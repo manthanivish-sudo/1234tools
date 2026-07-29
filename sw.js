@@ -2,7 +2,7 @@
    Precaching 900 pages would be a rude thing to do to someone's data plan,
    so we precache only the shell and cache tool pages as they are visited. */
 
-var V = 'mvr-v5';
+var V = '1234tools-v1';
 var SHELL = [
   './', './index.html',
   './assets/app.css', './assets/app.js', './assets/icons.svg',
@@ -35,10 +35,10 @@ self.addEventListener('fetch', function (e) {
 
   var url = new URL(req.url);
 
-  // Brand assets and web fonts live off-origin (the parent site and
-  // Google Fonts). Cache them so the logo and Sora/Inter survive offline.
+  // Web fonts live off-origin (Google Fonts). Cache them so
+  // Sora/Inter survive offline.
   if (url.origin !== location.origin) {
-    if (/(^|\.)(fonts\.googleapis\.com|fonts\.gstatic\.com|mvritservices\.com)$/.test(url.hostname)) {
+    if (/(^|\.)(fonts\.googleapis\.com|fonts\.gstatic\.com)$/.test(url.hostname)) {
       e.respondWith(
         caches.match(req).then(function (hit) {
           return hit || fetch(req, { mode: 'cors' }).then(function (res) {

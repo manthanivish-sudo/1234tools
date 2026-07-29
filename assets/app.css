@@ -1,14 +1,13 @@
 /* ============================================================
-   MVR Tools — aligned to mvritservices.com
-   Brand tokens lifted verbatim from the parent site's style.css
-   so the tools read as the same product, not a bolt-on.
+   1234Tools — design system
+   Dark-futuristic gold theme, originally developed for
+   mvritservices.com/tools and carried over unchanged.
 
    Theming, three modes:
      [data-theme="dark"]    forced dark
      [data-theme="light"]   forced light
      [data-theme="system"]  follows prefers-color-scheme
-   Default is dark, matching the parent site, so a click through
-   from mvritservices.com never flashes white.
+   Default is dark.
    ============================================================ */
 
 /* ---------- DARK: parent-site tokens, unchanged ---------- */

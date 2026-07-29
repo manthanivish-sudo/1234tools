@@ -3,12 +3,12 @@
   'use strict';
   var base = window.__BASE__ || './';
   var doc = document.documentElement;
-  var KEY = 'mvr-theme';
+  var KEY = '1234tools-theme';
 
   /* ---------- theme: three modes ----------
      'dark'   force dark          'light'  force light
      'system' follow the OS via prefers-color-scheme in CSS
-     Default is dark to match mvritservices.com, which is dark-only. */
+     Default is dark. */
 
   function current() {
     try { var t = localStorage.getItem(KEY); return (t === 'light' || t === 'system') ? t : 'dark'; }

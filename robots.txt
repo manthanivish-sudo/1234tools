@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.mvritservices.com/tools/sitemap.xml
+Sitemap: https://www.1234tools.com/sitemap.xml
