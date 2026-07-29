@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Image Compressor — Free &amp; Private | MVR IT Services</title>
+<meta name="description" content="Shrink JPEG, PNG and WebP files with a live quality preview and a before/after size comparison.">
+<link rel="canonical" href="https://www.mvritservices.com/tools/image/image-compressor.html">
+<meta name="theme-color" content="#06080f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MVR IT Services LTD">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="Image Compressor — Free &amp; Private | MVR IT Services">
+<meta property="og:description" content="Shrink JPEG, PNG and WebP files with a live quality preview and a before/after size comparison.">
+<meta property="og:url" content="https://www.mvritservices.com/tools/image/image-compressor.html">
+<meta property="og:image" content="https://www.mvritservices.com/assets/img/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Image Compressor — Free &amp; Private | MVR IT Services">
+<meta name="twitter:description" content="Shrink JPEG, PNG and WebP files with a live quality preview and a before/after size comparison.">
+<link rel="icon" href="../assets/favicon.ico" sizes="any">
+<link rel="icon" href="https://www.mvritservices.com/assets/img/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../assets/app.css">
+<script src="../engine/imagecore.bundle.js" defer></script>
+<script src="../engine/zip.js" defer></script>
+<script src="../engine/render-image.js" defer></script>
+<script src="../engine/img-image-compressor.js" defer></script>
+<script>/* set theme before first paint so there is no flash */
+(function(){try{var t=localStorage.getItem('mvr-theme');document.documentElement.setAttribute('data-theme',t==='light'||t==='system'?t:'dark');}catch(e){}})();</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Image Compressor","description":"Shrink JPEG, PNG and WebP files with a live quality preview and a before/after size comparison.","url":"https://www.mvritservices.com/tools/image/image-compressor.html","applicationCategory":"MultimediaApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.mvritservices.com/tools"},{"@type":"ListItem","position":2,"name":"Image & Photo Tools","item":"https://www.mvritservices.com/tools/image/index.html"},{"@type":"ListItem","position":3,"name":"Image Compressor","item":"https://www.mvritservices.com/tools/image/image-compressor.html"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Are my images uploaded?","acceptedAnswer":{"@type":"Answer","text":"No. The file is read by your browser, drawn to a canvas and re-encoded locally. Nothing is transmitted, which is why this works with the network off."}},{"@type":"Question","name":"Why did my PNG get bigger as a JPEG?","acceptedAnswer":{"@type":"Answer","text":"JPEG handles photographs well and flat colour badly. Screenshots, logos and diagrams belong in PNG or WebP; converting them to JPEG usually adds size and visible artefacts."}}]}]}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="container nav-wrap">
+    <a class="brand" href="https://www.mvritservices.com/">
+      <img src="https://www.mvritservices.com/assets/img/logo.svg" alt="MVR IT Services logo" width="42" height="42">
+      <span>MVR IT Services<small>Technology · Delivered</small></span>
+    </a>
+
+    <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navlinks">
+      <span></span><span></span><span></span>
+    </button>
+
+    <div class="header-tools">
+      <div class="search-wrap">
+        <input id="q" type="search" placeholder="Search 1,169 tools…" autocomplete="off" aria-label="Search tools">
+        <div id="results" class="search-results" hidden></div>
+      </div>
+      <div class="theme-switch" role="group" aria-label="Colour theme">
+        <button type="button" data-theme-set="light" aria-pressed="false" title="Light" aria-label="Light theme">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 1.5v2M12 20.5v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1.5 12h2M20.5 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+        </button>
+        <button type="button" data-theme-set="dark" aria-pressed="false" title="Dark" aria-label="Dark theme">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20.5 13.4A8.5 8.5 0 1 1 10.6 3.5a6.8 6.8 0 0 0 9.9 9.9z"/></svg>
+        </button>
+        <button type="button" data-theme-set="system" aria-pressed="false" title="Match system" aria-label="Match system theme">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8.5 20.5h7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <ul class="nav-links" id="navlinks">
+      <li><a href="https://www.mvritservices.com/">Home</a></li>
+      <li><a href="https://www.mvritservices.com/services/">Services</a></li>
+      <li><a href="https://www.mvritservices.com/products/">Products</a></li>
+      <li><a href="../index.html" class="active">Tools</a></li>
+      <li><a href="https://www.mvritservices.com/contact/" class="nav-cta">Get a Quote</a></li>
+    </ul>
+  </div>
+</header>
+
+<div class="layout container">
+  <button class="sidebar-open" id="sidebarOpen" aria-expanded="false" aria-controls="sidebar">
+    <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-grid"></use></svg><span>All 1,169 tools</span>
+  </button>
+
+  <aside class="sidebar" id="sidebar" aria-label="Tool categories">
+    <div class="sidebar-head">
+      <span class="sidebar-title">Browse tools</span>
+      <button class="sidebar-close" id="sidebarClose" aria-label="Close categories"><svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-close"></use></svg></button>
+    </div>
+
+    <nav class="side-nav">
+      <a class="side-link" href="../index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,169</span>
+      </a>
+
+      <p class="side-group">Categories</p>
+      <a class="side-link" href="../conversions/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-conversions"></use></svg><span class="side-name">Conversions</span><span class="side-count">1,048</span>
+      </a>
+      <a class="side-link" href="../developer/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-developer"></use></svg><span class="side-name">Developer &amp; Web Tools</span><span class="side-count">22</span>
+      </a>
+      <a class="side-link is-active" href="../image/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-image"></use></svg><span class="side-name">image</span><span class="side-count">20</span>
+      </a>
+      <a class="side-link" href="../india/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-india"></use></svg><span class="side-name">india</span><span class="side-count">15</span>
+      </a>
+      <a class="side-link" href="../business/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-business"></use></svg><span class="side-name">business</span><span class="side-count">14</span>
+      </a>
+      <a class="side-link" href="../mathematics/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
+      </a>
+      <a class="side-link" href="../text/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-text"></use></svg><span class="side-name">text</span><span class="side-count">9</span>
+      </a>
+      <a class="side-link" href="../health/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
+      </a>
+      <a class="side-link" href="../utilities/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">8</span>
+      </a>
+      <a class="side-link" href="../time/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
+      </a>
+      <a class="side-link" href="../finance/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link" href="../engineering/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
+      </a>
+      <a class="side-link" href="../design/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
+      </a>
+
+      <p class="side-group">Conversion families</p>
+      <a class="side-link side-sub" href="../conversions/length/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-length"></use></svg><span class="side-name">Length &amp; Distance</span><span class="side-count">306</span>
+      </a>
+      <a class="side-link side-sub" href="../conversions/mass/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-mass"></use></svg><span class="side-name">Mass &amp; Weight</span><span class="side-count">72</span>
+      </a>
+      <a class="side-link side-sub" href="../conversions/temperature/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-temperature"></use></svg><span class="side-name">Temperature</span><span class="side-count">56</span>
+      </a>
+      <a class="side-link side-sub" href="../conversions/volume/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-volume"></use></svg><span class="side-name">Volume &amp; Capacity</span><span class="side-count">132</span>
+      </a>
+      <a class="side-link side-sub" href="../conversions/area/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-area"></use></svg><span class="side-name">Area</span><span class="side-count">90</span>
+      </a>
+      <a class="side-link side-sub" href="../conversions/time/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-time"></use></svg><span class="side-name">Time</span><span class="side-count">56</span>
+      </a>
+      <a class="side-link side-sub" href="../conversions/speed/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-speed"></use></svg><span class="side-name">Speed &amp; Velocity</span><span class="side-count">30</span>
+      </a>
+      <a class="side-link side-sub" href="../conversions/pressure/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-pressure"></use></svg><span class="side-name">Pressure</span><span class="side-count">72</span>
+      </a>
+      <a class="side-link side-sub" href="../conversions/energy/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-energy"></use></svg><span class="side-name">Energy &amp; Work</span><span class="side-count">72</span>
+      </a>
+      <a class="side-link side-sub" href="../conversions/power/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-power"></use></svg><span class="side-name">Power</span><span class="side-count">42</span>
+      </a>
+      <a class="side-link side-sub" href="../conversions/data/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-data"></use></svg><span class="side-name">Digital Storage</span><span class="side-count">90</span>
+      </a>
+      <a class="side-link side-sub" href="../conversions/angle/index.html">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-angle"></use></svg><span class="side-name">Angle</span><span class="side-count">30</span>
+      </a>
+    </nav>
+  </aside>
+
+  <main id="main" class="content">
+
+<nav class="crumbs"><a href="../index.html">Home</a> › <a href="index.html">Image &amp; Photo Tools</a> › <span>Image Compressor</span></nav>
+<article class="tool" data-tool="image-compressor">
+  <p class="eyebrow">Image &amp; Photo Tools</p>
+  <h1><svg class="ico ico-title" aria-hidden="true" focusable="false"><use href="../assets/icons.svg#i-image-compressor"></use></svg>Image Compressor</h1>
+  <p class="lede">Shrink JPEG, PNG and WebP files with a live quality preview and a before/after size comparison.</p>
+  <div class="tool-io"></div>
+  <section class="panel"><h2>Privacy</h2><p class="privacy-line">Your images never leave your device. Files are decoded and redrawn by your own browser using the Canvas API, so nothing is uploaded, queued or logged.</p></section>
+  <section class="panel"><h2>Tips</h2><ul class="tips"><li>WebP is typically 25–35% smaller than JPEG at the same visual quality, and every current browser supports it.</li><li>Quality 80 is the usual sweet spot for photographs. Above 90 the file grows quickly for a difference almost nobody can see.</li><li>The largest saving is usually resizing, not compressing. A 4000px photo shown in an 800px column wastes most of what the visitor downloads.</li><li>Compressing an already-compressed JPEG loses more quality each time. Always start from the original.</li></ul></section><section class="panel"><h2>Frequently asked questions</h2><details><summary>Are my images uploaded?</summary><p>No. The file is read by your browser, drawn to a canvas and re-encoded locally. Nothing is transmitted, which is why this works with the network off.</p></details><details><summary>Why did my PNG get bigger as a JPEG?</summary><p>JPEG handles photographs well and flat colour badly. Screenshots, logos and diagrams belong in PNG or WebP; converting them to JPEG usually adds size and visible artefacts.</p></details></section>
+  <section class="panel"><h2>Related tools</h2><ul class="related"><li><a href="image-converter.html">Image Format Converter</a></li><li><a href="bulk-image-resizer.html">Bulk Image Resizer</a></li><li><a href="image-cropper.html">Image Cropper</a></li><li><a href="social-media-resizer.html">Social Media Image Resizer</a></li><li><a href="circle-crop.html">Circle Crop / Avatar Maker</a></li><li><a href="image-border.html">Add Border &amp; Frame to Image</a></li><li><a href="image-rotate-flip.html">Rotate &amp; Flip Image</a></li><li><a href="photo-filters.html">Photo Filters &amp; Adjustments</a></li></ul></section>
+</article>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  var spec = window.IMAGE_TOOLS['image-compressor'];
+  spec.id = 'image-compressor';
+  var root = document.querySelector('.tool');
+  try { MVRTool.mountImage(spec, root); }
+  catch (e) {
+    root.querySelector('.tool-io').innerHTML =
+      '<div class="io-msg is-error">This tool needs browser features yours does not support. Try a current version of Chrome, Firefox, Edge or Safari.</div>';
+  }
+});
+</script>
+  </main>
+</div>
+<div class="scrim" id="scrim" hidden></div>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-about">
+        <a class="brand" href="https://www.mvritservices.com/">
+          <img src="https://www.mvritservices.com/assets/img/logo.svg" alt="MVR IT Services logo" width="42" height="42">
+          <span>MVR IT Services<small>Technology · Delivered</small></span>
+        </a>
+        <p>Corporate software, integrations and complete technology support for schools, hospitals, retailers, event organisers and growing businesses.</p>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="https://www.mvritservices.com/about/">About Us</a></li>
+          <li><a href="https://www.mvritservices.com/services/">Services</a></li>
+          <li><a href="https://www.mvritservices.com/products/">Products</a></li>
+          <li><a href="https://www.mvritservices.com/contact/">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Products</h4>
+        <ul>
+          <li><a href="https://www.mvritservices.com/products/#xleshop">XLeShop E-commerce</a></li>
+          <li><a href="https://www.mvritservices.com/products/#school">School Management</a></li>
+          <li><a href="https://www.mvritservices.com/products/#hospital">Hospital Management</a></li>
+          <li><a href="https://www.mvritservices.com/products/#events">Event QR Check-in</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="https://www.mvritservices.com/privacy/">Privacy Policy</a></li>
+          <li><a href="https://www.mvritservices.com/terms/">Terms of Service</a></li>
+          <li><a href="https://www.mvritservices.com/cookies/">Cookie Policy</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      <strong>About these tools.</strong> Every calculation runs inside your browser — no figures are sent to a server, and nothing you type is stored or logged. Results are for general information. For financial, medical, legal or safety-critical decisions, please consult a qualified professional.
+    </div>
+
+    <div class="footer-legal">
+      <div class="company-reg">
+        © <span data-year>2026</span> MVR IT Services LTD. All rights reserved.<br>
+        MVR IT Services LTD is a company registered in England and Wales.
+        Company No. <strong>10251131</strong>.
+        Registered office: <strong>Reading, United Kingdom</strong>.
+      </div>
+      <div>Made with dedication by MVR IT Services.</div>
+    </div>
+  </div>
+</footer>
+
+<script>window.__BASE__="../";</script>
+<script src="../assets/app.js" defer></script>
+</body>
+</html>
