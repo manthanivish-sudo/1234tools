@@ -1,4 +1,8 @@
 User-agent: *
 Allow: /
 
+# Build sources, not part of the site. Served because GitHub Pages publishes
+# the whole branch, but there is nothing here for a search engine.
+Disallow: /build/
+
 Sitemap: https://www.1234tools.com/sitemap.xml

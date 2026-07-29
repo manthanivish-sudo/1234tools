@@ -1121,3 +1121,118 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
   .calc-key { padding: 14px 4px; font-size: .8rem; }
   .countdown-unit { min-width: 52px; }
 }
+
+/* === PDF tools (build-pdf.js) === */
+/* ============================================================
+   PDF tools
+   Appended to app.css. Uses only existing tokens, so light, dark
+   and system modes need no extra rules.
+
+   Everything else render-pdf.js emits — .io-pane, .io-head, .dropzone,
+   .stat-grid, .file-row, .btn-ghost, .image-preview — is already styled
+   by the image-tool rules above and is deliberately not repeated here.
+   ============================================================ */
+
+/* hint text under a control label */
+.field-hint {
+  display: block; margin-top: 5px;
+  font-size: .74rem; line-height: 1.45; color: var(--text-3);
+}
+
+/* the run bar sits apart from the file actions above it */
+.pdf-run { margin: 16px 0; }
+.pdf-actions:empty { display: none; }
+
+/* ---------- results ---------- */
+
+.pdf-results {
+  display: grid; gap: 12px; margin-bottom: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.pdf-results:empty { display: none; }
+/* report/preamble children (io-pane, messages) span the full width */
+.pdf-results > .io-pane,
+.pdf-results > .io-msg,
+.pdf-results > .pdf-file-grid { grid-column: 1 / -1; }
+
+.pdf-file-grid {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+.pdf-file-grid:empty { display: none; }
+.pdf-file-grid > .io-msg { grid-column: 1 / -1; }
+
+.pdf-file-card {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  padding: 14px; text-align: center;
+  background: var(--bg-1); border: 1px solid var(--border);
+  border-radius: var(--radius); min-width: 0;
+  transition: border-color .2s;
+}
+.pdf-file-card:hover { border-color: var(--border-gold); }
+
+/* filenames are long and must not blow out the grid column */
+.pdf-file-name {
+  max-width: 100%; min-width: 0;
+  font-family: var(--font-mono); font-size: .78rem; color: var(--text-1);
+  overflow-wrap: anywhere; line-height: 1.4;
+}
+.pdf-file-card .btn-ghost { margin-top: auto; }
+
+/* ---------- page organiser ---------- */
+
+.page-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(126px, 1fr));
+}
+
+.page-card {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 10px;
+  background: var(--bg-1); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: border-color .2s, opacity .2s;
+}
+.page-card:hover { border-color: var(--border-gold); }
+
+/* a rendered page is white regardless of theme, so it gets its own plate */
+.page-card canvas {
+  display: block; max-width: 100%; height: auto;
+  border-radius: 4px; background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+}
+
+.page-num {
+  position: absolute; top: 6px; left: 6px;
+  min-width: 20px; padding: 1px 6px;
+  background: color-mix(in srgb, var(--accent) 88%, transparent);
+  color: var(--nav-cta-ink); border-radius: 999px;
+  font-family: var(--font-mono); font-size: .68rem; font-weight: 700;
+}
+
+.page-tools { display: flex; gap: 4px; flex-wrap: nowrap; }
+.page-tools .btn-ghost {
+  padding: 2px 8px; font-size: .9rem; line-height: 1.4;
+  min-width: 28px;
+}
+
+/* marked for removal — dimmed and struck through, but still restorable */
+.page-card.is-dropped { opacity: .4; border-color: var(--border); }
+.page-card.is-dropped canvas { filter: grayscale(1); }
+.page-card.is-dropped::after {
+  content: ''; position: absolute; inset: 10px;
+  background: linear-gradient(to bottom right,
+    transparent calc(50% - 1px), #e05c4a 50%, transparent calc(50% + 1px));
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .pdf-results { grid-template-columns: 1fr; }
+  .pdf-file-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .page-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pdf-file-card, .page-card { transition: none; }
+}

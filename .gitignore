@@ -1,0 +1,7 @@
+# Regenerable PDF test artefacts.
+# Fixtures come from build/pdf-package/tests/make-fixtures.py; output and
+# sample-output are written by test_pdftools.js. All three are reproducible,
+# and keeping them out of the repo also keeps them off the deployed site.
+build/pdf-package/tests/fixtures/
+build/pdf-package/tests/output/
+build/pdf-package/sample-output/
