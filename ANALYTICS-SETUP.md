@@ -1,25 +1,34 @@
 # Turning analytics on
 
-Status as of 2026-07-30:
+**Analytics went live on 2026-07-30.**
 
 | Step | State |
 |---|---|
-| 1 — GA4 property | created, `G-BJWYN6QS86` — **settings still to apply**, see 1.3 and 1.4 |
-| 2 — Clarity project | created, `xunompl96y` — **masking still to set**, see 2.3 |
-| 3 — Search Console | already configured, DNS-verified — see 3.2 for what is left |
-| 4 — ids pasted and built | **done**, committed, **not pushed** |
-| 5 — verify live | after the push |
+| 1 — GA4 property | `G-BJWYN6QS86`, 14-month retention applied |
+| 2 — Clarity project | `xunompl96y`, Strict masking applied |
+| 3 — Search Console | configured and DNS-verified — **GA4 link still to do**, see 3.2 |
+| 4 — ids pasted, built, pushed | done — confirmed serving on the live site |
+| 5 — verify in a browser | **still worth doing**, see step 5 |
 
-**Two dashboard settings are not optional, and neither is applied yet.** The
-published privacy and cookie pages already state both as fact, so they are
-currently inaccurate and will be visibly so the moment you push:
+Both settings the published privacy and cookie pages assert as fact — 14-month
+retention and Strict masking — are now true, so the pages are accurate.
 
-| Published claim | Where you make it true | Default |
-|---|---|---|
-| "Google Analytics data is retained for 14 months" | GA4 → Data retention → 14 months (step 1.4) | **2 months** |
-| "every form field … masked before it is recorded" | Clarity → Masking → **Strict** (step 2.3) | **Balanced** |
+Two things remain, neither blocking: **link Search Console to GA4** (3.2, the
+highest-value five minutes left) and **walk step 5 in a real browser** to see the
+consent gate hold with your own eyes.
 
-Do those two, then `git push`. Everything else here is either done or optional.
+### Pushing this repo
+
+GitHub Pages serves `main` directly with no Actions workflow, so **a push is a
+deploy.** Push as **manthanivish-sudo** — two accounts are logged into `gh` on this
+machine and the active one, `vmanthani`, has read-only access, which fails with a
+403 that reads like a permissions bug. The repo carries a local credential helper
+pinning the right account, so a plain `git push` works. If it ever stops working,
+restore it repo-locally rather than switching the global `gh` account:
+
+```
+git config --local --get-all credential.https://github.com.helper
+```
 
 ---
 
