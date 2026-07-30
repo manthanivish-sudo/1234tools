@@ -2,11 +2,12 @@
    Precaching 900 pages would be a rude thing to do to someone's data plan,
    so we precache only the shell and cache tool pages as they are visited. */
 
-var V = '1234tools-v3';
+var V = '1234tools-v4';
 var SHELL = [
   './', './index.html',
   './assets/app.css', './assets/app.js', './assets/icons.svg',
   './engine/render-core.js', './engine/units.bundle.js', './engine/tools.bundle.js',
+  './assets/fonts/sora-latin.woff2', './assets/fonts/inter-latin.woff2',
   './manifest.webmanifest'
 ];
 
@@ -35,22 +36,12 @@ self.addEventListener('fetch', function (e) {
 
   var url = new URL(req.url);
 
-  // Web fonts live off-origin (Google Fonts). Cache them so
-  // Sora/Inter survive offline.
-  if (url.origin !== location.origin) {
-    if (/(^|\.)(fonts\.googleapis\.com|fonts\.gstatic\.com)$/.test(url.hostname)) {
-      e.respondWith(
-        caches.match(req).then(function (hit) {
-          return hit || fetch(req, { mode: 'cors' }).then(function (res) {
-            var copy = res.clone();
-            caches.open(V).then(function (c) { c.put(req, copy); });
-            return res;
-          }).catch(function () { return hit || Response.error(); });
-        })
-      );
-    }
-    return;
-  }
+  // Off-origin requests pass straight through, uncached. Sora and Inter used
+  // to be fetched from Google and needed a rule here; they are self-hosted now
+  // and precached with the rest of the shell. What is left off-origin is
+  // analytics, which must never be served from cache: a replayed beacon would
+  // be a false pageview, and caching one would outlive a consent withdrawal.
+  if (url.origin !== location.origin) return;
 
   // Assets and engine code: cache-first, they are versioned by cache name.
   // mjs/bcmap/pfb/ttf are the vendored pdf.js engine, its CMaps and its
