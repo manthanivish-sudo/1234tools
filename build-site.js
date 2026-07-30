@@ -30,9 +30,9 @@ const CHECK = process.argv.includes('--check');
  */
 const CONFIG = {
   /* Google Analytics 4, looks like G-XXXXXXXXXX */
-  ga4: '',
+  ga4: 'G-2CGQLD4H5E',
   /* Microsoft Clarity project id, looks like abcdefghij */
-  clarity: '',
+  clarity: 'xunompl96y',
   /* Search Console: the content="..." value of the meta tag Google offers
      under "HTML tag" verification. DNS verification needs nothing here. */
   gsc: ''
