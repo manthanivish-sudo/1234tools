@@ -1,118 +1,106 @@
 /**
- * Live currency rates.
+ * Daily currency rates, served from this site.
  *
- * Two keyless, CORS-enabled sources, tried in order. Both publish daily
- * reference rates, so results are cached for the day in localStorage —
- * which also means the converter keeps working offline using the last
- * figures it fetched. The date fetched is always surfaced to the user,
- * because "the rate" is meaningless without knowing when it was taken.
+ * These used to be fetched straight from cdn.jsdelivr.net, with
+ * open.er-api.com as a fallback, on page load and before any consent — which
+ * meant this one page contacted a third party while privacy/index.html said no
+ * page did. The fetching now happens once a day on a GitHub runner
+ * (build/fetch-rates.js, driven by .github/workflows/update-rates.yml) and the
+ * result is committed as assets/rates.json, so the browser only ever asks this
+ * site. Nothing is lost: the upstream feeds publish daily, so a file rebuilt
+ * daily is exactly as current as fetching live was.
+ *
+ * Rates are still cached in localStorage, which is what keeps the converter
+ * working offline. The date is always surfaced, because "the rate" is
+ * meaningless without knowing when it was taken.
  */
 (function () {
   'use strict';
 
-  var CACHE_KEY = 'mvr-fx-v1';
-  var MAX_AGE = 6 * 60 * 60 * 1000;   // refetch after 6h; upstream updates daily
+  var CACHE_KEY = 'mvr-fx-v2';        // v1 held per-base payloads from the old feeds
+  var MAX_AGE = 6 * 60 * 60 * 1000;   // refetch after 6h; the file rebuilds daily
 
-  var SOURCES = [
-    {
-      name: 'Currency API (CDN)',
-      url: function (base) {
-        return 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/' +
-               base.toLowerCase() + '.json';
-      },
-      parse: function (json, base) {
-        var block = json[base.toLowerCase()];
-        if (!block) return null;
-        var rates = {};
-        Object.keys(block).forEach(function (k) { rates[k.toUpperCase()] = block[k]; });
-        return { rates: rates, date: json.date };
-      }
-    },
-    {
-      name: 'ExchangeRate-API (open)',
-      url: function (base) { return 'https://open.er-api.com/v6/latest/' + base.toUpperCase(); },
-      parse: function (json) {
-        if (json.result !== 'success' || !json.rates) return null;
-        return {
-          rates: json.rates,
-          date: (json.time_last_update_utc || '').slice(5, 16)
-        };
-      }
-    }
-  ];
+  /* Resolved from this script's own src, the way assets/analytics.js does it,
+     so the path holds wherever the page sits in the tree. */
+  var RATES_URL = (function () {
+    var s = document.currentScript;
+    var up = ((s && s.getAttribute('src')) || '').match(/(\.\.\/)+/);
+    return (up ? up[0] : '') + 'assets/rates.json';
+  })();
 
-  function readCache(base) {
-    try {
-      var all = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
-      return all[base.toUpperCase()] || null;
-    } catch (e) { return null; }
+  /* The old per-base cache can never be read again, so drop it rather than
+     leave a few KB of dead rates on every returning visitor's device. */
+  try { localStorage.removeItem('mvr-fx-v1'); } catch (e) {}
+
+  function readCache() {
+    try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); }
+    catch (e) { return null; }
   }
 
-  function writeCache(base, payload) {
-    try {
-      var all = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
-      all[base.toUpperCase()] = payload;
-      localStorage.setItem(CACHE_KEY, JSON.stringify(all));
-    } catch (e) { /* private mode or quota — the converter still works this session */ }
+  function writeCache(payload) {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(payload)); }
+    catch (e) { /* private mode or quota — the converter still works this session */ }
   }
 
   /**
-   * @returns {Promise<{rates:Object, date:string, source:string, stale:boolean, offline:boolean}>}
+   * One base for every pair; the page derives cross-rates from it. Callers must
+   * use the returned `base`, not the currency they happen to be displaying.
+   *
+   * @returns {Promise<{rates:Object, base:string, date:string, source:string,
+   *                    stale:boolean, offline:boolean}>}
    */
-  function getRates(base) {
-    base = (base || 'GBP').toUpperCase();
-    var cached = readCache(base);
+  function getRates() {
+    var cached = readCache();
     var fresh = cached && (Date.now() - cached.fetchedAt) < MAX_AGE;
 
     if (fresh) {
       return Promise.resolve({
-        rates: cached.rates, date: cached.date, source: cached.source,
-        stale: false, offline: false
+        rates: cached.rates, base: cached.base, date: cached.date,
+        source: cached.source, stale: false, offline: false
       });
     }
 
-    if (typeof fetch !== 'function') {
-      return cached
-        ? Promise.resolve({ rates: cached.rates, date: cached.date, source: cached.source, stale: true, offline: true })
-        : Promise.reject(new Error('This browser cannot fetch live rates, and none are cached on this device yet.'));
-    }
-
-    var attempt = function (i) {
-      if (i >= SOURCES.length) {
-        // Every source failed. Fall back to whatever was last stored rather
-        // than showing nothing — clearly labelled as out of date.
-        if (cached) {
-          return Promise.resolve({
-            rates: cached.rates, date: cached.date, source: cached.source,
-            stale: true, offline: true
-          });
-        }
-        return Promise.reject(new Error('Could not reach a rate source, and no rates are cached on this device yet.'));
+    var fallback = function (reason) {
+      /* Serve what was last stored rather than nothing — clearly labelled as
+         out of date. */
+      if (cached) {
+        return Promise.resolve({
+          rates: cached.rates, base: cached.base, date: cached.date,
+          source: cached.source, stale: true, offline: true
+        });
       }
-      var src = SOURCES[i];
-      return fetch(src.url(base), { cache: 'no-store' })
-        .then(function (r) {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.json();
-        })
-        .then(function (json) {
-          var parsed = src.parse(json, base);
-          if (!parsed || !parsed.rates) throw new Error('unexpected response shape');
-          var payload = {
-            rates: parsed.rates, date: parsed.date,
-            source: src.name, fetchedAt: Date.now()
-          };
-          writeCache(base, payload);
-          return { rates: parsed.rates, date: parsed.date, source: src.name, stale: false, offline: false };
-        })
-        .catch(function () { return attempt(i + 1); });
+      return Promise.reject(new Error(reason));
     };
 
-    return attempt(0);
+    if (typeof fetch !== 'function') {
+      return fallback('This browser cannot load the rates file, and none are saved on this device yet.');
+    }
+
+    return fetch(RATES_URL, { cache: 'no-cache' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (json) {
+        if (!json || !json.rates || !json.base) throw new Error('unexpected rates file');
+        var payload = {
+          rates: json.rates, base: json.base, date: json.date,
+          source: json.source, fetchedAt: Date.now()
+        };
+        writeCache(payload);
+        return {
+          rates: json.rates, base: json.base, date: json.date,
+          source: json.source, stale: false, offline: false
+        };
+      })
+      .catch(function () {
+        return fallback('Could not load the rates file, and none are saved on this device yet.');
+      });
   }
 
-  /* The currencies worth listing. The CDN source also carries hundreds of
-     crypto tickers, which would bury the fiat currencies people came for. */
+  /* The currencies worth listing. build/fetch-rates.js reads this list to
+     decide what goes into assets/rates.json, so adding a currency here is all
+     that is needed — but it only appears once the daily job has run. */
   var COMMON = {
     GBP: 'British Pound', USD: 'US Dollar', EUR: 'Euro', JPY: 'Japanese Yen',
     AUD: 'Australian Dollar', CAD: 'Canadian Dollar', CHF: 'Swiss Franc',
@@ -262,20 +250,24 @@
       table.appendChild(grid);
     }
 
-    function load(base) {
+    function load() {
       status.className = 'io-msg is-note';
-      status.textContent = 'Fetching the latest rates…';
-      window.MVRFx.getRates(base).then(function (res) {
+      status.textContent = 'Loading today’s rates…';
+      window.MVRFx.getRates().then(function (res) {
         state.rates = res.rates;
         state.date = res.date;
         state.source = res.source;
         state.stale = res.stale;
-        state.base = base;
-        state.rates[base] = 1;
+        /* The base of the data, never the currency on screen. Every pair is a
+           cross-rate derived from it, and treating the selected currency as the
+           base would silently return the wrong number for every pair that does
+           not happen to start there. */
+        state.base = res.base;
+        state.rates[res.base] = 1;
 
         if (res.stale) {
           status.className = 'io-msg is-warn';
-          status.textContent = 'Could not reach a rate source, so these are the last rates saved on this device (' +
+          status.textContent = 'Could not load the rates file, so these are the last rates saved on this device (' +
                                (res.date || 'date unknown') + '). Treat them as out of date.';
         } else {
           status.className = 'io-msg is-note';
@@ -291,16 +283,18 @@
       });
     }
 
-    from.sel.addEventListener('change', function () { load(from.sel.value); });
+    /* Changing a currency is now a repaint, not a refetch: one file covers
+       every pair. */
+    from.sel.addEventListener('change', paint);
     to.sel.addEventListener('change', paint);
     amount.addEventListener('input', paint);
     swap.addEventListener('click', function () {
       var f = from.sel.value;
       from.sel.value = to.sel.value;
       to.sel.value = f;
-      load(from.sel.value);
+      paint();
     });
 
-    load('GBP');
+    load();
   };
 })();

@@ -161,10 +161,20 @@ async function sweepPage(ctx, base, rel) {
     }, CONSENT_KEY);
 
     await page.setRequestInterception(true);
-    const escaped = [];
+    const escaped = [], thirdParty = [];
     page.on('request', (r) => {
-      if (TRACKERS.test(r.url())) { escaped.push(r.url()); r.abort().catch(() => {}); }
-      else r.continue().catch(() => {});
+      const url = r.url();
+      if (TRACKERS.test(url)) { escaped.push(url); r.abort().catch(() => {}); return; }
+      /* Anything else leaving the origin is a third party contacted regardless
+         of consent -- which is precisely what privacy/index.html promises does
+         not happen. data: and blob: have no host and are not requests off the
+         machine. This caught the currency converter calling cdn.jsdelivr.net on
+         load, which made that promise false on one page for months. */
+      try {
+        const h = new URL(url).hostname;
+        if (h && h !== '127.0.0.1' && h !== 'localhost') thirdParty.push(h);
+      } catch (e) {}
+      r.continue().catch(() => {});
     });
 
     await page.goto(base + rel, { waitUntil: 'load', timeout: 30000 });
@@ -212,7 +222,7 @@ async function sweepPage(ctx, base, rel) {
       };
     }, SENSITIVE, UI_FURNITURE.source);
 
-    return { rel, ...dynamic, attempted: escaped };
+    return { rel, ...dynamic, attempted: escaped, thirdParty: [...new Set(thirdParty)] };
   } catch (e) {
     return { rel, error: e.message };
   } finally {
@@ -238,6 +248,7 @@ async function sweep(browser) {
   const queue = list.slice();
   const failures = [], errors = [];
   let done = 0, noObserver = 0, fieldsSeen = 0, consentRan = 0;
+  const offOrigin = new Map();
 
   const worker = async () => {
     for (;;) {
@@ -251,6 +262,10 @@ async function sweep(browser) {
         if (r.unmasked.length) failures.push(r);
         if (!r.observerLive) noObserver++;
         if (r.attempted.length) consentRan++;
+        r.thirdParty.forEach((h) => {
+          if (!offOrigin.has(h)) offOrigin.set(h, []);
+          offOrigin.get(h).push(r.rel);
+        });
       }
       if (done % 200 === 0) process.stdout.write(`     … ${done}/${list.length}\n`);
     }
@@ -267,6 +282,13 @@ async function sweep(browser) {
   assert(consentRan === list.length, 'the consented path ran on every page',
     `${consentRan}/${list.length} attempted a tag load (all aborted before leaving the machine)`);
   assert(fieldsSeen > 0, 'sweep actually found fields to check', fieldsSeen + ' across the site');
+  /* The privacy and cookie pages both promise this outright. Asserting it
+     across every page is the only way that promise stays true by accident
+     rather than by luck. */
+  assert(offOrigin.size === 0, 'no page contacts a third party on load',
+    offOrigin.size
+      ? [...offOrigin.entries()].map(([h, p]) => `${h} (${p.length} page(s), e.g. ${p[0]})`).join('; ')
+      : 'nothing left the origin but the aborted tags');
   assert(noObserver === 0, 'the mask observer is live on every page',
     noObserver ? noObserver + ' page(s) did not mask a node added after load' : 'probe masked everywhere');
   assert(failures.length === 0, `every sensitive element is masked on all ${list.length} pages`,
