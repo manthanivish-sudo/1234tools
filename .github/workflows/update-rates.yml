@@ -19,6 +19,17 @@ on:
     # odd minute keeps it off the top-of-hour queue when Actions is busiest.
     - cron: '17 5 * * *'
   workflow_dispatch:
+    inputs:
+      verify_push:
+        # The scheduled run only exercises the commit-and-push path on a day a
+        # rate actually moved, so a broken token, a missing permission or a
+        # protected branch would sit undetected until that day -- and would then
+        # look like a rate-fetching bug. This pushes an empty commit on demand so
+        # the path can be proven now. Safe to run: an empty commit changes no
+        # file, so the Pages deploy it triggers republishes identical content.
+        description: 'Prove the commit-and-push path by pushing an empty commit'
+        type: boolean
+        default: false
 
 # Only what pushing the one file needs.
 permissions:
@@ -32,23 +43,41 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # v5 on both: the v4 runtimes target Node 20, which the runners now force
+      # onto Node 24 with a deprecation warning on every run.
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          # Only has to run build/fetch-rates.js, which uses global fetch and
+          # nothing else exotic. 22 rather than 20 because Node 20 is past end
+          # of life.
+          node-version: '22'
 
       - name: Fetch rates
         run: node build/fetch-rates.js
 
       - name: Commit if anything moved
+        env:
+          # Empty on a scheduled run, so the comparison below simply fails.
+          VERIFY_PUSH: ${{ inputs.verify_push }}
         run: |
+          MSG="Refresh currency rates ($(date -u +%Y-%m-%d))"
           if git diff --quiet -- assets/rates.json; then
-            echo "No rate moved today — nothing to commit."
-            exit 0
+            if [ "$VERIFY_PUSH" != "true" ]; then
+              echo "No rate moved today — nothing to commit."
+              exit 0
+            fi
+            echo "No rate moved, but verify_push was requested."
+            ALLOW_EMPTY=--allow-empty
+            MSG="Verify the rates workflow can push (no rate changed)"
           fi
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets/rates.json
-          git commit -m "Refresh currency rates ($(date -u +%Y-%m-%d))"
-          git push
+          git commit ${ALLOW_EMPTY:-} -m "$MSG"
+          # The concurrency group keeps this job from racing itself, but not from
+          # racing a hand push -- and this branch is deployed by hand regularly.
+          # Losing a day of rates to a non-fast-forward is a silly way to fail, so
+          # rebase onto whatever landed and try once more.
+          git push || { git pull --rebase origin main && git push; }
