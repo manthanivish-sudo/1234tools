@@ -97,7 +97,8 @@ const SENSITIVE = [
   '[contenteditable]:not([contenteditable="false"])',
   '[class*="result"]', '[class*="output"]', '[class*="readout"]',
   '[class*="preview"]', '[class*="io-"]', '[class*="file-name"]',
-  '[class*="stat-val"]', '[class*="page-grid"]', '[class*="display"]'
+  '[class*="stat-val"]', '[class*="page-grid"]', '[class*="display"]',
+  '#recent-tools'
 ].join(',');
 
 /**

@@ -56,6 +56,9 @@
     'input', 'textarea', 'select', 'canvas', '[contenteditable]',
     '[class*="result"]', '[class*="output"]', '[class*="readout"]',
     '[class*="preview"]', '[class*="display"]',
+    /* The homepage's "pick up where you left off" strip is the visitor's own
+       history. It never leaves the device and must not reach a replay either. */
+    '#recent-tools',
     '.io-pane', '.io-msg', '.pdf-file-name', '.page-grid', '.stat-val'
   ].join(',');
 
@@ -120,9 +123,22 @@
       t.src = 'https://www.clarity.ms/tag/' + i;
       y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
     })(window, document, 'clarity', 'script', CLARITY);
-    /* Belt and braces: the project must also be set to Strict masking in the
-       Clarity dashboard. This call asserts it from the page as well. */
-    window.clarity('consent');
+    /* consentv2, not the legacy clarity('consent'). The old call applies one
+       state to every consent type, so it was granting ad storage as well —
+       the opposite of what this banner asks for, and inconsistent with the GA4
+       defaults above, which deny every ad signal. Naming the two storages
+       separately is the only way to deny one and grant the other.
+
+       Note the capital S in both keys: Clarity's API is ad_Storage and
+       analytics_Storage, while the values it reports back are lower case.
+       Getting the case wrong fails silently.
+
+       Masking is belt and braces with the project's Strict setting in the
+       Clarity dashboard; neither replaces the other. */
+    window.clarity('consentv2', {
+      ad_Storage: 'denied',
+      analytics_Storage: 'granted'
+    });
   }
 
   function start() {

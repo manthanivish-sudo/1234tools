@@ -187,3 +187,61 @@
     });
   }
 })();
+
+/* ---------- recently used tools ----------
+   The homepage's "Popular tools" list is hand-picked and the same for
+   everyone. This is the part that is actually personal, and it is honest
+   because it never leaves the device: the last few tools you opened, read back
+   on the homepage. No identifier, no history of when, nothing transmitted, and
+   analytics.js masks the rendered list so it cannot reach a session replay
+   either. Disclosed in cookies/index.html as 1234tools-recent. */
+(function () {
+  'use strict';
+  var KEY = '1234tools-recent';
+  var MAX = 6;
+
+  function read() {
+    try {
+      var v = JSON.parse(localStorage.getItem(KEY) || '[]');
+      return Object.prototype.toString.call(v) === '[object Array]' ? v : [];
+    } catch (e) { return []; }
+  }
+
+  /* Tool pages only. Hubs, the homepage and the legal pages all have an h1 and
+     are not worth remembering, so the mount point is what distinguishes them. */
+  var h1 = document.querySelector('main h1');
+  var here = location.pathname.replace(/^\//, '');
+  if (h1 && here && !/(^|\/)index\.html$/.test(here) &&
+      document.querySelector('.tool, .tool-io')) {
+    var list = read().filter(function (x) { return x && x.u !== here; });
+    list.unshift({ u: here, t: h1.textContent.trim().slice(0, 80) });
+    try { localStorage.setItem(KEY, JSON.stringify(list.slice(0, MAX))); } catch (e) {}
+  }
+
+  var host = document.getElementById('recent-tools');
+  if (!host) return;
+  var recent = read().filter(function (x) { return x && x.u && x.t; });
+  if (!recent.length) return;
+
+  var head = document.createElement('h2');
+  head.className = 'section-title';
+  head.textContent = 'Pick up where you left off';
+
+  var grid = document.createElement('div');
+  grid.className = 'grid grid-feature';
+  recent.forEach(function (x) {
+    var a = document.createElement('a');
+    a.className = 'card';
+    a.href = x.u;
+    var s = document.createElement('strong');
+    /* textContent, never innerHTML: these titles come back out of storage, and
+       storage is writable by anything else running on this origin. */
+    s.textContent = x.t;
+    a.appendChild(s);
+    grid.appendChild(a);
+  });
+
+  host.appendChild(head);
+  host.appendChild(grid);
+  host.hidden = false;
+})();
