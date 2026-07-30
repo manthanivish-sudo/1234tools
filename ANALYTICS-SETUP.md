@@ -153,110 +153,168 @@ not a setting, and it is what the privacy page states.
 
 ## Step 3 — Search Console
 
-### The trap first
+### Your DNS as it actually stands
 
-Do **not** use the "Google Analytics" or "Google Tag Manager" verification methods.
-They look convenient now that GA4 exists. They will fail. Google's verifier fetches
-the page without clicking anything, so the consent banner is never answered, so
-gtag never loads, so there is no tag to find. Same reason the GA4 setup assistant's
-"verify installation" check will report the tag as missing — that is the gating
-working, not a bug.
+Checked live against Google's resolver on 30 July 2026:
 
-Two methods do work.
+| Record | Value | Meaning |
+|---|---|---|
+| `1234tools.com` NS | `dns1.registrar-servers.com`, `dns2` | **Namecheap BasicDNS** — you edit records in the Namecheap panel, not Cloudflare or anywhere else |
+| `1234tools.com` A | `185.199.108–111.153` | GitHub Pages, all four |
+| `www.1234tools.com` CNAME | `manthanivish-sudo.github.io` | GitHub Pages |
+| `1234tools.com` TXT | `google-site-verification=8wIGrc6iJkvmpS-BR5GVTSEeF_OGy_18b4bNYS-7Iu4` | **a Google verification token is already published** |
+| `1234tools.com` TXT | `v=spf1 include:spf.efwd.registrar-servers.com ~all` | Namecheap email forwarding — unrelated, leave alone |
 
-### Option A — DNS, one Domain property (recommended)
+Confirmed by request: `https://1234tools.com/` returns **301 → `https://www.1234tools.com/`**,
+which serves 200. Both hostnames are live and the apex funnels into `www`.
 
-Covers `www.1234tools.com`, `1234tools.com`, http and https, in one property. No
-site change, nothing to keep in the build, and it survives any future host move.
+**So the DNS half of this step may already be done.** That token was published by
+someone with access to this domain — almost certainly you, at some point. Before
+adding anything, open Search Console and look at the property list.
 
-1. <https://search.google.com/search-console> → **Add property** → **Domain** →
-   enter `1234tools.com` (no `https://`, no `www`).
-2. Google gives a TXT record: `google-site-verification=xxxxxxxx`.
-3. At your DNS provider add a TXT record on the **root/apex** — host `@` or blank,
-   depending on the provider — with that value. Leave the existing `CNAME`
-   pointing at GitHub Pages alone.
-4. Wait for propagation (usually minutes, up to a few hours) → **Verify**.
-5. Leave `CONFIG.gsc` empty. This method needs nothing in the HTML.
+### 3.1 Check what already exists
 
-### Option B — HTML meta tag
+Go to <https://search.google.com/search-console> and open the property dropdown,
+top-left. One of three things is true:
 
-Use this if you don't control DNS.
+- **A Domain property `1234tools.com` is listed** → verification is done. Skip to
+  3.3. Note that Google re-checks the TXT periodically, so **never delete that
+  record** — removing it silently unverifies the property weeks later.
+- **Nothing is listed, or only a URL-prefix property** → the token exists but the
+  Domain property was never completed, or it belongs to a *different Google
+  account*. Verification is per-account: a token verified under one account does
+  nothing for another. Do 3.2.
+- **You're signed into the wrong Google account** → check the avatar, top-right.
+  Use the same account that owns the GA4 property from step 1. Having them on one
+  account is what makes the Search Console ↔ GA4 link in 3.4 possible.
 
-1. **Add property** → **URL prefix** → `https://www.1234tools.com/`.
-2. Choose **HTML tag**. Google shows
-   `<meta name="google-site-verification" content="LONGSTRING">`.
-3. Copy **only** `LONGSTRING`, not the whole tag → `CONFIG.gsc`.
-4. Do steps 4 and 5 below (paste, build, push) **before** clicking Verify — the tag
-   has to be live on the site first.
-5. A URL-prefix property covers exactly that prefix. Traffic to the bare
-   `1234tools.com` would need its own property.
+### 3.2 Verify a Domain property (Namecheap)
 
-### After verification, either way
+A Domain property covers `www` and apex, http and https, and every subdomain, in
+one place. Given that your apex and `www` both resolve, this is the right choice —
+a URL-prefix property on `www` alone would silently miss anything that lands on the
+bare domain.
 
-- **Sitemaps** → submit `sitemap.xml`. It is a sitemap index pointing at
-  `sitemap-1.xml`; submitting the index is enough.
-- **URL inspection** on `https://www.1234tools.com/` → **Request indexing**, to
-  prime the first crawl.
-- Data starts appearing in 2–3 days and is only useful after two or three weeks.
-  This is the point of the whole exercise — real queries — so start it today even
-  if you postpone steps 1 and 2.
+1. Search Console → **Add property** → left-hand box, **Domain** → enter
+   `1234tools.com`. No `https://`, no `www`, no trailing slash.
+2. Google shows a TXT record to add. **Compare it to
+   `...8wIGrc6iJkvmpS...` above.** If it is identical, the record is already
+   published — click **Verify** immediately and you are done. If it differs, Google
+   has issued a new token; continue.
+3. Namecheap → sign in → **Domain List** → **Manage** next to `1234tools.com` →
+   **Advanced DNS** tab.
+4. Under **Host Records** → **Add New Record**:
+   - Type: **TXT Record**
+   - Host: **`@`** (this means the apex; not `www`, not blank)
+   - Value: the full `google-site-verification=...` string, nothing else — no
+     quotes, no `<meta>` wrapper
+   - TTL: **Automatic**
+5. Click the green tick to save the row. **Leave every other record alone** — the
+   four A records and the `www` CNAME are what serve the site; deleting one takes
+   the site down. Adding a second Google TXT alongside the existing one is fine;
+   multiple verification tokens coexist happily.
+6. Wait. Namecheap usually propagates in minutes; allow up to a few hours. Check
+   from your machine with:
+
+   ```
+   nslookup -type=TXT 1234tools.com 8.8.8.8
+   ```
+
+   When your new value appears there, go back to Search Console → **Verify**.
+   Verifying too early fails and is harmless — just click it again later.
+
+### 3.3 Do not use the tag-based verification methods
+
+Now that GA4 exists, Search Console will offer **Google Analytics** and **Google
+Tag Manager** as verification options. Both will fail on this site, and the reason
+is the consent gating working correctly:
+
+Google's verifier fetches the page as an anonymous client. It does not click
+"Allow". `assets/analytics.js` therefore never injects the gtag script, so there is
+no measurement tag on the page for Google to find, so verification fails.
+
+The same mechanism means **GA4's own "Test your website" / installation check will
+report the tag as missing.** That is expected. It is not a broken install — step 5
+verifies it properly, by consenting first.
+
+`CONFIG.gsc` in `build-site.js` is for the **HTML tag** method, which is a static
+`<meta>` in the head and does work. You do not need it: DNS verification is
+already in place and covers more. It stays blank.
+
+### 3.4 After verification — the part that actually matters
+
+Verification alone gives you nothing. These four do:
+
+1. **Sitemaps** → **Add a new sitemap** → enter `sitemap.xml`. It is a sitemap
+   *index* pointing at `sitemap-1.xml`; submitting the index is enough, Google
+   follows it. Status should read **Success** with 1,218-ish discovered URLs within
+   a day or two. If it says "Couldn't fetch", wait 24 hours before worrying —
+   that message is often premature.
+2. **URL inspection** → paste `https://www.1234tools.com/` → **Request indexing**.
+   Prime the homepage crawl. Do the same for `/pdf/index.html`, your newest
+   section. There is a quota of a handful per day; spend it on hubs, not on all
+   1,218 pages — Google finds the rest through the sitemap and internal links.
+3. **Settings → Associations** (or GA4 → Admin → **Search Console links**) → link
+   the property to the GA4 property from step 1. This is the piece most people
+   skip. It puts landing-page-level query data into GA4, so you can see *which
+   search brought someone in* alongside *what they did* — neither tool shows that
+   alone. Requires the same Google account owning both, which is why 3.1 nagged
+   about it.
+4. Set a reminder for **~3 weeks out** to read **Performance → Queries**. That
+   report is the entire reason for this exercise: it tells you which of the 1,218
+   pages are one position away from real traffic, which is what per-page SEO work
+   should be aimed at. Before then there is not enough data to act on, and looking
+   daily will only tempt you into changing things at random.
+
+### 3.5 What "done" looks like
+
+- Property `1234tools.com` shows a green **Ownership verified**.
+- Sitemap `sitemap.xml` shows **Success**.
+- **Coverage / Pages** shows indexed pages climbing over the following fortnight.
+  It will not reach 1,218. Google indexes a fraction of any large site; a slow
+  climb is normal and the number is not a target.
+
+Do this step today even if steps 1 and 2 wait. Search Console data only starts
+accruing from the day you verify — it is not backfilled, so every day unverified is
+a day of query data you can never recover.
 
 ---
 
-## Step 4 — Paste the ids and build
+## Step 4 — Paste the ids and build — **done, committed as `06a4342`**
 
-Edit `build-site.js`, lines 31–39:
+`CONFIG` in `build-site.js:31` now reads:
 
 ```js
 const CONFIG = {
-  /* Google Analytics 4, looks like G-XXXXXXXXXX */
-  ga4: 'G-ABCD123XYZ',
-  /* Microsoft Clarity project id, looks like abcdefghij */
-  clarity: 'abcdefghij',
-  /* Search Console: the content="..." value of the meta tag Google offers
-     under "HTML tag" verification. DNS verification needs nothing here. */
-  gsc: ''
+  ga4: 'G-2CGQLD4H5E',
+  clarity: 'xunompl96y',
+  gsc: ''                 // DNS verification — no meta tag needed
 };
 ```
 
-Quotes are single, each line ends in a comma except the last. Any id you leave
-blank simply emits no tag, so you can do GA4 now and Clarity later.
+`node build-site.js` wrote 1,219 files: the `<!-- ANALYTICS -->` block into all
+1,218 pages, plus the `sw.js` version bump `1234tools-v4 → v5` so returning
+visitors' service workers fetch fresh HTML instead of serving the pre-analytics
+copy from cache. Verified afterwards:
 
-Dry run first — writes nothing:
+- root page emits `src="assets/analytics.js"`, a page one level down emits
+  `src="../assets/analytics.js"` — relative depth is right
+- re-running `--check` reports **0 files would change**, so the build is idempotent
+  and safe to re-run
 
-```
-node build-site.js --check
-```
+If you ever change an id, edit those lines and run `node build-site.js` again.
+Leaving one blank emits no tag for that service.
 
-Expect `analytics: GA4 G-ABCD123XYZ, Clarity abcdefghij` and roughly 1,218 pages
-listed as would-be-patched. If it says *no ids configured*, the paste didn't take.
+### The remaining step: push
 
-Then apply:
-
-```
-node build-site.js
-```
-
-It rewrites the `<!-- ANALYTICS -->` block in every page, leaves the font block
-alone, and bumps the version string in `sw.js` so returning visitors' service
-workers fetch fresh copies instead of serving the pre-analytics HTML from cache.
-
-Check one page before committing — every page gets the same block:
+Pages serves `main` directly — there is no Actions workflow, so **the push is the
+deploy** and analytics goes live to real visitors 1–2 minutes later:
 
 ```
-grep -A3 "ANALYTICS:" index.html
-```
-
-Then deploy. Pages serves `main` directly (no Actions workflow), so a push is the
-deploy:
-
-```
-git add -A
-git commit -m "Enable GA4 and Clarity"
 git push
 ```
 
-Live in 1–2 minutes.
+Nothing else is needed. The commit is already made.
 
 ---
 
@@ -321,8 +379,10 @@ silently undid each other once.
 
 | Thing | Where |
 |---|---|
-| GA4 Measurement ID | Admin → Data streams → your stream |
-| Clarity project id | Settings → Overview, or the `/tag/` URL in the snippet |
+| GA4 Measurement ID | `G-2CGQLD4H5E` — Admin → Data streams → your stream |
+| Clarity project id | `xunompl96y` — Settings → Overview, or the `/tag/` URL |
+| DNS | Namecheap → Domain List → Manage → Advanced DNS |
+| Search Console property | Domain `1234tools.com` (DNS TXT already published) |
 | Ids live in code | `build-site.js:31` |
 | Consent + masking logic | `assets/analytics.js` |
 | Rebuild after any id change | `node build-site.js` |
