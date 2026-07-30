@@ -4,7 +4,7 @@ Status as of 2026-07-30:
 
 | Step | State |
 |---|---|
-| 1 — GA4 property | created, `G-2CGQLD4H5E` — **settings still to apply**, see 1.3 and 1.4 |
+| 1 — GA4 property | created, `G-BJWYN6QS86` — **settings still to apply**, see 1.3 and 1.4 |
 | 2 — Clarity project | created, `xunompl96y` — **masking still to set**, see 2.3 |
 | 3 — Search Console | already configured, DNS-verified — see 3.2 for what is left |
 | 4 — ids pasted and built | **done**, committed, **not pushed** |
@@ -247,7 +247,7 @@ natural home for it.
 
 ```js
 const CONFIG = {
-  ga4: 'G-2CGQLD4H5E',
+  ga4: 'G-BJWYN6QS86',
   clarity: 'xunompl96y',
   gsc: ''                 // DNS verification — no meta tag needed
 };
@@ -340,7 +340,7 @@ silently undid each other once.
 
 | Thing | Where |
 |---|---|
-| GA4 Measurement ID | `G-2CGQLD4H5E` — Admin → Data streams → your stream |
+| GA4 Measurement ID | `G-BJWYN6QS86` — Admin → Data streams → your stream |
 | Clarity project id | `xunompl96y` — Settings → Overview, or the `/tag/` URL |
 | DNS | Namecheap → Domain List → Manage → Advanced DNS |
 | Search Console property | Domain `1234tools.com` (DNS TXT already published) |
