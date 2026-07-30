@@ -1,0 +1,54 @@
+# Refreshes assets/rates.json once a day.
+#
+# The currency converter used to fetch rates from cdn.jsdelivr.net in the
+# visitor's browser, on page load, before any consent. This job moves that call
+# to a GitHub runner: the upstream feed now sees CI instead of a reader, and the
+# reader's browser only ever talks to 1234tools.com.
+#
+# Pushing to main IS the deploy — GitHub Pages serves this branch directly, with
+# no build step — so a successful run here publishes the new rates.
+#
+# Note GitHub disables scheduled workflows in a repository with no pushes for 60
+# days. This job pushing daily keeps itself alive, but if rates ever go stale for
+# weeks, check whether the schedule was disabled before suspecting the script.
+name: Update currency rates
+
+on:
+  schedule:
+    # 05:17 UTC. Both feeds publish their daily fix well before this, and the
+    # odd minute keeps it off the top-of-hour queue when Actions is busiest.
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+# Only what pushing the one file needs.
+permissions:
+  contents: write
+
+concurrency:
+  group: update-rates
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch rates
+        run: node build/fetch-rates.js
+
+      - name: Commit if anything moved
+        run: |
+          if git diff --quiet -- assets/rates.json; then
+            echo "No rate moved today — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/rates.json
+          git commit -m "Refresh currency rates ($(date -u +%Y-%m-%d))"
+          git push
