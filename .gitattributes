@@ -1,3 +1,19 @@
+# Check the tree out with LF endings on every platform.
+#
+# core.autocrlf is true on the machine this is developed on, so git was handing
+# the working tree CRLF while build-site.js and build-pdf.js write their
+# generated blocks with LF. The result: immediately after any checkout, rebase
+# or cherry-pick, `git status` listed hundreds of files as modified and
+# `build-site.js --check` offered to rewrite them — while `git diff` showed
+# nothing and the index, worktree and normalised blob hashes all matched. There
+# was never anything wrong, which is exactly what made it worth pinning down: it
+# reads like a broken generator.
+#
+# The repository has always stored LF. This only stops the checkout converting.
+* text=auto eol=lf
+
+# Must stay last: the rule above matches these too, and the later rule wins.
+#
 # Vendored pdf.js is stored byte-for-byte as published on npm, so it can be
 # checksummed against the upstream tarball. Without this, core.autocrlf=true
 # rewrites the line endings in pdf.min.mjs and pdf.worker.min.mjs on checkout
