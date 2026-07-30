@@ -55,12 +55,53 @@ engine — they search the usual layouts — but keeping the structure is simple
 | `label-pdf` | Label Sheet Generator |
 | `certificate-pdf` | Certificate Generator |
 
-**Needs pdf.js** — loaded from CDN on first use, only on these two pages
+**Needs pdf.js** — self-hosted, loaded on first use, only on these two pages
+(see [Vendoring pdf.js](#vendoring-pdfjs))
 
 | id | Tool |
 |---|---|
 | `pdf-to-images` | PDF to Images |
 | `pdf-organise` | Organise PDF Pages (visual thumbnails) |
+
+---
+
+## Vendoring pdf.js
+
+`render-pdf.js` resolves pdf.js from `vendor/pdfjs/` **relative to its own
+`src`**, not to the page — tool pages sit one directory down, and the site has
+been served from a subpath before, so neither a relative specifier nor a
+root-absolute one survives both. If you place `render-pdf.js` somewhere other
+than `engine/`, the vendor directory moves with it.
+
+Fetch it from npm rather than copying by hand, so the bytes can be checksummed
+against the published tarball:
+
+```sh
+curl -sL https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-4.6.82.tgz | tar -xz
+mkdir -p engine/vendor/pdfjs
+cp package/build/pdf.min.mjs package/build/pdf.worker.min.mjs package/LICENSE engine/vendor/pdfjs/
+cp -r package/cmaps package/standard_fonts engine/vendor/pdfjs/
+```
+
+| Path | Size | Fetched when |
+|---|---|---|
+| `pdf.min.mjs` | 330 KB | first use of either tool |
+| `pdf.worker.min.mjs` | 1.4 MB | first use of either tool |
+| `standard_fonts/` | 804 KB | document declares a base-14 font without embedding it |
+| `cmaps/` | 1.5 MB | document uses a predefined CJK encoding |
+
+Only the first two are always needed; the other two are requested per document,
+so the common case downloads 1.7 MB and no more. pdf.js is Apache-2.0 and its
+`LICENSE` ships alongside it.
+
+Two things are easy to get wrong:
+
+- **Line endings.** If `core.autocrlf` is on, git will rewrite `pdf.min.mjs` on
+  checkout and it will no longer match upstream. `engine/vendor/pdfjs/** -text`
+  in `.gitattributes` prevents that.
+- **Service worker.** The engine is `.mjs` and the data files are `.bcmap`,
+  `.pfb` and `.ttf`. A cache rule matching only `.js` will miss all of them, and
+  the tools will refetch 1.7 MB on every use and stay broken offline.
 
 ---
 

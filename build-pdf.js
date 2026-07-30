@@ -386,6 +386,26 @@ function buildBundles() {
   }
 }
 
+/**
+ * pdf.js is vendored, not generated, so it is checked rather than written.
+ * It lives only at its deployed path — keeping a second copy in the package
+ * would put 3.8 MB in the repository twice for no gain.
+ */
+const PDFJS_DIR = 'engine/vendor/pdfjs';
+const PDFJS_VERSION = '4.6.82';
+function checkVendoredPdfJs() {
+  const need = ['pdf.min.mjs', 'pdf.worker.min.mjs', 'cmaps', 'standard_fonts'];
+  const missing = need.filter(f => !fs.existsSync(path.join(ROOT, PDFJS_DIR, f)));
+  if (!missing.length) return `pdfjs-dist ${PDFJS_VERSION}, present`;
+  console.log(`  ! ${PDFJS_DIR} is missing: ${missing.join(', ')}`);
+  console.log('    The two rendering tools will not work. Restore it with:');
+  console.log(`      curl -sL https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-${PDFJS_VERSION}.tgz | tar -xz`);
+  console.log(`      mkdir -p ${PDFJS_DIR}`);
+  console.log(`      cp package/build/pdf.min.mjs package/build/pdf.worker.min.mjs package/LICENSE ${PDFJS_DIR}/`);
+  console.log(`      cp -r package/cmaps package/standard_fonts ${PDFJS_DIR}/`);
+  return `MISSING (${missing.length} of ${need.length})`;
+}
+
 /* ------------------------------------------------------------------ */
 /* shared assets (steps 2 and 3)                                      */
 /* ------------------------------------------------------------------ */
@@ -612,9 +632,11 @@ function main() {
   const indexed = updateSearchIndex(index);
   const sitemapUrls = updateSitemap(index);
   const nav = patchExistingPages(total);
+  const vendored = checkVendoredPdfJs();
   const sw = bumpServiceWorker(changes.length > 0 || nav.patched > 0);
 
   console.log(`  icons merged        ${symbols} symbols`);
+  console.log(`  vendored pdf.js     ${vendored}`);
   console.log(`  search index        ${indexed} entries`);
   console.log(`  sitemap             ${sitemapUrls} URLs`);
   console.log(`  nav patch           ${nav.patched} of ${nav.scanned} existing pages ` +

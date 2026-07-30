@@ -1,0 +1,5 @@
+# Vendored pdf.js is stored byte-for-byte as published on npm, so it can be
+# checksummed against the upstream tarball. Without this, core.autocrlf=true
+# rewrites the line endings in pdf.min.mjs and pdf.worker.min.mjs on checkout
+# and the files no longer match what was audited.
+engine/vendor/pdfjs/** -text

@@ -13,6 +13,17 @@
   'use strict';
   window.MVRTool = window.MVRTool || {};
 
+  /* Where pdf.js is vendored, resolved from this script's own URL rather than
+     the document's. Tool pages sit one level down (/pdf/x.html) and the site
+     has been served from a subpath before, so neither a relative specifier nor
+     a root-absolute one is safe here. currentScript is set while a deferred
+     classic script runs, which is how this file is loaded. */
+  const PDFJS_BASE = (function () {
+    const s = document.currentScript ||
+      document.querySelector('script[src$="render-pdf.js"]');
+    return new URL('vendor/pdfjs/', s ? s.src : location.href).href;
+  })();
+
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -323,10 +334,9 @@
     let pdfjs = null;
     async function ensurePdfJs() {
       if (pdfjs) return pdfjs;
-      say('Downloading the PDF rendering engine (about 1 MB). This happens once, then it is cached.', 'note');
-      const base = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82';
-      const mod = await import(`${base}/build/pdf.min.mjs`);
-      mod.GlobalWorkerOptions.workerSrc = `${base}/build/pdf.worker.min.mjs`;
+      say('Loading the PDF rendering engine (about 1.7 MB). This happens once, then it is cached.', 'note');
+      const mod = await import(`${PDFJS_BASE}pdf.min.mjs`);
+      mod.GlobalWorkerOptions.workerSrc = `${PDFJS_BASE}pdf.worker.min.mjs`;
       pdfjs = mod;
       say('');
       return mod;
@@ -336,14 +346,24 @@
       let lib;
       try { lib = await ensurePdfJs(); }
       catch (e) {
-        say('The rendering engine could not be downloaded — you may be offline, or the CDN may be blocked. ' +
-            'The other PDF tools all work without it.', 'error');
+        say('The rendering engine could not be loaded. Reload the page and try again — ' +
+            'the other PDF tools all work without it.', 'error');
         return;
       }
       const o = readOpts();
       const src = docs[0];
       const raw = new Uint8Array(await new Blob([src.doc.bytes]).arrayBuffer());
-      const pdf = await lib.getDocument({ data: raw }).promise;
+      /* Both data sets are vendored alongside the engine and fetched only for
+         documents that actually reference them. standardFontDataUrl covers the
+         base-14 fonts when a PDF declares but does not embed them — common, and
+         the difference between correct glyphs and a fallback face. cMapUrl
+         covers the predefined CJK encodings. */
+      const pdf = await lib.getDocument({
+        data: raw,
+        cMapUrl: `${PDFJS_BASE}cmaps/`,
+        cMapPacked: true,
+        standardFontDataUrl: `${PDFJS_BASE}standard_fonts/`
+      }).promise;
 
       if (spec.id === 'pdf-to-images') {
         let idx;
