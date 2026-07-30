@@ -1,19 +1,25 @@
 # Turning analytics on
 
-The code is finished and tested. Nothing is emitted because `CONFIG` at the top of
-`build-site.js` has no ids. This is the account work only you can do, then one
-paste and one command.
+Status as of 2026-07-30:
 
-Work through it in order. Steps 1–3 are dashboards, step 4 is the paste and build,
-step 5 proves it works. Budget about 40 minutes.
-
-**Two dashboard settings are not optional** — the published privacy page already
-states them as fact, so they must be true before you push:
-
-| Published claim | Where you make it true |
+| Step | State |
 |---|---|
-| "Google Analytics data is retained for 14 months" | GA4 → Data retention → 14 months (step 1.4) |
-| "every form field … masked before it is recorded" | Clarity → Masking → **Strict** (step 2.3) |
+| 1 — GA4 property | created, `G-2CGQLD4H5E` — **settings still to apply**, see 1.3 and 1.4 |
+| 2 — Clarity project | created, `xunompl96y` — **masking still to set**, see 2.3 |
+| 3 — Search Console | already configured, DNS-verified — see 3.2 for what is left |
+| 4 — ids pasted and built | **done**, committed, **not pushed** |
+| 5 — verify live | after the push |
+
+**Two dashboard settings are not optional, and neither is applied yet.** The
+published privacy and cookie pages already state both as fact, so they are
+currently inaccurate and will be visibly so the moment you push:
+
+| Published claim | Where you make it true | Default |
+|---|---|---|
+| "Google Analytics data is retained for 14 months" | GA4 → Data retention → 14 months (step 1.4) | **2 months** |
+| "every form field … masked before it is recorded" | Clarity → Masking → **Strict** (step 2.3) | **Balanced** |
+
+Do those two, then `git push`. Everything else here is either done or optional.
 
 ---
 
@@ -151,132 +157,87 @@ not a setting, and it is what the privacy page states.
 
 ---
 
-## Step 3 — Search Console
+## Step 3 — Search Console — **already configured**
 
-### Your DNS as it actually stands
-
-Checked live against Google's resolver on 30 July 2026:
+You confirmed on 2026-07-30 that Search Console is set up for this domain, and the
+DNS backs that up. Checked live against Google's resolver:
 
 | Record | Value | Meaning |
 |---|---|---|
-| `1234tools.com` NS | `dns1.registrar-servers.com`, `dns2` | **Namecheap BasicDNS** — you edit records in the Namecheap panel, not Cloudflare or anywhere else |
+| `1234tools.com` NS | `dns1.registrar-servers.com`, `dns2` | **Namecheap BasicDNS** — records are edited in the Namecheap panel |
 | `1234tools.com` A | `185.199.108–111.153` | GitHub Pages, all four |
 | `www.1234tools.com` CNAME | `manthanivish-sudo.github.io` | GitHub Pages |
-| `1234tools.com` TXT | `google-site-verification=8wIGrc6iJkvmpS-BR5GVTSEeF_OGy_18b4bNYS-7Iu4` | **a Google verification token is already published** |
+| `1234tools.com` TXT | `google-site-verification=8wIGrc6iJkvmpS-BR5GVTSEeF_OGy_18b4bNYS-7Iu4` | the verification token, published |
 | `1234tools.com` TXT | `v=spf1 include:spf.efwd.registrar-servers.com ~all` | Namecheap email forwarding — unrelated, leave alone |
 
-Confirmed by request: `https://1234tools.com/` returns **301 → `https://www.1234tools.com/`**,
+Also confirmed: `https://1234tools.com/` returns **301 → `https://www.1234tools.com/`**,
 which serves 200. Both hostnames are live and the apex funnels into `www`.
 
-**So the DNS half of this step may already be done.** That token was published by
-someone with access to this domain — almost certainly you, at some point. Before
-adding anything, open Search Console and look at the property list.
+`CONFIG.gsc` in `build-site.js` therefore stays **blank** — it exists for the HTML
+meta-tag verification method, which DNS verification makes unnecessary.
 
-### 3.1 Check what already exists
+### 3.1 Never delete that TXT record
 
-Go to <https://search.google.com/search-console> and open the property dropdown,
-top-left. One of three things is true:
+Google re-checks it periodically. Removing it does not fail loudly; the property
+silently unverifies weeks later and you lose the data stream without an obvious
+cause. If you ever tidy up DNS records, leave both TXT rows alone.
 
-- **A Domain property `1234tools.com` is listed** → verification is done. Skip to
-  3.3. Note that Google re-checks the TXT periodically, so **never delete that
-  record** — removing it silently unverifies the property weeks later.
-- **Nothing is listed, or only a URL-prefix property** → the token exists but the
-  Domain property was never completed, or it belongs to a *different Google
-  account*. Verification is per-account: a token verified under one account does
-  nothing for another. Do 3.2.
-- **You're signed into the wrong Google account** → check the avatar, top-right.
-  Use the same account that owns the GA4 property from step 1. Having them on one
-  account is what makes the Search Console ↔ GA4 link in 3.4 possible.
+### 3.2 Three things left to do there
 
-### 3.2 Verify a Domain property (Namecheap)
+Verification is the beginning, not the end. In rough order of value:
 
-A Domain property covers `www` and apex, http and https, and every subdomain, in
-one place. Given that your apex and `www` both resolve, this is the right choice —
-a URL-prefix property on `www` alone would silently miss anything that lands on the
-bare domain.
+1. **Link Search Console to GA4 — newly possible, and the biggest win.**
+   GA4 → **Admin** → **Search Console links** → **Link** → pick the property.
+   You could not do this before today because the GA4 property did not exist.
+   It is what puts query data next to behaviour data: which search brought someone
+   in, alongside what they then did. Neither tool shows that on its own, and this
+   is the single highest-value five minutes in the whole setup.
 
-1. Search Console → **Add property** → left-hand box, **Domain** → enter
-   `1234tools.com`. No `https://`, no `www`, no trailing slash.
-2. Google shows a TXT record to add. **Compare it to
-   `...8wIGrc6iJkvmpS...` above.** If it is identical, the record is already
-   published — click **Verify** immediately and you are done. If it differs, Google
-   has issued a new token; continue.
-3. Namecheap → sign in → **Domain List** → **Manage** next to `1234tools.com` →
-   **Advanced DNS** tab.
-4. Under **Host Records** → **Add New Record**:
-   - Type: **TXT Record**
-   - Host: **`@`** (this means the apex; not `www`, not blank)
-   - Value: the full `google-site-verification=...` string, nothing else — no
-     quotes, no `<meta>` wrapper
-   - TTL: **Automatic**
-5. Click the green tick to save the row. **Leave every other record alone** — the
-   four A records and the `www` CNAME are what serve the site; deleting one takes
-   the site down. Adding a second Google TXT alongside the existing one is fine;
-   multiple verification tokens coexist happily.
-6. Wait. Namecheap usually propagates in minutes; allow up to a few hours. Check
-   from your machine with:
+   It requires the same Google account to have access to both. If GA4 was created
+   under a different account from Search Console, grant that account access in
+   Search Console → **Settings → Users and permissions** first.
 
-   ```
-   nslookup -type=TXT 1234tools.com 8.8.8.8
-   ```
+2. **Check the sitemap is submitted and succeeding.** Search Console →
+   **Sitemaps**. It should list `sitemap.xml` with status **Success**. If it is
+   missing, add `sitemap.xml` — that is the index file, which points at
+   `sitemap-1.xml`; submitting the index is enough.
 
-   When your new value appears there, go back to Search Console → **Verify**.
-   Verifying too early fails and is harmless — just click it again later.
+   Even if it already says Success, **resubmit after the next push.** The sitemap
+   gained 12 URLs today (see below) and resubmitting nudges Google to re-read it
+   rather than waiting for its own schedule.
 
-### 3.3 Do not use the tag-based verification methods
+3. **Read Performance → Queries in about three weeks.** That report is the reason
+   for all of this. Before then there is not enough data to act on, and checking
+   daily only tempts you into changing things at random.
 
-Now that GA4 exists, Search Console will offer **Google Analytics** and **Google
-Tag Manager** as verification options. Both will fail on this site, and the reason
-is the consent gating working correctly:
+### 3.3 The sitemap gap this turned up
 
-Google's verifier fetches the page as an anonymous client. It does not click
-"Allow". `assets/analytics.js` therefore never injects the gtag script, so there is
-no measurement tag on the page for Google to find, so verification fails.
+Checking whether the sitemap was worth submitting turned up a real hole. It listed
+1,205 URLs against 1,218 pages. Excluding `404.html`, which should never be listed,
+the missing ones were **all 12 conversion category hubs**:
 
-The same mechanism means **GA4's own "Test your website" / installation check will
-report the tag as missing.** That is expected. It is not a broken install — step 5
-verifies it properly, by consenting first.
+```
+conversions/angle/  area/  data/  energy/  length/  mass/
+power/  pressure/  speed/  temperature/  time/  volume/
+```
 
-`CONFIG.gsc` in `build-site.js` is for the **HTML tag** method, which is a static
-`<meta>` in the head and does work. You do not need it: DNS verification is
-already in place and covers more. It stays blank.
+These are not stubs. `conversions/length/index.html` is 89 KB, titled *"Length &
+Distance Converters — 306 Free Tools"*, canonical, indexable, and linked from every
+page on the site. They are among the strongest category pages you have — exactly
+the "category collection pages" the growth plan wants to build — and Google had to
+find them by crawling alone.
 
-### 3.4 After verification — the part that actually matters
+Fixed in `d5fd82c`. The same commit normalises the five legal pages from the bare
+directory form (`/about/`) to the `index.html` form their own canonical tags
+declare, so no entry now contradicts its page. The sitemap covers every page on the
+site except `404.html`: **1,217 URLs**.
 
-Verification alone gives you nothing. These four do:
-
-1. **Sitemaps** → **Add a new sitemap** → enter `sitemap.xml`. It is a sitemap
-   *index* pointing at `sitemap-1.xml`; submitting the index is enough, Google
-   follows it. Status should read **Success** with 1,218-ish discovered URLs within
-   a day or two. If it says "Couldn't fetch", wait 24 hours before worrying —
-   that message is often premature.
-2. **URL inspection** → paste `https://www.1234tools.com/` → **Request indexing**.
-   Prime the homepage crawl. Do the same for `/pdf/index.html`, your newest
-   section. There is a quota of a handful per day; spend it on hubs, not on all
-   1,218 pages — Google finds the rest through the sitemap and internal links.
-3. **Settings → Associations** (or GA4 → Admin → **Search Console links**) → link
-   the property to the GA4 property from step 1. This is the piece most people
-   skip. It puts landing-page-level query data into GA4, so you can see *which
-   search brought someone in* alongside *what they did* — neither tool shows that
-   alone. Requires the same Google account owning both, which is why 3.1 nagged
-   about it.
-4. Set a reminder for **~3 weeks out** to read **Performance → Queries**. That
-   report is the entire reason for this exercise: it tells you which of the 1,218
-   pages are one position away from real traffic, which is what per-page SEO work
-   should be aimed at. Before then there is not enough data to act on, and looking
-   daily will only tempt you into changing things at random.
-
-### 3.5 What "done" looks like
-
-- Property `1234tools.com` shows a green **Ownership verified**.
-- Sitemap `sitemap.xml` shows **Success**.
-- **Coverage / Pages** shows indexed pages climbing over the following fortnight.
-  It will not reach 1,218. Google indexes a fraction of any large site; a slow
-  climb is normal and the number is not a target.
-
-Do this step today even if steps 1 and 2 wait. Search Console data only starts
-accruing from the day you verify — it is not backfilled, so every day unverified is
-a day of query data you can never recover.
+Worth knowing for later: **nothing generates the bulk of this sitemap.** `build-pdf.js`
+appends its own 17 URLs, and the rest is hand-maintained — which is exactly why 12
+pages went missing. If you add a section without also editing `sitemap-1.xml`, it
+will happen again. Generating the sitemap from the page list in `build-site.js`
+would close that hole permanently; it already walks all 1,218 pages and would be a
+natural home for it.
 
 ---
 
