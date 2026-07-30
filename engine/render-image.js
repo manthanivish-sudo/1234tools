@@ -955,14 +955,17 @@
       else if (pct > 92) say('Almost the whole image was removed. Lower the tolerance.', 'warn');
     }
 
-    /* The model is several megabytes, so it is fetched only when this mode
-       is actually selected, and only on this page. */
+    /* Measured: selecting this mode pulls ~90 MB from staticimgly.com plus the
+       ESM entry point and its transitive deps from cdn.jsdelivr.net. Those are
+       the only two third parties the image tools ever touch, which is why this
+       is fetched strictly on demand — a plain load of this page contacts
+       nobody. Do not move this import to the top level. */
     let aiState = 'idle';
     async function ensureAIModel() {
       if (aiState === 'ready') return true;
       if (aiState === 'failed') return false;
       aiState = 'loading';
-      say('Downloading the background-removal model (about 5 MB). This happens once, then it is cached.', 'note');
+      say('Downloading the background-removal model (about 90 MB). This happens once, then it is cached.', 'note');
       try {
         const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm');
         window.MVRBgAI = async (canvas, ctx, img) => {

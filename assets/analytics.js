@@ -44,11 +44,19 @@
      Clarity replays sessions. These tools hold payslips, invoice line items,
      names on certificates and take-home pay — none of which may be recorded.
      Masked elements still register position and interaction, so heatmaps and
-     scroll depth survive; only the text is withheld. */
+     scroll depth survive; only the text is withheld.
+
+     Matched on intent rather than by listing every class: an enumeration goes
+     stale the moment a tool page invents .search-results or .calc-result, and
+     the sweep in build/consent-check.js caught exactly that on all 1,218 pages.
+     Anything named like a result, an output, a readout or a preview is masked
+     on principle. Over-masking costs a little replay detail; under-masking
+     records someone's salary. */
   var MASK = [
-    'input', 'textarea', 'select', 'canvas',
-    '.result', '.result-value', '.result-label', '.tool-results',
-    '.io-pane', '.io-msg', '.readout', '.pdf-file-name', '.page-grid'
+    'input', 'textarea', 'select', 'canvas', '[contenteditable]',
+    '[class*="result"]', '[class*="output"]', '[class*="readout"]',
+    '[class*="preview"]', '[class*="display"]',
+    '.io-pane', '.io-msg', '.pdf-file-name', '.page-grid', '.stat-val'
   ].join(',');
 
   function mask(root) {

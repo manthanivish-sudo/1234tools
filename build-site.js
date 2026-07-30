@@ -10,6 +10,15 @@
  * 1,218 edits by hand. That was the "no general build system" gap: every
  * site-wide change previously meant touching every file.
  *
+ * It also owns sitemap-1.xml, and is now the only thing that writes it. Most of
+ * that file used to be hand-maintained, so it drifted whenever a section was
+ * added and nobody remembered — all 12 conversion hubs were missing until
+ * d5fd82c, large indexable pages Google could only reach by crawling.
+ * build-pdf.js appended its own 17 URLs in a slightly different format, which
+ * is why the file carried two. Generating the whole thing from the same walk
+ * that patches the pages makes "the page exists but Google was never told"
+ * unrepresentable, and makes the format uniform by construction.
+ *
  * Every edit is marker-delimited and idempotent. Running it twice writes
  * nothing the second time, which is what makes it safe to re-run.
  */
@@ -75,6 +84,105 @@ const prefixOf = (abs) => {
   const depth = path.relative(ROOT, abs).split(path.sep).length - 1;
   return '../'.repeat(depth);
 };
+
+/* ------------------------------------------------------------------ */
+/* sitemap                                                            */
+/* ------------------------------------------------------------------ */
+
+const SITE = 'https://www.1234tools.com';
+
+/** A soft-404 shell. It is reachable, but Google must never be told to index it. */
+const NOT_INDEXED = new Set(['404.html']);
+
+/**
+ * Section hubs, in the order the sitemap has always listed them. This is the
+ * one list to extend when a section is added — and forgetting to is survivable,
+ * because an unlisted page still ships in the tail below and gets reported.
+ */
+const SECTIONS = ['finance', 'mathematics', 'engineering', 'health', 'design',
+  'utilities', 'time', 'developer', 'business', 'india', 'image', 'text',
+  'conversions', 'pdf'];
+
+/**
+ * The pages that are not tools. They change on the order of never, and a
+ * crawler's budget is better spent on the 1,200 pages people actually search
+ * for, so they carry a lower priority and a yearly changefreq.
+ */
+const META_PAGES = {
+  'about/index.html':   { freq: 'yearly', pri: '0.5' },
+  'contact/index.html': { freq: 'yearly', pri: '0.5' },
+  'privacy/index.html': { freq: 'yearly', pri: '0.3' },
+  'terms/index.html':   { freq: 'yearly', pri: '0.3' },
+  'cookies/index.html': { freq: 'yearly', pri: '0.3' }
+};
+
+function sitemapMeta(rel) {
+  if (rel === 'index.html') return { freq: 'monthly', pri: '1.0' };
+  return META_PAGES[rel] || { freq: 'monthly', pri: '0.7' };
+}
+
+/**
+ * The tool order the site already maintains for its own search box. Reusing it
+ * is what keeps the sitemap and the search index from disagreeing about which
+ * tools exist: adding a tool to one now adds it to the other.
+ */
+function searchIndexPaths() {
+  const src = fs.readFileSync(path.join(ROOT, 'assets', 'search-index.js'), 'utf8');
+  const m = /^window\.SEARCH_INDEX=(\[[\s\S]*\]);?\s*$/.exec(src.trim());
+  if (!m) throw new Error('Unrecognised format in assets/search-index.js.');
+  return JSON.parse(m[1]).map((e) => String(e[1]));
+}
+
+/**
+ * Every indexable page, in the order the sitemap has carried them. The order is
+ * cosmetic to a crawler, but keeping it stable keeps the diff readable, which is
+ * what makes a regenerated file reviewable at all.
+ */
+function sitemapPages() {
+  const onDisk = new Set(
+    pages().map((abs) => path.relative(ROOT, abs).replace(/\\/g, '/'))
+           .filter((rel) => !NOT_INDEXED.has(rel))
+  );
+
+  const out = [], seen = new Set();
+  const take = (rel) => {
+    if (!onDisk.has(rel) || seen.has(rel)) return;
+    seen.add(rel);
+    out.push(rel);
+  };
+
+  take('index.html');
+  searchIndexPaths().forEach(take);
+  SECTIONS.forEach((s) => take(s + '/index.html'));
+  Object.keys(META_PAGES).forEach(take);
+  [...onDisk].filter((r) => /^conversions\/[^/]+\/index\.html$/.test(r))
+             .sort().forEach(take);
+
+  /* Whatever none of the lists above claimed. It is still emitted — a page
+     missing from the sitemap is the exact bug this function exists to prevent —
+     but it is reported, because landing here means a list needs extending. */
+  const unclaimed = [...onDisk].filter((r) => !seen.has(r)).sort();
+  unclaimed.forEach(take);
+
+  return { out, unclaimed };
+}
+
+function buildSitemap() {
+  const { out, unclaimed } = sitemapPages();
+  const body = out.map((rel) => {
+    const { freq, pri } = sitemapMeta(rel);
+    const loc = rel === 'index.html' ? SITE + '/' : `${SITE}/${rel}`;
+    return `<url><loc>${loc}</loc><changefreq>${freq}</changefreq>` +
+           `<priority>${pri}</priority></url>`;
+  });
+
+  const changed = write('sitemap-1.xml',
+    '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+    body.join('\n') + '\n</urlset>\n');
+
+  return { count: out.length, changed, unclaimed };
+}
 
 /* ------------------------------------------------------------------ */
 /* head edits                                                         */
@@ -237,12 +345,24 @@ function main() {
   const css = patchCss();
   const page = patchPages();
   const sw = patchServiceWorker(changes.length > 0);
+  /* After the service worker deliberately: the sitemap is for crawlers, not
+     part of the app shell, so adding a page must not invalidate the cached
+     shell of every returning visitor. */
+  const map = buildSitemap();
 
   console.log(`  pages scanned       ${page.total}`);
   console.log(`  font block          ${page.fonts} ${CHECK ? 'would be' : ''} patched`);
   console.log(`  analytics block     ${page.analytics} ${CHECK ? 'would be' : ''} patched`);
   console.log(`  app.css             ${css}`);
   if (sw) console.log(`  service worker      ${sw}`);
+  console.log(`  sitemap             ${map.count} URLs, ` +
+              (map.changed ? (CHECK ? 'would be rewritten' : 'rewritten') : 'unchanged'));
+  if (map.unclaimed.length) {
+    console.log(`  ! ${map.unclaimed.length} page(s) matched no known group — ` +
+                `listed at the end of the sitemap, but SECTIONS or META_PAGES wants extending:`);
+    map.unclaimed.slice(0, 5).forEach((s) => console.log('      ' + s));
+    if (map.unclaimed.length > 5) console.log(`      … +${map.unclaimed.length - 5}`);
+  }
   if (page.skipped.length) {
     console.log(`  ! ${page.skipped.length} page(s) had no recognisable font block:`);
     page.skipped.slice(0, 5).forEach(s => console.log('      ' + s));

@@ -508,7 +508,7 @@ function appendCss() {
 }
 
 /* ------------------------------------------------------------------ */
-/* search index and sitemap                                           */
+/* search index                                                       */
 /* ------------------------------------------------------------------ */
 
 function updateSearchIndex(index) {
@@ -524,23 +524,18 @@ function updateSearchIndex(index) {
   return entries.length;
 }
 
-function updateSitemap(index) {
-  const rel = 'sitemap-1.xml';
-  const xml = fs.readFileSync(path.join(ROOT, rel), 'utf8');
-  const urls = [...xml.matchAll(/<url>[\s\S]*?<\/url>/g)].map(x => x[0])
-    .filter(u => !u.includes(`${SITE}/${CATEGORY.slug}/`));
-
-  const today = new Date().toISOString().slice(0, 10);
-  const add = [`${CATEGORY.slug}/index.html`, ...index.map(t => t.url)].map(u =>
-    `<url><loc>${SITE}/${u}</loc><lastmod>${today}</lastmod>` +
-    `<changefreq>monthly</changefreq><priority>${u.endsWith('index.html') ? '0.8' : '0.7'}</priority></url>`);
-
-  write(rel,
-    '<?xml version="1.0" encoding="UTF-8"?>\n' +
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
-    urls.concat(add).join('\n') + '\n</urlset>\n');
-  return urls.length + add.length;
-}
+/*
+ * The sitemap used to be written here too, by preserving whatever URLs the file
+ * already held and re-appending these 17. That worked, but it made this the
+ * second writer of a file whose other ~1,200 URLs were hand-maintained, and the
+ * two disagreed on format: these entries carried a lastmod and gave the section
+ * hub priority 0.8, the hand-written ones had no lastmod and used 0.7.
+ *
+ * build-site.js now generates the whole sitemap from a walk of every page, so
+ * this section is deliberately gone rather than merely unused — a second writer
+ * is the thing to avoid. Adding the PDF pages to assets/search-index.js above is
+ * all this build has to do; they reach the sitemap from there.
+ */
 
 /**
  * Bump the cache version so returning visitors do not keep a stale shell.
@@ -658,7 +653,6 @@ function main() {
   buildPdfIndexPage(index, shellParts, total);
 
   const indexed = updateSearchIndex(index);
-  const sitemapUrls = updateSitemap(index);
   const nav = patchExistingPages(total);
   const vendored = checkVendoredPdfJs();
   const sw = bumpServiceWorker(changes.length > 0 || nav.patched > 0);
@@ -666,7 +660,7 @@ function main() {
   console.log(`  icons merged        ${symbols} symbols`);
   console.log(`  vendored pdf.js     ${vendored}`);
   console.log(`  search index        ${indexed} entries`);
-  console.log(`  sitemap             ${sitemapUrls} URLs`);
+  console.log(`  sitemap             owned by build-site.js — run it next`);
   console.log(`  nav patch           ${nav.patched} of ${nav.scanned} existing pages ` +
               `${CHECK ? 'would be' : ''} updated`);
   if (nav.skipped.length) {

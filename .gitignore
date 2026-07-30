@@ -5,3 +5,11 @@
 build/pdf-package/tests/fixtures/
 build/pdf-package/tests/output/
 build/pdf-package/sample-output/
+
+# puppeteer-core, the one dependency build/consent-check.js needs. Installed on
+# demand rather than committed, as that file's header says, and nothing the
+# deployed site loads. GitHub Pages serves this branch directly, so anything
+# committed here is published — node_modules least of all.
+node_modules/
+package.json
+package-lock.json
