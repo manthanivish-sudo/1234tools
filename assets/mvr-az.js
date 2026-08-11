@@ -12,7 +12,7 @@
 
   /* ------------------------------------------------------------------ data */
   var MVR = 'https://www.mvritservices.com';
-  var ATTEND = 'https://www.attend-now.com';
+  var ATTEND = 'https://attend-now.com'; // apex only — www has no DNS record
 
   // Every entry: k = key cap, p = products [{n:name, t:tagline, u:url, d:domain label}]
   // r:true = reserved key (invites the next client), site = "you are here" id.
