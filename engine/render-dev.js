@@ -95,7 +95,8 @@
       return { wrap: wrap, read: function () { return hex.value; }, key: f.key };
     } else {
       input = el('input', 'control');
-      input.type = f.type === 'number' ? 'number' : 'text';
+      const NATIVE = ['number', 'date', 'time', 'datetime-local', 'email', 'tel', 'url'];
+      input.type = NATIVE.indexOf(f.type) >= 0 ? f.type : 'text';
       if (f.type === 'number') {
         input.inputMode = 'numeric';
         if (f.min !== undefined) input.min = f.min;
@@ -291,140 +292,637 @@
 
   /* ---------------- QR ---------------- */
 
-  function mountQR(spec, root, encodeQR, qrToSVG) {
+  /* Escapes for the payload formats that carry their own quoting rules.
+     Getting these wrong is the usual reason a WiFi or contact code scans but
+     then hands the phone a mangled password or name. */
+  const escWifi = (s) => String(s == null ? '' : s).replace(/([\\;,:"])/g, '\\$1');
+  const escCard = (s) => String(s == null ? '' : s).replace(/([\\;,])/g, '\\$1').replace(/\n/g, '\\n');
+  const digitsOnly = (s) => String(s == null ? '' : s).replace(/[^\d+]/g, '');
+
+  /** VCALENDAR wants 20260911T140000, from an <input type="datetime-local">. */
+  function icsStamp(v) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(v || ''));
+    return m ? m[1] + m[2] + m[3] + 'T' + m[4] + m[5] + '00' : '';
+  }
+
+  const queryString = (o) => Object.keys(o)
+    .filter((k) => o[k] !== '' && o[k] != null)
+    .map((k) => k + '=' + encodeURIComponent(o[k]))
+    .join('&');
+
+  /* Content types: which fields to show, and how to turn them into the exact
+     string a scanner expects. `ready` decides whether there is enough to
+     encode yet, so the preview does not flash errors while someone types. */
+  const QR_TYPES = {
+    url: {
+      label: 'Website / URL',
+      fields: [['url', 'Address', 'text', 'https://www.1234tools.com']],
+      ready: (v) => !!String(v.url || '').trim(),
+      build: (v) => {
+        const s = String(v.url).trim();
+        return /^[a-z][a-z0-9+.-]*:/i.test(s) ? s : 'https://' + s;
+      }
+    },
+    text: {
+      label: 'Plain text',
+      fields: [['text', 'Text', 'textarea', 'MVR IT Services - Technology, Delivered']],
+      ready: (v) => !!v.text,
+      build: (v) => v.text
+    },
+    wifi: {
+      label: 'WiFi network',
+      fields: [['ssid', 'Network name (SSID)', 'text', ''], ['pass', 'Password', 'text', ''],
+               ['enc', 'Security', 'select', 'WPA'], ['hidden', 'Hidden network', 'select', 'no']],
+      options: {
+        enc: [['WPA', 'WPA / WPA2 / WPA3'], ['WEP', 'WEP'], ['nopass', 'Open (no password)']],
+        hidden: [['no', 'No'], ['yes', 'Yes']]
+      },
+      ready: (v) => !!v.ssid,
+      build: (v) => 'WIFI:T:' + (v.enc || 'WPA') + ';S:' + escWifi(v.ssid) + ';' +
+        (v.enc !== 'nopass' ? 'P:' + escWifi(v.pass) + ';' : '') +
+        (v.hidden === 'yes' ? 'H:true;' : '') + ';'
+    },
+    vcard: {
+      label: 'Contact card (vCard)',
+      fields: [['first', 'First name', 'text', ''], ['last', 'Last name', 'text', ''],
+               ['org', 'Organisation', 'text', ''], ['title', 'Job title', 'text', ''],
+               ['phone', 'Mobile', 'text', ''], ['work', 'Work phone', 'text', ''],
+               ['email', 'Email', 'text', ''], ['site', 'Website', 'text', ''],
+               ['street', 'Street', 'text', ''], ['city', 'City', 'text', ''],
+               ['zip', 'Postcode', 'text', ''], ['country', 'Country', 'text', '']],
+      ready: (v) => !!(v.first || v.last || v.phone || v.email),
+      build: (v) => [
+        'BEGIN:VCARD', 'VERSION:3.0',
+        'N:' + escCard(v.last) + ';' + escCard(v.first) + ';;;',
+        'FN:' + escCard([v.first, v.last].filter(Boolean).join(' ')),
+        v.org ? 'ORG:' + escCard(v.org) : '',
+        v.title ? 'TITLE:' + escCard(v.title) : '',
+        v.phone ? 'TEL;TYPE=CELL:' + v.phone : '',
+        v.work ? 'TEL;TYPE=WORK,VOICE:' + v.work : '',
+        v.email ? 'EMAIL;TYPE=INTERNET:' + v.email : '',
+        v.site ? 'URL:' + v.site : '',
+        (v.street || v.city || v.zip || v.country)
+          ? 'ADR;TYPE=WORK:;;' + escCard(v.street) + ';' + escCard(v.city) + ';;' + escCard(v.zip) + ';' + escCard(v.country)
+          : '',
+        'END:VCARD'
+      ].filter(Boolean).join('\n')
+    },
+    mecard: {
+      label: 'Contact card (MeCard)',
+      fields: [['name', 'Full name', 'text', ''], ['phone', 'Phone', 'text', ''],
+               ['email', 'Email', 'text', ''], ['url', 'Website', 'text', ''],
+               ['note', 'Note', 'text', '']],
+      ready: (v) => !!(v.name || v.phone || v.email),
+      build: (v) => 'MECARD:' + [
+        v.name ? 'N:' + escCard(v.name) : '',
+        v.phone ? 'TEL:' + digitsOnly(v.phone) : '',
+        v.email ? 'EMAIL:' + escCard(v.email) : '',
+        v.url ? 'URL:' + escCard(v.url) : '',
+        v.note ? 'NOTE:' + escCard(v.note) : ''
+      ].filter(Boolean).join(';') + ';;'
+    },
+    email: {
+      label: 'Email',
+      fields: [['to', 'To', 'text', ''], ['subj', 'Subject', 'text', ''], ['body', 'Message', 'textarea', '']],
+      ready: (v) => !!v.to,
+      build: (v) => {
+        const q = queryString({ subject: v.subj, body: v.body });
+        return 'mailto:' + String(v.to).trim() + (q ? '?' + q : '');
+      }
+    },
+    sms: {
+      label: 'SMS',
+      fields: [['num', 'Number', 'text', ''], ['msg', 'Message', 'textarea', '']],
+      ready: (v) => !!v.num,
+      build: (v) => 'SMSTO:' + digitsOnly(v.num) + ':' + (v.msg || '')
+    },
+    whatsapp: {
+      label: 'WhatsApp',
+      fields: [['num', 'Number, with country code', 'text', ''], ['msg', 'Message', 'textarea', '']],
+      ready: (v) => !!v.num,
+      build: (v) => 'https://wa.me/' + digitsOnly(v.num).replace(/^\+/, '') +
+        (v.msg ? '?' + queryString({ text: v.msg }) : '')
+    },
+    tel: {
+      label: 'Phone call',
+      fields: [['num', 'Number', 'text', '']],
+      ready: (v) => !!v.num,
+      build: (v) => 'tel:' + digitsOnly(v.num)
+    },
+    geo: {
+      label: 'Map location',
+      fields: [['lat', 'Latitude', 'text', '51.4543'], ['lon', 'Longitude', 'text', '-0.9781']],
+      ready: (v) => v.lat !== '' && v.lon !== '',
+      build: (v) => 'geo:' + String(v.lat).trim() + ',' + String(v.lon).trim()
+    },
+    event: {
+      label: 'Calendar event',
+      fields: [['title', 'Event name', 'text', ''], ['loc', 'Location', 'text', ''],
+               ['start', 'Starts', 'datetime-local', ''], ['end', 'Ends', 'datetime-local', ''],
+               ['desc', 'Description', 'textarea', '']],
+      ready: (v) => !!(v.title && v.start),
+      build: (v) => [
+        'BEGIN:VEVENT',
+        'SUMMARY:' + escCard(v.title),
+        v.loc ? 'LOCATION:' + escCard(v.loc) : '',
+        'DTSTART:' + icsStamp(v.start),
+        v.end ? 'DTEND:' + icsStamp(v.end) : '',
+        v.desc ? 'DESCRIPTION:' + escCard(v.desc) : '',
+        'END:VEVENT'
+      ].filter(Boolean).join('\n')
+    },
+    upi: {
+      label: 'UPI payment (India)',
+      fields: [['vpa', 'UPI ID (VPA)', 'text', ''], ['name', 'Payee name', 'text', ''],
+               ['am', 'Amount, optional', 'text', ''], ['tn', 'Note, optional', 'text', '']],
+      ready: (v) => /.+@.+/.test(String(v.vpa || '')),
+      build: (v) => 'upi://pay?' + queryString({ pa: String(v.vpa).trim(), pn: v.name, am: v.am, cu: 'INR', tn: v.tn })
+    },
+    bitcoin: {
+      label: 'Bitcoin payment',
+      fields: [['addr', 'Address', 'text', ''], ['am', 'Amount in BTC, optional', 'text', ''],
+               ['label', 'Label, optional', 'text', '']],
+      ready: (v) => !!String(v.addr || '').trim(),
+      build: (v) => {
+        const q = queryString({ amount: v.am, label: v.label });
+        return 'bitcoin:' + String(v.addr).trim() + (q ? '?' + q : '');
+      }
+    }
+  };
+
+  const SHAPE_LABELS = {
+    square: 'Square', rounded: 'Rounded', fluid: 'Fluid', dots: 'Dots',
+    classy: 'Classy', vertical: 'Vertical', horizontal: 'Horizontal',
+    leaf: 'Leaf', petal: 'Petal'
+  };
+
+  const EC_LABELS = {
+    L: 'Low - recovers 7%', M: 'Medium - recovers 15%',
+    Q: 'Quartile - recovers 25%', H: 'High - recovers 30%'
+  };
+
+  /* Contrast, so the page can say why a pretty colour pair will not scan.
+     Scanners look for a dark-on-light pattern; low contrast or an inverted
+     code is the second most common reason a good matrix fails in the wild. */
+  function hexToRgb(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+
+  function luminance(c) {
+    const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b);
+  }
+
+  function contrastOf(darkHex, lightHex) {
+    const a = hexToRgb(darkHex), b = hexToRgb(lightHex);
+    if (!a || !b) return null;
+    const la = luminance(a), lb = luminance(b);
+    return {
+      ratio: (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05),
+      inverted: la > lb
+    };
+  }
+
+  function mountQR(spec, root, api) {
+    /* The page used to pass (encodeQR, qrToSVG) as two functions. Accept that
+       shape as well, so a cached copy of the old page still works. */
+    const QR = (api && api.encode) ? api : window.QR;
     const io = root.querySelector('.tool-io');
 
-    const TYPES = {
-      url:   { label: 'Website / URL', fields: [['url', 'Address', 'text', 'https://www.mvritservices.com']] },
-      text:  { label: 'Plain text',    fields: [['text', 'Text', 'textarea', 'MVR IT Services — Technology · Delivered']] },
-      wifi:  { label: 'WiFi network',  fields: [['ssid', 'Network name (SSID)', 'text', ''], ['pass', 'Password', 'text', ''],
-                                                ['enc', 'Security', 'select', 'WPA'], ['hidden', 'Hidden network', 'select', 'no']] },
-      vcard: { label: 'Contact card',  fields: [['name', 'Full name', 'text', ''], ['org', 'Organisation', 'text', 'MVR IT Services LTD'],
-                                                ['phone', 'Phone', 'text', ''], ['email', 'Email', 'text', ''], ['site', 'Website', 'text', '']] },
-      email: { label: 'Email',         fields: [['to', 'To', 'text', ''], ['subj', 'Subject', 'text', ''], ['body', 'Message', 'textarea', '']] },
-      sms:   { label: 'SMS',           fields: [['num', 'Number', 'text', ''], ['msg', 'Message', 'textarea', '']] },
-      tel:   { label: 'Phone call',    fields: [['num', 'Number', 'text', '']] },
-      geo:   { label: 'Map location',  fields: [['lat', 'Latitude', 'text', '51.4543'], ['lon', 'Longitude', 'text', '-0.9781']] }
+    const state = {
+      logo: null,          // { href, name }
+      swatchSample: null
     };
 
-    const bar = el('div', 'opt-bar');
-    const typeWrap = el('div', 'field');
-    const typeLab = el('label', null, 'Content type');
-    typeLab.setAttribute('for', 'qr-type');
-    const typeSel = el('select', 'control');
-    typeSel.id = 'qr-type';
-    Object.keys(TYPES).forEach(function (k) {
-      const o = el('option', null, TYPES[k].label);
-      o.value = k;
-      typeSel.appendChild(o);
-    });
-    typeWrap.appendChild(typeLab);
-    typeWrap.appendChild(typeSel);
-    bar.appendChild(typeWrap);
+    /* ---- controls ---- */
 
-    ['ec', 'scale'].forEach(function (k) {
+    const layout = el('div', 'qr-layout');
+    const controls = el('div', 'qr-controls');
+    const stage = el('div', 'qr-stage');
+    layout.appendChild(controls);
+    layout.appendChild(stage);
+    io.appendChild(layout);
+
+    function panel(title, open) {
+      const d = el('details', 'qr-panel');
+      d.open = !!open;
+      const s = el('summary', null, title);
+      d.appendChild(s);
+      const body = el('div', 'qr-panel-body');
+      d.appendChild(body);
+      controls.appendChild(d);
+      return body;
+    }
+
+    function selectControl(host, label, name, options, def) {
       const w = el('div', 'field');
-      const l = el('label', null, k === 'ec' ? 'Error correction' : 'Size');
+      const id = 'qr-' + name;
+      const l = el('label', null, label);
+      l.setAttribute('for', id);
       const s = el('select', 'control');
-      const opts = k === 'ec'
-        ? [['M', 'Medium — 15% (screens)'], ['L', 'Low — 7% (max data)'], ['Q', 'Quartile — 25% (print)'], ['H', 'High — 30% (logo / harsh)']]
-        : [['8', 'Standard'], ['4', 'Small'], ['12', 'Large'], ['20', 'Extra large (print)']];
-      opts.forEach(function (o) {
+      s.id = id;
+      s.dataset.name = name;
+      options.forEach(function (o) {
         const op = el('option', null, o[1]);
         op.value = o[0];
+        if (o[0] === def) op.selected = true;
         s.appendChild(op);
       });
-      s.dataset.name = k;
       w.appendChild(l);
       w.appendChild(s);
-      bar.appendChild(w);
-    });
+      host.appendChild(w);
+      return s;
+    }
 
-    const colWrap = el('div', 'field');
-    colWrap.appendChild(el('label', null, 'Colours'));
-    const colRow = el('div', 'colour-field');
-    const darkIn = el('input');
-    darkIn.type = 'color'; darkIn.className = 'colour-swatch'; darkIn.value = '#06080f';
-    const lightIn = el('input');
-    lightIn.type = 'color'; lightIn.className = 'colour-swatch'; lightIn.value = '#ffffff';
-    colRow.appendChild(darkIn);
-    colRow.appendChild(lightIn);
-    colWrap.appendChild(colRow);
-    bar.appendChild(colWrap);
+    function colourControl(host, label, name, def) {
+      const w = el('div', 'field');
+      const l = el('label', null, label);
+      w.appendChild(l);
+      const row = el('div', 'colour-field');
+      const swatch = el('input');
+      swatch.type = 'color';
+      swatch.className = 'colour-swatch';
+      swatch.value = def;
+      swatch.dataset.name = name;
+      const hex = el('input', 'control colour-hex');
+      hex.type = 'text';
+      hex.value = def;
+      hex.spellcheck = false;
+      hex.setAttribute('aria-label', label + ' hex value');
+      swatch.addEventListener('input', function () { hex.value = swatch.value; });
+      hex.addEventListener('input', function () {
+        if (/^#[0-9a-f]{6}$/i.test(hex.value)) {
+          swatch.value = hex.value;
+          swatch.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+      row.appendChild(swatch);
+      row.appendChild(hex);
+      w.appendChild(row);
+      host.appendChild(w);
+      return { read: function () { return swatch.value; }, wrap: w };
+    }
 
-    const fieldHost = el('div', 'gen-form');
-    const preview = el('div', 'qr-stage');
-    const qrBox = el('div', 'qr-box');
-    const msg = el('div', 'io-msg');
-    const acts = el('div', 'io-actions qr-actions');
-    const stats = el('div', 'stat-grid');
-    preview.appendChild(qrBox);
-    preview.appendChild(msg);
-    preview.appendChild(acts);
-    preview.appendChild(stats);
+    function checkControl(host, label, name, def) {
+      const w = el('div', 'field field-check');
+      const id = 'qr-' + name;
+      const box = el('input');
+      box.type = 'checkbox';
+      box.id = id;
+      box.checked = !!def;
+      box.dataset.name = name;
+      const l = el('label', null, label);
+      l.setAttribute('for', id);
+      w.appendChild(box);
+      w.appendChild(l);
+      host.appendChild(w);
+      return box;
+    }
 
-    io.appendChild(bar);
-    io.appendChild(fieldHost);
-    io.appendChild(preview);
+    /* A shape picker whose swatches are real QR codes rendered in that shape,
+       so the choice is visible rather than a word in a dropdown. */
+    function shapePicker(host, label, name, names, def, render) {
+      const w = el('div', 'field field-wide');
+      w.appendChild(el('label', null, label));
+      const grid = el('div', 'shape-grid');
+      grid.setAttribute('role', 'radiogroup');
+      grid.setAttribute('aria-label', label);
+      let current = def;
+      names.forEach(function (n) {
+        const b = el('button', 'shape-btn');
+        b.type = 'button';
+        b.dataset.value = n;
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', n === def ? 'true' : 'false');
+        b.title = SHAPE_LABELS[n] || n;
+        b.innerHTML = render(n);
+        b.appendChild(el('span', 'shape-name', SHAPE_LABELS[n] || n));
+        if (n === def) b.classList.add('is-active');
+        b.addEventListener('click', function () {
+          current = n;
+          grid.querySelectorAll('.shape-btn').forEach(function (o) {
+            o.classList.toggle('is-active', o === b);
+            o.setAttribute('aria-checked', o === b ? 'true' : 'false');
+          });
+          schedule();
+        });
+        grid.appendChild(b);
+      });
+      w.appendChild(grid);
+      host.appendChild(w);
+      return { read: function () { return current; } };
+    }
+
+    /* content -------------------------------------------------- */
+
+    const contentBody = panel('1. Content', true);
+    const typeSel = selectControl(contentBody, 'Content type', 'type',
+      Object.keys(QR_TYPES).map((k) => [k, QR_TYPES[k].label]), 'url');
+    const fieldHost = el('div', 'gen-form gen-form-flush');
+    contentBody.appendChild(fieldHost);
 
     let readers = [];
     function buildFields() {
       fieldHost.textContent = '';
-      readers = TYPES[typeSel.value].fields.map(function (f) {
-        const spec2 = { key: f[0], label: f[1], type: f[2], default: f[3] };
+      const type = QR_TYPES[typeSel.value];
+      readers = type.fields.map(function (f) {
+        const s = { key: f[0], label: f[1], type: f[2], default: f[3] };
         if (f[2] === 'select') {
-          spec2.options = f[0] === 'enc'
-            ? [{ value: 'WPA', label: 'WPA / WPA2 / WPA3' }, { value: 'WEP', label: 'WEP' }, { value: 'nopass', label: 'Open (no password)' }]
-            : [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }];
+          s.options = (type.options[f[0]] || []).map((o) => ({ value: o[0], label: o[1] }));
         }
-        const b = buildField(spec2);
+        const b = buildField(s);
         fieldHost.appendChild(b.wrap);
         return b;
       });
     }
 
-    function payload() {
+    function values() {
       const v = {};
       readers.forEach(function (r) { v[r.key] = r.read(); });
-      const esc = s => String(s || '').replace(/([\\;,:"])/g, '\\$1');
-      switch (typeSel.value) {
-        case 'url':   return String(v.url || '').trim();
-        case 'text':  return v.text || '';
-        case 'wifi':  return v.ssid ? `WIFI:T:${v.enc};S:${esc(v.ssid)};${v.enc !== 'nopass' ? 'P:' + esc(v.pass) + ';' : ''}${v.hidden === 'yes' ? 'H:true;' : ''};` : '';
-        case 'vcard': return v.name || v.phone || v.email
-          ? ['BEGIN:VCARD', 'VERSION:3.0', `FN:${v.name || ''}`, v.org ? `ORG:${v.org}` : '',
-             v.phone ? `TEL;TYPE=WORK,VOICE:${v.phone}` : '', v.email ? `EMAIL:${v.email}` : '',
-             v.site ? `URL:${v.site}` : '', 'END:VCARD'].filter(Boolean).join('\n')
-          : '';
-        case 'email': return v.to ? `mailto:${v.to}${v.subj || v.body ? '?' : ''}${v.subj ? 'subject=' + encodeURIComponent(v.subj) : ''}${v.body ? (v.subj ? '&' : '') + 'body=' + encodeURIComponent(v.body) : ''}` : '';
-        case 'sms':   return v.num ? `SMSTO:${v.num}:${v.msg || ''}` : '';
-        case 'tel':   return v.num ? `tel:${v.num}` : '';
-        case 'geo':   return (v.lat && v.lon) ? `geo:${v.lat},${v.lon}` : '';
-        default:      return '';
-      }
+      return v;
     }
 
-    let currentSVG = '', currentQR = null;
+    /* shape ---------------------------------------------------- */
 
-    function run() {
-      const data = payload();
-      const ec = bar.querySelector('[data-name="ec"]').value;
-      const scale = Number(bar.querySelector('[data-name="scale"]').value);
+    const shapeBody = panel('2. Shape', false);
 
+    /* The swatches are real QR codes drawn in the style on offer, zoomed into
+       one detail. Shown whole at this size every option looks the same, which
+       is the failing of most style pickers. The viewBox is in module units,
+       so cropping is just a different window onto the same path data. */
+    const sample = QR.encode('1234Tools', 'M');
+    const SAMPLE_QUIET = 1;
+
+    /** The 6x6 window of data modules closest to half filled, for contrast. */
+    const detail = (function () {
+      let best = { r: 8, c: 8, score: Infinity };
+      for (let r = 8; r <= sample.size - 14; r++) {
+        for (let c = 8; c <= sample.size - 14; c++) {
+          let dark = 0;
+          for (let dr = 0; dr < 6; dr++) for (let dc = 0; dc < 6; dc++) dark += sample.matrix[r + dr][c + dc];
+          const score = Math.abs(dark - 18);
+          if (score < best.score) best = { r: r, c: c, score: score };
+        }
+      }
+      return best;
+    })();
+
+    function crop(svg, x, y, w, h) {
+      return svg.replace(/viewBox="[^"]*"/, 'viewBox="' + x + ' ' + y + ' ' + w + ' ' + h + '"')
+                .replace(/width="\d+" height="\d+"/, 'width="48" height="48"');
+    }
+
+    const swatch = (opts) => QR.toSVG(sample, Object.assign({
+      scale: 3, quiet: SAMPLE_QUIET, dark: 'currentColor', light: 'none'
+    }, opts));
+
+    const moduleSwatch = (n) =>
+      crop(swatch({ shape: n }), detail.c + SAMPLE_QUIET, detail.r + SAMPLE_QUIET, 6, 6);
+    const eyeSwatch = (opts) =>
+      crop(swatch(opts), SAMPLE_QUIET - 0.5, SAMPLE_QUIET - 0.5, 8, 8);
+
+    const shapePick = shapePicker(shapeBody, 'Module shape', 'shape',
+      QR.shapes.module, 'square', moduleSwatch);
+    const framePick = shapePicker(shapeBody, 'Eye frame', 'eyeFrame',
+      QR.shapes.eyeFrame, 'square', (n) => eyeSwatch({ eyeFrame: n }));
+    const ballPick = shapePicker(shapeBody, 'Eye centre', 'eyeBall',
+      QR.shapes.eyeBall, 'square', (n) => eyeSwatch({ eyeBall: n }));
+
+    /* colour --------------------------------------------------- */
+
+    const colourBody = panel('3. Colours', false);
+    const fillSel = selectControl(colourBody, 'Foreground', 'fill',
+      [['solid', 'Solid colour'], ['linear', 'Linear gradient'], ['radial', 'Radial gradient']], 'solid');
+    const darkIn = colourControl(colourBody, 'Foreground colour', 'dark', '#06080f');
+    const dark2In = colourControl(colourBody, 'Gradient second colour', 'dark2', '#6c4bd8');
+    const angleSel = selectControl(colourBody, 'Gradient angle', 'angle',
+      [['45', '45 degrees'], ['0', 'Left to right'], ['90', 'Top to bottom'], ['135', '135 degrees']], '45');
+    const lightIn = colourControl(colourBody, 'Background colour', 'light', '#ffffff');
+    const transparentBox = checkControl(colourBody, 'Transparent background (SVG and PNG)', 'transparent', false);
+    const eyeMatchBox = checkControl(colourBody, 'Eyes match the foreground', 'eyematch', true);
+    const frameColIn = colourControl(colourBody, 'Eye frame colour', 'framecol', '#06080f');
+    const ballColIn = colourControl(colourBody, 'Eye centre colour', 'ballcol', '#06080f');
+
+    /* logo ----------------------------------------------------- */
+
+    const logoBody = panel('4. Logo', false);
+    const logoRow = el('div', 'field field-wide');
+    logoRow.appendChild(el('label', null, 'Centre image'));
+    const logoPick = el('div', 'logo-pick');
+    const logoInput = el('input');
+    logoInput.type = 'file';
+    logoInput.accept = 'image/png,image/jpeg,image/svg+xml,image/webp,image/gif';
+    logoInput.className = 'visually-hidden';
+    logoInput.id = 'qr-logo';
+    const logoLabel = el('label', 'btn-ghost logo-choose', 'Choose image');
+    logoLabel.setAttribute('for', 'qr-logo');
+    const logoName = el('span', 'logo-name', 'No image - the code stays plain');
+    const logoClear = el('button', 'btn-ghost', 'Remove');
+    logoClear.type = 'button';
+    logoClear.hidden = true;
+    logoPick.appendChild(logoLabel);
+    logoPick.appendChild(logoClear);
+    logoPick.appendChild(logoName);
+    logoRow.appendChild(logoPick);
+    logoBody.appendChild(logoRow);
+
+    const logoSizeSel = selectControl(logoBody, 'Logo size', 'logosize',
+      [['0.16', 'Small - 16%'], ['0.22', 'Medium - 22%'], ['0.28', 'Large - 28%']], '0.22');
+    const logoPadSel = selectControl(logoBody, 'Clear space around it', 'logopad',
+      [['1', '1 module'], ['0', 'None'], ['2', '2 modules']], '1');
+    const logoBgBox = checkControl(logoBody, 'Knock out the code behind the logo', 'logobg', true);
+
+    logoInput.addEventListener('change', function () {
+      const f = logoInput.files && logoInput.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = function () {
+        state.logo = { href: String(reader.result), name: f.name };
+        logoName.textContent = f.name;
+        logoClear.hidden = false;
+        schedule();
+      };
+      reader.readAsDataURL(f);
+    });
+    logoClear.addEventListener('click', function () {
+      state.logo = null;
+      logoInput.value = '';
+      logoName.textContent = 'No image - the code stays plain';
+      logoClear.hidden = true;
+      schedule();
+    });
+    logoBody.appendChild(logoInput);
+
+    /* output --------------------------------------------------- */
+
+    const outBody = panel('5. Output', false);
+    const ecSel = selectControl(outBody, 'Error correction', 'ec',
+      [['M', EC_LABELS.M], ['L', EC_LABELS.L], ['Q', EC_LABELS.Q], ['H', EC_LABELS.H]], 'M');
+    const sizeSel = selectControl(outBody, 'PNG size', 'size',
+      [['600', '600 px'], ['300', '300 px'], ['1200', '1200 px'], ['2400', '2400 px - print']], '600');
+    const quietSel = selectControl(outBody, 'Quiet zone', 'quiet',
+      [['4', '4 modules - standard'], ['2', '2 modules'], ['1', '1 module'], ['8', '8 modules']], '4');
+
+    /* ---- stage ---- */
+
+    const qrBox = el('div', 'qr-box');
+    const verdict = el('div', 'qr-verdict');
+    const msg = el('div', 'io-msg');
+    const acts = el('div', 'io-actions qr-actions');
+    const stats = el('div', 'stat-grid');
+    stage.appendChild(qrBox);
+    stage.appendChild(verdict);
+    stage.appendChild(msg);
+    stage.appendChild(acts);
+    stage.appendChild(stats);
+
+    let currentSVG = '', currentText = '';
+
+    function styleOptions(scale) {
+      const solidDark = darkIn.read();
+      const transparent = transparentBox.checked;
+      const light = transparent ? 'none' : lightIn.read();
+      const opts = {
+        scale: scale,
+        quiet: Number(quietSel.value),
+        dark: solidDark,
+        light: light,
+        shape: shapePick.read(),
+        eyeFrame: framePick.read(),
+        eyeBall: ballPick.read()
+      };
+      if (fillSel.value !== 'solid') {
+        opts.gradient = {
+          type: fillSel.value === 'radial' ? 'radial' : 'linear',
+          from: solidDark,
+          to: dark2In.read(),
+          angle: Number(angleSel.value)
+        };
+      }
+      if (!eyeMatchBox.checked) {
+        opts.eyeFrameColour = frameColIn.read();
+        opts.eyeBallColour = ballColIn.read();
+      }
+      if (state.logo) {
+        opts.logo = {
+          href: state.logo.href,
+          size: Number(logoSizeSel.value),
+          padding: Number(logoPadSel.value),
+          background: logoBgBox.checked ? (transparent ? '#ffffff' : lightIn.read()) : 'none'
+        };
+      }
+      return opts;
+    }
+
+    /** Show or hide the controls that only apply to the current choices. */
+    function syncControlVisibility() {
+      const gradient = fillSel.value !== 'solid';
+      dark2In.wrap.hidden = !gradient;
+      angleSel.parentNode.hidden = fillSel.value !== 'linear';
+      lightIn.wrap.hidden = transparentBox.checked;
+      frameColIn.wrap.hidden = eyeMatchBox.checked;
+      ballColIn.wrap.hidden = eyeMatchBox.checked;
+      const hasLogo = !!state.logo;
+      logoSizeSel.parentNode.hidden = !hasLogo;
+      logoPadSel.parentNode.hidden = !hasLogo;
+      logoBgBox.parentNode.hidden = !hasLogo;
+    }
+
+    /**
+     * Everything the page can honestly check before the code meets a camera:
+     * it decodes back to the same text, the colours are the right way round
+     * and far enough apart, and any logo stays inside the error-correction
+     * budget of the worst-hit block.
+     */
+    function runChecks(qr, opts) {
+      const notes = [];
+      const check = QR.verify(qr, state.logo ? { logo: { size: opts.logo.size, padding: opts.logo.padding } } : null);
+
+      if (!check.ok) {
+        return { ok: false, headline: 'This code did not decode back to your content', notes: [check.error] };
+      }
+
+      let ok = true;
+      const gradient = fillSel.value !== 'solid';
+      const bg = transparentBox.checked ? '#ffffff' : lightIn.read();
+      const con = contrastOf(darkIn.read(), bg);
+      if (con) {
+        if (con.inverted) {
+          ok = false;
+          notes.push('The foreground is lighter than the background. Many scanners only read dark-on-light, so swap the two colours.');
+        } else if (con.ratio < 3) {
+          ok = false;
+          notes.push('Contrast is only ' + con.ratio.toFixed(1) + ':1. Aim for 4.5:1 or more, or phones will struggle in poor light.');
+        } else if (con.ratio < 4.5) {
+          notes.push('Contrast is ' + con.ratio.toFixed(1) + ':1, which works on a screen but is tight for print. 7:1 is a safer target.');
+        }
+      }
+      if (gradient) {
+        const con2 = contrastOf(dark2In.read(), bg);
+        if (con2 && (con2.inverted || con2.ratio < 3)) {
+          ok = false;
+          notes.push('The second gradient colour has too little contrast against the background, so one end of the code will fade out.');
+        }
+      }
+      if (transparentBox.checked) {
+        notes.push('A transparent background inherits whatever sits behind it. Place it on a plain light area only.');
+      }
+
+      if (check.logo) {
+        const L = check.logo;
+        if (L.fatal) {
+          ok = false;
+          notes.push('The logo covers ' + L.worstBlock + ' codewords in one block, past the ' + L.budget +
+            ' this code can repair. Shrink the logo or raise error correction to H.');
+        } else if (!L.safe) {
+          notes.push('The logo uses ' + Math.round(L.used * 100) + '% of the repair budget in its worst block. ' +
+            'It should still read, but leave more room if this is going to print.');
+        } else {
+          notes.push('The logo uses ' + Math.round(L.used * 100) + '% of the repair budget, which leaves room for print and camera noise.');
+        }
+      }
+
+      if (Number(quietSel.value) < 4) {
+        notes.push('A quiet zone under 4 modules is outside the standard. Codes butted against artwork often fail.');
+      }
+
+      return {
+        ok: ok,
+        headline: ok
+          ? 'Verified: decoded back to your exact content'
+          : 'Decodes correctly, but these settings will cost you scans',
+        notes: notes,
+        check: check
+      };
+    }
+
+    function render() {
+      syncControlVisibility();
+
+      const type = QR_TYPES[typeSel.value];
+      const v = values();
       qrBox.textContent = '';
       acts.textContent = '';
+      verdict.textContent = '';
+      verdict.className = 'qr-verdict';
       msg.textContent = '';
       msg.className = 'io-msg';
 
-      if (!data) {
+      if (!type.ready(v)) {
         msg.textContent = 'Fill in the fields above and your QR code will appear here.';
         msg.className = 'io-msg is-note';
         renderStats(stats, null);
         return;
       }
 
+      const data = type.build(v);
+      const ec = ecSel.value;
+
       let qr;
-      try { qr = encodeQR(data, ec); }
+      try { qr = QR.encode(data, ec); }
       catch (e) {
         msg.textContent = e.message;
         msg.className = 'io-msg is-error';
@@ -432,35 +930,62 @@
         return;
       }
 
-      currentQR = qr;
-      currentSVG = qrToSVG(qr, { scale: scale, dark: darkIn.value, light: lightIn.value });
+      currentText = data;
+      const opts = styleOptions(Math.max(2, Math.round(Number(sizeSel.value) / (qr.size + Number(quietSel.value) * 2))));
+      currentSVG = QR.toSVG(qr, opts);
       qrBox.innerHTML = currentSVG;
 
+      const result = runChecks(qr, opts);
+      verdict.className = 'qr-verdict ' + (result.ok ? 'is-pass' : 'is-warn');
+      const head = el('p', 'qr-verdict-head', result.headline);
+      verdict.appendChild(head);
+      if (result.notes.length) {
+        const ul = el('ul', 'qr-verdict-notes');
+        result.notes.forEach(function (n) { ul.appendChild(el('li', null, n)); });
+        verdict.appendChild(ul);
+      }
+
+      const pngSize = Number(sizeSel.value);
       acts.appendChild(downloadButton('Download SVG', 'qr-code.svg', function () {
-        return new Blob([currentSVG], { type: 'image/svg+xml' });
+        return new Blob([QR.toSVG(qr, styleOptions(8))], { type: 'image/svg+xml' });
       }));
       acts.appendChild(downloadButton('Download PNG', 'qr-code.png', function () {
-        return svgToPngBlob(currentSVG, (qr.size + 8) * scale);
+        return svgToPngBlob(currentSVG, pngSize);
       }));
-      acts.appendChild(copyButton(function () { return data; }, 'Copy content'));
+      acts.appendChild(copyButton(function () { return currentText; }, 'Copy content'));
+
+      const modes = qr.segments.map(function (s) {
+        return ({ numeric: 'numeric', alnum: 'alphanumeric', byte: 'byte' })[s.mode] + ' x' + s.length;
+      }).join(', ');
+      const mmPerModule = 0.5;
+      const printMm = Math.ceil((qr.size + Number(quietSel.value) * 2) * mmPerModule);
 
       renderStats(stats, [
-        ['Version', `${qr.version} (${qr.size}×${qr.size} modules)`],
-        ['Error correction', { L: 'Low, 7%', M: 'Medium, 15%', Q: 'Quartile, 25%', H: 'High, 30%' }[qr.ecLevel]],
+        ['Version', qr.version + ' (' + qr.size + ' x ' + qr.size + ' modules)'],
+        ['Error correction', EC_LABELS[qr.ecLevel]],
         ['Mask pattern', String(qr.mask)],
+        ['Encoding', modes],
         ['Content length', data.length + ' characters'],
-        ['Image size', `${(qr.size + 8) * scale}×${(qr.size + 8) * scale} px`]
+        ['PNG export', pngSize + ' x ' + pngSize + ' px'],
+        ['Smallest safe print', printMm + ' mm wide']
       ]);
     }
 
-    typeSel.addEventListener('change', function () { buildFields(); run(); });
-    fieldHost.addEventListener('input', run);
-    fieldHost.addEventListener('change', run);
-    bar.addEventListener('input', run);
-    bar.addEventListener('change', run);
+    /* Re-render on the next frame so a fast typist does not queue up work. */
+    let pending = 0;
+    function schedule() {
+      if (pending) return;
+      pending = requestAnimationFrame(function () { pending = 0; render(); });
+    }
+
+    typeSel.addEventListener('change', function () { buildFields(); schedule(); });
+    fieldHost.addEventListener('input', schedule);
+    fieldHost.addEventListener('change', schedule);
+    controls.addEventListener('input', schedule);
+    controls.addEventListener('change', schedule);
 
     buildFields();
-    run();
+    render();
   }
 
   function svgToPngBlob(svg, size) {
