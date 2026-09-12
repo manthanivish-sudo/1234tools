@@ -801,11 +801,16 @@
     /* ---- stage ---- */
 
     const qrBox = el('div', 'qr-box');
+    /* Only shown on a shared link. Someone who is sent a code should be able to
+       read what it points at before pointing a camera at it — the same reason
+       the scanner names the domain instead of just opening it. */
+    const sharedContent = el('p', 'shared-content');
     const verdict = el('div', 'qr-verdict');
     const msg = el('div', 'io-msg');
     const acts = el('div', 'io-actions qr-actions');
     const stats = el('div', 'stat-grid');
     stage.appendChild(qrBox);
+    stage.appendChild(sharedContent);
     stage.appendChild(verdict);
     stage.appendChild(msg);
     stage.appendChild(acts);
@@ -897,8 +902,24 @@
         (v) => { eyeMatchBox.checked = false; ballColIn.write('#' + v); }]
     ];
 
+    /* Snapshotted before any link is read, so "default" means what the page
+       opens with rather than a list repeated in two places. */
+    let styleDefaults = null;
+    function captureDefaults() {
+      styleDefaults = {};
+      STYLE_KEYS.forEach(function (k) { styleDefaults[k[0]] = k[1](); });
+    }
+
+    /**
+     * The link for a finished code.
+     *
+     * Only settings that differ from the default travel, so an ordinary black
+     * code is a short link rather than a screenful of ec:M,px:600,quiet:4 and
+     * so on that all say "unchanged". And it opens showing the code, because
+     * someone sending a QR code is sending the code, not an editing session —
+     * the controls are one tap away for anyone who wants them.
+     */
     function shareLink() {
-      const type = QR_TYPES[typeSel.value];
       const q = new URLSearchParams();
       q.set('t', typeSel.value);
       readers.forEach(function (r) {
@@ -906,10 +927,14 @@
         if (v !== '' && v != null) q.set(r.key, v);
       });
       const style = STYLE_KEYS
-        .map(function (k) { return k[1]() ? k[0] + ':' + k[1]() : ''; })
-        .filter(Boolean)
+        .filter(function (k) {
+          const v = k[1]();
+          return v && (!styleDefaults || v !== styleDefaults[k[0]]);
+        })
+        .map(function (k) { return k[0] + ':' + k[1](); })
         .join(',');
       if (style) q.set('style', style);
+      q.set('v', '1');
       return location.origin + location.pathname + '?' + q.toString();
     }
 
@@ -946,13 +971,18 @@
      */
     function applyViewMode() {
       const params = new URLSearchParams(location.search);
-      if (params.get('view') !== 'code') return;
-      root.classList.add('is-shared-view');
+      // `v=1` is what links carry now; `view=code` was the first spelling and
+      // still works, because links already sent to people have to keep working.
+      if (params.get('v') !== '1' && params.get('view') !== 'code') return;
+      // on the document, not the article: the breadcrumbs and the page heading
+      // sit outside the tool and have to go too, or the code lands below the
+      // fold on the phone it was sent to
+      document.documentElement.classList.add('is-shared-view');
 
       const open = el('button', 'btn-ghost shared-edit', 'Edit this code');
       open.type = 'button';
       open.addEventListener('click', function () {
-        root.classList.remove('is-shared-view');
+        document.documentElement.classList.remove('is-shared-view');
         open.remove();
       });
       stage.parentNode.insertBefore(open, stage.nextSibling);
@@ -1117,6 +1147,7 @@
       }
 
       currentText = data;
+      sharedContent.textContent = data;
       const opts = styleOptions(Math.max(2, Math.round(Number(sizeSel.value) / (qr.size + Number(quietSel.value) * 2))));
       currentSVG = QR.toSVG(qr, opts);
       qrBox.innerHTML = currentSVG;
@@ -1209,6 +1240,7 @@
     controls.addEventListener('change', schedule);
 
     buildFields();
+    captureDefaults();
     /* A link like ?t=wifi&ssid=Cafe&style=ec:H rebuilds the code on arrival,
        so a code can be sent as a URL rather than as a picture — and the person
        who receives it can see what it contains before trusting it. */

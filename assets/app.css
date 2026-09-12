@@ -649,10 +649,26 @@ details p { margin: 8px 0 0; color: var(--text-2); font-size: .93rem; }
 
 /* A code arriving as a shared link: show the code, keep the controls one tap
    away. The panels stay in the DOM so the tool still works if they open them. */
-.is-shared-view .qr-controls { display: none; }
+.is-shared-view .qr-controls,
+.is-shared-view .crumbs,
+.is-shared-view .tool > .eyebrow,
+.is-shared-view .tool > .lede,
+.is-shared-view .tool > .panel,
+.is-shared-view .sidebar,
+.is-shared-view .sidebar-open { display: none; }
+.is-shared-view .layout { display: block; }
+.is-shared-view .tool h1 { font-size: 1.35rem; margin: 4px 0 14px; }
 .is-shared-view .qr-layout { grid-template-columns: 1fr; }
 .is-shared-view .qr-stage { position: static; max-width: 460px; margin: 0 auto; }
 .shared-edit { display: block; margin: 16px auto 0; }
+.shared-content { display: none; }
+.is-shared-view .shared-content {
+  display: block; margin: 0; padding: 12px 16px;
+  font-family: var(--font-mono); font-size: .78rem; line-height: 1.5;
+  color: var(--text-2); background: var(--bg-0);
+  border-top: 1px solid var(--border);
+  overflow-wrap: anywhere; max-height: 7.5em; overflow: auto;
+}
 
 /* the scan check — the page decodes its own output before you download it */
 .qr-verdict { padding: 0 16px; }
