@@ -2,7 +2,7 @@
    Precaching 900 pages would be a rude thing to do to someone's data plan,
    so we precache only the shell and cache tool pages as they are visited. */
 
-var V = '1234tools-v35';
+var V = '1234tools-v36';
 var SHELL = [
   './', './index.html',
   './assets/app.css', './assets/app.js', './assets/icons.svg',
@@ -69,7 +69,10 @@ self.addEventListener('fetch', function (e) {
         return res;
       })
       .catch(function () {
-        return caches.match(req).then(function (hit) {
+        // ignoreSearch matters for installed tools: their start_url carries a
+        // ?src=pwa marker, and an exact match would miss the copy cached when
+        // the page was first visited, stranding the app on the offline notice.
+        return caches.match(req, { ignoreSearch: true }).then(function (hit) {
           return hit || caches.match('./index.html') || new Response(
             '<!doctype html><meta charset=utf-8><title>Offline</title>' +
             '<body style="font-family:system-ui;background:#06080f;color:#f4f6fb;' +

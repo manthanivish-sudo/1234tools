@@ -960,6 +960,8 @@
       const mmPerModule = 0.5;
       const printMm = Math.ceil((qr.size + Number(quietSel.value) * 2) * mmPerModule);
 
+      document.dispatchEvent(new CustomEvent('mvr:tool-used'));
+
       renderStats(stats, [
         ['Version', qr.version + ' (' + qr.size + ' x ' + qr.size + ' modules)'],
         ['Error correction', EC_LABELS[qr.ecLevel]],
@@ -986,6 +988,554 @@
 
     buildFields();
     render();
+  }
+
+  /* ---------------- QR scanner ---------------- */
+
+  /**
+   * What a scanned payload actually is, and what can usefully be done with it.
+   * A scanner that only prints the raw string makes the reader do the parsing,
+   * which is the one job they wanted done for them.
+   */
+  function classifyPayload(text) {
+    const s = String(text || '');
+    const lower = s.toLowerCase();
+
+    if (/^wifi:/i.test(s)) {
+      const field = (key) => {
+        const m = new RegExp(key + ':((?:\\\\.|[^;])*);', 'i').exec(s);
+        return m ? m[1].replace(/\\(.)/g, '$1') : '';
+      };
+      return {
+        kind: 'WiFi network',
+        fields: [
+          ['Network (SSID)', field('S')],
+          ['Security', ({ WPA: 'WPA / WPA2 / WPA3', WEP: 'WEP', nopass: 'Open, no password' })[field('T')] || field('T') || 'Unspecified'],
+          ['Password', field('P') || '(none)'],
+          ['Hidden', /H:true/i.test(s) ? 'Yes' : 'No']
+        ]
+      };
+    }
+
+    if (/^BEGIN:VCARD/i.test(s)) {
+      const line = (key) => {
+        const m = new RegExp('^' + key + '[^:\\r\\n]*:(.*)$', 'im').exec(s);
+        return m ? m[1].replace(/\\n/g, ' ').replace(/\\(.)/g, '$1').trim() : '';
+      };
+      return {
+        kind: 'Contact card',
+        fields: [
+          ['Name', line('FN')], ['Organisation', line('ORG')], ['Title', line('TITLE')],
+          ['Phone', line('TEL')], ['Email', line('EMAIL')], ['Website', line('URL')]
+        ].filter((f) => f[1]),
+        download: { name: 'contact.vcf', type: 'text/vcard', body: s }
+      };
+    }
+
+    if (/^MECARD:/i.test(s)) {
+      const field = (key) => {
+        const m = new RegExp(key + ':((?:\\\\.|[^;])*);', 'i').exec(s);
+        return m ? m[1].replace(/\\(.)/g, '$1') : '';
+      };
+      const name = field('N'), tel = field('TEL'), email = field('EMAIL'), url = field('URL');
+      const vcard = ['BEGIN:VCARD', 'VERSION:3.0', 'FN:' + name,
+        tel ? 'TEL:' + tel : '', email ? 'EMAIL:' + email : '', url ? 'URL:' + url : '',
+        'END:VCARD'].filter(Boolean).join('\n');
+      return {
+        kind: 'Contact card',
+        fields: [['Name', name], ['Phone', tel], ['Email', email], ['Website', url]].filter((f) => f[1]),
+        download: { name: 'contact.vcf', type: 'text/vcard', body: vcard }
+      };
+    }
+
+    if (/^BEGIN:(VEVENT|VCALENDAR)/i.test(s)) {
+      const line = (key) => {
+        const m = new RegExp('^' + key + '[^:\\r\\n]*:(.*)$', 'im').exec(s);
+        return m ? m[1].trim() : '';
+      };
+      const when = (v) => {
+        const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/.exec(v || '');
+        return m ? m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5] : v;
+      };
+      const body = /^BEGIN:VCALENDAR/i.test(s) ? s
+        : 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//1234Tools//QR//EN\n' + s + '\nEND:VCALENDAR';
+      return {
+        kind: 'Calendar event',
+        fields: [['Event', line('SUMMARY')], ['Location', line('LOCATION')],
+                 ['Starts', when(line('DTSTART'))], ['Ends', when(line('DTEND'))],
+                 ['Details', line('DESCRIPTION')]].filter((f) => f[1]),
+        download: { name: 'event.ics', type: 'text/calendar', body: body }
+      };
+    }
+
+    if (/^upi:\/\//i.test(s)) {
+      const q = {};
+      (s.split('?')[1] || '').split('&').forEach((kv) => {
+        const i = kv.indexOf('=');
+        if (i > 0) q[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1).replace(/\+/g, ' '));
+      });
+      return {
+        kind: 'UPI payment request',
+        warn: 'Check the payee and amount in your payment app before confirming. A payment code can be swapped on a printed sticker.',
+        fields: [['Pay to', q.pa || ''], ['Payee name', q.pn || ''],
+                 ['Amount', q.am ? (q.cu || 'INR') + ' ' + q.am : 'Not set'],
+                 ['Note', q.tn || '']].filter((f) => f[1]),
+        link: s
+      };
+    }
+
+    if (/^bitcoin:/i.test(s)) {
+      const addr = s.slice(8).split('?')[0];
+      const amount = /[?&]amount=([^&]*)/i.exec(s);
+      return {
+        kind: 'Bitcoin payment request',
+        warn: 'Check the address in your wallet before sending. Payments cannot be reversed.',
+        fields: [['Address', addr], ['Amount', amount ? amount[1] + ' BTC' : 'Not set']],
+        link: s
+      };
+    }
+
+    if (/^mailto:/i.test(s)) {
+      return { kind: 'Email', fields: [['To', s.slice(7).split('?')[0]]], link: s };
+    }
+    if (/^(sms|smsto):/i.test(s)) {
+      const rest = s.replace(/^(sms|smsto):/i, '');
+      const parts = rest.split(':');
+      return { kind: 'SMS', fields: [['Number', parts[0]], ['Message', parts.slice(1).join(':')]].filter((f) => f[1]) };
+    }
+    if (/^tel:/i.test(s)) {
+      return { kind: 'Phone number', fields: [['Number', s.slice(4)]], link: s };
+    }
+    if (/^geo:/i.test(s)) {
+      const c = s.slice(4).split(/[,;]/);
+      return {
+        kind: 'Map location',
+        fields: [['Latitude', c[0]], ['Longitude', c[1] || '']],
+        link: 'https://www.openstreetmap.org/?mlat=' + encodeURIComponent(c[0]) + '&mlon=' + encodeURIComponent(c[1] || '')
+      };
+    }
+
+    if (/^https?:\/\//i.test(s)) {
+      let host = '', safe = true, notes = [];
+      try {
+        const u = new URL(s);
+        host = u.hostname;
+        // An address bar shows the decoded form; the code carries the raw one.
+        // Mixed scripts in a host name are the classic look-alike trick.
+        if (/^xn--/i.test(host) || /[^\x00-\x7F]/.test(host)) {
+          notes.push('This address uses non-Latin characters in the domain, which is how look-alike sites imitate a real one. Read it carefully.');
+        }
+        if (u.protocol === 'http:') {
+          notes.push('This is a plain http address, so anything you send to it travels unencrypted.');
+        }
+      } catch (e) { safe = false; }
+      return {
+        kind: 'Website address',
+        fields: [['Goes to', host], ['Full address', s]],
+        notes: notes,
+        link: safe ? s : null
+      };
+    }
+
+    if (/^(javascript|data|vbscript|file):/i.test(lower)) {
+      return {
+        kind: 'Suspicious link',
+        warn: 'This code contains a script or file address rather than an ordinary link. Nothing here will open it. Codes like this are used to attack the device that reads them.',
+        fields: [['Content', s]]
+      };
+    }
+
+    return { kind: 'Plain text', fields: [], link: null };
+  }
+
+  function mountQRScanner(spec, root, api) {
+    const QR = (api && api.encode) ? api : window.QR;
+    const Detect = window.QRDetect;
+    const io = root.querySelector('.tool-io');
+
+    const state = {
+      stream: null, track: null, running: false, native: null,
+      devices: [], deviceIndex: 0, torchOn: false, last: '', history: []
+    };
+
+    /* ---- camera panel ---- */
+
+    const stage = el('div', 'scan-stage');
+    const frame = el('div', 'scan-frame');
+    const video = el('video');
+    video.playsInline = true;
+    video.muted = true;
+    video.setAttribute('playsinline', '');
+    video.setAttribute('aria-label', 'Camera preview');
+    const reticle = el('div', 'scan-reticle');
+    reticle.innerHTML = '<span></span><span></span><span></span><span></span>';
+    const placeholder = el('div', 'scan-placeholder');
+    placeholder.appendChild(el('p', null, 'The camera preview appears here. Nothing is recorded, and no frame leaves your device.'));
+    frame.appendChild(video);
+    frame.appendChild(reticle);
+    frame.appendChild(placeholder);
+    stage.appendChild(frame);
+
+    const controls = el('div', 'io-actions scan-controls');
+    const startBtn = el('button', 'btn-primary', 'Start camera');
+    startBtn.type = 'button';
+    const switchBtn = el('button', 'btn-ghost', 'Switch camera');
+    switchBtn.type = 'button';
+    switchBtn.hidden = true;
+    const torchBtn = el('button', 'btn-ghost', 'Torch');
+    torchBtn.type = 'button';
+    torchBtn.hidden = true;
+    controls.appendChild(startBtn);
+    controls.appendChild(switchBtn);
+    controls.appendChild(torchBtn);
+    stage.appendChild(controls);
+
+    const msg = el('div', 'io-msg');
+    stage.appendChild(msg);
+    io.appendChild(stage);
+
+    /* ---- image fallback ---- */
+
+    const drop = el('div', 'dropzone scan-drop');
+    drop.tabIndex = 0;
+    drop.appendChild(el('strong', null, 'Or scan a picture of a code'));
+    drop.appendChild(el('span', null, 'Drop an image here, paste one, or tap to choose a file'));
+    const fileInput = el('input', 'visually-hidden');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    drop.appendChild(fileInput);
+    io.appendChild(drop);
+
+    /* ---- result ---- */
+
+    const result = el('div', 'scan-result');
+    io.appendChild(result);
+
+    const historyWrap = el('section', 'scan-history');
+    io.appendChild(historyWrap);
+
+    /* ---- scanning ---- */
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    /** Read one frame. Uses the browser's own detector where there is one. */
+    async function readFrame(source, width, height) {
+      if (state.native) {
+        try {
+          const found = await state.native.detect(source);
+          if (found && found.length) return { text: found[0].rawValue, native: true };
+        } catch (e) { state.native = null; }
+      }
+      const max = 640;
+      const scale = Math.min(1, max / Math.max(width, height));
+      canvas.width = Math.round(width * scale);
+      canvas.height = Math.round(height * scale);
+      ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      return Detect.scan(data);
+    }
+
+    let looping = false;
+    async function loop() {
+      if (!state.running) { looping = false; return; }
+      looping = true;
+      if (video.readyState >= 2 && video.videoWidth) {
+        try {
+          const got = await readFrame(video, video.videoWidth, video.videoHeight);
+          if (got && got.text && got.text !== state.last) showResult(got, 'camera');
+        } catch (e) { /* a dropped frame is not worth reporting */ }
+      }
+      requestAnimationFrame(loop);
+    }
+
+    async function start() {
+      if (state.running) return stop();
+      note('Asking for camera permission…', 'note');
+      try {
+        state.stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+      } catch (e) {
+        const name = e && e.name;
+        note(
+          name === 'NotAllowedError'
+            ? 'Camera permission was refused. Allow it in the address bar, or scan a picture of the code below instead.'
+            : name === 'NotFoundError'
+              ? 'No camera was found on this device. You can still scan a picture of a code below.'
+              : 'The camera could not be started: ' + (e && e.message ? e.message : 'unknown error') +
+                '. Note that browsers only allow the camera on secure (https) pages.',
+          'error');
+        return;
+      }
+
+      video.srcObject = state.stream;
+      state.track = state.stream.getVideoTracks()[0];
+      await video.play().catch(function () {});
+      frame.classList.add('is-live');
+      placeholder.hidden = true;
+      state.running = true;
+      startBtn.textContent = 'Stop camera';
+      note('Point the camera at a QR code. It reads automatically.', 'note');
+
+      if ('BarcodeDetector' in window && !state.native) {
+        try {
+          const formats = await window.BarcodeDetector.getSupportedFormats();
+          if (formats.indexOf('qr_code') >= 0) state.native = new window.BarcodeDetector({ formats: ['qr_code'] });
+        } catch (e) { state.native = null; }
+      }
+
+      try {
+        const caps = state.track.getCapabilities ? state.track.getCapabilities() : {};
+        torchBtn.hidden = !caps.torch;
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        state.devices = devices.filter((d) => d.kind === 'videoinput');
+        switchBtn.hidden = state.devices.length < 2;
+      } catch (e) { /* capability probing is optional */ }
+
+      if (!looping) loop();
+    }
+
+    function stop() {
+      state.running = false;
+      if (state.stream) state.stream.getTracks().forEach((t) => t.stop());
+      state.stream = null;
+      state.track = null;
+      video.srcObject = null;
+      frame.classList.remove('is-live');
+      placeholder.hidden = false;
+      startBtn.textContent = 'Start camera';
+      torchBtn.hidden = true;
+      switchBtn.hidden = true;
+      note('Camera stopped.', 'note');
+    }
+
+    async function switchCamera() {
+      if (!state.devices.length) return;
+      state.deviceIndex = (state.deviceIndex + 1) % state.devices.length;
+      const id = state.devices[state.deviceIndex].deviceId;
+      if (state.stream) state.stream.getTracks().forEach((t) => t.stop());
+      try {
+        state.stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: id } }, audio: false });
+        video.srcObject = state.stream;
+        state.track = state.stream.getVideoTracks()[0];
+        await video.play().catch(function () {});
+        state.torchOn = false;
+        const caps = state.track.getCapabilities ? state.track.getCapabilities() : {};
+        torchBtn.hidden = !caps.torch;
+      } catch (e) {
+        note('That camera could not be opened.', 'error');
+      }
+    }
+
+    async function toggleTorch() {
+      if (!state.track) return;
+      state.torchOn = !state.torchOn;
+      try {
+        await state.track.applyConstraints({ advanced: [{ torch: state.torchOn }] });
+        torchBtn.classList.toggle('is-active', state.torchOn);
+      } catch (e) {
+        note('This camera will not let the page control the torch.', 'warn');
+        torchBtn.hidden = true;
+      }
+    }
+
+    function note(text, kind) {
+      msg.textContent = text;
+      msg.className = 'io-msg' + (kind ? ' is-' + kind : '');
+    }
+
+    /* ---- reading a still image ---- */
+
+    function scanFile(file) {
+      if (!file || !/^image\//.test(file.type)) {
+        note('That file is not an image.', 'error');
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = async function () {
+        URL.revokeObjectURL(url);
+        let got = null;
+        // A code that is small in a large photo survives a second look at
+        // full resolution, so try both before giving up.
+        for (const max of [640, 1280, 2000]) {
+          const scale = Math.min(1, max / Math.max(img.width, img.height));
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          if (state.native) {
+            try {
+              const found = await state.native.detect(canvas);
+              if (found && found.length) { got = { text: found[0].rawValue, native: true }; break; }
+            } catch (e) { state.native = null; }
+          }
+          got = Detect.scan(ctx.getImageData(0, 0, canvas.width, canvas.height));
+          if (got) break;
+        }
+        if (got) showResult(got, 'image');
+        else note('No QR code was found in that image. A sharper picture, or one with the whole code and a little space around it, usually does it.', 'warn');
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        note('That image could not be opened.', 'error');
+      };
+      img.src = url;
+    }
+
+    /* ---- showing what was read ---- */
+
+    function showResult(got, source) {
+      state.last = got.text;
+      const info = classifyPayload(got.text);
+
+      result.textContent = '';
+      const card = el('div', 'scan-card');
+
+      const head = el('div', 'scan-card-head');
+      head.appendChild(el('span', 'scan-kind', info.kind));
+      head.appendChild(el('span', 'scan-source', source === 'camera' ? 'Read from the camera' : 'Read from an image'));
+      card.appendChild(head);
+
+      if (info.warn) {
+        const w = el('p', 'scan-warn', info.warn);
+        card.appendChild(w);
+      }
+      (info.notes || []).forEach(function (n) {
+        card.appendChild(el('p', 'scan-note', n));
+      });
+
+      if (info.fields && info.fields.length) {
+        const grid = el('div', 'stat-grid');
+        info.fields.forEach(function (f) {
+          const r = el('div', 'stat-row');
+          r.appendChild(el('span', 'stat-key', f[0]));
+          r.appendChild(el('span', 'stat-val', f[1]));
+          grid.appendChild(r);
+        });
+        card.appendChild(grid);
+      }
+
+      const pre = el('pre', 'scan-text');
+      pre.textContent = got.text;
+      card.appendChild(pre);
+
+      const actions = el('div', 'io-actions scan-actions');
+      actions.appendChild(copyButton(function () { return got.text; }, 'Copy'));
+
+      if (info.link) {
+        const a = el('a', 'btn-download', info.kind === 'Website address' ? 'Open link' : 'Open');
+        a.href = info.link;
+        a.rel = 'noopener noreferrer nofollow';
+        a.target = '_blank';
+        actions.appendChild(a);
+      }
+      if (info.download) {
+        actions.appendChild(downloadButton('Save ' + (info.download.name.split('.').pop().toUpperCase()),
+          info.download.name, function () {
+            return new Blob([info.download.body], { type: info.download.type });
+          }));
+      }
+      card.appendChild(actions);
+
+      if (got.version) {
+        const meta = el('p', 'scan-meta',
+          'Version ' + got.version + ', level ' + got.ecLevel + ', mask ' + got.mask +
+          (got.corrected ? ' — ' + got.corrected + ' damaged codeword' + (got.corrected === 1 ? '' : 's') + ' repaired' : '') +
+          (got.mirrored ? ' — mirrored' : ''));
+        card.appendChild(meta);
+      } else if (got.native) {
+        card.appendChild(el('p', 'scan-meta', 'Read with the browser’s built-in detector'));
+      }
+
+      result.appendChild(card);
+      note('', '');
+      addHistory(got.text, info.kind);
+      document.dispatchEvent(new CustomEvent('mvr:tool-used'));
+
+      if (navigator.vibrate) { try { navigator.vibrate(40); } catch (e) {} }
+    }
+
+    function addHistory(text, kind) {
+      if (state.history.length && state.history[0].text === text) return;
+      state.history.unshift({ text: text, kind: kind, at: new Date() });
+      state.history = state.history.slice(0, 10);
+      renderHistory();
+    }
+
+    function renderHistory() {
+      historyWrap.textContent = '';
+      if (!state.history.length) return;
+      const h = el('h2', null, 'This session');
+      historyWrap.appendChild(h);
+      historyWrap.appendChild(el('p', 'scan-history-note',
+        'Kept in this tab only, and gone when you close it. Nothing is stored on the device or sent anywhere.'));
+      const list = el('ul', 'scan-history-list');
+      state.history.forEach(function (item) {
+        const li = el('li');
+        const time = item.at.toLocaleTimeString();
+        li.appendChild(el('span', 'scan-history-kind', item.kind));
+        const t = el('span', 'scan-history-text', item.text.length > 90 ? item.text.slice(0, 90) + '…' : item.text);
+        li.appendChild(t);
+        li.appendChild(el('span', 'scan-history-time', time));
+        li.appendChild(copyButton(function () { return item.text; }, 'Copy'));
+        list.appendChild(li);
+      });
+      historyWrap.appendChild(list);
+      const clear = el('button', 'btn-ghost', 'Clear list');
+      clear.type = 'button';
+      clear.addEventListener('click', function () { state.history = []; renderHistory(); });
+      historyWrap.appendChild(clear);
+    }
+
+    /* ---- wiring ---- */
+
+    startBtn.addEventListener('click', start);
+    switchBtn.addEventListener('click', switchCamera);
+    torchBtn.addEventListener('click', toggleTorch);
+
+    drop.addEventListener('click', function () { fileInput.click(); });
+    drop.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+    });
+    fileInput.addEventListener('change', function () {
+      if (fileInput.files && fileInput.files[0]) scanFile(fileInput.files[0]);
+    });
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); });
+    });
+    drop.addEventListener('drop', function (e) {
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) scanFile(f);
+    });
+    document.addEventListener('paste', function (e) {
+      const items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type && items[i].type.indexOf('image') === 0) {
+          scanFile(items[i].getAsFile());
+          break;
+        }
+      }
+    });
+    window.addEventListener('pagehide', function () { if (state.running) stop(); });
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden && state.running) stop();
+    });
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      startBtn.disabled = true;
+      note('This browser will not give a page access to the camera. You can still scan a picture of a code below.', 'warn');
+    } else if (!window.isSecureContext) {
+      startBtn.disabled = true;
+      note('Browsers only allow camera access on secure (https) pages. Scanning a picture of a code still works here.', 'warn');
+    } else {
+      note('Point the camera at a QR code, or scan a picture of one below.', 'note');
+    }
   }
 
   function svgToPngBlob(svg, size) {
@@ -1257,6 +1807,7 @@
   window.MVRTool.mountCode = mountCode;
   window.MVRTool.mountGenerate = mountGenerate;
   window.MVRTool.mountQR = mountQR;
+  window.MVRTool.mountQRScanner = mountQRScanner;
   window.MVRTool.mountFile = mountFile;
   window.MVRTool._zipStore = zipStore;
 })();

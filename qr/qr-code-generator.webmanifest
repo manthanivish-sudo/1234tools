@@ -1,0 +1,42 @@
+{
+  "id": "/qr/qr-code-generator.html",
+  "name": "QR Code Generator — 1234Tools",
+  "short_name": "QR Generator",
+  "description": "Create QR codes for URLs, WiFi, contact cards, UPI and more. Custom shapes, colours and a logo, with a built-in scan check. Works offline.",
+  "start_url": "/qr/qr-code-generator.html?src=pwa",
+  "scope": "/qr/qr-code-generator.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/qr-code-generator-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/qr-code-generator-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/qr-code-generator-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

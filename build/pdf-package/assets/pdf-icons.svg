@@ -120,3 +120,65 @@
   <rect x="16.8" y="4" width="4.8" height="8" rx="1" stroke-dasharray="2.6 2"/>
   <path d="M4.4 16.4h15.2M17 13.8l2.6 2.6-2.6 2.6" />
 </symbol>
+
+<symbol id="i-pdf-editor" viewBox="0 0 24 24">
+  <path d="M6 2.8h7.6L18.6 8v13.2H6z"/>
+  <path d="M13.6 2.8V8h5" class="thin"/>
+  <path d="M8.4 12h6.4M8.4 15h4.4" class="thin"/>
+  <path d="M15.4 15l2.6 2.6M15.4 17.6l2.6-2.6" class="thin"/>
+</symbol>
+
+<symbol id="i-pdf-form-filler" viewBox="0 0 24 24">
+  <path d="M6 2.8h7.6L18.6 8v13.2H6z"/>
+  <path d="M13.6 2.8V8h5" class="thin"/>
+  <rect x="8.4" y="10.4" width="7.2" height="2" rx="0.4" class="thin"/>
+  <rect x="8.4" y="14.4" width="7.2" height="2" rx="0.4" class="thin"/>
+  <path d="M16.4 11.4h1.6M16.4 15.4h1.6" class="thin"/>
+</symbol>
+
+<symbol id="i-pdf-to-excel" viewBox="0 0 24 24">
+  <path d="M4 2.8h6.6L14.6 7v6.4H4z"/>
+  <path d="M10.6 2.8V7h4" class="thin"/>
+  <rect x="9.4" y="10.6" width="11.6" height="10.6" rx="1.4"/>
+  <path d="M12.4 13.4h6M12.4 16h6M12.4 18.6h3.4" class="thin"/>
+  <path d="M17.4 13.4v5.2" class="thin"/>
+</symbol>
+
+<symbol id="i-pdf-redaction" viewBox="0 0 24 24">
+  <path d="M6 2.8h7.6L18.6 8v13.2H6z"/>
+  <path d="M13.6 2.8V8h5" class="thin"/>
+  <rect x="8.4" y="10.4" width="7.2" height="3.2" fill="currentColor"/>
+  <rect x="8.4" y="15.4" width="4.8" height="2.4" fill="currentColor"/>
+</symbol>
+
+<symbol id="i-pdf-ocr" viewBox="0 0 24 24">
+  <path d="M6 2.8h7.6L18.6 8v13.2H6z"/>
+  <path d="M13.6 2.8V8h5" class="thin"/>
+  <circle cx="9.4" cy="12.4" r="2.4" class="thin"/>
+  <circle cx="15.4" cy="12.4" r="2.4" class="thin"/>
+  <path d="M11.8 12.4h1.6" class="thin"/>
+  <path d="M8.4 16.4h7.2" class="thin"/>
+</symbol>
+
+<symbol id="i-pdf-compare" viewBox="0 0 24 24">
+  <rect x="2.4" y="4" width="8" height="10" rx="1.2"/>
+  <rect x="13.6" y="4" width="8" height="10" rx="1.2"/>
+  <path d="M6.4 16v3.4a1.6 1.6 0 0 0 1.6 1.6h8a1.6 1.6 0 0 0 1.6-1.6V16"/>
+  <path d="M10.4 9l3.2 3.2M13.6 9l-3.2 3.2" class="thin"/>
+</symbol>
+
+<symbol id="i-pdf-signature" viewBox="0 0 24 24">
+  <path d="M6 2.8h7.6L18.6 8v13.2H6z"/>
+  <path d="M13.6 2.8V8h5" class="thin"/>
+  <path d="M8.4 15.4c1.6-1.6 3.2-0.8 4.8 0.8 1.6 1.6 3.2 0.8 4.8-0.8" class="thin"/>
+  <path d="M8.4 18.4h7.2" class="thin"/>
+  <circle cx="16.4" cy="17" r="1.2" class="fill"/>
+</symbol>
+
+<symbol id="i-pdf-portfolio" viewBox="0 0 24 24">
+  <rect x="2.4" y="3" width="8" height="10" rx="1.2"/>
+  <rect x="13.6" y="3" width="8" height="10" rx="1.2"/>
+  <path d="M6.4 13v3.4a1.6 1.6 0 0 0 1.6 1.6h8a1.6 1.6 0 0 0 1.6-1.6V13"/>
+  <path d="M6.4 8h3.2M14.4 8h3.2" class="thin"/>
+  <path d="M6.4 10.4h3.2M14.4 10.4h3.2" class="thin"/>
+</symbol>

@@ -27,6 +27,32 @@ function toGray(data, width, height) {
 }
 
 /**
+ * A 3x3 box blur. Sensor noise on a dim phone camera is per pixel, which is
+ * enough to make a blank block look like it has content and get split down
+ * the middle. A lens does this smoothing in hardware; a screenshot does not.
+ */
+function blur3(gray, width, height) {
+  const out = new Uint8ClampedArray(gray.length);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let sum = 0, n = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= height) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx;
+          if (xx < 0 || xx >= width) continue;
+          sum += gray[yy * width + xx];
+          n++;
+        }
+      }
+      out[y * width + x] = sum / n;
+    }
+  }
+  return out;
+}
+
+/**
  * Local thresholding. A single global threshold fails the moment a phone
  * casts a shadow over half the code, so each block gets its own level,
  * smoothed across its neighbours to avoid banding.
@@ -330,8 +356,15 @@ function findAlignment(bits, width, height, cx, cy, moduleSize, radius) {
 
 /* ---------- sampling ---------- */
 
-/** Read one bit per module through the perspective transform. */
-function sample(bits, width, height, transform, dimension) {
+/**
+ * Read one bit per module through the perspective transform.
+ *
+ * Each module is decided by a majority vote over a patch about a third of a
+ * module wide rather than a single pixel, so sensor noise on a dim phone
+ * camera averages out instead of flipping bits.
+ */
+function sample(bits, width, height, transform, dimension, moduleSize) {
+  const radius = Math.max(0, Math.min(3, Math.floor((moduleSize || 3) / 3.5)));
   const matrix = [];
   for (let r = 0; r < dimension; r++) {
     const row = new Uint8Array(dimension);
@@ -339,13 +372,14 @@ function sample(bits, width, height, transform, dimension) {
       const p = apply(transform, c + 0.5, r + 0.5);
       const x = Math.round(p.x), y = Math.round(p.y);
       if (x < 0 || x >= width || y < 0 || y >= height) return null;
-      // a 3-point vote steadies the reading when a module lands on a seam
       let dark = 0, n = 0;
-      for (const [ox, oy] of [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]]) {
-        const xx = x + ox, yy = y + oy;
-        if (xx < 0 || xx >= width || yy < 0 || yy >= height) continue;
-        dark += bits[yy * width + xx];
-        n++;
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const xx = x + dx, yy = y + dy;
+          if (xx < 0 || xx >= width || yy < 0 || yy >= height) continue;
+          dark += bits[yy * width + xx];
+          n++;
+        }
       }
       row[c] = dark * 2 > n ? 1 : 0;
     }
@@ -365,17 +399,24 @@ function scanImageData(image) {
   if (!width || !height) return null;
 
   const gray = toGray(image.data, width, height);
-  const bits = binarize(gray, width, height);
-  const finders = findFinders(bits, width, height);
-  if (finders.length < 3) return null;
 
-  // try the most confident triples first
-  const limit = Math.min(finders.length, 5);
-  for (let a = 0; a < limit - 2; a++) {
-    for (let b = a + 1; b < limit - 1; b++) {
-      for (let c = b + 1; c < limit; c++) {
-        const got = readTriple(bits, width, height, finders[a], finders[b], finders[c]);
-        if (got) return got;
+  // Sharp first, smoothed second: blurring costs a pass and can blunt a code
+  // whose modules are only two or three pixels wide, so it is the fallback
+  // rather than the default.
+  for (let pass = 0; pass < 2; pass++) {
+    const source = pass === 0 ? gray : blur3(gray, width, height);
+    const bits = binarize(source, width, height);
+    const finders = findFinders(bits, width, height);
+    if (finders.length < 3) continue;
+
+    // try the most confident triples first
+    const limit = Math.min(finders.length, 5);
+    for (let a = 0; a < limit - 2; a++) {
+      for (let b = a + 1; b < limit - 1; b++) {
+        for (let c = b + 1; c < limit; c++) {
+          const got = readTriple(bits, width, height, finders[a], finders[b], finders[c]);
+          if (got) return got;
+        }
       }
     }
   }
@@ -452,7 +493,7 @@ function readAtDimension(bits, width, height, ord, dimension, moduleSize) {
 
   for (const a of attempts) {
     const transform = gridTransform(a.src, a.dst);
-    const matrix = sample(bits, width, height, transform, dimension);
+    const matrix = sample(bits, width, height, transform, dimension, moduleSize);
     if (!matrix) continue;
 
     const corners = [

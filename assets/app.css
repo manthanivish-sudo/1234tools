@@ -668,6 +668,96 @@ details p { margin: 8px 0 0; color: var(--text-2); font-size: .93rem; }
 [data-theme="light"] .qr-verdict.is-pass .qr-verdict-head { color: #1c6b3f; }
 [data-theme="light"] .qr-verdict.is-warn .qr-verdict-head { color: #7d5200; }
 
+/* QR scanner */
+.scan-stage {
+  background: var(--bg-1); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; margin-bottom: 16px;
+}
+.scan-frame {
+  position: relative; aspect-ratio: 4 / 3; max-height: 60vh;
+  display: grid; place-items: center; background: #05070c; overflow: hidden;
+}
+.scan-frame video {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  opacity: 0; transition: opacity .3s;
+}
+.scan-frame.is-live video { opacity: 1; }
+.scan-placeholder {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  padding: 24px; text-align: center;
+}
+.scan-placeholder p { margin: 0; max-width: 34ch; color: var(--text-3); font-size: .88rem; }
+
+/* corner brackets, so people know where to aim */
+.scan-reticle { position: absolute; inset: 12%; pointer-events: none; opacity: 0; transition: opacity .3s; }
+.scan-frame.is-live .scan-reticle { opacity: 1; }
+.scan-reticle span {
+  position: absolute; width: 34px; height: 34px;
+  border: 3px solid var(--accent); border-radius: 4px;
+}
+.scan-reticle span:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+.scan-reticle span:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0; }
+.scan-reticle span:nth-child(3) { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+.scan-reticle span:nth-child(4) { bottom: 0; left: 0; border-right: 0; border-top: 0; }
+
+.scan-controls { padding: 14px 16px; justify-content: center; }
+.btn-ghost.is-active { border-color: var(--border-gold); color: var(--accent); }
+.scan-drop { margin-bottom: 16px; }
+
+/* what was read */
+.scan-result:empty { display: none; }
+.scan-card {
+  background: var(--bg-1); border: 1px solid var(--border-gold);
+  border-radius: var(--radius); overflow: hidden; margin-bottom: 16px;
+}
+.scan-card-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; padding: 14px 16px;
+  border-bottom: 1px solid var(--border); background: var(--surface);
+}
+.scan-kind { font-family: var(--font-head); font-weight: 700; color: var(--accent); }
+.scan-source { font-size: .76rem; color: var(--text-3); }
+.scan-warn, .scan-note {
+  margin: 0; padding: 12px 16px; font-size: .85rem; line-height: 1.55;
+  border-bottom: 1px solid var(--border);
+}
+.scan-warn { color: #ff9d8a; background: rgba(255,90,60,.09); }
+.scan-note { color: var(--gold-2); background: rgba(247,201,72,.08); }
+[data-theme="light"] .scan-warn { color: #8c1d0c; background: rgba(200,40,20,.07); }
+[data-theme="light"] .scan-note { color: #7d5200; }
+.scan-text {
+  margin: 0; padding: 14px 16px; max-height: 220px; overflow: auto;
+  font-family: var(--font-mono); font-size: .82rem; line-height: 1.55;
+  color: var(--text-1); background: var(--bg-0);
+  white-space: pre-wrap; overflow-wrap: anywhere;
+  border-top: 1px solid var(--border);
+}
+.scan-actions { padding: 14px 16px; }
+.scan-meta { margin: 0; padding: 0 16px 14px; font-size: .76rem; color: var(--text-3); }
+.scan-card .stat-val { overflow-wrap: anywhere; text-align: right; }
+
+/* session list */
+.scan-history:empty { display: none; }
+.scan-history h2 { font-size: 1rem; margin: 0 0 4px; }
+.scan-history-note { margin: 0 0 12px; font-size: .8rem; color: var(--text-3); }
+.scan-history-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.scan-history-list li {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px; font-size: .82rem;
+  background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.scan-history-kind {
+  flex: none; font-size: .68rem; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.scan-history-text { flex: 1; min-width: 0; overflow-wrap: anywhere; font-family: var(--font-mono); }
+.scan-history-time { flex: none; color: var(--text-3); font-size: .74rem; }
+
+@media (max-width: 640px) {
+  .scan-frame { aspect-ratio: 3 / 4; }
+  .scan-reticle { inset: 8%; }
+}
+
 /* file tools */
 .dropzone {
   display: grid; place-items: center; gap: 6px; text-align: center;
@@ -714,6 +804,55 @@ details p { margin: 8px 0 0; color: var(--text-2); font-size: .93rem; }
   .code-area, .code-out { padding: 12px; }
   .qr-box svg { max-width: 260px; }
 }
+
+/* ============================================================
+   Installable tools — the offer, and life as an installed app
+   ============================================================ */
+
+.install-panel { border-color: var(--border-gold); }
+.install-panel p { margin: 0 0 14px; }
+.install-panel .btn-primary { display: inline-block; }
+
+/* the timed offer, once the tool has actually been used */
+.install-bar {
+  position: fixed; z-index: 60; left: 16px; right: 16px; bottom: 16px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  max-width: 560px; margin: 0 auto; padding: 14px 16px;
+  background: var(--bg-1); border: 1px solid var(--border-gold);
+  border-radius: var(--radius); box-shadow: 0 18px 50px rgba(0,0,0,.45);
+  transform: translateY(140%); opacity: 0;
+  transition: transform .32s cubic-bezier(.2,.8,.3,1), opacity .32s;
+}
+.install-bar.is-up { transform: translateY(0); opacity: 1; }
+.install-icon { flex: none; width: 44px; height: 44px; border-radius: 11px; }
+.install-copy { flex: 1; min-width: 160px; display: grid; gap: 3px; }
+.install-copy strong { font-family: var(--font-head); font-size: .92rem; color: var(--text-1); }
+.install-copy span { font-size: .8rem; line-height: 1.5; color: var(--text-3); }
+.install-actions { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+
+@media (max-width: 520px) {
+  .install-bar { gap: 10px; padding: 12px 14px; }
+  .install-actions { width: 100%; margin-left: 0; justify-content: flex-end; }
+}
+
+/* Installed: it is an app now, so the site furniture goes. Whoever opened it
+   from a home-screen icon wants the tool, not a directory of 1,186 others. */
+.is-installed .site-header,
+.is-installed .sidebar,
+.is-installed .sidebar-open,
+.is-installed .site-footer,
+.is-installed .crumbs,
+.is-installed .install-panel,
+.is-installed .scrim { display: none !important; }
+
+.is-installed .layout { display: block; padding-top: 8px; }
+.is-installed .content { max-width: 780px; margin: 0 auto; }
+.is-installed body { padding-top: env(safe-area-inset-top); }
+.is-installed .tool h1 { margin-top: 8px; }
+
+/* the panels below the tool are reference material; keep them, but out of the
+   way of the thing the app is for */
+.is-installed .panel { margin-top: 18px; }
 
 /* ============================================================
    Icons — one cached sprite, currentColor, crisp at any size

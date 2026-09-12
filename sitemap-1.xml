@@ -28,7 +28,8 @@
 <url><loc>https://www.1234tools.com/developer/case-converter.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/developer/color-converter.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/developer/css-gradient.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.1234tools.com/developer/qr-code-generator.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/qr/qr-code-generator.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/qr/qr-code-scanner.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/developer/favicon-generator.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/business/currency-converter.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/business/profit-margin.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
@@ -1200,6 +1201,7 @@
 <url><loc>https://www.1234tools.com/text/index.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/conversions/index.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/pdf/index.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/qr/index.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/about/index.html</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
 <url><loc>https://www.1234tools.com/contact/index.html</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
 <url><loc>https://www.1234tools.com/privacy/index.html</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>

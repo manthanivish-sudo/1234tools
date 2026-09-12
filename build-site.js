@@ -95,13 +95,21 @@ const SITE = 'https://www.1234tools.com';
 const NOT_INDEXED = new Set(['404.html']);
 
 /**
+ * Pages that deliberately carry no shell. When a tool moves, one of these is
+ * left at the old URL so existing links and printed codes keep working. They
+ * must stay out of the sitemap, and patching a font or analytics block into
+ * one would defeat the point of a page whose whole job is to redirect.
+ */
+const REDIRECTS = new Set(['developer/qr-code-generator.html']);
+
+/**
  * Section hubs, in the order the sitemap has always listed them. This is the
  * one list to extend when a section is added — and forgetting to is survivable,
  * because an unlisted page still ships in the tail below and gets reported.
  */
 const SECTIONS = ['finance', 'mathematics', 'engineering', 'health', 'design',
   'utilities', 'time', 'developer', 'business', 'india', 'image', 'text',
-  'conversions', 'pdf'];
+  'conversions', 'pdf', 'qr'];
 
 /**
  * The pages that are not tools. They change on the order of never, and a
@@ -138,7 +146,7 @@ function searchIndexPaths() {
 function sitemapPages() {
   const onDisk = new Set(
     pages().map((abs) => path.relative(ROOT, abs).replace(/\\/g, '/'))
-           .filter((rel) => !NOT_INDEXED.has(rel))
+           .filter((rel) => !NOT_INDEXED.has(rel) && !REDIRECTS.has(rel))
   );
 
   const out = [], seen = new Set();
@@ -204,7 +212,7 @@ const POPULAR = [
   'pdf/merge-pdf.html',
   'developer/json-formatter.html',
   'image/passport-photo.html',
-  'developer/qr-code-generator.html',
+  'qr/qr-code-generator.html',
   'business/currency-converter.html',
   'india/gst-calculator.html',
   'text/word-counter.html'
@@ -595,6 +603,7 @@ function patchPages() {
 
   for (const abs of list) {
     const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
+    if (REDIRECTS.has(rel)) continue;
     const before = fs.readFileSync(abs, 'utf8');
     let html = before;
     const p = prefixOf(abs);
