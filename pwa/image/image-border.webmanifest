@@ -1,0 +1,42 @@
+{
+  "id": "/image/image-border.html",
+  "name": "Add Border & Frame to Image — 1234Tools",
+  "short_name": "Add Border & Frame",
+  "description": "Add a solid border, padding or polaroid-style frame around a photo.",
+  "start_url": "/image/image-border.html?src=pwa",
+  "scope": "/image/image-border.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "photo",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-image-border.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-image-border-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-image-border-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

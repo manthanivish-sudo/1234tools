@@ -1,0 +1,42 @@
+{
+  "id": "/conversions/temperature/celsius-to-fahrenheit.html",
+  "name": "Convert Celsius to Fahrenheit — 1234Tools",
+  "short_name": "Celsius → Fahrenheit",
+  "description": "Convert Celsius (°C) to Fahrenheit (°F) instantly. Works in both directions, with a full temperature table.",
+  "start_url": "/conversions/temperature/celsius-to-fahrenheit.html?src=pwa",
+  "scope": "/conversions/temperature/celsius-to-fahrenheit.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-temperature.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-temperature-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-temperature-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

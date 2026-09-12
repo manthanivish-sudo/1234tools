@@ -1,0 +1,42 @@
+{
+  "id": "/health/body-fat.html",
+  "name": "Body Fat Percentage Estimator — 1234Tools",
+  "short_name": "Body Fat Percentage",
+  "description": "Estimate body fat percentage from tape measurements using the US Navy circumference method.",
+  "start_url": "/health/body-fat.html?src=pwa",
+  "scope": "/health/body-fat.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "health",
+    "fitness"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-body-fat.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-body-fat-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-body-fat-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "id": "/finance/loan-payment.html",
+  "name": "Loan Payment Calculator — 1234Tools",
+  "short_name": "Loan Payment",
+  "description": "Calculate monthly loan payments, total interest paid, and the full cost of borrowing.",
+  "start_url": "/finance/loan-payment.html?src=pwa",
+  "scope": "/finance/loan-payment.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "finance"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-loan-payment.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-loan-payment-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-loan-payment-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

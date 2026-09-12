@@ -1,0 +1,42 @@
+{
+  "id": "/image/meme-generator.html",
+  "name": "Meme Generator — 1234Tools",
+  "short_name": "Meme Generator",
+  "description": "Add classic top and bottom caption text to an image, with the traditional outlined Impact styling.",
+  "start_url": "/image/meme-generator.html?src=pwa",
+  "scope": "/image/meme-generator.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "photo",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-meme-generator.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-meme-generator-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-meme-generator-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

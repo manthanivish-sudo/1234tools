@@ -1,0 +1,41 @@
+{
+  "id": "/time/timezone-converter.html",
+  "name": "Time Zone Converter — 1234Tools",
+  "short_name": "Time Zone Converter",
+  "description": "Convert a time between world time zones, with daylight saving handled automatically.",
+  "start_url": "/time/timezone-converter.html?src=pwa",
+  "scope": "/time/timezone-converter.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-timezone-converter.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-timezone-converter-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-timezone-converter-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

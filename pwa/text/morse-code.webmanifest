@@ -1,0 +1,41 @@
+{
+  "id": "/text/morse-code.html",
+  "name": "Morse Code Translator — 1234Tools",
+  "short_name": "Morse Code",
+  "description": "Translate text to Morse code and back, with the full reference alphabet.",
+  "start_url": "/text/morse-code.html?src=pwa",
+  "scope": "/text/morse-code.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-morse-code.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-morse-code-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-morse-code-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

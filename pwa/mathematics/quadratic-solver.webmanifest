@@ -1,0 +1,41 @@
+{
+  "id": "/mathematics/quadratic-solver.html",
+  "name": "Quadratic Equation Solver — 1234Tools",
+  "short_name": "Quadratic Equation",
+  "description": "Solve ax² + bx + c = 0, including complex roots, vertex, and discriminant.",
+  "start_url": "/mathematics/quadratic-solver.html?src=pwa",
+  "scope": "/mathematics/quadratic-solver.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-quadratic-solver.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-quadratic-solver-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-quadratic-solver-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

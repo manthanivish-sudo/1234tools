@@ -1,0 +1,41 @@
+{
+  "id": "/business/uk-take-home-pay.html",
+  "name": "UK Take-Home Pay Calculator — 1234Tools",
+  "short_name": "UK Take-Home Pay",
+  "description": "Estimate income tax, National Insurance and net pay from a gross salary. England, Wales and Northern Ireland.",
+  "start_url": "/business/uk-take-home-pay.html?src=pwa",
+  "scope": "/business/uk-take-home-pay.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-uk-take-home-pay.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-uk-take-home-pay-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-uk-take-home-pay-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

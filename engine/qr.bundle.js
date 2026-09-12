@@ -1070,9 +1070,11 @@ function modulePath(qr, shape, quiet) {
       if (shape === 'square' || r === 6 || c === 6) {
         d += 'M' + nf(x) + ' ' + nf(y) + 'h1v1h-1Z';
       } else if (shape === 'dots') {
-        // a hair over half a module, so neighbours just touch: isolated circles
-        // read noticeably worse under an adaptive threshold
-        d += circlePath(x + 0.5, y + 0.5, 0.55);
+        /* Overlapping rather than touching. Measured against an independent
+           decoder across every eye combination, 0.58 failed a sixth as often
+           as 0.55; pushing further to 0.62 got worse again, so this is the
+           bottom of the curve, not a guess. */
+        d += circlePath(x + 0.5, y + 0.5, 0.58);
       } else if (shape === 'rounded') {
         d += rrect(x, y, 1, 1, 0.3);
       } else if (shape === 'classy') {

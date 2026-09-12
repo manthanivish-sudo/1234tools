@@ -1,0 +1,41 @@
+{
+  "id": "/text/number-to-words.html",
+  "name": "Number to Words Converter — 1234Tools",
+  "short_name": "Number → Words",
+  "description": "Write numbers out in words, including currency form for cheques and contracts.",
+  "start_url": "/text/number-to-words.html?src=pwa",
+  "scope": "/text/number-to-words.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-number-to-words.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-number-to-words-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-number-to-words-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

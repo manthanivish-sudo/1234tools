@@ -1,0 +1,41 @@
+{
+  "id": "/utilities/square-footage.html",
+  "name": "Square Footage Calculator — 1234Tools",
+  "short_name": "Square Footage",
+  "description": "Calculate floor area for rooms, including L-shaped spaces, plus material quantities and cost.",
+  "start_url": "/utilities/square-footage.html?src=pwa",
+  "scope": "/utilities/square-footage.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-square-footage.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-square-footage-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-square-footage-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

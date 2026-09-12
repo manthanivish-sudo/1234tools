@@ -1,0 +1,42 @@
+{
+  "id": "/conversions/data/terabyte-1000-to-tebibyte-1024.html",
+  "name": "Convert Terabyte (1000) to Tebibyte (1024) — 1234Tools",
+  "short_name": "Terabyte (1000)",
+  "description": "Convert Terabyte (1000) (TB) to Tebibyte (1024) (TiB) instantly. Works in both directions, with a full digital storage table.",
+  "start_url": "/conversions/data/terabyte-1000-to-tebibyte-1024.html?src=pwa",
+  "scope": "/conversions/data/terabyte-1000-to-tebibyte-1024.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-data.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-data-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-data-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "id": "/developer/css-gradient.html",
+  "name": "CSS Gradient Generator — 1234Tools",
+  "short_name": "CSS Gradient",
+  "description": "Build linear and radial CSS gradients with a live preview and copy-ready code.",
+  "start_url": "/developer/css-gradient.html?src=pwa",
+  "scope": "/developer/css-gradient.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "developer",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-css-gradient.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-css-gradient-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-css-gradient-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

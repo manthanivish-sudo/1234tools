@@ -1,0 +1,42 @@
+{
+  "id": "/conversions/energy/calorie-thermo-to-british-thermal-unit.html",
+  "name": "Convert Calorie (thermo) to British Thermal Unit — 1234Tools",
+  "short_name": "Calorie (thermo)",
+  "description": "Convert Calorie (thermo) (cal) to British Thermal Unit (BTU) instantly. Works in both directions, with a full energy & work table.",
+  "start_url": "/conversions/energy/calorie-thermo-to-british-thermal-unit.html?src=pwa",
+  "scope": "/conversions/energy/calorie-thermo-to-british-thermal-unit.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-energy.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-energy-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-energy-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

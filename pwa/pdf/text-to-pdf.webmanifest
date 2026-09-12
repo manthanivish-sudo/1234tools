@@ -1,0 +1,42 @@
+{
+  "id": "/pdf/text-to-pdf.html",
+  "name": "Text to PDF Converter — 1234Tools",
+  "short_name": "Text → PDF Converter",
+  "description": "Turn plain text into a properly paginated PDF with margins, wrapping and page numbers.",
+  "start_url": "/pdf/text-to-pdf.html?src=pwa",
+  "scope": "/pdf/text-to-pdf.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-text-to-pdf.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-text-to-pdf-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-text-to-pdf-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

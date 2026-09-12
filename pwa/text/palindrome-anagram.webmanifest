@@ -1,0 +1,41 @@
+{
+  "id": "/text/palindrome-anagram.html",
+  "name": "Palindrome & Anagram Checker — 1234Tools",
+  "short_name": "Palindrome",
+  "description": "Check whether text reads the same backwards, and test whether two phrases are anagrams.",
+  "start_url": "/text/palindrome-anagram.html?src=pwa",
+  "scope": "/text/palindrome-anagram.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-palindrome-anagram.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-palindrome-anagram-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-palindrome-anagram-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

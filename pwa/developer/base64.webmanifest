@@ -1,0 +1,42 @@
+{
+  "id": "/developer/base64.html",
+  "name": "Base64 Encoder & Decoder — 1234Tools",
+  "short_name": "Base64 Encoder",
+  "description": "Encode text to Base64 or decode it back. Full Unicode support, plus URL-safe output.",
+  "start_url": "/developer/base64.html?src=pwa",
+  "scope": "/developer/base64.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "developer",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-base64.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-base64-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-base64-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

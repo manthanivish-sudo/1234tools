@@ -1,0 +1,42 @@
+{
+  "id": "/pdf/extract-pdf-pages.html",
+  "name": "Extract PDF Pages — 1234Tools",
+  "short_name": "Extract PDF Pages",
+  "description": "Pull specific pages out of a PDF into a new document, keeping the order you specify.",
+  "start_url": "/pdf/extract-pdf-pages.html?src=pwa",
+  "scope": "/pdf/extract-pdf-pages.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-extract-pdf-pages.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-extract-pdf-pages-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-extract-pdf-pages-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "id": "/utilities/fuel-efficiency.html",
+  "name": "Fuel Efficiency & Trip Cost Calculator — 1234Tools",
+  "short_name": "Fuel Efficiency",
+  "description": "Convert between MPG and L/100km, and calculate the fuel cost of a journey.",
+  "start_url": "/utilities/fuel-efficiency.html?src=pwa",
+  "scope": "/utilities/fuel-efficiency.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-fuel-efficiency.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-fuel-efficiency-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-fuel-efficiency-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -92,7 +92,11 @@
       input._value = function () { return hex.value; };
       input.dataset.name = f.key;
       wrap.appendChild(input);
-      return { wrap: wrap, read: function () { return hex.value; }, key: f.key };
+      return {
+        wrap: wrap, key: f.key,
+        read: function () { return hex.value; },
+        write: function (v) { hex.value = v; swatch.value = v; }
+      };
     } else {
       input = el('input', 'control');
       const NATIVE = ['number', 'date', 'time', 'datetime-local', 'email', 'tel', 'url'];
@@ -107,7 +111,11 @@
     input.id = id;
     input.name = f.key;
     wrap.appendChild(input);
-    return { wrap: wrap, read: function () { return input.value; }, key: f.key };
+    return {
+      wrap: wrap, key: f.key,
+      read: function () { return input.value; },
+      write: function (v) { input.value = v; }
+    };
   }
 
   function renderStats(container, stats) {
@@ -494,6 +502,7 @@
 
     const state = {
       logo: null,          // { href, name }
+      ecRaised: false,     // did adding a logo move the error correction up?
       swatchSample: null
     };
 
@@ -563,7 +572,15 @@
       row.appendChild(hex);
       w.appendChild(row);
       host.appendChild(w);
-      return { read: function () { return swatch.value; }, wrap: w };
+      return {
+        read: function () { return swatch.value; },
+        write: function (v) {
+          if (!/^#[0-9a-f]{6}$/i.test(v)) return;
+          swatch.value = v;
+          hex.value = v;
+        },
+        wrap: w
+      };
     }
 
     function checkControl(host, label, name, def) {
@@ -613,7 +630,13 @@
       });
       w.appendChild(grid);
       host.appendChild(w);
-      return { read: function () { return current; } };
+      return {
+        read: function () { return current; },
+        set: function (v) {
+          const b = grid.querySelector('.shape-btn[data-value="' + v + '"]');
+          if (b) b.click();
+        }
+      };
     }
 
     /* content -------------------------------------------------- */
@@ -743,12 +766,21 @@
         state.logo = { href: String(reader.result), name: f.name };
         logoName.textContent = f.name;
         logoClear.hidden = false;
+        /* A logo covers modules, so the code needs the error correction to
+           spare. Medium plus a logo is the combination that fails, and it was
+           the default, so move it up where the reader can see it happen and
+           put it back if they want. */
+        if (ecSel.value === 'L' || ecSel.value === 'M') {
+          ecSel.value = 'H';
+          state.ecRaised = true;
+        }
         schedule();
       };
       reader.readAsDataURL(f);
     });
     logoClear.addEventListener('click', function () {
       state.logo = null;
+      state.ecRaised = false;
       logoInput.value = '';
       logoName.textContent = 'No image - the code stays plain';
       logoClear.hidden = true;
@@ -780,6 +812,7 @@
     stage.appendChild(stats);
 
     let currentSVG = '', currentText = '';
+    let verifySeq = 0;
 
     function styleOptions(scale) {
       const solidDark = darkIn.read();
@@ -831,22 +864,169 @@
       logoBgBox.parentNode.hidden = !hasLogo;
     }
 
-    /**
-     * Everything the page can honestly check before the code meets a camera:
-     * it decodes back to the same text, the colours are the right way round
-     * and far enough apart, and any logo stays inside the error-correction
-     * budget of the worst-hit block.
-     */
-    function runChecks(qr, opts) {
-      const notes = [];
-      const check = QR.verify(qr, state.logo ? { logo: { size: opts.logo.size, padding: opts.logo.padding } } : null);
+    /* ---- sharing a code as a link ---- */
 
-      if (!check.ok) {
-        return { ok: false, headline: 'This code did not decode back to your content', notes: [check.error] };
+    /**
+     * A code lives in its own URL.
+     *
+     * Content fields keep their own names, so a link can be written by hand:
+     * ?t=url&url=https://example.com. The look travels in one `style`
+     * parameter instead of a dozen more, which keeps the two namespaces apart
+     * — `body` is a field on the email type and would otherwise collide with
+     * anything named for the body of the code.
+     */
+    const STYLE_KEYS = [
+      ['ec', () => ecSel.value, (v) => { ecSel.value = v; }],
+      ['px', () => sizeSel.value, (v) => { sizeSel.value = v; }],
+      ['quiet', () => quietSel.value, (v) => { quietSel.value = v; }],
+      ['shape', () => shapePick.read(), (v) => shapePick.set(v)],
+      ['eye', () => framePick.read(), (v) => framePick.set(v)],
+      ['ball', () => ballPick.read(), (v) => ballPick.set(v)],
+      ['fill', () => fillSel.value, (v) => { fillSel.value = v; }],
+      ['angle', () => angleSel.value, (v) => { angleSel.value = v; }],
+      ['fg', () => darkIn.read().replace('#', ''), (v) => darkIn.write('#' + v)],
+      ['fg2', () => dark2In.read().replace('#', ''), (v) => dark2In.write('#' + v)],
+      ['bg', () => transparentBox.checked ? 'none' : lightIn.read().replace('#', ''),
+        (v) => {
+          transparentBox.checked = (v === 'none');
+          if (v !== 'none') lightIn.write('#' + v);
+        }],
+      ['eyefg', () => eyeMatchBox.checked ? '' : frameColIn.read().replace('#', ''),
+        (v) => { eyeMatchBox.checked = false; frameColIn.write('#' + v); }],
+      ['eyebg', () => eyeMatchBox.checked ? '' : ballColIn.read().replace('#', ''),
+        (v) => { eyeMatchBox.checked = false; ballColIn.write('#' + v); }]
+    ];
+
+    function shareLink() {
+      const type = QR_TYPES[typeSel.value];
+      const q = new URLSearchParams();
+      q.set('t', typeSel.value);
+      readers.forEach(function (r) {
+        const v = r.read();
+        if (v !== '' && v != null) q.set(r.key, v);
+      });
+      const style = STYLE_KEYS
+        .map(function (k) { return k[1]() ? k[0] + ':' + k[1]() : ''; })
+        .filter(Boolean)
+        .join(',');
+      if (style) q.set('style', style);
+      return location.origin + location.pathname + '?' + q.toString();
+    }
+
+    /** Put a shared link back into the controls. Unknown values are ignored. */
+    function applyShare(params) {
+      const t = params.get('t');
+      if (!t || !QR_TYPES[t]) return false;
+      typeSel.value = t;
+      buildFields();
+      readers.forEach(function (r) {
+        const v = params.get(r.key);
+        if (v !== null) r.write(v);
+      });
+
+      const style = params.get('style') || '';
+      const seen = {};
+      style.split(',').forEach(function (pair) {
+        const i = pair.indexOf(':');
+        if (i > 0) seen[pair.slice(0, i)] = pair.slice(i + 1);
+      });
+      STYLE_KEYS.forEach(function (k) {
+        if (seen[k[0]] !== undefined && seen[k[0]] !== '') {
+          try { k[2](seen[k[0]]); } catch (e) { /* a bad value just keeps the default */ }
+        }
+      });
+      return true;
+    }
+
+    /**
+     * `view=code` strips the page back to the code itself, for someone opening
+     * a link that was shared with them rather than building one. The controls
+     * are still there, one tap away, because a shared code is usually the
+     * start of making your own.
+     */
+    function applyViewMode() {
+      const params = new URLSearchParams(location.search);
+      if (params.get('view') !== 'code') return;
+      root.classList.add('is-shared-view');
+
+      const open = el('button', 'btn-ghost shared-edit', 'Edit this code');
+      open.type = 'button';
+      open.addEventListener('click', function () {
+        root.classList.remove('is-shared-view');
+        open.remove();
+      });
+      stage.parentNode.insertBefore(open, stage.nextSibling);
+    }
+
+    /**
+     * Read the finished picture back.
+     *
+     * Checking the matrix only proves the encoder did its job. It says nothing
+     * about the image that actually gets downloaded, where a logo sits on top
+     * of real modules and can cover an alignment pattern the scanner needs to
+     * find the grid at all. So the artwork is rasterised and put through the
+     * same detector the scanner tool uses — twice, once at a comfortable size
+     * and once small and rough, which is the difference between "it reads" and
+     * "it reads on a business card in bad light".
+     */
+    function readBack(svg, text, modules) {
+      return new Promise(function (resolve) {
+        if (!window.QRDetect) { resolve(null); return; }
+        const img = new Image();
+        img.onload = function () {
+          const at = function (pxPerModule) {
+            const px = Math.round(modules * pxPerModule);
+            const c = document.createElement('canvas');
+            c.width = c.height = px;
+            const ctx = c.getContext('2d', { willReadFrequently: true });
+            ctx.fillStyle = '#ffffff';          // whatever is behind a transparent code
+            ctx.fillRect(0, 0, px, px);
+            ctx.drawImage(img, 0, 0, px, px);
+            const got = window.QRDetect.scan(ctx.getImageData(0, 0, px, px));
+            return !!(got && got.text === text);
+          };
+          const clean = at(10);
+          resolve({ clean: clean, rough: clean ? at(4) : false });
+        };
+        img.onerror = function () { resolve(null); };
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      });
+    }
+
+    /**
+     * When a logo stops the code reading, say which single change fixes it
+     * rather than leaving someone to guess. The candidates are tried in the
+     * order that costs the least: error correction first, since it changes
+     * nothing about how the code looks.
+     */
+    async function findFix(data, opts) {
+      const ec = ecSel.value;
+      const candidates = [];
+      if (ec !== 'H') candidates.push({ label: 'raising error correction to High', apply: { ec: 'H' } });
+      if (Number(logoPadSel.value) > 0) candidates.push({ label: 'removing the clear space around the logo', apply: { logopad: '0' } });
+      if (Number(logoSizeSel.value) > 0.16) candidates.push({ label: 'making the logo smaller', apply: { logosize: '0.16' } });
+      if (ec !== 'H' && Number(logoSizeSel.value) > 0.16) {
+        candidates.push({ label: 'level High and a smaller logo', apply: { ec: 'H', logosize: '0.16' } });
       }
 
+      for (const c of candidates) {
+        const trialEc = c.apply.ec || ec;
+        let qr;
+        try { qr = QR.encode(data, trialEc); } catch (e) { continue; }
+        const trialOpts = styleOptions(8);
+        if (c.apply.logopad !== undefined) trialOpts.logo.padding = Number(c.apply.logopad);
+        if (c.apply.logosize !== undefined) trialOpts.logo.size = Number(c.apply.logosize);
+        const svg = QR.toSVG(qr, trialOpts);
+        const got = await readBack(svg, data, qr.size + trialOpts.quiet * 2);
+        if (got && got.clean) return c;
+      }
+      return null;
+    }
+
+    /** Colour and quiet-zone checks, which need no rendering. */
+    function staticNotes() {
+      const notes = [];
       let ok = true;
-      const gradient = fillSel.value !== 'solid';
       const bg = transparentBox.checked ? '#ffffff' : lightIn.read();
       const con = contrastOf(darkIn.read(), bg);
       if (con) {
@@ -860,7 +1040,7 @@
           notes.push('Contrast is ' + con.ratio.toFixed(1) + ':1, which works on a screen but is tight for print. 7:1 is a safer target.');
         }
       }
-      if (gradient) {
+      if (fillSel.value !== 'solid') {
         const con2 = contrastOf(dark2In.read(), bg);
         if (con2 && (con2.inverted || con2.ratio < 3)) {
           ok = false;
@@ -870,33 +1050,39 @@
       if (transparentBox.checked) {
         notes.push('A transparent background inherits whatever sits behind it. Place it on a plain light area only.');
       }
-
-      if (check.logo) {
-        const L = check.logo;
-        if (L.fatal) {
-          ok = false;
-          notes.push('The logo covers ' + L.worstBlock + ' codewords in one block, past the ' + L.budget +
-            ' this code can repair. Shrink the logo or raise error correction to H.');
-        } else if (!L.safe) {
-          notes.push('The logo uses ' + Math.round(L.used * 100) + '% of the repair budget in its worst block. ' +
-            'It should still read, but leave more room if this is going to print.');
-        } else {
-          notes.push('The logo uses ' + Math.round(L.used * 100) + '% of the repair budget, which leaves room for print and camera noise.');
-        }
-      }
-
       if (Number(quietSel.value) < 4) {
         notes.push('A quiet zone under 4 modules is outside the standard. Codes butted against artwork often fail.');
       }
+      /* Decoration is not free. Every shape here was measured against a second
+         decoder before it shipped, but a shape that is not a plain square
+         still costs some of the margin a scanner works with, and that shows up
+         first on a small print in poor light. */
+      if (shapePick.read() !== 'square' || framePick.read() !== 'square' || ballPick.read() !== 'square') {
+        notes.push('Shaped modules and eyes cost a little of the margin a scanner has to work with. This one reads, but print it a size up and test the print itself.');
+      }
+      return { ok: ok, notes: notes };
+    }
 
-      return {
-        ok: ok,
-        headline: ok
-          ? 'Verified: decoded back to your exact content'
-          : 'Decodes correctly, but these settings will cost you scans',
-        notes: notes,
-        check: check
-      };
+    function paintVerdict(kind, headline, notes, fix) {
+      verdict.textContent = '';
+      verdict.className = 'qr-verdict is-' + kind;
+      verdict.appendChild(el('p', 'qr-verdict-head', headline));
+      if (notes && notes.length) {
+        const ul = el('ul', 'qr-verdict-notes');
+        notes.forEach(function (n) { ul.appendChild(el('li', null, n)); });
+        verdict.appendChild(ul);
+      }
+      if (fix) {
+        const b = el('button', 'btn-primary qr-fix', 'Fix it: ' + fix.label);
+        b.type = 'button';
+        b.addEventListener('click', function () {
+          if (fix.apply.ec) ecSel.value = fix.apply.ec;
+          if (fix.apply.logopad !== undefined) logoPadSel.value = fix.apply.logopad;
+          if (fix.apply.logosize !== undefined) logoSizeSel.value = fix.apply.logosize;
+          render();
+        });
+        verdict.appendChild(b);
+      }
     }
 
     function render() {
@@ -935,15 +1121,50 @@
       currentSVG = QR.toSVG(qr, opts);
       qrBox.innerHTML = currentSVG;
 
-      const result = runChecks(qr, opts);
-      verdict.className = 'qr-verdict ' + (result.ok ? 'is-pass' : 'is-warn');
-      const head = el('p', 'qr-verdict-head', result.headline);
-      verdict.appendChild(head);
-      if (result.notes.length) {
-        const ul = el('ul', 'qr-verdict-notes');
-        result.notes.forEach(function (n) { ul.appendChild(el('li', null, n)); });
-        verdict.appendChild(ul);
-      }
+      /* Read the finished artwork back before letting anyone download it.
+         This runs on every change, so the badge under the preview is a
+         statement about the image on screen, not about the matrix behind it. */
+      const stamp = ++verifySeq;
+      const basic = staticNotes();
+      paintVerdict('check', 'Reading the code back…', basic.notes);
+
+      readBack(currentSVG, data, qr.size + opts.quiet * 2).then(async function (got) {
+        if (stamp !== verifySeq) return;                 // a newer render won
+
+        if (!got) {
+          paintVerdict(basic.ok ? 'pass' : 'warn',
+            'Encoded and checked against the standard', basic.notes);
+          return;
+        }
+
+        if (!got.clean) {
+          const notes = [
+            state.logo
+              ? 'The logo is covering more of the code than its error correction can repair. ' +
+                'On a small code the middle also holds an alignment pattern, which a scanner needs to find the grid at all.'
+              : 'The rendered image did not decode. The colours or shapes are getting in the way.'
+          ].concat(basic.notes);
+          paintVerdict('fail', 'This will not scan — do not use it yet', notes);
+          const fix = await findFix(data, opts);
+          if (stamp === verifySeq && fix) {
+            paintVerdict('fail', 'This will not scan — do not use it yet', notes, fix);
+          }
+          return;
+        }
+
+        const notes = basic.notes.slice();
+        if (state.ecRaised) {
+          notes.push('Error correction was raised to High when you added the logo, so there is room to repair what it covers. Lower it above if you would rather have a less dense code.');
+        }
+        if (!got.rough) {
+          notes.unshift('It reads at a comfortable size but not when small or low quality, so print it large and keep it sharp.');
+        }
+        paintVerdict(basic.ok ? 'pass' : 'warn',
+          got.rough
+            ? 'Verified: this exact image was scanned and read back correctly'
+            : 'Scanned and read back correctly, with little margin to spare',
+          notes);
+      });
 
       const pngSize = Number(sizeSel.value);
       acts.appendChild(downloadButton('Download SVG', 'qr-code.svg', function () {
@@ -953,6 +1174,7 @@
         return svgToPngBlob(currentSVG, pngSize);
       }));
       acts.appendChild(copyButton(function () { return currentText; }, 'Copy content'));
+      acts.appendChild(copyButton(shareLink, 'Copy share link'));
 
       const modes = qr.segments.map(function (s) {
         return ({ numeric: 'numeric', alnum: 'alphanumeric', byte: 'byte' })[s.mode] + ' x' + s.length;
@@ -987,6 +1209,11 @@
     controls.addEventListener('change', schedule);
 
     buildFields();
+    /* A link like ?t=wifi&ssid=Cafe&style=ec:H rebuilds the code on arrival,
+       so a code can be sent as a URL rather than as a picture — and the person
+       who receives it can see what it contains before trusting it. */
+    try { applyShare(new URLSearchParams(location.search)); } catch (e) { /* a malformed link just shows the default */ }
+    applyViewMode();
     render();
   }
 

@@ -1,0 +1,42 @@
+{
+  "id": "/conversions/volume/tablespoon-us-to-milliliter.html",
+  "name": "Convert Tablespoon (US) to Milliliter — 1234Tools",
+  "short_name": "Tablespoon (US)",
+  "description": "Convert Tablespoon (US) (tbsp) to Milliliter (mL) instantly. Works in both directions, with a full volume & capacity table.",
+  "start_url": "/conversions/volume/tablespoon-us-to-milliliter.html?src=pwa",
+  "scope": "/conversions/volume/tablespoon-us-to-milliliter.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-volume.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-volume-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-volume-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "id": "/business/amortization-schedule.html",
+  "name": "Loan Amortisation Schedule — 1234Tools",
+  "short_name": "Loan Amortisation",
+  "description": "Full payment-by-payment breakdown of principal, interest and remaining balance, with optional overpayments.",
+  "start_url": "/business/amortization-schedule.html?src=pwa",
+  "scope": "/business/amortization-schedule.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-amortization-schedule.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-amortization-schedule-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-amortization-schedule-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

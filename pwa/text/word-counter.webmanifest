@@ -1,0 +1,41 @@
+{
+  "id": "/text/word-counter.html",
+  "name": "Word & Character Counter — 1234Tools",
+  "short_name": "Word & Character",
+  "description": "Count words, characters, sentences and paragraphs, with reading time and keyword density.",
+  "start_url": "/text/word-counter.html?src=pwa",
+  "scope": "/text/word-counter.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-word-counter.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-word-counter-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-word-counter-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

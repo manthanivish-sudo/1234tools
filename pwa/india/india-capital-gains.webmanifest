@@ -1,0 +1,41 @@
+{
+  "id": "/india/india-capital-gains.html",
+  "name": "Capital Gains Tax Calculator (India) — 1234Tools",
+  "short_name": "Capital Gains Tax",
+  "description": "Short and long-term capital gains on equity, mutual funds, property and other assets under current rules.",
+  "start_url": "/india/india-capital-gains.html?src=pwa",
+  "scope": "/india/india-capital-gains.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "finance"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-india-capital-gains.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-india-capital-gains-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-india-capital-gains-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

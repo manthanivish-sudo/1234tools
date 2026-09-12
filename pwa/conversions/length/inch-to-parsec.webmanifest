@@ -1,0 +1,42 @@
+{
+  "id": "/conversions/length/inch-to-parsec.html",
+  "name": "Convert Inch to Parsec — 1234Tools",
+  "short_name": "Inch → Parsec",
+  "description": "Convert Inch (in) to Parsec (pc) instantly. Works in both directions, with a full length & distance table.",
+  "start_url": "/conversions/length/inch-to-parsec.html?src=pwa",
+  "scope": "/conversions/length/inch-to-parsec.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-length.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-length-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-length-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

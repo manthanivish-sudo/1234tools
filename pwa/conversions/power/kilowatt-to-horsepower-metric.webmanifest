@@ -1,0 +1,42 @@
+{
+  "id": "/conversions/power/kilowatt-to-horsepower-metric.html",
+  "name": "Convert Kilowatt to Horsepower (metric) — 1234Tools",
+  "short_name": "Kilowatt",
+  "description": "Convert Kilowatt (kW) to Horsepower (metric) (PS) instantly. Works in both directions, with a full power table.",
+  "start_url": "/conversions/power/kilowatt-to-horsepower-metric.html?src=pwa",
+  "scope": "/conversions/power/kilowatt-to-horsepower-metric.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-power.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-power-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-power-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

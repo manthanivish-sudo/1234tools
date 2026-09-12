@@ -1,0 +1,42 @@
+{
+  "id": "/conversions/pressure/inches-of-mercury-to-atmosphere.html",
+  "name": "Convert Inches of Mercury to Atmosphere — 1234Tools",
+  "short_name": "Inches of Mercury",
+  "description": "Convert Inches of Mercury (inHg) to Atmosphere (atm) instantly. Works in both directions, with a full pressure table.",
+  "start_url": "/conversions/pressure/inches-of-mercury-to-atmosphere.html?src=pwa",
+  "scope": "/conversions/pressure/inches-of-mercury-to-atmosphere.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-pressure.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-pressure-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-pressure-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

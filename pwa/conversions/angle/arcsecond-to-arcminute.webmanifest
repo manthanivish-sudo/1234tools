@@ -1,0 +1,42 @@
+{
+  "id": "/conversions/angle/arcsecond-to-arcminute.html",
+  "name": "Convert Arcsecond to Arcminute — 1234Tools",
+  "short_name": "Arcsecond",
+  "description": "Convert Arcsecond (\") to Arcminute (') instantly. Works in both directions, with a full angle table.",
+  "start_url": "/conversions/angle/arcsecond-to-arcminute.html?src=pwa",
+  "scope": "/conversions/angle/arcsecond-to-arcminute.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-angle.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-angle-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-angle-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "id": "/conversions/speed/kilometers-per-hour-to-mach-sea-level.html",
+  "name": "Convert Kilometers per Hour to Mach (sea level) — 1234Tools",
+  "short_name": "Kilometers per Hour",
+  "description": "Convert Kilometers per Hour (km/h) to Mach (sea level) (Ma) instantly. Works in both directions, with a full speed & velocity table.",
+  "start_url": "/conversions/speed/kilometers-per-hour-to-mach-sea-level.html?src=pwa",
+  "scope": "/conversions/speed/kilometers-per-hour-to-mach-sea-level.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-speed.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-speed-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-speed-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

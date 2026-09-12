@@ -1,0 +1,41 @@
+{
+  "id": "/time/date-difference.html",
+  "name": "Date Difference Calculator — 1234Tools",
+  "short_name": "Date Difference",
+  "description": "Calculate the exact time between two dates in years, months, days, and total units.",
+  "start_url": "/time/date-difference.html?src=pwa",
+  "scope": "/time/date-difference.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-date-difference.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-date-difference-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-date-difference-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

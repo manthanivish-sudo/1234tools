@@ -1,0 +1,42 @@
+{
+  "id": "/health/water-intake.html",
+  "name": "Daily Water Intake Estimator — 1234Tools",
+  "short_name": "Daily Water Intake",
+  "description": "A rough guide to daily fluid needs based on body weight, activity and climate.",
+  "start_url": "/health/water-intake.html?src=pwa",
+  "scope": "/health/water-intake.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "health",
+    "fitness"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-water-intake.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-water-intake-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-water-intake-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

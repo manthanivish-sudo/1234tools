@@ -1,0 +1,42 @@
+{
+  "id": "/conversions/data/tebibyte-1024-to-bit.html",
+  "name": "Convert Tebibyte (1024) to Bit — 1234Tools",
+  "short_name": "Tebibyte (1024)",
+  "description": "Convert Tebibyte (1024) (TiB) to Bit (bit) instantly. Works in both directions, with a full digital storage table.",
+  "start_url": "/conversions/data/tebibyte-1024-to-bit.html?src=pwa",
+  "scope": "/conversions/data/tebibyte-1024-to-bit.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-data.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-data-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-data-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "id": "/developer/jwt-decoder.html",
+  "name": "JWT Decoder — 1234Tools",
+  "short_name": "JWT Decoder",
+  "description": "Decode a JSON Web Token to inspect its header, payload and expiry. Runs entirely in your browser.",
+  "start_url": "/developer/jwt-decoder.html?src=pwa",
+  "scope": "/developer/jwt-decoder.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "developer",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-jwt-decoder.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-jwt-decoder-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-jwt-decoder-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

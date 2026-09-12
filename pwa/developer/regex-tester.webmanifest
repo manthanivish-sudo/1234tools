@@ -1,0 +1,42 @@
+{
+  "id": "/developer/regex-tester.html",
+  "name": "Regex Tester — 1234Tools",
+  "short_name": "Regex Tester",
+  "description": "Test regular expressions against sample text with live match highlighting and capture groups.",
+  "start_url": "/developer/regex-tester.html?src=pwa",
+  "scope": "/developer/regex-tester.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "developer",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-regex-tester.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-regex-tester-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-regex-tester-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

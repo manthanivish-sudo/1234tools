@@ -1,0 +1,41 @@
+{
+  "id": "/utilities/random-number-generator.html",
+  "name": "Random Number Generator — 1234Tools",
+  "short_name": "Random Number",
+  "description": "Generate random numbers in any range, with or without duplicates, using a cryptographic source.",
+  "start_url": "/utilities/random-number-generator.html?src=pwa",
+  "scope": "/utilities/random-number-generator.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-random-number-generator.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-random-number-generator-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-random-number-generator-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

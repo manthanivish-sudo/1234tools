@@ -1,0 +1,42 @@
+{
+  "id": "/conversions/mass/tonne-to-gram.html",
+  "name": "Convert Tonne to Gram — 1234Tools",
+  "short_name": "Tonne → Gram",
+  "description": "Convert Tonne (t) to Gram (g) instantly. Works in both directions, with a full mass & weight table.",
+  "start_url": "/conversions/mass/tonne-to-gram.html?src=pwa",
+  "scope": "/conversions/mass/tonne-to-gram.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-mass.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-mass-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-mass-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

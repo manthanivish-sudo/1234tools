@@ -1,0 +1,42 @@
+{
+  "id": "/pdf/paper-pdf.html",
+  "name": "Printable Paper Generator — 1234Tools",
+  "short_name": "Printable Paper",
+  "description": "Generate graph, lined, dotted, isometric or music paper as a print-ready PDF.",
+  "start_url": "/pdf/paper-pdf.html?src=pwa",
+  "scope": "/pdf/paper-pdf.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-paper-pdf.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-paper-pdf-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-paper-pdf-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

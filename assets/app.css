@@ -647,6 +647,13 @@ details p { margin: 8px 0 0; color: var(--text-2); font-size: .93rem; }
 .qr-actions { padding: 16px; justify-content: center; }
 .qr-actions:empty { padding: 0; }
 
+/* A code arriving as a shared link: show the code, keep the controls one tap
+   away. The panels stay in the DOM so the tool still works if they open them. */
+.is-shared-view .qr-controls { display: none; }
+.is-shared-view .qr-layout { grid-template-columns: 1fr; }
+.is-shared-view .qr-stage { position: static; max-width: 460px; margin: 0 auto; }
+.shared-edit { display: block; margin: 16px auto 0; }
+
 /* the scan check — the page decodes its own output before you download it */
 .qr-verdict { padding: 0 16px; }
 .qr-verdict:not(:empty) { padding: 14px 16px; border-top: 1px solid var(--border); }
@@ -665,6 +672,14 @@ details p { margin: 8px 0 0; color: var(--text-2); font-size: .93rem; }
   font-size: .8rem; line-height: 1.55; color: var(--text-2);
 }
 .qr-verdict-notes li + li { margin-top: 5px; }
+.qr-verdict.is-check { background: var(--surface); }
+.qr-verdict.is-check .qr-verdict-head { color: var(--text-3); }
+.qr-verdict.is-check .qr-verdict-head::before { content: "…"; }
+.qr-verdict.is-fail { background: rgba(255,90,60,.10); }
+.qr-verdict.is-fail .qr-verdict-head { color: #ff9d8a; }
+.qr-verdict.is-fail .qr-verdict-head::before { content: "✕"; }
+.qr-fix { margin-top: 12px; }
+[data-theme="light"] .qr-verdict.is-fail .qr-verdict-head { color: #8c1d0c; }
 [data-theme="light"] .qr-verdict.is-pass .qr-verdict-head { color: #1c6b3f; }
 [data-theme="light"] .qr-verdict.is-warn .qr-verdict-head { color: #7d5200; }
 

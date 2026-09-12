@@ -1,0 +1,41 @@
+{
+  "id": "/business/depreciation.html",
+  "name": "Depreciation Calculator with Schedule — 1234Tools",
+  "short_name": "Depreciation",
+  "description": "Straight-line, reducing balance, sum-of-years and units of production, with a full year-by-year schedule.",
+  "start_url": "/business/depreciation.html?src=pwa",
+  "scope": "/business/depreciation.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-depreciation.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-depreciation-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-depreciation-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

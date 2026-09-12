@@ -31,10 +31,12 @@
   if (!manifest || !/\.webmanifest$/.test(manifest.getAttribute('href') || '')) return;
 
   /* Each tool installs as its own app, so a refusal has to be remembered per
-     tool. A single key would mean turning down the generator silently took the
-     scanner's offer away with it — they share an origin, not an identity. */
+     tool. A single key would mean turning down one tool silently took every
+     other tool's offer away with it — they share an origin, not an identity.
+     The resolved manifest path is unique by construction; the file name alone
+     would not be, the day two sections both want a "converter". */
   var KEY = 'mvr-install-dismissed:' +
-            manifest.getAttribute('href').replace(/^.*\//, '').replace(/\.webmanifest$/, '');
+            new URL(manifest.href, location.href).pathname.replace(/\.webmanifest$/, '');
 
   var deferred = null;
   var banner = null;

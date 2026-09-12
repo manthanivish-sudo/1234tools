@@ -1,0 +1,42 @@
+{
+  "id": "/pdf/pdf-metadata.html",
+  "name": "PDF Metadata Editor & Remover — 1234Tools",
+  "short_name": "PDF Metadata Editor",
+  "description": "View, change or completely strip the hidden metadata in a PDF — author, title, software.",
+  "start_url": "/pdf/pdf-metadata.html?src=pwa",
+  "scope": "/pdf/pdf-metadata.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-pdf-metadata.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-pdf-metadata-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-pdf-metadata-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

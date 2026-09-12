@@ -1,0 +1,41 @@
+{
+  "id": "/india/advance-tax.html",
+  "name": "Advance Tax Calculator — 1234Tools",
+  "short_name": "Advance Tax",
+  "description": "Quarterly advance tax instalments and the interest payable under Sections 234B and 234C if you underpay.",
+  "start_url": "/india/advance-tax.html?src=pwa",
+  "scope": "/india/advance-tax.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "finance"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-advance-tax.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-advance-tax-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-advance-tax-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

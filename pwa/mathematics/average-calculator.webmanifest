@@ -1,0 +1,41 @@
+{
+  "id": "/mathematics/average-calculator.html",
+  "name": "Average Calculator (Mean, Median, Mode) — 1234Tools",
+  "short_name": "Average Calculator",
+  "description": "Calculate mean, median, mode, range and weighted average from a list of numbers.",
+  "start_url": "/mathematics/average-calculator.html?src=pwa",
+  "scope": "/mathematics/average-calculator.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-average-calculator.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-average-calculator-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-average-calculator-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

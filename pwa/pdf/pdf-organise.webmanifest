@@ -1,0 +1,42 @@
+{
+  "id": "/pdf/pdf-organise.html",
+  "name": "Organise PDF Pages — 1234Tools",
+  "short_name": "Organise PDF Pages",
+  "description": "See page thumbnails and reorder, rotate or delete pages visually before saving.",
+  "start_url": "/pdf/pdf-organise.html?src=pwa",
+  "scope": "/pdf/pdf-organise.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-pdf-organise.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-pdf-organise-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-pdf-organise-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

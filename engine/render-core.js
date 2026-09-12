@@ -150,6 +150,11 @@
         try {
           const res = spec.compute(readValues(spec, form)) || {};
           renderResults(spec, res, out);
+          /* Tells the install offer this tool has earned its place on someone's
+             home screen. Every tool computes once on load to show a worked
+             example, and that is not use: only a change the visitor made counts.
+             Nothing else listens for this. */
+          if (touched) document.dispatchEvent(new CustomEvent('mvr:tool-used'));
           const host = root.querySelector('.tool-table');
           if (host) window.MVRTool.renderTable(res._table, host);
         } catch (e) {
@@ -158,8 +163,10 @@
         }
       };
 
-      form.addEventListener('input', run);
-      form.addEventListener('change', run);
+      let touched = false;
+      const touchedRun = () => { touched = true; run(); };
+      form.addEventListener('input', touchedRun);
+      form.addEventListener('change', touchedRun);
       run();
     },
 
@@ -231,15 +238,19 @@
         out.appendChild(tbl);
       };
 
+      /* Same rule as the calculators: the worked example shown on load is not
+         use, so the install offer waits for a change the visitor made. */
+      const used = () => { document.dispatchEvent(new CustomEvent('mvr:tool-used')); run(); };
+
       swap.addEventListener('click', () => {
         const fs = form.querySelector('[name="from"]');
         const ts = form.querySelector('[name="to"]');
         [fs.value, ts.value] = [ts.value, fs.value];
-        run();
+        used();
       });
 
-      form.addEventListener('input', run);
-      form.addEventListener('change', run);
+      form.addEventListener('input', used);
+      form.addEventListener('change', used);
       run();
     }
   };

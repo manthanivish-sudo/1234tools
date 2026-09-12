@@ -1,0 +1,42 @@
+{
+  "id": "/developer/robots-txt-generator.html",
+  "name": "robots.txt Generator — 1234Tools",
+  "short_name": "robots.txt Generator",
+  "description": "Build a valid robots.txt with crawl rules, sitemap references and common bot presets.",
+  "start_url": "/developer/robots-txt-generator.html?src=pwa",
+  "scope": "/developer/robots-txt-generator.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "developer",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-robots-txt-generator.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-robots-txt-generator-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-robots-txt-generator-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

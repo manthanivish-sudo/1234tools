@@ -1,0 +1,41 @@
+{
+  "id": "/mathematics/lcm-gcd.html",
+  "name": "LCM & GCD Calculator — 1234Tools",
+  "short_name": "LCM & GCD Calculator",
+  "description": "Find the least common multiple and greatest common divisor of any list of numbers.",
+  "start_url": "/mathematics/lcm-gcd.html?src=pwa",
+  "scope": "/mathematics/lcm-gcd.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-lcm-gcd.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-lcm-gcd-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-lcm-gcd-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "id": "/conversions/angle/arcminute-to-radian.html",
+  "name": "Convert Arcminute to Radian — 1234Tools",
+  "short_name": "Arcminute → Radian",
+  "description": "Convert Arcminute (') to Radian (rad) instantly. Works in both directions, with a full angle table.",
+  "start_url": "/conversions/angle/arcminute-to-radian.html?src=pwa",
+  "scope": "/conversions/angle/arcminute-to-radian.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-angle.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-angle-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-angle-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

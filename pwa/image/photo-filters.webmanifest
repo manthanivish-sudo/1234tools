@@ -1,0 +1,42 @@
+{
+  "id": "/image/photo-filters.html",
+  "name": "Photo Filters & Adjustments — 1234Tools",
+  "short_name": "Photo Filters",
+  "description": "Adjust brightness, contrast, saturation and blur, or apply grayscale, sepia and invert.",
+  "start_url": "/image/photo-filters.html?src=pwa",
+  "scope": "/image/photo-filters.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "photo",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-photo-filters.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-photo-filters-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-photo-filters-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

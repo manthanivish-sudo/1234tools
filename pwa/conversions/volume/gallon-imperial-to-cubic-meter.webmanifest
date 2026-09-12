@@ -1,0 +1,42 @@
+{
+  "id": "/conversions/volume/gallon-imperial-to-cubic-meter.html",
+  "name": "Convert Gallon (Imperial) to Cubic Meter — 1234Tools",
+  "short_name": "Gallon (Imperial)",
+  "description": "Convert Gallon (Imperial) (gal UK) to Cubic Meter (m³) instantly. Works in both directions, with a full volume & capacity table.",
+  "start_url": "/conversions/volume/gallon-imperial-to-cubic-meter.html?src=pwa",
+  "scope": "/conversions/volume/gallon-imperial-to-cubic-meter.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-volume.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-volume-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-volume-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

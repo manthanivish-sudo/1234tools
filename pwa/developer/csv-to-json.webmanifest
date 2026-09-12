@@ -1,0 +1,42 @@
+{
+  "id": "/developer/csv-to-json.html",
+  "name": "CSV to JSON Converter — 1234Tools",
+  "short_name": "CSV → JSON Converter",
+  "description": "Convert CSV or TSV into JSON, and back again. Handles quoted fields and embedded commas.",
+  "start_url": "/developer/csv-to-json.html?src=pwa",
+  "scope": "/developer/csv-to-json.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "developer",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-csv-to-json.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-csv-to-json-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-csv-to-json-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

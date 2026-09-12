@@ -1,0 +1,41 @@
+{
+  "id": "/mathematics/ratio-calculator.html",
+  "name": "Ratio Calculator — 1234Tools",
+  "short_name": "Ratio Calculator",
+  "description": "Simplify ratios, solve for a missing term, and scale a ratio to a total.",
+  "start_url": "/mathematics/ratio-calculator.html?src=pwa",
+  "scope": "/mathematics/ratio-calculator.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ratio-calculator.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ratio-calculator-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ratio-calculator-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

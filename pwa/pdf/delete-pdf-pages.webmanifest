@@ -1,0 +1,42 @@
+{
+  "id": "/pdf/delete-pdf-pages.html",
+  "name": "Delete PDF Pages — 1234Tools",
+  "short_name": "Delete PDF Pages",
+  "description": "Remove unwanted pages from a PDF — blank scans, cover sheets, or anything else.",
+  "start_url": "/pdf/delete-pdf-pages.html?src=pwa",
+  "scope": "/pdf/delete-pdf-pages.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-delete-pdf-pages.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-delete-pdf-pages-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-delete-pdf-pages-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "id": "/health/bmr-tdee.html",
+  "name": "BMR & Daily Energy Calculator — 1234Tools",
+  "short_name": "BMR & Daily Energy",
+  "description": "Estimate resting metabolic rate and total daily energy expenditure using the Mifflin-St Jeor equation.",
+  "start_url": "/health/bmr-tdee.html?src=pwa",
+  "scope": "/health/bmr-tdee.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "health",
+    "fitness"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-bmr-tdee.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-bmr-tdee-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-bmr-tdee-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

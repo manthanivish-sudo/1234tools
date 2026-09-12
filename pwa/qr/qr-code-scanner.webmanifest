@@ -1,0 +1,42 @@
+{
+  "id": "/qr/qr-code-scanner.html",
+  "name": "QR Code Scanner — 1234Tools",
+  "short_name": "QR Code Scanner",
+  "description": "Scan a QR code with your camera or from a picture. Reads WiFi, contact cards, payments and links, and shows where a link really goes before you open it.",
+  "start_url": "/qr/qr-code-scanner.html?src=pwa",
+  "scope": "/qr/qr-code-scanner.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-qr-code-scanner.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-qr-code-scanner-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-qr-code-scanner-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

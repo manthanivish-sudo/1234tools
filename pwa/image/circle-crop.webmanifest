@@ -1,0 +1,42 @@
+{
+  "id": "/image/circle-crop.html",
+  "name": "Circle Crop / Avatar Maker — 1234Tools",
+  "short_name": "Circle Crop /",
+  "description": "Crop an image into a circle or rounded square with a transparent background — ready for profile pictures.",
+  "start_url": "/image/circle-crop.html?src=pwa",
+  "scope": "/image/circle-crop.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "photo",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-circle-crop.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-circle-crop-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-circle-crop-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

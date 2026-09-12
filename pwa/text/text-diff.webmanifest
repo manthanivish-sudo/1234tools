@@ -1,0 +1,41 @@
+{
+  "id": "/text/text-diff.html",
+  "name": "Text Compare & Diff Tool — 1234Tools",
+  "short_name": "Text Compare & Diff",
+  "description": "Compare two texts line by line and see exactly what was added, removed or changed.",
+  "start_url": "/text/text-diff.html?src=pwa",
+  "scope": "/text/text-diff.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-text-diff.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-text-diff-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-text-diff-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

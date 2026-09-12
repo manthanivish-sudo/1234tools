@@ -1,0 +1,41 @@
+{
+  "id": "/india/gst-calculator.html",
+  "name": "GST Calculator (India) — 1234Tools",
+  "short_name": "GST Calculator",
+  "description": "Add or remove GST at current 2026 slabs, with the CGST, SGST and IGST split for your invoice.",
+  "start_url": "/india/gst-calculator.html?src=pwa",
+  "scope": "/india/gst-calculator.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "finance"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-gst-calculator.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-gst-calculator-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-gst-calculator-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

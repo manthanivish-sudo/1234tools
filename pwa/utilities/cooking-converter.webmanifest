@@ -1,0 +1,41 @@
+{
+  "id": "/utilities/cooking-converter.html",
+  "name": "Cooking Measurement Converter — 1234Tools",
+  "short_name": "Cooking Measurement",
+  "description": "Convert between cups, tablespoons, millilitres, grams and ounces for common ingredients.",
+  "start_url": "/utilities/cooking-converter.html?src=pwa",
+  "scope": "/utilities/cooking-converter.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-cooking-converter.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-cooking-converter-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-cooking-converter-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

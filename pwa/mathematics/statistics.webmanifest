@@ -1,0 +1,41 @@
+{
+  "id": "/mathematics/statistics.html",
+  "name": "Statistics Calculator (Mean, Median, Mode, SD) — 1234Tools",
+  "short_name": "Statistics",
+  "description": "Compute mean, median, mode, standard deviation, variance, and quartiles from a dataset.",
+  "start_url": "/mathematics/statistics.html?src=pwa",
+  "scope": "/mathematics/statistics.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-statistics.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-statistics-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-statistics-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

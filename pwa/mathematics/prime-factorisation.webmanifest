@@ -1,0 +1,41 @@
+{
+  "id": "/mathematics/prime-factorisation.html",
+  "name": "Prime Factorisation Calculator — 1234Tools",
+  "short_name": "Prime Factorisation",
+  "description": "Break a number into prime factors, list all divisors, and test whether it is prime.",
+  "start_url": "/mathematics/prime-factorisation.html?src=pwa",
+  "scope": "/mathematics/prime-factorisation.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-prime-factorisation.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-prime-factorisation-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-prime-factorisation-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
