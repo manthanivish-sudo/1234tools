@@ -699,6 +699,101 @@ details p { margin: 8px 0 0; color: var(--text-2); font-size: .93rem; }
 [data-theme="light"] .qr-verdict.is-pass .qr-verdict-head { color: #1c6b3f; }
 [data-theme="light"] .qr-verdict.is-warn .qr-verdict-head { color: #7d5200; }
 
+/* QR in bulk: the list is the control, the sheet of codes is the result, so
+   the two columns swap round against the single generator. */
+@media (min-width: 1150px) {
+  .qr-layout.qr-bulk { grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); }
+  .qr-layout.qr-bulk .qr-stage { position: static; }
+}
+@media (max-width: 1149px) {
+  .qr-layout.qr-bulk .qr-stage { order: 0; }
+}
+
+.bulk-input { font-family: var(--font-mono); font-size: .8rem; line-height: 1.6; resize: vertical; }
+.bulk-hint { margin: 8px 0 0; font-size: .78rem; line-height: 1.55; color: var(--text-3); }
+.bulk-source { padding: 0; margin-top: 4px; grid-column: 1 / -1; }
+/* the list has moved on since the batch was built */
+.btn-primary.is-stale { box-shadow: 0 0 0 2px var(--border-gold); }
+
+.bulk-summary:not(:empty) {
+  padding: 13px 16px; border-bottom: 1px solid var(--border);
+  background: var(--surface); font-size: .84rem; color: var(--text-2);
+}
+.bulk-count { font-family: var(--font-head); font-weight: 600; color: var(--text-1); }
+.bulk-summary.is-busy .bulk-count { color: var(--text-3); font-weight: 500; }
+.bulk-map { margin: 0; padding: 0 16px 14px; font-size: .78rem; line-height: 1.55; color: var(--text-3); }
+.bulk-map:empty { display: none; }
+
+.bulk-grid {
+  display: grid; gap: 12px; padding: 0 16px 16px;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+}
+.bulk-grid:empty { display: none; }
+.bulk-card {
+  display: flex; flex-direction: column; min-width: 0;
+  background: var(--bg-0); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); overflow: hidden;
+}
+.bulk-art { padding: 10px; background: #fff; }
+.bulk-art svg { display: block; width: 100%; height: auto; }
+.bulk-card-body { display: grid; gap: 4px; padding: 9px 10px 10px; border-top: 1px solid var(--border); }
+.bulk-name {
+  font-family: var(--font-mono); font-size: .74rem; color: var(--text-1);
+  overflow-wrap: anywhere;
+}
+.bulk-content { font-size: .72rem; color: var(--text-3); overflow-wrap: anywhere; }
+.bulk-status {
+  justify-self: start; margin-top: 2px; padding: 2px 7px;
+  font-size: .64rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  border-radius: 999px; background: var(--surface); color: var(--text-3);
+}
+.bulk-card.is-ok .bulk-status { background: rgba(64,196,120,.14); color: #6fdc9b; }
+.bulk-card.is-tight { border-color: var(--border-gold); }
+.bulk-card.is-tight .bulk-status { background: rgba(247,201,72,.14); color: var(--gold-2); }
+.bulk-card.is-fail { border-color: #c2452c; }
+.bulk-card.is-fail .bulk-status { background: rgba(255,90,60,.16); color: #ff9d8a; }
+[data-theme="light"] .bulk-card.is-ok .bulk-status { color: #1c6b3f; }
+[data-theme="light"] .bulk-card.is-tight .bulk-status { color: #7d5200; }
+[data-theme="light"] .bulk-card.is-fail .bulk-status { color: #8c1d0c; }
+.bulk-card-acts { display: flex; gap: 6px; margin-top: 4px; }
+.bulk-card-acts .btn-download { padding: 4px 9px; font-size: .7rem; }
+
+/* Shut until every code has been read back, so an archive can never leave
+   the page carrying a file nobody has checked. */
+.qr-actions .btn-download[disabled], .qr-actions .btn-ghost[disabled] {
+  opacity: .5; cursor: not-allowed; filter: grayscale(.6);
+}
+
+.bulk-skipped-wrap:not(:empty) { padding: 0 16px 16px; }
+.bulk-skipped > summary { cursor: pointer; font-size: .8rem; color: var(--gold-2); }
+.bulk-skipped ul {
+  margin: 8px 0 0; padding-left: 18px; font-size: .76rem; line-height: 1.6;
+  color: var(--text-3); overflow-wrap: anywhere;
+}
+
+/* Printing a sheet of codes: everything but the grid gets out of the way, and
+   the cards are sized so a page of them is usable as labels straight off the
+   printer. */
+@media print {
+  .is-bulk-print .site-header, .is-bulk-print .site-footer, .is-bulk-print .sidebar,
+  .is-bulk-print .sidebar-open, .is-bulk-print .crumbs, .is-bulk-print .qr-controls,
+  .is-bulk-print .bulk-summary, .is-bulk-print .qr-verdict, .is-bulk-print .bulk-map,
+  .is-bulk-print .qr-actions, .is-bulk-print .stat-grid, .is-bulk-print .panel,
+  .is-bulk-print .bulk-card-acts, .is-bulk-print .bulk-status,
+  .is-bulk-print .bulk-skipped-wrap, .is-bulk-print .io-msg { display: none !important; }
+  .is-bulk-print .layout, .is-bulk-print .qr-layout.qr-bulk { display: block; }
+  .is-bulk-print .qr-stage { border: 0; background: none; }
+  .is-bulk-print .bulk-grid {
+    padding: 0; gap: 6mm;
+    grid-template-columns: repeat(auto-fill, minmax(38mm, 1fr));
+  }
+  /* A printed sheet carries only codes that read back. */
+  .is-bulk-print .bulk-card.is-fail, .is-bulk-print .bulk-card.is-checking { display: none; }
+  .is-bulk-print .bulk-card { break-inside: avoid; border-color: #ccc; background: #fff; }
+  .is-bulk-print .bulk-name { color: #000; }
+  .is-bulk-print .bulk-content { display: none; }
+}
+
 /* QR scanner */
 .scan-stage {
   background: var(--bg-1); border: 1px solid var(--border);
@@ -734,6 +829,15 @@ details p { margin: 8px 0 0; color: var(--text-2); font-size: .93rem; }
 .scan-controls { padding: 14px 16px; justify-content: center; }
 .btn-ghost.is-active { border-color: var(--border-gold); color: var(--accent); }
 .scan-drop { margin-bottom: 16px; }
+
+/* Pick the lens by name. A phone's "back camera" is three or four of them. */
+.scan-camera { display: inline-flex; min-width: 0; margin: 0; }
+.scan-camera[hidden] { display: none; }
+.scan-camera-select { max-width: 230px; padding-top: 9px; padding-bottom: 9px; }
+
+/* A selfie camera shows the world back to front, so the preview is flipped.
+   This is display only: the frame the decoder reads is the untouched one. */
+.scan-frame.is-mirrored video { transform: scaleX(-1); }
 
 /* what was read */
 .scan-result:empty { display: none; }

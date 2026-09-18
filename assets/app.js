@@ -116,14 +116,25 @@
      engine on the exact tool they wanted and never use the box, so it
      is fetched on first interaction rather than on every page load. */
   var indexState = 'idle';
+  var waiting = [];
   function ensureIndex(then) {
     if (indexState === 'ready') { then(); return; }
+    /* Queue, rather than drop. Focusing the box starts the fetch, so a fast
+       typist finished their term while it was still in flight and the render
+       that was waiting on it was thrown away — the box stayed empty until they
+       pressed one more key. */
+    waiting.push(then);
     if (indexState === 'loading') return;
     indexState = 'loading';
     var s = document.createElement('script');
     s.src = base + 'assets/search-index.js';
-    s.onload = function () { indexState = 'ready'; then(); };
-    s.onerror = function () { indexState = 'idle'; };
+    s.onload = function () {
+      indexState = 'ready';
+      var run = waiting;
+      waiting = [];
+      for (var i = 0; i < run.length; i++) run[i]();
+    };
+    s.onerror = function () { indexState = 'idle'; waiting = []; };
     document.head.appendChild(s);
   }
 

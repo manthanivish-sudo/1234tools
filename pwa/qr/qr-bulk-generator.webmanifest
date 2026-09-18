@@ -1,0 +1,42 @@
+{
+  "id": "/qr/qr-bulk-generator.html",
+  "name": "Bulk QR Code Generator — 1234Tools",
+  "short_name": "Bulk QR Code",
+  "description": "Turn a list or a CSV into hundreds of QR codes at once, all sharing one look: shapes, colours, gradient, logo and error correction. Every code is scanned back before you download the batch as PNG or SVG.",
+  "start_url": "/qr/qr-bulk-generator.html?src=pwa",
+  "scope": "/qr/qr-bulk-generator.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-qr-bulk-generator.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-qr-bulk-generator-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-qr-bulk-generator-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
