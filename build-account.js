@@ -100,7 +100,7 @@ function pricingBody() {
     '  <div class="io-msg" id="pricing-msg"></div>\n' +
     '  <div class="plan-controls">\n' +
     '    <div class="biz-seg" role="tablist" aria-label="Billing period"><button type="button" class="biz-seg-btn is-on" data-period="monthly">Monthly</button><button type="button" class="biz-seg-btn" data-period="annual">Annual <small>2 months free</small></button></div>\n' +
-    '    <div class="biz-seg" role="tablist" aria-label="Where you pay from">' + Object.entries(PLANS.currencies).map(([cur, c], i) => '<button type="button" class="biz-seg-btn' + (i === 0 ? ' is-on' : '') + '" data-cur="' + cur + '" title="' + esc(c.label) + '">' + esc(cur === 'INR' ? 'India · ₹' : 'Elsewhere · £') + '</button>').join('') + '</div>\n' +
+    '    <div class="biz-seg" role="tablist" aria-label="Where you pay from">' + Object.entries(PLANS.currencies).map(([cur, c], i) => '<button type="button" class="biz-seg-btn' + (i === 0 ? ' is-on' : '') + '" data-cur="' + cur + '" title="' + esc(c.label) + '">' + esc(cur === 'INR' ? 'India · ₹ Razorpay' : 'UK &amp; elsewhere · £ Stripe').replace('&amp;amp;', '&amp;') + '</button>').join('') + '</div>\n' +
     '  </div>\n' +
     '  <div class="plan-grid">' + cards + '</div>\n' +
     '  <p class="plan-note" id="plan-note"></p>\n' +
@@ -121,7 +121,7 @@ function pricingScript() {
     document.querySelectorAll('.plan-amount').forEach(function (el) { el.hidden = !(el.dataset.cur === cur && el.dataset.period === period); });
     document.querySelectorAll('[data-period]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.period === period); });
     document.querySelectorAll('[data-cur]').forEach(function (b) { if (b.classList.contains('biz-seg-btn')) b.classList.toggle('is-on', b.dataset.cur === cur); });
-    note.textContent = cur === 'INR' ? 'Charged in rupees through Razorpay: UPI, cards, net banking. GST invoice on request.' : 'Charged in pounds through Stripe, by card. VAT invoice on request.';
+    note.textContent = cur === 'INR' ? 'Charged in rupees through Razorpay: UPI, cards, net banking. GST invoice on request.' : 'Charged in pounds sterling through Stripe, by card, by MVR IT Services LTD (UK). VAT invoice on request; the same rail serves customers outside India and the UK.';
   }
   document.querySelectorAll('[data-period]').forEach(function (b) { b.addEventListener('click', function () { period = b.dataset.period; paint(); }); });
   document.querySelectorAll('.biz-seg-btn[data-cur]').forEach(function (b) { b.addEventListener('click', function () { cur = b.dataset.cur; paint(); }); });

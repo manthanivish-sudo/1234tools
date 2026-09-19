@@ -84,6 +84,8 @@
     if (/invalid-email/.test(code)) return 'That does not look like an email address.';
     if (/too-many-requests/.test(code)) return 'Too many tries. Wait a few minutes.';
     if (/popup-closed|cancelled-popup/.test(code)) return 'The sign-in window was closed before it finished.';
+    if (/operation-not-allowed/.test(code)) return 'That sign-in method is not switched on yet — use email and password for now.';
+    if (/unauthorized-domain/.test(code)) return 'This address is not authorised for sign-in yet. Try again from www.1234tools.com.';
     if (/network-request-failed/.test(code)) return 'No connection. Check the network and try again.';
     return (e && e.message) || 'Something went wrong.';
   };

@@ -10,9 +10,11 @@
  * Paste the config from Firebase console -> Project settings -> Your apps.
  */
 window.FIREBASE_CONFIG = {
-  apiKey: 'REPLACE_ME',
-  authDomain: 'REPLACE_ME.firebaseapp.com',
-  projectId: 'REPLACE_ME',
-  appId: 'REPLACE_ME',
+  apiKey: 'AIzaSyBxtLZHkt3RzTcscjJklaRoJJ2tjFCQBM8',
+  authDomain: 'mvr-1234tools.firebaseapp.com',
+  projectId: 'mvr-1234tools',
+  appId: '1:950170265810:web:62f1940361d1b46ce3250b',
+  messagingSenderId: '950170265810',
+  storageBucket: 'mvr-1234tools.firebasestorage.app',
   region: 'asia-south1'
 };

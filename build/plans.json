@@ -1,8 +1,8 @@
 {
   "_comment": "What the pricing page shows. Amounts are display values; the backend's functions/plans.json is what actually charges. Keep them in step.",
   "currencies": {
-    "INR": { "symbol": "₹", "provider": "razorpay", "label": "India · UPI, cards, net banking" },
-    "GBP": { "symbol": "£", "provider": "stripe", "label": "Everywhere else · card" }
+    "INR": { "symbol": "₹", "provider": "razorpay", "label": "India · UPI, cards, net banking through Razorpay" },
+    "GBP": { "symbol": "£", "provider": "stripe", "label": "United Kingdom and everywhere else · card through Stripe" }
   },
   "plans": [
     {
@@ -48,7 +48,7 @@
   "faq": [
     { "q": "Do I need an account to use the tools?", "a": "No. Every tool that runs in your browser stays free and needs no account — that is the point of the site. An account is for the things that cannot run in a browser: AI calls, which need a model on a server, and settings you want on more than one device." },
     { "q": "What changes about my privacy if I sign in?", "a": "Signing in means Google’s sign-in library loads on that page and your email is stored with your account. The free tools do not change: a PDF you merge or a spreadsheet you convert still never leaves your device, signed in or not. AI tools are different by nature — the text you send to one is sent to the model — and every AI tool says so on its page." },
-    { "q": "Which currency will I be charged in?", "a": "Rupees through Razorpay if you choose India — UPI, cards and net banking — or pounds through Stripe by card from anywhere else. The site guesses from your location; switch it above the plans if it guessed wrong." },
+    { "q": "Which currency will I be charged in?", "a": "Rupees through Razorpay if you choose India — UPI, cards and net banking — or pounds sterling through Stripe by card if you choose the UK, which also covers everywhere else. 1234Tools is run by MVR IT Services LTD, a UK company, so UK customers get a UK VAT invoice. The site guesses from your location; switch it above the plans if it guessed wrong." },
     { "q": "Can I cancel?", "a": "Yes, from your account page, at any time. Access runs to the end of the period you paid for and does not renew." },
     { "q": "Is there a refund?", "a": "If a paid feature did not work for you, write within 14 days of the charge and it is refunded. No forms." }
   ]
