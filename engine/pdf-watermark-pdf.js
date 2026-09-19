@@ -26,6 +26,7 @@ window.PDF_TOOLS = window.PDF_TOOLS || {};
 window.PDF_TOOLS["watermark-pdf"] = {
 "title": "Add Watermark to PDF",
 "kind": "transform",
+"action": "Add watermark",
 "multiple": false,
 "description": "Stamp text across every page — DRAFT, CONFIDENTIAL, a name or a date — at any angle and opacity.",
 "keywords": ["watermark pdf","add text to pdf","stamp pdf","draft watermark","confidential pdf"],

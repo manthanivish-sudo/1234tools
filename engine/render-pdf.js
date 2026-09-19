@@ -181,14 +181,26 @@
     const reader = (key) => readers.find(r => r.key === key);
 
     const runBar = el('div', 'io-actions pdf-run');
+    /* "Process" told nobody anything. A spec may name its verb. */
     const runBtn = el('button', 'btn-primary',
-      spec.kind === 'inspect' ? 'Inspect' : spec.kind === 'create' ? 'Create PDF' : 'Process');
+      spec.action || (spec.kind === 'inspect' ? 'Inspect' : spec.kind === 'create' ? 'Create PDF' : 'Process'));
     runBtn.type = 'button';
     runBar.appendChild(runBtn);
     io.appendChild(runBar);
 
+    /* The result announces itself first, with the download in it; the
+       viewer of what was made comes next; the stats last. That order is the
+       whole point on a phone, where the old layout put the download a screen
+       and a half below the button. */
+    const summary = el('div', 'pdf-summary');
+    const viewer = el('div', 'pdf-view');
+    summary.hidden = true;
+    viewer.hidden = true;
+
     io.appendChild(msg);
     io.appendChild(report);
+    io.appendChild(summary);
+    io.appendChild(viewer);
     io.appendChild(results);
     io.appendChild(actions);
     io.appendChild(stats);
@@ -270,6 +282,7 @@
             drop.appendChild(fileInput);
             results.innerHTML = ''; actions.innerHTML = ''; stats.innerHTML = '';
             report.hidden = true;
+            clearResult();
             if (spec.placePreview) { place.hidden = true; place.innerHTML = ''; }
           }
         });
@@ -284,6 +297,7 @@
       actions.innerHTML = '';
       stats.innerHTML = '';
       report.hidden = true;
+      clearResult();
 
       if (needsFiles && !docs.length) { say('Choose a PDF first.', 'note'); return; }
 
@@ -301,35 +315,16 @@
           docs, opts: readOpts(), core,
           text: textArea ? textArea.value : ''
         });
-        if (!res) { say('That produced no result.', 'error'); return; }
-        if (res.error) { say(res.error, 'error'); return; }
+        if (!res) { say('That produced no result.', 'error'); reveal(msg); return; }
+        if (res.error) { say(res.error, 'error'); reveal(msg); return; }
         if (res.warn) say(res.warn, 'warn');
 
         if (res.report) { report.textContent = res.report; report.hidden = false; }
         renderStats(res.stats);
 
         const files = res.files || [];
-        if (files.length === 1) {
-          const f = files[0];
-          const b = el('button', 'btn-primary', `Download ${f.name} (${fmtBytes(f.bytes.length)})`);
-          b.type = 'button';
-          b.addEventListener('click', () => download(f.bytes, f.name));
-          actions.appendChild(b);
-        } else if (files.length > 1) {
-          const zip = el('button', 'btn-primary', `Download all ${files.length} as ZIP`);
-          zip.type = 'button';
-          zip.addEventListener('click', async () => {
-            if (!window.MVRZip) { say('The ZIP writer did not load.', 'error'); return; }
-            zip.disabled = true; zip.textContent = 'Packing…';
-            try {
-              const blob = await window.MVRZip(files.map(f => ({
-                name: f.name, blob: new Blob([f.bytes], { type: 'application/pdf' })
-              })));
-              download(blob, (spec.id || 'output') + '.zip');
-            } finally { zip.disabled = false; zip.textContent = `Download all ${files.length} as ZIP`; }
-          });
-          actions.appendChild(zip);
-
+        if (files.length) await showResult(files);
+        if (files.length > 1) {
           const list = el('div', 'pdf-file-grid');
           files.slice(0, 60).forEach(f => {
             const card = el('div', 'pdf-file-card');
@@ -769,21 +764,38 @@
       results.appendChild(grid);
       await paint();
 
-      const save = el('button', 'btn-primary', 'Save reorganised PDF');
+      /* Builds the file and hands it to the same result path as every other
+         tool: summary with the download, and a preview of what was built,
+         rather than a download that fires blind. */
+      const save = el('button', 'btn-primary', 'Build reorganised PDF');
       save.type = 'button';
       save.addEventListener('click', async () => {
         const items = state.filter(s => s.keep).map(s => ({
           doc: src.doc, pageIndex: s.index, rotate: s.rotate
         }));
-        if (!items.length) { say('Every page is marked for removal.', 'error'); return; }
+        if (!items.length) { say('Every page is marked for removal.', 'error'); reveal(msg); return; }
         save.disabled = true;
         try {
           const bytes = await core.assemble(items, {});
-          download(bytes, src.name.replace(/\.pdf$/i, '') + '-organised.pdf');
+          await showResult([{ name: src.name.replace(/\.pdf$/i, '') + '-organised.pdf', bytes }]);
         } catch (e) { say('Could not build the PDF: ' + e.message, 'error'); }
         finally { save.disabled = false; }
       });
       actions.appendChild(save);
+    }
+
+    /* A spec tends to echo the raw option back - "Position: bc" - because
+       that is what it was given. The control knows what "bc" was called on
+       the way in, so say that. Numbers are left alone: "1" is a count more
+       often than it is an option. */
+    function optionLabel(value) {
+      const v = String(value);
+      if (/^-?[\d.,]+$/.test(v)) return null;
+      for (const c of spec.controls || []) {
+        if (c.type !== 'select') continue;
+        for (const o of c.options || []) if (String(o.value) === v) return o.label;
+      }
+      return null;
     }
 
     function renderStats(rows) {
@@ -791,9 +803,241 @@
       (rows || []).forEach(r => {
         const row = el('div', 'stat-row');
         row.appendChild(el('span', 'stat-key', r[0]));
-        row.appendChild(el('span', 'stat-val', r[1]));
+        row.appendChild(el('span', 'stat-val', optionLabel(r[1]) || r[1]));
         stats.appendChild(row);
       });
+    }
+
+    /* ---------- the result, before it is downloaded ---------- */
+
+    /* Bring a node under the sticky header if it is off screen. The result
+       used to land a screen or two below the button on a phone, and nothing
+       moved to meet it. */
+    function reveal(node) {
+      const h = document.querySelector('.site-header');
+      const sticky = (h && getComputedStyle(h).position === 'sticky') ? h.getBoundingClientRect().height : 0;
+      const top = node.getBoundingClientRect().top;
+      if (top < sticky + 12 || top > window.innerHeight * 0.6) {
+        window.scrollTo({ top: window.scrollY + top - sticky - 12, behavior: 'smooth' });
+      }
+    }
+
+    let viewState = null;
+    function clearResult() {
+      summary.hidden = true; summary.innerHTML = '';
+      viewer.hidden = true; viewer.innerHTML = '';
+      viewState = null;
+    }
+
+    async function showResult(files) {
+      /* Page counts from the core, which is already loaded and cheap. */
+      for (const f of files.slice(0, 60)) {
+        try { f.pages = await (await core.PDFDocument.load(f.bytes)).pageCount(); }
+        catch (e) { f.pages = null; }
+      }
+      const pagesOf = (f) => f.pages ? f.pages + (f.pages === 1 ? ' page' : ' pages') : null;
+
+      summary.innerHTML = '';
+      const head = el('div', 'pdf-summary-head');
+      head.appendChild(el('span', 'pdf-summary-tick', '\u2713'));
+      const what = el('div', 'pdf-summary-what');
+      if (files.length === 1) {
+        what.appendChild(el('strong', 'pdf-summary-name', files[0].name));
+        what.appendChild(el('span', 'pdf-summary-meta',
+          [pagesOf(files[0]), fmtBytes(files[0].bytes.length)].filter(Boolean).join(' \u00b7 ')));
+      } else {
+        const pages = files.reduce((n, f) => n + (f.pages || 0), 0);
+        what.appendChild(el('strong', 'pdf-summary-name', files.length + ' files'));
+        what.appendChild(el('span', 'pdf-summary-meta',
+          (pages ? pages + ' pages \u00b7 ' : '') + fmtBytes(files.reduce((n, f) => n + f.bytes.length, 0))));
+      }
+      head.appendChild(what);
+      summary.appendChild(head);
+
+      const acts = el('div', 'pdf-summary-actions');
+      if (files.length === 1) {
+        const f = files[0];
+        const b = el('button', 'btn-primary', `Download ${f.name}`);
+        b.type = 'button';
+        b.addEventListener('click', () => download(f.bytes, f.name));
+        acts.appendChild(b);
+      } else {
+        const zip = el('button', 'btn-primary', `Download all ${files.length} as ZIP`);
+        zip.type = 'button';
+        zip.addEventListener('click', async () => {
+          if (!window.MVRZip) { say('The ZIP writer did not load.', 'error'); return; }
+          zip.disabled = true; zip.textContent = 'Packing\u2026';
+          try {
+            const blob = await window.MVRZip(files.map(f => ({
+              name: f.name, blob: new Blob([f.bytes], { type: 'application/pdf' })
+            })));
+            download(blob, (spec.id || 'output') + '.zip');
+          } finally { zip.disabled = false; zip.textContent = `Download all ${files.length} as ZIP`; }
+        });
+        acts.appendChild(zip);
+      }
+      summary.appendChild(acts);
+      summary.hidden = false;
+      reveal(summary);
+
+      if (!spec.noPreview) openViewer(files);
+    }
+
+    /* The output, page by page, at a zoom you choose. Rasterised on demand
+       at the device's pixel density so text stays crisp at 200%. */
+    const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
+
+    async function openViewer(files) {
+      viewer.innerHTML = '';
+      viewer.hidden = false;
+      viewer.appendChild(el('p', 'place-note', 'Preparing the preview\u2026'));
+
+      let lib;
+      try { lib = await ensurePdfJs(); }
+      catch (e) {
+        viewer.innerHTML = '';
+        viewer.appendChild(el('p', 'place-note',
+          'The preview could not load. The download above is not affected.'));
+        return;
+      }
+      /* The run may have been cleared while the engine loaded. */
+      if (viewer.hidden) return;
+
+      viewState = { files, fileIndex: 0, page: 0, zoom: 'fit', pdf: null, scale: 1 };
+      viewer.innerHTML = '';
+
+      const bar = el('div', 'pdf-view-bar');
+      let fileSel = null;
+      if (files.length > 1) {
+        fileSel = el('select', 'control pdf-view-file');
+        fileSel.setAttribute('aria-label', 'Which file to preview');
+        files.forEach((f, i) => {
+          const o = el('option', null, f.name + (f.pages ? ' \u00b7 ' + f.pages + (f.pages === 1 ? ' page' : ' pages') : ''));
+          o.value = String(i);
+          fileSel.appendChild(o);
+        });
+        bar.appendChild(fileSel);
+      }
+
+      const pager = el('div', 'place-pager');
+      const prev = el('button', 'btn-ghost', '\u2039');
+      prev.type = 'button'; prev.title = 'Previous page'; prev.setAttribute('aria-label', 'Previous page');
+      const num = el('span', 'place-page-num');
+      const next = el('button', 'btn-ghost', '\u203a');
+      next.type = 'button'; next.title = 'Next page'; next.setAttribute('aria-label', 'Next page');
+      pager.appendChild(prev); pager.appendChild(num); pager.appendChild(next);
+      bar.appendChild(pager);
+
+      const zoom = el('div', 'pdf-view-zoom');
+      const zOut = el('button', 'btn-ghost', '\u2212');
+      zOut.type = 'button'; zOut.title = 'Zoom out'; zOut.setAttribute('aria-label', 'Zoom out');
+      const zFit = el('button', 'btn-ghost', 'Fit');
+      zFit.type = 'button'; zFit.title = 'Fit the page to the width';
+      const zIn = el('button', 'btn-ghost', '+');
+      zIn.type = 'button'; zIn.title = 'Zoom in'; zIn.setAttribute('aria-label', 'Zoom in');
+      const zPct = el('span', 'pdf-view-pct');
+      zPct.setAttribute('aria-live', 'polite');
+      zoom.appendChild(zOut); zoom.appendChild(zFit); zoom.appendChild(zIn); zoom.appendChild(zPct);
+      bar.appendChild(zoom);
+      viewer.appendChild(bar);
+
+      const stage = el('div', 'pdf-view-stage');
+      stage.tabIndex = 0;
+      stage.setAttribute('role', 'region');
+      stage.setAttribute('aria-label', 'Preview of the output. Plus and minus zoom; Page Up and Page Down turn the page.');
+      const canvas = el('canvas', 'pdf-view-canvas');
+      stage.appendChild(canvas);
+      viewer.appendChild(stage);
+      const note = el('p', 'place-readout');
+      viewer.appendChild(note);
+
+      const open = async (i) => {
+        const f = files[i];
+        viewState.fileIndex = i;
+        viewState.page = 0;
+        /* pdf.js hands the buffer it is given to its worker, which detaches
+           it. These bytes are also what the Download button sends, so the
+           viewer works on a copy. */
+        const copy = new Uint8Array(f.bytes.length);
+        copy.set(f.bytes);
+        viewState.pdf = await lib.getDocument({
+          data: copy,
+          cMapUrl: `${PDFJS_BASE}cmaps/`,
+          cMapPacked: true,
+          standardFontDataUrl: `${PDFJS_BASE}standard_fonts/`
+        }).promise;
+        await paint();
+      };
+
+      const paint = async () => {
+        const st = viewState;
+        if (!st || !st.pdf) return;
+        const page = await st.pdf.getPage(st.page + 1);
+        const base = page.getViewport({ scale: 1 });
+        const avail = Math.max(240, stage.clientWidth - 2);
+        const fit = avail / base.width;
+        const scale = st.zoom === 'fit' ? fit : st.zoom;
+        st.scale = scale;
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        const vp = page.getViewport({ scale: scale * dpr });
+        canvas.width = Math.round(vp.width);
+        canvas.height = Math.round(vp.height);
+        canvas.style.width = Math.round(vp.width / dpr) + 'px';
+        canvas.style.height = Math.round(vp.height / dpr) + 'px';
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+        num.textContent = 'Page ' + (st.page + 1) + ' of ' + st.pdf.numPages;
+        prev.disabled = st.page === 0;
+        next.disabled = st.page >= st.pdf.numPages - 1;
+        zPct.textContent = Math.round(scale * 100) + '%';
+        zOut.disabled = scale <= ZOOMS[0] + 0.01;
+        zIn.disabled = scale >= ZOOMS[ZOOMS.length - 1] - 0.01;
+        note.textContent = Math.round(base.width) + ' \u00d7 ' + Math.round(base.height) + ' pt' +
+          (st.zoom === 'fit' ? ' \u00b7 fitted to width' : '');
+      };
+
+      const step = (dir) => {
+        const st = viewState;
+        const cur = st.scale;
+        const next = dir > 0 ? ZOOMS.find(z => z > cur + 0.01) : [...ZOOMS].reverse().find(z => z < cur - 0.01);
+        if (next === undefined) return;
+        st.zoom = next;
+        paint();
+      };
+
+      prev.addEventListener('click', () => { viewState.page--; paint(); });
+      next.addEventListener('click', () => { viewState.page++; paint(); });
+      zIn.addEventListener('click', () => step(1));
+      zOut.addEventListener('click', () => step(-1));
+      zFit.addEventListener('click', () => { viewState.zoom = 'fit'; paint(); });
+      if (fileSel) fileSel.addEventListener('change', () => open(Number(fileSel.value)));
+      stage.addEventListener('keydown', (ev) => {
+        if (ev.key === '+' || ev.key === '=') step(1);
+        else if (ev.key === '-' || ev.key === '_') step(-1);
+        else if (ev.key === '0') { viewState.zoom = 'fit'; paint(); }
+        else if (ev.key === 'PageDown' && !next.disabled) { viewState.page++; paint(); }
+        else if (ev.key === 'PageUp' && !prev.disabled) { viewState.page--; paint(); }
+        else return;
+        ev.preventDefault();
+      });
+      /* Double-click or double-tap: between fitted and 200%. */
+      stage.addEventListener('dblclick', () => { viewState.zoom = viewState.zoom === 'fit' ? 2 : 'fit'; paint(); });
+      /* A fitted page follows the column when the window is resized. */
+      let resizeTimer = null;
+      window.addEventListener('resize', () => {
+        if (!viewState || viewState.zoom !== 'fit') return;
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(paint, 150);
+      });
+
+      try { await open(0); }
+      catch (e) {
+        viewer.innerHTML = '';
+        viewer.appendChild(el('p', 'place-note', 'This output could not be previewed, but it can still be downloaded.'));
+      }
     }
 
     /* ---------- wiring ---------- */

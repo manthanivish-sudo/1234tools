@@ -26,6 +26,7 @@ window.PDF_TOOLS = window.PDF_TOOLS || {};
 window.PDF_TOOLS["merge-pdf"] = {
 "title": "Merge PDF Files",
 "kind": "transform",
+"action": "Merge PDFs",
 "multiple": true,
 "description": "Combine several PDFs into one, in any order, without uploading anything.",
 "keywords": ["merge pdf","combine pdf","join pdf files","pdf merger","concatenate pdf"],

@@ -26,6 +26,7 @@ window.PDF_TOOLS = window.PDF_TOOLS || {};
 window.PDF_TOOLS["split-pdf"] = {
 "title": "Split PDF",
 "kind": "transform",
+"action": "Split PDF",
 "multiple": false,
 "description": "Split one PDF into several files — by page count, by ranges, or one file per page.",
 "keywords": ["split pdf","separate pdf pages","divide pdf","pdf splitter","break up pdf"],

@@ -26,6 +26,7 @@ window.PDF_TOOLS = window.PDF_TOOLS || {};
 window.PDF_TOOLS["pdf-organise"] = {
 "title": "Organise PDF Pages",
 "kind": "render",
+"action": "Show the pages",
 "multiple": false,
 "description": "See page thumbnails and reorder, rotate or delete pages visually before saving.",
 "keywords": ["organise pdf","reorder pdf pages","rearrange pdf","pdf page organizer","move pdf pages"],

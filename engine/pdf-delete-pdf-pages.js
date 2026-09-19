@@ -26,6 +26,7 @@ window.PDF_TOOLS = window.PDF_TOOLS || {};
 window.PDF_TOOLS["delete-pdf-pages"] = {
 "title": "Delete PDF Pages",
 "kind": "transform",
+"action": "Delete pages",
 "multiple": false,
 "description": "Remove unwanted pages from a PDF — blank scans, cover sheets, or anything else.",
 "keywords": ["delete pdf pages","remove pages from pdf","pdf page remover","erase pdf page"],

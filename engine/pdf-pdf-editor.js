@@ -26,6 +26,7 @@ window.PDF_TOOLS = window.PDF_TOOLS || {};
 window.PDF_TOOLS["pdf-editor"] = {
 "title": "Add Text to a PDF",
 "kind": "transform",
+"action": "Add text",
 "multiple": false,
 "description": "Put a line of text anywhere on a PDF \u2014 click the page to choose the spot and see it land before you commit.",
 "keywords": ["add text to pdf","write on pdf","type on pdf","insert text in pdf","annotate pdf free","pdf text overlay"],

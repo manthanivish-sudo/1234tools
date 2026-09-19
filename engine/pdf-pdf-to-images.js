@@ -26,6 +26,7 @@ window.PDF_TOOLS = window.PDF_TOOLS || {};
 window.PDF_TOOLS["pdf-to-images"] = {
 "title": "PDF to Images",
 "kind": "render",
+"action": "Convert to images",
 "multiple": false,
 "description": "Convert PDF pages to PNG or JPEG images at any resolution, entirely in your browser.",
 "keywords": ["pdf to image","pdf to png","pdf to jpg","convert pdf to picture","extract pdf pages as images"],

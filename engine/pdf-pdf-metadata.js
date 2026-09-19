@@ -26,6 +26,7 @@ window.PDF_TOOLS = window.PDF_TOOLS || {};
 window.PDF_TOOLS["pdf-metadata"] = {
 "title": "PDF Metadata Editor & Remover",
 "kind": "transform",
+"action": "Apply to metadata",
 "multiple": false,
 "description": "View, change or completely strip the hidden metadata in a PDF — author, title, software.",
 "keywords": ["pdf metadata","remove pdf metadata","edit pdf properties","pdf author remove","anonymise pdf"],

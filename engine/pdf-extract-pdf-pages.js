@@ -26,6 +26,7 @@ window.PDF_TOOLS = window.PDF_TOOLS || {};
 window.PDF_TOOLS["extract-pdf-pages"] = {
 "title": "Extract PDF Pages",
 "kind": "transform",
+"action": "Extract pages",
 "multiple": false,
 "description": "Pull specific pages out of a PDF into a new document, keeping the order you specify.",
 "keywords": ["extract pdf pages","select pdf pages","pdf page extractor","get pages from pdf","copy pdf pages"],

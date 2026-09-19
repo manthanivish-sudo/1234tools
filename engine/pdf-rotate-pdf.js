@@ -26,6 +26,7 @@ window.PDF_TOOLS = window.PDF_TOOLS || {};
 window.PDF_TOOLS["rotate-pdf"] = {
 "title": "Rotate PDF Pages",
 "kind": "transform",
+"action": "Rotate pages",
 "multiple": false,
 "description": "Rotate every page or selected pages by 90, 180 or 270 degrees, permanently.",
 "keywords": ["rotate pdf","turn pdf pages","pdf orientation","fix sideways pdf","rotate pdf permanently"],

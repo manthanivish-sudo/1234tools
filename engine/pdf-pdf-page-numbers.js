@@ -26,6 +26,7 @@ window.PDF_TOOLS = window.PDF_TOOLS || {};
 window.PDF_TOOLS["pdf-page-numbers"] = {
 "title": "Add Page Numbers to PDF",
 "kind": "transform",
+"action": "Add page numbers",
 "multiple": false,
 "description": "Stamp page numbers, headers or footers onto an existing PDF.",
 "keywords": ["add page numbers to pdf","pdf page numbering","pdf header footer","number pdf pages"],

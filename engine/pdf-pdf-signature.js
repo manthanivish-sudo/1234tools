@@ -26,6 +26,7 @@ window.PDF_TOOLS = window.PDF_TOOLS || {};
 window.PDF_TOOLS["pdf-signature"] = {
 "title": "Add a Signature to a PDF",
 "kind": "transform",
+"action": "Add signature",
 "multiple": false,
 "description": "Draw or type a signature onto a PDF and place it where you want. A visible signature, not a cryptographic one \u2014 the difference is explained below.",
 "keywords": ["sign pdf","add signature to pdf","pdf signature image","signature on pdf","place signature pdf","pdf sign online free"],
