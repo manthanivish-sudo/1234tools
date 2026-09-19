@@ -32,8 +32,8 @@
     return b;
   }
 
-  function downloadButton(label, filename, makeBlob) {
-    const b = el('button', 'btn-download', label);
+  function downloadButton(label, filename, makeBlob, cls) {
+    const b = el('button', cls || 'btn-download', label);
     b.type = 'button';
     b.addEventListener('click', async function () {
       const blob = await makeBlob();
@@ -2180,18 +2180,29 @@
   function classifyPayload(text) {
     const s = String(text || '');
     const lower = s.toLowerCase();
+    const clip = (v, n) => (v && v.length > n ? v.slice(0, n) + '…' : v || '');
 
     if (/^wifi:/i.test(s)) {
       const field = (key) => {
         const m = new RegExp(key + ':((?:\\\\.|[^;])*);', 'i').exec(s);
         return m ? m[1].replace(/\\(.)/g, '$1') : '';
       };
+      const ssid = field('S'), pass = field('P'), enc = field('T');
       return {
         kind: 'WiFi network',
+        headline: ssid || 'Unnamed network',
+        icon: 'wifi',
+        /* A web page cannot join a network — only the phone's own camera app
+           can. Saying so beats a button that quietly does nothing, and the
+           password is the thing you actually need in hand. */
+        copy: pass ? { label: 'Copy the password', value: pass } : null,
+        aside: pass
+          ? 'A web page cannot join a network for you. Copy the password, then pick the network in your WiFi settings.'
+          : 'This is an open network with no password. Pick it in your WiFi settings.',
         fields: [
-          ['Network (SSID)', field('S')],
-          ['Security', ({ WPA: 'WPA / WPA2 / WPA3', WEP: 'WEP', nopass: 'Open, no password' })[field('T')] || field('T') || 'Unspecified'],
-          ['Password', field('P') || '(none)'],
+          ['Network (SSID)', ssid],
+          ['Security', ({ WPA: 'WPA / WPA2 / WPA3', WEP: 'WEP', nopass: 'Open, no password' })[enc] || enc || 'Unspecified'],
+          ['Password', pass || '(none)'],
           ['Hidden', /H:true/i.test(s) ? 'Yes' : 'No']
         ]
       };
@@ -2204,6 +2215,9 @@
       };
       return {
         kind: 'Contact card',
+        headline: line('FN') || line('ORG') || 'Contact',
+        icon: 'contact',
+        downloadLabel: 'Save to contacts',
         fields: [
           ['Name', line('FN')], ['Organisation', line('ORG')], ['Title', line('TITLE')],
           ['Phone', line('TEL')], ['Email', line('EMAIL')], ['Website', line('URL')]
@@ -2223,6 +2237,9 @@
         'END:VCARD'].filter(Boolean).join('\n');
       return {
         kind: 'Contact card',
+        headline: name || tel || 'Contact',
+        icon: 'contact',
+        downloadLabel: 'Save to contacts',
         fields: [['Name', name], ['Phone', tel], ['Email', email], ['Website', url]].filter((f) => f[1]),
         download: { name: 'contact.vcf', type: 'text/vcard', body: vcard }
       };
@@ -2241,6 +2258,9 @@
         : 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//1234Tools//QR//EN\n' + s + '\nEND:VCALENDAR';
       return {
         kind: 'Calendar event',
+        headline: line('SUMMARY') || 'Event',
+        icon: 'calendar',
+        downloadLabel: 'Add to calendar',
         fields: [['Event', line('SUMMARY')], ['Location', line('LOCATION')],
                  ['Starts', when(line('DTSTART'))], ['Ends', when(line('DTEND'))],
                  ['Details', line('DESCRIPTION')]].filter((f) => f[1]),
@@ -2256,11 +2276,14 @@
       });
       return {
         kind: 'UPI payment request',
+        headline: q.pn || q.pa || 'Payment request',
+        icon: 'pay',
         warn: 'Check the payee and amount in your payment app before confirming. A payment code can be swapped on a printed sticker.',
         fields: [['Pay to', q.pa || ''], ['Payee name', q.pn || ''],
                  ['Amount', q.am ? (q.cu || 'INR') + ' ' + q.am : 'Not set'],
                  ['Note', q.tn || '']].filter((f) => f[1]),
-        link: s
+        link: s,
+        linkLabel: 'Open in a payment app'
       };
     }
 
@@ -2269,29 +2292,66 @@
       const amount = /[?&]amount=([^&]*)/i.exec(s);
       return {
         kind: 'Bitcoin payment request',
+        headline: clip(addr, 24),
+        icon: 'pay',
         warn: 'Check the address in your wallet before sending. Payments cannot be reversed.',
         fields: [['Address', addr], ['Amount', amount ? amount[1] + ' BTC' : 'Not set']],
-        link: s
+        link: s,
+        linkLabel: 'Open in a wallet'
       };
     }
 
     if (/^mailto:/i.test(s)) {
-      return { kind: 'Email', fields: [['To', s.slice(7).split('?')[0]]], link: s };
+      const to = s.slice(7).split('?')[0];
+      return {
+        kind: 'Email',
+        headline: decodeURIComponent(to) || 'Email',
+        icon: 'mail',
+        fields: [['To', decodeURIComponent(to)]],
+        link: s,
+        linkLabel: 'Write an email'
+      };
     }
+
     if (/^(sms|smsto):/i.test(s)) {
       const rest = s.replace(/^(sms|smsto):/i, '');
       const parts = rest.split(':');
-      return { kind: 'SMS', fields: [['Number', parts[0]], ['Message', parts.slice(1).join(':')]].filter((f) => f[1]) };
+      const num = parts[0];
+      const body = parts.slice(1).join(':');
+      return {
+        kind: 'Text message',
+        headline: num,
+        icon: 'message',
+        fields: [['Number', num], ['Message', body]].filter((f) => f[1]),
+        /* RFC 5724 spells the prefilled body this way. Phones that ignore it
+           still open the right conversation, and the text is on screen to
+           copy, so nothing is lost either way. */
+        link: 'sms:' + num + (body ? '?body=' + encodeURIComponent(body) : ''),
+        linkLabel: 'Open a message'
+      };
     }
+
     if (/^tel:/i.test(s)) {
-      return { kind: 'Phone number', fields: [['Number', s.slice(4)]], link: s };
+      return {
+        kind: 'Phone number',
+        headline: s.slice(4),
+        icon: 'phone',
+        fields: [['Number', s.slice(4)]],
+        link: s,
+        linkLabel: 'Call this number'
+      };
     }
+
     if (/^geo:/i.test(s)) {
       const c = s.slice(4).split(/[,;]/);
       return {
         kind: 'Map location',
+        headline: c[0] + (c[1] ? ', ' + c[1] : ''),
+        icon: 'pin',
         fields: [['Latitude', c[0]], ['Longitude', c[1] || '']],
-        link: 'https://www.openstreetmap.org/?mlat=' + encodeURIComponent(c[0]) + '&mlon=' + encodeURIComponent(c[1] || '')
+        link: 'https://www.openstreetmap.org/?mlat=' + encodeURIComponent(c[0]) + '&mlon=' + encodeURIComponent(c[1] || ''),
+        linkLabel: 'Show on a map',
+        aside: 'The map opens on OpenStreetMap, which is the one link here that leaves this site.'
       };
     }
 
@@ -2311,21 +2371,37 @@
       } catch (e) { safe = false; }
       return {
         kind: 'Website address',
+        /* The domain is the headline, not the whole URL: it is the part that
+           decides whether opening this is a good idea, and a long tracking
+           tail would push it off a phone screen. */
+        headline: host || clip(s, 40),
+        sub: s,
+        icon: 'link',
         fields: [['Goes to', host], ['Full address', s]],
         notes: notes,
-        link: safe ? s : null
+        link: safe ? s : null,
+        linkLabel: 'Open this link'
       };
     }
 
     if (/^(javascript|data|vbscript|file):/i.test(lower)) {
       return {
         kind: 'Suspicious link',
+        headline: (lower.split(':')[0] || '') + ': address',
+        icon: 'alert',
         warn: 'This code contains a script or file address rather than an ordinary link. Nothing here will open it. Codes like this are used to attack the device that reads them.',
         fields: [['Content', s]]
       };
     }
 
-    return { kind: 'Plain text', fields: [], link: null };
+    return {
+      kind: 'Plain text',
+      headline: clip(s.split('\n')[0], 60) || 'Empty',
+      icon: 'text',
+      fields: [],
+      link: null,
+      copy: { label: 'Copy the text', value: s }
+    };
   }
 
   function mountQRScanner(spec, root, api) {
@@ -2337,8 +2413,8 @@
       stream: null, track: null, running: false, busy: false,
       native: null, nativeTried: false,
       devices: [], deviceId: null, resumeId: null, facing: 'environment',
-      torchOn: false, resumeOnShow: false,
-      last: '', misses: 0, altPass: false, history: []
+      torchOn: false, hasTorch: false, resumeOnShow: false,
+      mode: 'idle', last: '', misses: 0, altPass: false, history: []
     };
 
     /* ---- camera panel ---- */
@@ -2351,7 +2427,7 @@
     video.setAttribute('playsinline', '');
     video.setAttribute('aria-label', 'Camera preview');
     const reticle = el('div', 'scan-reticle');
-    reticle.innerHTML = '<span></span><span></span><span></span><span></span>';
+    reticle.innerHTML = '<span></span><span></span><span></span><span></span><i class="scan-beam"></i>';
     const placeholder = el('div', 'scan-placeholder');
     placeholder.appendChild(el('p', null, 'The camera preview appears here. Nothing is recorded, and no frame leaves your device.'));
     frame.appendChild(video);
@@ -2359,9 +2435,19 @@
     frame.appendChild(placeholder);
     stage.appendChild(frame);
 
+    /* The answer goes where the camera was.
+       It used to be appended below the whole stage, which on a phone put it
+       under the fold: the camera kept running, nothing visibly happened, and
+       the only clue that the scan had worked was off screen. */
+    const result = el('div', 'scan-result');
+    result.setAttribute('role', 'status');
+    result.setAttribute('aria-live', 'polite');
+    stage.appendChild(result);
+
     const controls = el('div', 'io-actions scan-controls');
     const startBtn = el('button', 'btn-primary', 'Start camera');
     startBtn.type = 'button';
+    startBtn.dataset.act = 'start';
 
     /* A named list rather than a "switch" button. On a current phone "the
        back camera" is three or four lenses, and blind cycling lands on the
@@ -2375,8 +2461,16 @@
 
     const torchBtn = el('button', 'btn-ghost', 'Torch');
     torchBtn.type = 'button';
+    torchBtn.dataset.act = 'torch';
     torchBtn.hidden = true;
+
+    const againBtn = el('button', 'btn-primary', 'Scan another code');
+    againBtn.type = 'button';
+    againBtn.dataset.act = 'again';
+    againBtn.hidden = true;
+
     controls.appendChild(startBtn);
+    controls.appendChild(againBtn);
     controls.appendChild(camWrap);
     controls.appendChild(torchBtn);
     stage.appendChild(controls);
@@ -2397,13 +2491,31 @@
     drop.appendChild(fileInput);
     io.appendChild(drop);
 
-    /* ---- result ---- */
-
-    const result = el('div', 'scan-result');
-    io.appendChild(result);
+    /* ---- earlier scans ---- */
 
     const historyWrap = el('section', 'scan-history');
     io.appendChild(historyWrap);
+
+    /**
+     * Three states, and every control belongs to exactly one of them.
+     *
+     *   idle    nothing running, "Start camera"
+     *   live    preview and reticle, camera list and torch
+     *   result  the camera is off and its space holds the answer
+     */
+    function setMode(mode) {
+      state.mode = mode;
+      stage.dataset.mode = mode;
+      frame.hidden = mode === 'result';
+      result.hidden = mode !== 'result';
+      startBtn.hidden = mode === 'result';
+      againBtn.hidden = mode !== 'result';
+      camWrap.hidden = mode !== 'live' || state.devices.length < 2;
+      torchBtn.hidden = mode !== 'live' || !state.hasTorch;
+      if (mode !== 'live') {
+        torchBtn.classList.remove('is-active');
+      }
+    }
 
     /* ---- scanning ---- */
 
@@ -2427,13 +2539,31 @@
       } catch (e) { state.native = null; }
     }
 
-    /** Draw part of a source into the work canvas and hand back its pixels. */
+    /**
+     * Draw part of a source into the work canvas and hand back its pixels.
+     *
+     * The window it drew is remembered, because the detector reports the
+     * code's corners in canvas coordinates and the frozen frame shown
+     * afterwards is in source coordinates.
+     */
+    let lastView = null;
     function grab(source, sx, sy, sw, sh, max) {
       const scale = Math.min(1, max / Math.max(sw, sh));
       canvas.width = Math.max(1, Math.round(sw * scale));
       canvas.height = Math.max(1, Math.round(sh * scale));
       ctx.drawImage(source, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      lastView = { sx: sx, sy: sy, sw: sw, sh: sh, cw: canvas.width, ch: canvas.height };
       return ctx.getImageData(0, 0, canvas.width, canvas.height);
+    }
+
+    /** Corners, from wherever the detector found them, in source pixels. */
+    function cornersInSource(got) {
+      if (got.native) return got.corners || null;         // already source space
+      if (!got.corners || !lastView) return null;
+      const v = lastView;
+      return got.corners.map(function (pt) {
+        return { x: v.sx + pt.x * (v.sw / v.cw), y: v.sy + pt.y * (v.sh / v.ch) };
+      });
     }
 
     const FULL_MAX = 800;      // whole frame, scaled down
@@ -2455,7 +2585,7 @@
         try {
           const found = await state.native.detect(source);
           if (found && found.length && found[0].rawValue) {
-            return { text: found[0].rawValue, native: true };
+            return { text: found[0].rawValue, native: true, corners: found[0].cornerPoints || null };
           }
         } catch (e) { state.native = null; }
       }
@@ -2495,9 +2625,19 @@
         try {
           const got = await readFrame(video, video.videoWidth, video.videoHeight);
           if (got && got.text) {
-            if (got.text !== state.last) showResult(got, 'camera');
+            /* Freeze the frame before the stream is torn down, so the answer
+               can show what was actually read rather than a black rectangle. */
+            const shot = freezeFrame(video, video.videoWidth, video.videoHeight, cornersInSource(got));
             state.misses = 0;
-          } else if (state.last && ++state.misses > MISSES_TO_FORGET) {
+            stop('', 'note', true);
+            showResult(got, 'camera', shot);
+            /* The loop ends with the camera. Clearing the flag matters:
+               `start()` only restarts the loop when nothing is looping, so
+               leaving it set gave a live preview that scanned nothing. */
+            looping = false;
+            return;
+          }
+          if (state.last && ++state.misses > MISSES_TO_FORGET) {
             state.last = '';
             state.misses = 0;
           }
@@ -2551,8 +2691,8 @@
       state.stream = null;
       state.track = null;
       state.torchOn = false;
+      state.hasTorch = false;
       torchBtn.classList.remove('is-active');
-      torchBtn.hidden = true;
     }
 
     /**
@@ -2589,7 +2729,8 @@
     function probeTorch() {
       const look = function () {
         if (!state.track) return;
-        torchBtn.hidden = !capabilities().torch;
+        state.hasTorch = !!capabilities().torch;
+        if (state.mode === 'live') torchBtn.hidden = !state.hasTorch;
       };
       look();
       setTimeout(look, 600);
@@ -2612,7 +2753,7 @@
       if (state.deviceId && state.devices.some(function (d) { return d.deviceId === state.deviceId; })) {
         camSel.value = state.deviceId;
       }
-      camWrap.hidden = state.devices.length < 2;
+      if (state.mode === 'live') camWrap.hidden = state.devices.length < 2;
     }
 
     async function attach(stream) {
@@ -2686,13 +2827,21 @@
       state.running = true;
       state.resumeOnShow = false;
       startBtn.textContent = 'Stop camera';
+      setMode('live');
       note(AIM, 'note');
       state.busy = false;
       initNative();
       if (!looping) loop();
     }
 
-    function stop(message, kind) {
+    /**
+     * Turn the camera off.
+     *
+     * `keepMode` is passed when a successful scan is what stopped it: the
+     * stage is about to become the result, and flipping it back to idle first
+     * would blink the placeholder through.
+     */
+    function stop(message, kind, keepMode) {
       state.running = false;
       state.resumeOnShow = false;
       state.last = '';
@@ -2702,7 +2851,7 @@
       frame.classList.remove('is-live', 'is-mirrored');
       placeholder.hidden = false;
       startBtn.textContent = 'Start camera';
-      camWrap.hidden = true;
+      if (!keepMode) setMode('idle');
       note(message === undefined ? 'Camera stopped.' : message, kind || 'note');
     }
 
@@ -2766,6 +2915,8 @@
         note('That file is not an image.', 'error');
         return;
       }
+      if (state.running) stop('', 'note', true);
+      note('Looking for a code in that picture…', 'note');
       await initNative();
       const url = URL.createObjectURL(file);
       const img = new Image();
@@ -2789,7 +2940,9 @@
             try {
               const found = await state.native.detect(canvas);
               if (found && found.length && found[0].rawValue) {
-                got = { text: found[0].rawValue, native: true };
+                /* The native detector read the work canvas, so its corners
+                   are in that window's coordinates, same as ours. */
+                got = { text: found[0].rawValue, nativeOnCanvas: true, corners: found[0].cornerPoints || null };
                 break;
               }
             } catch (e) { state.native = null; }
@@ -2797,8 +2950,15 @@
           got = Detect.scan(data);
           if (got) break;
         }
-        if (got) showResult(got, 'image');
-        else note('No QR code was found in that image. A sharper picture, or one with the whole code and a little space around it, usually does it.', 'warn');
+        if (got) {
+          const marks = got.nativeOnCanvas
+            ? cornersInSource({ corners: got.corners })
+            : cornersInSource(got);
+          if (got.nativeOnCanvas) { got.native = true; delete got.nativeOnCanvas; }
+          showResult(got, 'image', freezeFrame(img, img.width, img.height, marks));
+        } else {
+          note('No QR code was found in that image. A sharper picture, or one with the whole code and a little space around it, usually does it.', 'warn');
+        }
       };
       img.onerror = function () {
         URL.revokeObjectURL(url);
@@ -2809,7 +2969,106 @@
 
     /* ---- showing what was read ---- */
 
-    function showResult(got, source) {
+    /* A small line drawing per payload kind, so the answer is recognisable
+       before a word of it is read. Two colours at most, and no brand marks:
+       these have to work at 28px in both themes. */
+    const KIND_ICONS = {
+      link: '<path d="M9.5 14.5a4 4 0 0 1 0-5.7l2.8-2.8a4 4 0 1 1 5.7 5.7l-1.3 1.3"/><path d="M14.5 9.5a4 4 0 0 1 0 5.7l-2.8 2.8a4 4 0 1 1-5.7-5.7l1.3-1.3"/>',
+      wifi: '<path d="M2.5 8.8a15 15 0 0 1 19 0"/><path d="M6 12.4a10 10 0 0 1 12 0"/><path d="M9.4 15.9a5 5 0 0 1 5.2 0"/><circle cx="12" cy="19.4" r="1.1" fill="currentColor" stroke="none"/>',
+      contact: '<circle cx="12" cy="8.5" r="3.6"/><path d="M4.8 20.2a7.6 7.6 0 0 1 14.4 0"/>',
+      calendar: '<rect x="3.2" y="4.8" width="17.6" height="16" rx="2.2"/><path d="M3.2 9.6h17.6M8 3.2v3.2M16 3.2v3.2"/><circle cx="8.4" cy="13.6" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="13.6" r="1" fill="currentColor" stroke="none"/>',
+      pay: '<rect x="2.8" y="5.6" width="18.4" height="12.8" rx="2.2"/><path d="M2.8 10h18.4"/><path d="M6.4 14.4h3.2"/>',
+      mail: '<rect x="2.8" y="5.2" width="18.4" height="13.6" rx="2.2"/><path d="M3.4 7 12 13l8.6-6"/>',
+      message: '<path d="M20.8 12.8a7.6 7.6 0 0 1-7.6 7.6H8.4L3.2 23v-5.2a7.6 7.6 0 0 1 5.2-11.8h4.8a7.6 7.6 0 0 1 7.6 7.6z"/>',
+      phone: '<path d="M7 3.6h3l1.6 4-2 1.4a11 11 0 0 0 5.4 5.4l1.4-2 4 1.6v3A2.4 2.4 0 0 1 18 19.4 14.4 14.4 0 0 1 4.6 6 2.4 2.4 0 0 1 7 3.6z"/>',
+      pin: '<path d="M12 21.4s6.8-6.1 6.8-11a6.8 6.8 0 1 0-13.6 0c0 4.9 6.8 11 6.8 11z"/><circle cx="12" cy="10.2" r="2.4"/>',
+      alert: '<path d="M12 3.6 22 20.4H2z"/><path d="M12 9.6v4.4"/><circle cx="12" cy="17.2" r="1.1" fill="currentColor" stroke="none"/>',
+      text: '<path d="M5 5.6h14M5 10.4h14M5 15.2h9"/>'
+    };
+
+    function kindIcon(name) {
+      const wrap = document.createElement('span');
+      wrap.className = 'scan-kind-icon';
+      wrap.setAttribute('aria-hidden', 'true');
+      wrap.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" ' +
+        'stroke-linecap="round" stroke-linejoin="round">' + (KIND_ICONS[name] || KIND_ICONS.text) + '</svg>';
+      return wrap;
+    }
+
+    /**
+     * A thumbnail of what was read: the code, with a little of what surrounded
+     * it, cut from the frame at the instant of the read and outlined.
+     *
+     * It is not decoration. Point a camera at a menu with four codes on it and
+     * "here is a link" raises the obvious question of which one — this answers
+     * it, and it makes the freeze believable rather than a sudden switch to a
+     * page of text. It is a small square rather than the whole frame because
+     * on a phone the whole frame was the single biggest thing pushing the
+     * action below the fold.
+     */
+    function freezeFrame(source, width, height, corners) {
+      const out = 220;
+      const c = document.createElement('canvas');
+      c.width = c.height = out;
+      const g = c.getContext('2d');
+
+      let side, sx, sy;
+      if (corners && corners.length === 4) {
+        const xs = corners.map(function (pt) { return pt.x; });
+        const ys = corners.map(function (pt) { return pt.y; });
+        const x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs);
+        const y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+        side = Math.max(x1 - x0, y1 - y0) * 1.45;     // the code, plus its setting
+        sx = (x0 + x1) / 2 - side / 2;
+        sy = (y0 + y1) / 2 - side / 2;
+      } else {
+        side = Math.min(width, height);
+        sx = (width - side) / 2;
+        sy = (height - side) / 2;
+      }
+      side = Math.max(8, Math.min(side, Math.min(width, height)));
+      sx = Math.max(0, Math.min(sx, width - side));
+      sy = Math.max(0, Math.min(sy, height - side));
+
+      g.fillStyle = '#05070c';
+      g.fillRect(0, 0, out, out);
+      try { g.drawImage(source, sx, sy, side, side, 0, 0, out, out); }
+      catch (e) { return null; }
+
+      if (corners && corners.length === 4) {
+        const k = out / side;
+        g.strokeStyle = '#f7c948';
+        g.lineWidth = Math.max(2, out / 70);
+        g.lineJoin = 'round';
+        g.beginPath();
+        corners.forEach(function (pt, i) {
+          const x = (pt.x - sx) * k, y = (pt.y - sy) * k;
+          if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+        });
+        g.closePath();
+        g.stroke();
+      }
+      return c;
+    }
+
+    /** Two lines on the technique used, for anyone who wants them. */
+    function readMeta(got) {
+      if (got.version) {
+        return 'Version ' + got.version + ' · level ' + got.ecLevel + ' · mask ' + got.mask +
+          (got.corrected ? ' · ' + got.corrected + ' damaged codeword' + (got.corrected === 1 ? '' : 's') + ' repaired' : '') +
+          (got.mirrored ? ' · mirrored' : '');
+      }
+      return got.native ? 'Read with the browser’s built-in detector' : '';
+    }
+
+    /**
+     * What was read, where the camera was.
+     *
+     * The shape is deliberate: what it is, then whether it is safe, then the
+     * one thing you probably want to do, and only then the detail. The old
+     * card led with a table of fields and buried the action under it.
+     */
+    function showResult(got, source, shot) {
       state.last = got.text;
       state.misses = 0;
       const info = classifyPayload(got.text);
@@ -2817,21 +3076,71 @@
       result.textContent = '';
       const card = el('div', 'scan-card');
 
-      const head = el('div', 'scan-card-head');
-      head.appendChild(el('span', 'scan-kind', info.kind));
-      head.appendChild(el('span', 'scan-source', source === 'camera' ? 'Read from the camera' : 'Read from an image'));
+      /* what it is, with the thing it was read from beside it */
+      const head = el('div', 'scan-head');
+      head.appendChild(kindIcon(info.icon));
+      const headText = el('div', 'scan-head-text');
+      headText.appendChild(el('span', 'scan-kind',
+        info.kind + (source === 'image' ? ' · from your picture' : '')));
+      headText.appendChild(el('strong', 'scan-headline', info.headline || got.text));
+      if (info.sub && info.sub !== info.headline) {
+        headText.appendChild(el('span', 'scan-sub', info.sub));
+      }
+      head.appendChild(headText);
+      if (shot) {
+        const figure = el('div', 'scan-shot');
+        shot.className = 'scan-shot-img';
+        shot.setAttribute('role', 'img');
+        shot.setAttribute('aria-label', 'The code that was read, cut from the frame it was read in');
+        figure.appendChild(shot);
+        head.appendChild(figure);
+      }
       card.appendChild(head);
 
-      if (info.warn) {
-        const w = el('p', 'scan-warn', info.warn);
-        card.appendChild(w);
-      }
-      (info.notes || []).forEach(function (n) {
-        card.appendChild(el('p', 'scan-note', n));
-      });
+      /* whether it is safe */
+      if (info.warn) card.appendChild(el('p', 'scan-warn', info.warn));
+      (info.notes || []).forEach(function (n) { card.appendChild(el('p', 'scan-note', n)); });
+      if (info.aside) card.appendChild(el('p', 'scan-aside', info.aside));
 
+      /* the one thing you probably want to do */
+      const doRow = el('div', 'scan-do');
+      if (info.link && info.linkLabel) {
+        const a = el('a', 'btn-primary scan-go', info.linkLabel);
+        a.href = info.link;
+        a.rel = 'noopener noreferrer nofollow';
+        a.target = '_blank';
+        doRow.appendChild(a);
+      } else if (info.download) {
+        doRow.appendChild(downloadButton(info.downloadLabel || 'Save the file',
+          info.download.name, function () {
+            return new Blob([info.download.body], { type: info.download.type });
+          }, 'btn-primary scan-go'));
+      } else if (info.copy) {
+        const b = copyButton(function () { return info.copy.value; }, info.copy.label);
+        b.className = 'btn-primary scan-go';
+        doRow.appendChild(b);
+      }
+      /* Copying the whole payload is always available, and is the fallback
+         when a kind has no action of its own — but not twice: on plain text
+         the primary action already copies exactly this. */
+      const primaryCopiesAll = info.copy && info.copy.value === got.text;
+      if (!primaryCopiesAll) {
+        const copyAll = copyButton(function () { return got.text; },
+          doRow.children.length ? 'Copy the code' : 'Copy the text');
+        copyAll.className = doRow.children.length ? 'btn-ghost' : 'btn-primary scan-go';
+        doRow.appendChild(copyAll);
+      }
+      if (info.download && info.link) {
+        doRow.appendChild(downloadButton('Save ' + info.download.name.split('.').pop().toUpperCase(),
+          info.download.name, function () {
+            return new Blob([info.download.body], { type: info.download.type });
+          }));
+      }
+      card.appendChild(doRow);
+
+      /* the detail */
       if (info.fields && info.fields.length) {
-        const grid = el('div', 'stat-grid');
+        const grid = el('div', 'stat-grid scan-facts');
         info.fields.forEach(function (f) {
           const r = el('div', 'stat-row');
           r.appendChild(el('span', 'stat-key', f[0]));
@@ -2841,40 +3150,38 @@
         card.appendChild(grid);
       }
 
+      const raw = el('details', 'scan-raw');
+      raw.appendChild(el('summary', null, 'Exactly what the code contains'));
       const pre = el('pre', 'scan-text');
       pre.textContent = got.text;
-      card.appendChild(pre);
-
-      const actions = el('div', 'io-actions scan-actions');
-      actions.appendChild(copyButton(function () { return got.text; }, 'Copy'));
-
-      if (info.link) {
-        const a = el('a', 'btn-download', info.kind === 'Website address' ? 'Open link' : 'Open');
-        a.href = info.link;
-        a.rel = 'noopener noreferrer nofollow';
-        a.target = '_blank';
-        actions.appendChild(a);
-      }
-      if (info.download) {
-        actions.appendChild(downloadButton('Save ' + (info.download.name.split('.').pop().toUpperCase()),
-          info.download.name, function () {
-            return new Blob([info.download.body], { type: info.download.type });
-          }));
-      }
-      card.appendChild(actions);
-
-      if (got.version) {
-        const meta = el('p', 'scan-meta',
-          'Version ' + got.version + ', level ' + got.ecLevel + ', mask ' + got.mask +
-          (got.corrected ? ' — ' + got.corrected + ' damaged codeword' + (got.corrected === 1 ? '' : 's') + ' repaired' : '') +
-          (got.mirrored ? ' — mirrored' : ''));
-        card.appendChild(meta);
-      } else if (got.native) {
-        card.appendChild(el('p', 'scan-meta', 'Read with the browser’s built-in detector'));
-      }
+      raw.appendChild(pre);
+      const meta = readMeta(got);
+      if (meta) raw.appendChild(el('p', 'scan-meta', meta));
+      card.appendChild(raw);
 
       result.appendChild(card);
+      setMode('result');
       note('', '');
+
+      /* Bring the answer into view.
+         The site header is sticky, so "top is above zero" is not the same as
+         "you can see it": someone who had scrolled a little got a result
+         whose first 50px sat under the header, which is the bug this whole
+         change is about. Measure the header rather than encoding its height,
+         since it is a different size on a phone. */
+      const headerHeight = function () {
+        const h = document.querySelector('.site-header');
+        if (!h) return 0;
+        const box = h.getBoundingClientRect();
+        return getComputedStyle(h).position === 'sticky' ? box.height : 0;
+      };
+      const clear = headerHeight() + 12;
+      const top = stage.getBoundingClientRect().top;
+      if (top < clear || top > window.innerHeight * 0.4) {
+        const want = Math.max(0, top + window.scrollY - clear);
+        window.scrollTo({ top: want, behavior: 'smooth' });
+      }
+
       addHistory(got.text, info.kind);
       document.dispatchEvent(new CustomEvent('mvr:tool-used'));
 
@@ -2917,7 +3224,14 @@
 
     startBtn.addEventListener('click', function () {
       if (state.running) stop();
-      else start(camWrap.hidden ? null : (camSel.value || null));
+      else start(state.devices.length > 1 ? (camSel.value || null) : null);
+    });
+
+    /* Back to the camera that just worked, not to a cold start. */
+    againBtn.addEventListener('click', function () {
+      result.textContent = '';
+      setMode('idle');
+      start(state.deviceId || null);
     });
     camSel.addEventListener('change', function () { switchTo(camSel.value); });
     torchBtn.addEventListener('click', toggleTorch);
@@ -2979,6 +3293,7 @@
     });
 
     initNative();
+    setMode('idle');
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       startBtn.disabled = true;
