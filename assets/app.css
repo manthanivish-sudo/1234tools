@@ -249,13 +249,19 @@ main { min-height: 60vh; padding: 32px 0 64px; }
   border-radius: var(--radius-sm);
   overflow-wrap: anywhere;
 }
+/* An ordered list, so assistive technology announces it as one. The
+   separator is drawn here rather than typed into the markup, so it is never
+   read aloud. */
+.crumbs ol { list-style: none; margin: 0; padding: 0; display: inline; }
+.crumbs li { display: inline; }
+.crumbs li + li::before { content: '\203A'; margin: 0 .45em; color: var(--text-3); }
 .crumbs a {
   color: var(--text-2); text-decoration: none;
   border-bottom: 1px solid transparent; transition: color .15s, border-color .15s;
 }
 .crumbs a:hover, .crumbs a:focus-visible { color: var(--accent); border-bottom-color: var(--border-gold); }
 /* the current page: the last item, and the only one that is not a link */
-.crumbs > span { color: var(--text-1); font-weight: 600; }
+.crumbs [aria-current="page"], .crumbs > span { color: var(--text-1); font-weight: 600; }
 
 @media (max-width: 640px) {
   .crumbs { display: block; padding: 7px 12px; font-size: .78rem; }
@@ -1766,7 +1772,8 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
   margin: 0 0 10px;
 }
 .place-title { font-size: .85rem; color: var(--text-2); }
-.place-head .btn-ghost { margin-left: auto; }
+.place-head > .btn-ghost:last-child { margin-left: auto; }
+.place-head .place-pager ~ .btn-ghost { margin-left: 0; }
 
 /* A rendered page is white in either theme, so it gets its own plate. */
 .place-canvas {
@@ -1777,17 +1784,36 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
 }
 .place-canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
+/* The pager. The Pages field says where the text goes; this says what you
+   are looking at, and they are allowed to differ. */
+.place-pager { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.place-pager .btn-ghost { min-width: 28px; padding: 2px 8px; line-height: 1.4; }
+.place-pager .btn-ghost[disabled] { opacity: .35; cursor: default; }
+.place-page-num {
+  min-width: 96px; text-align: center;
+  font-family: var(--font-mono); font-size: .74rem; color: var(--text-2);
+}
+.place-head .place-pager + .btn-ghost { margin-left: 8px; }
+
 .place-readout {
   margin: 10px 0 0; text-align: center;
   font-family: var(--font-mono); font-size: .76rem; color: var(--text-3);
 }
+
+/* Said only when the page in view will not be written to. */
+.place-hint { margin: 6px 0 0; text-align: center; font-size: .78rem; color: var(--text-3); }
+.place-hint.is-warn { color: #e8b04a; }
+[data-theme="light"] .place-hint.is-warn { color: #8a5a00; }
 .place-readout.is-off { color: #e8896f; }
 .place-note { margin: 0; font-size: .85rem; line-height: 1.6; color: var(--text-3); }
 
 @media (max-width: 640px) {
   .place-preview { padding: 10px; }
-  .place-head { gap: 8px; }
-  .place-title { font-size: .8rem; }
+  .place-head { flex-wrap: wrap; gap: 8px; }
+  .place-title { font-size: .8rem; width: 100%; }
+  .place-pager { margin-left: 0; }
+  .place-page-num { min-width: 84px; font-size: .72rem; }
+  .place-head > .btn-ghost:last-child { margin-left: auto; }
 }
 
 /* ---------- page organiser ---------- */

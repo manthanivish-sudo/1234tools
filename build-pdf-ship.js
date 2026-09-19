@@ -41,6 +41,12 @@ const CHECK = process.argv.includes('--check');
 const VERBOSE = process.argv.includes('--verbose');
 const SITE = 'https://www.1234tools.com';
 
+/* The breadcrumb is a shared component: same markup and same structured data
+   as every other page, from the same function, so a page generated here can
+   never disagree with the pass that maintains the rest. */
+const crumbs = require('./build-crumbs.js');
+const { trailFor } = require('./build/sections.js');
+
 /* slug -> icon glyph. Only what has been verified to work. */
 const SHIPPING = [
   ['pdf-editor', 'i-pdf-editor'],
@@ -110,14 +116,10 @@ function head(parts, slug, title, description, canonical) {
   return h;
 }
 
-/** Matches build-pwa.js, so the two agree about the home-screen label. */
-function shortName(title) {
-  let s = title.replace(/^Convert\s+/i, '').replace(/\s*[—–]\s*.*$/, '').trim();
-  if (s.length <= 20) return s;
-  const cut = s.slice(0, 20);
-  const sp = cut.lastIndexOf(' ');
-  return (sp > 7 ? cut.slice(0, sp) : cut).replace(/[\s,&+-]+$/, '').trim();
-}
+/* The home-screen label is build-pwa.js's to decide. A second copy of the
+   rule here drifted from the first and the two scripts spent a while
+   correcting each other's output on every run. */
+const { shortName } = require('./build-pwa.js');
 
 const markActive = (html) => html
   .replace(/ class="side-link is-active"/g, ' class="side-link"')
@@ -137,8 +139,10 @@ function toolPage(slug, glyph, parts) {
       '<li><a href="/pdf/pdf-organise/">Organise PDF Pages</a></li>'
     ]).join('');
 
+  const pathOnly = '/pdf/' + slug + '/';
+  const trail = trailFor(pathOnly);
   const body =
-    '<nav class="crumbs"><a href="/">Home</a> › <a href="/pdf/">PDF Tools</a> › <span>' + esc(t.title) + '</span></nav>\n' +
+    crumbs.render(trail, t.title) + '\n' +
     '<article class="tool" data-tool="' + slug + '">\n' +
     '  <p class="eyebrow">PDF Tools</p>\n' +
     '  <h1><svg class="ico ico-title" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#' + glyph + '"></use></svg>' + esc(t.title) + '</h1>\n' +
@@ -175,14 +179,7 @@ function toolPage(slug, glyph, parts) {
         applicationCategory: 'UtilitiesApplication', operatingSystem: 'Any',
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
       },
-      {
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: SITE },
-          { '@type': 'ListItem', position: 2, name: 'PDF Tools', item: SITE + '/pdf/' },
-          { '@type': 'ListItem', position: 3, name: t.title, item: url }
-        ]
-      }
+      crumbs.breadcrumbList(trail, t.title, pathOnly)
     ].concat(t.faq && t.faq.length ? [{
       '@type': 'FAQPage',
       mainEntity: t.faq.map(function (f) {

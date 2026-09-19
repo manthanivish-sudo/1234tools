@@ -365,9 +365,26 @@
     }
 
     /* ---------- click to place ---------- */
-    /* Rasterise once into an offscreen canvas, then blit and draw the marker
-       on every change. Re-rendering a page per keystroke would be visible. */
+    /* Rasterise the shown page once into an offscreen canvas, then blit and
+       draw the marker on every change. Re-rendering per keystroke would be
+       visible, and re-opening the document per page would be worse. */
     let placeState = null;
+    let placeDoc = null;      // { pdf, name } for the file currently loaded
+    let placePage = 0;        // which page the preview is showing
+
+    /** Which page the Pages control points at, for the opening view. */
+    function firstSelectedPage(total) {
+      const cfg = spec.placePreview;
+      const r = cfg && cfg.page && reader(cfg.page);
+      if (!r) return 0;
+      const v = String(r.read() || '').trim();
+      if (/^last$/i.test(v)) return total - 1;
+      try {
+        const idx = core.parsePageRange(v, total);
+        if (idx.length) return idx[0];
+      } catch (e) { /* half-typed ranges are normal while typing */ }
+      return 0;
+    }
 
     async function paintPlace() {
       const cfg = spec.placePreview;
@@ -389,55 +406,55 @@
       }
 
       const src = docs[0];
-      let pdf;
-      try {
-        const raw = new Uint8Array(await new Blob([src.doc.bytes]).arrayBuffer());
-        pdf = await lib.getDocument({
-          data: raw,
-          cMapUrl: `${PDFJS_BASE}cmaps/`,
-          cMapPacked: true,
-          standardFontDataUrl: `${PDFJS_BASE}standard_fonts/`
-        }).promise;
-      } catch (e) {
-        place.innerHTML = '';
-        place.appendChild(el('p', 'place-note', 'This PDF could not be rendered for preview, but it can still be processed.'));
-        return;
-      }
-
-      /* Which page to show: the first one the page control selects. */
-      let shown = 0;
-      const pageKey = cfg.page && reader(cfg.page);
-      if (pageKey) {
-        const v = String(pageKey.read() || '').trim();
-        if (/^last$/i.test(v)) shown = pdf.numPages - 1;
-        else {
-          try {
-            const idx = core.parsePageRange(v, pdf.numPages);
-            if (idx.length) shown = idx[0];
-          } catch (e) { shown = 0; }
+      if (!placeDoc || placeDoc.name !== src.name) {
+        try {
+          const raw = new Uint8Array(await new Blob([src.doc.bytes]).arrayBuffer());
+          placeDoc = {
+            name: src.name,
+            pdf: await lib.getDocument({
+              data: raw,
+              cMapUrl: `${PDFJS_BASE}cmaps/`,
+              cMapPacked: true,
+              standardFontDataUrl: `${PDFJS_BASE}standard_fonts/`
+            }).promise
+          };
+        } catch (e) {
+          placeDoc = null;
+          place.innerHTML = '';
+          place.appendChild(el('p', 'place-note',
+            'This PDF could not be rendered for preview, but it can still be processed.'));
+          return;
         }
+        placePage = firstSelectedPage(placeDoc.pdf.numPages);
       }
-      shown = Math.max(0, Math.min(pdf.numPages - 1, shown));
 
-      const page = await pdf.getPage(shown + 1);
-      const base = page.getViewport({ scale: 1 });
-      /* Fit the column, and never rasterise more than is useful. */
-      const wide = Math.min(560, Math.max(280, place.clientWidth || 520));
-      const scale = Math.min(1.6, wide / base.width);
-      const vp = page.getViewport({ scale });
+      const total = placeDoc.pdf.numPages;
+      placePage = Math.max(0, Math.min(total - 1, placePage));
 
-      const sheet = document.createElement('canvas');
-      sheet.width = Math.round(vp.width);
-      sheet.height = Math.round(vp.height);
-      const sctx = sheet.getContext('2d');
-      sctx.fillStyle = '#fff';
-      sctx.fillRect(0, 0, sheet.width, sheet.height);
-      await page.render({ canvasContext: sctx, viewport: vp }).promise;
-
+      /* ---- the frame, built once per file ---- */
       place.innerHTML = '';
+
       const head = el('div', 'place-head');
-      head.appendChild(el('span', 'place-title',
-        'Click the page to place it' + (pdf.numPages > 1 ? ' \u00b7 page ' + (shown + 1) + ' of ' + pdf.numPages : '')));
+      head.appendChild(el('span', 'place-title', 'Click the page to place it'));
+
+      let pager = null, pageLabel = null, prev = null, next = null;
+      if (total > 1) {
+        pager = el('div', 'place-pager');
+        prev = el('button', 'btn-ghost', '\u2039');
+        prev.type = 'button';
+        prev.title = 'Previous page';
+        prev.setAttribute('aria-label', 'Previous page');
+        pageLabel = el('span', 'place-page-num');
+        next = el('button', 'btn-ghost', '\u203a');
+        next.type = 'button';
+        next.title = 'Next page';
+        next.setAttribute('aria-label', 'Next page');
+        pager.appendChild(prev);
+        pager.appendChild(pageLabel);
+        pager.appendChild(next);
+        head.appendChild(pager);
+      }
+
       const reset = el('button', 'btn-ghost', 'Centre');
       reset.type = 'button';
       reset.title = 'Put it in the middle of the page';
@@ -445,8 +462,6 @@
       place.appendChild(head);
 
       const canvas = el('canvas', 'place-canvas');
-      canvas.width = sheet.width;
-      canvas.height = sheet.height;
       canvas.setAttribute('role', 'application');
       canvas.tabIndex = 0;
       canvas.setAttribute('aria-label',
@@ -457,25 +472,69 @@
       const readout = el('p', 'place-readout');
       place.appendChild(readout);
 
-      placeState = { cfg, sheet, canvas, readout, scale, wPt: base.width, hPt: base.height };
+      const hint = el('p', 'place-hint');
+      place.appendChild(hint);
+
+      /* ---- rasterise whichever page is showing ---- */
+      const showPage = async (index) => {
+        placePage = Math.max(0, Math.min(total - 1, index));
+        const page = await placeDoc.pdf.getPage(placePage + 1);
+        const base = page.getViewport({ scale: 1 });
+        /* Fit the column, and never rasterise more than is useful. */
+        const wide = Math.min(560, Math.max(280, place.clientWidth || 520));
+        const scale = Math.min(1.6, wide / base.width);
+        const vp = page.getViewport({ scale });
+
+        const sheet = document.createElement('canvas');
+        sheet.width = Math.round(vp.width);
+        sheet.height = Math.round(vp.height);
+        const sctx = sheet.getContext('2d');
+        sctx.fillStyle = '#fff';
+        sctx.fillRect(0, 0, sheet.width, sheet.height);
+        await page.render({ canvasContext: sctx, viewport: vp }).promise;
+
+        canvas.width = sheet.width;
+        canvas.height = sheet.height;
+        placeState = { cfg, sheet, canvas, readout, hint, scale, wPt: base.width, hPt: base.height };
+
+        if (pageLabel) {
+          pageLabel.textContent = 'Page ' + (placePage + 1) + ' of ' + total;
+          prev.disabled = placePage === 0;
+          next.disabled = placePage === total - 1;
+        }
+        drawPlace();
+      };
+
+      if (pager) {
+        prev.addEventListener('click', () => showPage(placePage - 1));
+        next.addEventListener('click', () => showPage(placePage + 1));
+      }
 
       const setPoint = (xPt, yPt) => {
+        if (!placeState) return;
         const rx = reader(cfg.x), ry = reader(cfg.y);
-        if (rx) rx.set(Math.round(Math.max(0, Math.min(base.width, xPt))));
-        if (ry) ry.set(Math.round(Math.max(0, Math.min(base.height, yPt))));
+        if (rx) rx.set(Math.round(Math.max(0, Math.min(placeState.wPt, xPt))));
+        if (ry) ry.set(Math.round(Math.max(0, Math.min(placeState.hPt, yPt))));
         drawPlace();
       };
 
       canvas.addEventListener('click', (ev) => {
+        if (!placeState) return;
         const r = canvas.getBoundingClientRect();
-        const xPt = (ev.clientX - r.left) * (base.width / r.width);
+        const xPt = (ev.clientX - r.left) * (placeState.wPt / r.width);
         /* PDF counts up from the bottom; the canvas counts down from the top. */
-        const yPt = base.height - (ev.clientY - r.top) * (base.height / r.height);
+        const yPt = placeState.hPt - (ev.clientY - r.top) * (placeState.hPt / r.height);
         setPoint(xPt, yPt);
         canvas.focus();
       });
 
       canvas.addEventListener('keydown', (ev) => {
+        /* Page Up and Page Down turn the page; the arrows move the marker. */
+        if (total > 1 && (ev.key === 'PageUp' || ev.key === 'PageDown')) {
+          showPage(placePage + (ev.key === 'PageDown' ? 1 : -1));
+          ev.preventDefault();
+          return;
+        }
         const step = ev.shiftKey ? 20 : 2;
         const rx = reader(cfg.x), ry = reader(cfg.y);
         const cx = Number(rx && rx.read()) || 0, cy = Number(ry && ry.read()) || 0;
@@ -487,24 +546,29 @@
         ev.preventDefault();
       });
 
-      reset.addEventListener('click', () => setPoint(base.width / 2, base.height / 2));
+      reset.addEventListener('click', () => {
+        if (placeState) setPoint(placeState.wPt / 2, placeState.hPt / 2);
+      });
 
       /* Any control that feeds the marker redraws it. */
       [cfg.x, cfg.y, cfg.text, cfg.size, cfg.colour].forEach(k => {
         const r = typeof k === 'string' && reader(k);
         if (r && r.input) r.input.addEventListener('input', drawPlace);
       });
-      if (pageKey && pageKey.input) {
-        pageKey.input.addEventListener('change', () => paintPlace());
+      /* Changing which pages get the text moves the view to the first of
+         them, which is almost always where you want to look next. */
+      const pageReader = cfg.page && reader(cfg.page);
+      if (pageReader && pageReader.input) {
+        pageReader.input.addEventListener('change', () => showPage(firstSelectedPage(total)));
       }
 
-      drawPlace();
+      await showPage(placePage);
     }
 
     /* Draw what the output will look like, not a generic pin. */
     function drawPlace() {
       if (!placeState) return;
-      const { cfg, sheet, canvas, readout, scale, wPt, hPt } = placeState;
+      const { cfg, sheet, canvas, readout, hint, scale, wPt, hPt } = placeState;
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(sheet, 0, 0);
@@ -551,6 +615,28 @@
         ' points from the bottom-left of a ' + Math.round(wPt) + ' \u00d7 ' + Math.round(hPt) + ' page' +
         (off ? ' \u2014 that is off the page' : '');
       readout.className = 'place-readout' + (off ? ' is-off' : '');
+
+      /* You can page through the whole document, but only the pages the Pages
+         box names will actually be written to. Saying so here is cheaper than
+         letting someone aim carefully at a page that will not change. */
+      if (hint && placeDoc) {
+        const total = placeDoc.pdf.numPages;
+        let selected = null;
+        const r = cfg.page && reader(cfg.page);
+        if (r) {
+          const v = String(r.read() || '').trim();
+          if (/^last$/i.test(v)) selected = [total - 1];
+          else { try { selected = core.parsePageRange(v, total); } catch (e) { selected = null; } }
+        }
+        if (selected && selected.indexOf(placePage) < 0) {
+          hint.textContent = 'You are looking at page ' + (placePage + 1) +
+            ', which the Pages box does not include \u2014 nothing will be added here.';
+          hint.className = 'place-hint is-warn';
+        } else {
+          hint.textContent = '';
+          hint.className = 'place-hint';
+        }
+      }
     }
 
     async function runRender() {

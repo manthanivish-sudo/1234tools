@@ -727,7 +727,56 @@ function patchServiceWorker(somethingChanged) {
 
 /* ------------------------------------------------------------------ */
 
+/**
+ * Refuse to run over somebody else's unfinished work.
+ *
+ * This script patches every page on the site, and eight unpublished PDF tool
+ * drafts currently sit in the working tree as untracked HTML alongside edits
+ * to twenty tracked pages. Running here puts generated blocks back into files
+ * whose author had taken them out and rewrites their related-tool lists —
+ * changes git cannot undo, because the work was never committed.
+ *
+ * It found this out the hard way: a require() of this file for one helper
+ * executed main() as a side effect and rewrote 42 files. Hence both halves
+ * of the guard — the check below, and main() no longer running on import.
+ *
+ * To run it anyway, commit or stash the drafts first, or pass --force if you
+ * are certain. Preferably neither: export HEAD and run it there.
+ */
+function refuseIfDraftsPresent() {
+  if (process.argv.includes('--force')) return;
+  let drafts = [];
+  try {
+    drafts = require('child_process')
+      .execFileSync('git', ['ls-files', '--others', '--exclude-standard'],
+        { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 })
+      .split('\n').map((f) => f.trim())
+      .filter((f) => f.endsWith('.html'));
+  } catch (e) { return; }   /* no git: nothing to protect */
+  if (!drafts.length) return;
+
+  console.error([
+    '',
+    'build-site.js refuses to run: the working tree has unpublished pages.',
+    '',
+    '  ' + drafts.length + ' untracked HTML file(s), starting with:',
+    ...drafts.slice(0, 6).map((f) => '      ' + f),
+    drafts.length > 6 ? '      … and ' + (drafts.length - 6) + ' more' : '',
+    '',
+    '  This script rewrites every page on the site, including those, and the',
+    '  changes are not recoverable because the files are not committed.',
+    '',
+    '  Do this instead:',
+    '      git archive HEAD | tar -x -C /tmp/site && cd /tmp/site && node build-site.js',
+    '',
+    '  Or commit the drafts first. --force overrides, and means it.',
+    ''
+  ].filter((l) => l !== '').join('\n'));
+  process.exit(1);
+}
+
 function main() {
+  refuseIfDraftsPresent();
   console.log(`\nbuild-site.js${CHECK ? '  (--check: nothing will be written)' : ''}`);
   const on = [
     CONFIG.ga4 ? 'GA4 ' + CONFIG.ga4 : null,
@@ -781,5 +830,11 @@ function main() {
   console.log(`\n  ${changes.length} file(s) ${CHECK ? 'would change' : 'written'}\n`);
 }
 
-try { main(); }
-catch (e) { console.error('\nbuild-site.js failed: ' + (e && e.message || e) + '\n'); process.exit(1); }
+/* Only when run, never when required. `node build-site.js` still works;
+   require('./build-site.js') for a helper no longer rebuilds the site. */
+if (require.main === module) {
+  try { main(); }
+  catch (e) { console.error('\nbuild-site.js failed: ' + (e && e.message || e) + '\n'); process.exit(1); }
+}
+
+module.exports = { searchIndexTools, SECTIONS, META_PAGES };

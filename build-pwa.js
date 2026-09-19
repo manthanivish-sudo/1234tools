@@ -122,6 +122,14 @@ function shortName(title) {
     .trim();
 }
 
+/* The label rule is shared: build-pdf-ship.js writes the same meta tag for
+   the pages it generates, and a second copy of this function there drifted
+   until the two scripts were rewriting each other's output on every run. When
+   required, lend the function and do nothing else; the build below runs only
+   when this file is run. */
+module.exports = { shortName };
+if (require.main !== module) return;
+
 const esc = (s) => String(s)
   .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
   .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&mdash;/g, '—');
