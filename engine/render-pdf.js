@@ -1166,5 +1166,49 @@
       fileInput.addEventListener('change', () => { if (fileInput.files.length) loadFiles(fileInput.files); });
     }
     runBtn.addEventListener('click', run);
+
+    /* On a phone the button lands a screen or two below the page you are
+       aiming at. While it is off screen and there is something to run, a
+       copy of it sits at the bottom of the viewport; it goes the moment a
+       result appears, because the result scrolls into view on its own. */
+    (function stickyRun() {
+      if (!('IntersectionObserver' in window) || !window.matchMedia) return;
+      const narrow = window.matchMedia('(max-width: 640px)');
+      const bar = el('div', 'pdf-run-sticky');
+      bar.hidden = true;
+      const copy = el('button', 'btn-primary', runBtn.textContent);
+      copy.type = 'button';
+      copy.addEventListener('click', () => { bar.hidden = true; run(); });
+      bar.appendChild(copy);
+      document.body.appendChild(bar);
+
+      let runVisible = true;
+      const update = () => {
+        const ready = needsFiles ? docs.length > 0 : true;
+        /* The consent banner is pinned to the same edge on a first visit and
+           must be answered first; the bar yields while it is there. */
+        const consentUp = !!document.querySelector('.cc');
+        const show = narrow.matches && ready && !runVisible && summary.hidden && !runBtn.disabled && !consentUp;
+        bar.hidden = !show;
+        copy.textContent = runBtn.textContent;
+        io.classList.toggle('has-sticky-run', show);
+      };
+      new IntersectionObserver((entries) => {
+        runVisible = entries[0].isIntersecting;
+        update();
+      }, { threshold: 0 }).observe(runBar);
+      if (narrow.addEventListener) narrow.addEventListener('change', update);
+      else if (narrow.addListener) narrow.addListener(update);
+      /* Files arrive and results appear without the button moving. */
+      const later = () => setTimeout(update, 60);
+      if (fileInput) fileInput.addEventListener('change', later);
+      io.addEventListener('click', later);
+      io.addEventListener('drop', later);
+      new MutationObserver(later).observe(summary, { attributes: true, attributeFilter: ['hidden'] });
+      /* Answering the banner removes it from the body. */
+      new MutationObserver((muts) => {
+        if (muts.some(m => [...m.removedNodes, ...m.addedNodes].some(n => n.classList && n.classList.contains('cc')))) later();
+      }).observe(document.body, { childList: true });
+    })();
   };
 })();
