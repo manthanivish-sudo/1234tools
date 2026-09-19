@@ -83,7 +83,13 @@ function tools() {
   return sandbox.window.SEARCH_INDEX
     .map(function (e) {
       const url = e[1];
-      return { title: e[0], url: url, id: e[2], slug: slugOf(url), file: fileOf(url) };
+      const slug = slugOf(url);
+      return {
+        title: e[0], url: url, id: e[2], slug: slug, file: fileOf(url),
+        /* A redirect stub at the old address is the record that this tool
+           was once served there, and so what its installed id has to stay. */
+        hadHtmlUrl: fs.existsSync(path.join(ROOT, slug + '.html'))
+      };
     })
     .filter(function (t) { return !drafts.has(t.file) && !drafts.has(t.url); });
 }
@@ -132,9 +138,13 @@ function manifestFor(tool, meta) {
   return JSON.stringify({
     /* The id is what makes this a separate installation rather than another
        copy of the site. It must stay stable: change it and an installed app
-       is orphaned — which is why it still names the address these tools were
-       first published at, even though nothing is served there any more. */
-    id: '/' + tool.slug + '.html',
+       is orphaned rather than moved.
+       So a tool that was published before URLs gained their trailing slash
+       keeps naming the address it was first installed from, even though
+       nothing is served there any more — its redirect stub is how we know.
+       A tool born after the move never had that address, and pointing its id
+       at a page that has never existed would be a small permanent lie. */
+    id: '/' + tool.slug + (tool.hadHtmlUrl ? '.html' : '/'),
     name: meta.title + ' — 1234Tools',
     short_name: meta.short,
     description: meta.description,
