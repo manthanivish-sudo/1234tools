@@ -1540,7 +1540,8 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
   .image-card { padding: 10px; }
   .palette-grid { grid-template-columns: 1fr 1fr; }
   .file-row { flex-wrap: wrap; }
-  .file-meta { flex-basis: 100%; padding-left: 32px; font-size: .7rem; }
+  /* meta goes last so the remove button stays beside the name */
+  .file-meta { order: 2; flex-basis: 100%; padding-left: 32px; font-size: .7rem; }
 }
 
 /* ============================================================
