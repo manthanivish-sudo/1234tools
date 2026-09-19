@@ -1,0 +1,41 @@
+{
+  "id": "/education/attendance-calculator.html",
+  "name": "Attendance Calculator — 1234Tools",
+  "short_name": "Attendance",
+  "description": "Work out your attendance percentage, how many classes you can still miss, and how many you must attend in a row to get back to the required minimum.",
+  "start_url": "/education/attendance-calculator/?src=pwa",
+  "scope": "/education/attendance-calculator/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-attendance.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-attendance-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-attendance-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

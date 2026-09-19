@@ -1,0 +1,41 @@
+{
+  "id": "/education/sgpa-to-cgpa.html",
+  "name": "SGPA to CGPA Calculator — 1234Tools",
+  "short_name": "SGPA → CGPA",
+  "description": "Turn semester grade points into a cumulative CGPA, weighted by semester credits where you have them, with the equivalent percentage.",
+  "start_url": "/education/sgpa-to-cgpa/?src=pwa",
+  "scope": "/education/sgpa-to-cgpa/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-sgpa.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-sgpa-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-sgpa-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

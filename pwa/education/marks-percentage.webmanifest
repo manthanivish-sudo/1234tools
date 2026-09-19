@@ -1,0 +1,41 @@
+{
+  "id": "/education/marks-percentage.html",
+  "name": "Marks Percentage Calculator — 1234Tools",
+  "short_name": "Marks Percentage",
+  "description": "Add up marks across subjects and get the total, the percentage and the grade, with per-subject maximums where they differ.",
+  "start_url": "/education/marks-percentage/?src=pwa",
+  "scope": "/education/marks-percentage/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-marks.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-marks-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-marks-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

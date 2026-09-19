@@ -1132,4 +1132,42 @@
   <circle cx="17" cy="16.8" r="3.2" class="thin"/>
   <path d="m15 19.4-.8 3.2 2.8-1.4 2.8 1.4-.8-3.2" class="thin"/>
 </symbol>
+<symbol id="i-education" viewBox="0 0 24 24">
+  <path d="M12 3.2 2 7.6l10 4.4 10-4.4z"/>
+  <path d="M6.4 10.4v5.2c0 1.5 2.5 2.8 5.6 2.8s5.6-1.3 5.6-2.8v-5.2" class="thin"/>
+  <path d="M22 7.6v5.6M20.8 20.8h2.4l-1.2-3.2z" class="thin"/>
+</symbol>
+<symbol id="i-cgpa" viewBox="0 0 24 24">
+  <rect x="3" y="4" width="18" height="16" rx="2.2"/>
+  <path d="M7.2 15.6 10 10.8l2.4 3.6 2-2.4 2.4 3.6" class="thin"/>
+  <path d="M7.2 8.4h4" class="thin"/>
+</symbol>
+<symbol id="i-sgpa" viewBox="0 0 24 24">
+  <rect x="3" y="4" width="18" height="16" rx="2.2"/>
+  <path d="M7 9.2h4.4M7 12.4h7M7 15.6h5.6" class="thin"/>
+  <path d="M16.4 8.8v6.4l2.2-1.6 2.2 1.6V8.8" class="fill"/>
+</symbol>
+<symbol id="i-marks" viewBox="0 0 24 24">
+  <path d="M6 2.8h8.4L19 7.4v13.8H6z"/>
+  <path d="M14.4 2.8v4.6H19" class="thin"/>
+  <path d="m8.8 13.2 2 2 4-4.4" class="thin"/>
+  <path d="M8.8 17.6h6.4" class="thin"/>
+</symbol>
+<symbol id="i-attendance" viewBox="0 0 24 24">
+  <rect x="3.2" y="4.8" width="17.6" height="16" rx="2.2"/>
+  <path d="M3.2 9.6h17.6M8 3.2v3.2M16 3.2v3.2"/>
+  <path d="m8.4 14 1.8 1.8 3.6-3.6" class="thin"/>
+  <path d="m16 13.2 2.8 2.8M18.8 13.2 16 16" class="thin"/>
+</symbol>
+<symbol id="i-percentile" viewBox="0 0 24 24">
+  <path d="M3.2 20.4h17.6"/>
+  <path d="M4.8 16.4 9.6 11l3.6 3.2 5.6-6.4" class="thin"/>
+  <circle cx="18.8" cy="7.8" r="1.6" class="fill"/>
+  <path d="M4.8 4.4v3.2M3.2 6h3.2" class="thin"/>
+</symbol>
+<symbol id="i-exam-countdown" viewBox="0 0 24 24">
+  <circle cx="12" cy="13.2" r="7.6"/>
+  <path d="M12 9.2v4.4l2.8 1.6" class="thin"/>
+  <path d="M9.2 2.8h5.6M12 2.8v2.8" class="thin"/>
+</symbol>
 </svg>

@@ -52,15 +52,40 @@ function write(rel, content) {
 const slugOf = (url) => url.replace(/\/+$/, '').replace(/\.html$/, '');
 const fileOf = (url) => (url.endsWith('/') ? url + 'index.html' : url);
 
+/**
+ * Pages that exist but have never shipped.
+ *
+ * A half-finished section can be listed in the search index before its pages
+ * are committed. Writing manifests for those would both overwrite somebody's
+ * draft and record a start_url for a page that is not where the index says it
+ * is, so they are left out until they land.
+ */
+function unpublished() {
+  const out = new Set();
+  try {
+    const listed = require('child_process')
+      .execFileSync('git', ['ls-files', '--others', '--exclude-standard'],
+        { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+    listed.split(String.fromCharCode(10)).forEach(function (f) {
+      const t = f.trim();
+      if (t.endsWith('.html')) out.add(t);
+    });
+  } catch (e) { /* no git here: assume everything has shipped */ }
+  return out;
+}
+
 /** The tool list the site already maintains for its own search box. */
 function tools() {
   const src = fs.readFileSync(path.join(ROOT, 'assets/search-index.js'), 'utf8');
   const sandbox = { window: {} };
   new Function('window', src)(sandbox.window);
-  return sandbox.window.SEARCH_INDEX.map(function (e) {
-    const url = e[1];
-    return { title: e[0], url: url, id: e[2], slug: slugOf(url), file: fileOf(url) };
-  });
+  const drafts = unpublished();
+  return sandbox.window.SEARCH_INDEX
+    .map(function (e) {
+      const url = e[1];
+      return { title: e[0], url: url, id: e[2], slug: slugOf(url), file: fileOf(url) };
+    })
+    .filter(function (t) { return !drafts.has(t.file) && !drafts.has(t.url); });
 }
 
 /**
