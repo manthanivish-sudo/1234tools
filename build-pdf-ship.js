@@ -128,11 +128,15 @@ function head(parts, slug, title, description, canonical) {
     .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>\n?/, '')
     /* the shell's own manifest and engine script belong to merge-pdf */
     .replace(/<link rel="manifest" href="[^"]*">/, '<link rel="manifest" href="/pwa/pdf/' + slug + '.webmanifest">')
-    .replace(/<link rel="apple-touch-icon" href="[^"]*">/, '<link rel="apple-touch-icon" href="/assets/pwa/i-' + slug + '-192.png">')
+    .replace(/<link rel="apple-touch-icon" href="[^"]*">/, '<link rel="apple-touch-icon" href="/assets/pwa/' + glyphFor(slug) + '-192.png">')
     .replace(/<meta name="apple-mobile-web-app-title" content="[^"]*">/, '<meta name="apple-mobile-web-app-title" content="' + esc(shortName(spec(slug).title)) + '">')
     .replace('<script src="/engine/pdf-merge-pdf.js" defer></script>', '<script src="/engine/pdf-' + slug + '.js" defer></script>');
   return h;
 }
+
+/* build-pwa.js names the icon after the glyph the h1 uses, so this must too;
+   "i-" + slug only matched while every shipped glyph happened to be that. */
+const glyphFor = (slug) => (SHIPPING.find(function (x) { return x[0] === slug; }) || ['', 'i-' + slug])[1];
 
 /* The home-screen label is build-pwa.js's to decide. A second copy of the
    rule here drifted from the first and the two scripts spent a while
@@ -340,14 +344,15 @@ function main() {
   const m = /<small>([\d,]+)\+ free tools<\/small>/.exec(home);
   if (!m) throw new Error('could not read the tool total from index.html');
   const oldTotal = m[1];
-  const already = fs.existsSync(path.join(ROOT, 'pdf', SHIPPING[0][0], 'index.html'));
-  const newTotal = already ? oldTotal
-    : (Number(oldTotal.replace(/,/g, '')) + SHIPPING.length).toLocaleString('en-GB');
+  /* Only the pages that do not exist yet are new: a tool added to SHIPPING
+     after the first one shipped must still move the counts, once. */
+  const fresh = SHIPPING.filter(function (x) { return !fs.existsSync(path.join(ROOT, 'pdf', x[0], 'index.html')); }).length;
+  const newTotal = fresh ? (Number(oldTotal.replace(/,/g, '')) + fresh).toLocaleString('en-GB') : oldTotal;
 
   const pm = /<span class="side-name">PDF Tools<\/span><span class="side-count">(\d+)<\/span>/.exec(home);
   if (!pm) throw new Error('could not read the PDF section count');
   const oldPdf = Number(pm[1]);
-  const newPdf = already ? oldPdf : oldPdf + SHIPPING.length;
+  const newPdf = oldPdf + fresh;
 
   const glyphs = patchIcons();
   let built = 0;
