@@ -140,7 +140,7 @@ function hubPage(parts, all) {
     crumbs.render([], sec.hub || sec.name) + '\n' +
     '<p class="eyebrow">AI for Business</p>\n' +
     '<h1>' + icon('i-ai', 'ico ico-title') + 'AI for Business</h1>\n' +
-    '<p class="lede">' + all.length + ' tools for the work every business does by hand. Read an invoice into a spreadsheet. Sort a bank statement into ledgers. Clean a customer list. Write the letter, the listing, the post. Summarise the contract before you sign it.</p>\n' +
+    '<p class="lede">' + all.length + ' tools for the work every business does by hand. Read an invoice into a spreadsheet. Sort a bank statement into ledgers. Clean a customer list. Write the letter, the listing, the post, the ad, the landing page. Summarise the contract before you sign it.</p>\n' +
     '<section class="panel ai-how"><h2>How these are different from the rest of the site</h2>' +
     '<p>Everything else on 1234Tools runs on your device and never sends anything anywhere. These cannot: they need a language model, and that runs on a server. So each of these pages says exactly what it will send before you press the button — the text of the invoice, the rows of the statement — and the file itself is read on your device and never leaves it.</p>' +
     '<p>You need an account, because calls are counted: <strong>' + LIMITS.free + ' a month free</strong>, with no card, and <strong>' + LIMITS.pro + ' a month on Pro</strong>. We store the count, not what you sent or what came back. The model is Anthropic’s Claude, through our own gateway; your text is not used to train it. <a href="/privacy/#ai">The details, in the privacy policy</a>.</p></section>\n' +
@@ -149,12 +149,12 @@ function hubPage(parts, all) {
     '<li><strong>Reading and structuring</strong> — invoices, statements, contracts, notes — is where they save hours. The output is a first draft of data entry or of a document that you check, not a replacement for checking.</li>' +
     '<li><strong>Writing from facts</strong> works well when you give the facts. Anything missing comes back as a bracketed placeholder rather than an invention; that is deliberate.</li>' +
     '<li><strong>Tax and legal questions</strong> get honest confidence levels and a list of what to check. They are a fast route to the right neighbourhood, not a filing or a legal opinion.</li>' +
-    '<li><strong>Scanned documents</strong> cannot be read yet; a typed or exported PDF has a text layer and can. OCR is on the list — say if you need it.</li></ul></section>\n' +
+    '<li><strong>Scanned documents</strong> are read as pictures by the Scanned Invoice &amp; Receipt Reader, the Expense Receipts tool and the KYC Document Reader: the resized picture itself is sent, so cover what should not travel before you photograph it. A typed or exported PDF is still better fed to the text tools, which send no picture.</li></ul></section>\n' +
     '<section class="panel"><h2>Frequently asked questions</h2>' +
     '<details><summary>Why do I need an account for these and nothing else?</summary><p>Because these cost money each time they run and the free allowance has to belong to someone. The account does nothing else: it is an email address, a plan, and a count. Every tool that runs in your browser stays free and anonymous.</p></details>' +
     '<details><summary>Is my data used to train the model?</summary><p>No. Calls go through our gateway to Anthropic’s API, whose terms exclude API data from training. We do not store your inputs or the outputs.</p></details>' +
     '<details><summary>What happens when the free calls run out?</summary><p>The tool tells you, with the date they reset, and points to the plans. Nothing is charged without you choosing a plan.</p></details>' +
-    '<details><summary>Which tools are coming next?</summary><p>OCR for scanned invoices, a GST return reconciler, batch runs over whole folders for Pro, and Tally-direct import for the categoriser. The order depends on what people ask for — the contact page works.</p></details></section>\n';
+    '<details><summary>Which tools are coming next?</summary><p>A GST return reconciler, batch runs over whole folders for Pro, and Tally-direct import for the categoriser. The order depends on what people ask for — the contact page works.</p></details></section>\n';
   const ld = '<script type="application/ld+json">' + JSON.stringify({
     '@context': 'https://schema.org',
     '@graph': [

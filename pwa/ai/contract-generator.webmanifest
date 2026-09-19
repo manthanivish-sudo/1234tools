@@ -1,0 +1,41 @@
+{
+  "id": "/ai/contract-generator/",
+  "name": "Contract, NDA & Offer Letter Generator — 1234Tools",
+  "short_name": "Contract, NDA",
+  "description": "Name the parties and the terms and get a full first draft — a mutual or one-way NDA, a service or consultancy agreement, an offer letter, a leave-and-licence summary — with numbered clauses, defined terms and [brackets] where you still have to decide. A draft for your lawyer, not a substitute for one.",
+  "start_url": "/ai/contract-generator/?src=pwa",
+  "scope": "/ai/contract-generator/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-contract.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-contract-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-contract-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "id": "/ai/seo-writer/",
+  "name": "SEO Title, Meta & Outline Writer — 1234Tools",
+  "short_name": "SEO Title, Meta",
+  "description": "Give it a page topic, who it is for and the keyword you want to rank for; get back a title that fits in the search result, a meta description that fits under it, an H1, an H2 outline, the questions people ask, where to link from — and a note on what the searcher actually wants.",
+  "start_url": "/ai/seo-writer/?src=pwa",
+  "scope": "/ai/seo-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-seo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-seo-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-seo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

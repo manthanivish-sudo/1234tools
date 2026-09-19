@@ -2089,6 +2089,7 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
 .ai-fields dd ul { margin: 0; padding-left: 18px; }
 .ai-fields dd .ai-fields dl { border: 0; }
 .ai-fields dd .biz-preview { margin: 4px 0 0; max-height: 300px; }
+.ai-result .biz-table td { white-space: normal; max-width: 520px; overflow-wrap: anywhere; }
 
 .ai-how p { margin: 0 0 10px; font-size: .9rem; line-height: 1.6; color: var(--text-2); }
 .ai-how p:last-child { margin-bottom: 0; }

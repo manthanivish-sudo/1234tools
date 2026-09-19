@@ -42,7 +42,7 @@
 
 <header class="site-header">
   <div class="container nav-wrap">
-    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,214+ free tools</small></span></a>
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,231+ free tools</small></span></a>
 
     <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navlinks">
       <span></span><span></span><span></span>
@@ -50,7 +50,7 @@
 
     <div class="header-tools">
       <div class="search-wrap">
-        <input id="q" type="search" placeholder="Search 1,214 tools…" autocomplete="off" aria-label="Search tools">
+        <input id="q" type="search" placeholder="Search 1,231 tools…" autocomplete="off" aria-label="Search tools">
         <div id="results" class="search-results" hidden></div>
       </div>
       <div class="theme-switch" role="group" aria-label="Colour theme">
@@ -77,7 +77,7 @@
 
 <div class="layout container">
   <button class="sidebar-open" id="sidebarOpen" aria-expanded="false" aria-controls="sidebar">
-    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,214 tools</span>
+    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,231 tools</span>
   </button>
 
   <aside class="sidebar" id="sidebar" aria-label="Tool categories">
@@ -88,7 +88,7 @@
 
     <nav class="side-nav">
       <a class="side-link" href="/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,214</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,231</span>
       </a>
 
       <p class="side-group">Categories</p>
@@ -143,7 +143,7 @@
 
       <p class="side-group">AI for business</p>
       <a class="side-link" href="/ai/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-ai"></use></svg><span class="side-name">AI for Business</span><span class="side-count">10</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-ai"></use></svg><span class="side-name">AI for Business</span><span class="side-count">27</span>
       </a>
 
       <p class="side-group">Learning</p>
@@ -249,8 +249,8 @@
 <h2 id="ai">8. Accounts and the AI tools (optional)</h2>
 <p><strong>Accounts.</strong> If you create one, we store your email address, the plan you are on, the dates it runs between, and a count of AI calls per month. If you save a tool setting while signed in — a Tally column mapping, for instance — that setting is stored with your account so it is there on your other devices. This is held in Google Cloud Firestore in the Mumbai region (asia-south1), readable only by you and by the code that maintains plans. Signing in with Google means Google’s sign-in library loads on that page. Signing in with an email and password does not involve Google beyond the authentication service itself.</p>
 <p><strong>Payments.</strong> Card and bank details never touch us. Payments in India are taken by Razorpay and elsewhere by Stripe, on their pages, under their privacy policies; we receive a confirmation that a plan was paid for, a subscription reference, and — from Stripe — a customer reference so you can manage your billing. We do not receive or store card numbers.</p>
-<p><strong>The AI tools.</strong> These are the only tools on the site that send anything anywhere. Each page states, above the button, exactly what it will send — the text of an invoice, the rows of a bank statement, the notes of a meeting — and a file you give it is read on your device so that only its text goes. The text is sent through our own server to Anthropic’s API, which generates the answer. We do not store what you sent or what came back; we store only that a call was made, to count it against your monthly allowance. Anthropic’s API terms exclude API inputs and outputs from model training. Do not send anything you are not permitted to share with a processor; where a document is confidential, redact it first — the tools work on structure, not on names.</p>
-<p><strong>Masking before sending.</strong> Each AI tool masks personal identifiers on your device before anything is sent — emails, phone numbers, PAN, Aadhaar, card, IBAN and account numbers are replaced with placeholders and restored in the answer — and shows you what was masked. It is on by default and can be turned off per run. Names are not detected by this; redact those yourself where they matter.</p>
+<p><strong>The AI tools.</strong> These are the only tools on the site that send anything anywhere. Each page states, above the button, exactly what it will send — the text of an invoice, the rows of a bank statement, the notes of a meeting — and a file you give it is read on your device so that only its text goes. The three tools for scanned documents are the exception: there the picture is the content, so the photo or scan — resized on your device — is what is sent, and what is printed on it goes with it. The text is sent through our own server to Anthropic’s API, which generates the answer. We do not store what you sent or what came back; we store only that a call was made, to count it against your monthly allowance. Anthropic’s API terms exclude API inputs and outputs from model training. Do not send anything you are not permitted to share with a processor; where a document is confidential, redact it first — the tools work on structure, not on names.</p>
+<p><strong>Masking before sending.</strong> Each AI tool masks personal identifiers on your device before anything is sent — emails, phone numbers, PAN, Aadhaar, card, IBAN and account numbers are replaced with placeholders and restored in the answer — and shows you what was masked. It works on text; it cannot mask a picture, and the page says so whenever one is attached. It is on by default and can be turned off per run. Names are not detected by this; redact those yourself where they matter.</p>
 <p><strong>Your data, in your hands.</strong> From your account page you can download everything we hold about you as one file, and delete the account outright: a live subscription is cancelled first so nothing further is charged, then the saved settings, usage counts and sign-in are removed, immediately and irreversibly. Webhook records from the payment providers are kept for up to 13 months for reconciliation and disputes and are pruned automatically after that. The <a href="/trust/">trust and security page</a> lists every sub-processor and how to exercise the rights you have under UK and EU GDPR and India’s DPDP Act.</p>
 <!-- /AI-PRIVACY -->
 </main>
@@ -261,8 +261,8 @@
   <div class="container">
     <div class="footer-grid">
       <div class="footer-about">
-        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,214+ free tools</small></span></a>
-        <p>1,214+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
+        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,231+ free tools</small></span></a>
+        <p>1,231+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
       </div>
       <div>
         <h4>1234Tools</h4>

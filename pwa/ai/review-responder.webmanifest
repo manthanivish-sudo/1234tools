@@ -1,0 +1,41 @@
+{
+  "id": "/ai/review-responder/",
+  "name": "Customer Review Responder — 1234Tools",
+  "short_name": "Customer Review",
+  "description": "Paste the reviews — one per line, or a CSV export — and get, for each one, the sentiment, the issue in a few words, a reply in your voice ready to post, and what to fix inside the business, as a table you can download.",
+  "start_url": "/ai/review-responder/?src=pwa",
+  "scope": "/ai/review-responder/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-review.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-review-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-review-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

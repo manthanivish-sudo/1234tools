@@ -1,0 +1,41 @@
+{
+  "id": "/ai/landing-page-writer/",
+  "name": "Landing Page Copy Writer — 1234Tools",
+  "short_name": "Landing Page Copy",
+  "description": "Product, audience, offer and proof in; a landing page out — hero headline and subhead, three benefit blocks, how it works, the objections answered, testimonial slots marked [quote needed], an FAQ and five calls to action — written from your facts and nothing else.",
+  "start_url": "/ai/landing-page-writer/?src=pwa",
+  "scope": "/ai/landing-page-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-landing.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-landing-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-landing-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

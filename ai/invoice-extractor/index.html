@@ -49,14 +49,14 @@
 <script src="/assets/firebase-config.js"></script>
 <script>window.AI_LIMITS={"free":10,"pro":300,"business":2000};</script>
 <script src="/assets/account.js" defer></script>
-<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Invoice & Receipt Data Extractor","description":"Drop an invoice or receipt — PDF or pasted text — and get the vendor, numbers, dates, taxes and every line item back as a table you can download for your accounts.","url":"https://www.1234tools.com/ai/invoice-extractor/","applicationCategory":"BusinessApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"INR","description":"10 calls a month free; more on Pro"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI for Business","item":"https://www.1234tools.com/ai/"},{"@type":"ListItem","position":3,"name":"Invoice & Receipt Data Extractor","item":"https://www.1234tools.com/ai/invoice-extractor/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is sent, and where?","acceptedAnswer":{"@type":"Answer","text":"The text of the invoice — what you pasted, or what the page read out of the PDF — is sent to the model through our gateway to be structured. The PDF file never leaves your device, and we do not store the text or the answer; only the fact that a call was made is counted against your monthly allowance."}},{"@type":"Question","name":"How accurate is it?","acceptedAnswer":{"@type":"Answer","text":"On typed invoices, very: vendor, numbers, dates and line items come back correctly in the great majority of cases. Where a value is ambiguous the model is told to return null rather than guess. Treat it as a fast first draft of data entry that you check, not as an auditor."}},{"@type":"Question","name":"Does it do OCR on scanned invoices?","acceptedAnswer":{"@type":"Answer","text":"Not yet. A scan has no text layer, and reading pixels is a different job. If you have many scans, tell us — it is on the list."}}]}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Invoice & Receipt Data Extractor","description":"Drop an invoice or receipt — PDF or pasted text — and get the vendor, numbers, dates, taxes and every line item back as a table you can download for your accounts.","url":"https://www.1234tools.com/ai/invoice-extractor/","applicationCategory":"BusinessApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"INR","description":"10 calls a month free; more on Pro"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI for Business","item":"https://www.1234tools.com/ai/"},{"@type":"ListItem","position":3,"name":"Invoice & Receipt Data Extractor","item":"https://www.1234tools.com/ai/invoice-extractor/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is sent, and where?","acceptedAnswer":{"@type":"Answer","text":"The text of the invoice — what you pasted, or what the page read out of the PDF — is sent to the model through our gateway to be structured. The PDF file never leaves your device, and we do not store the text or the answer; only the fact that a call was made is counted against your monthly allowance."}},{"@type":"Question","name":"How accurate is it?","acceptedAnswer":{"@type":"Answer","text":"On typed invoices, very: vendor, numbers, dates and line items come back correctly in the great majority of cases. Where a value is ambiguous the model is told to return null rather than guess. Treat it as a fast first draft of data entry that you check, not as an auditor."}},{"@type":"Question","name":"Does it do OCR on scanned invoices?","acceptedAnswer":{"@type":"Answer","text":"Not this tool: it reads the text layer and sends no picture. The Scanned Invoice & Receipt Reader sends the picture itself to the model and reads it from the pixels — use that for scans and photos, and this one for typed PDFs, which is cheaper on tokens and keeps the file on your device."}}]}]}</script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
   <div class="container nav-wrap">
-    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,214+ free tools</small></span></a>
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,231+ free tools</small></span></a>
 
     <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navlinks">
       <span></span><span></span><span></span>
@@ -64,7 +64,7 @@
 
     <div class="header-tools">
       <div class="search-wrap">
-        <input id="q" type="search" placeholder="Search 1,214 tools…" autocomplete="off" aria-label="Search tools">
+        <input id="q" type="search" placeholder="Search 1,231 tools…" autocomplete="off" aria-label="Search tools">
         <div id="results" class="search-results" hidden></div>
       </div>
       <div class="theme-switch" role="group" aria-label="Colour theme">
@@ -91,7 +91,7 @@
 
 <div class="layout container">
   <button class="sidebar-open" id="sidebarOpen" aria-expanded="false" aria-controls="sidebar">
-    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,214 tools</span>
+    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,231 tools</span>
   </button>
 
   <aside class="sidebar" id="sidebar" aria-label="Tool categories">
@@ -102,7 +102,7 @@
 
     <nav class="side-nav">
       <a class="side-link" href="/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,214</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,231</span>
       </a>
 
       <p class="side-group">Categories</p>
@@ -157,7 +157,7 @@
 
       <p class="side-group">AI for business</p>
       <a class="side-link is-active" href="/ai/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-ai"></use></svg><span class="side-name">AI for Business</span><span class="side-count">10</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-ai"></use></svg><span class="side-name">AI for Business</span><span class="side-count">27</span>
       </a>
 
       <p class="side-group">Learning</p>
@@ -213,9 +213,9 @@
   <p class="lede">Drop an invoice or receipt — PDF or pasted text — and get the vendor, numbers, dates, taxes and every line item back as a table you can download for your accounts.</p>
   <p class="ai-privacy-line"><svg class="ico ico-inline" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-cloud"></use></svg> <strong>This is a cloud tool.</strong> The text of the invoice is sent to the model. The PDF file itself is read here and never leaves your device. Nothing is stored by us; the call is counted against your month’s allowance — 10 free, 300 on Pro. <a href="/privacy/#ai">How the AI tools handle data</a>.</p>
   <div class="tool-io"></div>
-  <section class="panel"><h2>Tips</h2><ul class="tips"><li>A typed or exported PDF has a text layer and reads cleanly. A scanned image does not — the page tells you, and nothing is sent.</li><li>Check the totals against the paper before you post them. The model reads well, but it is reading, not calculating; the line items are there so you can add them up.</li><li>Download the .xlsx and the line items come as a proper table under the header fields, ready for a purchase register or a Tally import.</li><li>Multi-page invoices work; the first 40 pages are read. Statements with dozens of invoices are better fed one invoice at a time.</li></ul></section>
-  <section class="panel"><h2>Frequently asked questions</h2><details><summary>What is sent, and where?</summary><p>The text of the invoice — what you pasted, or what the page read out of the PDF — is sent to the model through our gateway to be structured. The PDF file never leaves your device, and we do not store the text or the answer; only the fact that a call was made is counted against your monthly allowance.</p></details><details><summary>How accurate is it?</summary><p>On typed invoices, very: vendor, numbers, dates and line items come back correctly in the great majority of cases. Where a value is ambiguous the model is told to return null rather than guess. Treat it as a fast first draft of data entry that you check, not as an auditor.</p></details><details><summary>Does it do OCR on scanned invoices?</summary><p>Not yet. A scan has no text layer, and reading pixels is a different job. If you have many scans, tell us — it is on the list.</p></details></section>
-  <section class="panel"><h2>Related tools</h2><ul class="related"><li><a href="/ai/bank-statement-categoriser/">Bank Statement Categoriser</a></li><li><a href="/ai/data-cleaner/">Customer &amp; Product Data Cleaner</a></li><li><a href="/ai/business-writer/">Business Email &amp; Letter Writer</a></li><li><a href="/ai/product-listing-writer/">Product Listing Writer</a></li><li><a href="/ai/document-summariser/">Contract &amp; Document Summariser</a></li><li><a href="/business/tally-converter/">Excel / CSV to Tally Converter</a></li><li><a href="/pricing/">Plans and pricing</a></li></ul></section>
+  <section class="panel"><h2>Tips</h2><ul class="tips"><li>A typed or exported PDF has a text layer and reads cleanly. A scanned image does not — the page tells you, nothing is sent, and the Scanned Invoice &amp; Receipt Reader reads it as a picture instead.</li><li>Check the totals against the paper before you post them. The model reads well, but it is reading, not calculating; the line items are there so you can add them up.</li><li>Download the .xlsx and the line items come as a proper table under the header fields, ready for a purchase register or a Tally import.</li><li>Multi-page invoices work; the first 40 pages are read. Statements with dozens of invoices are better fed one invoice at a time.</li></ul></section>
+  <section class="panel"><h2>Frequently asked questions</h2><details><summary>What is sent, and where?</summary><p>The text of the invoice — what you pasted, or what the page read out of the PDF — is sent to the model through our gateway to be structured. The PDF file never leaves your device, and we do not store the text or the answer; only the fact that a call was made is counted against your monthly allowance.</p></details><details><summary>How accurate is it?</summary><p>On typed invoices, very: vendor, numbers, dates and line items come back correctly in the great majority of cases. Where a value is ambiguous the model is told to return null rather than guess. Treat it as a fast first draft of data entry that you check, not as an auditor.</p></details><details><summary>Does it do OCR on scanned invoices?</summary><p>Not this tool: it reads the text layer and sends no picture. The Scanned Invoice &amp; Receipt Reader sends the picture itself to the model and reads it from the pixels — use that for scans and photos, and this one for typed PDFs, which is cheaper on tokens and keeps the file on your device.</p></details></section>
+  <section class="panel"><h2>Related tools</h2><ul class="related"><li><a href="/ai/seo-writer/">SEO Title, Meta &amp; Outline Writer</a></li><li><a href="/ai/blog-writer/">Blog Post Writer</a></li><li><a href="/ai/ad-copy-writer/">Google &amp; Meta Ad Copy Writer</a></li><li><a href="/ai/email-campaign-writer/">Email Campaign Writer</a></li><li><a href="/ai/brand-voice-guide/">Brand Voice Guide Builder</a></li><li><a href="/business/tally-converter/">Excel / CSV to Tally Converter</a></li><li><a href="/pricing/">Plans and pricing</a></li></ul></section>
 </article>
 </main>
 </div>
@@ -225,8 +225,8 @@
   <div class="container">
     <div class="footer-grid">
       <div class="footer-about">
-        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,214+ free tools</small></span></a>
-        <p>1,214+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
+        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,231+ free tools</small></span></a>
+        <p>1,231+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
       </div>
       <div>
         <h4>1234Tools</h4>

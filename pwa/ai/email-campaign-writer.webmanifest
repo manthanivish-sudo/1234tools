@@ -1,0 +1,41 @@
+{
+  "id": "/ai/email-campaign-writer/",
+  "name": "Email Campaign Writer — 1234Tools",
+  "short_name": "Email Campaign",
+  "description": "A launch, an offer, a win-back, a newsletter or an onboarding series, written from your facts: five subject lines with preview text, the email itself, a plain-text version, the call to action — and a three-email sequence when you ask for one.",
+  "start_url": "/ai/email-campaign-writer/?src=pwa",
+  "scope": "/ai/email-campaign-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-email.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-email-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-email-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

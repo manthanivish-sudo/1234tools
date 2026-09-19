@@ -1,0 +1,41 @@
+{
+  "id": "/ai/scanned-invoice-extractor/",
+  "name": "Scanned Invoice & Receipt Reader — 1234Tools",
+  "short_name": "Scanned Invoice",
+  "description": "Photograph or scan an invoice or receipt and get the vendor, numbers, dates, taxes and every line item back as a table you can download — the picture is read directly, so a scan with no text layer works.",
+  "start_url": "/ai/scanned-invoice-extractor/?src=pwa",
+  "scope": "/ai/scanned-invoice-extractor/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-scan.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-scan-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-scan-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "id": "/ai/job-description-writer/",
+  "name": "Job Description Writer — 1234Tools",
+  "short_name": "Job Description",
+  "description": "The facts of a role — title, what they will do, what they must have, pay, where and when — written into a job description with responsibilities, requirements, nice-to-haves and a salary line, then checked for wording that puts good candidates off.",
+  "start_url": "/ai/job-description-writer/?src=pwa",
+  "scope": "/ai/job-description-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-jd.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-jd-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-jd-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

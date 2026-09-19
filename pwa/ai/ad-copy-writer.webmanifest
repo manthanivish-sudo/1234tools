@@ -1,0 +1,41 @@
+{
+  "id": "/ai/ad-copy-writer/",
+  "name": "Google & Meta Ad Copy Writer — 1234Tools",
+  "short_name": "Google & Meta Ad",
+  "description": "One offer in; a full set of ad copy out — 15 Google responsive search ad headlines and 4 descriptions, 3 Meta primary texts and 5 headlines — each written short of its character limit, counted here in your browser, and flagged if one slips over, as a table you can paste straight into the ad platform.",
+  "start_url": "/ai/ad-copy-writer/?src=pwa",
+  "scope": "/ai/ad-copy-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-ads.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-ads-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-ads-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

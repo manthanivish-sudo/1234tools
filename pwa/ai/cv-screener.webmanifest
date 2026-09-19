@@ -1,0 +1,41 @@
+{
+  "id": "/ai/cv-screener/",
+  "name": "CV Screener against a Job Description — 1234Tools",
+  "short_name": "CV Screener against",
+  "description": "Paste the job description and up to five CVs and get, for each candidate, a fit score with the reasoning, the requirements they meet, the gaps, and the questions to ask at interview. Decision support for a hiring manager: it must not be the only reason a candidate is rejected.",
+  "start_url": "/ai/cv-screener/?src=pwa",
+  "scope": "/ai/cv-screener/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-cv.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-cv-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-cv-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

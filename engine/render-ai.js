@@ -10,11 +10,18 @@
  * These are the cloud tools, and the page says so before anything is sent:
  * what leaves the device is shown, verbatim, under "What will be sent".
  * Files are read here — a PDF's text layer, a spreadsheet's rows — and only
- * the text goes; the file itself never does.
+ * the text goes; the file itself never does. The one exception is the
+ * 'image' input, for scans and photos: there the picture is the content,
+ * so it is downscaled here and the resized JPEG goes beside the text. The
+ * preview lists every picture and its size, and the shield says plainly
+ * that pixels cannot be masked.
  *
  * A tool is a spec on window.AI_TOOLS[slug]:
  *   title, description, glyph, privacy      what it is and what it sends
- *   inputs: [{ key, label, type: 'text'|'text+file', accept, rows, placeholder, required }]
+ *   transform(data, ctx) -> data           optional, before the answer is shown
+ *   inputs: [{ key, label, type: 'text'|'text+file'|'image', accept, rows, placeholder, required }]
+ *     'image': photos or a PDF, up to 4 pictures a run (PDF pages are
+ *     rendered here, first 4); the textarea beneath holds optional notes
  *   options: [{ key, label, type: 'select'|'text'|'number', options, default }]
  *   system(opts) -> string                  the model's standing instructions
  *   prompt(inputs, opts) -> string          the message, built from what was given
@@ -29,6 +36,75 @@
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
   const LIMITS = window.AI_LIMITS || { free: 10, pro: 300, business: 2000 };
   const MAX_CHARS = 60000;
+
+  /* ---- pictures: the 'image' input ----
+     A photo or scan is resized here so the longer side is at most 1600 px
+     and re-encoded as a JPEG; a PDF is rendered page by page with the pdf.js
+     the site vendors. The gateway takes up to four pictures of 3 MB each. */
+  const MAX_IMAGES = 4, IMAGE_SIDE = 1600, JPEG_QUALITY = 0.85, MAX_IMAGE_B64 = 3 * 1024 * 1024;
+  const PDFJS_BASE = (function () {
+    const s = (typeof document !== 'undefined' && (document.currentScript || document.querySelector('script[src$="render-ai.js"]'))) || null;
+    return new URL('vendor/pdfjs/', s ? s.src : (typeof location !== 'undefined' ? location.href : 'http://localhost/')).href;
+  })();
+  let pdfjs = null;
+  async function ensurePdfJs() {
+    if (pdfjs) return pdfjs;
+    const mod = await import(PDFJS_BASE + 'pdf.min.mjs');
+    mod.GlobalWorkerOptions.workerSrc = PDFJS_BASE + 'pdf.worker.min.mjs';
+    pdfjs = mod;
+    return mod;
+  }
+  const kb = (n) => n < 1024 * 1024 ? Math.max(1, Math.round(n / 1024)) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
+  /** A white-backed canvas of the source, no larger than IMAGE_SIDE on its longer side. */
+  function fitCanvas(src, w, h) {
+    const scale = Math.min(1, IMAGE_SIDE / Math.max(w, h));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w * scale)); c.height = Math.max(1, Math.round(h * scale));
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);   /* JPEG has no transparency */
+    ctx.drawImage(src, 0, 0, c.width, c.height);
+    return c;
+  }
+  async function imageToCanvas(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      img.src = url;
+      try { await img.decode(); }
+      catch (e) { throw new Error(file.name + ' could not be read as an image. JPEG, PNG and WebP work.'); }
+      return fitCanvas(img, img.naturalWidth, img.naturalHeight);
+    } finally { URL.revokeObjectURL(url); }
+  }
+  async function pdfToCanvases(file, maxPages) {
+    const lib = await ensurePdfJs();
+    const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), cMapUrl: PDFJS_BASE + 'cmaps/', cMapPacked: true, standardFontDataUrl: PDFJS_BASE + 'standard_fonts/' }).promise;
+    const n = Math.min(pdf.numPages, maxPages);
+    const canvases = [];
+    for (let i = 1; i <= n; i++) {
+      const page = await pdf.getPage(i);
+      const base = page.getViewport({ scale: 1.5 });
+      const vp = page.getViewport({ scale: 1.5 * Math.min(1, IMAGE_SIDE / Math.max(base.width, base.height)) });
+      const c = document.createElement('canvas');
+      c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      canvases.push(c);
+    }
+    return { canvases, numPages: pdf.numPages };
+  }
+  /** Base64 JPEG without the data: prefix; the quality steps down if the 3 MB cap is hit. */
+  function encodeJpeg(canvas) {
+    let q = JPEG_QUALITY, data;
+    do { data = canvas.toDataURL('image/jpeg', q).split(',')[1]; q -= 0.15; } while (data.length > MAX_IMAGE_B64 && q > 0.3);
+    return { data, bytes: Math.round(data.length * 3 / 4) };
+  }
+  function thumbOf(canvas, w) {
+    const t = document.createElement('canvas');
+    t.width = w; t.height = Math.max(1, Math.round(canvas.height * w / canvas.width));
+    t.getContext('2d').drawImage(canvas, 0, 0, t.width, t.height);
+    return t;
+  }
 
   /** The first JSON value in a reply, however the model wrapped it. */
   function firstJson(text) {
@@ -92,6 +168,8 @@
     /* ---- inputs ---- */
     const inputs = {};
     const attached = {};      /* key -> { name, text } for a file that was read */
+    const pictures = {};      /* key -> [{ name, media_type, data, bytes, width, height, thumb }] for an 'image' input */
+    const allImages = () => spec.inputs.filter(i => i.type === 'image').flatMap(i => pictures[i.key] || []);
     for (const inp of spec.inputs) {
       const wrap = el('div', 'field ai-input');
       const label = el('label', null, inp.label + (inp.required === false ? '' : ' *'));
@@ -118,7 +196,7 @@
               if (!window.MVRPdfText) throw new Error('The PDF reader did not load.');
               const r = await window.MVRPdfText.extract(file, { maxPages: 40 });
               text = r.text;
-              if (!text.trim()) throw new Error('This PDF has no text layer — it is a scan. Nothing can be read from it here; a typed or exported PDF works.');
+              if (!text.trim()) throw new Error('This PDF has no text layer — it is a scan. Nothing can be read from it here; a typed or exported PDF works, or use the Scanned Invoice & Receipt Reader, which reads the picture.');
               say(file.name, r.numPages + ' page' + (r.numPages === 1 ? '' : 's') + (r.numPages > 40 ? ', first 40 read' : '') + ' · ' + text.length.toLocaleString('en-GB') + ' characters');
             } else if (/\.(xlsx|csv|tsv)$/i.test(file.name)) {
               if (!window.MVRSheet) throw new Error('The spreadsheet reader did not load.');
@@ -139,6 +217,67 @@
         drop.addEventListener('drop', e => { if (e.dataTransfer.files.length) take(e.dataTransfer.files[0]); });
         input.addEventListener('change', () => { if (input.files.length) take(input.files[0]); });
         wrap.appendChild(drop);
+      }
+      if (inp.type === 'image') {
+        const list = pictures[inp.key] = [];
+        const drop = el('div', 'ai-drop');
+        drop.tabIndex = 0; drop.setAttribute('role', 'button');
+        const input = el('input', 'visually-hidden'); input.type = 'file'; input.multiple = true;
+        input.accept = inp.accept || 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp,.pdf,application/pdf';
+        const idle = ['Choose photos or a PDF', 'JPEG, PNG, WebP or PDF — up to ' + MAX_IMAGES + ' pictures a run, resized here and sent as JPEG'];
+        const say = (strong, small) => { drop.innerHTML = '<strong>' + strong + '</strong><span>' + small + '</span>'; drop.appendChild(input); };
+        say(idle[0], idle[1]);
+        drop.addEventListener('click', () => input.click());
+        drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+        ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+        ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+        const grid = el('div', 'page-grid ai-pictures');
+        const hint = el('span', 'field-hint ai-picture-count');
+        const paint = () => {
+          grid.innerHTML = '';
+          list.forEach((pic, i) => {
+            const card = el('div', 'page-card');
+            card.appendChild(pic.thumb);
+            card.appendChild(el('span', 'page-num', String(i + 1)));
+            const bar = el('div', 'page-tools');
+            const rm = el('button', 'btn-ghost', 'Remove'); rm.type = 'button';
+            rm.setAttribute('aria-label', 'Remove picture ' + (i + 1) + ', ' + pic.name);
+            rm.addEventListener('click', () => { list.splice(i, 1); paint(); });
+            bar.appendChild(rm);
+            card.appendChild(bar);
+            card.appendChild(el('span', 'field-hint', kb(pic.bytes)));
+            grid.appendChild(card);
+          });
+          const n = list.length, total = list.reduce((a, p) => a + p.bytes, 0);
+          hint.textContent = n ? n + ' picture' + (n === 1 ? '' : 's') + ' · ' + kb(total) + ' will be sent' + (n >= MAX_IMAGES ? ' · that is the limit for one run' : '') : '';
+          say(idle[0], idle[1]);
+          paintShield(); refreshPreview();
+        };
+        const take = async (files) => {
+          const queue = Array.from(files);
+          try {
+            for (const file of queue) {
+              if (list.length >= MAX_IMAGES) { msg.say('Up to ' + MAX_IMAGES + ' pictures a run — the rest were not added.', 'note'); break; }
+              say(file.name, 'reading…');
+              let canvases;
+              if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
+                const r = await pdfToCanvases(file, MAX_IMAGES - list.length);
+                canvases = r.canvases;
+                if (r.numPages > canvases.length) msg.say(file.name + ' has ' + r.numPages + ' pages; the first ' + canvases.length + ' were taken (' + MAX_IMAGES + ' pictures a run).', 'note');
+              } else if (/^image\//.test(file.type) || /\.(jpe?g|png|webp|gif|bmp)$/i.test(file.name)) {
+                canvases = [await imageToCanvas(file)];
+              } else throw new Error(file.name + ' is not an image or a PDF.');
+              canvases.forEach((c, i) => {
+                const j = encodeJpeg(c);
+                list.push({ name: canvases.length > 1 ? file.name + ' p' + (i + 1) : file.name, media_type: 'image/jpeg', data: j.data, bytes: j.bytes, width: c.width, height: c.height, thumb: thumbOf(c, 120) });
+              });
+            }
+          } catch (e) { msg.say(e.message || String(e), 'error'); }
+          paint();
+        };
+        drop.addEventListener('drop', e => { if (e.dataTransfer.files.length) take(e.dataTransfer.files); });
+        input.addEventListener('change', () => { if (input.files.length) take(input.files); input.value = ''; });
+        wrap.appendChild(drop); wrap.appendChild(grid); wrap.appendChild(hint);
       }
       wrap.appendChild(ta);
       const count = el('span', 'field-hint ai-count');
@@ -196,7 +335,14 @@
     preview.appendChild(sum);
     const prePre = el('pre', 'code-out ai-preview-body');
     preview.appendChild(prePre);
-    const refreshPreview = () => { if (preview.open) prePre.textContent = outgoing().text || '(nothing yet)'; };
+    /* pictures are listed at the top of the preview: how many, how big, as what */
+    const imageNote = () => {
+      const all = allImages();
+      if (!all.length) return '';
+      return '[' + all.length + ' picture' + (all.length === 1 ? '' : 's') + ' attached, sent as JPEG with the longer side at most ' + IMAGE_SIDE + ' px, ' + kb(all.reduce((a, p) => a + p.bytes, 0)) + ' in all: ' +
+        all.map((p, i) => (i + 1) + '. ' + p.name + ' — ' + p.width + '×' + p.height + ', ' + kb(p.bytes)).join('; ') + ']\n\n';
+    };
+    const refreshPreview = () => { if (preview.open) prePre.textContent = imageNote() + (outgoing().text || '(nothing yet)'); };
     preview.addEventListener('toggle', refreshPreview);
     shieldBox.addEventListener('change', () => { refreshPreview(); paintShield(); });
     Object.values(inputs).forEach(ta => ta.addEventListener('input', () => { paintShield(); if (preview.open) refreshPreview(); }));
@@ -211,10 +357,13 @@
     }
     function paintShield() {
       if (!window.MVRPII) return;
-      if (!shieldBox.checked) { shieldNote.textContent = 'Off — the text goes as typed.'; return; }
+      /* the shield works on text; a picture goes as it is, and the note says so */
+      const pics = allImages().length;
+      const picNote = pics ? (pics === 1 ? 'The picture goes as it is' : 'The ' + pics + ' pictures go as they are') + ' — pixels cannot be masked, so anything printed on it is sent.' : '';
+      if (!shieldBox.checked) { shieldNote.textContent = 'Off — the text goes as typed.' + (picNote ? ' ' + picNote : ''); return; }
       const o = outgoing();
       const n = Object.values(o.counts).reduce((a, b) => a + b, 0);
-      shieldNote.textContent = n ? 'Will mask ' + window.MVRPII.describe(o.counts) + '.' : '';
+      shieldNote.textContent = (n ? 'Will mask ' + window.MVRPII.describe(o.counts) + (pics ? ' in the text.' : '.') : '') + (picNote ? (n ? ' ' : '') + picNote : '');
     }
 
     /* ---- run ---- */
@@ -228,7 +377,8 @@
       sampleBtn.addEventListener('click', () => {
         Object.entries(spec.sample.inputs || {}).forEach(([k, v]) => { if (inputs[k]) { inputs[k].value = v; inputs[k].dispatchEvent(new Event('input', { bubbles: true })); } });
         Object.entries(spec.sample.opts || {}).forEach(([k, v]) => { if (opts[k]) opts[k].value = v; });
-        msg.say('Sample loaded. Press ' + (spec.action || 'Run') + '.', 'note');
+        const needsPicture = spec.inputs.some(i => i.type === 'image' && i.required !== false && !(pictures[i.key] || []).length);
+        msg.say(needsPicture ? 'Sample notes loaded. A sample cannot attach a picture — add a photo or scan, then press ' + (spec.action || 'Run') + '.' : 'Sample loaded. Press ' + (spec.action || 'Run') + '.', 'note');
       });
       runBar.appendChild(sampleBtn);
     }
@@ -284,7 +434,13 @@
       if (!state.enabled) return;
       if (!state.user) { location.href = '/account/?next=' + encodeURIComponent(location.pathname); return; }
       const ins = readInputs();
-      for (const inp of spec.inputs) if (inp.required !== false && !String(ins[inp.key] || '').trim()) { msg.say('Fill in “' + inp.label + '” first.', 'note'); inputs[inp.key].focus(); return; }
+      for (const inp of spec.inputs) {
+        if (inp.required === false) continue;
+        /* an image input is satisfied by a picture; the notes beneath it are optional */
+        if (inp.type === 'image') { if (!(pictures[inp.key] || []).length) { msg.say('Add a photo or scan under “' + inp.label + '” first.', 'note'); return; } continue; }
+        if (!String(ins[inp.key] || '').trim()) { msg.say('Fill in “' + inp.label + '” first.', 'note'); inputs[inp.key].focus(); return; }
+      }
+      const pics = allImages();
       const out = outgoing();
       if (!out.text) { msg.say('Nothing to send yet.', 'note'); return; }
       let system = typeof spec.system === 'function' ? spec.system(readOpts()) : spec.system;
@@ -293,10 +449,12 @@
       runBtn.disabled = true;
       const was = runBtn.textContent; runBtn.textContent = 'Working…';
       const masked = out.map ? Object.keys(out.map).length : 0;
-      msg.say('Sent' + (masked ? ' with ' + window.MVRPII.describe(out.counts) + ' masked' : '') + '. The model usually answers in a few seconds.', 'note');
+      msg.say('Sent' + (pics.length ? ' with ' + pics.length + ' picture' + (pics.length === 1 ? '' : 's') + ' (' + kb(pics.reduce((a, p) => a + p.bytes, 0)) + ')' : '') + (masked ? (pics.length ? ' and ' : ' with ') + window.MVRPII.describe(out.counts) + ' masked' : '') + '. The model usually answers in ' + (pics.length ? 'ten seconds or so' : 'a few seconds') + '.', 'note');
       const t0 = Date.now();
       try {
-        const res = await A.ai(spec.id, out.text, { system, maxTokens: spec.maxTokens || 2000 });
+        const callOpts = { system, maxTokens: spec.maxTokens || 2000 };
+        if (pics.length) callOpts.images = pics.map(p => ({ media_type: p.media_type, data: p.data }));
+        const res = await A.ai(spec.id, out.text, callOpts);
         if (out.map) res.text = window.MVRPII.unmask(res.text, out.map);
         msg.say('');
         usage = { calls: (usage ? usage.calls : 0) + 1 };
@@ -317,6 +475,9 @@
       let data = null, parseError = null;
       if (spec.output === 'fields' || spec.output === 'table') {
         try { data = firstJson(text); } catch (e) { parseError = e.message; }
+        /* a spec may correct or annotate what the model returned — a count the
+           browser can make exactly, a flag on a line that is over a limit */
+        if (data && typeof spec.transform === 'function') { try { data = spec.transform(data, { inputs: readInputs(), opts: readOpts() }); } catch (e) { /* the answer stands as parsed */ } }
       }
       const head = el('div', 'result-summary');
       const hh = el('div', 'result-summary-head');

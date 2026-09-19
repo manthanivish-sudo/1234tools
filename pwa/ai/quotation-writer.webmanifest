@@ -1,0 +1,41 @@
+{
+  "id": "/ai/quotation-writer/",
+  "name": "Quotation & Proposal Writer — 1234Tools",
+  "short_name": "Quotation",
+  "description": "The facts of a deal — who it is for, what you will supply, the prices, the terms — written up as a quotation or a short proposal: a numbered line-item table, totals with tax, validity and the terms spelt out, ready to paste onto your letterhead.",
+  "start_url": "/ai/quotation-writer/?src=pwa",
+  "scope": "/ai/quotation-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-quote.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-quote-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-quote-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

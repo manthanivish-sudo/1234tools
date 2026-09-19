@@ -1,0 +1,41 @@
+{
+  "id": "/ai/brand-voice-guide/",
+  "name": "Brand Voice Guide Builder — 1234Tools",
+  "short_name": "Brand Voice Guide",
+  "description": "Paste two or three pieces of copy you already like and say what the brand is; get back a voice guide — the personality in three words, a tone do/don’t table, words to use and words to avoid, your samples rewritten to show the rules, and how the voice changes for social, support and sales.",
+  "start_url": "/ai/brand-voice-guide/?src=pwa",
+  "scope": "/ai/brand-voice-guide/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-voice.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-voice-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-voice-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
