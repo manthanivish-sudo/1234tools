@@ -221,6 +221,27 @@
     return [DIGIT_PRODUCT]; // digits
   }
 
+  /* Tell the destination which of the family sites sent the click, and where
+     on the page it was. Read from location rather than written in, because
+     this file is the same on every site. */
+  var REFPOLICY = 'no-referrer-when-downgrade';
+
+  function tagged(url, where) {
+    try {
+      var u = new URL(url, location.href);
+      if (u.hostname === location.hostname) return url;
+      if (u.searchParams.has('utm_source')) return u.href;
+      u.searchParams.set('utm_source', location.hostname.replace(/^www\./, ''));
+      u.searchParams.set('utm_medium', 'referral');
+      u.searchParams.set('utm_campaign', 'mvr-az');
+      u.searchParams.set('utm_content', where);
+      return u.href;
+    } catch (e) {
+      /* An unparseable URL still has to work as a link. */
+      return url;
+    }
+  }
+
   function buildPop(key, isHere) {
     var pop = el('div', 'mvraz-pop');
     pop.setAttribute('role', 'group');
@@ -228,9 +249,10 @@
     productsFor(key).forEach(function (p) {
       var a = el('a', 'mvraz-item',
         '<b>' + esc(p.n) + '</b><span>' + esc(p.t) + '</span><em>' + esc(p.d) + '</em>');
-      a.href = p.u;
+      a.href = tagged(p.u, 'az-list');
       a.target = '_blank';
       a.rel = 'noopener';
+      a.referrerPolicy = REFPOLICY;
       pop.appendChild(a);
     });
     return pop;
@@ -274,9 +296,10 @@
         cap.appendChild(el('span', 'mvraz-count', '×' + prods.length));
       } else {
         cap = el('a', 'mvraz-key', esc(key.k));
-        cap.href = prods[0].u;
+        cap.href = tagged(prods[0].u, 'az-key');
         cap.target = '_blank';
         cap.rel = 'noopener';
+        cap.referrerPolicy = REFPOLICY;
         cap.setAttribute('aria-label', key.k + ' — ' + prods[0].n + ': ' + prods[0].t);
         cap.title = prods[0].n;
       }
@@ -297,9 +320,10 @@
       '<b>10 digits</b> &middot; <b>26 letters</b> &middot; <b>25+ products &amp; platforms</b> &middot; one team behind all of it'));
 
     var cta = el('a', 'mvraz-cta', 'Explore every product →');
-    cta.href = MVR + '/products/';
+    cta.href = tagged(MVR + '/products/', 'az-cta');
     cta.target = '_blank';
     cta.rel = 'noopener';
+    cta.referrerPolicy = REFPOLICY;
     root.appendChild(cta);
 
     mount.appendChild(root);
