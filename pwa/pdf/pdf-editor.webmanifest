@@ -2,7 +2,7 @@
   "id": "/pdf/pdf-editor/",
   "name": "Add Text to a PDF — 1234Tools",
   "short_name": "Add Text to a PDF",
-  "description": "Put a line of text anywhere on a PDF — click the page to choose the spot and see it land before you commit.",
+  "description": "Put text anywhere on a PDF — as many pieces as you like, on any pages, wrapped to a width. Click the page to place each one and see it land before you commit.",
   "start_url": "/pdf/pdf-editor/?src=pwa",
   "scope": "/pdf/pdf-editor/",
   "display": "standalone",

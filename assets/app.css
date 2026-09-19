@@ -1800,6 +1800,25 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
   font-family: var(--font-mono); font-size: .76rem; color: var(--text-3);
 }
 
+/* Banked items: everything already placed, under the controls that edit
+   the current one. */
+.place-items { margin: 0 0 18px; }
+.place-items-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 0 0 10px; }
+.place-items-add { border-color: var(--border-gold); color: var(--accent); }
+.place-items-hint { font-size: .8rem; color: var(--text-3); flex: 1 1 240px; }
+.place-items-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.place-items-empty { font-size: .8rem; color: var(--text-3); font-style: italic; padding: 4px 2px; }
+.place-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; background: var(--bg-1);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.place-item-swatch { flex: none; width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--border); }
+.place-item-label { flex: 1 1 auto; min-width: 0; display: grid; gap: 1px; }
+.place-item-label strong { font-size: .84rem; color: var(--text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.place-item-meta { font-family: var(--font-mono); font-size: .7rem; color: var(--text-3); }
+.place-item .btn-ghost { flex: none; padding: 3px 9px; }
+
 /* Said only when the page in view will not be written to. */
 .place-hint { margin: 6px 0 0; text-align: center; font-size: .78rem; color: var(--text-3); }
 .place-hint.is-warn { color: #e8b04a; }

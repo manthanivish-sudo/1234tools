@@ -73,10 +73,14 @@
       read = () => t.value;
     } else if (c.type === 'color') {
       const row = el('div', 'colour-field');
+      /* The label's `for` names the hex box, which is the one a keyboard
+         reaches; the swatch gets its own name. Neither had one before, so
+         "Colour" was a label attached to nothing. */
       const sw = el('input', 'colour-swatch');
       sw.type = 'color'; sw.value = c.default;
+      sw.setAttribute('aria-label', c.label + ' picker');
       const hex = el('input', 'control colour-hex');
-      hex.type = 'text'; hex.value = c.default; hex.spellcheck = false;
+      hex.type = 'text'; hex.id = id; hex.name = c.key; hex.value = c.default; hex.spellcheck = false;
       sw.addEventListener('input', () => { hex.value = sw.value; });
       hex.addEventListener('input', () => { if (/^#[0-9a-f]{6}$/i.test(hex.value)) sw.value = hex.value; });
       row.appendChild(sw); row.appendChild(hex);
@@ -180,6 +184,94 @@
     if (readers.length) io.appendChild(opts);
     const reader = (key) => readers.find(r => r.key === key);
 
+    /* Banked items. The controls are always "the one being edited"; this is
+       everything already placed. */
+    const itemised = !!(spec.placePreview && spec.placePreview.items);
+    const saved = [];
+    const itemsPanel = el('div', 'place-items');
+    if (itemised) {
+      const cfg = spec.placePreview;
+      const bank = el('button', 'btn-ghost place-items-add', 'Add as another item');
+      bank.type = 'button';
+      bank.title = 'Keep this text where it is and start another';
+      bank.addEventListener('click', () => {
+        const cur = currentItem();
+        if (!cur.text.trim()) { say('Type the text first, then add it as an item.', 'note'); reveal(msg); return; }
+        saved.push(cur);
+        const t = reader(cfg.text);
+        if (t) t.set('');
+        say('');
+        renderItems();
+        drawPlace();
+        const t2 = reader(cfg.text);
+        if (t2 && t2.input) t2.input.focus();
+      });
+      const bar = el('div', 'place-items-bar');
+      bar.appendChild(bank);
+      bar.appendChild(el('span', 'place-items-hint',
+        'The text above is one item. Bank it to place another somewhere else, on any page.'));
+      itemsPanel.appendChild(bar);
+      itemsPanel.appendChild(el('ol', 'place-items-list'));
+      io.appendChild(itemsPanel);
+    }
+
+    /** The control values as one item. */
+    function currentItem() {
+      const cfg = spec.placePreview || {};
+      const v = (k, d) => { const r = typeof k === 'string' && reader(k); return r ? r.read() : d; };
+      return {
+        text: String(v(cfg.text, '') || ''),
+        size: Math.max(6, Number(v(cfg.size, 12)) || 12),
+        colour: /^#[0-9a-f]{6}$/i.test(String(v(cfg.colour, '#000000'))) ? v(cfg.colour, '#000000') : '#000000',
+        x: Number(v(cfg.x, 0)) || 0,
+        y: Number(v(cfg.y, 0)) || 0,
+        width: Math.max(0, Number(v(cfg.width, 0)) || 0),
+        pages: String(v(cfg.page, '1') || '1')
+      };
+    }
+
+    function renderItems() {
+      if (!itemised) return;
+      const list = itemsPanel.querySelector('.place-items-list');
+      list.innerHTML = '';
+      if (!saved.length) {
+        list.appendChild(el('li', 'place-items-empty', 'Nothing banked yet.'));
+        return;
+      }
+      saved.forEach((it, i) => {
+        const li = el('li', 'place-item');
+        const swatch = el('span', 'place-item-swatch');
+        swatch.style.background = it.colour;
+        li.appendChild(swatch);
+        const label = el('span', 'place-item-label');
+        const first = it.text.split('\n')[0];
+        label.appendChild(el('strong', null, first.length > 40 ? first.slice(0, 40) + '\u2026' : first));
+        label.appendChild(el('span', 'place-item-meta',
+          'page ' + it.pages + ' \u00b7 ' + Math.round(it.x) + ', ' + Math.round(it.y) + ' \u00b7 ' + it.size + ' pt' +
+          (it.width ? ' \u00b7 wrap ' + it.width : '')));
+        li.appendChild(label);
+        const edit = el('button', 'btn-ghost', 'Edit'); edit.type = 'button';
+        edit.title = 'Put this item back in the controls';
+        edit.addEventListener('click', () => {
+          const cfg = spec.placePreview;
+          saved.splice(i, 1);
+          const set = (k, v) => { const r = typeof k === 'string' && reader(k); if (r) r.set(v); };
+          set(cfg.text, it.text); set(cfg.size, it.size); set(cfg.colour, it.colour);
+          set(cfg.x, it.x); set(cfg.y, it.y); set(cfg.width, it.width); set(cfg.page, it.pages);
+          renderItems();
+          const r = reader(cfg.page);
+          if (r && r.input) r.input.dispatchEvent(new Event('change', { bubbles: true }));
+          drawPlace();
+        });
+        const rm = el('button', 'btn-ghost', '\u00d7'); rm.type = 'button'; rm.title = 'Remove this item';
+        rm.addEventListener('click', () => { saved.splice(i, 1); renderItems(); drawPlace(); });
+        li.appendChild(edit);
+        li.appendChild(rm);
+        list.appendChild(li);
+      });
+    }
+    renderItems();
+
     const runBar = el('div', 'io-actions pdf-run');
     /* "Process" told nobody anything. A spec may name its verb. */
     const runBtn = el('button', 'btn-primary',
@@ -212,6 +304,7 @@
     const readOpts = () => {
       const o = {};
       readers.forEach(r => { o[r.key] = r.read(); });
+      if (itemised) o[spec.placePreview.items] = saved.map(it => Object.assign({}, it));
       return o;
     };
 
@@ -546,7 +639,7 @@
       });
 
       /* Any control that feeds the marker redraws it. */
-      [cfg.x, cfg.y, cfg.text, cfg.size, cfg.colour].forEach(k => {
+      [cfg.x, cfg.y, cfg.text, cfg.size, cfg.colour, cfg.width].forEach(k => {
         const r = typeof k === 'string' && reader(k);
         if (r && r.input) r.input.addEventListener('input', drawPlace);
       });
@@ -573,29 +666,48 @@
         const r = reader(k);
         return r ? r.read() : fallback;
       };
-      const xPt = Number(val(cfg.x, 0)) || 0;
-      const yPt = Number(val(cfg.y, 0)) || 0;
-      const text = String(val(cfg.text, '') || '').split('\n')[0].slice(0, 80);
-      const size = Math.max(6, Number(val(cfg.size, 12)) || 12);
-      const colour = /^#[0-9a-f]{6}$/i.test(String(val(cfg.colour, '#000000'))) ? val(cfg.colour, '#000000') : '#000000';
+      const cur = currentItem();
+      const xPt = cur.x, yPt = cur.y, size = cur.size, colour = cur.colour, text = cur.text;
 
       const cx = xPt * scale;
       const cy = (hPt - yPt) * scale;
 
-      if (text) {
-        ctx.font = (size * scale).toFixed(1) + 'px Helvetica, Arial, sans-serif';
-        const w = ctx.measureText(text).width;
-        const h = size * scale;
-        ctx.fillStyle = 'rgba(247,201,72,.22)';
-        ctx.fillRect(cx - 2, cy - h, w + 4, h + 4);
-        ctx.strokeStyle = '#f7c948';
+      /* The same wrapping the content stream will get, from the same
+         function, at the same leading. */
+      const linesOf = (it) => {
+        if (!it.text.trim()) return [];
+        if (it.width > 0 && core.wrapText) return core.wrapText(it.text, 'Helvetica', it.size, it.width);
+        return String(it.text).split('\n');
+      };
+      const onThisPage = (it) => {
+        const total = placeDoc ? placeDoc.pdf.numPages : 1;
+        const v = String(it.pages || '').trim();
+        if (/^last$/i.test(v)) return placePage === total - 1;
+        try { return core.parsePageRange(v, total).indexOf(placePage) >= 0; }
+        catch (e) { return false; }
+      };
+      const drawItem = (it, active) => {
+        const lines = linesOf(it);
+        if (!lines.length) return;
+        const px = it.size * scale;
+        const lead = px * 1.25;
+        ctx.font = px.toFixed(1) + 'px Helvetica, Arial, sans-serif';
+        const ox = it.x * scale, oy = (hPt - it.y) * scale;
+        const w = Math.max.apply(null, lines.map(l => ctx.measureText(l).width));
+        const h = px + lead * (lines.length - 1);
+        ctx.fillStyle = active ? 'rgba(247,201,72,.22)' : 'rgba(120,130,150,.14)';
+        ctx.fillRect(ox - 2, oy - px, w + 4, h + 4);
+        ctx.strokeStyle = active ? '#f7c948' : 'rgba(120,130,150,.7)';
         ctx.lineWidth = 1;
-        ctx.setLineDash([4, 3]);
-        ctx.strokeRect(cx - 2, cy - h, w + 4, h + 4);
+        ctx.setLineDash(active ? [4, 3] : [2, 3]);
+        ctx.strokeRect(ox - 2, oy - px, w + 4, h + 4);
         ctx.setLineDash([]);
-        ctx.fillStyle = colour;
-        ctx.fillText(text, cx, cy);
-      }
+        ctx.fillStyle = it.colour;
+        lines.forEach((l, k) => ctx.fillText(l, ox, oy + k * lead));
+      };
+
+      saved.forEach(it => { if (onThisPage(it)) drawItem(it, false); });
+      if (text.trim()) drawItem(cur, true);
 
       /* The anchor, always, even with no text yet. */
       ctx.strokeStyle = '#f7c948';
