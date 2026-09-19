@@ -1,0 +1,76 @@
+# Re-checks every outbound link in /learn/ once a week.
+#
+# A curated directory is only worth the state it is kept in. Left alone, a
+# fifth of these links would be dead within a year — courses get restructured,
+# projects get archived, companies get acquired and quietly drop the tutorial
+# that came with them. None of that announces itself, and a reader finding a
+# 404 before the owner does is the failure this job exists to prevent.
+#
+# It does not edit anything. Deciding where a moved resource now lives, or
+# whether a dead one should be replaced or dropped, is a judgement about
+# quality and there is no safe way to automate it. The job's whole output is a
+# failed run and a report, which GitHub emails to the owner.
+#
+# Non-zero exit means genuinely dead: nothing answered, or the server said the
+# page is gone. A host that refuses automated requests — Cloudflare in front of
+# LeetCode, Codeforces and a few others — is reported but does not fail the
+# run. A weekly job that cries wolf is a weekly job nobody reads, which would
+# leave the directory rotting exactly as if this file did not exist.
+#
+# Note GitHub disables scheduled workflows in a repository with no pushes for
+# 60 days. The daily rates job keeps the repository active, so this one stays
+# alive with it.
+name: Check learning links
+
+on:
+  schedule:
+    # 06:40 UTC on Mondays. After the nightly rates job, and early enough that
+    # a report is waiting at the start of the week rather than the end of it.
+    - cron: '40 6 * * 1'
+  workflow_dispatch:
+  push:
+    # Anything that changes the list is worth checking immediately, so a typo
+    # in a URL is caught by the commit that introduced it rather than up to a
+    # week later.
+    paths:
+      - 'build/learn-data.js'
+      - 'build/check-links.js'
+      - '.github/workflows/check-links.yml'
+
+# Reads the repository and nothing else. This job never writes.
+permissions:
+  contents: read
+
+concurrency:
+  group: check-links
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      # The checker shells out to curl, which every ubuntu runner has, and
+      # falls back to a browser only for hosts that refuse curl. There is no
+      # browser on the runner, so it is skipped: those links are then reported
+      # as unverified rather than guessed at.
+      - name: Check every outbound link
+        run: node build/check-links.js --no-browser
+
+      # Runs whatever the result, so the machine-readable report is attached
+      # even when the job failed — which is the run you actually want it for.
+      - name: Attach the report
+        if: always()
+        run: node build/check-links.js --no-browser --json > link-report.json || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: link-report
+          path: link-report.json
+          retention-days: 30

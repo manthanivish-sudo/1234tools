@@ -1220,4 +1220,16 @@
 <url><loc>https://www.1234tools.com/conversions/temperature/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/conversions/time/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/conversions/volume/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/learn/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/learn/ai/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+<url><loc>https://www.1234tools.com/learn/programming/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+<url><loc>https://www.1234tools.com/learn/data/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+<url><loc>https://www.1234tools.com/learn/cloud/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+<url><loc>https://www.1234tools.com/learn/security/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+<url><loc>https://www.1234tools.com/learn/labs/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+<url><loc>https://www.1234tools.com/learn/practice/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+<url><loc>https://www.1234tools.com/learn/certifications/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+<url><loc>https://www.1234tools.com/learn/mathematics/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+<url><loc>https://www.1234tools.com/learn/business/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+<url><loc>https://www.1234tools.com/learn/design/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
 </urlset>

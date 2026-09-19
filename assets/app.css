@@ -973,6 +973,59 @@ a.scan-go { display: inline-flex; align-items: center; justify-content: center; 
   .scan-controls .btn-primary { flex: 1 1 100%; }
 }
 
+/* Learning directory.
+   These pages point outwards, so they are styled to read as a list of other
+   people's work rather than as another tool: no controls, the cost stated
+   before you click, and the destination named next to every entry. */
+.learn-guidance p { margin: 0 0 10px; font-size: .9rem; line-height: 1.65; color: var(--text-2); }
+.learn-guidance p:last-child { margin-bottom: 0; }
+.learn-guidance strong { color: var(--text-1); }
+
+.learn-list { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; }
+.learn-item {
+  padding: 15px 16px;
+  background: var(--bg-1); border: 1px solid var(--border);
+  border-radius: var(--radius); transition: border-color .2s, background .2s;
+}
+.learn-item:hover { border-color: var(--border-gold); background: var(--surface-strong); }
+
+.learn-item-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.learn-title {
+  font-family: var(--font-head); font-size: 1.02rem; font-weight: 600;
+  color: var(--text-1); text-decoration: none; overflow-wrap: anywhere;
+}
+.learn-title:hover { color: var(--accent); text-decoration: underline; }
+/* An outbound link should say so before it is clicked, not after. */
+.learn-title::after { content: " \2197"; color: var(--text-3); font-size: .82em; }
+.learn-title:hover::after { color: var(--accent); }
+
+.learn-cost {
+  flex: none; margin-left: auto; padding: 3px 9px; border-radius: 999px;
+  font-size: .64rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  background: var(--surface); color: var(--text-3); white-space: nowrap;
+}
+.learn-cost.is-free { background: rgba(64,196,120,.14); color: #6fdc9b; }
+.learn-cost.is-free-tier { background: rgba(247,201,72,.14); color: var(--gold-2); }
+[data-theme="light"] .learn-cost.is-free { color: #1c6b3f; }
+[data-theme="light"] .learn-cost.is-free-tier { color: #7d5200; }
+
+.learn-note { margin: 7px 0 0; font-size: .86rem; line-height: 1.6; color: var(--text-2); }
+.learn-meta { display: flex; gap: 10px; flex-wrap: wrap; margin: 9px 0 0; font-size: .74rem; color: var(--text-3); }
+.learn-provider { font-weight: 600; }
+.learn-host { font-family: var(--font-mono); }
+.learn-host::before { content: "\00b7"; margin-right: 10px; }
+
+.learn-grid .card { position: relative; }
+.card-count {
+  margin-top: 8px; font-size: .72rem; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--text-3);
+}
+
+@media (max-width: 640px) {
+  .learn-item-head { gap: 8px; }
+  .learn-cost { margin-left: 0; }
+}
+
 /* file tools */
 .dropzone {
   display: grid; place-items: center; gap: 6px; text-align: center;
