@@ -3,8 +3,8 @@
   "name": "Random Number Generator — 1234Tools",
   "short_name": "Random Number",
   "description": "Generate random numbers in any range, with or without duplicates, using a cryptographic source.",
-  "start_url": "/utilities/random-number-generator.html?src=pwa",
-  "scope": "/utilities/random-number-generator.html",
+  "start_url": "/utilities/random-number-generator/?src=pwa",
+  "scope": "/utilities/random-number-generator/",
   "display": "standalone",
   "display_override": [
     "standalone",

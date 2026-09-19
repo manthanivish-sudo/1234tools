@@ -3,8 +3,8 @@
   "name": "Convert Kilocalorie to Kilowatt Hour — 1234Tools",
   "short_name": "Kilocalorie",
   "description": "Convert Kilocalorie (kcal) to Kilowatt Hour (kWh) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/kilocalorie-to-kilowatt-hour.html?src=pwa",
-  "scope": "/conversions/energy/kilocalorie-to-kilowatt-hour.html",
+  "start_url": "/conversions/energy/kilocalorie-to-kilowatt-hour/?src=pwa",
+  "scope": "/conversions/energy/kilocalorie-to-kilowatt-hour/",
   "display": "standalone",
   "display_override": [
     "standalone",

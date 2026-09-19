@@ -3,8 +3,8 @@
   "name": "Convert Centimeter to Kilometer — 1234Tools",
   "short_name": "Centimeter",
   "description": "Convert Centimeter (cm) to Kilometer (km) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/centimeter-to-kilometer.html?src=pwa",
-  "scope": "/conversions/length/centimeter-to-kilometer.html",
+  "start_url": "/conversions/length/centimeter-to-kilometer/?src=pwa",
+  "scope": "/conversions/length/centimeter-to-kilometer/",
   "display": "standalone",
   "display_override": [
     "standalone",

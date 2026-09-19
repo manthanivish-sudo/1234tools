@@ -3,8 +3,8 @@
   "name": "Convert Meter to Parsec — 1234Tools",
   "short_name": "Meter → Parsec",
   "description": "Convert Meter (m) to Parsec (pc) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/meter-to-parsec.html?src=pwa",
-  "scope": "/conversions/length/meter-to-parsec.html",
+  "start_url": "/conversions/length/meter-to-parsec/?src=pwa",
+  "scope": "/conversions/length/meter-to-parsec/",
   "display": "standalone",
   "display_override": [
     "standalone",

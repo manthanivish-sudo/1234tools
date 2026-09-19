@@ -3,8 +3,8 @@
   "name": "Business Days Calculator — 1234Tools",
   "short_name": "Business Days",
   "description": "Count working days between two dates, or add working days to a date, excluding weekends and holidays.",
-  "start_url": "/time/business-days.html?src=pwa",
-  "scope": "/time/business-days.html",
+  "start_url": "/time/business-days/?src=pwa",
+  "scope": "/time/business-days/",
   "display": "standalone",
   "display_override": [
     "standalone",

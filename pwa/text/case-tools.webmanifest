@@ -3,8 +3,8 @@
   "name": "Text Cleanup Toolkit — 1234Tools",
   "short_name": "Text Cleanup Toolkit",
   "description": "Remove duplicate lines, sort, trim whitespace, strip HTML tags and reverse text.",
-  "start_url": "/text/case-tools.html?src=pwa",
-  "scope": "/text/case-tools.html",
+  "start_url": "/text/case-tools/?src=pwa",
+  "scope": "/text/case-tools/",
   "display": "standalone",
   "display_override": [
     "standalone",

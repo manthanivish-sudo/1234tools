@@ -3,8 +3,8 @@
   "name": "Prime Factorisation Calculator — 1234Tools",
   "short_name": "Prime Factorisation",
   "description": "Break a number into prime factors, list all divisors, and test whether it is prime.",
-  "start_url": "/mathematics/prime-factorisation.html?src=pwa",
-  "scope": "/mathematics/prime-factorisation.html",
+  "start_url": "/mathematics/prime-factorisation/?src=pwa",
+  "scope": "/mathematics/prime-factorisation/",
   "display": "standalone",
   "display_override": [
     "standalone",

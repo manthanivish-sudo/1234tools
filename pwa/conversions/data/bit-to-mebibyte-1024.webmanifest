@@ -3,8 +3,8 @@
   "name": "Convert Bit to Mebibyte (1024) — 1234Tools",
   "short_name": "Bit → Mebibyte",
   "description": "Convert Bit (bit) to Mebibyte (1024) (MiB) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/bit-to-mebibyte-1024.html?src=pwa",
-  "scope": "/conversions/data/bit-to-mebibyte-1024.html",
+  "start_url": "/conversions/data/bit-to-mebibyte-1024/?src=pwa",
+  "scope": "/conversions/data/bit-to-mebibyte-1024/",
   "display": "standalone",
   "display_override": [
     "standalone",

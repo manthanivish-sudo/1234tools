@@ -3,8 +3,8 @@
   "name": "Convert Hour to Second — 1234Tools",
   "short_name": "Hour → Second",
   "description": "Convert Hour (h) to Second (s) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/hour-to-second.html?src=pwa",
-  "scope": "/conversions/time/hour-to-second.html",
+  "start_url": "/conversions/time/hour-to-second/?src=pwa",
+  "scope": "/conversions/time/hour-to-second/",
   "display": "standalone",
   "display_override": [
     "standalone",

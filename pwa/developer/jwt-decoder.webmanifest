@@ -3,8 +3,8 @@
   "name": "JWT Decoder — 1234Tools",
   "short_name": "JWT Decoder",
   "description": "Decode a JSON Web Token to inspect its header, payload and expiry. Runs entirely in your browser.",
-  "start_url": "/developer/jwt-decoder.html?src=pwa",
-  "scope": "/developer/jwt-decoder.html",
+  "start_url": "/developer/jwt-decoder/?src=pwa",
+  "scope": "/developer/jwt-decoder/",
   "display": "standalone",
   "display_override": [
     "standalone",

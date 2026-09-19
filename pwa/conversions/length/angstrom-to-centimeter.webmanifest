@@ -3,8 +3,8 @@
   "name": "Convert Angstrom to Centimeter — 1234Tools",
   "short_name": "Angstrom",
   "description": "Convert Angstrom (Å) to Centimeter (cm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/angstrom-to-centimeter.html?src=pwa",
-  "scope": "/conversions/length/angstrom-to-centimeter.html",
+  "start_url": "/conversions/length/angstrom-to-centimeter/?src=pwa",
+  "scope": "/conversions/length/angstrom-to-centimeter/",
   "display": "standalone",
   "display_override": [
     "standalone",

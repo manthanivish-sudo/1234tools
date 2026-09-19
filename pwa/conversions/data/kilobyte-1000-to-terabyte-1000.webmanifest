@@ -3,8 +3,8 @@
   "name": "Convert Kilobyte (1000) to Terabyte (1000) — 1234Tools",
   "short_name": "Kilobyte (1000)",
   "description": "Convert Kilobyte (1000) (KB) to Terabyte (1000) (TB) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/kilobyte-1000-to-terabyte-1000.html?src=pwa",
-  "scope": "/conversions/data/kilobyte-1000-to-terabyte-1000.html",
+  "start_url": "/conversions/data/kilobyte-1000-to-terabyte-1000/?src=pwa",
+  "scope": "/conversions/data/kilobyte-1000-to-terabyte-1000/",
   "display": "standalone",
   "display_override": [
     "standalone",

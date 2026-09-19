@@ -3,8 +3,8 @@
   "name": "Convert Turn to Gradian — 1234Tools",
   "short_name": "Turn → Gradian",
   "description": "Convert Turn (turn) to Gradian (grad) instantly. Works in both directions, with a full angle table.",
-  "start_url": "/conversions/angle/turn-to-gradian.html?src=pwa",
-  "scope": "/conversions/angle/turn-to-gradian.html",
+  "start_url": "/conversions/angle/turn-to-gradian/?src=pwa",
+  "scope": "/conversions/angle/turn-to-gradian/",
   "display": "standalone",
   "display_override": [
     "standalone",

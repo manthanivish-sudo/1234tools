@@ -3,8 +3,8 @@
   "name": "Text Case Converter — 1234Tools",
   "short_name": "Text Case Converter",
   "description": "Convert between camelCase, snake_case, kebab-case, PascalCase, CONSTANT_CASE, Title Case and more.",
-  "start_url": "/developer/case-converter.html?src=pwa",
-  "scope": "/developer/case-converter.html",
+  "start_url": "/developer/case-converter/?src=pwa",
+  "scope": "/developer/case-converter/",
   "display": "standalone",
   "display_override": [
     "standalone",

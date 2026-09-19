@@ -3,8 +3,8 @@
   "name": "Convert Bit to Kilobyte (1000) — 1234Tools",
   "short_name": "Bit → Kilobyte",
   "description": "Convert Bit (bit) to Kilobyte (1000) (KB) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/bit-to-kilobyte-1000.html?src=pwa",
-  "scope": "/conversions/data/bit-to-kilobyte-1000.html",
+  "start_url": "/conversions/data/bit-to-kilobyte-1000/?src=pwa",
+  "scope": "/conversions/data/bit-to-kilobyte-1000/",
   "display": "standalone",
   "display_override": [
     "standalone",

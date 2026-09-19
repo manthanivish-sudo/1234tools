@@ -3,8 +3,8 @@
   "name": "Convert PSI to Millibar — 1234Tools",
   "short_name": "PSI → Millibar",
   "description": "Convert PSI (psi) to Millibar (mbar) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/psi-to-millibar.html?src=pwa",
-  "scope": "/conversions/pressure/psi-to-millibar.html",
+  "start_url": "/conversions/pressure/psi-to-millibar/?src=pwa",
+  "scope": "/conversions/pressure/psi-to-millibar/",
   "display": "standalone",
   "display_override": [
     "standalone",

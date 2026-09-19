@@ -3,8 +3,8 @@
   "name": "Pregnancy Due Date Calculator — 1234Tools",
   "short_name": "Pregnancy Due Date",
   "description": "Estimate a due date from the last menstrual period or conception date, with current gestational age.",
-  "start_url": "/health/pregnancy-due-date.html?src=pwa",
-  "scope": "/health/pregnancy-due-date.html",
+  "start_url": "/health/pregnancy-due-date/?src=pwa",
+  "scope": "/health/pregnancy-due-date/",
   "display": "standalone",
   "display_override": [
     "standalone",

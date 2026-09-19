@@ -3,8 +3,8 @@
   "name": "HRA Exemption Calculator — 1234Tools",
   "short_name": "HRA Exemption",
   "description": "Work out the house rent allowance exemption under Section 10(13A) — the lowest of three tests.",
-  "start_url": "/india/hra-exemption.html?src=pwa",
-  "scope": "/india/hra-exemption.html",
+  "start_url": "/india/hra-exemption/?src=pwa",
+  "scope": "/india/hra-exemption/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Sales Commission Calculator — 1234Tools",
   "short_name": "Sales Commission",
   "description": "Flat, tiered and threshold-based commission, with on-target earnings and effective rate.",
-  "start_url": "/business/commission-calculator.html?src=pwa",
-  "scope": "/business/commission-calculator.html",
+  "start_url": "/business/commission-calculator/?src=pwa",
+  "scope": "/business/commission-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

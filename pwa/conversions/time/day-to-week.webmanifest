@@ -3,8 +3,8 @@
   "name": "Convert Day to Week — 1234Tools",
   "short_name": "Day → Week",
   "description": "Convert Day (d) to Week (wk) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/day-to-week.html?src=pwa",
-  "scope": "/conversions/time/day-to-week.html",
+  "start_url": "/conversions/time/day-to-week/?src=pwa",
+  "scope": "/conversions/time/day-to-week/",
   "display": "standalone",
   "display_override": [
     "standalone",

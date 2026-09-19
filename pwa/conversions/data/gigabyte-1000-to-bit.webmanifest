@@ -3,8 +3,8 @@
   "name": "Convert Gigabyte (1000) to Bit — 1234Tools",
   "short_name": "Gigabyte (1000)",
   "description": "Convert Gigabyte (1000) (GB) to Bit (bit) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/gigabyte-1000-to-bit.html?src=pwa",
-  "scope": "/conversions/data/gigabyte-1000-to-bit.html",
+  "start_url": "/conversions/data/gigabyte-1000-to-bit/?src=pwa",
+  "scope": "/conversions/data/gigabyte-1000-to-bit/",
   "display": "standalone",
   "display_override": [
     "standalone",

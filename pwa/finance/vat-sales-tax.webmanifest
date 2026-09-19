@@ -3,8 +3,8 @@
   "name": "VAT & Sales Tax Calculator — 1234Tools",
   "short_name": "VAT & Sales Tax",
   "description": "Add tax to a net price or extract tax from a gross price — works in both directions.",
-  "start_url": "/finance/vat-sales-tax.html?src=pwa",
-  "scope": "/finance/vat-sales-tax.html",
+  "start_url": "/finance/vat-sales-tax/?src=pwa",
+  "scope": "/finance/vat-sales-tax/",
   "display": "standalone",
   "display_override": [
     "standalone",

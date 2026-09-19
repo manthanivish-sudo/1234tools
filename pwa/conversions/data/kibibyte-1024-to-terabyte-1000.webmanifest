@@ -3,8 +3,8 @@
   "name": "Convert Kibibyte (1024) to Terabyte (1000) — 1234Tools",
   "short_name": "Kibibyte (1024)",
   "description": "Convert Kibibyte (1024) (KiB) to Terabyte (1000) (TB) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/kibibyte-1024-to-terabyte-1000.html?src=pwa",
-  "scope": "/conversions/data/kibibyte-1024-to-terabyte-1000.html",
+  "start_url": "/conversions/data/kibibyte-1024-to-terabyte-1000/?src=pwa",
+  "scope": "/conversions/data/kibibyte-1024-to-terabyte-1000/",
   "display": "standalone",
   "display_override": [
     "standalone",

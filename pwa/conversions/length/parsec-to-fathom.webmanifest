@@ -3,8 +3,8 @@
   "name": "Convert Parsec to Fathom — 1234Tools",
   "short_name": "Parsec → Fathom",
   "description": "Convert Parsec (pc) to Fathom (ftm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/parsec-to-fathom.html?src=pwa",
-  "scope": "/conversions/length/parsec-to-fathom.html",
+  "start_url": "/conversions/length/parsec-to-fathom/?src=pwa",
+  "scope": "/conversions/length/parsec-to-fathom/",
   "display": "standalone",
   "display_override": [
     "standalone",

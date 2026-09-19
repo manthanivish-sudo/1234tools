@@ -3,8 +3,8 @@
   "name": "Convert Acre to Square Meter — 1234Tools",
   "short_name": "Acre → Square Meter",
   "description": "Convert Acre (ac) to Square Meter (m²) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/acre-to-square-meter.html?src=pwa",
-  "scope": "/conversions/area/acre-to-square-meter.html",
+  "start_url": "/conversions/area/acre-to-square-meter/?src=pwa",
+  "scope": "/conversions/area/acre-to-square-meter/",
   "display": "standalone",
   "display_override": [
     "standalone",

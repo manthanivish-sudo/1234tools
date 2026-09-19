@@ -3,8 +3,8 @@
   "name": "Convert Kilobyte (1000) to Byte — 1234Tools",
   "short_name": "Kilobyte (1000)",
   "description": "Convert Kilobyte (1000) (KB) to Byte (B) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/kilobyte-1000-to-byte.html?src=pwa",
-  "scope": "/conversions/data/kilobyte-1000-to-byte.html",
+  "start_url": "/conversions/data/kilobyte-1000-to-byte/?src=pwa",
+  "scope": "/conversions/data/kilobyte-1000-to-byte/",
   "display": "standalone",
   "display_override": [
     "standalone",

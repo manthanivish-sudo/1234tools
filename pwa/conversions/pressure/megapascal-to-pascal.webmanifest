@@ -3,8 +3,8 @@
   "name": "Convert Megapascal to Pascal — 1234Tools",
   "short_name": "Megapascal → Pascal",
   "description": "Convert Megapascal (MPa) to Pascal (Pa) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/megapascal-to-pascal.html?src=pwa",
-  "scope": "/conversions/pressure/megapascal-to-pascal.html",
+  "start_url": "/conversions/pressure/megapascal-to-pascal/?src=pwa",
+  "scope": "/conversions/pressure/megapascal-to-pascal/",
   "display": "standalone",
   "display_override": [
     "standalone",

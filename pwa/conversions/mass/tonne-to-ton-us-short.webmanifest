@@ -3,8 +3,8 @@
   "name": "Convert Tonne to Ton (US short) — 1234Tools",
   "short_name": "Tonne → Ton",
   "description": "Convert Tonne (t) to Ton (US short) (ton) instantly. Works in both directions, with a full mass & weight table.",
-  "start_url": "/conversions/mass/tonne-to-ton-us-short.html?src=pwa",
-  "scope": "/conversions/mass/tonne-to-ton-us-short.html",
+  "start_url": "/conversions/mass/tonne-to-ton-us-short/?src=pwa",
+  "scope": "/conversions/mass/tonne-to-ton-us-short/",
   "display": "standalone",
   "display_override": [
     "standalone",

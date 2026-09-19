@@ -3,8 +3,8 @@
   "name": "Convert Square Foot to Square Meter — 1234Tools",
   "short_name": "Square Foot",
   "description": "Convert Square Foot (ft²) to Square Meter (m²) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-foot-to-square-meter.html?src=pwa",
-  "scope": "/conversions/area/square-foot-to-square-meter.html",
+  "start_url": "/conversions/area/square-foot-to-square-meter/?src=pwa",
+  "scope": "/conversions/area/square-foot-to-square-meter/",
   "display": "standalone",
   "display_override": [
     "standalone",

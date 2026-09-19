@@ -3,8 +3,8 @@
   "name": "Convert Pascal to Torr / mmHg — 1234Tools",
   "short_name": "Pascal → Torr / mmHg",
   "description": "Convert Pascal (Pa) to Torr / mmHg (Torr) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/pascal-to-torr-mmhg.html?src=pwa",
-  "scope": "/conversions/pressure/pascal-to-torr-mmhg.html",
+  "start_url": "/conversions/pressure/pascal-to-torr-mmhg/?src=pwa",
+  "scope": "/conversions/pressure/pascal-to-torr-mmhg/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Colour Palette Extractor — 1234Tools",
   "short_name": "Colour Palette",
   "description": "Pull the dominant colours out of any image as HEX, RGB and HSL, with contrast checks.",
-  "start_url": "/image/color-palette-extractor.html?src=pwa",
-  "scope": "/image/color-palette-extractor.html",
+  "start_url": "/image/color-palette-extractor/?src=pwa",
+  "scope": "/image/color-palette-extractor/",
   "display": "standalone",
   "display_override": [
     "standalone",

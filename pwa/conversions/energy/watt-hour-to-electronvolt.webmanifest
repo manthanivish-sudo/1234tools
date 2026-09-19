@@ -3,8 +3,8 @@
   "name": "Convert Watt Hour to Electronvolt — 1234Tools",
   "short_name": "Watt Hour",
   "description": "Convert Watt Hour (Wh) to Electronvolt (eV) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/watt-hour-to-electronvolt.html?src=pwa",
-  "scope": "/conversions/energy/watt-hour-to-electronvolt.html",
+  "start_url": "/conversions/energy/watt-hour-to-electronvolt/?src=pwa",
+  "scope": "/conversions/energy/watt-hour-to-electronvolt/",
   "display": "standalone",
   "display_override": [
     "standalone",

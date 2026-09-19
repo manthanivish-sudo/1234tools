@@ -3,8 +3,8 @@
   "name": "Convert Angstrom to Nautical Mile — 1234Tools",
   "short_name": "Angstrom → Nautical",
   "description": "Convert Angstrom (Å) to Nautical Mile (nmi) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/angstrom-to-nautical-mile.html?src=pwa",
-  "scope": "/conversions/length/angstrom-to-nautical-mile.html",
+  "start_url": "/conversions/length/angstrom-to-nautical-mile/?src=pwa",
+  "scope": "/conversions/length/angstrom-to-nautical-mile/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Watt Hour to Calorie (thermo) — 1234Tools",
   "short_name": "Watt Hour → Calorie",
   "description": "Convert Watt Hour (Wh) to Calorie (thermo) (cal) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/watt-hour-to-calorie-thermo.html?src=pwa",
-  "scope": "/conversions/energy/watt-hour-to-calorie-thermo.html",
+  "start_url": "/conversions/energy/watt-hour-to-calorie-thermo/?src=pwa",
+  "scope": "/conversions/energy/watt-hour-to-calorie-thermo/",
   "display": "standalone",
   "display_override": [
     "standalone",

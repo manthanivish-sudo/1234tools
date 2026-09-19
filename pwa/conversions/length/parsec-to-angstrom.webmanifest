@@ -3,8 +3,8 @@
   "name": "Convert Parsec to Angstrom — 1234Tools",
   "short_name": "Parsec → Angstrom",
   "description": "Convert Parsec (pc) to Angstrom (Å) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/parsec-to-angstrom.html?src=pwa",
-  "scope": "/conversions/length/parsec-to-angstrom.html",
+  "start_url": "/conversions/length/parsec-to-angstrom/?src=pwa",
+  "scope": "/conversions/length/parsec-to-angstrom/",
   "display": "standalone",
   "display_override": [
     "standalone",

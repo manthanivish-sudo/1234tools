@@ -3,8 +3,8 @@
   "name": "Convert Nautical Mile to Meter — 1234Tools",
   "short_name": "Nautical Mile",
   "description": "Convert Nautical Mile (nmi) to Meter (m) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/nautical-mile-to-meter.html?src=pwa",
-  "scope": "/conversions/length/nautical-mile-to-meter.html",
+  "start_url": "/conversions/length/nautical-mile-to-meter/?src=pwa",
+  "scope": "/conversions/length/nautical-mile-to-meter/",
   "display": "standalone",
   "display_override": [
     "standalone",

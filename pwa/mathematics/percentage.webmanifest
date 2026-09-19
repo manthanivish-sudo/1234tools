@@ -3,8 +3,8 @@
   "name": "Percentage Calculator — 1234Tools",
   "short_name": "Percentage",
   "description": "Calculate percentages, percentage change, and reverse percentages in both directions.",
-  "start_url": "/mathematics/percentage.html?src=pwa",
-  "scope": "/mathematics/percentage.html",
+  "start_url": "/mathematics/percentage/?src=pwa",
+  "scope": "/mathematics/percentage/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Financial Ratio Calculator — 1234Tools",
   "short_name": "Financial Ratio",
   "description": "Liquidity, profitability, efficiency and leverage ratios from balance sheet and P&L figures.",
-  "start_url": "/business/business-ratios.html?src=pwa",
-  "scope": "/business/business-ratios.html",
+  "start_url": "/business/business-ratios/?src=pwa",
+  "scope": "/business/business-ratios/",
   "display": "standalone",
   "display_override": [
     "standalone",

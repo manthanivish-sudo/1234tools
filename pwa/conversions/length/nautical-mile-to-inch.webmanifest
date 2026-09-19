@@ -3,8 +3,8 @@
   "name": "Convert Nautical Mile to Inch — 1234Tools",
   "short_name": "Nautical Mile → Inch",
   "description": "Convert Nautical Mile (nmi) to Inch (in) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/nautical-mile-to-inch.html?src=pwa",
-  "scope": "/conversions/length/nautical-mile-to-inch.html",
+  "start_url": "/conversions/length/nautical-mile-to-inch/?src=pwa",
+  "scope": "/conversions/length/nautical-mile-to-inch/",
   "display": "standalone",
   "display_override": [
     "standalone",

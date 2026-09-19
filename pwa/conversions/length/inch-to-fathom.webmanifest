@@ -3,8 +3,8 @@
   "name": "Convert Inch to Fathom — 1234Tools",
   "short_name": "Inch → Fathom",
   "description": "Convert Inch (in) to Fathom (ftm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/inch-to-fathom.html?src=pwa",
-  "scope": "/conversions/length/inch-to-fathom.html",
+  "start_url": "/conversions/length/inch-to-fathom/?src=pwa",
+  "scope": "/conversions/length/inch-to-fathom/",
   "display": "standalone",
   "display_override": [
     "standalone",

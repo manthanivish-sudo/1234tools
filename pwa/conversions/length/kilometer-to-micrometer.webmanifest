@@ -3,8 +3,8 @@
   "name": "Convert Kilometer to Micrometer — 1234Tools",
   "short_name": "Kilometer",
   "description": "Convert Kilometer (km) to Micrometer (µm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/kilometer-to-micrometer.html?src=pwa",
-  "scope": "/conversions/length/kilometer-to-micrometer.html",
+  "start_url": "/conversions/length/kilometer-to-micrometer/?src=pwa",
+  "scope": "/conversions/length/kilometer-to-micrometer/",
   "display": "standalone",
   "display_override": [
     "standalone",

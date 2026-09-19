@@ -3,8 +3,8 @@
   "name": "robots.txt Generator — 1234Tools",
   "short_name": "robots.txt Generator",
   "description": "Build a valid robots.txt with crawl rules, sitemap references and common bot presets.",
-  "start_url": "/developer/robots-txt-generator.html?src=pwa",
-  "scope": "/developer/robots-txt-generator.html",
+  "start_url": "/developer/robots-txt-generator/?src=pwa",
+  "scope": "/developer/robots-txt-generator/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Year (Julian) to Second — 1234Tools",
   "short_name": "Year (Julian)",
   "description": "Convert Year (Julian) (yr) to Second (s) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/year-julian-to-second.html?src=pwa",
-  "scope": "/conversions/time/year-julian-to-second.html",
+  "start_url": "/conversions/time/year-julian-to-second/?src=pwa",
+  "scope": "/conversions/time/year-julian-to-second/",
   "display": "standalone",
   "display_override": [
     "standalone",

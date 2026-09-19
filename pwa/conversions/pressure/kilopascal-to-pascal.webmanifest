@@ -3,8 +3,8 @@
   "name": "Convert Kilopascal to Pascal — 1234Tools",
   "short_name": "Kilopascal → Pascal",
   "description": "Convert Kilopascal (kPa) to Pascal (Pa) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/kilopascal-to-pascal.html?src=pwa",
-  "scope": "/conversions/pressure/kilopascal-to-pascal.html",
+  "start_url": "/conversions/pressure/kilopascal-to-pascal/?src=pwa",
+  "scope": "/conversions/pressure/kilopascal-to-pascal/",
   "display": "standalone",
   "display_override": [
     "standalone",

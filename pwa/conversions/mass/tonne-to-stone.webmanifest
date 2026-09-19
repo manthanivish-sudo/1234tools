@@ -3,8 +3,8 @@
   "name": "Convert Tonne to Stone — 1234Tools",
   "short_name": "Tonne → Stone",
   "description": "Convert Tonne (t) to Stone (st) instantly. Works in both directions, with a full mass & weight table.",
-  "start_url": "/conversions/mass/tonne-to-stone.html?src=pwa",
-  "scope": "/conversions/mass/tonne-to-stone.html",
+  "start_url": "/conversions/mass/tonne-to-stone/?src=pwa",
+  "scope": "/conversions/mass/tonne-to-stone/",
   "display": "standalone",
   "display_override": [
     "standalone",

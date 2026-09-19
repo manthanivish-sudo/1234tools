@@ -3,8 +3,8 @@
   "name": "Convert Gram to Kilogram — 1234Tools",
   "short_name": "Gram → Kilogram",
   "description": "Convert Gram (g) to Kilogram (kg) instantly. Works in both directions, with a full mass & weight table.",
-  "start_url": "/conversions/mass/gram-to-kilogram.html?src=pwa",
-  "scope": "/conversions/mass/gram-to-kilogram.html",
+  "start_url": "/conversions/mass/gram-to-kilogram/?src=pwa",
+  "scope": "/conversions/mass/gram-to-kilogram/",
   "display": "standalone",
   "display_override": [
     "standalone",

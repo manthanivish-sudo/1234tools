@@ -3,8 +3,8 @@
   "name": "Convert Nanometer to Millimeter — 1234Tools",
   "short_name": "Nanometer",
   "description": "Convert Nanometer (nm) to Millimeter (mm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/nanometer-to-millimeter.html?src=pwa",
-  "scope": "/conversions/length/nanometer-to-millimeter.html",
+  "start_url": "/conversions/length/nanometer-to-millimeter/?src=pwa",
+  "scope": "/conversions/length/nanometer-to-millimeter/",
   "display": "standalone",
   "display_override": [
     "standalone",

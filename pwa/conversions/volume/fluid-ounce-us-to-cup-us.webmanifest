@@ -3,8 +3,8 @@
   "name": "Convert Fluid Ounce (US) to Cup (US) — 1234Tools",
   "short_name": "Fluid Ounce (US)",
   "description": "Convert Fluid Ounce (US) (fl oz) to Cup (US) (cup) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/fluid-ounce-us-to-cup-us.html?src=pwa",
-  "scope": "/conversions/volume/fluid-ounce-us-to-cup-us.html",
+  "start_url": "/conversions/volume/fluid-ounce-us-to-cup-us/?src=pwa",
+  "scope": "/conversions/volume/fluid-ounce-us-to-cup-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Square Yard to Square Millimeter — 1234Tools",
   "short_name": "Square Yard",
   "description": "Convert Square Yard (yd²) to Square Millimeter (mm²) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-yard-to-square-millimeter.html?src=pwa",
-  "scope": "/conversions/area/square-yard-to-square-millimeter.html",
+  "start_url": "/conversions/area/square-yard-to-square-millimeter/?src=pwa",
+  "scope": "/conversions/area/square-yard-to-square-millimeter/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Degree to Turn — 1234Tools",
   "short_name": "Degree → Turn",
   "description": "Convert Degree (°) to Turn (turn) instantly. Works in both directions, with a full angle table.",
-  "start_url": "/conversions/angle/degree-to-turn.html?src=pwa",
-  "scope": "/conversions/angle/degree-to-turn.html",
+  "start_url": "/conversions/angle/degree-to-turn/?src=pwa",
+  "scope": "/conversions/angle/degree-to-turn/",
   "display": "standalone",
   "display_override": [
     "standalone",

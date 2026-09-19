@@ -3,8 +3,8 @@
   "name": "Convert Square Centimeter to Square Meter — 1234Tools",
   "short_name": "Square Centimeter",
   "description": "Convert Square Centimeter (cm²) to Square Meter (m²) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-centimeter-to-square-meter.html?src=pwa",
-  "scope": "/conversions/area/square-centimeter-to-square-meter.html",
+  "start_url": "/conversions/area/square-centimeter-to-square-meter/?src=pwa",
+  "scope": "/conversions/area/square-centimeter-to-square-meter/",
   "display": "standalone",
   "display_override": [
     "standalone",

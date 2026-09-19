@@ -3,8 +3,8 @@
   "name": "Convert Calorie (thermo) to Kilojoule — 1234Tools",
   "short_name": "Calorie (thermo)",
   "description": "Convert Calorie (thermo) (cal) to Kilojoule (kJ) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/calorie-thermo-to-kilojoule.html?src=pwa",
-  "scope": "/conversions/energy/calorie-thermo-to-kilojoule.html",
+  "start_url": "/conversions/energy/calorie-thermo-to-kilojoule/?src=pwa",
+  "scope": "/conversions/energy/calorie-thermo-to-kilojoule/",
   "display": "standalone",
   "display_override": [
     "standalone",

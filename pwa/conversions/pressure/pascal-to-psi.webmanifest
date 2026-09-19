@@ -3,8 +3,8 @@
   "name": "Convert Pascal to PSI — 1234Tools",
   "short_name": "Pascal → PSI",
   "description": "Convert Pascal (Pa) to PSI (psi) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/pascal-to-psi.html?src=pwa",
-  "scope": "/conversions/pressure/pascal-to-psi.html",
+  "start_url": "/conversions/pressure/pascal-to-psi/?src=pwa",
+  "scope": "/conversions/pressure/pascal-to-psi/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Angstrom to Chain — 1234Tools",
   "short_name": "Angstrom → Chain",
   "description": "Convert Angstrom (Å) to Chain (ch) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/angstrom-to-chain.html?src=pwa",
-  "scope": "/conversions/length/angstrom-to-chain.html",
+  "start_url": "/conversions/length/angstrom-to-chain/?src=pwa",
+  "scope": "/conversions/length/angstrom-to-chain/",
   "display": "standalone",
   "display_override": [
     "standalone",

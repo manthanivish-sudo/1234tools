@@ -3,8 +3,8 @@
   "name": "Organise PDF Pages — 1234Tools",
   "short_name": "Organise PDF Pages",
   "description": "See page thumbnails and reorder, rotate or delete pages visually before saving.",
-  "start_url": "/pdf/pdf-organise.html?src=pwa",
-  "scope": "/pdf/pdf-organise.html",
+  "start_url": "/pdf/pdf-organise/?src=pwa",
+  "scope": "/pdf/pdf-organise/",
   "display": "standalone",
   "display_override": [
     "standalone",

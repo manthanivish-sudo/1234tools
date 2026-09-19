@@ -3,8 +3,8 @@
   "name": "Convert Day to Hour — 1234Tools",
   "short_name": "Day → Hour",
   "description": "Convert Day (d) to Hour (h) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/day-to-hour.html?src=pwa",
-  "scope": "/conversions/time/day-to-hour.html",
+  "start_url": "/conversions/time/day-to-hour/?src=pwa",
+  "scope": "/conversions/time/day-to-hour/",
   "display": "standalone",
   "display_override": [
     "standalone",

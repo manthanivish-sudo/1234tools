@@ -3,8 +3,8 @@
   "name": "Convert Joule to Electronvolt — 1234Tools",
   "short_name": "Joule → Electronvolt",
   "description": "Convert Joule (J) to Electronvolt (eV) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/joule-to-electronvolt.html?src=pwa",
-  "scope": "/conversions/energy/joule-to-electronvolt.html",
+  "start_url": "/conversions/energy/joule-to-electronvolt/?src=pwa",
+  "scope": "/conversions/energy/joule-to-electronvolt/",
   "display": "standalone",
   "display_override": [
     "standalone",

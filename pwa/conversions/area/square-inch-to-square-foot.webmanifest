@@ -3,8 +3,8 @@
   "name": "Convert Square Inch to Square Foot — 1234Tools",
   "short_name": "Square Inch",
   "description": "Convert Square Inch (in²) to Square Foot (ft²) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-inch-to-square-foot.html?src=pwa",
-  "scope": "/conversions/area/square-inch-to-square-foot.html",
+  "start_url": "/conversions/area/square-inch-to-square-foot/?src=pwa",
+  "scope": "/conversions/area/square-inch-to-square-foot/",
   "display": "standalone",
   "display_override": [
     "standalone",

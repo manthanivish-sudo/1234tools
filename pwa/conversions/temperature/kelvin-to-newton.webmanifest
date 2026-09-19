@@ -3,8 +3,8 @@
   "name": "Convert Kelvin to Newton — 1234Tools",
   "short_name": "Kelvin → Newton",
   "description": "Convert Kelvin (K) to Newton (°N) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/kelvin-to-newton.html?src=pwa",
-  "scope": "/conversions/temperature/kelvin-to-newton.html",
+  "start_url": "/conversions/temperature/kelvin-to-newton/?src=pwa",
+  "scope": "/conversions/temperature/kelvin-to-newton/",
   "display": "standalone",
   "display_override": [
     "standalone",

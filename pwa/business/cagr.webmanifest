@@ -3,8 +3,8 @@
   "name": "CAGR Calculator (Compound Annual Growth Rate) — 1234Tools",
   "short_name": "CAGR Calculator",
   "description": "Calculate the smoothed annual growth rate between two values, and project it forward.",
-  "start_url": "/business/cagr.html?src=pwa",
-  "scope": "/business/cagr.html",
+  "start_url": "/business/cagr/?src=pwa",
+  "scope": "/business/cagr/",
   "display": "standalone",
   "display_override": [
     "standalone",

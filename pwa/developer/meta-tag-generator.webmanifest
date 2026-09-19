@@ -3,8 +3,8 @@
   "name": "Meta Tag & Open Graph Generator — 1234Tools",
   "short_name": "Meta Tag & Open",
   "description": "Generate SEO meta tags, Open Graph and Twitter Card markup, with live length warnings.",
-  "start_url": "/developer/meta-tag-generator.html?src=pwa",
-  "scope": "/developer/meta-tag-generator.html",
+  "start_url": "/developer/meta-tag-generator/?src=pwa",
+  "scope": "/developer/meta-tag-generator/",
   "display": "standalone",
   "display_override": [
     "standalone",

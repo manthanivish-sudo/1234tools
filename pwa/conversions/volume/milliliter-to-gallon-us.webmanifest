@@ -3,8 +3,8 @@
   "name": "Convert Milliliter to Gallon (US) — 1234Tools",
   "short_name": "Milliliter → Gallon",
   "description": "Convert Milliliter (mL) to Gallon (US) (gal) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/milliliter-to-gallon-us.html?src=pwa",
-  "scope": "/conversions/volume/milliliter-to-gallon-us.html",
+  "start_url": "/conversions/volume/milliliter-to-gallon-us/?src=pwa",
+  "scope": "/conversions/volume/milliliter-to-gallon-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

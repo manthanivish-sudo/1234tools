@@ -3,8 +3,8 @@
   "name": "Convert Millimeter to Foot — 1234Tools",
   "short_name": "Millimeter → Foot",
   "description": "Convert Millimeter (mm) to Foot (ft) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/millimeter-to-foot.html?src=pwa",
-  "scope": "/conversions/length/millimeter-to-foot.html",
+  "start_url": "/conversions/length/millimeter-to-foot/?src=pwa",
+  "scope": "/conversions/length/millimeter-to-foot/",
   "display": "standalone",
   "display_override": [
     "standalone",

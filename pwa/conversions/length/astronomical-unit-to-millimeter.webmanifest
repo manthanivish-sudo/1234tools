@@ -3,8 +3,8 @@
   "name": "Convert Astronomical Unit to Millimeter — 1234Tools",
   "short_name": "Astronomical Unit",
   "description": "Convert Astronomical Unit (AU) to Millimeter (mm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/astronomical-unit-to-millimeter.html?src=pwa",
-  "scope": "/conversions/length/astronomical-unit-to-millimeter.html",
+  "start_url": "/conversions/length/astronomical-unit-to-millimeter/?src=pwa",
+  "scope": "/conversions/length/astronomical-unit-to-millimeter/",
   "display": "standalone",
   "display_override": [
     "standalone",

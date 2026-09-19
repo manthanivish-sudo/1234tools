@@ -3,8 +3,8 @@
   "name": "Convert Gradian to Arcminute — 1234Tools",
   "short_name": "Gradian → Arcminute",
   "description": "Convert Gradian (grad) to Arcminute (') instantly. Works in both directions, with a full angle table.",
-  "start_url": "/conversions/angle/gradian-to-arcminute.html?src=pwa",
-  "scope": "/conversions/angle/gradian-to-arcminute.html",
+  "start_url": "/conversions/angle/gradian-to-arcminute/?src=pwa",
+  "scope": "/conversions/angle/gradian-to-arcminute/",
   "display": "standalone",
   "display_override": [
     "standalone",

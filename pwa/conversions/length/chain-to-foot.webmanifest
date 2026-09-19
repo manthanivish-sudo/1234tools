@@ -3,8 +3,8 @@
   "name": "Convert Chain to Foot — 1234Tools",
   "short_name": "Chain → Foot",
   "description": "Convert Chain (ch) to Foot (ft) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/chain-to-foot.html?src=pwa",
-  "scope": "/conversions/length/chain-to-foot.html",
+  "start_url": "/conversions/length/chain-to-foot/?src=pwa",
+  "scope": "/conversions/length/chain-to-foot/",
   "display": "standalone",
   "display_override": [
     "standalone",

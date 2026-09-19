@@ -3,8 +3,8 @@
   "name": "Convert Month (avg) to Year (Julian) — 1234Tools",
   "short_name": "Month (avg) → Year",
   "description": "Convert Month (avg) (mo) to Year (Julian) (yr) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/month-avg-to-year-julian.html?src=pwa",
-  "scope": "/conversions/time/month-avg-to-year-julian.html",
+  "start_url": "/conversions/time/month-avg-to-year-julian/?src=pwa",
+  "scope": "/conversions/time/month-avg-to-year-julian/",
   "display": "standalone",
   "display_override": [
     "standalone",

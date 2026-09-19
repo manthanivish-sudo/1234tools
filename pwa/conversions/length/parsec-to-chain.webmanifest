@@ -3,8 +3,8 @@
   "name": "Convert Parsec to Chain — 1234Tools",
   "short_name": "Parsec → Chain",
   "description": "Convert Parsec (pc) to Chain (ch) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/parsec-to-chain.html?src=pwa",
-  "scope": "/conversions/length/parsec-to-chain.html",
+  "start_url": "/conversions/length/parsec-to-chain/?src=pwa",
+  "scope": "/conversions/length/parsec-to-chain/",
   "display": "standalone",
   "display_override": [
     "standalone",

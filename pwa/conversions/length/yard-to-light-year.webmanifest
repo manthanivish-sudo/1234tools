@@ -3,8 +3,8 @@
   "name": "Convert Yard to Light Year — 1234Tools",
   "short_name": "Yard → Light Year",
   "description": "Convert Yard (yd) to Light Year (ly) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/yard-to-light-year.html?src=pwa",
-  "scope": "/conversions/length/yard-to-light-year.html",
+  "start_url": "/conversions/length/yard-to-light-year/?src=pwa",
+  "scope": "/conversions/length/yard-to-light-year/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Break-Even Analysis Calculator — 1234Tools",
   "short_name": "Break-Even Analysis",
   "description": "Find the sales volume and revenue where a product or business stops losing money.",
-  "start_url": "/business/break-even.html?src=pwa",
-  "scope": "/business/break-even.html",
+  "start_url": "/business/break-even/?src=pwa",
+  "scope": "/business/break-even/",
   "display": "standalone",
   "display_override": [
     "standalone",

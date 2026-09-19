@@ -3,8 +3,8 @@
   "name": "Convert Yard to Chain — 1234Tools",
   "short_name": "Yard → Chain",
   "description": "Convert Yard (yd) to Chain (ch) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/yard-to-chain.html?src=pwa",
-  "scope": "/conversions/length/yard-to-chain.html",
+  "start_url": "/conversions/length/yard-to-chain/?src=pwa",
+  "scope": "/conversions/length/yard-to-chain/",
   "display": "standalone",
   "display_override": [
     "standalone",

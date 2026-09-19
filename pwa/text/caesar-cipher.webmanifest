@@ -3,8 +3,8 @@
   "name": "Caesar Cipher & ROT13 Tool — 1234Tools",
   "short_name": "Caesar Cipher",
   "description": "Encode and decode Caesar shift ciphers, including ROT13, with automatic cracking.",
-  "start_url": "/text/caesar-cipher.html?src=pwa",
-  "scope": "/text/caesar-cipher.html",
+  "start_url": "/text/caesar-cipher/?src=pwa",
+  "scope": "/text/caesar-cipher/",
   "display": "standalone",
   "display_override": [
     "standalone",

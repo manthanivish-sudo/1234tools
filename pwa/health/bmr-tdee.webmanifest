@@ -3,8 +3,8 @@
   "name": "BMR & Daily Energy Calculator — 1234Tools",
   "short_name": "BMR & Daily Energy",
   "description": "Estimate resting metabolic rate and total daily energy expenditure using the Mifflin-St Jeor equation.",
-  "start_url": "/health/bmr-tdee.html?src=pwa",
-  "scope": "/health/bmr-tdee.html",
+  "start_url": "/health/bmr-tdee/?src=pwa",
+  "scope": "/health/bmr-tdee/",
   "display": "standalone",
   "display_override": [
     "standalone",

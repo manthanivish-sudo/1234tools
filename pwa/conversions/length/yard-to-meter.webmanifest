@@ -3,8 +3,8 @@
   "name": "Convert Yard to Meter — 1234Tools",
   "short_name": "Yard → Meter",
   "description": "Convert Yard (yd) to Meter (m) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/yard-to-meter.html?src=pwa",
-  "scope": "/conversions/length/yard-to-meter.html",
+  "start_url": "/conversions/length/yard-to-meter/?src=pwa",
+  "scope": "/conversions/length/yard-to-meter/",
   "display": "standalone",
   "display_override": [
     "standalone",

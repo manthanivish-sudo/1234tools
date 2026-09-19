@@ -3,8 +3,8 @@
   "name": "Convert Hour to Month (avg) — 1234Tools",
   "short_name": "Hour → Month",
   "description": "Convert Hour (h) to Month (avg) (mo) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/hour-to-month-avg.html?src=pwa",
-  "scope": "/conversions/time/hour-to-month-avg.html",
+  "start_url": "/conversions/time/hour-to-month-avg/?src=pwa",
+  "scope": "/conversions/time/hour-to-month-avg/",
   "display": "standalone",
   "display_override": [
     "standalone",

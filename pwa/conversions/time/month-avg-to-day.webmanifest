@@ -3,8 +3,8 @@
   "name": "Convert Month (avg) to Day — 1234Tools",
   "short_name": "Month (avg) → Day",
   "description": "Convert Month (avg) (mo) to Day (d) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/month-avg-to-day.html?src=pwa",
-  "scope": "/conversions/time/month-avg-to-day.html",
+  "start_url": "/conversions/time/month-avg-to-day/?src=pwa",
+  "scope": "/conversions/time/month-avg-to-day/",
   "display": "standalone",
   "display_override": [
     "standalone",

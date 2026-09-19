@@ -3,8 +3,8 @@
   "name": "Convert Calorie (thermo) to Joule — 1234Tools",
   "short_name": "Calorie (thermo)",
   "description": "Convert Calorie (thermo) (cal) to Joule (J) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/calorie-thermo-to-joule.html?src=pwa",
-  "scope": "/conversions/energy/calorie-thermo-to-joule.html",
+  "start_url": "/conversions/energy/calorie-thermo-to-joule/?src=pwa",
+  "scope": "/conversions/energy/calorie-thermo-to-joule/",
   "display": "standalone",
   "display_override": [
     "standalone",

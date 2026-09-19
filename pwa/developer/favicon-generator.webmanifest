@@ -3,8 +3,8 @@
   "name": "Favicon Generator — 1234Tools",
   "short_name": "Favicon Generator",
   "description": "Generate every favicon and app icon size from one image, with the HTML to install them.",
-  "start_url": "/developer/favicon-generator.html?src=pwa",
-  "scope": "/developer/favicon-generator.html",
+  "start_url": "/developer/favicon-generator/?src=pwa",
+  "scope": "/developer/favicon-generator/",
   "display": "standalone",
   "display_override": [
     "standalone",

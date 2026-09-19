@@ -3,8 +3,8 @@
   "name": "Ratio Calculator — 1234Tools",
   "short_name": "Ratio Calculator",
   "description": "Simplify ratios, solve for a missing term, and scale a ratio to a total.",
-  "start_url": "/mathematics/ratio-calculator.html?src=pwa",
-  "scope": "/mathematics/ratio-calculator.html",
+  "start_url": "/mathematics/ratio-calculator/?src=pwa",
+  "scope": "/mathematics/ratio-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

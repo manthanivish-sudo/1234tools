@@ -3,8 +3,8 @@
   "name": "FD & RD Calculator — 1234Tools",
   "short_name": "FD & RD Calculator",
   "description": "Fixed and recurring deposit maturity with quarterly compounding, plus the effect of TDS.",
-  "start_url": "/india/fd-rd-calculator.html?src=pwa",
-  "scope": "/india/fd-rd-calculator.html",
+  "start_url": "/india/fd-rd-calculator/?src=pwa",
+  "scope": "/india/fd-rd-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Arcsecond to Arcminute — 1234Tools",
   "short_name": "Arcsecond",
   "description": "Convert Arcsecond (\") to Arcminute (') instantly. Works in both directions, with a full angle table.",
-  "start_url": "/conversions/angle/arcsecond-to-arcminute.html?src=pwa",
-  "scope": "/conversions/angle/arcsecond-to-arcminute.html",
+  "start_url": "/conversions/angle/arcsecond-to-arcminute/?src=pwa",
+  "scope": "/conversions/angle/arcsecond-to-arcminute/",
   "display": "standalone",
   "display_override": [
     "standalone",

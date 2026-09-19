@@ -3,8 +3,8 @@
   "name": "Convert Rømer to Newton — 1234Tools",
   "short_name": "Rømer → Newton",
   "description": "Convert Rømer (°Rø) to Newton (°N) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/r-mer-to-newton.html?src=pwa",
-  "scope": "/conversions/temperature/r-mer-to-newton.html",
+  "start_url": "/conversions/temperature/r-mer-to-newton/?src=pwa",
+  "scope": "/conversions/temperature/r-mer-to-newton/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Atmosphere to Torr / mmHg — 1234Tools",
   "short_name": "Atmosphere → Torr /",
   "description": "Convert Atmosphere (atm) to Torr / mmHg (Torr) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/atmosphere-to-torr-mmhg.html?src=pwa",
-  "scope": "/conversions/pressure/atmosphere-to-torr-mmhg.html",
+  "start_url": "/conversions/pressure/atmosphere-to-torr-mmhg/?src=pwa",
+  "scope": "/conversions/pressure/atmosphere-to-torr-mmhg/",
   "display": "standalone",
   "display_override": [
     "standalone",

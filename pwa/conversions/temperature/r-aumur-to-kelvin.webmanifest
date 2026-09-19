@@ -3,8 +3,8 @@
   "name": "Convert Réaumur to Kelvin — 1234Tools",
   "short_name": "Réaumur → Kelvin",
   "description": "Convert Réaumur (°Ré) to Kelvin (K) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/r-aumur-to-kelvin.html?src=pwa",
-  "scope": "/conversions/temperature/r-aumur-to-kelvin.html",
+  "start_url": "/conversions/temperature/r-aumur-to-kelvin/?src=pwa",
+  "scope": "/conversions/temperature/r-aumur-to-kelvin/",
   "display": "standalone",
   "display_override": [
     "standalone",

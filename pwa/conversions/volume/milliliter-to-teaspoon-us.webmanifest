@@ -3,8 +3,8 @@
   "name": "Convert Milliliter to Teaspoon (US) — 1234Tools",
   "short_name": "Milliliter",
   "description": "Convert Milliliter (mL) to Teaspoon (US) (tsp) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/milliliter-to-teaspoon-us.html?src=pwa",
-  "scope": "/conversions/volume/milliliter-to-teaspoon-us.html",
+  "start_url": "/conversions/volume/milliliter-to-teaspoon-us/?src=pwa",
+  "scope": "/conversions/volume/milliliter-to-teaspoon-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

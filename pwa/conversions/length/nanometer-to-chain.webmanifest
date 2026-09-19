@@ -3,8 +3,8 @@
   "name": "Convert Nanometer to Chain — 1234Tools",
   "short_name": "Nanometer → Chain",
   "description": "Convert Nanometer (nm) to Chain (ch) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/nanometer-to-chain.html?src=pwa",
-  "scope": "/conversions/length/nanometer-to-chain.html",
+  "start_url": "/conversions/length/nanometer-to-chain/?src=pwa",
+  "scope": "/conversions/length/nanometer-to-chain/",
   "display": "standalone",
   "display_override": [
     "standalone",

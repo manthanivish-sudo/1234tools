@@ -3,8 +3,8 @@
   "name": "Convert Stone to Kilogram — 1234Tools",
   "short_name": "Stone → Kilogram",
   "description": "Convert Stone (st) to Kilogram (kg) instantly. Works in both directions, with a full mass & weight table.",
-  "start_url": "/conversions/mass/stone-to-kilogram.html?src=pwa",
-  "scope": "/conversions/mass/stone-to-kilogram.html",
+  "start_url": "/conversions/mass/stone-to-kilogram/?src=pwa",
+  "scope": "/conversions/mass/stone-to-kilogram/",
   "display": "standalone",
   "display_override": [
     "standalone",

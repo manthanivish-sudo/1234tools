@@ -3,8 +3,8 @@
   "name": "Convert Bar to Atmosphere — 1234Tools",
   "short_name": "Bar → Atmosphere",
   "description": "Convert Bar (bar) to Atmosphere (atm) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/bar-to-atmosphere.html?src=pwa",
-  "scope": "/conversions/pressure/bar-to-atmosphere.html",
+  "start_url": "/conversions/pressure/bar-to-atmosphere/?src=pwa",
+  "scope": "/conversions/pressure/bar-to-atmosphere/",
   "display": "standalone",
   "display_override": [
     "standalone",

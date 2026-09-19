@@ -3,8 +3,8 @@
   "name": "CSS Gradient Generator — 1234Tools",
   "short_name": "CSS Gradient",
   "description": "Build linear and radial CSS gradients with a live preview and copy-ready code.",
-  "start_url": "/developer/css-gradient.html?src=pwa",
-  "scope": "/developer/css-gradient.html",
+  "start_url": "/developer/css-gradient/?src=pwa",
+  "scope": "/developer/css-gradient/",
   "display": "standalone",
   "display_override": [
     "standalone",

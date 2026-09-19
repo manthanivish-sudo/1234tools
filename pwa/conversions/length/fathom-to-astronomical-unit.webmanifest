@@ -3,8 +3,8 @@
   "name": "Convert Fathom to Astronomical Unit — 1234Tools",
   "short_name": "Fathom",
   "description": "Convert Fathom (ftm) to Astronomical Unit (AU) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/fathom-to-astronomical-unit.html?src=pwa",
-  "scope": "/conversions/length/fathom-to-astronomical-unit.html",
+  "start_url": "/conversions/length/fathom-to-astronomical-unit/?src=pwa",
+  "scope": "/conversions/length/fathom-to-astronomical-unit/",
   "display": "standalone",
   "display_override": [
     "standalone",

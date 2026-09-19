@@ -3,8 +3,8 @@
   "name": "Convert Réaumur to Delisle — 1234Tools",
   "short_name": "Réaumur → Delisle",
   "description": "Convert Réaumur (°Ré) to Delisle (°De) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/r-aumur-to-delisle.html?src=pwa",
-  "scope": "/conversions/temperature/r-aumur-to-delisle.html",
+  "start_url": "/conversions/temperature/r-aumur-to-delisle/?src=pwa",
+  "scope": "/conversions/temperature/r-aumur-to-delisle/",
   "display": "standalone",
   "display_override": [
     "standalone",

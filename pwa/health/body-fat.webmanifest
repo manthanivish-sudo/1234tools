@@ -3,8 +3,8 @@
   "name": "Body Fat Percentage Estimator — 1234Tools",
   "short_name": "Body Fat Percentage",
   "description": "Estimate body fat percentage from tape measurements using the US Navy circumference method.",
-  "start_url": "/health/body-fat.html?src=pwa",
-  "scope": "/health/body-fat.html",
+  "start_url": "/health/body-fat/?src=pwa",
+  "scope": "/health/body-fat/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Furlong to Chain — 1234Tools",
   "short_name": "Furlong → Chain",
   "description": "Convert Furlong (fur) to Chain (ch) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/furlong-to-chain.html?src=pwa",
-  "scope": "/conversions/length/furlong-to-chain.html",
+  "start_url": "/conversions/length/furlong-to-chain/?src=pwa",
+  "scope": "/conversions/length/furlong-to-chain/",
   "display": "standalone",
   "display_override": [
     "standalone",

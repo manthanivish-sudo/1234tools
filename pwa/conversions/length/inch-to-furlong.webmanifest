@@ -3,8 +3,8 @@
   "name": "Convert Inch to Furlong — 1234Tools",
   "short_name": "Inch → Furlong",
   "description": "Convert Inch (in) to Furlong (fur) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/inch-to-furlong.html?src=pwa",
-  "scope": "/conversions/length/inch-to-furlong.html",
+  "start_url": "/conversions/length/inch-to-furlong/?src=pwa",
+  "scope": "/conversions/length/inch-to-furlong/",
   "display": "standalone",
   "display_override": [
     "standalone",

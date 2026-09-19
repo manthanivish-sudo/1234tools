@@ -3,8 +3,8 @@
   "name": "Convert Minute to Day — 1234Tools",
   "short_name": "Minute → Day",
   "description": "Convert Minute (min) to Day (d) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/minute-to-day.html?src=pwa",
-  "scope": "/conversions/time/minute-to-day.html",
+  "start_url": "/conversions/time/minute-to-day/?src=pwa",
+  "scope": "/conversions/time/minute-to-day/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Bar to Kilopascal — 1234Tools",
   "short_name": "Bar → Kilopascal",
   "description": "Convert Bar (bar) to Kilopascal (kPa) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/bar-to-kilopascal.html?src=pwa",
-  "scope": "/conversions/pressure/bar-to-kilopascal.html",
+  "start_url": "/conversions/pressure/bar-to-kilopascal/?src=pwa",
+  "scope": "/conversions/pressure/bar-to-kilopascal/",
   "display": "standalone",
   "display_override": [
     "standalone",

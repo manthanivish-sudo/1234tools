@@ -3,8 +3,8 @@
   "name": "Convert Week to Second — 1234Tools",
   "short_name": "Week → Second",
   "description": "Convert Week (wk) to Second (s) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/week-to-second.html?src=pwa",
-  "scope": "/conversions/time/week-to-second.html",
+  "start_url": "/conversions/time/week-to-second/?src=pwa",
+  "scope": "/conversions/time/week-to-second/",
   "display": "standalone",
   "display_override": [
     "standalone",

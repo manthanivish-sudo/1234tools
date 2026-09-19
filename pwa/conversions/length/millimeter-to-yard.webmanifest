@@ -3,8 +3,8 @@
   "name": "Convert Millimeter to Yard — 1234Tools",
   "short_name": "Millimeter → Yard",
   "description": "Convert Millimeter (mm) to Yard (yd) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/millimeter-to-yard.html?src=pwa",
-  "scope": "/conversions/length/millimeter-to-yard.html",
+  "start_url": "/conversions/length/millimeter-to-yard/?src=pwa",
+  "scope": "/conversions/length/millimeter-to-yard/",
   "display": "standalone",
   "display_override": [
     "standalone",

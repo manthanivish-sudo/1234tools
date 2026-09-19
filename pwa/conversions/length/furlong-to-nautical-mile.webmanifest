@@ -3,8 +3,8 @@
   "name": "Convert Furlong to Nautical Mile — 1234Tools",
   "short_name": "Furlong → Nautical",
   "description": "Convert Furlong (fur) to Nautical Mile (nmi) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/furlong-to-nautical-mile.html?src=pwa",
-  "scope": "/conversions/length/furlong-to-nautical-mile.html",
+  "start_url": "/conversions/length/furlong-to-nautical-mile/?src=pwa",
+  "scope": "/conversions/length/furlong-to-nautical-mile/",
   "display": "standalone",
   "display_override": [
     "standalone",

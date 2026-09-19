@@ -3,8 +3,8 @@
   "name": "Convert Second to Minute — 1234Tools",
   "short_name": "Second → Minute",
   "description": "Convert Second (s) to Minute (min) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/second-to-minute.html?src=pwa",
-  "scope": "/conversions/time/second-to-minute.html",
+  "start_url": "/conversions/time/second-to-minute/?src=pwa",
+  "scope": "/conversions/time/second-to-minute/",
   "display": "standalone",
   "display_override": [
     "standalone",

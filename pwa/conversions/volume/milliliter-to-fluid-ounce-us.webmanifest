@@ -3,8 +3,8 @@
   "name": "Convert Milliliter to Fluid Ounce (US) — 1234Tools",
   "short_name": "Milliliter → Fluid",
   "description": "Convert Milliliter (mL) to Fluid Ounce (US) (fl oz) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/milliliter-to-fluid-ounce-us.html?src=pwa",
-  "scope": "/conversions/volume/milliliter-to-fluid-ounce-us.html",
+  "start_url": "/conversions/volume/milliliter-to-fluid-ounce-us/?src=pwa",
+  "scope": "/conversions/volume/milliliter-to-fluid-ounce-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

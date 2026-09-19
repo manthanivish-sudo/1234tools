@@ -3,8 +3,8 @@
   "name": "Convert Millisecond to Year (Julian) — 1234Tools",
   "short_name": "Millisecond → Year",
   "description": "Convert Millisecond (ms) to Year (Julian) (yr) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/millisecond-to-year-julian.html?src=pwa",
-  "scope": "/conversions/time/millisecond-to-year-julian.html",
+  "start_url": "/conversions/time/millisecond-to-year-julian/?src=pwa",
+  "scope": "/conversions/time/millisecond-to-year-julian/",
   "display": "standalone",
   "display_override": [
     "standalone",

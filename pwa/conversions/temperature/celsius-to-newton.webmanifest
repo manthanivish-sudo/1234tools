@@ -3,8 +3,8 @@
   "name": "Convert Celsius to Newton — 1234Tools",
   "short_name": "Celsius → Newton",
   "description": "Convert Celsius (°C) to Newton (°N) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/celsius-to-newton.html?src=pwa",
-  "scope": "/conversions/temperature/celsius-to-newton.html",
+  "start_url": "/conversions/temperature/celsius-to-newton/?src=pwa",
+  "scope": "/conversions/temperature/celsius-to-newton/",
   "display": "standalone",
   "display_override": [
     "standalone",

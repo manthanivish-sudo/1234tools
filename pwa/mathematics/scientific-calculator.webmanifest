@@ -3,8 +3,8 @@
   "name": "Scientific Calculator — 1234Tools",
   "short_name": "Scientific",
   "description": "A full scientific calculator with trigonometry, logarithms, powers, roots and constants.",
-  "start_url": "/mathematics/scientific-calculator.html?src=pwa",
-  "scope": "/mathematics/scientific-calculator.html",
+  "start_url": "/mathematics/scientific-calculator/?src=pwa",
+  "scope": "/mathematics/scientific-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

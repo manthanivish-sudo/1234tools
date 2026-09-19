@@ -3,8 +3,8 @@
   "name": "Convert Nanometer to Fathom — 1234Tools",
   "short_name": "Nanometer → Fathom",
   "description": "Convert Nanometer (nm) to Fathom (ftm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/nanometer-to-fathom.html?src=pwa",
-  "scope": "/conversions/length/nanometer-to-fathom.html",
+  "start_url": "/conversions/length/nanometer-to-fathom/?src=pwa",
+  "scope": "/conversions/length/nanometer-to-fathom/",
   "display": "standalone",
   "display_override": [
     "standalone",

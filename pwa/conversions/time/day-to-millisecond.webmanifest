@@ -3,8 +3,8 @@
   "name": "Convert Day to Millisecond — 1234Tools",
   "short_name": "Day → Millisecond",
   "description": "Convert Day (d) to Millisecond (ms) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/day-to-millisecond.html?src=pwa",
-  "scope": "/conversions/time/day-to-millisecond.html",
+  "start_url": "/conversions/time/day-to-millisecond/?src=pwa",
+  "scope": "/conversions/time/day-to-millisecond/",
   "display": "standalone",
   "display_override": [
     "standalone",

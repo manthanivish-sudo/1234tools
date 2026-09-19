@@ -3,8 +3,8 @@
   "name": "Convert Acre to Square Centimeter — 1234Tools",
   "short_name": "Acre → Square",
   "description": "Convert Acre (ac) to Square Centimeter (cm²) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/acre-to-square-centimeter.html?src=pwa",
-  "scope": "/conversions/area/acre-to-square-centimeter.html",
+  "start_url": "/conversions/area/acre-to-square-centimeter/?src=pwa",
+  "scope": "/conversions/area/acre-to-square-centimeter/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Minute to Second — 1234Tools",
   "short_name": "Minute → Second",
   "description": "Convert Minute (min) to Second (s) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/minute-to-second.html?src=pwa",
-  "scope": "/conversions/time/minute-to-second.html",
+  "start_url": "/conversions/time/minute-to-second/?src=pwa",
+  "scope": "/conversions/time/minute-to-second/",
   "display": "standalone",
   "display_override": [
     "standalone",

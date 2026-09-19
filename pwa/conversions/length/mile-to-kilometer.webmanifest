@@ -3,8 +3,8 @@
   "name": "Convert Mile to Kilometer — 1234Tools",
   "short_name": "Mile → Kilometer",
   "description": "Convert Mile (mi) to Kilometer (km) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/mile-to-kilometer.html?src=pwa",
-  "scope": "/conversions/length/mile-to-kilometer.html",
+  "start_url": "/conversions/length/mile-to-kilometer/?src=pwa",
+  "scope": "/conversions/length/mile-to-kilometer/",
   "display": "standalone",
   "display_override": [
     "standalone",

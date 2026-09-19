@@ -3,8 +3,8 @@
   "name": ".htaccess Snippet Generator — 1234Tools",
   "short_name": ".htaccess Snippet",
   "description": "Generate Apache rules for HTTPS redirects, www handling, caching, compression and security headers.",
-  "start_url": "/developer/htaccess-generator.html?src=pwa",
-  "scope": "/developer/htaccess-generator.html",
+  "start_url": "/developer/htaccess-generator/?src=pwa",
+  "scope": "/developer/htaccess-generator/",
   "display": "standalone",
   "display_override": [
     "standalone",

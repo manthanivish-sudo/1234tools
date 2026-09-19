@@ -3,8 +3,8 @@
   "name": "Convert Micrometer to Millimeter — 1234Tools",
   "short_name": "Micrometer",
   "description": "Convert Micrometer (µm) to Millimeter (mm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/micrometer-to-millimeter.html?src=pwa",
-  "scope": "/conversions/length/micrometer-to-millimeter.html",
+  "start_url": "/conversions/length/micrometer-to-millimeter/?src=pwa",
+  "scope": "/conversions/length/micrometer-to-millimeter/",
   "display": "standalone",
   "display_override": [
     "standalone",

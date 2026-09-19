@@ -3,8 +3,8 @@
   "name": "Convert Yard to Foot — 1234Tools",
   "short_name": "Yard → Foot",
   "description": "Convert Yard (yd) to Foot (ft) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/yard-to-foot.html?src=pwa",
-  "scope": "/conversions/length/yard-to-foot.html",
+  "start_url": "/conversions/length/yard-to-foot/?src=pwa",
+  "scope": "/conversions/length/yard-to-foot/",
   "display": "standalone",
   "display_override": [
     "standalone",

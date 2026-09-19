@@ -3,8 +3,8 @@
   "name": "Convert Mile to Meter — 1234Tools",
   "short_name": "Mile → Meter",
   "description": "Convert Mile (mi) to Meter (m) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/mile-to-meter.html?src=pwa",
-  "scope": "/conversions/length/mile-to-meter.html",
+  "start_url": "/conversions/length/mile-to-meter/?src=pwa",
+  "scope": "/conversions/length/mile-to-meter/",
   "display": "standalone",
   "display_override": [
     "standalone",

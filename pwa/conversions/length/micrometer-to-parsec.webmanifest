@@ -3,8 +3,8 @@
   "name": "Convert Micrometer to Parsec — 1234Tools",
   "short_name": "Micrometer → Parsec",
   "description": "Convert Micrometer (µm) to Parsec (pc) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/micrometer-to-parsec.html?src=pwa",
-  "scope": "/conversions/length/micrometer-to-parsec.html",
+  "start_url": "/conversions/length/micrometer-to-parsec/?src=pwa",
+  "scope": "/conversions/length/micrometer-to-parsec/",
   "display": "standalone",
   "display_override": [
     "standalone",

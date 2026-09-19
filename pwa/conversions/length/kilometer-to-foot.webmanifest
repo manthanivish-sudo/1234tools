@@ -3,8 +3,8 @@
   "name": "Convert Kilometer to Foot — 1234Tools",
   "short_name": "Kilometer → Foot",
   "description": "Convert Kilometer (km) to Foot (ft) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/kilometer-to-foot.html?src=pwa",
-  "scope": "/conversions/length/kilometer-to-foot.html",
+  "start_url": "/conversions/length/kilometer-to-foot/?src=pwa",
+  "scope": "/conversions/length/kilometer-to-foot/",
   "display": "standalone",
   "display_override": [
     "standalone",

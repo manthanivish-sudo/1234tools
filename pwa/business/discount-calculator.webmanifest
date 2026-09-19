@@ -3,8 +3,8 @@
   "name": "Discount & Sale Price Calculator — 1234Tools",
   "short_name": "Discount & Sale",
   "description": "Apply single or stacked discounts, work backwards from a sale price, and see the margin impact.",
-  "start_url": "/business/discount-calculator.html?src=pwa",
-  "scope": "/business/discount-calculator.html",
+  "start_url": "/business/discount-calculator/?src=pwa",
+  "scope": "/business/discount-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

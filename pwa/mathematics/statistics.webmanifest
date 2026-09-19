@@ -3,8 +3,8 @@
   "name": "Statistics Calculator (Mean, Median, Mode, SD) — 1234Tools",
   "short_name": "Statistics",
   "description": "Compute mean, median, mode, standard deviation, variance, and quartiles from a dataset.",
-  "start_url": "/mathematics/statistics.html?src=pwa",
-  "scope": "/mathematics/statistics.html",
+  "start_url": "/mathematics/statistics/?src=pwa",
+  "scope": "/mathematics/statistics/",
   "display": "standalone",
   "display_override": [
     "standalone",

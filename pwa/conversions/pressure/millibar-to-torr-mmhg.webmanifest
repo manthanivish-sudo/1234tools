@@ -3,8 +3,8 @@
   "name": "Convert Millibar to Torr / mmHg — 1234Tools",
   "short_name": "Millibar → Torr /",
   "description": "Convert Millibar (mbar) to Torr / mmHg (Torr) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/millibar-to-torr-mmhg.html?src=pwa",
-  "scope": "/conversions/pressure/millibar-to-torr-mmhg.html",
+  "start_url": "/conversions/pressure/millibar-to-torr-mmhg/?src=pwa",
+  "scope": "/conversions/pressure/millibar-to-torr-mmhg/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Acre to Square Inch — 1234Tools",
   "short_name": "Acre → Square Inch",
   "description": "Convert Acre (ac) to Square Inch (in²) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/acre-to-square-inch.html?src=pwa",
-  "scope": "/conversions/area/acre-to-square-inch.html",
+  "start_url": "/conversions/area/acre-to-square-inch/?src=pwa",
+  "scope": "/conversions/area/acre-to-square-inch/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Millibar to Pascal — 1234Tools",
   "short_name": "Millibar → Pascal",
   "description": "Convert Millibar (mbar) to Pascal (Pa) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/millibar-to-pascal.html?src=pwa",
-  "scope": "/conversions/pressure/millibar-to-pascal.html",
+  "start_url": "/conversions/pressure/millibar-to-pascal/?src=pwa",
+  "scope": "/conversions/pressure/millibar-to-pascal/",
   "display": "standalone",
   "display_override": [
     "standalone",

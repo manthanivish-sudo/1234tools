@@ -3,8 +3,8 @@
   "name": "Convert Parsec to Nautical Mile — 1234Tools",
   "short_name": "Parsec → Nautical",
   "description": "Convert Parsec (pc) to Nautical Mile (nmi) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/parsec-to-nautical-mile.html?src=pwa",
-  "scope": "/conversions/length/parsec-to-nautical-mile.html",
+  "start_url": "/conversions/length/parsec-to-nautical-mile/?src=pwa",
+  "scope": "/conversions/length/parsec-to-nautical-mile/",
   "display": "standalone",
   "display_override": [
     "standalone",

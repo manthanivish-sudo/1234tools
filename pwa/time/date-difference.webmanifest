@@ -3,8 +3,8 @@
   "name": "Date Difference Calculator — 1234Tools",
   "short_name": "Date Difference",
   "description": "Calculate the exact time between two dates in years, months, days, and total units.",
-  "start_url": "/time/date-difference.html?src=pwa",
-  "scope": "/time/date-difference.html",
+  "start_url": "/time/date-difference/?src=pwa",
+  "scope": "/time/date-difference/",
   "display": "standalone",
   "display_override": [
     "standalone",

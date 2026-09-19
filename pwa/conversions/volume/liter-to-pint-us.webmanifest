@@ -3,8 +3,8 @@
   "name": "Convert Liter to Pint (US) — 1234Tools",
   "short_name": "Liter → Pint",
   "description": "Convert Liter (L) to Pint (US) (pt) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/liter-to-pint-us.html?src=pwa",
-  "scope": "/conversions/volume/liter-to-pint-us.html",
+  "start_url": "/conversions/volume/liter-to-pint-us/?src=pwa",
+  "scope": "/conversions/volume/liter-to-pint-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

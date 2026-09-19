@@ -3,8 +3,8 @@
   "name": "Convert Tonne to Kilogram — 1234Tools",
   "short_name": "Tonne → Kilogram",
   "description": "Convert Tonne (t) to Kilogram (kg) instantly. Works in both directions, with a full mass & weight table.",
-  "start_url": "/conversions/mass/tonne-to-kilogram.html?src=pwa",
-  "scope": "/conversions/mass/tonne-to-kilogram.html",
+  "start_url": "/conversions/mass/tonne-to-kilogram/?src=pwa",
+  "scope": "/conversions/mass/tonne-to-kilogram/",
   "display": "standalone",
   "display_override": [
     "standalone",

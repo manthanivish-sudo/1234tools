@@ -3,8 +3,8 @@
   "name": "Add Page Numbers to PDF — 1234Tools",
   "short_name": "Add Page Numbers",
   "description": "Stamp page numbers, headers or footers onto an existing PDF.",
-  "start_url": "/pdf/pdf-page-numbers.html?src=pwa",
-  "scope": "/pdf/pdf-page-numbers.html",
+  "start_url": "/pdf/pdf-page-numbers/?src=pwa",
+  "scope": "/pdf/pdf-page-numbers/",
   "display": "standalone",
   "display_override": [
     "standalone",

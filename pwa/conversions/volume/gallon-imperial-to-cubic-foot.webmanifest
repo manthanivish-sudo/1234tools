@@ -3,8 +3,8 @@
   "name": "Convert Gallon (Imperial) to Cubic Foot — 1234Tools",
   "short_name": "Gallon (Imperial)",
   "description": "Convert Gallon (Imperial) (gal UK) to Cubic Foot (ft³) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/gallon-imperial-to-cubic-foot.html?src=pwa",
-  "scope": "/conversions/volume/gallon-imperial-to-cubic-foot.html",
+  "start_url": "/conversions/volume/gallon-imperial-to-cubic-foot/?src=pwa",
+  "scope": "/conversions/volume/gallon-imperial-to-cubic-foot/",
   "display": "standalone",
   "display_override": [
     "standalone",

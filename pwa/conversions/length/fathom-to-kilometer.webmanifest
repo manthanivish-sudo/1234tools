@@ -3,8 +3,8 @@
   "name": "Convert Fathom to Kilometer — 1234Tools",
   "short_name": "Fathom → Kilometer",
   "description": "Convert Fathom (ftm) to Kilometer (km) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/fathom-to-kilometer.html?src=pwa",
-  "scope": "/conversions/length/fathom-to-kilometer.html",
+  "start_url": "/conversions/length/fathom-to-kilometer/?src=pwa",
+  "scope": "/conversions/length/fathom-to-kilometer/",
   "display": "standalone",
   "display_override": [
     "standalone",

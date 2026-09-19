@@ -3,8 +3,8 @@
   "name": "Palindrome & Anagram Checker — 1234Tools",
   "short_name": "Palindrome",
   "description": "Check whether text reads the same backwards, and test whether two phrases are anagrams.",
-  "start_url": "/text/palindrome-anagram.html?src=pwa",
-  "scope": "/text/palindrome-anagram.html",
+  "start_url": "/text/palindrome-anagram/?src=pwa",
+  "scope": "/text/palindrome-anagram/",
   "display": "standalone",
   "display_override": [
     "standalone",

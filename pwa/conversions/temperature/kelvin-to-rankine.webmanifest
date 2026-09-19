@@ -3,8 +3,8 @@
   "name": "Convert Kelvin to Rankine — 1234Tools",
   "short_name": "Kelvin → Rankine",
   "description": "Convert Kelvin (K) to Rankine (°R) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/kelvin-to-rankine.html?src=pwa",
-  "scope": "/conversions/temperature/kelvin-to-rankine.html",
+  "start_url": "/conversions/temperature/kelvin-to-rankine/?src=pwa",
+  "scope": "/conversions/temperature/kelvin-to-rankine/",
   "display": "standalone",
   "display_override": [
     "standalone",

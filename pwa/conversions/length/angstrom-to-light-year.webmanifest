@@ -3,8 +3,8 @@
   "name": "Convert Angstrom to Light Year — 1234Tools",
   "short_name": "Angstrom → Light",
   "description": "Convert Angstrom (Å) to Light Year (ly) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/angstrom-to-light-year.html?src=pwa",
-  "scope": "/conversions/length/angstrom-to-light-year.html",
+  "start_url": "/conversions/length/angstrom-to-light-year/?src=pwa",
+  "scope": "/conversions/length/angstrom-to-light-year/",
   "display": "standalone",
   "display_override": [
     "standalone",

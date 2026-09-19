@@ -3,8 +3,8 @@
   "name": "Convert Millibar to Bar — 1234Tools",
   "short_name": "Millibar → Bar",
   "description": "Convert Millibar (mbar) to Bar (bar) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/millibar-to-bar.html?src=pwa",
-  "scope": "/conversions/pressure/millibar-to-bar.html",
+  "start_url": "/conversions/pressure/millibar-to-bar/?src=pwa",
+  "scope": "/conversions/pressure/millibar-to-bar/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Megabyte (1000) to Byte — 1234Tools",
   "short_name": "Megabyte (1000)",
   "description": "Convert Megabyte (1000) (MB) to Byte (B) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/megabyte-1000-to-byte.html?src=pwa",
-  "scope": "/conversions/data/megabyte-1000-to-byte.html",
+  "start_url": "/conversions/data/megabyte-1000-to-byte/?src=pwa",
+  "scope": "/conversions/data/megabyte-1000-to-byte/",
   "display": "standalone",
   "display_override": [
     "standalone",

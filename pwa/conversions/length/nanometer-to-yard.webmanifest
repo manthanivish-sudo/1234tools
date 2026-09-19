@@ -3,8 +3,8 @@
   "name": "Convert Nanometer to Yard — 1234Tools",
   "short_name": "Nanometer → Yard",
   "description": "Convert Nanometer (nm) to Yard (yd) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/nanometer-to-yard.html?src=pwa",
-  "scope": "/conversions/length/nanometer-to-yard.html",
+  "start_url": "/conversions/length/nanometer-to-yard/?src=pwa",
+  "scope": "/conversions/length/nanometer-to-yard/",
   "display": "standalone",
   "display_override": [
     "standalone",

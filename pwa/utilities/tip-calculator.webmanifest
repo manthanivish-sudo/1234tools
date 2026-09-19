@@ -3,8 +3,8 @@
   "name": "Tip Calculator & Bill Splitter — 1234Tools",
   "short_name": "Tip Calculator",
   "description": "Work out a tip and split a bill between any number of people, with optional rounding.",
-  "start_url": "/utilities/tip-calculator.html?src=pwa",
-  "scope": "/utilities/tip-calculator.html",
+  "start_url": "/utilities/tip-calculator/?src=pwa",
+  "scope": "/utilities/tip-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

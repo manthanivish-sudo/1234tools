@@ -3,8 +3,8 @@
   "name": "Convert Inches of Mercury to Torr / mmHg — 1234Tools",
   "short_name": "Inches of Mercury",
   "description": "Convert Inches of Mercury (inHg) to Torr / mmHg (Torr) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/inches-of-mercury-to-torr-mmhg.html?src=pwa",
-  "scope": "/conversions/pressure/inches-of-mercury-to-torr-mmhg.html",
+  "start_url": "/conversions/pressure/inches-of-mercury-to-torr-mmhg/?src=pwa",
+  "scope": "/conversions/pressure/inches-of-mercury-to-torr-mmhg/",
   "display": "standalone",
   "display_override": [
     "standalone",

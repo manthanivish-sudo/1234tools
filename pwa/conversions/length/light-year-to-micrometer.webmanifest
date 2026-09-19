@@ -3,8 +3,8 @@
   "name": "Convert Light Year to Micrometer — 1234Tools",
   "short_name": "Light Year",
   "description": "Convert Light Year (ly) to Micrometer (µm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/light-year-to-micrometer.html?src=pwa",
-  "scope": "/conversions/length/light-year-to-micrometer.html",
+  "start_url": "/conversions/length/light-year-to-micrometer/?src=pwa",
+  "scope": "/conversions/length/light-year-to-micrometer/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Morse Code Translator — 1234Tools",
   "short_name": "Morse Code",
   "description": "Translate text to Morse code and back, with the full reference alphabet.",
-  "start_url": "/text/morse-code.html?src=pwa",
-  "scope": "/text/morse-code.html",
+  "start_url": "/text/morse-code/?src=pwa",
+  "scope": "/text/morse-code/",
   "display": "standalone",
   "display_override": [
     "standalone",

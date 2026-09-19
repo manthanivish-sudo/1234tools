@@ -3,8 +3,8 @@
   "name": "Convert Bit to Byte — 1234Tools",
   "short_name": "Bit → Byte",
   "description": "Convert Bit (bit) to Byte (B) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/bit-to-byte.html?src=pwa",
-  "scope": "/conversions/data/bit-to-byte.html",
+  "start_url": "/conversions/data/bit-to-byte/?src=pwa",
+  "scope": "/conversions/data/bit-to-byte/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Yard to Kilometer — 1234Tools",
   "short_name": "Yard → Kilometer",
   "description": "Convert Yard (yd) to Kilometer (km) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/yard-to-kilometer.html?src=pwa",
-  "scope": "/conversions/length/yard-to-kilometer.html",
+  "start_url": "/conversions/length/yard-to-kilometer/?src=pwa",
+  "scope": "/conversions/length/yard-to-kilometer/",
   "display": "standalone",
   "display_override": [
     "standalone",

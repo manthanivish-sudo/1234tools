@@ -3,8 +3,8 @@
   "name": "URL Slug Generator — 1234Tools",
   "short_name": "URL Slug Generator",
   "description": "Turn titles into clean, SEO-friendly URL slugs. Handles accents and multiple lines at once.",
-  "start_url": "/developer/slug-generator.html?src=pwa",
-  "scope": "/developer/slug-generator.html",
+  "start_url": "/developer/slug-generator/?src=pwa",
+  "scope": "/developer/slug-generator/",
   "display": "standalone",
   "display_override": [
     "standalone",

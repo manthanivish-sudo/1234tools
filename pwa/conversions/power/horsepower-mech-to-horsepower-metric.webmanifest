@@ -3,8 +3,8 @@
   "name": "Convert Horsepower (mech) to Horsepower (metric) — 1234Tools",
   "short_name": "Horsepower (mech)",
   "description": "Convert Horsepower (mech) (hp) to Horsepower (metric) (PS) instantly. Works in both directions, with a full power table.",
-  "start_url": "/conversions/power/horsepower-mech-to-horsepower-metric.html?src=pwa",
-  "scope": "/conversions/power/horsepower-mech-to-horsepower-metric.html",
+  "start_url": "/conversions/power/horsepower-mech-to-horsepower-metric/?src=pwa",
+  "scope": "/conversions/power/horsepower-mech-to-horsepower-metric/",
   "display": "standalone",
   "display_override": [
     "standalone",

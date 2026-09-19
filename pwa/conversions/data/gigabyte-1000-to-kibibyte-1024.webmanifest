@@ -3,8 +3,8 @@
   "name": "Convert Gigabyte (1000) to Kibibyte (1024) — 1234Tools",
   "short_name": "Gigabyte (1000)",
   "description": "Convert Gigabyte (1000) (GB) to Kibibyte (1024) (KiB) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/gigabyte-1000-to-kibibyte-1024.html?src=pwa",
-  "scope": "/conversions/data/gigabyte-1000-to-kibibyte-1024.html",
+  "start_url": "/conversions/data/gigabyte-1000-to-kibibyte-1024/?src=pwa",
+  "scope": "/conversions/data/gigabyte-1000-to-kibibyte-1024/",
   "display": "standalone",
   "display_override": [
     "standalone",

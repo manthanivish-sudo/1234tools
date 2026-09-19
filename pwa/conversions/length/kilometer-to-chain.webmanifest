@@ -3,8 +3,8 @@
   "name": "Convert Kilometer to Chain — 1234Tools",
   "short_name": "Kilometer → Chain",
   "description": "Convert Kilometer (km) to Chain (ch) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/kilometer-to-chain.html?src=pwa",
-  "scope": "/conversions/length/kilometer-to-chain.html",
+  "start_url": "/conversions/length/kilometer-to-chain/?src=pwa",
+  "scope": "/conversions/length/kilometer-to-chain/",
   "display": "standalone",
   "display_override": [
     "standalone",

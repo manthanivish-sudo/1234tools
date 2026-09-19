@@ -3,8 +3,8 @@
   "name": "Convert British Thermal Unit to Kilowatt Hour — 1234Tools",
   "short_name": "British Thermal",
   "description": "Convert British Thermal Unit (BTU) to Kilowatt Hour (kWh) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/british-thermal-unit-to-kilowatt-hour.html?src=pwa",
-  "scope": "/conversions/energy/british-thermal-unit-to-kilowatt-hour.html",
+  "start_url": "/conversions/energy/british-thermal-unit-to-kilowatt-hour/?src=pwa",
+  "scope": "/conversions/energy/british-thermal-unit-to-kilowatt-hour/",
   "display": "standalone",
   "display_override": [
     "standalone",

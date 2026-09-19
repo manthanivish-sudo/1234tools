@@ -3,8 +3,8 @@
   "name": "Convert Square Yard to Hectare — 1234Tools",
   "short_name": "Square Yard",
   "description": "Convert Square Yard (yd²) to Hectare (ha) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-yard-to-hectare.html?src=pwa",
-  "scope": "/conversions/area/square-yard-to-hectare.html",
+  "start_url": "/conversions/area/square-yard-to-hectare/?src=pwa",
+  "scope": "/conversions/area/square-yard-to-hectare/",
   "display": "standalone",
   "display_override": [
     "standalone",

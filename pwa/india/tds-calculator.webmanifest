@@ -3,8 +3,8 @@
   "name": "TDS Calculator — 1234Tools",
   "short_name": "TDS Calculator",
   "description": "Tax deducted at source across common sections, with the higher rate where PAN is not furnished.",
-  "start_url": "/india/tds-calculator.html?src=pwa",
-  "scope": "/india/tds-calculator.html",
+  "start_url": "/india/tds-calculator/?src=pwa",
+  "scope": "/india/tds-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

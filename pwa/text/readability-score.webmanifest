@@ -3,8 +3,8 @@
   "name": "Readability Score Checker — 1234Tools",
   "short_name": "Readability Score",
   "description": "Flesch Reading Ease, Flesch-Kincaid grade, Gunning Fog and SMOG scores for any text.",
-  "start_url": "/text/readability-score.html?src=pwa",
-  "scope": "/text/readability-score.html",
+  "start_url": "/text/readability-score/?src=pwa",
+  "scope": "/text/readability-score/",
   "display": "standalone",
   "display_override": [
     "standalone",

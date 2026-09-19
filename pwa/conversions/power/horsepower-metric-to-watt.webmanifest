@@ -3,8 +3,8 @@
   "name": "Convert Horsepower (metric) to Watt — 1234Tools",
   "short_name": "Horsepower (metric)",
   "description": "Convert Horsepower (metric) (PS) to Watt (W) instantly. Works in both directions, with a full power table.",
-  "start_url": "/conversions/power/horsepower-metric-to-watt.html?src=pwa",
-  "scope": "/conversions/power/horsepower-metric-to-watt.html",
+  "start_url": "/conversions/power/horsepower-metric-to-watt/?src=pwa",
+  "scope": "/conversions/power/horsepower-metric-to-watt/",
   "display": "standalone",
   "display_override": [
     "standalone",

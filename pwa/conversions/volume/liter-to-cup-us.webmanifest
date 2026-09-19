@@ -3,8 +3,8 @@
   "name": "Convert Liter to Cup (US) — 1234Tools",
   "short_name": "Liter → Cup",
   "description": "Convert Liter (L) to Cup (US) (cup) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/liter-to-cup-us.html?src=pwa",
-  "scope": "/conversions/volume/liter-to-cup-us.html",
+  "start_url": "/conversions/volume/liter-to-cup-us/?src=pwa",
+  "scope": "/conversions/volume/liter-to-cup-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

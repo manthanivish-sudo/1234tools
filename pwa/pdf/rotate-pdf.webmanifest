@@ -3,8 +3,8 @@
   "name": "Rotate PDF Pages — 1234Tools",
   "short_name": "Rotate PDF Pages",
   "description": "Rotate every page or selected pages by 90, 180 or 270 degrees, permanently.",
-  "start_url": "/pdf/rotate-pdf.html?src=pwa",
-  "scope": "/pdf/rotate-pdf.html",
+  "start_url": "/pdf/rotate-pdf/?src=pwa",
+  "scope": "/pdf/rotate-pdf/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Gratuity Calculator — 1234Tools",
   "short_name": "Gratuity Calculator",
   "description": "Gratuity payable under the Payment of Gratuity Act, with the tax-exempt portion.",
-  "start_url": "/india/gratuity-calculator.html?src=pwa",
-  "scope": "/india/gratuity-calculator.html",
+  "start_url": "/india/gratuity-calculator/?src=pwa",
+  "scope": "/india/gratuity-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

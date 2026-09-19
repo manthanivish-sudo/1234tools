@@ -3,8 +3,8 @@
   "name": "Convert Meter to Inch — 1234Tools",
   "short_name": "Meter → Inch",
   "description": "Convert Meter (m) to Inch (in) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/meter-to-inch.html?src=pwa",
-  "scope": "/conversions/length/meter-to-inch.html",
+  "start_url": "/conversions/length/meter-to-inch/?src=pwa",
+  "scope": "/conversions/length/meter-to-inch/",
   "display": "standalone",
   "display_override": [
     "standalone",

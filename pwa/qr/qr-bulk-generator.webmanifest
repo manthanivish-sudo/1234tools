@@ -3,8 +3,8 @@
   "name": "Bulk QR Code Generator — 1234Tools",
   "short_name": "Bulk QR Code",
   "description": "Turn a list or a CSV into hundreds of QR codes at once, all sharing one look: shapes, colours, gradient, logo and error correction. Every code is scanned back before you download the batch as PNG or SVG.",
-  "start_url": "/qr/qr-bulk-generator.html?src=pwa",
-  "scope": "/qr/qr-bulk-generator.html",
+  "start_url": "/qr/qr-bulk-generator/?src=pwa",
+  "scope": "/qr/qr-bulk-generator/",
   "display": "standalone",
   "display_override": [
     "standalone",

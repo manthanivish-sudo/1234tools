@@ -3,8 +3,8 @@
   "name": "Image to Base64 / Data URI — 1234Tools",
   "short_name": "Image → Base64 /",
   "description": "Convert an image to a Base64 data URI for inlining in CSS, HTML or JSON.",
-  "start_url": "/image/image-to-base64.html?src=pwa",
-  "scope": "/image/image-to-base64.html",
+  "start_url": "/image/image-to-base64/?src=pwa",
+  "scope": "/image/image-to-base64/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Angstrom to Micrometer — 1234Tools",
   "short_name": "Angstrom",
   "description": "Convert Angstrom (Å) to Micrometer (µm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/angstrom-to-micrometer.html?src=pwa",
-  "scope": "/conversions/length/angstrom-to-micrometer.html",
+  "start_url": "/conversions/length/angstrom-to-micrometer/?src=pwa",
+  "scope": "/conversions/length/angstrom-to-micrometer/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Label Sheet Generator — 1234Tools",
   "short_name": "Label Sheet",
   "description": "Print address or product labels on standard sheet layouts, with data from a list.",
-  "start_url": "/pdf/label-pdf.html?src=pwa",
-  "scope": "/pdf/label-pdf.html",
+  "start_url": "/pdf/label-pdf/?src=pwa",
+  "scope": "/pdf/label-pdf/",
   "display": "standalone",
   "display_override": [
     "standalone",

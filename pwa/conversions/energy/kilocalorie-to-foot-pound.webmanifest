@@ -3,8 +3,8 @@
   "name": "Convert Kilocalorie to Foot-Pound — 1234Tools",
   "short_name": "Kilocalorie",
   "description": "Convert Kilocalorie (kcal) to Foot-Pound (ft·lb) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/kilocalorie-to-foot-pound.html?src=pwa",
-  "scope": "/conversions/energy/kilocalorie-to-foot-pound.html",
+  "start_url": "/conversions/energy/kilocalorie-to-foot-pound/?src=pwa",
+  "scope": "/conversions/energy/kilocalorie-to-foot-pound/",
   "display": "standalone",
   "display_override": [
     "standalone",

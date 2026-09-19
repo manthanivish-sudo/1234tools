@@ -3,8 +3,8 @@
   "name": "PPF Calculator — 1234Tools",
   "short_name": "PPF Calculator",
   "description": "Public Provident Fund maturity value over 15 years, with the year-by-year balance.",
-  "start_url": "/india/ppf-calculator.html?src=pwa",
-  "scope": "/india/ppf-calculator.html",
+  "start_url": "/india/ppf-calculator/?src=pwa",
+  "scope": "/india/ppf-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Byte to Mebibyte (1024) — 1234Tools",
   "short_name": "Byte → Mebibyte",
   "description": "Convert Byte (B) to Mebibyte (1024) (MiB) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/byte-to-mebibyte-1024.html?src=pwa",
-  "scope": "/conversions/data/byte-to-mebibyte-1024.html",
+  "start_url": "/conversions/data/byte-to-mebibyte-1024/?src=pwa",
+  "scope": "/conversions/data/byte-to-mebibyte-1024/",
   "display": "standalone",
   "display_override": [
     "standalone",

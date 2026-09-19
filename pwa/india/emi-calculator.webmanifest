@@ -3,8 +3,8 @@
   "name": "EMI Calculator with Amortisation — 1234Tools",
   "short_name": "EMI Calculator",
   "description": "Equated monthly instalment for home, car or personal loans, with the full repayment schedule.",
-  "start_url": "/india/emi-calculator.html?src=pwa",
-  "scope": "/india/emi-calculator.html",
+  "start_url": "/india/emi-calculator/?src=pwa",
+  "scope": "/india/emi-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

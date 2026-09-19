@@ -3,8 +3,8 @@
   "name": "Convert Millisecond to Week — 1234Tools",
   "short_name": "Millisecond → Week",
   "description": "Convert Millisecond (ms) to Week (wk) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/millisecond-to-week.html?src=pwa",
-  "scope": "/conversions/time/millisecond-to-week.html",
+  "start_url": "/conversions/time/millisecond-to-week/?src=pwa",
+  "scope": "/conversions/time/millisecond-to-week/",
   "display": "standalone",
   "display_override": [
     "standalone",

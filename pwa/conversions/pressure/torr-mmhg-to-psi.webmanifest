@@ -3,8 +3,8 @@
   "name": "Convert Torr / mmHg to PSI — 1234Tools",
   "short_name": "Torr / mmHg → PSI",
   "description": "Convert Torr / mmHg (Torr) to PSI (psi) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/torr-mmhg-to-psi.html?src=pwa",
-  "scope": "/conversions/pressure/torr-mmhg-to-psi.html",
+  "start_url": "/conversions/pressure/torr-mmhg-to-psi/?src=pwa",
+  "scope": "/conversions/pressure/torr-mmhg-to-psi/",
   "display": "standalone",
   "display_override": [
     "standalone",

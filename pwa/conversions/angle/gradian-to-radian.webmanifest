@@ -3,8 +3,8 @@
   "name": "Convert Gradian to Radian — 1234Tools",
   "short_name": "Gradian → Radian",
   "description": "Convert Gradian (grad) to Radian (rad) instantly. Works in both directions, with a full angle table.",
-  "start_url": "/conversions/angle/gradian-to-radian.html?src=pwa",
-  "scope": "/conversions/angle/gradian-to-radian.html",
+  "start_url": "/conversions/angle/gradian-to-radian/?src=pwa",
+  "scope": "/conversions/angle/gradian-to-radian/",
   "display": "standalone",
   "display_override": [
     "standalone",

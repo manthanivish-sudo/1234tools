@@ -3,8 +3,8 @@
   "name": "Convert Réaumur to Celsius — 1234Tools",
   "short_name": "Réaumur → Celsius",
   "description": "Convert Réaumur (°Ré) to Celsius (°C) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/r-aumur-to-celsius.html?src=pwa",
-  "scope": "/conversions/temperature/r-aumur-to-celsius.html",
+  "start_url": "/conversions/temperature/r-aumur-to-celsius/?src=pwa",
+  "scope": "/conversions/temperature/r-aumur-to-celsius/",
   "display": "standalone",
   "display_override": [
     "standalone",

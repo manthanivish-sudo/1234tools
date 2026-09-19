@@ -3,8 +3,8 @@
   "name": "Convert Electronvolt to Calorie (thermo) — 1234Tools",
   "short_name": "Electronvolt",
   "description": "Convert Electronvolt (eV) to Calorie (thermo) (cal) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/electronvolt-to-calorie-thermo.html?src=pwa",
-  "scope": "/conversions/energy/electronvolt-to-calorie-thermo.html",
+  "start_url": "/conversions/energy/electronvolt-to-calorie-thermo/?src=pwa",
+  "scope": "/conversions/energy/electronvolt-to-calorie-thermo/",
   "display": "standalone",
   "display_override": [
     "standalone",

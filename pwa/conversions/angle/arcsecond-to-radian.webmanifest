@@ -3,8 +3,8 @@
   "name": "Convert Arcsecond to Radian — 1234Tools",
   "short_name": "Arcsecond → Radian",
   "description": "Convert Arcsecond (\") to Radian (rad) instantly. Works in both directions, with a full angle table.",
-  "start_url": "/conversions/angle/arcsecond-to-radian.html?src=pwa",
-  "scope": "/conversions/angle/arcsecond-to-radian.html",
+  "start_url": "/conversions/angle/arcsecond-to-radian/?src=pwa",
+  "scope": "/conversions/angle/arcsecond-to-radian/",
   "display": "standalone",
   "display_override": [
     "standalone",

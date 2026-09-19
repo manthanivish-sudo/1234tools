@@ -3,8 +3,8 @@
   "name": "HTML Entity Encoder & Decoder — 1234Tools",
   "short_name": "HTML Entity Encoder",
   "description": "Escape text for safe display in HTML, or convert entities back to characters.",
-  "start_url": "/developer/html-entities.html?src=pwa",
-  "scope": "/developer/html-entities.html",
+  "start_url": "/developer/html-entities/?src=pwa",
+  "scope": "/developer/html-entities/",
   "display": "standalone",
   "display_override": [
     "standalone",

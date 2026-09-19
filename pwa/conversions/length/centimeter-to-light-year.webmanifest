@@ -3,8 +3,8 @@
   "name": "Convert Centimeter to Light Year — 1234Tools",
   "short_name": "Centimeter → Light",
   "description": "Convert Centimeter (cm) to Light Year (ly) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/centimeter-to-light-year.html?src=pwa",
-  "scope": "/conversions/length/centimeter-to-light-year.html",
+  "start_url": "/conversions/length/centimeter-to-light-year/?src=pwa",
+  "scope": "/conversions/length/centimeter-to-light-year/",
   "display": "standalone",
   "display_override": [
     "standalone",

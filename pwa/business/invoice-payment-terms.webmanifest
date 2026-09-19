@@ -3,8 +3,8 @@
   "name": "Invoice Due Date & Settlement Discount Calculator — 1234Tools",
   "short_name": "Invoice Due Date",
   "description": "Work out payment due dates, late payment interest, and whether an early settlement discount is worth taking.",
-  "start_url": "/business/invoice-payment-terms.html?src=pwa",
-  "scope": "/business/invoice-payment-terms.html",
+  "start_url": "/business/invoice-payment-terms/?src=pwa",
+  "scope": "/business/invoice-payment-terms/",
   "display": "standalone",
   "display_override": [
     "standalone",

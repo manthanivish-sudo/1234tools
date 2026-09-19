@@ -3,8 +3,8 @@
   "name": "Convert Quart (US) to Cubic Foot — 1234Tools",
   "short_name": "Quart (US) → Cubic",
   "description": "Convert Quart (US) (qt) to Cubic Foot (ft³) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/quart-us-to-cubic-foot.html?src=pwa",
-  "scope": "/conversions/volume/quart-us-to-cubic-foot.html",
+  "start_url": "/conversions/volume/quart-us-to-cubic-foot/?src=pwa",
+  "scope": "/conversions/volume/quart-us-to-cubic-foot/",
   "display": "standalone",
   "display_override": [
     "standalone",

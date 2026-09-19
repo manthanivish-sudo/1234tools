@@ -3,8 +3,8 @@
   "name": "Rotate & Flip Image — 1234Tools",
   "short_name": "Rotate & Flip Image",
   "description": "Rotate by any angle and mirror horizontally or vertically, with the canvas resized to fit.",
-  "start_url": "/image/image-rotate-flip.html?src=pwa",
-  "scope": "/image/image-rotate-flip.html",
+  "start_url": "/image/image-rotate-flip/?src=pwa",
+  "scope": "/image/image-rotate-flip/",
   "display": "standalone",
   "display_override": [
     "standalone",

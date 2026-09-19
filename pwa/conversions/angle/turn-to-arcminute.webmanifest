@@ -3,8 +3,8 @@
   "name": "Convert Turn to Arcminute — 1234Tools",
   "short_name": "Turn → Arcminute",
   "description": "Convert Turn (turn) to Arcminute (') instantly. Works in both directions, with a full angle table.",
-  "start_url": "/conversions/angle/turn-to-arcminute.html?src=pwa",
-  "scope": "/conversions/angle/turn-to-arcminute.html",
+  "start_url": "/conversions/angle/turn-to-arcminute/?src=pwa",
+  "scope": "/conversions/angle/turn-to-arcminute/",
   "display": "standalone",
   "display_override": [
     "standalone",

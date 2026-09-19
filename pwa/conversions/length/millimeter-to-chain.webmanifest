@@ -3,8 +3,8 @@
   "name": "Convert Millimeter to Chain — 1234Tools",
   "short_name": "Millimeter → Chain",
   "description": "Convert Millimeter (mm) to Chain (ch) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/millimeter-to-chain.html?src=pwa",
-  "scope": "/conversions/length/millimeter-to-chain.html",
+  "start_url": "/conversions/length/millimeter-to-chain/?src=pwa",
+  "scope": "/conversions/length/millimeter-to-chain/",
   "display": "standalone",
   "display_override": [
     "standalone",

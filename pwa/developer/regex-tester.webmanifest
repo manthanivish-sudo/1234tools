@@ -3,8 +3,8 @@
   "name": "Regex Tester — 1234Tools",
   "short_name": "Regex Tester",
   "description": "Test regular expressions against sample text with live match highlighting and capture groups.",
-  "start_url": "/developer/regex-tester.html?src=pwa",
-  "scope": "/developer/regex-tester.html",
+  "start_url": "/developer/regex-tester/?src=pwa",
+  "scope": "/developer/regex-tester/",
   "display": "standalone",
   "display_override": [
     "standalone",

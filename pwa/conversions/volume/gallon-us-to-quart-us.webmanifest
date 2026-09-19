@@ -3,8 +3,8 @@
   "name": "Convert Gallon (US) to Quart (US) — 1234Tools",
   "short_name": "Gallon (US) → Quart",
   "description": "Convert Gallon (US) (gal) to Quart (US) (qt) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/gallon-us-to-quart-us.html?src=pwa",
-  "scope": "/conversions/volume/gallon-us-to-quart-us.html",
+  "start_url": "/conversions/volume/gallon-us-to-quart-us/?src=pwa",
+  "scope": "/conversions/volume/gallon-us-to-quart-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

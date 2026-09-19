@@ -3,8 +3,8 @@
   "name": "Convert Ounce to Tonne — 1234Tools",
   "short_name": "Ounce → Tonne",
   "description": "Convert Ounce (oz) to Tonne (t) instantly. Works in both directions, with a full mass & weight table.",
-  "start_url": "/conversions/mass/ounce-to-tonne.html?src=pwa",
-  "scope": "/conversions/mass/ounce-to-tonne.html",
+  "start_url": "/conversions/mass/ounce-to-tonne/?src=pwa",
+  "scope": "/conversions/mass/ounce-to-tonne/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Nanometer to Angstrom — 1234Tools",
   "short_name": "Nanometer → Angstrom",
   "description": "Convert Nanometer (nm) to Angstrom (Å) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/nanometer-to-angstrom.html?src=pwa",
-  "scope": "/conversions/length/nanometer-to-angstrom.html",
+  "start_url": "/conversions/length/nanometer-to-angstrom/?src=pwa",
+  "scope": "/conversions/length/nanometer-to-angstrom/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Hash Generator (SHA-256, SHA-1, MD5, CRC32) — 1234Tools",
   "short_name": "Hash Generator",
   "description": "Generate cryptographic and checksum hashes from text, entirely in your browser.",
-  "start_url": "/developer/hash-generator.html?src=pwa",
-  "scope": "/developer/hash-generator.html",
+  "start_url": "/developer/hash-generator/?src=pwa",
+  "scope": "/developer/hash-generator/",
   "display": "standalone",
   "display_override": [
     "standalone",

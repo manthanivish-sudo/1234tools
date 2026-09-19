@@ -3,8 +3,8 @@
   "name": "Convert Milliwatt to Kilowatt — 1234Tools",
   "short_name": "Milliwatt → Kilowatt",
   "description": "Convert Milliwatt (mW) to Kilowatt (kW) instantly. Works in both directions, with a full power table.",
-  "start_url": "/conversions/power/milliwatt-to-kilowatt.html?src=pwa",
-  "scope": "/conversions/power/milliwatt-to-kilowatt.html",
+  "start_url": "/conversions/power/milliwatt-to-kilowatt/?src=pwa",
+  "scope": "/conversions/power/milliwatt-to-kilowatt/",
   "display": "standalone",
   "display_override": [
     "standalone",

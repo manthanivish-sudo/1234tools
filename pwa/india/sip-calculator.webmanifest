@@ -3,8 +3,8 @@
   "name": "SIP Calculator — 1234Tools",
   "short_name": "SIP Calculator",
   "description": "Project the future value of a systematic investment plan, with optional annual step-up.",
-  "start_url": "/india/sip-calculator.html?src=pwa",
-  "scope": "/india/sip-calculator.html",
+  "start_url": "/india/sip-calculator/?src=pwa",
+  "scope": "/india/sip-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

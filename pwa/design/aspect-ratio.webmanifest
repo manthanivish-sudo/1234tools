@@ -3,8 +3,8 @@
   "name": "Aspect Ratio Calculator — 1234Tools",
   "short_name": "Aspect Ratio",
   "description": "Calculate proportional dimensions and simplify aspect ratios for images and video.",
-  "start_url": "/design/aspect-ratio.html?src=pwa",
-  "scope": "/design/aspect-ratio.html",
+  "start_url": "/design/aspect-ratio/?src=pwa",
+  "scope": "/design/aspect-ratio/",
   "display": "standalone",
   "display_override": [
     "standalone",

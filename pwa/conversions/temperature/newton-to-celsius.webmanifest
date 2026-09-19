@@ -3,8 +3,8 @@
   "name": "Convert Newton to Celsius — 1234Tools",
   "short_name": "Newton → Celsius",
   "description": "Convert Newton (°N) to Celsius (°C) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/newton-to-celsius.html?src=pwa",
-  "scope": "/conversions/temperature/newton-to-celsius.html",
+  "start_url": "/conversions/temperature/newton-to-celsius/?src=pwa",
+  "scope": "/conversions/temperature/newton-to-celsius/",
   "display": "standalone",
   "display_override": [
     "standalone",

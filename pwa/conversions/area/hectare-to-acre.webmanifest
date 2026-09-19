@@ -3,8 +3,8 @@
   "name": "Convert Hectare to Acre — 1234Tools",
   "short_name": "Hectare → Acre",
   "description": "Convert Hectare (ha) to Acre (ac) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/hectare-to-acre.html?src=pwa",
-  "scope": "/conversions/area/hectare-to-acre.html",
+  "start_url": "/conversions/area/hectare-to-acre/?src=pwa",
+  "scope": "/conversions/area/hectare-to-acre/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Ton (UK long) to Ounce — 1234Tools",
   "short_name": "Ton (UK long)",
   "description": "Convert Ton (UK long) (LT) to Ounce (oz) instantly. Works in both directions, with a full mass & weight table.",
-  "start_url": "/conversions/mass/ton-uk-long-to-ounce.html?src=pwa",
-  "scope": "/conversions/mass/ton-uk-long-to-ounce.html",
+  "start_url": "/conversions/mass/ton-uk-long-to-ounce/?src=pwa",
+  "scope": "/conversions/mass/ton-uk-long-to-ounce/",
   "display": "standalone",
   "display_override": [
     "standalone",

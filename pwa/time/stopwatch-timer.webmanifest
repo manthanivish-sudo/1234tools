@@ -3,8 +3,8 @@
   "name": "Stopwatch, Timer & Pomodoro — 1234Tools",
   "short_name": "Stopwatch, Timer",
   "description": "A stopwatch with lap times, a countdown timer, and a Pomodoro cycle with work and break intervals.",
-  "start_url": "/time/stopwatch-timer.html?src=pwa",
-  "scope": "/time/stopwatch-timer.html",
+  "start_url": "/time/stopwatch-timer/?src=pwa",
+  "scope": "/time/stopwatch-timer/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Centimeter to Nautical Mile — 1234Tools",
   "short_name": "Centimeter",
   "description": "Convert Centimeter (cm) to Nautical Mile (nmi) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/centimeter-to-nautical-mile.html?src=pwa",
-  "scope": "/conversions/length/centimeter-to-nautical-mile.html",
+  "start_url": "/conversions/length/centimeter-to-nautical-mile/?src=pwa",
+  "scope": "/conversions/length/centimeter-to-nautical-mile/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Inch to Micrometer — 1234Tools",
   "short_name": "Inch → Micrometer",
   "description": "Convert Inch (in) to Micrometer (µm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/inch-to-micrometer.html?src=pwa",
-  "scope": "/conversions/length/inch-to-micrometer.html",
+  "start_url": "/conversions/length/inch-to-micrometer/?src=pwa",
+  "scope": "/conversions/length/inch-to-micrometer/",
   "display": "standalone",
   "display_override": [
     "standalone",

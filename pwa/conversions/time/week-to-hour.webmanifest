@@ -3,8 +3,8 @@
   "name": "Convert Week to Hour — 1234Tools",
   "short_name": "Week → Hour",
   "description": "Convert Week (wk) to Hour (h) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/week-to-hour.html?src=pwa",
-  "scope": "/conversions/time/week-to-hour.html",
+  "start_url": "/conversions/time/week-to-hour/?src=pwa",
+  "scope": "/conversions/time/week-to-hour/",
   "display": "standalone",
   "display_override": [
     "standalone",

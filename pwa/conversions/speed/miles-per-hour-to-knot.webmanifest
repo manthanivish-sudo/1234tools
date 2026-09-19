@@ -3,8 +3,8 @@
   "name": "Convert Miles per Hour to Knot — 1234Tools",
   "short_name": "Miles per Hour",
   "description": "Convert Miles per Hour (mph) to Knot (kn) instantly. Works in both directions, with a full speed & velocity table.",
-  "start_url": "/conversions/speed/miles-per-hour-to-knot.html?src=pwa",
-  "scope": "/conversions/speed/miles-per-hour-to-knot.html",
+  "start_url": "/conversions/speed/miles-per-hour-to-knot/?src=pwa",
+  "scope": "/conversions/speed/miles-per-hour-to-knot/",
   "display": "standalone",
   "display_override": [
     "standalone",

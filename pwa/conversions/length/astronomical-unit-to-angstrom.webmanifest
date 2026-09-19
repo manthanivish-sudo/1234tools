@@ -3,8 +3,8 @@
   "name": "Convert Astronomical Unit to Angstrom — 1234Tools",
   "short_name": "Astronomical Unit",
   "description": "Convert Astronomical Unit (AU) to Angstrom (Å) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/astronomical-unit-to-angstrom.html?src=pwa",
-  "scope": "/conversions/length/astronomical-unit-to-angstrom.html",
+  "start_url": "/conversions/length/astronomical-unit-to-angstrom/?src=pwa",
+  "scope": "/conversions/length/astronomical-unit-to-angstrom/",
   "display": "standalone",
   "display_override": [
     "standalone",

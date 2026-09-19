@@ -3,8 +3,8 @@
   "name": "Convert Hour to Minute — 1234Tools",
   "short_name": "Hour → Minute",
   "description": "Convert Hour (h) to Minute (min) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/hour-to-minute.html?src=pwa",
-  "scope": "/conversions/time/hour-to-minute.html",
+  "start_url": "/conversions/time/hour-to-minute/?src=pwa",
+  "scope": "/conversions/time/hour-to-minute/",
   "display": "standalone",
   "display_override": [
     "standalone",

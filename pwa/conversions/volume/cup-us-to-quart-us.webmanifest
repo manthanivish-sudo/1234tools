@@ -3,8 +3,8 @@
   "name": "Convert Cup (US) to Quart (US) — 1234Tools",
   "short_name": "Cup (US) → Quart",
   "description": "Convert Cup (US) (cup) to Quart (US) (qt) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/cup-us-to-quart-us.html?src=pwa",
-  "scope": "/conversions/volume/cup-us-to-quart-us.html",
+  "start_url": "/conversions/volume/cup-us-to-quart-us/?src=pwa",
+  "scope": "/conversions/volume/cup-us-to-quart-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

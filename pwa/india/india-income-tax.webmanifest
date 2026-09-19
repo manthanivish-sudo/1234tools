@@ -3,8 +3,8 @@
   "name": "Income Tax Calculator (New vs Old Regime) — 1234Tools",
   "short_name": "Income Tax",
   "description": "Compare tax under both regimes for FY 2026-27, including rebate, surcharge, cess and marginal relief.",
-  "start_url": "/india/india-income-tax.html?src=pwa",
-  "scope": "/india/india-income-tax.html",
+  "start_url": "/india/india-income-tax/?src=pwa",
+  "scope": "/india/india-income-tax/",
   "display": "standalone",
   "display_override": [
     "standalone",

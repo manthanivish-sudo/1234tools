@@ -3,8 +3,8 @@
   "name": "Convert Watt to Kilowatt — 1234Tools",
   "short_name": "Watt → Kilowatt",
   "description": "Convert Watt (W) to Kilowatt (kW) instantly. Works in both directions, with a full power table.",
-  "start_url": "/conversions/power/watt-to-kilowatt.html?src=pwa",
-  "scope": "/conversions/power/watt-to-kilowatt.html",
+  "start_url": "/conversions/power/watt-to-kilowatt/?src=pwa",
+  "scope": "/conversions/power/watt-to-kilowatt/",
   "display": "standalone",
   "display_override": [
     "standalone",

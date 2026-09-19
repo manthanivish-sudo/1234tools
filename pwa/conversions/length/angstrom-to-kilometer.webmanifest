@@ -3,8 +3,8 @@
   "name": "Convert Angstrom to Kilometer — 1234Tools",
   "short_name": "Angstrom → Kilometer",
   "description": "Convert Angstrom (Å) to Kilometer (km) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/angstrom-to-kilometer.html?src=pwa",
-  "scope": "/conversions/length/angstrom-to-kilometer.html",
+  "start_url": "/conversions/length/angstrom-to-kilometer/?src=pwa",
+  "scope": "/conversions/length/angstrom-to-kilometer/",
   "display": "standalone",
   "display_override": [
     "standalone",

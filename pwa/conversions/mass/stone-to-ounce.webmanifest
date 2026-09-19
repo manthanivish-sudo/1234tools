@@ -3,8 +3,8 @@
   "name": "Convert Stone to Ounce — 1234Tools",
   "short_name": "Stone → Ounce",
   "description": "Convert Stone (st) to Ounce (oz) instantly. Works in both directions, with a full mass & weight table.",
-  "start_url": "/conversions/mass/stone-to-ounce.html?src=pwa",
-  "scope": "/conversions/mass/stone-to-ounce.html",
+  "start_url": "/conversions/mass/stone-to-ounce/?src=pwa",
+  "scope": "/conversions/mass/stone-to-ounce/",
   "display": "standalone",
   "display_override": [
     "standalone",

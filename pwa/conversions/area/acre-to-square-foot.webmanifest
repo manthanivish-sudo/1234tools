@@ -3,8 +3,8 @@
   "name": "Convert Acre to Square Foot — 1234Tools",
   "short_name": "Acre → Square Foot",
   "description": "Convert Acre (ac) to Square Foot (ft²) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/acre-to-square-foot.html?src=pwa",
-  "scope": "/conversions/area/acre-to-square-foot.html",
+  "start_url": "/conversions/area/acre-to-square-foot/?src=pwa",
+  "scope": "/conversions/area/acre-to-square-foot/",
   "display": "standalone",
   "display_override": [
     "standalone",

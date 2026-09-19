@@ -3,8 +3,8 @@
   "name": "Convert Gallon (Imperial) to Milliliter — 1234Tools",
   "short_name": "Gallon (Imperial)",
   "description": "Convert Gallon (Imperial) (gal UK) to Milliliter (mL) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/gallon-imperial-to-milliliter.html?src=pwa",
-  "scope": "/conversions/volume/gallon-imperial-to-milliliter.html",
+  "start_url": "/conversions/volume/gallon-imperial-to-milliliter/?src=pwa",
+  "scope": "/conversions/volume/gallon-imperial-to-milliliter/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Pint (US) to Quart (US) — 1234Tools",
   "short_name": "Pint (US) → Quart",
   "description": "Convert Pint (US) (pt) to Quart (US) (qt) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/pint-us-to-quart-us.html?src=pwa",
-  "scope": "/conversions/volume/pint-us-to-quart-us.html",
+  "start_url": "/conversions/volume/pint-us-to-quart-us/?src=pwa",
+  "scope": "/conversions/volume/pint-us-to-quart-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

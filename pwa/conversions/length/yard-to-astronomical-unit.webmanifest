@@ -3,8 +3,8 @@
   "name": "Convert Yard to Astronomical Unit — 1234Tools",
   "short_name": "Yard → Astronomical",
   "description": "Convert Yard (yd) to Astronomical Unit (AU) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/yard-to-astronomical-unit.html?src=pwa",
-  "scope": "/conversions/length/yard-to-astronomical-unit.html",
+  "start_url": "/conversions/length/yard-to-astronomical-unit/?src=pwa",
+  "scope": "/conversions/length/yard-to-astronomical-unit/",
   "display": "standalone",
   "display_override": [
     "standalone",

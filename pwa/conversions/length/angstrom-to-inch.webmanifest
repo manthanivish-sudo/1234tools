@@ -3,8 +3,8 @@
   "name": "Convert Angstrom to Inch — 1234Tools",
   "short_name": "Angstrom → Inch",
   "description": "Convert Angstrom (Å) to Inch (in) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/angstrom-to-inch.html?src=pwa",
-  "scope": "/conversions/length/angstrom-to-inch.html",
+  "start_url": "/conversions/length/angstrom-to-inch/?src=pwa",
+  "scope": "/conversions/length/angstrom-to-inch/",
   "display": "standalone",
   "display_override": [
     "standalone",

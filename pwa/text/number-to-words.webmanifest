@@ -3,8 +3,8 @@
   "name": "Number to Words Converter — 1234Tools",
   "short_name": "Number → Words",
   "description": "Write numbers out in words, including currency form for cheques and contracts.",
-  "start_url": "/text/number-to-words.html?src=pwa",
-  "scope": "/text/number-to-words.html",
+  "start_url": "/text/number-to-words/?src=pwa",
+  "scope": "/text/number-to-words/",
   "display": "standalone",
   "display_override": [
     "standalone",

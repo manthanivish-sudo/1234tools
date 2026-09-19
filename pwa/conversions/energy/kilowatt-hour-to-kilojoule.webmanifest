@@ -3,8 +3,8 @@
   "name": "Convert Kilowatt Hour to Kilojoule — 1234Tools",
   "short_name": "Kilowatt Hour",
   "description": "Convert Kilowatt Hour (kWh) to Kilojoule (kJ) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/kilowatt-hour-to-kilojoule.html?src=pwa",
-  "scope": "/conversions/energy/kilowatt-hour-to-kilojoule.html",
+  "start_url": "/conversions/energy/kilowatt-hour-to-kilojoule/?src=pwa",
+  "scope": "/conversions/energy/kilowatt-hour-to-kilojoule/",
   "display": "standalone",
   "display_override": [
     "standalone",

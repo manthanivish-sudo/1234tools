@@ -3,8 +3,8 @@
   "name": "Time Zone Converter — 1234Tools",
   "short_name": "Time Zone Converter",
   "description": "Convert a time between world time zones, with daylight saving handled automatically.",
-  "start_url": "/time/timezone-converter.html?src=pwa",
-  "scope": "/time/timezone-converter.html",
+  "start_url": "/time/timezone-converter/?src=pwa",
+  "scope": "/time/timezone-converter/",
   "display": "standalone",
   "display_override": [
     "standalone",

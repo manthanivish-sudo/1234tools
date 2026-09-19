@@ -3,8 +3,8 @@
   "name": "Convert Meters per Second to Miles per Hour — 1234Tools",
   "short_name": "Meters per Second",
   "description": "Convert Meters per Second (m/s) to Miles per Hour (mph) instantly. Works in both directions, with a full speed & velocity table.",
-  "start_url": "/conversions/speed/meters-per-second-to-miles-per-hour.html?src=pwa",
-  "scope": "/conversions/speed/meters-per-second-to-miles-per-hour.html",
+  "start_url": "/conversions/speed/meters-per-second-to-miles-per-hour/?src=pwa",
+  "scope": "/conversions/speed/meters-per-second-to-miles-per-hour/",
   "display": "standalone",
   "display_override": [
     "standalone",

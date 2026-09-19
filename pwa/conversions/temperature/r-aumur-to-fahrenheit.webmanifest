@@ -3,8 +3,8 @@
   "name": "Convert Réaumur to Fahrenheit — 1234Tools",
   "short_name": "Réaumur → Fahrenheit",
   "description": "Convert Réaumur (°Ré) to Fahrenheit (°F) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/r-aumur-to-fahrenheit.html?src=pwa",
-  "scope": "/conversions/temperature/r-aumur-to-fahrenheit.html",
+  "start_url": "/conversions/temperature/r-aumur-to-fahrenheit/?src=pwa",
+  "scope": "/conversions/temperature/r-aumur-to-fahrenheit/",
   "display": "standalone",
   "display_override": [
     "standalone",

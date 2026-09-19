@@ -3,8 +3,8 @@
   "name": "Convert Tablespoon (US) to Cubic Foot — 1234Tools",
   "short_name": "Tablespoon (US)",
   "description": "Convert Tablespoon (US) (tbsp) to Cubic Foot (ft³) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/tablespoon-us-to-cubic-foot.html?src=pwa",
-  "scope": "/conversions/volume/tablespoon-us-to-cubic-foot.html",
+  "start_url": "/conversions/volume/tablespoon-us-to-cubic-foot/?src=pwa",
+  "scope": "/conversions/volume/tablespoon-us-to-cubic-foot/",
   "display": "standalone",
   "display_override": [
     "standalone",

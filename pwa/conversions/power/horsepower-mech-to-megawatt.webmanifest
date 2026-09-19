@@ -3,8 +3,8 @@
   "name": "Convert Horsepower (mech) to Megawatt — 1234Tools",
   "short_name": "Horsepower (mech)",
   "description": "Convert Horsepower (mech) (hp) to Megawatt (MW) instantly. Works in both directions, with a full power table.",
-  "start_url": "/conversions/power/horsepower-mech-to-megawatt.html?src=pwa",
-  "scope": "/conversions/power/horsepower-mech-to-megawatt.html",
+  "start_url": "/conversions/power/horsepower-mech-to-megawatt/?src=pwa",
+  "scope": "/conversions/power/horsepower-mech-to-megawatt/",
   "display": "standalone",
   "display_override": [
     "standalone",

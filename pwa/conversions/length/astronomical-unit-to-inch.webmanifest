@@ -3,8 +3,8 @@
   "name": "Convert Astronomical Unit to Inch — 1234Tools",
   "short_name": "Astronomical Unit",
   "description": "Convert Astronomical Unit (AU) to Inch (in) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/astronomical-unit-to-inch.html?src=pwa",
-  "scope": "/conversions/length/astronomical-unit-to-inch.html",
+  "start_url": "/conversions/length/astronomical-unit-to-inch/?src=pwa",
+  "scope": "/conversions/length/astronomical-unit-to-inch/",
   "display": "standalone",
   "display_override": [
     "standalone",

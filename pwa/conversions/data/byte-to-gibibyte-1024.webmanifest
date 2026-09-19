@@ -3,8 +3,8 @@
   "name": "Convert Byte to Gibibyte (1024) — 1234Tools",
   "short_name": "Byte → Gibibyte",
   "description": "Convert Byte (B) to Gibibyte (1024) (GiB) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/byte-to-gibibyte-1024.html?src=pwa",
-  "scope": "/conversions/data/byte-to-gibibyte-1024.html",
+  "start_url": "/conversions/data/byte-to-gibibyte-1024/?src=pwa",
+  "scope": "/conversions/data/byte-to-gibibyte-1024/",
   "display": "standalone",
   "display_override": [
     "standalone",

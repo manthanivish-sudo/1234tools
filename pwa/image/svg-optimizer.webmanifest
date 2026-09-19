@@ -3,8 +3,8 @@
   "name": "SVG Optimiser — 1234Tools",
   "short_name": "SVG Optimiser",
   "description": "Strip editor metadata and shrink SVG files without touching the artwork.",
-  "start_url": "/image/svg-optimizer.html?src=pwa",
-  "scope": "/image/svg-optimizer.html",
+  "start_url": "/image/svg-optimizer/?src=pwa",
+  "scope": "/image/svg-optimizer/",
   "display": "standalone",
   "display_override": [
     "standalone",

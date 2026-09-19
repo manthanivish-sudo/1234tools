@@ -3,8 +3,8 @@
   "name": "Convert Foot-Pound to Electronvolt — 1234Tools",
   "short_name": "Foot-Pound",
   "description": "Convert Foot-Pound (ft·lb) to Electronvolt (eV) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/foot-pound-to-electronvolt.html?src=pwa",
-  "scope": "/conversions/energy/foot-pound-to-electronvolt.html",
+  "start_url": "/conversions/energy/foot-pound-to-electronvolt/?src=pwa",
+  "scope": "/conversions/energy/foot-pound-to-electronvolt/",
   "display": "standalone",
   "display_override": [
     "standalone",

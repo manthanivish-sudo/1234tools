@@ -3,8 +3,8 @@
   "name": "Convert Watt Hour to Foot-Pound — 1234Tools",
   "short_name": "Watt Hour",
   "description": "Convert Watt Hour (Wh) to Foot-Pound (ft·lb) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/watt-hour-to-foot-pound.html?src=pwa",
-  "scope": "/conversions/energy/watt-hour-to-foot-pound.html",
+  "start_url": "/conversions/energy/watt-hour-to-foot-pound/?src=pwa",
+  "scope": "/conversions/energy/watt-hour-to-foot-pound/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Dice Roller — 1234Tools",
   "short_name": "Dice Roller",
   "description": "Roll any number of dice with any number of sides, with modifiers and standard RPG notation.",
-  "start_url": "/utilities/dice-roller.html?src=pwa",
-  "scope": "/utilities/dice-roller.html",
+  "start_url": "/utilities/dice-roller/?src=pwa",
+  "scope": "/utilities/dice-roller/",
   "display": "standalone",
   "display_override": [
     "standalone",

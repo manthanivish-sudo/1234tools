@@ -3,8 +3,8 @@
   "name": "Word & Character Counter — 1234Tools",
   "short_name": "Word & Character",
   "description": "Count words, characters, sentences and paragraphs, with reading time and keyword density.",
-  "start_url": "/text/word-counter.html?src=pwa",
-  "scope": "/text/word-counter.html",
+  "start_url": "/text/word-counter/?src=pwa",
+  "scope": "/text/word-counter/",
   "display": "standalone",
   "display_override": [
     "standalone",

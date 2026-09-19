@@ -3,8 +3,8 @@
   "name": "Convert Liter to Milliliter — 1234Tools",
   "short_name": "Liter → Milliliter",
   "description": "Convert Liter (L) to Milliliter (mL) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/liter-to-milliliter.html?src=pwa",
-  "scope": "/conversions/volume/liter-to-milliliter.html",
+  "start_url": "/conversions/volume/liter-to-milliliter/?src=pwa",
+  "scope": "/conversions/volume/liter-to-milliliter/",
   "display": "standalone",
   "display_override": [
     "standalone",

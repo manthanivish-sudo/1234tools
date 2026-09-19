@@ -3,8 +3,8 @@
   "name": "Convert Delisle to Kelvin — 1234Tools",
   "short_name": "Delisle → Kelvin",
   "description": "Convert Delisle (°De) to Kelvin (K) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/delisle-to-kelvin.html?src=pwa",
-  "scope": "/conversions/temperature/delisle-to-kelvin.html",
+  "start_url": "/conversions/temperature/delisle-to-kelvin/?src=pwa",
+  "scope": "/conversions/temperature/delisle-to-kelvin/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Merge PDF Files — 1234Tools",
   "short_name": "Merge PDF Files",
   "description": "Combine several PDFs into one, in any order, without uploading anything.",
-  "start_url": "/pdf/merge-pdf.html?src=pwa",
-  "scope": "/pdf/merge-pdf.html",
+  "start_url": "/pdf/merge-pdf/?src=pwa",
+  "scope": "/pdf/merge-pdf/",
   "display": "standalone",
   "display_override": [
     "standalone",

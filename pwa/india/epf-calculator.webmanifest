@@ -3,8 +3,8 @@
   "name": "EPF Calculator — 1234Tools",
   "short_name": "EPF Calculator",
   "description": "Employees’ Provident Fund corpus at retirement, including the employer’s split into EPF and EPS.",
-  "start_url": "/india/epf-calculator.html?src=pwa",
-  "scope": "/india/epf-calculator.html",
+  "start_url": "/india/epf-calculator/?src=pwa",
+  "scope": "/india/epf-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

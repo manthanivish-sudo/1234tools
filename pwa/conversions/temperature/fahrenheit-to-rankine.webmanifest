@@ -3,8 +3,8 @@
   "name": "Convert Fahrenheit to Rankine — 1234Tools",
   "short_name": "Fahrenheit → Rankine",
   "description": "Convert Fahrenheit (°F) to Rankine (°R) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/fahrenheit-to-rankine.html?src=pwa",
-  "scope": "/conversions/temperature/fahrenheit-to-rankine.html",
+  "start_url": "/conversions/temperature/fahrenheit-to-rankine/?src=pwa",
+  "scope": "/conversions/temperature/fahrenheit-to-rankine/",
   "display": "standalone",
   "display_override": [
     "standalone",

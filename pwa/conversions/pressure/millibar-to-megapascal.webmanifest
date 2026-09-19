@@ -3,8 +3,8 @@
   "name": "Convert Millibar to Megapascal — 1234Tools",
   "short_name": "Millibar",
   "description": "Convert Millibar (mbar) to Megapascal (MPa) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/millibar-to-megapascal.html?src=pwa",
-  "scope": "/conversions/pressure/millibar-to-megapascal.html",
+  "start_url": "/conversions/pressure/millibar-to-megapascal/?src=pwa",
+  "scope": "/conversions/pressure/millibar-to-megapascal/",
   "display": "standalone",
   "display_override": [
     "standalone",

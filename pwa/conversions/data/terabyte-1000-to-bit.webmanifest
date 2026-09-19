@@ -3,8 +3,8 @@
   "name": "Convert Terabyte (1000) to Bit — 1234Tools",
   "short_name": "Terabyte (1000)",
   "description": "Convert Terabyte (1000) (TB) to Bit (bit) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/terabyte-1000-to-bit.html?src=pwa",
-  "scope": "/conversions/data/terabyte-1000-to-bit.html",
+  "start_url": "/conversions/data/terabyte-1000-to-bit/?src=pwa",
+  "scope": "/conversions/data/terabyte-1000-to-bit/",
   "display": "standalone",
   "display_override": [
     "standalone",

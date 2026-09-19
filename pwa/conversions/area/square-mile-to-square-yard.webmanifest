@@ -3,8 +3,8 @@
   "name": "Convert Square Mile to Square Yard — 1234Tools",
   "short_name": "Square Mile",
   "description": "Convert Square Mile (mi²) to Square Yard (yd²) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-mile-to-square-yard.html?src=pwa",
-  "scope": "/conversions/area/square-mile-to-square-yard.html",
+  "start_url": "/conversions/area/square-mile-to-square-yard/?src=pwa",
+  "scope": "/conversions/area/square-mile-to-square-yard/",
   "display": "standalone",
   "display_override": [
     "standalone",

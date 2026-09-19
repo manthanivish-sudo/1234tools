@@ -3,8 +3,8 @@
   "name": "Convert Megapascal to Atmosphere — 1234Tools",
   "short_name": "Megapascal",
   "description": "Convert Megapascal (MPa) to Atmosphere (atm) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/megapascal-to-atmosphere.html?src=pwa",
-  "scope": "/conversions/pressure/megapascal-to-atmosphere.html",
+  "start_url": "/conversions/pressure/megapascal-to-atmosphere/?src=pwa",
+  "scope": "/conversions/pressure/megapascal-to-atmosphere/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "JSON Formatter & Validator — 1234Tools",
   "short_name": "JSON Formatter",
   "description": "Format, validate and minify JSON. Pinpoints the exact line and column of any syntax error.",
-  "start_url": "/developer/json-formatter.html?src=pwa",
-  "scope": "/developer/json-formatter.html",
+  "start_url": "/developer/json-formatter/?src=pwa",
+  "scope": "/developer/json-formatter/",
   "display": "standalone",
   "display_override": [
     "standalone",

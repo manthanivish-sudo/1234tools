@@ -3,8 +3,8 @@
   "name": "True Cost of an Employee Calculator — 1234Tools",
   "short_name": "True Cost of an",
   "description": "Work out what an employee really costs after employer NI, pension, holiday and overheads.",
-  "start_url": "/business/employer-cost.html?src=pwa",
-  "scope": "/business/employer-cost.html",
+  "start_url": "/business/employer-cost/?src=pwa",
+  "scope": "/business/employer-cost/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Square Inch to Square Mile — 1234Tools",
   "short_name": "Square Inch",
   "description": "Convert Square Inch (in²) to Square Mile (mi²) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-inch-to-square-mile.html?src=pwa",
-  "scope": "/conversions/area/square-inch-to-square-mile.html",
+  "start_url": "/conversions/area/square-inch-to-square-mile/?src=pwa",
+  "scope": "/conversions/area/square-inch-to-square-mile/",
   "display": "standalone",
   "display_override": [
     "standalone",

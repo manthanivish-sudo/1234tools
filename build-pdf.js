@@ -636,6 +636,33 @@ function patchExistingPages(total) {
 /* ------------------------------------------------------------------ */
 
 function main() {
+  /**
+   * This generator predates the move to slash-terminated URLs: it writes
+   * `pdf/merge-pdf.html` and lists that address in the search index, which
+   * would quietly undo the migration for this one section and leave the
+   * sitemap pointing at pages that now redirect.
+   *
+   * Refuse rather than corrupt. Teaching it the new shape is a real piece of
+   * work and the PDF section is mid-rework, so this stops the foot-gun today
+   * and says exactly what is needed to remove the guard.
+   */
+  if (fs.existsSync(path.join(ROOT, 'pdf/merge-pdf/index.html'))) {
+    console.error([
+      '',
+      'build-pdf.js is out of date.',
+      '',
+      '  The site now serves tools at /pdf/merge-pdf/ rather than',
+      '  /pdf/merge-pdf.html, and this script still emits the old shape.',
+      '  Running it would undo build-urls.js for the PDF section.',
+      '',
+      '  It needs the same treatment build-site.js and build-pwa.js had:',
+      '  write pages to <slug>/index.html, emit root-absolute links, and',
+      '  put the slash form in the search index.',
+      ''
+    ].join('\n'));
+    process.exit(1);
+  }
+
   const ids = Object.keys(PDF_TOOLS);
   const existingTotal = 1169;
   const total = existingTotal + ids.length;

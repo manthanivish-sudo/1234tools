@@ -3,8 +3,8 @@
   "name": "Quadratic Equation Solver — 1234Tools",
   "short_name": "Quadratic Equation",
   "description": "Solve ax² + bx + c = 0, including complex roots, vertex, and discriminant.",
-  "start_url": "/mathematics/quadratic-solver.html?src=pwa",
-  "scope": "/mathematics/quadratic-solver.html",
+  "start_url": "/mathematics/quadratic-solver/?src=pwa",
+  "scope": "/mathematics/quadratic-solver/",
   "display": "standalone",
   "display_override": [
     "standalone",

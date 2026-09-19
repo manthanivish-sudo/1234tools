@@ -3,8 +3,8 @@
   "name": "Age Calculator — 1234Tools",
   "short_name": "Age Calculator",
   "description": "Work out an exact age in years, months and days, plus total days lived and time to the next birthday.",
-  "start_url": "/time/age-calculator.html?src=pwa",
-  "scope": "/time/age-calculator.html",
+  "start_url": "/time/age-calculator/?src=pwa",
+  "scope": "/time/age-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

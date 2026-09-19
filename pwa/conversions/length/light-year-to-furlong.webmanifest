@@ -3,8 +3,8 @@
   "name": "Convert Light Year to Furlong — 1234Tools",
   "short_name": "Light Year → Furlong",
   "description": "Convert Light Year (ly) to Furlong (fur) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/light-year-to-furlong.html?src=pwa",
-  "scope": "/conversions/length/light-year-to-furlong.html",
+  "start_url": "/conversions/length/light-year-to-furlong/?src=pwa",
+  "scope": "/conversions/length/light-year-to-furlong/",
   "display": "standalone",
   "display_override": [
     "standalone",

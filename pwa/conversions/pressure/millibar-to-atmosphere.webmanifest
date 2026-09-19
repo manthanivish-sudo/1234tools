@@ -3,8 +3,8 @@
   "name": "Convert Millibar to Atmosphere — 1234Tools",
   "short_name": "Millibar",
   "description": "Convert Millibar (mbar) to Atmosphere (atm) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/millibar-to-atmosphere.html?src=pwa",
-  "scope": "/conversions/pressure/millibar-to-atmosphere.html",
+  "start_url": "/conversions/pressure/millibar-to-atmosphere/?src=pwa",
+  "scope": "/conversions/pressure/millibar-to-atmosphere/",
   "display": "standalone",
   "display_override": [
     "standalone",

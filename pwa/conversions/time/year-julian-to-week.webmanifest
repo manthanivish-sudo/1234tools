@@ -3,8 +3,8 @@
   "name": "Convert Year (Julian) to Week — 1234Tools",
   "short_name": "Year (Julian) → Week",
   "description": "Convert Year (Julian) (yr) to Week (wk) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/year-julian-to-week.html?src=pwa",
-  "scope": "/conversions/time/year-julian-to-week.html",
+  "start_url": "/conversions/time/year-julian-to-week/?src=pwa",
+  "scope": "/conversions/time/year-julian-to-week/",
   "display": "standalone",
   "display_override": [
     "standalone",

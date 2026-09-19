@@ -3,8 +3,8 @@
   "name": "Convert Feet per Second to Mach (sea level) — 1234Tools",
   "short_name": "Feet per Second",
   "description": "Convert Feet per Second (ft/s) to Mach (sea level) (Ma) instantly. Works in both directions, with a full speed & velocity table.",
-  "start_url": "/conversions/speed/feet-per-second-to-mach-sea-level.html?src=pwa",
-  "scope": "/conversions/speed/feet-per-second-to-mach-sea-level.html",
+  "start_url": "/conversions/speed/feet-per-second-to-mach-sea-level/?src=pwa",
+  "scope": "/conversions/speed/feet-per-second-to-mach-sea-level/",
   "display": "standalone",
   "display_override": [
     "standalone",

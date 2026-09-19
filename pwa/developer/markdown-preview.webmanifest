@@ -3,8 +3,8 @@
   "name": "Markdown to HTML Converter — 1234Tools",
   "short_name": "Markdown → HTML",
   "description": "Convert Markdown to clean HTML, with support for headings, lists, code blocks, links and tables.",
-  "start_url": "/developer/markdown-preview.html?src=pwa",
-  "scope": "/developer/markdown-preview.html",
+  "start_url": "/developer/markdown-preview/?src=pwa",
+  "scope": "/developer/markdown-preview/",
   "display": "standalone",
   "display_override": [
     "standalone",

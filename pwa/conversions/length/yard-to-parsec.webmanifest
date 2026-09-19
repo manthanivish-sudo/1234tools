@@ -3,8 +3,8 @@
   "name": "Convert Yard to Parsec — 1234Tools",
   "short_name": "Yard → Parsec",
   "description": "Convert Yard (yd) to Parsec (pc) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/yard-to-parsec.html?src=pwa",
-  "scope": "/conversions/length/yard-to-parsec.html",
+  "start_url": "/conversions/length/yard-to-parsec/?src=pwa",
+  "scope": "/conversions/length/yard-to-parsec/",
   "display": "standalone",
   "display_override": [
     "standalone",

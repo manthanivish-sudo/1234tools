@@ -3,8 +3,8 @@
   "name": "Average Calculator (Mean, Median, Mode) — 1234Tools",
   "short_name": "Average Calculator",
   "description": "Calculate mean, median, mode, range and weighted average from a list of numbers.",
-  "start_url": "/mathematics/average-calculator.html?src=pwa",
-  "scope": "/mathematics/average-calculator.html",
+  "start_url": "/mathematics/average-calculator/?src=pwa",
+  "scope": "/mathematics/average-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

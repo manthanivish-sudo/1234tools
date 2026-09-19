@@ -3,8 +3,8 @@
   "name": "QR Code Scanner — 1234Tools",
   "short_name": "QR Code Scanner",
   "description": "Scan a QR code with your camera or from a picture. Reads WiFi, contact cards, payments and links, and shows where a link really goes before you open it.",
-  "start_url": "/qr/qr-code-scanner.html?src=pwa",
-  "scope": "/qr/qr-code-scanner.html",
+  "start_url": "/qr/qr-code-scanner/?src=pwa",
+  "scope": "/qr/qr-code-scanner/",
   "display": "standalone",
   "display_override": [
     "standalone",

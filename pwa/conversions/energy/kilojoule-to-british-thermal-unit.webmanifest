@@ -3,8 +3,8 @@
   "name": "Convert Kilojoule to British Thermal Unit — 1234Tools",
   "short_name": "Kilojoule → British",
   "description": "Convert Kilojoule (kJ) to British Thermal Unit (BTU) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/kilojoule-to-british-thermal-unit.html?src=pwa",
-  "scope": "/conversions/energy/kilojoule-to-british-thermal-unit.html",
+  "start_url": "/conversions/energy/kilojoule-to-british-thermal-unit/?src=pwa",
+  "scope": "/conversions/energy/kilojoule-to-british-thermal-unit/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Cubic Foot to Liter — 1234Tools",
   "short_name": "Cubic Foot → Liter",
   "description": "Convert Cubic Foot (ft³) to Liter (L) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/cubic-foot-to-liter.html?src=pwa",
-  "scope": "/conversions/volume/cubic-foot-to-liter.html",
+  "start_url": "/conversions/volume/cubic-foot-to-liter/?src=pwa",
+  "scope": "/conversions/volume/cubic-foot-to-liter/",
   "display": "standalone",
   "display_override": [
     "standalone",

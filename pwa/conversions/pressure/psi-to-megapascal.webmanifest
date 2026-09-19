@@ -3,8 +3,8 @@
   "name": "Convert PSI to Megapascal — 1234Tools",
   "short_name": "PSI → Megapascal",
   "description": "Convert PSI (psi) to Megapascal (MPa) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/psi-to-megapascal.html?src=pwa",
-  "scope": "/conversions/pressure/psi-to-megapascal.html",
+  "start_url": "/conversions/pressure/psi-to-megapascal/?src=pwa",
+  "scope": "/conversions/pressure/psi-to-megapascal/",
   "display": "standalone",
   "display_override": [
     "standalone",

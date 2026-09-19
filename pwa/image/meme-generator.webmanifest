@@ -3,8 +3,8 @@
   "name": "Meme Generator — 1234Tools",
   "short_name": "Meme Generator",
   "description": "Add classic top and bottom caption text to an image, with the traditional outlined Impact styling.",
-  "start_url": "/image/meme-generator.html?src=pwa",
-  "scope": "/image/meme-generator.html",
+  "start_url": "/image/meme-generator/?src=pwa",
+  "scope": "/image/meme-generator/",
   "display": "standalone",
   "display_override": [
     "standalone",

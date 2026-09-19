@@ -3,8 +3,8 @@
   "name": "Shoe Size Converter — 1234Tools",
   "short_name": "Shoe Size Converter",
   "description": "Convert shoe sizes between UK, US, EU, Japan and foot length in centimetres.",
-  "start_url": "/utilities/shoe-size-converter.html?src=pwa",
-  "scope": "/utilities/shoe-size-converter.html",
+  "start_url": "/utilities/shoe-size-converter/?src=pwa",
+  "scope": "/utilities/shoe-size-converter/",
   "display": "standalone",
   "display_override": [
     "standalone",

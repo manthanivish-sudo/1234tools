@@ -3,8 +3,8 @@
   "name": "Convert Week to Minute — 1234Tools",
   "short_name": "Week → Minute",
   "description": "Convert Week (wk) to Minute (min) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/week-to-minute.html?src=pwa",
-  "scope": "/conversions/time/week-to-minute.html",
+  "start_url": "/conversions/time/week-to-minute/?src=pwa",
+  "scope": "/conversions/time/week-to-minute/",
   "display": "standalone",
   "display_override": [
     "standalone",

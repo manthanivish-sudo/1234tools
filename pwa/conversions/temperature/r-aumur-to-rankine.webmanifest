@@ -3,8 +3,8 @@
   "name": "Convert Réaumur to Rankine — 1234Tools",
   "short_name": "Réaumur → Rankine",
   "description": "Convert Réaumur (°Ré) to Rankine (°R) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/r-aumur-to-rankine.html?src=pwa",
-  "scope": "/conversions/temperature/r-aumur-to-rankine.html",
+  "start_url": "/conversions/temperature/r-aumur-to-rankine/?src=pwa",
+  "scope": "/conversions/temperature/r-aumur-to-rankine/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Image Splitter (Grid & Carousel) — 1234Tools",
   "short_name": "Image Splitter",
   "description": "Cut an image into a grid of tiles — for Instagram carousels, photo mosaics or sprite sheets.",
-  "start_url": "/image/image-splitter.html?src=pwa",
-  "scope": "/image/image-splitter.html",
+  "start_url": "/image/image-splitter/?src=pwa",
+  "scope": "/image/image-splitter/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Rømer to Kelvin — 1234Tools",
   "short_name": "Rømer → Kelvin",
   "description": "Convert Rømer (°Rø) to Kelvin (K) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/r-mer-to-kelvin.html?src=pwa",
-  "scope": "/conversions/temperature/r-mer-to-kelvin.html",
+  "start_url": "/conversions/temperature/r-mer-to-kelvin/?src=pwa",
+  "scope": "/conversions/temperature/r-mer-to-kelvin/",
   "display": "standalone",
   "display_override": [
     "standalone",

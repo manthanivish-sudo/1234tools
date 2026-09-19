@@ -3,8 +3,8 @@
   "name": "Convert Bit to Kibibyte (1024) — 1234Tools",
   "short_name": "Bit → Kibibyte",
   "description": "Convert Bit (bit) to Kibibyte (1024) (KiB) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/bit-to-kibibyte-1024.html?src=pwa",
-  "scope": "/conversions/data/bit-to-kibibyte-1024.html",
+  "start_url": "/conversions/data/bit-to-kibibyte-1024/?src=pwa",
+  "scope": "/conversions/data/bit-to-kibibyte-1024/",
   "display": "standalone",
   "display_override": [
     "standalone",

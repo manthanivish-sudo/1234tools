@@ -3,8 +3,8 @@
   "name": "Convert Centimeter to Furlong — 1234Tools",
   "short_name": "Centimeter → Furlong",
   "description": "Convert Centimeter (cm) to Furlong (fur) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/centimeter-to-furlong.html?src=pwa",
-  "scope": "/conversions/length/centimeter-to-furlong.html",
+  "start_url": "/conversions/length/centimeter-to-furlong/?src=pwa",
+  "scope": "/conversions/length/centimeter-to-furlong/",
   "display": "standalone",
   "display_override": [
     "standalone",

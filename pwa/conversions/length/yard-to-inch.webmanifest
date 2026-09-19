@@ -3,8 +3,8 @@
   "name": "Convert Yard to Inch — 1234Tools",
   "short_name": "Yard → Inch",
   "description": "Convert Yard (yd) to Inch (in) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/yard-to-inch.html?src=pwa",
-  "scope": "/conversions/length/yard-to-inch.html",
+  "start_url": "/conversions/length/yard-to-inch/?src=pwa",
+  "scope": "/conversions/length/yard-to-inch/",
   "display": "standalone",
   "display_override": [
     "standalone",

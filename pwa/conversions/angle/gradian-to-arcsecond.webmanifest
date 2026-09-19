@@ -3,8 +3,8 @@
   "name": "Convert Gradian to Arcsecond — 1234Tools",
   "short_name": "Gradian → Arcsecond",
   "description": "Convert Gradian (grad) to Arcsecond (\") instantly. Works in both directions, with a full angle table.",
-  "start_url": "/conversions/angle/gradian-to-arcsecond.html?src=pwa",
-  "scope": "/conversions/angle/gradian-to-arcsecond.html",
+  "start_url": "/conversions/angle/gradian-to-arcsecond/?src=pwa",
+  "scope": "/conversions/angle/gradian-to-arcsecond/",
   "display": "standalone",
   "display_override": [
     "standalone",

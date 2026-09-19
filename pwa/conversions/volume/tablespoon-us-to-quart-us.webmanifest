@@ -3,8 +3,8 @@
   "name": "Convert Tablespoon (US) to Quart (US) — 1234Tools",
   "short_name": "Tablespoon (US)",
   "description": "Convert Tablespoon (US) (tbsp) to Quart (US) (qt) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/tablespoon-us-to-quart-us.html?src=pwa",
-  "scope": "/conversions/volume/tablespoon-us-to-quart-us.html",
+  "start_url": "/conversions/volume/tablespoon-us-to-quart-us/?src=pwa",
+  "scope": "/conversions/volume/tablespoon-us-to-quart-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

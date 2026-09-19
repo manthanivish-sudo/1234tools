@@ -3,8 +3,8 @@
   "name": "Convert Light Year to Chain — 1234Tools",
   "short_name": "Light Year → Chain",
   "description": "Convert Light Year (ly) to Chain (ch) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/light-year-to-chain.html?src=pwa",
-  "scope": "/conversions/length/light-year-to-chain.html",
+  "start_url": "/conversions/length/light-year-to-chain/?src=pwa",
+  "scope": "/conversions/length/light-year-to-chain/",
   "display": "standalone",
   "display_override": [
     "standalone",

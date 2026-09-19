@@ -3,8 +3,8 @@
   "name": "Text to PDF Converter — 1234Tools",
   "short_name": "Text → PDF Converter",
   "description": "Turn plain text into a properly paginated PDF with margins, wrapping and page numbers.",
-  "start_url": "/pdf/text-to-pdf.html?src=pwa",
-  "scope": "/pdf/text-to-pdf.html",
+  "start_url": "/pdf/text-to-pdf/?src=pwa",
+  "scope": "/pdf/text-to-pdf/",
   "display": "standalone",
   "display_override": [
     "standalone",

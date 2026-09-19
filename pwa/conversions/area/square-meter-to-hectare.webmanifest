@@ -3,8 +3,8 @@
   "name": "Convert Square Meter to Hectare — 1234Tools",
   "short_name": "Square Meter",
   "description": "Convert Square Meter (m²) to Hectare (ha) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-meter-to-hectare.html?src=pwa",
-  "scope": "/conversions/area/square-meter-to-hectare.html",
+  "start_url": "/conversions/area/square-meter-to-hectare/?src=pwa",
+  "scope": "/conversions/area/square-meter-to-hectare/",
   "display": "standalone",
   "display_override": [
     "standalone",

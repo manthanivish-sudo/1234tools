@@ -3,8 +3,8 @@
   "name": "CTC to In-Hand Salary Calculator — 1234Tools",
   "short_name": "CTC → In-Hand",
   "description": "Break a cost-to-company figure into gross, deductions and monthly in-hand pay.",
-  "start_url": "/india/ctc-take-home.html?src=pwa",
-  "scope": "/india/ctc-take-home.html",
+  "start_url": "/india/ctc-take-home/?src=pwa",
+  "scope": "/india/ctc-take-home/",
   "display": "standalone",
   "display_override": [
     "standalone",

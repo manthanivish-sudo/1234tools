@@ -3,8 +3,8 @@
   "name": "Convert Week to Month (avg) — 1234Tools",
   "short_name": "Week → Month",
   "description": "Convert Week (wk) to Month (avg) (mo) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/week-to-month-avg.html?src=pwa",
-  "scope": "/conversions/time/week-to-month-avg.html",
+  "start_url": "/conversions/time/week-to-month-avg/?src=pwa",
+  "scope": "/conversions/time/week-to-month-avg/",
   "display": "standalone",
   "display_override": [
     "standalone",

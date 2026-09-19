@@ -79,11 +79,26 @@ function pages(dir = ROOT, out = []) {
   return out;
 }
 
-/** '', '../' or '../../' — how this page reaches the site root. */
-const prefixOf = (abs) => {
-  const depth = path.relative(ROOT, abs).split(path.sep).length - 1;
-  return '../'.repeat(depth);
-};
+/**
+ * A tool has two addresses and they are not the same string.
+ *
+ * The search index carries the one it is served at, `qr/qr-code-scanner/`,
+ * which ends in a slash. `fileOf` is the markup behind it; `hrefOf` is what a
+ * link on another page should say. Conflating the two is what broke this
+ * script the first time the URLs moved, so they are named apart.
+ */
+const fileOf = (url) => (url.endsWith('/') ? url + 'index.html' : url);
+const hrefOf = (url) => '/' + url;
+
+/** The address a file on disk is served at. */
+function publicUrl(rel) {
+  if (rel === 'index.html') return '/';
+  if (rel.endsWith('/index.html')) return '/' + rel.slice(0, -'index.html'.length);
+  return '/' + rel;
+}
+
+/** Links are root-absolute now, so depth no longer changes what a page says. */
+const prefixOf = () => '/';
 
 /* ------------------------------------------------------------------ */
 /* sitemap                                                            */
@@ -99,8 +114,27 @@ const NOT_INDEXED = new Set(['404.html']);
  * left at the old URL so existing links and printed codes keep working. They
  * must stay out of the sitemap, and patching a font or analytics block into
  * one would defeat the point of a page whose whole job is to redirect.
+ *
+ * Recognised by what they are rather than listed by name: there are now one
+ * per tool, and a list of twelve hundred would go stale the first time a tool
+ * was added.
  */
-const REDIRECTS = new Set(['developer/qr-code-generator.html']);
+const isRedirect = (html) =>
+  /name="robots" content="noindex,follow"/.test(html) && /http-equiv="refresh"/.test(html);
+
+const redirectPages = (function () {
+  let cache = null;
+  return function () {
+    if (cache) return cache;
+    cache = new Set();
+    for (const abs of pages()) {
+      if (isRedirect(fs.readFileSync(abs, 'utf8'))) {
+        cache.add(path.relative(ROOT, abs).replace(/\\/g, '/'));
+      }
+    }
+    return cache;
+  };
+})();
 
 /**
  * Section hubs, in the order the sitemap has always listed them. This is the
@@ -146,7 +180,7 @@ function searchIndexPaths() {
 function sitemapPages() {
   const onDisk = new Set(
     pages().map((abs) => path.relative(ROOT, abs).replace(/\\/g, '/'))
-           .filter((rel) => !NOT_INDEXED.has(rel) && !REDIRECTS.has(rel))
+           .filter((rel) => !NOT_INDEXED.has(rel) && !redirectPages().has(rel))
   );
 
   const out = [], seen = new Set();
@@ -157,7 +191,7 @@ function sitemapPages() {
   };
 
   take('index.html');
-  searchIndexPaths().forEach(take);
+  searchIndexPaths().map(fileOf).forEach(take);
   SECTIONS.forEach((s) => take(s + '/index.html'));
   Object.keys(META_PAGES).forEach(take);
   [...onDisk].filter((r) => /^conversions\/[^/]+\/index\.html$/.test(r))
@@ -176,7 +210,7 @@ function buildSitemap() {
   const { out, unclaimed } = sitemapPages();
   const body = out.map((rel) => {
     const { freq, pri } = sitemapMeta(rel);
-    const loc = rel === 'index.html' ? SITE + '/' : `${SITE}/${rel}`;
+    const loc = SITE + publicUrl(rel);
     return `<url><loc>${loc}</loc><changefreq>${freq}</changefreq>` +
            `<priority>${pri}</priority></url>`;
   });
@@ -208,14 +242,14 @@ const POPULAR_END = '<!-- /POPULAR -->';
  * leaves the device, which is why it can be honest about being personal.
  */
 const POPULAR = [
-  'image/image-compressor.html',
-  'pdf/merge-pdf.html',
-  'developer/json-formatter.html',
-  'image/passport-photo.html',
-  'qr/qr-code-generator.html',
-  'business/currency-converter.html',
-  'india/gst-calculator.html',
-  'text/word-counter.html'
+  'image/image-compressor/',
+  'pdf/merge-pdf/',
+  'developer/json-formatter/',
+  'image/passport-photo/',
+  'qr/qr-code-generator/',
+  'business/currency-converter/',
+  'india/gst-calculator/',
+  'text/word-counter/'
 ];
 
 function buildPopular() {
@@ -226,11 +260,11 @@ function buildPopular() {
   const card = (u) => {
     const t = byUrl.get(u);
     if (!t) throw new Error(`POPULAR lists a tool that is not in the search index: ${u}`);
-    const page = fs.readFileSync(path.join(ROOT, u), 'utf8');
+    const page = fs.readFileSync(path.join(ROOT, fileOf(u)), 'utf8');
     const d = /<meta name="description" content="([^"]*)"/.exec(page);
-    return `<a class="card" href="${u}">` +
+    return `<a class="card" href="${hrefOf(u)}">` +
       '<span class="card-icon"><svg class="ico" aria-hidden="true" focusable="false">' +
-      `<use href="./assets/icons.svg#i-${t.id}"></use></svg></span>` +
+      `<use href="/assets/icons.svg#i-${t.id}"></use></svg></span>` +
       `<strong>${esc(t.title)}</strong>` +
       (d ? `<span class="card-desc">${d[1]}</span>` : '') +
       '</a>';
@@ -301,14 +335,14 @@ function searchIndexTools() {
 
   return JSON.parse(m[1]).map((e) => {
     const url = String(e[1]);
-    const seg = url.split('/');
+    const seg = url.replace(/\/+$/, '').split('/');
     const slug = seg[seg.length - 1].replace(/\.html$/, '');
     return {
       title: String(e[0]),
       url,
       id: String(e[2] || ''),
       category: seg[0],
-      /* conversions/<family>/<pair>.html — the family is a far stronger signal
+      /* conversions/<family>/<pair>/ — the family is a far stronger signal
          than the category, which covers a thousand pages on its own. */
       family: seg.length > 2 ? seg[1] : null,
       editable: seg[0] !== 'pdf',
@@ -362,20 +396,22 @@ function relScore(a, b) {
 const REL_SECTION =
   /<section class="panel"><h2>Related tools<\/h2><ul class="related">([\s\S]*?)<\/ul><\/section>/;
 
-/** Site-relative targets of the hand-written links, or null if there is no list. */
-function curatedOf(html, pageUrl) {
+/**
+ * The tools a hand-written list points at, named the way the search index names
+ * them, or null if the page has no list. Links are root-absolute on the page
+ * and slash-terminated in the index, so both forms are accepted on the way in.
+ */
+function curatedOf(html) {
   const m = REL_SECTION.exec(html);
   if (!m) return null;
-  const dir = path.posix.dirname(pageUrl);
   return [...m[1].split(REL_MARK)[0].matchAll(/href="([^"]+)"/g)]
-    .map((x) => path.posix.normalize(path.posix.join(dir, x[1])));
+    .map((x) => x[1].replace(/^\//, '').replace(/#.*$/, ''))
+    .map((u) => (u.endsWith('.html') ? u.replace(/\.html$/, '/') : u));
 }
 
 function relBlock(pageUrl, targets, byUrl) {
-  const dir = path.posix.dirname(pageUrl);
   return targets.map((u) => {
-    const href = path.posix.relative(dir, u);
-    return `<li><a href="${href}">${esc(byUrl.get(u).title)}</a></li>`;
+    return `<li><a href="${hrefOf(u)}">${esc(byUrl.get(u).title)}</a></li>`;
   }).join('');
 }
 
@@ -389,9 +425,9 @@ function patchRelated() {
   const html = new Map();
   let created = 0;
   for (const t of tools) {
-    const src = fs.readFileSync(path.join(ROOT, t.url), 'utf8');
+    const src = fs.readFileSync(path.join(ROOT, fileOf(t.url)), 'utf8');
     html.set(t.url, src);
-    const c = curatedOf(src, t.url);
+    const c = curatedOf(src);
     if (c === null) { created++; curated.set(t.url, []); }
     else curated.set(t.url, c.filter((u) => byUrl.has(u)));
   }
@@ -447,7 +483,7 @@ function patchRelated() {
         if (o.category !== t.category) {
           const fam = o.category + '/' + (o.family || '');
           if ((perFamily.get(fam) || 0) >= 3) continue;
-          const lead = u.split('/').pop().replace(/\.html$/, '').split('-to-')[0];
+          const lead = u.replace(/\/+$/, '').split('/').pop().replace(/\.html$/, '').split('-to-')[0];
           if (leadSeen.has(lead)) continue;
           perFamily.set(fam, (perFamily.get(fam) || 0) + 1);
           leadSeen.add(lead);
@@ -530,8 +566,8 @@ function patchRelated() {
 
     if (next !== src) {
       touched++;
-      changes.push('update ' + t.url);
-      if (!CHECK) fs.writeFileSync(path.join(ROOT, t.url), next);
+      changes.push('update ' + fileOf(t.url));
+      if (!CHECK) fs.writeFileSync(path.join(ROOT, fileOf(t.url)), next);
     }
   }
 
@@ -603,10 +639,10 @@ function patchPages() {
 
   for (const abs of list) {
     const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
-    if (REDIRECTS.has(rel)) continue;
     const before = fs.readFileSync(abs, 'utf8');
+    if (isRedirect(before)) continue;
     let html = before;
-    const p = prefixOf(abs);
+    const p = prefixOf();
 
     /* fonts: first run swaps the Google block out, later runs update in place */
     if (GOOGLE_FONTS.test(html)) {

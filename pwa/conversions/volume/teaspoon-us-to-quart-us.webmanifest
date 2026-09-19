@@ -3,8 +3,8 @@
   "name": "Convert Teaspoon (US) to Quart (US) — 1234Tools",
   "short_name": "Teaspoon (US)",
   "description": "Convert Teaspoon (US) (tsp) to Quart (US) (qt) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/teaspoon-us-to-quart-us.html?src=pwa",
-  "scope": "/conversions/volume/teaspoon-us-to-quart-us.html",
+  "start_url": "/conversions/volume/teaspoon-us-to-quart-us/?src=pwa",
+  "scope": "/conversions/volume/teaspoon-us-to-quart-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

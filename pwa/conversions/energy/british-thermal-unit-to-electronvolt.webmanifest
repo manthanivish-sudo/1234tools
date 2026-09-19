@@ -3,8 +3,8 @@
   "name": "Convert British Thermal Unit to Electronvolt — 1234Tools",
   "short_name": "British Thermal",
   "description": "Convert British Thermal Unit (BTU) to Electronvolt (eV) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/british-thermal-unit-to-electronvolt.html?src=pwa",
-  "scope": "/conversions/energy/british-thermal-unit-to-electronvolt.html",
+  "start_url": "/conversions/energy/british-thermal-unit-to-electronvolt/?src=pwa",
+  "scope": "/conversions/energy/british-thermal-unit-to-electronvolt/",
   "display": "standalone",
   "display_override": [
     "standalone",

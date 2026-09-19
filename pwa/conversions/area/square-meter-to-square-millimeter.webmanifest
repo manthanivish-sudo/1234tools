@@ -3,8 +3,8 @@
   "name": "Convert Square Meter to Square Millimeter — 1234Tools",
   "short_name": "Square Meter",
   "description": "Convert Square Meter (m²) to Square Millimeter (mm²) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-meter-to-square-millimeter.html?src=pwa",
-  "scope": "/conversions/area/square-meter-to-square-millimeter.html",
+  "start_url": "/conversions/area/square-meter-to-square-millimeter/?src=pwa",
+  "scope": "/conversions/area/square-meter-to-square-millimeter/",
   "display": "standalone",
   "display_override": [
     "standalone",

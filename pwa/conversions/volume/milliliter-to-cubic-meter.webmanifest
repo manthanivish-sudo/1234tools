@@ -3,8 +3,8 @@
   "name": "Convert Milliliter to Cubic Meter — 1234Tools",
   "short_name": "Milliliter → Cubic",
   "description": "Convert Milliliter (mL) to Cubic Meter (m³) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/milliliter-to-cubic-meter.html?src=pwa",
-  "scope": "/conversions/volume/milliliter-to-cubic-meter.html",
+  "start_url": "/conversions/volume/milliliter-to-cubic-meter/?src=pwa",
+  "scope": "/conversions/volume/milliliter-to-cubic-meter/",
   "display": "standalone",
   "display_override": [
     "standalone",

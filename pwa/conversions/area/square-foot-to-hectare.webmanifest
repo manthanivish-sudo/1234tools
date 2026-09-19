@@ -3,8 +3,8 @@
   "name": "Convert Square Foot to Hectare — 1234Tools",
   "short_name": "Square Foot",
   "description": "Convert Square Foot (ft²) to Hectare (ha) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-foot-to-hectare.html?src=pwa",
-  "scope": "/conversions/area/square-foot-to-hectare.html",
+  "start_url": "/conversions/area/square-foot-to-hectare/?src=pwa",
+  "scope": "/conversions/area/square-foot-to-hectare/",
   "display": "standalone",
   "display_override": [
     "standalone",

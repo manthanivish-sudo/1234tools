@@ -3,8 +3,8 @@
   "name": "NPS Calculator — 1234Tools",
   "short_name": "NPS Calculator",
   "description": "National Pension System corpus at 60, with the mandatory annuity split and estimated pension.",
-  "start_url": "/india/nps-calculator.html?src=pwa",
-  "scope": "/india/nps-calculator.html",
+  "start_url": "/india/nps-calculator/?src=pwa",
+  "scope": "/india/nps-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

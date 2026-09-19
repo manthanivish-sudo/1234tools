@@ -3,8 +3,8 @@
   "name": "QR Code Generator — 1234Tools",
   "short_name": "QR Code Generator",
   "description": "Create QR codes for URLs, WiFi, contact cards, UPI and more. Custom shapes, colours and a logo, with a built-in scan check. Download as SVG or PNG.",
-  "start_url": "/qr/qr-code-generator.html?src=pwa",
-  "scope": "/qr/qr-code-generator.html",
+  "start_url": "/qr/qr-code-generator/?src=pwa",
+  "scope": "/qr/qr-code-generator/",
   "display": "standalone",
   "display_override": [
     "standalone",

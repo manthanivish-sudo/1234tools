@@ -3,8 +3,8 @@
   "name": "Convert Inch to Foot — 1234Tools",
   "short_name": "Inch → Foot",
   "description": "Convert Inch (in) to Foot (ft) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/inch-to-foot.html?src=pwa",
-  "scope": "/conversions/length/inch-to-foot.html",
+  "start_url": "/conversions/length/inch-to-foot/?src=pwa",
+  "scope": "/conversions/length/inch-to-foot/",
   "display": "standalone",
   "display_override": [
     "standalone",

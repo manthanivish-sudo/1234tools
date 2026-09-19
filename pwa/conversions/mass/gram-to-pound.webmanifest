@@ -3,8 +3,8 @@
   "name": "Convert Gram to Pound — 1234Tools",
   "short_name": "Gram → Pound",
   "description": "Convert Gram (g) to Pound (lb) instantly. Works in both directions, with a full mass & weight table.",
-  "start_url": "/conversions/mass/gram-to-pound.html?src=pwa",
-  "scope": "/conversions/mass/gram-to-pound.html",
+  "start_url": "/conversions/mass/gram-to-pound/?src=pwa",
+  "scope": "/conversions/mass/gram-to-pound/",
   "display": "standalone",
   "display_override": [
     "standalone",

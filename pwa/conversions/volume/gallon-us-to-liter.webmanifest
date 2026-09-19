@@ -3,8 +3,8 @@
   "name": "Convert Gallon (US) to Liter — 1234Tools",
   "short_name": "Gallon (US) → Liter",
   "description": "Convert Gallon (US) (gal) to Liter (L) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/gallon-us-to-liter.html?src=pwa",
-  "scope": "/conversions/volume/gallon-us-to-liter.html",
+  "start_url": "/conversions/volume/gallon-us-to-liter/?src=pwa",
+  "scope": "/conversions/volume/gallon-us-to-liter/",
   "display": "standalone",
   "display_override": [
     "standalone",

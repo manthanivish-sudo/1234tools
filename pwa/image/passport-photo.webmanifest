@@ -3,8 +3,8 @@
   "name": "Passport & ID Photo Maker — 1234Tools",
   "short_name": "Passport & ID Photo",
   "description": "Create correctly sized passport and visa photos, laid out on a printable 4×6 sheet.",
-  "start_url": "/image/passport-photo.html?src=pwa",
-  "scope": "/image/passport-photo.html",
+  "start_url": "/image/passport-photo/?src=pwa",
+  "scope": "/image/passport-photo/",
   "display": "standalone",
   "display_override": [
     "standalone",

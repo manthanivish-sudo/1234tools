@@ -3,8 +3,8 @@
   "name": "Loan Amortisation Schedule — 1234Tools",
   "short_name": "Loan Amortisation",
   "description": "Full payment-by-payment breakdown of principal, interest and remaining balance, with optional overpayments.",
-  "start_url": "/business/amortization-schedule.html?src=pwa",
-  "scope": "/business/amortization-schedule.html",
+  "start_url": "/business/amortization-schedule/?src=pwa",
+  "scope": "/business/amortization-schedule/",
   "display": "standalone",
   "display_override": [
     "standalone",

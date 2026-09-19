@@ -3,8 +3,8 @@
   "name": "Convert PSI to Bar — 1234Tools",
   "short_name": "PSI → Bar",
   "description": "Convert PSI (psi) to Bar (bar) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/psi-to-bar.html?src=pwa",
-  "scope": "/conversions/pressure/psi-to-bar.html",
+  "start_url": "/conversions/pressure/psi-to-bar/?src=pwa",
+  "scope": "/conversions/pressure/psi-to-bar/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Year (Julian) to Hour — 1234Tools",
   "short_name": "Year (Julian) → Hour",
   "description": "Convert Year (Julian) (yr) to Hour (h) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/year-julian-to-hour.html?src=pwa",
-  "scope": "/conversions/time/year-julian-to-hour.html",
+  "start_url": "/conversions/time/year-julian-to-hour/?src=pwa",
+  "scope": "/conversions/time/year-julian-to-hour/",
   "display": "standalone",
   "display_override": [
     "standalone",

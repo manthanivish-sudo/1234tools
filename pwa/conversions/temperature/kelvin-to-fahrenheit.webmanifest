@@ -3,8 +3,8 @@
   "name": "Convert Kelvin to Fahrenheit — 1234Tools",
   "short_name": "Kelvin → Fahrenheit",
   "description": "Convert Kelvin (K) to Fahrenheit (°F) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/kelvin-to-fahrenheit.html?src=pwa",
-  "scope": "/conversions/temperature/kelvin-to-fahrenheit.html",
+  "start_url": "/conversions/temperature/kelvin-to-fahrenheit/?src=pwa",
+  "scope": "/conversions/temperature/kelvin-to-fahrenheit/",
   "display": "standalone",
   "display_override": [
     "standalone",

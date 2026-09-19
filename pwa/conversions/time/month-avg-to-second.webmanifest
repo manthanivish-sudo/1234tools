@@ -3,8 +3,8 @@
   "name": "Convert Month (avg) to Second — 1234Tools",
   "short_name": "Month (avg) → Second",
   "description": "Convert Month (avg) (mo) to Second (s) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/month-avg-to-second.html?src=pwa",
-  "scope": "/conversions/time/month-avg-to-second.html",
+  "start_url": "/conversions/time/month-avg-to-second/?src=pwa",
+  "scope": "/conversions/time/month-avg-to-second/",
   "display": "standalone",
   "display_override": [
     "standalone",

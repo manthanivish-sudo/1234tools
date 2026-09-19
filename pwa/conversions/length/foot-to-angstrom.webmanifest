@@ -3,8 +3,8 @@
   "name": "Convert Foot to Angstrom — 1234Tools",
   "short_name": "Foot → Angstrom",
   "description": "Convert Foot (ft) to Angstrom (Å) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/foot-to-angstrom.html?src=pwa",
-  "scope": "/conversions/length/foot-to-angstrom.html",
+  "start_url": "/conversions/length/foot-to-angstrom/?src=pwa",
+  "scope": "/conversions/length/foot-to-angstrom/",
   "display": "standalone",
   "display_override": [
     "standalone",

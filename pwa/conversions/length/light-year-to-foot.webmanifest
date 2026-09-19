@@ -3,8 +3,8 @@
   "name": "Convert Light Year to Foot — 1234Tools",
   "short_name": "Light Year → Foot",
   "description": "Convert Light Year (ly) to Foot (ft) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/light-year-to-foot.html?src=pwa",
-  "scope": "/conversions/length/light-year-to-foot.html",
+  "start_url": "/conversions/length/light-year-to-foot/?src=pwa",
+  "scope": "/conversions/length/light-year-to-foot/",
   "display": "standalone",
   "display_override": [
     "standalone",

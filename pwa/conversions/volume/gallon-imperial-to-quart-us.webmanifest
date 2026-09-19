@@ -3,8 +3,8 @@
   "name": "Convert Gallon (Imperial) to Quart (US) — 1234Tools",
   "short_name": "Gallon (Imperial)",
   "description": "Convert Gallon (Imperial) (gal UK) to Quart (US) (qt) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/gallon-imperial-to-quart-us.html?src=pwa",
-  "scope": "/conversions/volume/gallon-imperial-to-quart-us.html",
+  "start_url": "/conversions/volume/gallon-imperial-to-quart-us/?src=pwa",
+  "scope": "/conversions/volume/gallon-imperial-to-quart-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

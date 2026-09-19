@@ -3,8 +3,8 @@
   "name": "URL Encoder & Decoder — 1234Tools",
   "short_name": "URL Encoder",
   "description": "Percent-encode text for URLs and query strings, or decode it back to readable form.",
-  "start_url": "/developer/url-encoder.html?src=pwa",
-  "scope": "/developer/url-encoder.html",
+  "start_url": "/developer/url-encoder/?src=pwa",
+  "scope": "/developer/url-encoder/",
   "display": "standalone",
   "display_override": [
     "standalone",

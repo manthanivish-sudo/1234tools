@@ -3,8 +3,8 @@
   "name": "Convert Nautical Mile to Astronomical Unit — 1234Tools",
   "short_name": "Nautical Mile",
   "description": "Convert Nautical Mile (nmi) to Astronomical Unit (AU) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/nautical-mile-to-astronomical-unit.html?src=pwa",
-  "scope": "/conversions/length/nautical-mile-to-astronomical-unit.html",
+  "start_url": "/conversions/length/nautical-mile-to-astronomical-unit/?src=pwa",
+  "scope": "/conversions/length/nautical-mile-to-astronomical-unit/",
   "display": "standalone",
   "display_override": [
     "standalone",

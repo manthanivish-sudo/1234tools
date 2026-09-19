@@ -3,8 +3,8 @@
   "name": "Convert Arcminute to Degree — 1234Tools",
   "short_name": "Arcminute → Degree",
   "description": "Convert Arcminute (') to Degree (°) instantly. Works in both directions, with a full angle table.",
-  "start_url": "/conversions/angle/arcminute-to-degree.html?src=pwa",
-  "scope": "/conversions/angle/arcminute-to-degree.html",
+  "start_url": "/conversions/angle/arcminute-to-degree/?src=pwa",
+  "scope": "/conversions/angle/arcminute-to-degree/",
   "display": "standalone",
   "display_override": [
     "standalone",

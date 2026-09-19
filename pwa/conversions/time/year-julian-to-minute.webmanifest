@@ -3,8 +3,8 @@
   "name": "Convert Year (Julian) to Minute — 1234Tools",
   "short_name": "Year (Julian)",
   "description": "Convert Year (Julian) (yr) to Minute (min) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/year-julian-to-minute.html?src=pwa",
-  "scope": "/conversions/time/year-julian-to-minute.html",
+  "start_url": "/conversions/time/year-julian-to-minute/?src=pwa",
+  "scope": "/conversions/time/year-julian-to-minute/",
   "display": "standalone",
   "display_override": [
     "standalone",

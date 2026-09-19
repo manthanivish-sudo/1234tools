@@ -3,8 +3,8 @@
   "name": "Convert Foot to Nautical Mile — 1234Tools",
   "short_name": "Foot → Nautical Mile",
   "description": "Convert Foot (ft) to Nautical Mile (nmi) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/foot-to-nautical-mile.html?src=pwa",
-  "scope": "/conversions/length/foot-to-nautical-mile.html",
+  "start_url": "/conversions/length/foot-to-nautical-mile/?src=pwa",
+  "scope": "/conversions/length/foot-to-nautical-mile/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Radian to Degree — 1234Tools",
   "short_name": "Radian → Degree",
   "description": "Convert Radian (rad) to Degree (°) instantly. Works in both directions, with a full angle table.",
-  "start_url": "/conversions/angle/radian-to-degree.html?src=pwa",
-  "scope": "/conversions/angle/radian-to-degree.html",
+  "start_url": "/conversions/angle/radian-to-degree/?src=pwa",
+  "scope": "/conversions/angle/radian-to-degree/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Atmosphere to Kilopascal — 1234Tools",
   "short_name": "Atmosphere",
   "description": "Convert Atmosphere (atm) to Kilopascal (kPa) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/atmosphere-to-kilopascal.html?src=pwa",
-  "scope": "/conversions/pressure/atmosphere-to-kilopascal.html",
+  "start_url": "/conversions/pressure/atmosphere-to-kilopascal/?src=pwa",
+  "scope": "/conversions/pressure/atmosphere-to-kilopascal/",
   "display": "standalone",
   "display_override": [
     "standalone",

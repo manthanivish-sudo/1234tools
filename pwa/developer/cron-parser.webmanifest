@@ -3,8 +3,8 @@
   "name": "Cron Expression Parser — 1234Tools",
   "short_name": "Cron Expression",
   "description": "Translate a cron expression into plain English and see exactly when it will next run.",
-  "start_url": "/developer/cron-parser.html?src=pwa",
-  "scope": "/developer/cron-parser.html",
+  "start_url": "/developer/cron-parser/?src=pwa",
+  "scope": "/developer/cron-parser/",
   "display": "standalone",
   "display_override": [
     "standalone",

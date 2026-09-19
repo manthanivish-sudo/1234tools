@@ -3,8 +3,8 @@
   "name": "Convert Delisle to Newton — 1234Tools",
   "short_name": "Delisle → Newton",
   "description": "Convert Delisle (°De) to Newton (°N) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/delisle-to-newton.html?src=pwa",
-  "scope": "/conversions/temperature/delisle-to-newton.html",
+  "start_url": "/conversions/temperature/delisle-to-newton/?src=pwa",
+  "scope": "/conversions/temperature/delisle-to-newton/",
   "display": "standalone",
   "display_override": [
     "standalone",

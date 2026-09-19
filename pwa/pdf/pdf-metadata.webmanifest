@@ -3,8 +3,8 @@
   "name": "PDF Metadata Editor & Remover — 1234Tools",
   "short_name": "PDF Metadata Editor",
   "description": "View, change or completely strip the hidden metadata in a PDF — author, title, software.",
-  "start_url": "/pdf/pdf-metadata.html?src=pwa",
-  "scope": "/pdf/pdf-metadata.html",
+  "start_url": "/pdf/pdf-metadata/?src=pwa",
+  "scope": "/pdf/pdf-metadata/",
   "display": "standalone",
   "display_override": [
     "standalone",

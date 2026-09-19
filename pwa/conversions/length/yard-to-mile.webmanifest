@@ -3,8 +3,8 @@
   "name": "Convert Yard to Mile — 1234Tools",
   "short_name": "Yard → Mile",
   "description": "Convert Yard (yd) to Mile (mi) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/yard-to-mile.html?src=pwa",
-  "scope": "/conversions/length/yard-to-mile.html",
+  "start_url": "/conversions/length/yard-to-mile/?src=pwa",
+  "scope": "/conversions/length/yard-to-mile/",
   "display": "standalone",
   "display_override": [
     "standalone",

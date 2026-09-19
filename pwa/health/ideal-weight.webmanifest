@@ -3,8 +3,8 @@
   "name": "Reference Weight Range Calculator — 1234Tools",
   "short_name": "Reference Weight",
   "description": "Weight ranges from the standard clinical formulas, with a clear account of what they can and cannot tell you.",
-  "start_url": "/health/ideal-weight.html?src=pwa",
-  "scope": "/health/ideal-weight.html",
+  "start_url": "/health/ideal-weight/?src=pwa",
+  "scope": "/health/ideal-weight/",
   "display": "standalone",
   "display_override": [
     "standalone",

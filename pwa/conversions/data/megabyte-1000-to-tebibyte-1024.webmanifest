@@ -3,8 +3,8 @@
   "name": "Convert Megabyte (1000) to Tebibyte (1024) — 1234Tools",
   "short_name": "Megabyte (1000)",
   "description": "Convert Megabyte (1000) (MB) to Tebibyte (1024) (TiB) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/megabyte-1000-to-tebibyte-1024.html?src=pwa",
-  "scope": "/conversions/data/megabyte-1000-to-tebibyte-1024.html",
+  "start_url": "/conversions/data/megabyte-1000-to-tebibyte-1024/?src=pwa",
+  "scope": "/conversions/data/megabyte-1000-to-tebibyte-1024/",
   "display": "standalone",
   "display_override": [
     "standalone",

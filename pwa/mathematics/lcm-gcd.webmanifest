@@ -3,8 +3,8 @@
   "name": "LCM & GCD Calculator — 1234Tools",
   "short_name": "LCM & GCD Calculator",
   "description": "Find the least common multiple and greatest common divisor of any list of numbers.",
-  "start_url": "/mathematics/lcm-gcd.html?src=pwa",
-  "scope": "/mathematics/lcm-gcd.html",
+  "start_url": "/mathematics/lcm-gcd/?src=pwa",
+  "scope": "/mathematics/lcm-gcd/",
   "display": "standalone",
   "display_override": [
     "standalone",

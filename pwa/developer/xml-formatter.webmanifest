@@ -3,8 +3,8 @@
   "name": "XML Formatter & Validator — 1234Tools",
   "short_name": "XML Formatter",
   "description": "Indent, tidy and check XML. Also minifies for production and reports tag structure.",
-  "start_url": "/developer/xml-formatter.html?src=pwa",
-  "scope": "/developer/xml-formatter.html",
+  "start_url": "/developer/xml-formatter/?src=pwa",
+  "scope": "/developer/xml-formatter/",
   "display": "standalone",
   "display_override": [
     "standalone",

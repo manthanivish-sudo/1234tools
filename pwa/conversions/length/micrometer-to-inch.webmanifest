@@ -3,8 +3,8 @@
   "name": "Convert Micrometer to Inch — 1234Tools",
   "short_name": "Micrometer → Inch",
   "description": "Convert Micrometer (µm) to Inch (in) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/micrometer-to-inch.html?src=pwa",
-  "scope": "/conversions/length/micrometer-to-inch.html",
+  "start_url": "/conversions/length/micrometer-to-inch/?src=pwa",
+  "scope": "/conversions/length/micrometer-to-inch/",
   "display": "standalone",
   "display_override": [
     "standalone",

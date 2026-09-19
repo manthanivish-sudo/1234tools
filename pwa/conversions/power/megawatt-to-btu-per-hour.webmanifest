@@ -3,8 +3,8 @@
   "name": "Convert Megawatt to BTU per Hour — 1234Tools",
   "short_name": "Megawatt → BTU per",
   "description": "Convert Megawatt (MW) to BTU per Hour (BTU/h) instantly. Works in both directions, with a full power table.",
-  "start_url": "/conversions/power/megawatt-to-btu-per-hour.html?src=pwa",
-  "scope": "/conversions/power/megawatt-to-btu-per-hour.html",
+  "start_url": "/conversions/power/megawatt-to-btu-per-hour/?src=pwa",
+  "scope": "/conversions/power/megawatt-to-btu-per-hour/",
   "display": "standalone",
   "display_override": [
     "standalone",

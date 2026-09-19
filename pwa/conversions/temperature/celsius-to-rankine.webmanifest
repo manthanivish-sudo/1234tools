@@ -3,8 +3,8 @@
   "name": "Convert Celsius to Rankine — 1234Tools",
   "short_name": "Celsius → Rankine",
   "description": "Convert Celsius (°C) to Rankine (°R) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/celsius-to-rankine.html?src=pwa",
-  "scope": "/conversions/temperature/celsius-to-rankine.html",
+  "start_url": "/conversions/temperature/celsius-to-rankine/?src=pwa",
+  "scope": "/conversions/temperature/celsius-to-rankine/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Image Format Converter — 1234Tools",
   "short_name": "Image Format",
   "description": "Convert between PNG, JPEG and WebP in your browser. No upload, no queue, no watermark.",
-  "start_url": "/image/image-converter.html?src=pwa",
-  "scope": "/image/image-converter.html",
+  "start_url": "/image/image-converter/?src=pwa",
+  "scope": "/image/image-converter/",
   "display": "standalone",
   "display_override": [
     "standalone",

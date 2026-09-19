@@ -3,8 +3,8 @@
   "name": "Ohm's Law Calculator — 1234Tools",
   "short_name": "Ohm's Law Calculator",
   "description": "Calculate voltage, current, resistance, and power. Enter any two values.",
-  "start_url": "/engineering/ohms-law.html?src=pwa",
-  "scope": "/engineering/ohms-law.html",
+  "start_url": "/engineering/ohms-law/?src=pwa",
+  "scope": "/engineering/ohms-law/",
   "display": "standalone",
   "display_override": [
     "standalone",

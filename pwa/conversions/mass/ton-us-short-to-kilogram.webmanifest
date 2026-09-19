@@ -3,8 +3,8 @@
   "name": "Convert Ton (US short) to Kilogram — 1234Tools",
   "short_name": "Ton (US short)",
   "description": "Convert Ton (US short) (ton) to Kilogram (kg) instantly. Works in both directions, with a full mass & weight table.",
-  "start_url": "/conversions/mass/ton-us-short-to-kilogram.html?src=pwa",
-  "scope": "/conversions/mass/ton-us-short-to-kilogram.html",
+  "start_url": "/conversions/mass/ton-us-short-to-kilogram/?src=pwa",
+  "scope": "/conversions/mass/ton-us-short-to-kilogram/",
   "display": "standalone",
   "display_override": [
     "standalone",

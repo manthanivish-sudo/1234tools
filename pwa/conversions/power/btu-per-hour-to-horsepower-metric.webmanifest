@@ -3,8 +3,8 @@
   "name": "Convert BTU per Hour to Horsepower (metric) — 1234Tools",
   "short_name": "BTU per Hour",
   "description": "Convert BTU per Hour (BTU/h) to Horsepower (metric) (PS) instantly. Works in both directions, with a full power table.",
-  "start_url": "/conversions/power/btu-per-hour-to-horsepower-metric.html?src=pwa",
-  "scope": "/conversions/power/btu-per-hour-to-horsepower-metric.html",
+  "start_url": "/conversions/power/btu-per-hour-to-horsepower-metric/?src=pwa",
+  "scope": "/conversions/power/btu-per-hour-to-horsepower-metric/",
   "display": "standalone",
   "display_override": [
     "standalone",

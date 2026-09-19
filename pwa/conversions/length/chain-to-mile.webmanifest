@@ -3,8 +3,8 @@
   "name": "Convert Chain to Mile — 1234Tools",
   "short_name": "Chain → Mile",
   "description": "Convert Chain (ch) to Mile (mi) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/chain-to-mile.html?src=pwa",
-  "scope": "/conversions/length/chain-to-mile.html",
+  "start_url": "/conversions/length/chain-to-mile/?src=pwa",
+  "scope": "/conversions/length/chain-to-mile/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Kilopascal to PSI — 1234Tools",
   "short_name": "Kilopascal → PSI",
   "description": "Convert Kilopascal (kPa) to PSI (psi) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/kilopascal-to-psi.html?src=pwa",
-  "scope": "/conversions/pressure/kilopascal-to-psi.html",
+  "start_url": "/conversions/pressure/kilopascal-to-psi/?src=pwa",
+  "scope": "/conversions/pressure/kilopascal-to-psi/",
   "display": "standalone",
   "display_override": [
     "standalone",

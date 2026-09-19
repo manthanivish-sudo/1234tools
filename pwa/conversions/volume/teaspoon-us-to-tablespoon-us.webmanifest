@@ -3,8 +3,8 @@
   "name": "Convert Teaspoon (US) to Tablespoon (US) — 1234Tools",
   "short_name": "Teaspoon (US)",
   "description": "Convert Teaspoon (US) (tsp) to Tablespoon (US) (tbsp) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/teaspoon-us-to-tablespoon-us.html?src=pwa",
-  "scope": "/conversions/volume/teaspoon-us-to-tablespoon-us.html",
+  "start_url": "/conversions/volume/teaspoon-us-to-tablespoon-us/?src=pwa",
+  "scope": "/conversions/volume/teaspoon-us-to-tablespoon-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

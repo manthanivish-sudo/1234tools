@@ -3,8 +3,8 @@
   "name": "Ovulation & Fertile Window Calculator — 1234Tools",
   "short_name": "Ovulation & Fertile",
   "description": "Estimate ovulation and the fertile window from cycle length and last period date.",
-  "start_url": "/health/ovulation-calculator.html?src=pwa",
-  "scope": "/health/ovulation-calculator.html",
+  "start_url": "/health/ovulation-calculator/?src=pwa",
+  "scope": "/health/ovulation-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Base64 Encoder & Decoder — 1234Tools",
   "short_name": "Base64 Encoder",
   "description": "Encode text to Base64 or decode it back. Full Unicode support, plus URL-safe output.",
-  "start_url": "/developer/base64.html?src=pwa",
-  "scope": "/developer/base64.html",
+  "start_url": "/developer/base64/?src=pwa",
+  "scope": "/developer/base64/",
   "display": "standalone",
   "display_override": [
     "standalone",

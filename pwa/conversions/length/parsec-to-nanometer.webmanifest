@@ -3,8 +3,8 @@
   "name": "Convert Parsec to Nanometer — 1234Tools",
   "short_name": "Parsec → Nanometer",
   "description": "Convert Parsec (pc) to Nanometer (nm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/parsec-to-nanometer.html?src=pwa",
-  "scope": "/conversions/length/parsec-to-nanometer.html",
+  "start_url": "/conversions/length/parsec-to-nanometer/?src=pwa",
+  "scope": "/conversions/length/parsec-to-nanometer/",
   "display": "standalone",
   "display_override": [
     "standalone",

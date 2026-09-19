@@ -3,8 +3,8 @@
   "name": "Convert Ton (US short) to Ounce — 1234Tools",
   "short_name": "Ton (US short)",
   "description": "Convert Ton (US short) (ton) to Ounce (oz) instantly. Works in both directions, with a full mass & weight table.",
-  "start_url": "/conversions/mass/ton-us-short-to-ounce.html?src=pwa",
-  "scope": "/conversions/mass/ton-us-short-to-ounce.html",
+  "start_url": "/conversions/mass/ton-us-short-to-ounce/?src=pwa",
+  "scope": "/conversions/mass/ton-us-short-to-ounce/",
   "display": "standalone",
   "display_override": [
     "standalone",

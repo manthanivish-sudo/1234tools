@@ -3,8 +3,8 @@
   "name": "Convert Megapascal to Inches of Mercury — 1234Tools",
   "short_name": "Megapascal → Inches",
   "description": "Convert Megapascal (MPa) to Inches of Mercury (inHg) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/megapascal-to-inches-of-mercury.html?src=pwa",
-  "scope": "/conversions/pressure/megapascal-to-inches-of-mercury.html",
+  "start_url": "/conversions/pressure/megapascal-to-inches-of-mercury/?src=pwa",
+  "scope": "/conversions/pressure/megapascal-to-inches-of-mercury/",
   "display": "standalone",
   "display_override": [
     "standalone",

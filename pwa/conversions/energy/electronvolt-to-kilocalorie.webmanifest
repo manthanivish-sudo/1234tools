@@ -3,8 +3,8 @@
   "name": "Convert Electronvolt to Kilocalorie — 1234Tools",
   "short_name": "Electronvolt",
   "description": "Convert Electronvolt (eV) to Kilocalorie (kcal) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/electronvolt-to-kilocalorie.html?src=pwa",
-  "scope": "/conversions/energy/electronvolt-to-kilocalorie.html",
+  "start_url": "/conversions/energy/electronvolt-to-kilocalorie/?src=pwa",
+  "scope": "/conversions/energy/electronvolt-to-kilocalorie/",
   "display": "standalone",
   "display_override": [
     "standalone",

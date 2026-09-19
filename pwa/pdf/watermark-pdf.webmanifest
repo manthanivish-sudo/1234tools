@@ -3,8 +3,8 @@
   "name": "Add Watermark to PDF — 1234Tools",
   "short_name": "Add Watermark → PDF",
   "description": "Stamp text across every page — DRAFT, CONFIDENTIAL, a name or a date — at any angle and opacity.",
-  "start_url": "/pdf/watermark-pdf.html?src=pwa",
-  "scope": "/pdf/watermark-pdf.html",
+  "start_url": "/pdf/watermark-pdf/?src=pwa",
+  "scope": "/pdf/watermark-pdf/",
   "display": "standalone",
   "display_override": [
     "standalone",

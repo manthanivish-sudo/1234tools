@@ -3,8 +3,8 @@
   "name": "Convert Square Millimeter to Acre — 1234Tools",
   "short_name": "Square Millimeter",
   "description": "Convert Square Millimeter (mm²) to Acre (ac) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-millimeter-to-acre.html?src=pwa",
-  "scope": "/conversions/area/square-millimeter-to-acre.html",
+  "start_url": "/conversions/area/square-millimeter-to-acre/?src=pwa",
+  "scope": "/conversions/area/square-millimeter-to-acre/",
   "display": "standalone",
   "display_override": [
     "standalone",

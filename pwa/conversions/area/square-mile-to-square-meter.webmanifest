@@ -3,8 +3,8 @@
   "name": "Convert Square Mile to Square Meter — 1234Tools",
   "short_name": "Square Mile",
   "description": "Convert Square Mile (mi²) to Square Meter (m²) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-mile-to-square-meter.html?src=pwa",
-  "scope": "/conversions/area/square-mile-to-square-meter.html",
+  "start_url": "/conversions/area/square-mile-to-square-meter/?src=pwa",
+  "scope": "/conversions/area/square-mile-to-square-meter/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Newton to Réaumur — 1234Tools",
   "short_name": "Newton → Réaumur",
   "description": "Convert Newton (°N) to Réaumur (°Ré) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/newton-to-r-aumur.html?src=pwa",
-  "scope": "/conversions/temperature/newton-to-r-aumur.html",
+  "start_url": "/conversions/temperature/newton-to-r-aumur/?src=pwa",
+  "scope": "/conversions/temperature/newton-to-r-aumur/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Certificate Generator — 1234Tools",
   "short_name": "Certificate",
   "description": "Create certificates of completion, achievement or attendance — one, or a batch from a name list.",
-  "start_url": "/pdf/certificate-pdf.html?src=pwa",
-  "scope": "/pdf/certificate-pdf.html",
+  "start_url": "/pdf/certificate-pdf/?src=pwa",
+  "scope": "/pdf/certificate-pdf/",
   "display": "standalone",
   "display_override": [
     "standalone",

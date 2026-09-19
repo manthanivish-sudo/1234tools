@@ -3,8 +3,8 @@
   "name": "Convert Millibar to Kilopascal — 1234Tools",
   "short_name": "Millibar",
   "description": "Convert Millibar (mbar) to Kilopascal (kPa) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/millibar-to-kilopascal.html?src=pwa",
-  "scope": "/conversions/pressure/millibar-to-kilopascal.html",
+  "start_url": "/conversions/pressure/millibar-to-kilopascal/?src=pwa",
+  "scope": "/conversions/pressure/millibar-to-kilopascal/",
   "display": "standalone",
   "display_override": [
     "standalone",

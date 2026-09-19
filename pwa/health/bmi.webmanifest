@@ -3,8 +3,8 @@
   "name": "BMI Calculator — 1234Tools",
   "short_name": "BMI Calculator",
   "description": "Calculate Body Mass Index from height and weight, in metric or imperial units.",
-  "start_url": "/health/bmi.html?src=pwa",
-  "scope": "/health/bmi.html",
+  "start_url": "/health/bmi/?src=pwa",
+  "scope": "/health/bmi/",
   "display": "standalone",
   "display_override": [
     "standalone",

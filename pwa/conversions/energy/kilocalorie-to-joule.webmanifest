@@ -3,8 +3,8 @@
   "name": "Convert Kilocalorie to Joule — 1234Tools",
   "short_name": "Kilocalorie → Joule",
   "description": "Convert Kilocalorie (kcal) to Joule (J) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/kilocalorie-to-joule.html?src=pwa",
-  "scope": "/conversions/energy/kilocalorie-to-joule.html",
+  "start_url": "/conversions/energy/kilocalorie-to-joule/?src=pwa",
+  "scope": "/conversions/energy/kilocalorie-to-joule/",
   "display": "standalone",
   "display_override": [
     "standalone",

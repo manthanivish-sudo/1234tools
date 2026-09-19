@@ -3,8 +3,8 @@
   "name": "Convert Millisecond to Month (avg) — 1234Tools",
   "short_name": "Millisecond → Month",
   "description": "Convert Millisecond (ms) to Month (avg) (mo) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/millisecond-to-month-avg.html?src=pwa",
-  "scope": "/conversions/time/millisecond-to-month-avg.html",
+  "start_url": "/conversions/time/millisecond-to-month-avg/?src=pwa",
+  "scope": "/conversions/time/millisecond-to-month-avg/",
   "display": "standalone",
   "display_override": [
     "standalone",

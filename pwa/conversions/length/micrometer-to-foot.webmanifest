@@ -3,8 +3,8 @@
   "name": "Convert Micrometer to Foot — 1234Tools",
   "short_name": "Micrometer → Foot",
   "description": "Convert Micrometer (µm) to Foot (ft) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/micrometer-to-foot.html?src=pwa",
-  "scope": "/conversions/length/micrometer-to-foot.html",
+  "start_url": "/conversions/length/micrometer-to-foot/?src=pwa",
+  "scope": "/conversions/length/micrometer-to-foot/",
   "display": "standalone",
   "display_override": [
     "standalone",

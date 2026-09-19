@@ -3,8 +3,8 @@
   "name": "Extract PDF Pages — 1234Tools",
   "short_name": "Extract PDF Pages",
   "description": "Pull specific pages out of a PDF into a new document, keeping the order you specify.",
-  "start_url": "/pdf/extract-pdf-pages.html?src=pwa",
-  "scope": "/pdf/extract-pdf-pages.html",
+  "start_url": "/pdf/extract-pdf-pages/?src=pwa",
+  "scope": "/pdf/extract-pdf-pages/",
   "display": "standalone",
   "display_override": [
     "standalone",

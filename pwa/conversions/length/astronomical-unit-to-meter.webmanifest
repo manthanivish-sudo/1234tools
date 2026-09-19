@@ -3,8 +3,8 @@
   "name": "Convert Astronomical Unit to Meter — 1234Tools",
   "short_name": "Astronomical Unit",
   "description": "Convert Astronomical Unit (AU) to Meter (m) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/astronomical-unit-to-meter.html?src=pwa",
-  "scope": "/conversions/length/astronomical-unit-to-meter.html",
+  "start_url": "/conversions/length/astronomical-unit-to-meter/?src=pwa",
+  "scope": "/conversions/length/astronomical-unit-to-meter/",
   "display": "standalone",
   "display_override": [
     "standalone",

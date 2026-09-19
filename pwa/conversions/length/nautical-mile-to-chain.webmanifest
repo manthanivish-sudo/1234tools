@@ -3,8 +3,8 @@
   "name": "Convert Nautical Mile to Chain — 1234Tools",
   "short_name": "Nautical Mile",
   "description": "Convert Nautical Mile (nmi) to Chain (ch) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/nautical-mile-to-chain.html?src=pwa",
-  "scope": "/conversions/length/nautical-mile-to-chain.html",
+  "start_url": "/conversions/length/nautical-mile-to-chain/?src=pwa",
+  "scope": "/conversions/length/nautical-mile-to-chain/",
   "display": "standalone",
   "display_override": [
     "standalone",

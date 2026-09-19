@@ -3,8 +3,8 @@
   "name": "Convert Square Inch to Square Centimeter — 1234Tools",
   "short_name": "Square Inch",
   "description": "Convert Square Inch (in²) to Square Centimeter (cm²) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-inch-to-square-centimeter.html?src=pwa",
-  "scope": "/conversions/area/square-inch-to-square-centimeter.html",
+  "start_url": "/conversions/area/square-inch-to-square-centimeter/?src=pwa",
+  "scope": "/conversions/area/square-inch-to-square-centimeter/",
   "display": "standalone",
   "display_override": [
     "standalone",

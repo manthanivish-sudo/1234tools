@@ -3,8 +3,8 @@
   "name": "Convert Astronomical Unit to Kilometer — 1234Tools",
   "short_name": "Astronomical Unit",
   "description": "Convert Astronomical Unit (AU) to Kilometer (km) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/astronomical-unit-to-kilometer.html?src=pwa",
-  "scope": "/conversions/length/astronomical-unit-to-kilometer.html",
+  "start_url": "/conversions/length/astronomical-unit-to-kilometer/?src=pwa",
+  "scope": "/conversions/length/astronomical-unit-to-kilometer/",
   "display": "standalone",
   "display_override": [
     "standalone",

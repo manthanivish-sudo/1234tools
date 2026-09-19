@@ -3,8 +3,8 @@
   "name": "Convert Fathom to Angstrom — 1234Tools",
   "short_name": "Fathom → Angstrom",
   "description": "Convert Fathom (ftm) to Angstrom (Å) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/fathom-to-angstrom.html?src=pwa",
-  "scope": "/conversions/length/fathom-to-angstrom.html",
+  "start_url": "/conversions/length/fathom-to-angstrom/?src=pwa",
+  "scope": "/conversions/length/fathom-to-angstrom/",
   "display": "standalone",
   "display_override": [
     "standalone",

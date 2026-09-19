@@ -3,8 +3,8 @@
   "name": "Convert Fluid Ounce (US) to Tablespoon (US) — 1234Tools",
   "short_name": "Fluid Ounce (US)",
   "description": "Convert Fluid Ounce (US) (fl oz) to Tablespoon (US) (tbsp) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/fluid-ounce-us-to-tablespoon-us.html?src=pwa",
-  "scope": "/conversions/volume/fluid-ounce-us-to-tablespoon-us.html",
+  "start_url": "/conversions/volume/fluid-ounce-us-to-tablespoon-us/?src=pwa",
+  "scope": "/conversions/volume/fluid-ounce-us-to-tablespoon-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

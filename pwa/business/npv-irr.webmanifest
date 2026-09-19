@@ -3,8 +3,8 @@
   "name": "NPV & IRR Calculator (Discounted Cash Flow) — 1234Tools",
   "short_name": "NPV & IRR Calculator",
   "description": "Value a project with net present value, internal rate of return and discounted payback.",
-  "start_url": "/business/npv-irr.html?src=pwa",
-  "scope": "/business/npv-irr.html",
+  "start_url": "/business/npv-irr/?src=pwa",
+  "scope": "/business/npv-irr/",
   "display": "standalone",
   "display_override": [
     "standalone",

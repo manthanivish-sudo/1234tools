@@ -3,8 +3,8 @@
   "name": "Printable Paper Generator — 1234Tools",
   "short_name": "Printable Paper",
   "description": "Generate graph, lined, dotted, isometric or music paper as a print-ready PDF.",
-  "start_url": "/pdf/paper-pdf.html?src=pwa",
-  "scope": "/pdf/paper-pdf.html",
+  "start_url": "/pdf/paper-pdf/?src=pwa",
+  "scope": "/pdf/paper-pdf/",
   "display": "standalone",
   "display_override": [
     "standalone",

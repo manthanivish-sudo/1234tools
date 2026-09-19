@@ -3,8 +3,8 @@
   "name": "Convert Square Mile to Acre — 1234Tools",
   "short_name": "Square Mile → Acre",
   "description": "Convert Square Mile (mi²) to Acre (ac) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-mile-to-acre.html?src=pwa",
-  "scope": "/conversions/area/square-mile-to-acre.html",
+  "start_url": "/conversions/area/square-mile-to-acre/?src=pwa",
+  "scope": "/conversions/area/square-mile-to-acre/",
   "display": "standalone",
   "display_override": [
     "standalone",

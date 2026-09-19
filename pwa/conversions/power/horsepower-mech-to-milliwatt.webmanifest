@@ -3,8 +3,8 @@
   "name": "Convert Horsepower (mech) to Milliwatt — 1234Tools",
   "short_name": "Horsepower (mech)",
   "description": "Convert Horsepower (mech) (hp) to Milliwatt (mW) instantly. Works in both directions, with a full power table.",
-  "start_url": "/conversions/power/horsepower-mech-to-milliwatt.html?src=pwa",
-  "scope": "/conversions/power/horsepower-mech-to-milliwatt.html",
+  "start_url": "/conversions/power/horsepower-mech-to-milliwatt/?src=pwa",
+  "scope": "/conversions/power/horsepower-mech-to-milliwatt/",
   "display": "standalone",
   "display_override": [
     "standalone",

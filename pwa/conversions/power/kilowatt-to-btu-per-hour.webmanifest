@@ -3,8 +3,8 @@
   "name": "Convert Kilowatt to BTU per Hour — 1234Tools",
   "short_name": "Kilowatt → BTU per",
   "description": "Convert Kilowatt (kW) to BTU per Hour (BTU/h) instantly. Works in both directions, with a full power table.",
-  "start_url": "/conversions/power/kilowatt-to-btu-per-hour.html?src=pwa",
-  "scope": "/conversions/power/kilowatt-to-btu-per-hour.html",
+  "start_url": "/conversions/power/kilowatt-to-btu-per-hour/?src=pwa",
+  "scope": "/conversions/power/kilowatt-to-btu-per-hour/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Square Footage Calculator — 1234Tools",
   "short_name": "Square Footage",
   "description": "Calculate floor area for rooms, including L-shaped spaces, plus material quantities and cost.",
-  "start_url": "/utilities/square-footage.html?src=pwa",
-  "scope": "/utilities/square-footage.html",
+  "start_url": "/utilities/square-footage/?src=pwa",
+  "scope": "/utilities/square-footage/",
   "display": "standalone",
   "display_override": [
     "standalone",

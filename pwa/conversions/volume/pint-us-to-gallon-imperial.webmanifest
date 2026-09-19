@@ -3,8 +3,8 @@
   "name": "Convert Pint (US) to Gallon (Imperial) — 1234Tools",
   "short_name": "Pint (US) → Gallon",
   "description": "Convert Pint (US) (pt) to Gallon (Imperial) (gal UK) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/pint-us-to-gallon-imperial.html?src=pwa",
-  "scope": "/conversions/volume/pint-us-to-gallon-imperial.html",
+  "start_url": "/conversions/volume/pint-us-to-gallon-imperial/?src=pwa",
+  "scope": "/conversions/volume/pint-us-to-gallon-imperial/",
   "display": "standalone",
   "display_override": [
     "standalone",

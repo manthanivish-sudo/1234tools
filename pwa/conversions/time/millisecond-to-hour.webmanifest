@@ -3,8 +3,8 @@
   "name": "Convert Millisecond to Hour — 1234Tools",
   "short_name": "Millisecond → Hour",
   "description": "Convert Millisecond (ms) to Hour (h) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/millisecond-to-hour.html?src=pwa",
-  "scope": "/conversions/time/millisecond-to-hour.html",
+  "start_url": "/conversions/time/millisecond-to-hour/?src=pwa",
+  "scope": "/conversions/time/millisecond-to-hour/",
   "display": "standalone",
   "display_override": [
     "standalone",

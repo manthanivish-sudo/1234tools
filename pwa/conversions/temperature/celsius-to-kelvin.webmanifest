@@ -3,8 +3,8 @@
   "name": "Convert Celsius to Kelvin — 1234Tools",
   "short_name": "Celsius → Kelvin",
   "description": "Convert Celsius (°C) to Kelvin (K) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/celsius-to-kelvin.html?src=pwa",
-  "scope": "/conversions/temperature/celsius-to-kelvin.html",
+  "start_url": "/conversions/temperature/celsius-to-kelvin/?src=pwa",
+  "scope": "/conversions/temperature/celsius-to-kelvin/",
   "display": "standalone",
   "display_override": [
     "standalone",

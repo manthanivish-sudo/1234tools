@@ -3,8 +3,8 @@
   "name": "Convert Square Millimeter to Square Inch — 1234Tools",
   "short_name": "Square Millimeter",
   "description": "Convert Square Millimeter (mm²) to Square Inch (in²) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-millimeter-to-square-inch.html?src=pwa",
-  "scope": "/conversions/area/square-millimeter-to-square-inch.html",
+  "start_url": "/conversions/area/square-millimeter-to-square-inch/?src=pwa",
+  "scope": "/conversions/area/square-millimeter-to-square-inch/",
   "display": "standalone",
   "display_override": [
     "standalone",

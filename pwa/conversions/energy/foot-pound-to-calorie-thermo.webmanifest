@@ -3,8 +3,8 @@
   "name": "Convert Foot-Pound to Calorie (thermo) — 1234Tools",
   "short_name": "Foot-Pound → Calorie",
   "description": "Convert Foot-Pound (ft·lb) to Calorie (thermo) (cal) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/foot-pound-to-calorie-thermo.html?src=pwa",
-  "scope": "/conversions/energy/foot-pound-to-calorie-thermo.html",
+  "start_url": "/conversions/energy/foot-pound-to-calorie-thermo/?src=pwa",
+  "scope": "/conversions/energy/foot-pound-to-calorie-thermo/",
   "display": "standalone",
   "display_override": [
     "standalone",

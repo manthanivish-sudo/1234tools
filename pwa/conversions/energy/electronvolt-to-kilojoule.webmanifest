@@ -3,8 +3,8 @@
   "name": "Convert Electronvolt to Kilojoule — 1234Tools",
   "short_name": "Electronvolt",
   "description": "Convert Electronvolt (eV) to Kilojoule (kJ) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/electronvolt-to-kilojoule.html?src=pwa",
-  "scope": "/conversions/energy/electronvolt-to-kilojoule.html",
+  "start_url": "/conversions/energy/electronvolt-to-kilojoule/?src=pwa",
+  "scope": "/conversions/energy/electronvolt-to-kilojoule/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Fathom to Mile — 1234Tools",
   "short_name": "Fathom → Mile",
   "description": "Convert Fathom (ftm) to Mile (mi) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/fathom-to-mile.html?src=pwa",
-  "scope": "/conversions/length/fathom-to-mile.html",
+  "start_url": "/conversions/length/fathom-to-mile/?src=pwa",
+  "scope": "/conversions/length/fathom-to-mile/",
   "display": "standalone",
   "display_override": [
     "standalone",

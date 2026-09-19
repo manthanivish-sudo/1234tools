@@ -3,8 +3,8 @@
   "name": "Convert Meter to Kilometer — 1234Tools",
   "short_name": "Meter → Kilometer",
   "description": "Convert Meter (m) to Kilometer (km) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/meter-to-kilometer.html?src=pwa",
-  "scope": "/conversions/length/meter-to-kilometer.html",
+  "start_url": "/conversions/length/meter-to-kilometer/?src=pwa",
+  "scope": "/conversions/length/meter-to-kilometer/",
   "display": "standalone",
   "display_override": [
     "standalone",

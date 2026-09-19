@@ -3,8 +3,8 @@
   "name": "Convert Nautical Mile to Fathom — 1234Tools",
   "short_name": "Nautical Mile",
   "description": "Convert Nautical Mile (nmi) to Fathom (ftm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/nautical-mile-to-fathom.html?src=pwa",
-  "scope": "/conversions/length/nautical-mile-to-fathom.html",
+  "start_url": "/conversions/length/nautical-mile-to-fathom/?src=pwa",
+  "scope": "/conversions/length/nautical-mile-to-fathom/",
   "display": "standalone",
   "display_override": [
     "standalone",

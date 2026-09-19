@@ -3,8 +3,8 @@
   "name": "Convert Light Year to Millimeter — 1234Tools",
   "short_name": "Light Year",
   "description": "Convert Light Year (ly) to Millimeter (mm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/light-year-to-millimeter.html?src=pwa",
-  "scope": "/conversions/length/light-year-to-millimeter.html",
+  "start_url": "/conversions/length/light-year-to-millimeter/?src=pwa",
+  "scope": "/conversions/length/light-year-to-millimeter/",
   "display": "standalone",
   "display_override": [
     "standalone",

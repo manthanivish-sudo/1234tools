@@ -3,8 +3,8 @@
   "name": "Convert Kilopascal to Inches of Mercury — 1234Tools",
   "short_name": "Kilopascal → Inches",
   "description": "Convert Kilopascal (kPa) to Inches of Mercury (inHg) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/kilopascal-to-inches-of-mercury.html?src=pwa",
-  "scope": "/conversions/pressure/kilopascal-to-inches-of-mercury.html",
+  "start_url": "/conversions/pressure/kilopascal-to-inches-of-mercury/?src=pwa",
+  "scope": "/conversions/pressure/kilopascal-to-inches-of-mercury/",
   "display": "standalone",
   "display_override": [
     "standalone",

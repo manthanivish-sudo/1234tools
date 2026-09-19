@@ -3,8 +3,8 @@
   "name": "Convert Milliliter to Pint (US) — 1234Tools",
   "short_name": "Milliliter → Pint",
   "description": "Convert Milliliter (mL) to Pint (US) (pt) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/milliliter-to-pint-us.html?src=pwa",
-  "scope": "/conversions/volume/milliliter-to-pint-us.html",
+  "start_url": "/conversions/volume/milliliter-to-pint-us/?src=pwa",
+  "scope": "/conversions/volume/milliliter-to-pint-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

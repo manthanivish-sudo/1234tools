@@ -3,8 +3,8 @@
   "name": "Convert Kilojoule to Foot-Pound — 1234Tools",
   "short_name": "Kilojoule",
   "description": "Convert Kilojoule (kJ) to Foot-Pound (ft·lb) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/kilojoule-to-foot-pound.html?src=pwa",
-  "scope": "/conversions/energy/kilojoule-to-foot-pound.html",
+  "start_url": "/conversions/energy/kilojoule-to-foot-pound/?src=pwa",
+  "scope": "/conversions/energy/kilojoule-to-foot-pound/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Social Media Image Resizer — 1234Tools",
   "short_name": "Social Media Image",
   "description": "Produce correctly sized images for Instagram, Facebook, X, LinkedIn, YouTube and more in one pass.",
-  "start_url": "/image/social-media-resizer.html?src=pwa",
-  "scope": "/image/social-media-resizer.html",
+  "start_url": "/image/social-media-resizer/?src=pwa",
+  "scope": "/image/social-media-resizer/",
   "display": "standalone",
   "display_override": [
     "standalone",

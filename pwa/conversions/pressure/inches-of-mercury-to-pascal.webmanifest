@@ -3,8 +3,8 @@
   "name": "Convert Inches of Mercury to Pascal — 1234Tools",
   "short_name": "Inches of Mercury",
   "description": "Convert Inches of Mercury (inHg) to Pascal (Pa) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/inches-of-mercury-to-pascal.html?src=pwa",
-  "scope": "/conversions/pressure/inches-of-mercury-to-pascal.html",
+  "start_url": "/conversions/pressure/inches-of-mercury-to-pascal/?src=pwa",
+  "scope": "/conversions/pressure/inches-of-mercury-to-pascal/",
   "display": "standalone",
   "display_override": [
     "standalone",

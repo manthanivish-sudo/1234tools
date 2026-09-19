@@ -3,8 +3,8 @@
   "name": "PDF to Images — 1234Tools",
   "short_name": "PDF → Images",
   "description": "Convert PDF pages to PNG or JPEG images at any resolution, entirely in your browser.",
-  "start_url": "/pdf/pdf-to-images.html?src=pwa",
-  "scope": "/pdf/pdf-to-images.html",
+  "start_url": "/pdf/pdf-to-images/?src=pwa",
+  "scope": "/pdf/pdf-to-images/",
   "display": "standalone",
   "display_override": [
     "standalone",

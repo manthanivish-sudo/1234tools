@@ -3,8 +3,8 @@
   "name": "Blur & Redact Image — 1234Tools",
   "short_name": "Blur & Redact Image",
   "description": "Blur, pixelate or black out part of an image to hide faces, addresses or account details before sharing.",
-  "start_url": "/image/blur-redact.html?src=pwa",
-  "scope": "/image/blur-redact.html",
+  "start_url": "/image/blur-redact/?src=pwa",
+  "scope": "/image/blur-redact/",
   "display": "standalone",
   "display_override": [
     "standalone",

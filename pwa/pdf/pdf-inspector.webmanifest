@@ -3,8 +3,8 @@
   "name": "PDF Inspector — 1234Tools",
   "short_name": "PDF Inspector",
   "description": "Examine a PDF: page count, sizes, rotation, fonts, images, metadata and structure.",
-  "start_url": "/pdf/pdf-inspector.html?src=pwa",
-  "scope": "/pdf/pdf-inspector.html",
+  "start_url": "/pdf/pdf-inspector/?src=pwa",
+  "scope": "/pdf/pdf-inspector/",
   "display": "standalone",
   "display_override": [
     "standalone",

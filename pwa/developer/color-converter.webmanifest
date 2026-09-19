@@ -3,8 +3,8 @@
   "name": "Colour Converter & Contrast Checker — 1234Tools",
   "short_name": "Colour Converter",
   "description": "Convert between HEX, RGB, HSL and HSB, and check WCAG contrast against a background.",
-  "start_url": "/developer/color-converter.html?src=pwa",
-  "scope": "/developer/color-converter.html",
+  "start_url": "/developer/color-converter/?src=pwa",
+  "scope": "/developer/color-converter/",
   "display": "standalone",
   "display_override": [
     "standalone",

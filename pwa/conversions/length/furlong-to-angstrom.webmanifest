@@ -3,8 +3,8 @@
   "name": "Convert Furlong to Angstrom — 1234Tools",
   "short_name": "Furlong → Angstrom",
   "description": "Convert Furlong (fur) to Angstrom (Å) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/furlong-to-angstrom.html?src=pwa",
-  "scope": "/conversions/length/furlong-to-angstrom.html",
+  "start_url": "/conversions/length/furlong-to-angstrom/?src=pwa",
+  "scope": "/conversions/length/furlong-to-angstrom/",
   "display": "standalone",
   "display_override": [
     "standalone",

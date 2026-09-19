@@ -3,8 +3,8 @@
   "name": "Text Compare & Diff Tool — 1234Tools",
   "short_name": "Text Compare & Diff",
   "description": "Compare two texts line by line and see exactly what was added, removed or changed.",
-  "start_url": "/text/text-diff.html?src=pwa",
-  "scope": "/text/text-diff.html",
+  "start_url": "/text/text-diff/?src=pwa",
+  "scope": "/text/text-diff/",
   "display": "standalone",
   "display_override": [
     "standalone",

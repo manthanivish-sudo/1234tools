@@ -3,8 +3,8 @@
   "name": "Image Compressor — 1234Tools",
   "short_name": "Image Compressor",
   "description": "Shrink JPEG, PNG and WebP files with a live quality preview and a before/after size comparison.",
-  "start_url": "/image/image-compressor.html?src=pwa",
-  "scope": "/image/image-compressor.html",
+  "start_url": "/image/image-compressor/?src=pwa",
+  "scope": "/image/image-compressor/",
   "display": "standalone",
   "display_override": [
     "standalone",

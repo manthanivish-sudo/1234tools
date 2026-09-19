@@ -3,8 +3,8 @@
   "name": "Convert Square Millimeter to Hectare — 1234Tools",
   "short_name": "Square Millimeter",
   "description": "Convert Square Millimeter (mm²) to Hectare (ha) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-millimeter-to-hectare.html?src=pwa",
-  "scope": "/conversions/area/square-millimeter-to-hectare.html",
+  "start_url": "/conversions/area/square-millimeter-to-hectare/?src=pwa",
+  "scope": "/conversions/area/square-millimeter-to-hectare/",
   "display": "standalone",
   "display_override": [
     "standalone",

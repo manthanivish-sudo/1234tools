@@ -3,8 +3,8 @@
   "name": "Convert Milliliter to Cup (US) — 1234Tools",
   "short_name": "Milliliter → Cup",
   "description": "Convert Milliliter (mL) to Cup (US) (cup) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/milliliter-to-cup-us.html?src=pwa",
-  "scope": "/conversions/volume/milliliter-to-cup-us.html",
+  "start_url": "/conversions/volume/milliliter-to-cup-us/?src=pwa",
+  "scope": "/conversions/volume/milliliter-to-cup-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

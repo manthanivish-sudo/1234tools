@@ -3,8 +3,8 @@
   "name": "Fraction Calculator — 1234Tools",
   "short_name": "Fraction Calculator",
   "description": "Add, subtract, multiply and divide fractions, simplify them, and convert to and from decimals.",
-  "start_url": "/mathematics/fraction-calculator.html?src=pwa",
-  "scope": "/mathematics/fraction-calculator.html",
+  "start_url": "/mathematics/fraction-calculator/?src=pwa",
+  "scope": "/mathematics/fraction-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

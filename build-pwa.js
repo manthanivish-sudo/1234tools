@@ -42,12 +42,25 @@ function write(rel, content) {
   return true;
 }
 
+/**
+ * A tool has three addresses and they are all different strings.
+ *
+ * `url` is what the search index carries, which is what the tool is served at:
+ * `qr/qr-code-scanner/`. `file` is the markup behind it. `slug` is the part
+ * that never changes, and is what names the manifest on disk.
+ */
+const slugOf = (url) => url.replace(/\/+$/, '').replace(/\.html$/, '');
+const fileOf = (url) => (url.endsWith('/') ? url + 'index.html' : url);
+
 /** The tool list the site already maintains for its own search box. */
 function tools() {
   const src = fs.readFileSync(path.join(ROOT, 'assets/search-index.js'), 'utf8');
   const sandbox = { window: {} };
   new Function('window', src)(sandbox.window);
-  return sandbox.window.SEARCH_INDEX.map(([title, url, id]) => ({ title, url, id }));
+  return sandbox.window.SEARCH_INDEX.map(function (e) {
+    const url = e[1];
+    return { title: e[0], url: url, id: e[2], slug: slugOf(url), file: fileOf(url) };
+  });
 }
 
 /**
@@ -90,12 +103,13 @@ const CATEGORY = {
 };
 
 function manifestFor(tool, meta) {
-  const page = '/' + tool.url;
+  const page = '/' + tool.slug + '/';
   return JSON.stringify({
     /* The id is what makes this a separate installation rather than another
        copy of the site. It must stay stable: change it and an installed app
-       is orphaned. */
-    id: page,
+       is orphaned — which is why it still names the address these tools were
+       first published at, even though nothing is served there any more. */
+    id: '/' + tool.slug + '.html',
     name: meta.title + ' — 1234Tools',
     short_name: meta.short,
     description: meta.description,
@@ -108,7 +122,7 @@ function manifestFor(tool, meta) {
     background_color: '#06080f',
     lang: 'en-GB',
     dir: 'ltr',
-    categories: CATEGORY[tool.url.split('/')[0]] || ['utilities'],
+    categories: CATEGORY[tool.slug.split('/')[0]] || ['utilities'],
     icons: [
       { src: '/assets/pwa/' + meta.glyph + '.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
       { src: '/assets/pwa/' + meta.glyph + '-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
@@ -123,19 +137,19 @@ function manifestFor(tool, meta) {
  * app. The page path is the only thing that is unique per tool.
  */
 function manifestPath(tool) {
-  return 'pwa/' + tool.url.replace(/\.html$/, '') + '.webmanifest';
+  return 'pwa/' + tool.slug + '.webmanifest';
 }
 
 function pwaBlock(prefix, tool, meta) {
   return [
     START,
-    '<link rel="manifest" href="' + prefix + manifestPath(tool) + '">',
-    '<link rel="apple-touch-icon" href="' + prefix + 'assets/pwa/' + meta.glyph + '-192.png">',
+    '<link rel="manifest" href="/' + manifestPath(tool) + '">',
+    '<link rel="apple-touch-icon" href="/assets/pwa/' + meta.glyph + '-192.png">',
     '<meta name="apple-mobile-web-app-capable" content="yes">',
     '<meta name="mobile-web-app-capable" content="yes">',
     '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">',
     '<meta name="apple-mobile-web-app-title" content="' + meta.short.replace(/"/g, '&quot;') + '">',
-    '<script src="' + prefix + 'assets/pwa.js" defer></script>',
+    '<script src="/assets/pwa.js" defer></script>',
     END
   ].join('\n');
 }
@@ -152,10 +166,11 @@ const STALE = [
 ];
 
 function patch(tool, meta) {
-  const abs = path.join(ROOT, tool.url);
+  const abs = path.join(ROOT, tool.file);
   const before = fs.readFileSync(abs, 'utf8');
-  const depth = tool.url.split('/').length - 1;
-  const prefix = '../'.repeat(depth);
+  /* Links are root-absolute now, so a page's depth no longer changes what it
+     says. Kept as an argument only so the block below reads the same. */
+  const prefix = '/';
 
   let html = before;
   const old = html.indexOf(START);
@@ -171,7 +186,7 @@ function patch(tool, meta) {
   html = html.slice(0, at) + pwaBlock(prefix, tool, meta) + '\n' + html.slice(at);
 
   if (html === before) return { changed: false };
-  changes.push('update ' + tool.url);
+  changes.push('update ' + tool.file);
   if (!CHECK) fs.writeFileSync(abs, html);
   return { changed: true };
 }
@@ -183,13 +198,13 @@ const glyphs = new Set();
 let patched = 0, skipped = [];
 
 for (const tool of list) {
-  const abs = path.join(ROOT, tool.url);
-  if (!fs.existsSync(abs)) { skipped.push(tool.url + ' (no page)'); continue; }
+  const abs = path.join(ROOT, tool.file);
+  if (!fs.existsSync(abs)) { skipped.push(tool.file + ' (no page)'); continue; }
   const html = fs.readFileSync(abs, 'utf8');
 
   const g = /<h1><svg class="ico ico-title"[^>]*><use href="[^#"]*#(i-[a-z0-9-]+)"/.exec(html);
   const d = /<meta name="description" content="([^"]*)"/.exec(html);
-  if (!g || !d) { skipped.push(tool.url + ' (no glyph or description)'); continue; }
+  if (!g || !d) { skipped.push(tool.file + ' (no glyph or description)'); continue; }
 
   const meta = {
     title: esc(tool.title),

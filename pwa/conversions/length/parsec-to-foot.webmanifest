@@ -3,8 +3,8 @@
   "name": "Convert Parsec to Foot — 1234Tools",
   "short_name": "Parsec → Foot",
   "description": "Convert Parsec (pc) to Foot (ft) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/parsec-to-foot.html?src=pwa",
-  "scope": "/conversions/length/parsec-to-foot.html",
+  "start_url": "/conversions/length/parsec-to-foot/?src=pwa",
+  "scope": "/conversions/length/parsec-to-foot/",
   "display": "standalone",
   "display_override": [
     "standalone",

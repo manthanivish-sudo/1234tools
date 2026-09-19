@@ -3,8 +3,8 @@
   "name": "Convert Delisle to Celsius — 1234Tools",
   "short_name": "Delisle → Celsius",
   "description": "Convert Delisle (°De) to Celsius (°C) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/delisle-to-celsius.html?src=pwa",
-  "scope": "/conversions/temperature/delisle-to-celsius.html",
+  "start_url": "/conversions/temperature/delisle-to-celsius/?src=pwa",
+  "scope": "/conversions/temperature/delisle-to-celsius/",
   "display": "standalone",
   "display_override": [
     "standalone",

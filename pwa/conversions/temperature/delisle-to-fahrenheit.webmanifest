@@ -3,8 +3,8 @@
   "name": "Convert Delisle to Fahrenheit — 1234Tools",
   "short_name": "Delisle → Fahrenheit",
   "description": "Convert Delisle (°De) to Fahrenheit (°F) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/delisle-to-fahrenheit.html?src=pwa",
-  "scope": "/conversions/temperature/delisle-to-fahrenheit.html",
+  "start_url": "/conversions/temperature/delisle-to-fahrenheit/?src=pwa",
+  "scope": "/conversions/temperature/delisle-to-fahrenheit/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Millimeter to Angstrom — 1234Tools",
   "short_name": "Millimeter",
   "description": "Convert Millimeter (mm) to Angstrom (Å) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/millimeter-to-angstrom.html?src=pwa",
-  "scope": "/conversions/length/millimeter-to-angstrom.html",
+  "start_url": "/conversions/length/millimeter-to-angstrom/?src=pwa",
+  "scope": "/conversions/length/millimeter-to-angstrom/",
   "display": "standalone",
   "display_override": [
     "standalone",

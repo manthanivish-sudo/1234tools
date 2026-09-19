@@ -3,8 +3,8 @@
   "name": "Convert Degree to Gradian — 1234Tools",
   "short_name": "Degree → Gradian",
   "description": "Convert Degree (°) to Gradian (grad) instantly. Works in both directions, with a full angle table.",
-  "start_url": "/conversions/angle/degree-to-gradian.html?src=pwa",
-  "scope": "/conversions/angle/degree-to-gradian.html",
+  "start_url": "/conversions/angle/degree-to-gradian/?src=pwa",
+  "scope": "/conversions/angle/degree-to-gradian/",
   "display": "standalone",
   "display_override": [
     "standalone",

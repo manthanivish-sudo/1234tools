@@ -3,8 +3,8 @@
   "name": "Convert Square Kilometer to Hectare — 1234Tools",
   "short_name": "Square Kilometer",
   "description": "Convert Square Kilometer (km²) to Hectare (ha) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-kilometer-to-hectare.html?src=pwa",
-  "scope": "/conversions/area/square-kilometer-to-hectare.html",
+  "start_url": "/conversions/area/square-kilometer-to-hectare/?src=pwa",
+  "scope": "/conversions/area/square-kilometer-to-hectare/",
   "display": "standalone",
   "display_override": [
     "standalone",

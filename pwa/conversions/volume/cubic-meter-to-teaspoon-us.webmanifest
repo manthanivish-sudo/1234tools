@@ -3,8 +3,8 @@
   "name": "Convert Cubic Meter to Teaspoon (US) — 1234Tools",
   "short_name": "Cubic Meter",
   "description": "Convert Cubic Meter (m³) to Teaspoon (US) (tsp) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/cubic-meter-to-teaspoon-us.html?src=pwa",
-  "scope": "/conversions/volume/cubic-meter-to-teaspoon-us.html",
+  "start_url": "/conversions/volume/cubic-meter-to-teaspoon-us/?src=pwa",
+  "scope": "/conversions/volume/cubic-meter-to-teaspoon-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

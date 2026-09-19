@@ -3,8 +3,8 @@
   "name": "Heart Rate Zone Calculator — 1234Tools",
   "short_name": "Heart Rate Zone",
   "description": "Training heart rate zones from maximum or reserve heart rate, with what each zone is for.",
-  "start_url": "/health/heart-rate-zones.html?src=pwa",
-  "scope": "/health/heart-rate-zones.html",
+  "start_url": "/health/heart-rate-zones/?src=pwa",
+  "scope": "/health/heart-rate-zones/",
   "display": "standalone",
   "display_override": [
     "standalone",

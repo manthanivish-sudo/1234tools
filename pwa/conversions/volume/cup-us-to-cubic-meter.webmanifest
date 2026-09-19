@@ -3,8 +3,8 @@
   "name": "Convert Cup (US) to Cubic Meter — 1234Tools",
   "short_name": "Cup (US) → Cubic",
   "description": "Convert Cup (US) (cup) to Cubic Meter (m³) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/cup-us-to-cubic-meter.html?src=pwa",
-  "scope": "/conversions/volume/cup-us-to-cubic-meter.html",
+  "start_url": "/conversions/volume/cup-us-to-cubic-meter/?src=pwa",
+  "scope": "/conversions/volume/cup-us-to-cubic-meter/",
   "display": "standalone",
   "display_override": [
     "standalone",

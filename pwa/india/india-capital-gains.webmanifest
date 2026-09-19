@@ -3,8 +3,8 @@
   "name": "Capital Gains Tax Calculator (India) — 1234Tools",
   "short_name": "Capital Gains Tax",
   "description": "Short and long-term capital gains on equity, mutual funds, property and other assets under current rules.",
-  "start_url": "/india/india-capital-gains.html?src=pwa",
-  "scope": "/india/india-capital-gains.html",
+  "start_url": "/india/india-capital-gains/?src=pwa",
+  "scope": "/india/india-capital-gains/",
   "display": "standalone",
   "display_override": [
     "standalone",

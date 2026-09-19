@@ -3,8 +3,8 @@
   "name": "Convert Nanometer to Centimeter — 1234Tools",
   "short_name": "Nanometer",
   "description": "Convert Nanometer (nm) to Centimeter (cm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/nanometer-to-centimeter.html?src=pwa",
-  "scope": "/conversions/length/nanometer-to-centimeter.html",
+  "start_url": "/conversions/length/nanometer-to-centimeter/?src=pwa",
+  "scope": "/conversions/length/nanometer-to-centimeter/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Micrometer to Centimeter — 1234Tools",
   "short_name": "Micrometer",
   "description": "Convert Micrometer (µm) to Centimeter (cm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/micrometer-to-centimeter.html?src=pwa",
-  "scope": "/conversions/length/micrometer-to-centimeter.html",
+  "start_url": "/conversions/length/micrometer-to-centimeter/?src=pwa",
+  "scope": "/conversions/length/micrometer-to-centimeter/",
   "display": "standalone",
   "display_override": [
     "standalone",

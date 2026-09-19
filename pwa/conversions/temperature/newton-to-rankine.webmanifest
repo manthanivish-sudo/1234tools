@@ -3,8 +3,8 @@
   "name": "Convert Newton to Rankine — 1234Tools",
   "short_name": "Newton → Rankine",
   "description": "Convert Newton (°N) to Rankine (°R) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/newton-to-rankine.html?src=pwa",
-  "scope": "/conversions/temperature/newton-to-rankine.html",
+  "start_url": "/conversions/temperature/newton-to-rankine/?src=pwa",
+  "scope": "/conversions/temperature/newton-to-rankine/",
   "display": "standalone",
   "display_override": [
     "standalone",

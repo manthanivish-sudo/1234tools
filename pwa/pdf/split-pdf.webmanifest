@@ -3,8 +3,8 @@
   "name": "Split PDF — 1234Tools",
   "short_name": "Split PDF",
   "description": "Split one PDF into several files — by page count, by ranges, or one file per page.",
-  "start_url": "/pdf/split-pdf.html?src=pwa",
-  "scope": "/pdf/split-pdf.html",
+  "start_url": "/pdf/split-pdf/?src=pwa",
+  "scope": "/pdf/split-pdf/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Rømer to Fahrenheit — 1234Tools",
   "short_name": "Rømer → Fahrenheit",
   "description": "Convert Rømer (°Rø) to Fahrenheit (°F) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/r-mer-to-fahrenheit.html?src=pwa",
-  "scope": "/conversions/temperature/r-mer-to-fahrenheit.html",
+  "start_url": "/conversions/temperature/r-mer-to-fahrenheit/?src=pwa",
+  "scope": "/conversions/temperature/r-mer-to-fahrenheit/",
   "display": "standalone",
   "display_override": [
     "standalone",

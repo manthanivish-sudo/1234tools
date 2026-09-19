@@ -3,8 +3,8 @@
   "name": "CSV to JSON Converter — 1234Tools",
   "short_name": "CSV → JSON Converter",
   "description": "Convert CSV or TSV into JSON, and back again. Handles quoted fields and embedded commas.",
-  "start_url": "/developer/csv-to-json.html?src=pwa",
-  "scope": "/developer/csv-to-json.html",
+  "start_url": "/developer/csv-to-json/?src=pwa",
+  "scope": "/developer/csv-to-json/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Newton to Fahrenheit — 1234Tools",
   "short_name": "Newton → Fahrenheit",
   "description": "Convert Newton (°N) to Fahrenheit (°F) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/newton-to-fahrenheit.html?src=pwa",
-  "scope": "/conversions/temperature/newton-to-fahrenheit.html",
+  "start_url": "/conversions/temperature/newton-to-fahrenheit/?src=pwa",
+  "scope": "/conversions/temperature/newton-to-fahrenheit/",
   "display": "standalone",
   "display_override": [
     "standalone",

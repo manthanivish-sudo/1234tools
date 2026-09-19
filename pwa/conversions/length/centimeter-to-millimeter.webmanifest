@@ -3,8 +3,8 @@
   "name": "Convert Centimeter to Millimeter — 1234Tools",
   "short_name": "Centimeter",
   "description": "Convert Centimeter (cm) to Millimeter (mm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/centimeter-to-millimeter.html?src=pwa",
-  "scope": "/conversions/length/centimeter-to-millimeter.html",
+  "start_url": "/conversions/length/centimeter-to-millimeter/?src=pwa",
+  "scope": "/conversions/length/centimeter-to-millimeter/",
   "display": "standalone",
   "display_override": [
     "standalone",

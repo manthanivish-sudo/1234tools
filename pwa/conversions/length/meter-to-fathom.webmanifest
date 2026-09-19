@@ -3,8 +3,8 @@
   "name": "Convert Meter to Fathom — 1234Tools",
   "short_name": "Meter → Fathom",
   "description": "Convert Meter (m) to Fathom (ftm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/meter-to-fathom.html?src=pwa",
-  "scope": "/conversions/length/meter-to-fathom.html",
+  "start_url": "/conversions/length/meter-to-fathom/?src=pwa",
+  "scope": "/conversions/length/meter-to-fathom/",
   "display": "standalone",
   "display_override": [
     "standalone",

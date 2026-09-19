@@ -3,8 +3,8 @@
   "name": "Convert Gram to Ounce — 1234Tools",
   "short_name": "Gram → Ounce",
   "description": "Convert Gram (g) to Ounce (oz) instantly. Works in both directions, with a full mass & weight table.",
-  "start_url": "/conversions/mass/gram-to-ounce.html?src=pwa",
-  "scope": "/conversions/mass/gram-to-ounce.html",
+  "start_url": "/conversions/mass/gram-to-ounce/?src=pwa",
+  "scope": "/conversions/mass/gram-to-ounce/",
   "display": "standalone",
   "display_override": [
     "standalone",

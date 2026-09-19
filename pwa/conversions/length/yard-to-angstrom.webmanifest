@@ -3,8 +3,8 @@
   "name": "Convert Yard to Angstrom — 1234Tools",
   "short_name": "Yard → Angstrom",
   "description": "Convert Yard (yd) to Angstrom (Å) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/yard-to-angstrom.html?src=pwa",
-  "scope": "/conversions/length/yard-to-angstrom.html",
+  "start_url": "/conversions/length/yard-to-angstrom/?src=pwa",
+  "scope": "/conversions/length/yard-to-angstrom/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Parsec to Kilometer — 1234Tools",
   "short_name": "Parsec → Kilometer",
   "description": "Convert Parsec (pc) to Kilometer (km) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/parsec-to-kilometer.html?src=pwa",
-  "scope": "/conversions/length/parsec-to-kilometer.html",
+  "start_url": "/conversions/length/parsec-to-kilometer/?src=pwa",
+  "scope": "/conversions/length/parsec-to-kilometer/",
   "display": "standalone",
   "display_override": [
     "standalone",

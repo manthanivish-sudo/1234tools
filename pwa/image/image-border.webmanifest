@@ -3,8 +3,8 @@
   "name": "Add Border & Frame to Image — 1234Tools",
   "short_name": "Add Border & Frame",
   "description": "Add a solid border, padding or polaroid-style frame around a photo.",
-  "start_url": "/image/image-border.html?src=pwa",
-  "scope": "/image/image-border.html",
+  "start_url": "/image/image-border/?src=pwa",
+  "scope": "/image/image-border/",
   "display": "standalone",
   "display_override": [
     "standalone",

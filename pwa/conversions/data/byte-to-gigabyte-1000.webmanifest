@@ -3,8 +3,8 @@
   "name": "Convert Byte to Gigabyte (1000) — 1234Tools",
   "short_name": "Byte → Gigabyte",
   "description": "Convert Byte (B) to Gigabyte (1000) (GB) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/byte-to-gigabyte-1000.html?src=pwa",
-  "scope": "/conversions/data/byte-to-gigabyte-1000.html",
+  "start_url": "/conversions/data/byte-to-gigabyte-1000/?src=pwa",
+  "scope": "/conversions/data/byte-to-gigabyte-1000/",
   "display": "standalone",
   "display_override": [
     "standalone",

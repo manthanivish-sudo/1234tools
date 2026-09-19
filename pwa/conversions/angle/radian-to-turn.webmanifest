@@ -3,8 +3,8 @@
   "name": "Convert Radian to Turn — 1234Tools",
   "short_name": "Radian → Turn",
   "description": "Convert Radian (rad) to Turn (turn) instantly. Works in both directions, with a full angle table.",
-  "start_url": "/conversions/angle/radian-to-turn.html?src=pwa",
-  "scope": "/conversions/angle/radian-to-turn.html",
+  "start_url": "/conversions/angle/radian-to-turn/?src=pwa",
+  "scope": "/conversions/angle/radian-to-turn/",
   "display": "standalone",
   "display_override": [
     "standalone",

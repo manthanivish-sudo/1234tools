@@ -3,8 +3,8 @@
   "name": "Convert Inches of Mercury to Bar — 1234Tools",
   "short_name": "Inches of Mercury",
   "description": "Convert Inches of Mercury (inHg) to Bar (bar) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/inches-of-mercury-to-bar.html?src=pwa",
-  "scope": "/conversions/pressure/inches-of-mercury-to-bar.html",
+  "start_url": "/conversions/pressure/inches-of-mercury-to-bar/?src=pwa",
+  "scope": "/conversions/pressure/inches-of-mercury-to-bar/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Delisle to Rømer — 1234Tools",
   "short_name": "Delisle → Rømer",
   "description": "Convert Delisle (°De) to Rømer (°Rø) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/delisle-to-r-mer.html?src=pwa",
-  "scope": "/conversions/temperature/delisle-to-r-mer.html",
+  "start_url": "/conversions/temperature/delisle-to-r-mer/?src=pwa",
+  "scope": "/conversions/temperature/delisle-to-r-mer/",
   "display": "standalone",
   "display_override": [
     "standalone",

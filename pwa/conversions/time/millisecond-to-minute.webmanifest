@@ -3,8 +3,8 @@
   "name": "Convert Millisecond to Minute — 1234Tools",
   "short_name": "Millisecond → Minute",
   "description": "Convert Millisecond (ms) to Minute (min) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/millisecond-to-minute.html?src=pwa",
-  "scope": "/conversions/time/millisecond-to-minute.html",
+  "start_url": "/conversions/time/millisecond-to-minute/?src=pwa",
+  "scope": "/conversions/time/millisecond-to-minute/",
   "display": "standalone",
   "display_override": [
     "standalone",

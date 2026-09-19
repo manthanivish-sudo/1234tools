@@ -3,8 +3,8 @@
   "name": "Convert Light Year to Fathom — 1234Tools",
   "short_name": "Light Year → Fathom",
   "description": "Convert Light Year (ly) to Fathom (ftm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/light-year-to-fathom.html?src=pwa",
-  "scope": "/conversions/length/light-year-to-fathom.html",
+  "start_url": "/conversions/length/light-year-to-fathom/?src=pwa",
+  "scope": "/conversions/length/light-year-to-fathom/",
   "display": "standalone",
   "display_override": [
     "standalone",

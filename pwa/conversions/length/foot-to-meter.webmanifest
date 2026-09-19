@@ -3,8 +3,8 @@
   "name": "Convert Foot to Meter — 1234Tools",
   "short_name": "Foot → Meter",
   "description": "Convert Foot (ft) to Meter (m) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/foot-to-meter.html?src=pwa",
-  "scope": "/conversions/length/foot-to-meter.html",
+  "start_url": "/conversions/length/foot-to-meter/?src=pwa",
+  "scope": "/conversions/length/foot-to-meter/",
   "display": "standalone",
   "display_override": [
     "standalone",

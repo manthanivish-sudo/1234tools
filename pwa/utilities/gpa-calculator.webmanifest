@@ -3,8 +3,8 @@
   "name": "GPA Calculator — 1234Tools",
   "short_name": "GPA Calculator",
   "description": "Calculate weighted and unweighted grade point average from course grades and credits.",
-  "start_url": "/utilities/gpa-calculator.html?src=pwa",
-  "scope": "/utilities/gpa-calculator.html",
+  "start_url": "/utilities/gpa-calculator/?src=pwa",
+  "scope": "/utilities/gpa-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

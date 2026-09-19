@@ -3,8 +3,8 @@
   "name": "Convert Furlong to Nanometer — 1234Tools",
   "short_name": "Furlong → Nanometer",
   "description": "Convert Furlong (fur) to Nanometer (nm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/furlong-to-nanometer.html?src=pwa",
-  "scope": "/conversions/length/furlong-to-nanometer.html",
+  "start_url": "/conversions/length/furlong-to-nanometer/?src=pwa",
+  "scope": "/conversions/length/furlong-to-nanometer/",
   "display": "standalone",
   "display_override": [
     "standalone",

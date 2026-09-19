@@ -3,8 +3,8 @@
   "name": "Convert Centimeter to Meter — 1234Tools",
   "short_name": "Centimeter → Meter",
   "description": "Convert Centimeter (cm) to Meter (m) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/centimeter-to-meter.html?src=pwa",
-  "scope": "/conversions/length/centimeter-to-meter.html",
+  "start_url": "/conversions/length/centimeter-to-meter/?src=pwa",
+  "scope": "/conversions/length/centimeter-to-meter/",
   "display": "standalone",
   "display_override": [
     "standalone",

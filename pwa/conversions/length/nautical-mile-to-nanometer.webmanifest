@@ -3,8 +3,8 @@
   "name": "Convert Nautical Mile to Nanometer — 1234Tools",
   "short_name": "Nautical Mile",
   "description": "Convert Nautical Mile (nmi) to Nanometer (nm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/nautical-mile-to-nanometer.html?src=pwa",
-  "scope": "/conversions/length/nautical-mile-to-nanometer.html",
+  "start_url": "/conversions/length/nautical-mile-to-nanometer/?src=pwa",
+  "scope": "/conversions/length/nautical-mile-to-nanometer/",
   "display": "standalone",
   "display_override": [
     "standalone",

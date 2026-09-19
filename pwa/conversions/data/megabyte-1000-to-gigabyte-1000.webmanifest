@@ -3,8 +3,8 @@
   "name": "Convert Megabyte (1000) to Gigabyte (1000) — 1234Tools",
   "short_name": "Megabyte (1000)",
   "description": "Convert Megabyte (1000) (MB) to Gigabyte (1000) (GB) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/megabyte-1000-to-gigabyte-1000.html?src=pwa",
-  "scope": "/conversions/data/megabyte-1000-to-gigabyte-1000.html",
+  "start_url": "/conversions/data/megabyte-1000-to-gigabyte-1000/?src=pwa",
+  "scope": "/conversions/data/megabyte-1000-to-gigabyte-1000/",
   "display": "standalone",
   "display_override": [
     "standalone",

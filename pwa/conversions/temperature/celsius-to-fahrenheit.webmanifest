@@ -3,8 +3,8 @@
   "name": "Convert Celsius to Fahrenheit — 1234Tools",
   "short_name": "Celsius → Fahrenheit",
   "description": "Convert Celsius (°C) to Fahrenheit (°F) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/celsius-to-fahrenheit.html?src=pwa",
-  "scope": "/conversions/temperature/celsius-to-fahrenheit.html",
+  "start_url": "/conversions/temperature/celsius-to-fahrenheit/?src=pwa",
+  "scope": "/conversions/temperature/celsius-to-fahrenheit/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "ROI & Payback Period Calculator — 1234Tools",
   "short_name": "ROI & Payback",
   "description": "Calculate return on investment, annualised return and how long an investment takes to pay for itself.",
-  "start_url": "/business/roi.html?src=pwa",
-  "scope": "/business/roi.html",
+  "start_url": "/business/roi/?src=pwa",
+  "scope": "/business/roi/",
   "display": "standalone",
   "display_override": [
     "standalone",

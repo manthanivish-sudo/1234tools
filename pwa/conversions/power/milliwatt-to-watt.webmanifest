@@ -3,8 +3,8 @@
   "name": "Convert Milliwatt to Watt — 1234Tools",
   "short_name": "Milliwatt → Watt",
   "description": "Convert Milliwatt (mW) to Watt (W) instantly. Works in both directions, with a full power table.",
-  "start_url": "/conversions/power/milliwatt-to-watt.html?src=pwa",
-  "scope": "/conversions/power/milliwatt-to-watt.html",
+  "start_url": "/conversions/power/milliwatt-to-watt/?src=pwa",
+  "scope": "/conversions/power/milliwatt-to-watt/",
   "display": "standalone",
   "display_override": [
     "standalone",

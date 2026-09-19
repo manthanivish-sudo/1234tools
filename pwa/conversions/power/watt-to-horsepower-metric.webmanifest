@@ -3,8 +3,8 @@
   "name": "Convert Watt to Horsepower (metric) — 1234Tools",
   "short_name": "Watt → Horsepower",
   "description": "Convert Watt (W) to Horsepower (metric) (PS) instantly. Works in both directions, with a full power table.",
-  "start_url": "/conversions/power/watt-to-horsepower-metric.html?src=pwa",
-  "scope": "/conversions/power/watt-to-horsepower-metric.html",
+  "start_url": "/conversions/power/watt-to-horsepower-metric/?src=pwa",
+  "scope": "/conversions/power/watt-to-horsepower-metric/",
   "display": "standalone",
   "display_override": [
     "standalone",

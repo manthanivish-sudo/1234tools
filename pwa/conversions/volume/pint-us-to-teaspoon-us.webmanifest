@@ -3,8 +3,8 @@
   "name": "Convert Pint (US) to Teaspoon (US) — 1234Tools",
   "short_name": "Pint (US) → Teaspoon",
   "description": "Convert Pint (US) (pt) to Teaspoon (US) (tsp) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/pint-us-to-teaspoon-us.html?src=pwa",
-  "scope": "/conversions/volume/pint-us-to-teaspoon-us.html",
+  "start_url": "/conversions/volume/pint-us-to-teaspoon-us/?src=pwa",
+  "scope": "/conversions/volume/pint-us-to-teaspoon-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

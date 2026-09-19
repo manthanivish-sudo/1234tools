@@ -3,8 +3,8 @@
   "name": "Convert Square Centimeter to Square Foot — 1234Tools",
   "short_name": "Square Centimeter",
   "description": "Convert Square Centimeter (cm²) to Square Foot (ft²) instantly. Works in both directions, with a full area table.",
-  "start_url": "/conversions/area/square-centimeter-to-square-foot.html?src=pwa",
-  "scope": "/conversions/area/square-centimeter-to-square-foot.html",
+  "start_url": "/conversions/area/square-centimeter-to-square-foot/?src=pwa",
+  "scope": "/conversions/area/square-centimeter-to-square-foot/",
   "display": "standalone",
   "display_override": [
     "standalone",

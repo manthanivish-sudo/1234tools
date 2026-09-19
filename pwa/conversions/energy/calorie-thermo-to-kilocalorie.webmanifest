@@ -3,8 +3,8 @@
   "name": "Convert Calorie (thermo) to Kilocalorie — 1234Tools",
   "short_name": "Calorie (thermo)",
   "description": "Convert Calorie (thermo) (cal) to Kilocalorie (kcal) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/calorie-thermo-to-kilocalorie.html?src=pwa",
-  "scope": "/conversions/energy/calorie-thermo-to-kilocalorie.html",
+  "start_url": "/conversions/energy/calorie-thermo-to-kilocalorie/?src=pwa",
+  "scope": "/conversions/energy/calorie-thermo-to-kilocalorie/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Furlong to Yard — 1234Tools",
   "short_name": "Furlong → Yard",
   "description": "Convert Furlong (fur) to Yard (yd) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/furlong-to-yard.html?src=pwa",
-  "scope": "/conversions/length/furlong-to-yard.html",
+  "start_url": "/conversions/length/furlong-to-yard/?src=pwa",
+  "scope": "/conversions/length/furlong-to-yard/",
   "display": "standalone",
   "display_override": [
     "standalone",

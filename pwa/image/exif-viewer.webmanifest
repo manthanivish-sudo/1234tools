@@ -3,8 +3,8 @@
   "name": "EXIF Metadata Viewer — 1234Tools",
   "short_name": "EXIF Metadata Viewer",
   "description": "See the hidden metadata in a photo — camera, timestamp, settings and GPS location.",
-  "start_url": "/image/exif-viewer.html?src=pwa",
-  "scope": "/image/exif-viewer.html",
+  "start_url": "/image/exif-viewer/?src=pwa",
+  "scope": "/image/exif-viewer/",
   "display": "standalone",
   "display_override": [
     "standalone",

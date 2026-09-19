@@ -3,8 +3,8 @@
   "name": "Convert Astronomical Unit to Centimeter — 1234Tools",
   "short_name": "Astronomical Unit",
   "description": "Convert Astronomical Unit (AU) to Centimeter (cm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/astronomical-unit-to-centimeter.html?src=pwa",
-  "scope": "/conversions/length/astronomical-unit-to-centimeter.html",
+  "start_url": "/conversions/length/astronomical-unit-to-centimeter/?src=pwa",
+  "scope": "/conversions/length/astronomical-unit-to-centimeter/",
   "display": "standalone",
   "display_override": [
     "standalone",

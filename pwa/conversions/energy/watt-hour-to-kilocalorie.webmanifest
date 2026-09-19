@@ -3,8 +3,8 @@
   "name": "Convert Watt Hour to Kilocalorie — 1234Tools",
   "short_name": "Watt Hour",
   "description": "Convert Watt Hour (Wh) to Kilocalorie (kcal) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/watt-hour-to-kilocalorie.html?src=pwa",
-  "scope": "/conversions/energy/watt-hour-to-kilocalorie.html",
+  "start_url": "/conversions/energy/watt-hour-to-kilocalorie/?src=pwa",
+  "scope": "/conversions/energy/watt-hour-to-kilocalorie/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Delisle to Rankine — 1234Tools",
   "short_name": "Delisle → Rankine",
   "description": "Convert Delisle (°De) to Rankine (°R) instantly. Works in both directions, with a full temperature table.",
-  "start_url": "/conversions/temperature/delisle-to-rankine.html?src=pwa",
-  "scope": "/conversions/temperature/delisle-to-rankine.html",
+  "start_url": "/conversions/temperature/delisle-to-rankine/?src=pwa",
+  "scope": "/conversions/temperature/delisle-to-rankine/",
   "display": "standalone",
   "display_override": [
     "standalone",

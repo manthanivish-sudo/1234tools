@@ -3,8 +3,8 @@
   "name": "Convert Kilojoule to Watt Hour — 1234Tools",
   "short_name": "Kilojoule → Watt",
   "description": "Convert Kilojoule (kJ) to Watt Hour (Wh) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/kilojoule-to-watt-hour.html?src=pwa",
-  "scope": "/conversions/energy/kilojoule-to-watt-hour.html",
+  "start_url": "/conversions/energy/kilojoule-to-watt-hour/?src=pwa",
+  "scope": "/conversions/energy/kilojoule-to-watt-hour/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert Nanometer to Inch — 1234Tools",
   "short_name": "Nanometer → Inch",
   "description": "Convert Nanometer (nm) to Inch (in) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/nanometer-to-inch.html?src=pwa",
-  "scope": "/conversions/length/nanometer-to-inch.html",
+  "start_url": "/conversions/length/nanometer-to-inch/?src=pwa",
+  "scope": "/conversions/length/nanometer-to-inch/",
   "display": "standalone",
   "display_override": [
     "standalone",

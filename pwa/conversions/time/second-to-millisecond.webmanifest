@@ -3,8 +3,8 @@
   "name": "Convert Second to Millisecond — 1234Tools",
   "short_name": "Second → Millisecond",
   "description": "Convert Second (s) to Millisecond (ms) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/second-to-millisecond.html?src=pwa",
-  "scope": "/conversions/time/second-to-millisecond.html",
+  "start_url": "/conversions/time/second-to-millisecond/?src=pwa",
+  "scope": "/conversions/time/second-to-millisecond/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Convert British Thermal Unit to Kilocalorie — 1234Tools",
   "short_name": "British Thermal",
   "description": "Convert British Thermal Unit (BTU) to Kilocalorie (kcal) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/british-thermal-unit-to-kilocalorie.html?src=pwa",
-  "scope": "/conversions/energy/british-thermal-unit-to-kilocalorie.html",
+  "start_url": "/conversions/energy/british-thermal-unit-to-kilocalorie/?src=pwa",
+  "scope": "/conversions/energy/british-thermal-unit-to-kilocalorie/",
   "display": "standalone",
   "display_override": [
     "standalone",

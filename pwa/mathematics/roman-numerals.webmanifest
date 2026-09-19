@@ -3,8 +3,8 @@
   "name": "Roman Numeral Converter — 1234Tools",
   "short_name": "Roman Numeral",
   "description": "Convert numbers to Roman numerals and back, with the rules explained.",
-  "start_url": "/mathematics/roman-numerals.html?src=pwa",
-  "scope": "/mathematics/roman-numerals.html",
+  "start_url": "/mathematics/roman-numerals/?src=pwa",
+  "scope": "/mathematics/roman-numerals/",
   "display": "standalone",
   "display_override": [
     "standalone",

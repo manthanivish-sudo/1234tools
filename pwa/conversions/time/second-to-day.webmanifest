@@ -3,8 +3,8 @@
   "name": "Convert Second to Day — 1234Tools",
   "short_name": "Second → Day",
   "description": "Convert Second (s) to Day (d) instantly. Works in both directions, with a full time table.",
-  "start_url": "/conversions/time/second-to-day.html?src=pwa",
-  "scope": "/conversions/time/second-to-day.html",
+  "start_url": "/conversions/time/second-to-day/?src=pwa",
+  "scope": "/conversions/time/second-to-day/",
   "display": "standalone",
   "display_override": [
     "standalone",

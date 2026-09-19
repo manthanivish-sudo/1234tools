@@ -3,8 +3,8 @@
   "name": "Compound Interest Calculator — 1234Tools",
   "short_name": "Compound Interest",
   "description": "Calculate how an investment grows with compound interest, including regular contributions.",
-  "start_url": "/finance/compound-interest.html?src=pwa",
-  "scope": "/finance/compound-interest.html",
+  "start_url": "/finance/compound-interest/?src=pwa",
+  "scope": "/finance/compound-interest/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Area & Volume Calculator — 1234Tools",
   "short_name": "Area & Volume",
   "description": "Area, perimeter, surface area and volume for common 2D and 3D shapes.",
-  "start_url": "/mathematics/geometry-calculator.html?src=pwa",
-  "scope": "/mathematics/geometry-calculator.html",
+  "start_url": "/mathematics/geometry-calculator/?src=pwa",
+  "scope": "/mathematics/geometry-calculator/",
   "display": "standalone",
   "display_override": [
     "standalone",

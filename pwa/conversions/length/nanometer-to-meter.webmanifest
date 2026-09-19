@@ -3,8 +3,8 @@
   "name": "Convert Nanometer to Meter — 1234Tools",
   "short_name": "Nanometer → Meter",
   "description": "Convert Nanometer (nm) to Meter (m) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/nanometer-to-meter.html?src=pwa",
-  "scope": "/conversions/length/nanometer-to-meter.html",
+  "start_url": "/conversions/length/nanometer-to-meter/?src=pwa",
+  "scope": "/conversions/length/nanometer-to-meter/",
   "display": "standalone",
   "display_override": [
     "standalone",

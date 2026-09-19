@@ -3,8 +3,8 @@
   "name": "Convert Fluid Ounce (US) to Gallon (US) — 1234Tools",
   "short_name": "Fluid Ounce (US)",
   "description": "Convert Fluid Ounce (US) (fl oz) to Gallon (US) (gal) instantly. Works in both directions, with a full volume & capacity table.",
-  "start_url": "/conversions/volume/fluid-ounce-us-to-gallon-us.html?src=pwa",
-  "scope": "/conversions/volume/fluid-ounce-us-to-gallon-us.html",
+  "start_url": "/conversions/volume/fluid-ounce-us-to-gallon-us/?src=pwa",
+  "scope": "/conversions/volume/fluid-ounce-us-to-gallon-us/",
   "display": "standalone",
   "display_override": [
     "standalone",

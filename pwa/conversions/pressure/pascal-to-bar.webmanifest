@@ -3,8 +3,8 @@
   "name": "Convert Pascal to Bar — 1234Tools",
   "short_name": "Pascal → Bar",
   "description": "Convert Pascal (Pa) to Bar (bar) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/pascal-to-bar.html?src=pwa",
-  "scope": "/conversions/pressure/pascal-to-bar.html",
+  "start_url": "/conversions/pressure/pascal-to-bar/?src=pwa",
+  "scope": "/conversions/pressure/pascal-to-bar/",
   "display": "standalone",
   "display_override": [
     "standalone",

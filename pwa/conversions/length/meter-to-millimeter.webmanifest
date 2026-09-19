@@ -3,8 +3,8 @@
   "name": "Convert Meter to Millimeter — 1234Tools",
   "short_name": "Meter → Millimeter",
   "description": "Convert Meter (m) to Millimeter (mm) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/meter-to-millimeter.html?src=pwa",
-  "scope": "/conversions/length/meter-to-millimeter.html",
+  "start_url": "/conversions/length/meter-to-millimeter/?src=pwa",
+  "scope": "/conversions/length/meter-to-millimeter/",
   "display": "standalone",
   "display_override": [
     "standalone",

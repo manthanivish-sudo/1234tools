@@ -3,8 +3,8 @@
   "name": "Convert Inch to Chain — 1234Tools",
   "short_name": "Inch → Chain",
   "description": "Convert Inch (in) to Chain (ch) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/inch-to-chain.html?src=pwa",
-  "scope": "/conversions/length/inch-to-chain.html",
+  "start_url": "/conversions/length/inch-to-chain/?src=pwa",
+  "scope": "/conversions/length/inch-to-chain/",
   "display": "standalone",
   "display_override": [
     "standalone",

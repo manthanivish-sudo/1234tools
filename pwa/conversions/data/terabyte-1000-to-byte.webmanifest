@@ -3,8 +3,8 @@
   "name": "Convert Terabyte (1000) to Byte — 1234Tools",
   "short_name": "Terabyte (1000)",
   "description": "Convert Terabyte (1000) (TB) to Byte (B) instantly. Works in both directions, with a full digital storage table.",
-  "start_url": "/conversions/data/terabyte-1000-to-byte.html?src=pwa",
-  "scope": "/conversions/data/terabyte-1000-to-byte.html",
+  "start_url": "/conversions/data/terabyte-1000-to-byte/?src=pwa",
+  "scope": "/conversions/data/terabyte-1000-to-byte/",
   "display": "standalone",
   "display_override": [
     "standalone",

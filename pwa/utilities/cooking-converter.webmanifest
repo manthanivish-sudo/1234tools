@@ -3,8 +3,8 @@
   "name": "Cooking Measurement Converter — 1234Tools",
   "short_name": "Cooking Measurement",
   "description": "Convert between cups, tablespoons, millilitres, grams and ounces for common ingredients.",
-  "start_url": "/utilities/cooking-converter.html?src=pwa",
-  "scope": "/utilities/cooking-converter.html",
+  "start_url": "/utilities/cooking-converter/?src=pwa",
+  "scope": "/utilities/cooking-converter/",
   "display": "standalone",
   "display_override": [
     "standalone",

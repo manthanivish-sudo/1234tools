@@ -3,8 +3,8 @@
   "name": "Daily Water Intake Estimator — 1234Tools",
   "short_name": "Daily Water Intake",
   "description": "A rough guide to daily fluid needs based on body weight, activity and climate.",
-  "start_url": "/health/water-intake.html?src=pwa",
-  "scope": "/health/water-intake.html",
+  "start_url": "/health/water-intake/?src=pwa",
+  "scope": "/health/water-intake/",
   "display": "standalone",
   "display_override": [
     "standalone",

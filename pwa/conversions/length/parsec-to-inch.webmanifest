@@ -3,8 +3,8 @@
   "name": "Convert Parsec to Inch — 1234Tools",
   "short_name": "Parsec → Inch",
   "description": "Convert Parsec (pc) to Inch (in) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/parsec-to-inch.html?src=pwa",
-  "scope": "/conversions/length/parsec-to-inch.html",
+  "start_url": "/conversions/length/parsec-to-inch/?src=pwa",
+  "scope": "/conversions/length/parsec-to-inch/",
   "display": "standalone",
   "display_override": [
     "standalone",

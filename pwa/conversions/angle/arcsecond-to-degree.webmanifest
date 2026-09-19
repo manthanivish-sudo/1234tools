@@ -3,8 +3,8 @@
   "name": "Convert Arcsecond to Degree — 1234Tools",
   "short_name": "Arcsecond → Degree",
   "description": "Convert Arcsecond (\") to Degree (°) instantly. Works in both directions, with a full angle table.",
-  "start_url": "/conversions/angle/arcsecond-to-degree.html?src=pwa",
-  "scope": "/conversions/angle/arcsecond-to-degree.html",
+  "start_url": "/conversions/angle/arcsecond-to-degree/?src=pwa",
+  "scope": "/conversions/angle/arcsecond-to-degree/",
   "display": "standalone",
   "display_override": [
     "standalone",

@@ -3,8 +3,8 @@
   "name": "Date Add & Subtract Calculator — 1234Tools",
   "short_name": "Date Add & Subtract",
   "description": "Add or subtract years, months, weeks and days from any date, with correct end-of-month handling.",
-  "start_url": "/time/date-add-subtract.html?src=pwa",
-  "scope": "/time/date-add-subtract.html",
+  "start_url": "/time/date-add-subtract/?src=pwa",
+  "scope": "/time/date-add-subtract/",
   "display": "standalone",
   "display_override": [
     "standalone",

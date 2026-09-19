@@ -3,8 +3,8 @@
   "name": "Convert Light Year to Meter — 1234Tools",
   "short_name": "Light Year → Meter",
   "description": "Convert Light Year (ly) to Meter (m) instantly. Works in both directions, with a full length & distance table.",
-  "start_url": "/conversions/length/light-year-to-meter.html?src=pwa",
-  "scope": "/conversions/length/light-year-to-meter.html",
+  "start_url": "/conversions/length/light-year-to-meter/?src=pwa",
+  "scope": "/conversions/length/light-year-to-meter/",
   "display": "standalone",
   "display_override": [
     "standalone",

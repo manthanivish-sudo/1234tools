@@ -3,8 +3,8 @@
   "name": "Countdown Timer — 1234Tools",
   "short_name": "Countdown Timer",
   "description": "Count down to any date and time, with a live display of days, hours, minutes and seconds.",
-  "start_url": "/time/countdown-timer.html?src=pwa",
-  "scope": "/time/countdown-timer.html",
+  "start_url": "/time/countdown-timer/?src=pwa",
+  "scope": "/time/countdown-timer/",
   "display": "standalone",
   "display_override": [
     "standalone",

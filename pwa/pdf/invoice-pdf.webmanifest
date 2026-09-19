@@ -3,8 +3,8 @@
   "name": "Invoice Generator (PDF) — 1234Tools",
   "short_name": "Invoice Generator",
   "description": "Create a clean, professional invoice PDF with line items, tax and totals calculated for you.",
-  "start_url": "/pdf/invoice-pdf.html?src=pwa",
-  "scope": "/pdf/invoice-pdf.html",
+  "start_url": "/pdf/invoice-pdf/?src=pwa",
+  "scope": "/pdf/invoice-pdf/",
   "display": "standalone",
   "display_override": [
     "standalone",

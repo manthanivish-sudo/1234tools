@@ -3,8 +3,8 @@
   "name": "Convert Kilopascal to Megapascal — 1234Tools",
   "short_name": "Kilopascal",
   "description": "Convert Kilopascal (kPa) to Megapascal (MPa) instantly. Works in both directions, with a full pressure table.",
-  "start_url": "/conversions/pressure/kilopascal-to-megapascal.html?src=pwa",
-  "scope": "/conversions/pressure/kilopascal-to-megapascal.html",
+  "start_url": "/conversions/pressure/kilopascal-to-megapascal/?src=pwa",
+  "scope": "/conversions/pressure/kilopascal-to-megapascal/",
   "display": "standalone",
   "display_override": [
     "standalone",

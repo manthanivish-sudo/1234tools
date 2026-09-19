@@ -3,8 +3,8 @@
   "name": "Convert Joule to Kilowatt Hour — 1234Tools",
   "short_name": "Joule → Kilowatt",
   "description": "Convert Joule (J) to Kilowatt Hour (kWh) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/joule-to-kilowatt-hour.html?src=pwa",
-  "scope": "/conversions/energy/joule-to-kilowatt-hour.html",
+  "start_url": "/conversions/energy/joule-to-kilowatt-hour/?src=pwa",
+  "scope": "/conversions/energy/joule-to-kilowatt-hour/",
   "display": "standalone",
   "display_override": [
     "standalone",

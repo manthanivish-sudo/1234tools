@@ -3,8 +3,8 @@
   "name": "Convert Watt Hour to Joule — 1234Tools",
   "short_name": "Watt Hour → Joule",
   "description": "Convert Watt Hour (Wh) to Joule (J) instantly. Works in both directions, with a full energy & work table.",
-  "start_url": "/conversions/energy/watt-hour-to-joule.html?src=pwa",
-  "scope": "/conversions/energy/watt-hour-to-joule.html",
+  "start_url": "/conversions/energy/watt-hour-to-joule/?src=pwa",
+  "scope": "/conversions/energy/watt-hour-to-joule/",
   "display": "standalone",
   "display_override": [
     "standalone",
