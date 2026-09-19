@@ -1753,6 +1753,43 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
 }
 .pdf-file-card .btn-ghost { margin-top: auto; }
 
+/* ---------- click to place ---------- */
+/* Shown by the two tools that ask where on the page something goes. The
+   canvas is the control: clicking it writes the X and Y fields below. */
+.place-preview {
+  margin: 0 0 18px; padding: 14px;
+  background: var(--bg-1); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.place-head {
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 0 10px;
+}
+.place-title { font-size: .85rem; color: var(--text-2); }
+.place-head .btn-ghost { margin-left: auto; }
+
+/* A rendered page is white in either theme, so it gets its own plate. */
+.place-canvas {
+  display: block; max-width: 100%; height: auto; margin: 0 auto;
+  background: #fff; cursor: crosshair;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  box-shadow: 0 6px 22px rgba(0,0,0,.28);
+}
+.place-canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.place-readout {
+  margin: 10px 0 0; text-align: center;
+  font-family: var(--font-mono); font-size: .76rem; color: var(--text-3);
+}
+.place-readout.is-off { color: #e8896f; }
+.place-note { margin: 0; font-size: .85rem; line-height: 1.6; color: var(--text-3); }
+
+@media (max-width: 640px) {
+  .place-preview { padding: 10px; }
+  .place-head { gap: 8px; }
+  .place-title { font-size: .8rem; }
+}
+
 /* ---------- page organiser ---------- */
 
 .page-grid {

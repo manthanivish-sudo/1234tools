@@ -52,7 +52,7 @@
     label.setAttribute('for', id);
     wrap.appendChild(label);
 
-    let read;
+    let read, primary = null;
     if (c.type === 'select') {
       const s = el('select', 'control');
       s.id = id; s.name = c.key;
@@ -63,11 +63,13 @@
         s.appendChild(opt);
       });
       wrap.appendChild(s);
+      primary = s;
       read = () => s.value;
     } else if (c.type === 'textarea') {
       const t = el('textarea', 'control');
       t.id = id; t.name = c.key; t.rows = 4; t.value = c.default || '';
       wrap.appendChild(t);
+      primary = t;
       read = () => t.value;
     } else if (c.type === 'color') {
       const row = el('div', 'colour-field');
@@ -79,12 +81,14 @@
       hex.addEventListener('input', () => { if (/^#[0-9a-f]{6}$/i.test(hex.value)) sw.value = hex.value; });
       row.appendChild(sw); row.appendChild(hex);
       wrap.appendChild(row);
+      primary = hex;
       read = () => hex.value;
     } else if (c.type === 'date') {
       const i = el('input', 'control');
       i.type = 'date'; i.id = id; i.name = c.key;
       i.value = c.default === 'TODAY' ? new Date().toISOString().slice(0, 10) : (c.default || '');
       wrap.appendChild(i);
+      primary = i;
       read = () => i.value;
     } else if (c.type === 'number') {
       const i = el('input', 'control');
@@ -94,16 +98,25 @@
       if (c.step !== undefined) i.step = c.step;
       i.value = c.default;
       wrap.appendChild(i);
+      primary = i;
       read = () => i.value;
     } else {
       const i = el('input', 'control');
       i.type = 'text'; i.id = id; i.name = c.key; i.value = c.default || '';
       if (c.hint) i.placeholder = c.hint;
       wrap.appendChild(i);
+      primary = i;
       read = () => i.value;
     }
     if (c.hint) wrap.appendChild(el('span', 'field-hint', c.hint));
-    return { wrap, read, key: c.key };
+    return {
+      wrap, read, key: c.key, input: primary,
+      set: (v) => {
+        if (!primary) return;
+        primary.value = v;
+        primary.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    };
   }
 
   /* ---------- mount ---------- */
@@ -153,12 +166,19 @@
       io.appendChild(textPane);
     }
 
+    /* Click-to-place. Sits above the controls it fills in, because the
+       order of operations is: see the page, click the spot, adjust. */
+    const place = el('div', 'place-preview');
+    place.hidden = true;
+    if (spec.placePreview) io.appendChild(place);
+
     const readers = (spec.controls || []).map(c => {
       const b = buildControl(c);
       opts.appendChild(b.wrap);
       return b;
     });
     if (readers.length) io.appendChild(opts);
+    const reader = (key) => readers.find(r => r.key === key);
 
     const runBar = el('div', 'io-actions pdf-run');
     const runBtn = el('button', 'btn-primary',
@@ -213,6 +233,7 @@
         drop.appendChild(fileInput);
       }
       renderFileList();
+      if (spec.placePreview) paintPlace();
       if (spec.kind === 'inspect') run();
     }
 
@@ -249,6 +270,7 @@
             drop.appendChild(fileInput);
             results.innerHTML = ''; actions.innerHTML = ''; stats.innerHTML = '';
             report.hidden = true;
+            if (spec.placePreview) { place.hidden = true; place.innerHTML = ''; }
           }
         });
         row.appendChild(rm);
@@ -340,6 +362,195 @@
       pdfjs = mod;
       say('');
       return mod;
+    }
+
+    /* ---------- click to place ---------- */
+    /* Rasterise once into an offscreen canvas, then blit and draw the marker
+       on every change. Re-rendering a page per keystroke would be visible. */
+    let placeState = null;
+
+    async function paintPlace() {
+      const cfg = spec.placePreview;
+      if (!cfg || !docs.length) return;
+
+      place.hidden = false;
+      place.innerHTML = '';
+      place.appendChild(el('p', 'place-note', 'Rendering the page\u2026'));
+
+      let lib;
+      try { lib = await ensurePdfJs(); }
+      catch (e) {
+        /* The tool still works; only the aiming aid is gone. */
+        place.innerHTML = '';
+        place.appendChild(el('p', 'place-note',
+          'The page preview could not load. The X and Y boxes still work \u2014 they are ' +
+          'measured in points from the bottom-left corner, 72 to the inch.'));
+        return;
+      }
+
+      const src = docs[0];
+      let pdf;
+      try {
+        const raw = new Uint8Array(await new Blob([src.doc.bytes]).arrayBuffer());
+        pdf = await lib.getDocument({
+          data: raw,
+          cMapUrl: `${PDFJS_BASE}cmaps/`,
+          cMapPacked: true,
+          standardFontDataUrl: `${PDFJS_BASE}standard_fonts/`
+        }).promise;
+      } catch (e) {
+        place.innerHTML = '';
+        place.appendChild(el('p', 'place-note', 'This PDF could not be rendered for preview, but it can still be processed.'));
+        return;
+      }
+
+      /* Which page to show: the first one the page control selects. */
+      let shown = 0;
+      const pageKey = cfg.page && reader(cfg.page);
+      if (pageKey) {
+        const v = String(pageKey.read() || '').trim();
+        if (/^last$/i.test(v)) shown = pdf.numPages - 1;
+        else {
+          try {
+            const idx = core.parsePageRange(v, pdf.numPages);
+            if (idx.length) shown = idx[0];
+          } catch (e) { shown = 0; }
+        }
+      }
+      shown = Math.max(0, Math.min(pdf.numPages - 1, shown));
+
+      const page = await pdf.getPage(shown + 1);
+      const base = page.getViewport({ scale: 1 });
+      /* Fit the column, and never rasterise more than is useful. */
+      const wide = Math.min(560, Math.max(280, place.clientWidth || 520));
+      const scale = Math.min(1.6, wide / base.width);
+      const vp = page.getViewport({ scale });
+
+      const sheet = document.createElement('canvas');
+      sheet.width = Math.round(vp.width);
+      sheet.height = Math.round(vp.height);
+      const sctx = sheet.getContext('2d');
+      sctx.fillStyle = '#fff';
+      sctx.fillRect(0, 0, sheet.width, sheet.height);
+      await page.render({ canvasContext: sctx, viewport: vp }).promise;
+
+      place.innerHTML = '';
+      const head = el('div', 'place-head');
+      head.appendChild(el('span', 'place-title',
+        'Click the page to place it' + (pdf.numPages > 1 ? ' \u00b7 page ' + (shown + 1) + ' of ' + pdf.numPages : '')));
+      const reset = el('button', 'btn-ghost', 'Centre');
+      reset.type = 'button';
+      reset.title = 'Put it in the middle of the page';
+      head.appendChild(reset);
+      place.appendChild(head);
+
+      const canvas = el('canvas', 'place-canvas');
+      canvas.width = sheet.width;
+      canvas.height = sheet.height;
+      canvas.setAttribute('role', 'application');
+      canvas.tabIndex = 0;
+      canvas.setAttribute('aria-label',
+        'Page preview. Click to set the position, or use the arrow keys. ' +
+        'The X and Y boxes below hold the same value.');
+      place.appendChild(canvas);
+
+      const readout = el('p', 'place-readout');
+      place.appendChild(readout);
+
+      placeState = { cfg, sheet, canvas, readout, scale, wPt: base.width, hPt: base.height };
+
+      const setPoint = (xPt, yPt) => {
+        const rx = reader(cfg.x), ry = reader(cfg.y);
+        if (rx) rx.set(Math.round(Math.max(0, Math.min(base.width, xPt))));
+        if (ry) ry.set(Math.round(Math.max(0, Math.min(base.height, yPt))));
+        drawPlace();
+      };
+
+      canvas.addEventListener('click', (ev) => {
+        const r = canvas.getBoundingClientRect();
+        const xPt = (ev.clientX - r.left) * (base.width / r.width);
+        /* PDF counts up from the bottom; the canvas counts down from the top. */
+        const yPt = base.height - (ev.clientY - r.top) * (base.height / r.height);
+        setPoint(xPt, yPt);
+        canvas.focus();
+      });
+
+      canvas.addEventListener('keydown', (ev) => {
+        const step = ev.shiftKey ? 20 : 2;
+        const rx = reader(cfg.x), ry = reader(cfg.y);
+        const cx = Number(rx && rx.read()) || 0, cy = Number(ry && ry.read()) || 0;
+        if (ev.key === 'ArrowLeft') setPoint(cx - step, cy);
+        else if (ev.key === 'ArrowRight') setPoint(cx + step, cy);
+        else if (ev.key === 'ArrowUp') setPoint(cx, cy + step);
+        else if (ev.key === 'ArrowDown') setPoint(cx, cy - step);
+        else return;
+        ev.preventDefault();
+      });
+
+      reset.addEventListener('click', () => setPoint(base.width / 2, base.height / 2));
+
+      /* Any control that feeds the marker redraws it. */
+      [cfg.x, cfg.y, cfg.text, cfg.size, cfg.colour].forEach(k => {
+        const r = typeof k === 'string' && reader(k);
+        if (r && r.input) r.input.addEventListener('input', drawPlace);
+      });
+      if (pageKey && pageKey.input) {
+        pageKey.input.addEventListener('change', () => paintPlace());
+      }
+
+      drawPlace();
+    }
+
+    /* Draw what the output will look like, not a generic pin. */
+    function drawPlace() {
+      if (!placeState) return;
+      const { cfg, sheet, canvas, readout, scale, wPt, hPt } = placeState;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(sheet, 0, 0);
+
+      const val = (k, fallback) => {
+        if (typeof k !== 'string') return k === undefined ? fallback : k;
+        const r = reader(k);
+        return r ? r.read() : fallback;
+      };
+      const xPt = Number(val(cfg.x, 0)) || 0;
+      const yPt = Number(val(cfg.y, 0)) || 0;
+      const text = String(val(cfg.text, '') || '').split('\n')[0].slice(0, 80);
+      const size = Math.max(6, Number(val(cfg.size, 12)) || 12);
+      const colour = /^#[0-9a-f]{6}$/i.test(String(val(cfg.colour, '#000000'))) ? val(cfg.colour, '#000000') : '#000000';
+
+      const cx = xPt * scale;
+      const cy = (hPt - yPt) * scale;
+
+      if (text) {
+        ctx.font = (size * scale).toFixed(1) + 'px Helvetica, Arial, sans-serif';
+        const w = ctx.measureText(text).width;
+        const h = size * scale;
+        ctx.fillStyle = 'rgba(247,201,72,.22)';
+        ctx.fillRect(cx - 2, cy - h, w + 4, h + 4);
+        ctx.strokeStyle = '#f7c948';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
+        ctx.strokeRect(cx - 2, cy - h, w + 4, h + 4);
+        ctx.setLineDash([]);
+        ctx.fillStyle = colour;
+        ctx.fillText(text, cx, cy);
+      }
+
+      /* The anchor, always, even with no text yet. */
+      ctx.strokeStyle = '#f7c948';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - 7, cy); ctx.lineTo(cx + 7, cy);
+      ctx.moveTo(cx, cy - 7); ctx.lineTo(cx, cy + 7);
+      ctx.stroke();
+
+      const off = xPt < 0 || yPt < 0 || xPt > wPt || yPt > hPt;
+      readout.textContent = 'X ' + Math.round(xPt) + ' \u00b7 Y ' + Math.round(yPt) +
+        ' points from the bottom-left of a ' + Math.round(wPt) + ' \u00d7 ' + Math.round(hPt) + ' page' +
+        (off ? ' \u2014 that is off the page' : '');
+      readout.className = 'place-readout' + (off ? ' is-off' : '');
     }
 
     async function runRender() {

@@ -105,7 +105,10 @@ function tools() {
 function shortName(title) {
   let s = title
     .replace(/^Convert\s+/i, '')
-    .replace(/\s+to\s+/i, ' → ')
+    /* "PDF to Word" is a conversion and reads well as an arrow. "Add Text to
+       a PDF" is not, and "Add Text → a PDF" is gibberish on a home screen.
+       An article after "to" is what separates the two. */
+    .replace(/\s+to\s+(?!(a|an|the)\s)/i, ' → ')
     .replace(/\s*[—–]\s*.*$/, '')
     .replace(/\s*\([^)]*\)\s*$/, '')
     .trim();
