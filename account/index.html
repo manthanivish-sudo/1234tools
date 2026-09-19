@@ -43,7 +43,7 @@
 
 <header class="site-header">
   <div class="container nav-wrap">
-    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,196+ free tools</small></span></a>
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,205+ free tools</small></span></a>
 
     <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navlinks">
       <span></span><span></span><span></span>
@@ -51,7 +51,7 @@
 
     <div class="header-tools">
       <div class="search-wrap">
-        <input id="q" type="search" placeholder="Search 1,196 tools…" autocomplete="off" aria-label="Search tools">
+        <input id="q" type="search" placeholder="Search 1,205 tools…" autocomplete="off" aria-label="Search tools">
         <div id="results" class="search-results" hidden></div>
       </div>
       <div class="theme-switch" role="group" aria-label="Colour theme">
@@ -78,7 +78,7 @@
 
 <div class="layout container">
   <button class="sidebar-open" id="sidebarOpen" aria-expanded="false" aria-controls="sidebar">
-    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,196 tools</span>
+    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,205 tools</span>
   </button>
 
   <aside class="sidebar" id="sidebar" aria-label="Tool categories">
@@ -89,7 +89,7 @@
 
     <nav class="side-nav">
       <a class="side-link" href="/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,196</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,205</span>
       </a>
 
       <p class="side-group">Categories</p>
@@ -140,6 +140,11 @@
       </a>
       <a class="side-link" href="/education/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-education"></use></svg><span class="side-name">Education &amp; Exams</span><span class="side-count">6</span>
+      </a>
+
+      <p class="side-group">AI for business</p>
+      <a class="side-link" href="/ai/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-ai"></use></svg><span class="side-name">AI for Business</span><span class="side-count">9</span>
       </a>
 
       <p class="side-group">Learning</p>
@@ -213,6 +218,7 @@
       <div class="io-actions"><a class="btn-primary" id="acct-upgrade" href="/pricing/">See plans</a><button type="button" class="btn-ghost" id="acct-manage" hidden>Manage billing</button><button type="button" class="btn-ghost" id="acct-cancel" hidden>Cancel at period end</button><button type="button" class="btn-ghost" id="acct-signout">Sign out</button></div>
     </div>
     <section class="panel"><h2>Saved settings</h2><p class="acct-hint">Tool settings you save while signed in — a Tally column mapping, for instance — are kept here and offered on any device.</p><ul class="acct-saved" id="acct-saved"><li class="acct-empty">Nothing saved yet.</li></ul></section>
+    <section class="panel"><h2>Your data</h2><p class="acct-hint">Everything we hold about this account, as one file — or gone. Deleting cancels any subscription first, then removes the saved settings, the usage counts and the sign-in itself. It cannot be undone. <a href="/trust/">What we hold and why</a>.</p><div class="io-actions"><button type="button" class="btn-ghost" id="acct-export">Download my data</button><button type="button" class="btn-ghost acct-danger" id="acct-delete">Delete my account</button></div></section>
   </section>
 </article>
 <script>
@@ -282,6 +288,23 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!confirm('Cancel the subscription? You keep access until the end of the period you have paid for.')) return;
     A.manage('cancel').then(function (r) { say('Cancelled. Access continues until ' + (r.until ? new Date(r.until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'the end of the period') + '.', 'note'); }).catch(function (e) { say(e.message, 'error'); });
   });
+  $('acct-export').addEventListener('click', function () {
+    var b = $('acct-export'); busy(b, true); say('Collecting…', 'note');
+    A.exportData().then(function (data) {
+      var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob); var a = document.createElement('a'); a.href = url; a.download = '1234tools-account-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      say('Downloaded. That file is everything we hold about this account.', 'note');
+    }).catch(function (e) { say(e.message, 'error'); }).then(function () { busy(b, false); });
+  });
+  $('acct-delete').addEventListener('click', function () {
+    var typed = prompt('This deletes the account, its saved settings and usage counts, and cancels any subscription. It cannot be undone.\n\nType DELETE to confirm:');
+    if (typed !== 'DELETE') { say('Not deleted.', 'note'); return; }
+    var b = $('acct-delete'); busy(b, true); say('Deleting…', 'note');
+    A.deleteAccount().then(function (r) {
+      say('Deleted' + (r && r.cancelled ? ', and the ' + r.cancelled + ' subscription was cancelled' : '') + '. Nothing about you remains on our side.', 'note');
+    }).catch(function (e) { say(e.message, 'error'); busy(b, false); });
+  });
 });
 </script>
 </main>
@@ -292,8 +315,8 @@ document.addEventListener('DOMContentLoaded', function () {
   <div class="container">
     <div class="footer-grid">
       <div class="footer-about">
-        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,196+ free tools</small></span></a>
-        <p>1,196+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
+        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,205+ free tools</small></span></a>
+        <p>1,205+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
       </div>
       <div>
         <h4>1234Tools</h4>

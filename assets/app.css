@@ -2023,6 +2023,95 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
   .plan-controls .biz-seg { display: flex; }
 }
 
+/* ---------- AI tools ---------- */
+/* The cloud tools. The privacy line is styled to be read, not skipped: it
+   is the one paragraph on the page that says what leaves the device. */
+.ai-privacy-line {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin: -12px 0 22px; padding: 12px 14px;
+  font-size: .86rem; line-height: 1.55; color: var(--text-2);
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg-1));
+  border: 1px solid var(--border-gold); border-left-width: 3px; border-radius: var(--radius-sm);
+}
+.ai-privacy-line .ico-inline { flex: none; width: 18px; height: 18px; margin-top: 2px; color: var(--accent); }
+.ai-privacy-line a { color: var(--accent); }
+
+.ai-gate {
+  margin: 0 0 16px; padding: 10px 14px;
+  background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: .84rem; color: var(--text-2);
+}
+.ai-gate:empty { display: none; }
+.ai-gate-text { margin: 0; line-height: 1.55; }
+.ai-gate-text a { color: var(--accent); }
+.ai-gate-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.ai-plan { padding: 2px 9px; border-radius: 999px; font-size: .66rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: var(--surface); color: var(--text-3); }
+.ai-plan.is-pro, .ai-plan.is-business { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--gold-2); }
+.ai-upgrade { margin-left: auto; color: var(--accent); font-weight: 600; text-decoration: none; }
+.ai-upgrade:hover { text-decoration: underline; }
+
+.ai-input { margin: 0 0 14px; }
+.ai-drop {
+  display: grid; place-items: center; gap: 4px; text-align: center;
+  padding: 16px; margin: 0 0 8px; cursor: pointer;
+  background: var(--bg-1); border: 2px dashed var(--border); border-radius: var(--radius-sm);
+  transition: border-color .2s, background .2s;
+}
+.ai-drop:hover, .ai-drop:focus-visible, .ai-drop.over { border-color: var(--border-gold); background: var(--surface-strong); }
+.ai-drop strong { font-size: .9rem; color: var(--text-1); }
+.ai-drop span { font-size: .78rem; color: var(--text-3); }
+.ai-textarea { min-height: 120px; font-family: var(--font-mono); font-size: .82rem; line-height: 1.5; resize: vertical; }
+.ai-count { display: block; text-align: right; }
+.ai-count.is-over { color: #e8896f; }
+
+.ai-preview { margin: 0 0 4px; font-size: .82rem; color: var(--text-3); }
+.ai-preview summary { cursor: pointer; padding: 6px 0; }
+.ai-preview-body { max-height: 260px; overflow: auto; font-size: .74rem; white-space: pre-wrap; }
+
+.ai-result { margin-top: 12px; }
+.ai-text { padding: 16px 18px; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: .92rem; line-height: 1.65; color: var(--text-1); }
+.ai-text p { margin: 0 0 12px; white-space: pre-wrap; }
+.ai-text p:last-child { margin-bottom: 0; }
+.ai-text ul { margin: 0 0 12px; padding-left: 20px; }
+.ai-text li { margin: 0 0 4px; }
+.ai-h3 { margin: 14px 0 6px; font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); }
+.ai-text .ai-h3:first-child { margin-top: 0; }
+
+.ai-fields dl { margin: 0; display: grid; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.ai-fields dl > div { display: grid; grid-template-columns: minmax(140px, 28%) 1fr; gap: 12px; padding: 9px 14px; background: var(--bg-1); }
+.ai-fields dt { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); padding-top: 2px; }
+.ai-fields dd { margin: 0; font-size: .88rem; color: var(--text-1); overflow-wrap: anywhere; }
+.ai-fields dd ul { margin: 0; padding-left: 18px; }
+.ai-fields dd .ai-fields dl { border: 0; }
+.ai-fields dd .biz-preview { margin: 4px 0 0; max-height: 300px; }
+
+.ai-how p { margin: 0 0 10px; font-size: .9rem; line-height: 1.6; color: var(--text-2); }
+.ai-how p:last-child { margin-bottom: 0; }
+
+@media (max-width: 640px) {
+  .ai-fields dl > div { grid-template-columns: 1fr; gap: 3px; }
+  .ai-upgrade { margin-left: 0; }
+  .ai-privacy-line { margin-top: -6px; }
+}
+
+/* ---------- the shield, and the trust page ---------- */
+.ai-shield {
+  display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: start;
+  margin: 0 0 12px; padding: 10px 14px; cursor: pointer;
+  font-size: .82rem; line-height: 1.5; color: var(--text-2);
+  background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.ai-shield input { margin: 4px 0 0; accent-color: var(--accent); }
+.ai-shield-text strong { color: var(--text-1); }
+.ai-shield-text em { color: var(--text-3); font-style: normal; }
+.ai-shield-note { grid-column: 2; font-family: var(--font-mono); font-size: .72rem; color: var(--gold-2); }
+.ai-shield-note:empty { display: none; }
+.acct-danger { border-color: rgba(255,90,60,.45); color: #e8896f; }
+.acct-danger:hover { border-color: #e8896f; color: #ff9d8a; }
+.trust-table th[scope="row"] { text-transform: none; letter-spacing: 0; font-size: .82rem; color: var(--text-1); white-space: normal; }
+.trust-table td { white-space: normal; font-family: var(--font-body); }
+.trust .tips li strong, .trust p strong { color: var(--text-1); }
+
 /* ---------- page organiser ---------- */
 
 .page-grid {

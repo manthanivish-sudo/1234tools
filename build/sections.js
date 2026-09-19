@@ -30,6 +30,9 @@ const SECTIONS = {
      readers to the wrong one, so the plain name wins and `also` records the
      label it knowingly replaces. */
   '/business/':    { name: 'Business', also: ['Business & Accounting'] },
+  /* The cloud tools. `hub` is the hub's own crumb; the sidebar group above
+     it is written by build-ai.js, which owns everything under /ai/. */
+  '/ai/':          { name: 'AI for Business', head: 'AI for Business', hub: 'AI for Business', noun: 'tool' },
   '/conversions/': { name: 'Conversions' },
   /* `noun` is what a generated hub title counts: "14 Free Calculators" is
      right for business and wrong for an image compressor. */
@@ -70,6 +73,7 @@ const SECTIONS = {
   '/about/':   { name: 'About', meta: true },
   '/pricing/': { name: 'Pricing', meta: true },
   '/account/': { name: 'Account', meta: true },
+  '/trust/':   { name: 'Trust & security', meta: true },
   '/contact/': { name: 'Contact', meta: true },
   '/privacy/': { name: 'Privacy', meta: true },
   '/terms/':   { name: 'Terms', meta: true },

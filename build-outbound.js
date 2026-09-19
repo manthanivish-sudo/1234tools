@@ -191,4 +191,8 @@ function main() {
   console.log('\n  ' + files + ' file(s) ' + (CHECK ? 'would change' : 'changed') + '\n');
 }
 
-main();
+/* A generator that writes a page with an outbound link calls rewrite() on
+   it before writing, so the page and this pass agree on the first run. Run
+   directly, this tags the whole site; required, it only lends the function. */
+if (require.main === module) main();
+module.exports = { rewrite, decorate, sectionOf };

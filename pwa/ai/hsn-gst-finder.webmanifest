@@ -1,0 +1,41 @@
+{
+  "id": "/ai/hsn-gst-finder/",
+  "name": "HSN / SAC Code & GST Rate Finder — 1234Tools",
+  "short_name": "HSN / SAC Code",
+  "description": "Describe a product or service in plain words and get the likely HSN or SAC codes with the GST rate for each, the reasoning, and the things that could move it to a different code.",
+  "start_url": "/ai/hsn-gst-finder/?src=pwa",
+  "scope": "/ai/hsn-gst-finder/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-hsn.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-hsn-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-hsn-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

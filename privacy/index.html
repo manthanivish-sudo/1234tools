@@ -42,7 +42,7 @@
 
 <header class="site-header">
   <div class="container nav-wrap">
-    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,196+ free tools</small></span></a>
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,205+ free tools</small></span></a>
 
     <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navlinks">
       <span></span><span></span><span></span>
@@ -50,7 +50,7 @@
 
     <div class="header-tools">
       <div class="search-wrap">
-        <input id="q" type="search" placeholder="Search 1,196 tools…" autocomplete="off" aria-label="Search tools">
+        <input id="q" type="search" placeholder="Search 1,205 tools…" autocomplete="off" aria-label="Search tools">
         <div id="results" class="search-results" hidden></div>
       </div>
       <div class="theme-switch" role="group" aria-label="Colour theme">
@@ -77,7 +77,7 @@
 
 <div class="layout container">
   <button class="sidebar-open" id="sidebarOpen" aria-expanded="false" aria-controls="sidebar">
-    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,196 tools</span>
+    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,205 tools</span>
   </button>
 
   <aside class="sidebar" id="sidebar" aria-label="Tool categories">
@@ -88,7 +88,7 @@
 
     <nav class="side-nav">
       <a class="side-link" href="/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,196</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,205</span>
       </a>
 
       <p class="side-group">Categories</p>
@@ -139,6 +139,11 @@
       </a>
       <a class="side-link" href="/education/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-education"></use></svg><span class="side-name">Education &amp; Exams</span><span class="side-count">6</span>
+      </a>
+
+      <p class="side-group">AI for business</p>
+      <a class="side-link" href="/ai/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-ai"></use></svg><span class="side-name">AI for Business</span><span class="side-count">9</span>
       </a>
 
       <p class="side-group">Learning</p>
@@ -195,7 +200,8 @@
 
 <section class="panel">
   <h2>1. The short version</h2>
-  <p>Every calculator and converter on 1234Tools runs entirely in your browser. Whatever you type into a tool — numbers, dates, text, images — is processed on your device and is never transmitted to us, stored by us, or seen by us. There is no account and no database.</p>
+  <p>Every calculator and converter on 1234Tools runs entirely in your browser. Whatever you type into a tool — numbers, dates, text, images — is processed on your device and is never transmitted to us, stored by us, or seen by us. No account is needed for any of them and we keep no database of what you do with them.</p>
+<p><strong>Two optional things are different, and each says so on its own page:</strong> an <a href="/account/">account</a>, which you need only for the <a href="/ai/">AI tools</a> and for settings you want on more than one device; and the AI tools themselves, which send the text you give them to a language model to do their work. Section 8 covers both.</p>
   <p>If you allow it, we measure <em>which pages</em> are visited so we know what to improve. That is a separate thing from what you do inside a tool, and it is off by default: nothing is loaded and no cookie is set unless you agree. The contents of the tools are never recorded, whatever you choose.</p>
 </section>
 
@@ -207,6 +213,7 @@
 
 <section class="panel">
   <h2>3. What we do collect</h2>
+<p><em>For accounts and the AI tools, see section 8; this section covers everyone else.</em></p>
   <ul class="tips">
     <li><strong>Contact form messages.</strong> If you use the <a href="/contact/">contact form</a>, your name, email address and message are sent to our inbox via a third-party form processor (FormSubmit.co) so we can reply. This is the only personal data we receive.</li>
     <li><strong>A theme preference.</strong> If you switch between light, dark or system theme, that single choice is saved in your browser's local storage so it's remembered next visit. It never leaves your device.</li>
@@ -238,7 +245,15 @@
   <p>We may update this policy from time to time; the date at the top shows the current version.</p>
 </section>
 
-  </main>
+  <!-- AI-PRIVACY -->
+<h2 id="ai">8. Accounts and the AI tools (optional)</h2>
+<p><strong>Accounts.</strong> If you create one, we store your email address, the plan you are on, the dates it runs between, and a count of AI calls per month. If you save a tool setting while signed in — a Tally column mapping, for instance — that setting is stored with your account so it is there on your other devices. This is held in Google Cloud Firestore in the Mumbai region (asia-south1), readable only by you and by the code that maintains plans. Signing in with Google means Google’s sign-in library loads on that page. Signing in with an email and password does not involve Google beyond the authentication service itself.</p>
+<p><strong>Payments.</strong> Card and bank details never touch us. Payments in India are taken by Razorpay and elsewhere by Stripe, on their pages, under their privacy policies; we receive a confirmation that a plan was paid for, a subscription reference, and — from Stripe — a customer reference so you can manage your billing. We do not receive or store card numbers.</p>
+<p><strong>The AI tools.</strong> These are the only tools on the site that send anything anywhere. Each page states, above the button, exactly what it will send — the text of an invoice, the rows of a bank statement, the notes of a meeting — and a file you give it is read on your device so that only its text goes. The text is sent through our own server to Anthropic’s API, which generates the answer. We do not store what you sent or what came back; we store only that a call was made, to count it against your monthly allowance. Anthropic’s API terms exclude API inputs and outputs from model training. Do not send anything you are not permitted to share with a processor; where a document is confidential, redact it first — the tools work on structure, not on names.</p>
+<p><strong>Masking before sending.</strong> Each AI tool masks personal identifiers on your device before anything is sent — emails, phone numbers, PAN, Aadhaar, card, IBAN and account numbers are replaced with placeholders and restored in the answer — and shows you what was masked. It is on by default and can be turned off per run. Names are not detected by this; redact those yourself where they matter.</p>
+<p><strong>Your data, in your hands.</strong> From your account page you can download everything we hold about you as one file, and delete the account outright: a live subscription is cancelled first so nothing further is charged, then the saved settings, usage counts and sign-in are removed, immediately and irreversibly. Webhook records from the payment providers are kept for up to 13 months for reconciliation and disputes and are pruned automatically after that. The <a href="/trust/">trust and security page</a> lists every sub-processor and how to exercise the rights you have under UK and EU GDPR and India’s DPDP Act.</p>
+<!-- /AI-PRIVACY -->
+</main>
 </div>
 <div class="scrim" id="scrim" hidden></div>
 
@@ -246,8 +261,8 @@
   <div class="container">
     <div class="footer-grid">
       <div class="footer-about">
-        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,196+ free tools</small></span></a>
-        <p>1,196+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
+        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,205+ free tools</small></span></a>
+        <p>1,205+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
       </div>
       <div>
         <h4>1234Tools</h4>

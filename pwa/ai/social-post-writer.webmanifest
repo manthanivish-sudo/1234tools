@@ -1,0 +1,41 @@
+{
+  "id": "/ai/social-post-writer/",
+  "name": "Social Media Post Writer — 1234Tools",
+  "short_name": "Social Media Post",
+  "description": "One offer, announcement or tip — written as ready-to-post copy for LinkedIn, Instagram, Facebook, X and WhatsApp, each in that platform’s length and manner, with hashtags that fit.",
+  "start_url": "/ai/social-post-writer/?src=pwa",
+  "scope": "/ai/social-post-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-social.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-social-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-social-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

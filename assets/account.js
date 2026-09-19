@@ -198,6 +198,25 @@
     return snap.exists() ? snap.data() : { calls: 0 };
   }
 
+  /* ---------- your data ---------- */
+  async function exportData() {
+    guard(); await ready;
+    if (!user) throw new Error('Sign in first.');
+    const call = FN.httpsCallable(fns, 'exportMyData');
+    try { return (await call({})).data; }
+    catch (e) { throw new Error(friendly(e)); }
+  }
+  async function deleteAccount() {
+    guard(); await ready;
+    if (!user) throw new Error('Sign in first.');
+    const call = FN.httpsCallable(fns, 'deleteAccount');
+    let res;
+    try { res = (await call({})).data; }
+    catch (e) { throw new Error(friendly(e)); }
+    try { await A.signOut(auth); } catch (e) { /* the user no longer exists; local state is all that is left */ }
+    return res;
+  }
+
   /* ---------- the AI gateway, for tools ---------- */
   async function ai(tool, input, opts) {
     guard(); await ready;
@@ -211,6 +230,6 @@
     enabled, ready, state, plan: () => planOf(record),
     onChange: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
     signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, signOut,
-    checkout, manage, saveMapping, listMappings, deleteMapping, usageThisMonth, ai
+    checkout, manage, saveMapping, listMappings, deleteMapping, usageThisMonth, ai, exportData, deleteAccount
   };
 })();

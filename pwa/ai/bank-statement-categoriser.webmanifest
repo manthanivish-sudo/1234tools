@@ -1,0 +1,41 @@
+{
+  "id": "/ai/bank-statement-categoriser/",
+  "name": "Bank Statement Categoriser — 1234Tools",
+  "short_name": "Bank Statement",
+  "description": "Paste or upload a bank statement and get every transaction categorised to a ledger head — rent, salaries, GST paid, a named customer — as a spreadsheet, or as Tally receipt and payment vouchers ready to import.",
+  "start_url": "/ai/bank-statement-categoriser/?src=pwa",
+  "scope": "/ai/bank-statement-categoriser/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-bank.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-bank-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-bank-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

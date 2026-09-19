@@ -21,6 +21,9 @@ const fs = require('fs');
 const path = require('path');
 const crumbs = require('./build-crumbs.js');
 const { trailFor } = require('./build/sections.js');
+/* outbound links are tagged the way build-outbound.js tags them, at write
+   time, so the two never rewrite each other */
+const outbound = require('./build-outbound.js');
 
 const ROOT = __dirname;
 const CHECK = process.argv.includes('--check');
@@ -171,6 +174,7 @@ function accountBody() {
     '      <div class="io-actions"><a class="btn-primary" id="acct-upgrade" href="/pricing/">See plans</a><button type="button" class="btn-ghost" id="acct-manage" hidden>Manage billing</button><button type="button" class="btn-ghost" id="acct-cancel" hidden>Cancel at period end</button><button type="button" class="btn-ghost" id="acct-signout">Sign out</button></div>\n' +
     '    </div>\n' +
     '    <section class="panel"><h2>Saved settings</h2><p class="acct-hint">Tool settings you save while signed in — a Tally column mapping, for instance — are kept here and offered on any device.</p><ul class="acct-saved" id="acct-saved"><li class="acct-empty">Nothing saved yet.</li></ul></section>\n' +
+    '    <section class="panel"><h2>Your data</h2><p class="acct-hint">Everything we hold about this account, as one file — or gone. Deleting cancels any subscription first, then removes the saved settings, the usage counts and the sign-in itself. It cannot be undone. <a href="/trust/">What we hold and why</a>.</p><div class="io-actions"><button type="button" class="btn-ghost" id="acct-export">Download my data</button><button type="button" class="btn-ghost acct-danger" id="acct-delete">Delete my account</button></div></section>\n' +
     '  </section>\n' +
     '</article>\n' +
     '<script>\n' + accountScript() + '</script>\n';
@@ -243,8 +247,72 @@ function accountScript() {
     if (!confirm('Cancel the subscription? You keep access until the end of the period you have paid for.')) return;
     A.manage('cancel').then(function (r) { say('Cancelled. Access continues until ' + (r.until ? new Date(r.until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'the end of the period') + '.', 'note'); }).catch(function (e) { say(e.message, 'error'); });
   });
+  $('acct-export').addEventListener('click', function () {
+    var b = $('acct-export'); busy(b, true); say('Collecting…', 'note');
+    A.exportData().then(function (data) {
+      var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob); var a = document.createElement('a'); a.href = url; a.download = '1234tools-account-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      say('Downloaded. That file is everything we hold about this account.', 'note');
+    }).catch(function (e) { say(e.message, 'error'); }).then(function () { busy(b, false); });
+  });
+  $('acct-delete').addEventListener('click', function () {
+    var typed = prompt('This deletes the account, its saved settings and usage counts, and cancels any subscription. It cannot be undone.\\n\\nType DELETE to confirm:');
+    if (typed !== 'DELETE') { say('Not deleted.', 'note'); return; }
+    var b = $('acct-delete'); busy(b, true); say('Deleting…', 'note');
+    A.deleteAccount().then(function (r) {
+      say('Deleted' + (r && r.cancelled ? ', and the ' + r.cancelled + ' subscription was cancelled' : '') + '. Nothing about you remains on our side.', 'note');
+    }).catch(function (e) { say(e.message, 'error'); busy(b, false); });
+  });
 });
 `;
+}
+
+/* ------------------------------------------------------------------ */
+
+function trustBody() {
+  const row = (k, v) => '<tr><th scope="row">' + k + '</th><td>' + v + '</td></tr>';
+  return '<article class="trust">\n' +
+    '  <p class="eyebrow">Trust</p>\n' +
+    '  <h1>Security, privacy and compliance</h1>\n' +
+    '  <p class="lede">What runs where, what we hold, who else touches it, and how to exercise your rights. Written to be checked, not to reassure.</p>\n' +
+    '  <section class="panel"><h2>Two kinds of tool</h2>' +
+    '<p><strong>On your device.</strong> ' + esc(String(PLANS.plans[0].features[0]).replace(/^All /, '').replace(/,.*$/, '')) + ' that run entirely in your browser: PDF, image, QR, text, calculators, converters, the Tally converter. Nothing you put into them is transmitted, stored or seen by us. No account is needed and none is created. They work with the network off.</p>' +
+    '<p><strong>In the cloud.</strong> The <a href="/ai/">AI tools</a>, which need a language model on a server. Each page states above the button exactly what it will send; files are read on your device so that only their text goes; personal identifiers are masked on the device before sending and restored in the answer; and neither what you send nor what comes back is stored by us. An account is needed only for these and for settings you want on more than one device.</p></section>\n' +
+    '  <section class="panel"><h2>What we hold, if you have an account</h2><div class="table-scroll"><table class="biz-table trust-table"><tbody>' +
+    row('Email address', 'to sign you in and to reach you about your account') +
+    row('Plan, status, period dates', 'so the tools know what you are entitled to') +
+    row('Payment references', 'a subscription id and, for Stripe, a customer id — never card or bank details, which we never receive') +
+    row('AI usage count, per month', 'to enforce the monthly allowance; pruned after 13 months') +
+    row('Saved tool settings', 'only if you choose to save them, e.g. a Tally column mapping') +
+    row('Webhook records from payment providers', 'for reconciliation and disputes; pruned after 13 months') +
+    row('AI inputs and outputs', '<strong>not stored.</strong> We count that a call happened; the text is not kept') +
+    '</tbody></table></div><p class="acct-hint">All of it is downloadable from your <a href="/account/">account page</a> as one file, and deletable there in one step.</p></section>\n' +
+    '  <section class="panel"><h2>Who else touches your data</h2><div class="table-scroll"><table class="biz-table trust-table"><thead><tr><th>Processor</th><th>What for</th><th>Where</th></tr></thead><tbody>' +
+    '<tr><td>Google Cloud (Firebase)</td><td>Sign-in, the account database, the functions that run the gateway and the payment webhooks</td><td>Mumbai (asia-south1) for data and functions; Firebase Authentication is a global Google service</td></tr>' +
+    '<tr><td>Anthropic</td><td>The language model behind the AI tools, via our own server; receives the (masked) text you send</td><td>United States. API data is not used to train models under Anthropic’s terms and is retained by them only briefly for abuse prevention</td></tr>' +
+    '<tr><td>Razorpay</td><td>Payments in India; you pay on their page</td><td>India</td></tr>' +
+    '<tr><td>Stripe</td><td>Payments in the UK and elsewhere; you pay on their page; billing portal</td><td>Stripe Payments UK Ltd, with processing in the EU and US under their safeguards</td></tr>' +
+    '<tr><td>GitHub Pages</td><td>Serves the site’s static pages</td><td>Global CDN</td></tr>' +
+    '<tr><td>Google Analytics, Microsoft Clarity</td><td>Page-view statistics, <strong>only if you allow them</strong> in the cookie prompt; never anything you type into a tool</td><td>Global</td></tr>' +
+    '</tbody></table></div><p class="acct-hint">A data processing agreement covering these sub-processors is available on request from the contact page.</p></section>\n' +
+    '  <section class="panel"><h2>How it is protected</h2><ul class="tips">' +
+    '<li>Everything travels over TLS. The site is static; there is no server that can be logged into, and no place a tool’s input could be written to.</li>' +
+    '<li>The database rules allow a browser to read its own record and write its own saved settings, and nothing else. Plans are written only by our functions after a payment provider has spoken through a signed webhook — every webhook signature is verified, and a replayed event is ignored.</li>' +
+    '<li>API keys for the model and the payment providers live in Google Secret Manager and are read by the functions at run time; no key is ever sent to a browser.</li>' +
+    '<li>The AI tools mask personal identifiers on your device before sending, show you what was masked, and restore it in the answer. The model sees structure, not people.</li>' +
+    '<li>Card and bank details are entered on Razorpay’s or Stripe’s pages and never pass through us.</li>' +
+    '<li>If a breach ever affected personal data we hold, we would tell affected people and the ICO within 72 hours of knowing.</li></ul></section>\n' +
+    '  <section class="panel"><h2>Your rights, and how to use them</h2>' +
+    '<p>1234Tools is operated by <strong>MVR IT Services LTD</strong>, a company registered in England and Wales (no. 10251131), which is the data controller. UK GDPR and the EU GDPR apply to people in the UK and EU; India’s Digital Personal Data Protection Act 2023 applies to people in India. Under all three you can:</p><ul class="tips">' +
+    '<li><strong>Access and take away</strong> what we hold — the <em>Download my data</em> button on your account page gives you all of it, as JSON, immediately.</li>' +
+    '<li><strong>Erase</strong> it — <em>Delete my account</em> does so immediately and irreversibly, cancelling any subscription first.</li>' +
+    '<li><strong>Correct</strong> it — your email is set by your sign-in provider; anything else, write to us.</li>' +
+    '<li><strong>Object or withdraw consent</strong> — analytics can be refused or withdrawn in the cookie prompt at any time; the AI tools send nothing unless you press the button.</li>' +
+    '<li><strong>Complain</strong> — to us first, via the <a href="/contact/">contact page</a>, and to the <a href="https://ico.org.uk/make-a-complaint/">Information Commissioner’s Office</a> in the UK, your local supervisory authority in the EU, or the Data Protection Board of India.</li></ul>' +
+    '<p>Requests that need a person are answered within 30 days, usually much sooner.</p></section>\n' +
+    '  <section class="panel"><h2>Retention, in one place</h2><ul class="tips"><li>Account record and saved settings: until you delete the account.</li><li>AI usage counts: 13 months.</li><li>Payment webhook records: 13 months.</li><li>AI inputs and outputs: not retained.</li><li>Server logs: Google Cloud’s default of 30 days; they record that a function ran, not what was sent to it.</li></ul></section>\n' +
+    '</article>\n';
 }
 
 /* ------------------------------------------------------------------ */
@@ -253,14 +321,25 @@ function main() {
   const parts = shell();
   const pages = [
     { slug: 'pricing', title: 'Plans and pricing — 1234Tools', description: 'Every tool that runs in your browser is free with no account. Pro and Business pay for what needs a server: AI calls and settings that follow you between devices. Rupees through Razorpay, pounds through Stripe.', body: pricingBody(), name: 'Pricing' },
-    { slug: 'account', title: 'Your account — 1234Tools', description: 'Sign in to 1234Tools to use the AI tools and keep saved settings across devices. Nothing else on the site needs an account.', body: accountBody(), name: 'Account' }
+    { slug: 'account', title: 'Your account — 1234Tools', description: 'Sign in to 1234Tools to use the AI tools and keep saved settings across devices. Nothing else on the site needs an account.', body: accountBody(), name: 'Account' },
+    /* the trust page is public and indexable from the start: it is the part people search for before they sign up */
+    { slug: 'trust', title: 'Security, privacy and compliance — 1234Tools', description: 'What runs on your device and what runs in the cloud, what 1234Tools holds about an account, every sub-processor and where it is, how the AI tools mask personal data, and how to exercise your GDPR and DPDP rights.', body: trustBody(), name: 'Trust & security', indexable: true, noAccount: true }
   ];
   let built = 0;
   for (const p of pages) {
     const pathOnly = '/' + p.slug + '/';
-    const html = headFor(parts, p.slug, p.title, p.description) + parts.mid + '\n' + crumbs.render(trailFor(pathOnly), p.name) + '\n' + p.body + parts.tail;
+    let html = headFor(parts, p.slug, p.title, p.description) + parts.mid + '\n' + crumbs.render(trailFor(pathOnly), p.name) + '\n' + p.body + parts.tail;
+    if (p.indexable) html = html.replace('<meta name="robots" content="noindex,nofollow">\n', '');
+    if (p.noAccount) html = html.replace('<script src="/assets/firebase-config.js"></script>\n<script src="/assets/account.js" defer></script>\n', '');
+    html = outbound.rewrite(html, p.slug).html;
     if (write(p.slug + '/index.html', html)) built++;
   }
+  /* indexable pages belong in the sitemap; the dark ones stay out of it */
+  const smRel = 'sitemap-1.xml';
+  const sm = fs.readFileSync(path.join(ROOT, smRel), 'utf8');
+  const add = pages.filter(p => p.indexable && sm.indexOf('<loc>' + SITE + '/' + p.slug + '/</loc>') < 0)
+    .map(p => '<url><loc>' + SITE + '/' + p.slug + '/</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>');
+  if (add.length) write(smRel, sm.replace('</urlset>', add.join('\n') + '\n</urlset>'));
   console.log('\nbuild-account.js' + (CHECK ? '  (--check: nothing will be written)' : '') + (LIVE ? '  (--live: indexable)' : '  (dark: noindex, unlinked)'));
   console.log('  pages               ' + pages.map(p => '/' + p.slug + '/').join(', '));
   console.log('  written             ' + built);

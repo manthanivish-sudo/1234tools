@@ -1,0 +1,41 @@
+{
+  "id": "/ai/data-cleaner/",
+  "name": "Customer & Product Data Cleaner — 1234Tools",
+  "short_name": "Customer & Product",
+  "description": "Upload a messy customer, supplier or product list and get it back normalised — consistent names, valid phones and emails, GSTINs checked, addresses tidied — with duplicates flagged and the reason given.",
+  "start_url": "/ai/data-cleaner/?src=pwa",
+  "scope": "/ai/data-cleaner/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-clean.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-clean-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-clean-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
