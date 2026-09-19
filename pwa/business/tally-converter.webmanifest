@@ -1,0 +1,41 @@
+{
+  "id": "/business/tally-converter/",
+  "name": "Excel / CSV to Tally Converter — 1234Tools",
+  "short_name": "Excel / CSV → Tally",
+  "description": "Turn a spreadsheet of sales, purchases, receipts and payments into Tally import XML — vouchers, party ledgers and stock items — and bring Tally’s exported XML back into Excel. Runs in your browser; nothing is uploaded.",
+  "start_url": "/business/tally-converter/?src=pwa",
+  "scope": "/business/tally-converter/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-tally.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-tally-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-tally-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

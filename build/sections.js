@@ -68,6 +68,8 @@ const SECTIONS = {
 
   /* Not tool sections, but they are levels in a trail and need names. */
   '/about/':   { name: 'About', meta: true },
+  '/pricing/': { name: 'Pricing', meta: true },
+  '/account/': { name: 'Account', meta: true },
   '/contact/': { name: 'Contact', meta: true },
   '/privacy/': { name: 'Privacy', meta: true },
   '/terms/':   { name: 'Terms', meta: true },

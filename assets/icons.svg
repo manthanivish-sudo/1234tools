@@ -1200,4 +1200,10 @@
   <path d="M8.4 18.4h7.2" class="thin"/>
   <circle cx="16.4" cy="17" r="1.2" class="fill"/>
 </symbol>
+<symbol id="i-tally" viewBox="0 0 24 24">
+  <rect x="3" y="4" width="8.5" height="16" rx="1.5"/>
+  <path d="M5.5 8.5h3.5M5.5 12h3.5M5.5 15.5h3.5" class="thin"/>
+  <path d="M14 8.5h7M18.5 6l2.5 2.5-2.5 2.5" class="thin"/>
+  <path d="M21 15.5h-7M16.5 13l-2.5 2.5 2.5 2.5" class="thin"/>
+</symbol>
 </svg>
