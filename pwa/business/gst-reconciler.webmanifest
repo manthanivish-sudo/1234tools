@@ -1,0 +1,41 @@
+{
+  "id": "/business/gst-reconciler/",
+  "name": "GSTR-2B Reconciliation — 1234Tools",
+  "short_name": "GSTR-2B Reconciliati",
+  "description": "Match your purchase register against GSTR-2B — the portal’s JSON or Excel — and see which input tax credit is safe to claim, which suppliers have not filed, what is in 2B but not in your books, and where the tax amounts differ. Runs in your browser; nothing is uploaded.",
+  "start_url": "/business/gst-reconciler/?src=pwa",
+  "scope": "/business/gst-reconciler/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-gst-recon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-gst-recon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-gst-recon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

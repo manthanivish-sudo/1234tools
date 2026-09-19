@@ -47,9 +47,14 @@ function write(rel, content) {
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const icon = (id, cls) => '<svg class="' + (cls || 'ico') + '" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#' + id + '"></use></svg>';
 
+/* Every engine/ai-tools*.js: the first file holds the original nine, and each
+   later batch adds its own file so parallel work never edits the same one.
+   A spec may carry `glyphSvg` (its <symbol>), so a batch is self-contained. */
 function tools() {
   const w = { window: {} };
-  new Function('window', 'document', fs.readFileSync(path.join(ROOT, 'engine/ai-tools.js'), 'utf8'))(w.window, undefined);
+  for (const f of fs.readdirSync(path.join(ROOT, 'engine')).filter(n => /^ai-tools.*\.js$/.test(n)).sort()) {
+    new Function('window', 'document', fs.readFileSync(path.join(ROOT, 'engine', f), 'utf8'))(w.window, undefined);
+  }
   return Object.entries(w.window.AI_TOOLS).map(([slug, spec]) => ({ slug, spec }));
 }
 
@@ -252,10 +257,13 @@ function patchIcons(list) {
   const rel = 'assets/icons.svg';
   let svg = fs.readFileSync(path.join(ROOT, rel), 'utf8');
   let added = 0;
+  const own = {};
+  list.forEach(t => { if (t.spec.glyphSvg) own[t.spec.glyph] = t.spec.glyphSvg; });
   for (const g of ['i-ai', 'i-cloud'].concat(list.map(t => t.spec.glyph))) {
     if (svg.indexOf('id="' + g + '"') >= 0) continue;
-    if (!GLYPHS[g]) throw new Error('no glyph drawn for ' + g);
-    svg = svg.replace('</svg>', GLYPHS[g] + '\n</svg>');
+    const sym = own[g] || GLYPHS[g];
+    if (!sym) throw new Error('no glyph drawn for ' + g);
+    svg = svg.replace('</svg>', sym + '\n</svg>');
     added++;
   }
   if (added) write(rel, svg);

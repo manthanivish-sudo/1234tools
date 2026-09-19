@@ -47,11 +47,29 @@ const SITE = 'https://www.1234tools.com';
 const crumbs = require('./build-crumbs.js');
 const { trailFor } = require('./build/sections.js');
 
-/* slug -> icon glyph. Only what has been verified to work. */
+/* slug -> icon glyph. Only what has been verified to work. A spec may carry
+   its own `glyphSvg`, which is added to the sprite if the id is not there. */
 const SHIPPING = [
   ['pdf-editor', 'i-pdf-editor'],
-  ['pdf-signature', 'i-pdf-signature']
-];
+  ['pdf-signature', 'i-pdf-signature'],
+  ['payslip-pdf', 'i-payslip'],
+  ['mail-merge-pdf', 'i-mail-merge']
+].filter(([slug]) => fs.existsSync(path.join(__dirname, 'engine', 'pdf-' + slug + '.js')));
+
+function patchIcons() {
+  const rel = 'assets/icons.svg';
+  let svg = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+  let added = 0;
+  for (const [slug, glyph] of SHIPPING) {
+    if (svg.indexOf('id="' + glyph + '"') >= 0) continue;
+    const s = spec(slug);
+    if (!s.glyphSvg) continue;
+    svg = svg.replace('</svg>', s.glyphSvg + '\n</svg>');
+    added++;
+  }
+  if (added) write(rel, svg);
+  return added;
+}
 
 const changes = [];
 function write(rel, content) {
@@ -331,6 +349,7 @@ function main() {
   const oldPdf = Number(pm[1]);
   const newPdf = already ? oldPdf : oldPdf + SHIPPING.length;
 
+  const glyphs = patchIcons();
   let built = 0;
   for (const [slug, glyph] of SHIPPING) {
     if (write('pdf/' + slug + '/index.html', toolPage(slug, glyph, parts))) built++;
@@ -344,7 +363,7 @@ function main() {
 
   console.log('\nbuild-pdf-ship.js' + (CHECK ? '  (--check: nothing will be written)' : ''));
   console.log('  shipping            ' + SHIPPING.map(function (x) { return x[0]; }).join(', '));
-  console.log('  pages built         ' + built);
+  console.log('  pages built         ' + built + (glyphs ? ' (' + glyphs + ' glyph(s) added)' : ''));
   console.log('  search index        ' + (indexed ? indexed + ' added' : 'unchanged'));
   console.log('  site total          ' + oldTotal + ' → ' + newTotal);
   console.log('  pdf section         ' + oldPdf + ' → ' + newPdf);

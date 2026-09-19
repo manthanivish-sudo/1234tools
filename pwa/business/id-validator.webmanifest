@@ -1,0 +1,41 @@
+{
+  "id": "/business/id-validator/",
+  "name": "GSTIN, PAN, IFSC & ID Validator (Bulk) — 1234Tools",
+  "short_name": "GSTIN, PAN, IFSC",
+  "description": "Check a whole column of GSTINs, PANs, Aadhaar numbers, IFSC codes, TANs, CINs, UPI IDs, IBANs, PIN codes, emails and phone numbers at once — format and checksum — with the reason for every failure. Runs in your browser; nothing is looked up or uploaded.",
+  "start_url": "/business/id-validator/?src=pwa",
+  "scope": "/business/id-validator/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-id-check.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-id-check-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-id-check-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

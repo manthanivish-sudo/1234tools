@@ -1252,4 +1252,43 @@
   <circle cx="8" cy="8.5" r="1.3" class="fill"/>
   <path d="M12 12.5l3 3M15 12.5l-3 3" class="thin"/>
 </symbol>
+<symbol id="i-acct-convert" viewBox="0 0 24 24">
+  <rect x="3" y="4" width="7.5" height="7.5" rx="1.5"/>
+  <rect x="13.5" y="12.5" width="7.5" height="7.5" rx="1.5"/>
+  <path d="M14 7.75h4.5a1.5 1.5 0 0 1 1.5 1.5v2.5M17.5 10l2.5 2-2.5 2" class="thin"/>
+  <path d="M10 16.25H5.5A1.5 1.5 0 0 1 4 14.75v-2.5M6.5 14l-2.5-2 2.5-2" class="thin"/>
+</symbol>
+<symbol id="i-bank-recon" viewBox="0 0 24 24">
+  <path d="M3 9.5l9-5 9 5H3z"/>
+  <path d="M6 9.5v7M12 9.5v7M18 9.5v7" class="thin"/>
+  <path d="M3 19.5h18"/>
+  <path d="M9 13.5h6M13 11.5l2 2-2 2" class="thin"/>
+</symbol>
+<symbol id="i-einvoice" viewBox="0 0 24 24">
+  <path d="M6 3h8l4 4v14H6z"/>
+  <path d="M14 3v4h4" class="thin"/>
+  <path d="M10.5 11c-1.2 0-1.5.5-1.5 1.5v1c0 .8-.4 1.2-1 1.5.6.3 1 .7 1 1.5v1c0 1 .3 1.5 1.5 1.5" class="thin"/>
+  <path d="M13.5 11c1.2 0 1.5.5 1.5 1.5v1c0 .8.4 1.2 1 1.5-.6.3-1 .7-1 1.5v1c0 1-.3 1.5-1.5 1.5" class="thin"/>
+</symbol>
+<symbol id="i-gst-recon" viewBox="0 0 24 24">
+  <path d="M4 4h8l3 3v5.5"/>
+  <path d="M12 4v3h3" class="thin"/>
+  <path d="M6.5 9.5h4M6.5 12.5h3" class="thin"/>
+  <rect x="11" y="12" width="9" height="8" rx="1.5"/>
+  <path d="M13.5 16.2l1.6 1.6 3-3.4"/>
+</symbol>
+<symbol id="i-id-check" viewBox="0 0 24 24">
+  <rect x="3" y="5" width="18" height="14" rx="2"/>
+  <circle cx="8.5" cy="11" r="2" class="thin"/>
+  <path d="M5.5 16c.5-1.5 1.6-2.2 3-2.2s2.5.7 3 2.2" class="thin"/>
+  <path d="M14 9.5h4M14 12.5h4" class="thin"/>
+  <path d="M14.5 15.8l1.3 1.3 2.4-2.6"/>
+</symbol>
+<symbol id="i-ai-form16" viewBox="0 0 24 24">
+  <path d="M6 3h8l4 4v14H6z"/>
+  <path d="M14 3v4h4" class="thin"/>
+  <path d="M9 17l6-6" class="thin"/>
+  <circle cx="9.8" cy="11.8" r="1.3" class="thin"/>
+  <circle cx="14.2" cy="16.2" r="1.3" class="thin"/>
+</symbol>
 </svg>

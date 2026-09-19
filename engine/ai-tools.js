@@ -259,6 +259,52 @@
     faq: [{ q: 'Can I rely on this for filing?', a: 'No. It is a fast way to get to the right neighbourhood of the tariff with the reasoning laid out. The classification you file is your responsibility — confirm against the current CBIC schedule or with your chartered accountant, especially where confidence is medium or low.' }]
   };
 
+  /* ------------------------------------------------------------------ */
+
+  window.AI_TOOLS['form16-reader'] = {
+    title: 'Form 16 Reader (Salary, Deductions & TDS)',
+    short: 'Form 16 Reader',
+    description: 'Drop a Form 16 — the PDF your employer or TRACES gives — and get the salary, exempt allowances, Chapter VI-A deductions, quarterly TDS and the tax computed back as fields you can check against your return, with a list of what to verify before you file.',
+    keywords: ['form 16 reader', 'form 16 to excel', 'extract form 16 data', 'form 16 part b explained', 'tds from form 16', 'itr from form 16', 'form 16 summary ai', 'salary tds certificate reader'],
+    glyph: 'i-ai-form16',
+    glyphSvg: '<symbol id="i-ai-form16" viewBox="0 0 24 24">\n  <path d="M6 3h8l4 4v14H6z"/>\n  <path d="M14 3v4h4" class="thin"/>\n  <path d="M9 17l6-6" class="thin"/>\n  <circle cx="9.8" cy="11.8" r="1.3" class="thin"/>\n  <circle cx="14.2" cy="16.2" r="1.3" class="thin"/>\n</symbol>',
+    scripts: COMMON, action: 'Read Form 16', resultTitle: 'Form 16 read',
+    privacy: 'The text of the Form 16 is sent to the model. It carries a PAN, a salary and the employer’s TAN; the PII shield masks the PANs on your device before anything leaves it, and the preview below shows exactly what goes.',
+    inputs: [{ key: 'doc', label: 'Form 16 (Part A, Part B or both)', type: 'text+file', accept: '.pdf,.txt', rows: 12, placeholder: 'Choose the PDF above, or paste the text. A scanned Form 16 has no text layer and cannot be read here.' }],
+    options: [{ key: 'regime', label: 'Tax regime', type: 'select', default: 'auto', options: [{ value: 'auto', label: 'Read it from the form' }, { value: 'new', label: 'New regime (115BAC)' }, { value: 'old', label: 'Old regime' }] }],
+    system: (o) => 'You read Indian Form 16 TDS certificates (Part A: tax deducted and deposited by quarter; Part B: the salary annexure) for a salaried taxpayer preparing an income-tax return. Amounts are numbers in rupees without commas or symbols; dates are YYYY-MM-DD; quarters are Q1 to Q4. Where a figure appears in both parts, report both and say if they differ. Do not recompute the tax; report what the form states, and put any arithmetic that does not add up under checks. ' + (o.regime === 'new' ? 'The employer applied the new regime under section 115BAC. ' : o.regime === 'old' ? 'The employer applied the old regime. ' : 'Read which regime applies from the form: "Yes" to opting out of section 115BAC means the old regime. ') + JSON_ONLY,
+    prompt: (i) => 'Extract this Form 16 into JSON with exactly these keys: employer_name, employer_tan, employer_pan, employee_name, employee_pan, assessment_year, financial_year, period_from, period_to, regime (new|old|null), tds_by_quarter (array of {quarter, amount_paid_credited, tax_deducted, tax_deposited, receipt_numbers}), total_tds_part_a, salary_17_1, perquisites_17_2, profits_in_lieu_17_3, gross_salary_total, exempt_allowances_section_10 (array of {allowance, amount}), total_exempt_allowances, standard_deduction, entertainment_allowance, professional_tax, income_chargeable_under_salaries, house_property_income, other_sources_income, gross_total_income, deductions_chapter_via (array of {section, description, gross_amount, deductible_amount}), total_deductions_chapter_via, total_taxable_income, tax_on_total_income, rebate_87a, surcharge, health_and_education_cess, tax_payable, relief_89, net_tax_payable, checks (array of short strings: what to verify against Form 26AS, AIS and the payslips before filing, including any arithmetic on the form that does not add up), notes.\n\nFORM 16 TEXT:\n' + i.doc,
+    output: 'fields', maxTokens: 4000,
+    downloads: (data, ctx) => {
+      const scalar = Object.entries(data).filter(([, v]) => !Array.isArray(v)).map(([k, v]) => [k, v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : v]);
+      const rows = [['field', 'value']].concat(scalar);
+      for (const key of ['tds_by_quarter', 'exempt_allowances_section_10', 'deductions_chapter_via']) {
+        const list = Array.isArray(data[key]) ? data[key].filter(x => x && typeof x === 'object') : [];
+        if (list.length) rows.push([], [key.replace(/_/g, ' ')], ...ctx.sheet.objectsToRows(list));
+      }
+      if (Array.isArray(data.checks) && data.checks.length) rows.push([], ['checks'], ...data.checks.map(c => [String(c)]));
+      const base = 'form16-' + (data.assessment_year ? String(data.assessment_year).replace(/[^\w-]+/g, '_') : 'extract');
+      return [
+        { name: base + '.csv', blob: () => new Blob([ctx.sheet.toCSV(rows)], { type: 'text/csv' }) },
+        { name: base + '.xlsx', blob: () => ctx.sheet.writeXlsx(rows, 'Form 16') }
+      ];
+    },
+    sample: { inputs: { doc: 'FORM NO. 16\n[See rule 31(1)(a)]\nPART A\nCertificate under Section 203 of the Income-tax Act, 1961 for tax deducted at source on salary\nCertificate No. ABCDEFG    Last updated on 15-Jun-2026\nName and address of the Employer: Sharma Traders Pvt Ltd, 12 MG Road, Pune 411001\nName and address of the Employee: Ramesh Kumar, Flat 4, Kothrud, Pune 411038\nPAN of the Deductor: AABCS1234A   TAN of the Deductor: PNES12345A   PAN of the Employee: ABCPK1234D\nAssessment Year: 2026-27   Period with the Employer: From 01-Apr-2025 To 31-Mar-2026\n\nSummary of amount paid/credited and tax deducted at source thereon in respect of the employee\nQuarter  Receipt Numbers  Amount paid/credited  Amount of tax deducted  Amount of tax deposited/remitted\nQ1  QRSTUVWX  240000.00  10348.00  10348.00\nQ2  QRSTUVWY  240000.00  10348.00  10348.00\nQ3  QRSTUVWZ  240000.00  10348.00  10348.00\nQ4  QRSTUVXA  240000.00  10348.00  10348.00\nTotal  960000.00  41392.00  41392.00\n\nPART B (Annexure)\nDetails of Salary Paid and any other income and tax deducted\nWhether opting out of taxation u/s 115BAC(1A)? Yes\n1. Gross Salary\n (a) Salary as per provisions contained in section 17(1)  960000.00\n (b) Value of perquisites u/s 17(2)  0.00\n (c) Profits in lieu of salary u/s 17(3)  0.00\n (d) Total  960000.00\n2. Less: Allowances to the extent exempt u/s 10\n (a) House rent allowance u/s 10(13A)  96000.00\n (h) Total amount of exemption claimed u/s 10  96000.00\n3. Total amount of salary received from current employer  864000.00\n4. Less: Deductions u/s 16\n (a) Standard deduction u/s 16(ia)  50000.00\n (b) Entertainment allowance u/s 16(ii)  0.00\n (c) Tax on employment u/s 16(iii)  2500.00\n5. Total amount of deductions u/s 16  52500.00\n6. Income chargeable under the head "Salaries"  811500.00\n7. Add: Any other income reported by the employee\n (a) Income from house property  0.00\n (b) Income under the head Other Sources  8000.00\n8. Total amount of other income reported by the employee  8000.00\n9. Gross total income  819500.00\n10. Deductions under Chapter VI-A\n (a) Deduction u/s 80C (PPF, life insurance premium)  Gross 150000.00  Deductible 150000.00\n (b) Deduction u/s 80D (health insurance premium)  Gross 25000.00  Deductible 25000.00\n (c) Deduction u/s 80TTA (interest on savings account)  Gross 8000.00  Deductible 8000.00\n11. Aggregate of deductible amount under Chapter VI-A  183000.00\n12. Total taxable income  636500.00\n13. Tax on total income  39800.00\n14. Rebate u/s 87A  0.00\n15. Surcharge  0.00\n16. Health and education cess @ 4%  1592.00\n17. Tax payable  41392.00\n18. Less: Relief u/s 89  0.00\n19. Net tax payable  41392.00\n\nVerification\nI, Priya Sharma, working in the capacity of Director, do hereby certify that a sum of Rs. 41392.00 [Rupees Forty One Thousand Three Hundred Ninety Two only] has been deducted and deposited to the credit of the Central Government.\nPlace: Pune   Date: 15-Jun-2026' } },
+    tips: [
+      'Employers issue Form 16 by 15 June; Part A comes from TRACES and Part B from payroll. Feed both parts — one PDF or two — and the quarterly TDS is set beside the annual figure.',
+      'The PANs on the form are masked by the shield before the text is sent and put back when the answer returns, so the result still shows them. The salary figures travel as they are: that is what is being read.',
+      'The checks list is the point. Total TDS in Part A should equal the tax payable in Part B and the credits in your Form 26AS; where they do not, the difference is what you chase before filing.',
+      'Two employers in the year means two Forms 16. Read each on its own; the return needs both sets of figures added together, which the second employer’s form usually has not done.',
+      'It reads, it does not compute. Whether a deduction was allowable, or whether the other regime would have cost less, is a question for the return, not the certificate.'
+    ],
+    faq: [
+      { q: 'What is sent, and is my PAN stored?', a: 'The text of the form goes to the model through our gateway, with the PANs masked on your device before it leaves. Nothing about the call is kept except the count against your allowance; the form, the text and the answer are not stored.' },
+      { q: 'Does it work with a password-protected Form 16?', a: 'Not while the password is on. Open it with the password TRACES set (usually your PAN in capitals followed by your date of birth) and save an unlocked copy, then choose that.' },
+      { q: 'Can it file my return?', a: 'No. It puts the certificate’s figures into fields you can copy into the income-tax portal or hand to whoever files for you, and lists what to check first.' },
+      { q: 'What if Part A and Part B disagree?', a: 'It reports both figures and names the difference under checks. Part A is what the department has received; Part B is what payroll says was deducted. The return is filed on the credit that actually reached the department, which Form 26AS confirms.' }
+    ]
+  };
+
   /* mount */
   if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', () => {

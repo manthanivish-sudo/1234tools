@@ -191,8 +191,10 @@ function patchIcons(list) {
   for (const t of list) {
     const g = t.spec.glyph;
     if (svg.indexOf('id="' + g + '"') >= 0) continue;
-    if (!GLYPHS[g]) throw new Error('no glyph drawn for ' + g);
-    svg = svg.replace('</svg>', GLYPHS[g] + '\n</svg>');
+    /* a spec may draw its own icon, so a new tool needs no edit here */
+    const sym = t.spec.glyphSvg || GLYPHS[g];
+    if (!sym) throw new Error('no glyph drawn for ' + g);
+    svg = svg.replace('</svg>', sym + '\n</svg>');
     added++;
   }
   if (added) write(rel, svg);

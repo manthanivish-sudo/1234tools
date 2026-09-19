@@ -1,0 +1,41 @@
+{
+  "id": "/ai/form16-reader/",
+  "name": "Form 16 Reader (Salary, Deductions & TDS) — 1234Tools",
+  "short_name": "Form 16 Reader",
+  "description": "Drop a Form 16 — the PDF your employer or TRACES gives — and get the salary, exempt allowances, Chapter VI-A deductions, quarterly TDS and the tax computed back as fields you can check against your return, with a list of what to verify before you file.",
+  "start_url": "/ai/form16-reader/?src=pwa",
+  "scope": "/ai/form16-reader/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-form16.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-form16-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-form16-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

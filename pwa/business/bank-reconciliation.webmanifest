@@ -1,0 +1,41 @@
+{
+  "id": "/business/bank-reconciliation/",
+  "name": "Bank Reconciliation — 1234Tools",
+  "short_name": "Bank Reconciliation",
+  "description": "Match a bank statement against the bank ledger from your books — Tally, Zoho, QuickBooks or a spreadsheet — and get the unmatched entries on each side, the matched pairs, and the closing balances explained. Runs in your browser; nothing is uploaded.",
+  "start_url": "/business/bank-reconciliation/?src=pwa",
+  "scope": "/business/bank-reconciliation/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-bank-recon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-bank-recon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-bank-recon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

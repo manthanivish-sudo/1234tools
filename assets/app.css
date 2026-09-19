@@ -1943,6 +1943,10 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
 .biz-opts .field[hidden] { display: none; }
 
 .biz-h3 { margin: 18px 0 8px; font-size: .72rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--text-3); }
+.biz-two { display: grid; gap: 4px 24px; grid-template-columns: 1fr 1fr; align-items: start; }
+.biz-col { min-width: 0; }
+.biz-col .biz-h3 { margin-top: 6px; }
+.biz-col .dropzone { margin-bottom: 12px; }
 .biz-preview { margin: 0 0 12px; max-height: 420px; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .biz-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
 .biz-table th, .biz-table td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
@@ -1959,6 +1963,7 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
   .biz-seg { display: flex; }
   .biz-seg-btn { flex: 1; padding: 8px 6px; font-size: .78rem; }
   .biz-map-grid { grid-template-columns: 1fr; }
+  .biz-two { grid-template-columns: 1fr; }
   .biz-preview { max-height: 320px; }
 }
 

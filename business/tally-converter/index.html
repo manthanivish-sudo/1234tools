@@ -50,7 +50,7 @@
 
 <header class="site-header">
   <div class="container nav-wrap">
-    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,205+ free tools</small></span></a>
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,211+ free tools</small></span></a>
 
     <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navlinks">
       <span></span><span></span><span></span>
@@ -58,7 +58,7 @@
 
     <div class="header-tools">
       <div class="search-wrap">
-        <input id="q" type="search" placeholder="Search 1,205 tools…" autocomplete="off" aria-label="Search tools">
+        <input id="q" type="search" placeholder="Search 1,211 tools…" autocomplete="off" aria-label="Search tools">
         <div id="results" class="search-results" hidden></div>
       </div>
       <div class="theme-switch" role="group" aria-label="Colour theme">
@@ -85,7 +85,7 @@
 
 <div class="layout container">
   <button class="sidebar-open" id="sidebarOpen" aria-expanded="false" aria-controls="sidebar">
-    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,205 tools</span>
+    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,211 tools</span>
   </button>
 
   <aside class="sidebar" id="sidebar" aria-label="Tool categories">
@@ -96,7 +96,7 @@
 
     <nav class="side-nav">
       <a class="side-link" href="/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,205</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,211</span>
       </a>
 
       <p class="side-group">Categories</p>
@@ -116,7 +116,7 @@
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-india"></use></svg><span class="side-name">India</span><span class="side-count">15</span>
       </a>
       <a class="side-link is-active" href="/business/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-business"></use></svg><span class="side-name">Business</span><span class="side-count">15</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-business"></use></svg><span class="side-name">Business</span><span class="side-count">20</span>
       </a>
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
@@ -151,7 +151,7 @@
 
       <p class="side-group">AI for business</p>
       <a class="side-link" href="/ai/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-ai"></use></svg><span class="side-name">AI for Business</span><span class="side-count">9</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-ai"></use></svg><span class="side-name">AI for Business</span><span class="side-count">10</span>
       </a>
 
       <p class="side-group">Learning</p>
@@ -209,7 +209,7 @@
   <section class="panel"><h2>Privacy</h2><p class="privacy-line">Your file never leaves your device. It is read and converted by your own browser, so nothing is uploaded, queued or logged — which is what makes this safe for a client’s books.</p></section>
   <section class="panel"><h2>Tips</h2><ul class="tips"><li>Column names are matched automatically — “Invoice No”, “Vch No” and “Voucher Number” all land on Voucher No — and you can correct any match before converting. Save a mapping once and it is remembered on this device.</li><li>One row per voucher is the simplest layout: date, type, number, party, amount, and the tax columns you use. The tool debits and credits the right ledgers for Sales, Purchase, Receipt, Payment, Journal and Contra.</li><li>One row per ledger line suits exports from other software: a voucher number to group by, a ledger, and Debit and Credit columns. Every voucher is checked to balance before anything is written.</li><li>Tick “Create missing party ledgers” and the download includes a second file of ledger masters — import that first, then the vouchers, and Tally will not stop on an unknown party.</li><li>Import into a test company first. The XML is built to Tally’s documented structure and checked for balance, but Tally’s own validation — ledger names, GST classifications, voucher numbering rules — runs only when it imports.</li><li>Bringing data out: export from Tally with Gateway of Tally → Display → Day Book (or Ledger), Alt+E, format XML. Drop that file here and download it as Excel or CSV, one row per voucher or per ledger line.</li></ul></section>
   <section class="panel"><h2>Frequently asked questions</h2><details><summary>Is my accounting data uploaded anywhere?</summary><p>No. The spreadsheet is unzipped and read by your own browser, the XML is written by your own browser, and the download comes from memory. Nothing is transmitted — which is why this works with the network off and why it is safe for a client’s books.</p></details><details><summary>How do I import the XML into Tally?</summary><p>Tally Prime: Gateway of Tally → Import → Vouchers (or Masters), choose the file, keep “Combine opening balances” for masters, and import. Tally ERP 9: Gateway of Tally → Import Data → Vouchers. Open the company you want the entries in first: the file carries no company name unless you type one in the options.</p></details><details><summary>Tally says a ledger does not exist. What now?</summary><p>Every ledger named in a voucher must already exist in the company — the party, the sales or purchase account, the tax ledgers, the bank. Tick “Create missing party ledgers” to get a masters file for the parties, import it first, and make sure your account and tax ledgers are spelled exactly as they are in Tally, including capitals.</p></details><details><summary>Why does a voucher fail the balance check?</summary><p>In Tally every voucher’s debits equal its credits. In one-row-per-voucher mode the tool works that out for you from the amount and taxes. In one-row-per-line mode it adds up your Debit and Credit columns for each voucher number and stops if they differ by more than a paisa — usually a missing line, a typo in a voucher number, or a rounding difference that needs a Round Off line.</p></details><details><summary>Does it handle GST?</summary><p>Sales and purchase vouchers carry CGST, SGST and IGST as separate ledger lines when you map those columns, so the amounts land on your tax ledgers exactly as typed. It does not calculate tax for you, and it does not write the GST classification details a stock item needs for Tally’s returns beyond HSN and rate — check those in Tally after import.</p></details><details><summary>Which Tally versions?</summary><p>The XML follows the Import Data envelope that Tally ERP 9 and Tally Prime both read. It has been checked for structure and balance, not imported into every release of Tally, so the first run should go into a test company.</p></details></section>
-  <section class="panel"><h2>Related tools</h2><ul class="related"><li><a href="/india/gst-calculator/">GST Calculator (India)</a></li><li><a href="/business/invoice-payment-terms/">Invoice Due Date &amp; Settlement Discount Calculator</a></li><li><a href="/developer/csv-to-json/">CSV to JSON Converter</a></li><li><a href="/pdf/invoice-pdf/">Invoice Generator (PDF)</a></li></ul></section>
+  <section class="panel"><h2>Related tools</h2><ul class="related"><li><a href="/business/accounting-converter/">QuickBooks / Zoho Books / Tally Converter</a></li><li><a href="/business/bank-reconciliation/">Bank Reconciliation</a></li><li><a href="/business/einvoice-json/">E-Invoice JSON Generator (IRP schema)</a></li><li><a href="/business/gst-reconciler/">GSTR-2B Reconciliation</a></li><li><a href="/business/id-validator/">GSTIN, PAN, IFSC &amp; ID Validator (Bulk)</a></li><li><a href="/india/gst-calculator/">GST Calculator (India)</a></li><li><a href="/business/invoice-payment-terms/">Invoice Due Date &amp; Settlement Discount Calculator</a></li><li><a href="/developer/csv-to-json/">CSV to JSON Converter</a></li><li><a href="/pdf/invoice-pdf/">Invoice Generator (PDF)</a></li></ul></section>
 </article>
 </main>
 </div>
@@ -219,8 +219,8 @@
   <div class="container">
     <div class="footer-grid">
       <div class="footer-about">
-        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,205+ free tools</small></span></a>
-        <p>1,205+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
+        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,211+ free tools</small></span></a>
+        <p>1,211+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
       </div>
       <div>
         <h4>1234Tools</h4>
