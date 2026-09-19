@@ -129,8 +129,13 @@ async function pool(items, size, worker) {
 (async function () {
   const all = [];
   for (const cat of CATEGORIES) {
-    for (const [title, url, provider, cost] of cat.links) {
-      all.push({ category: cat.name, slug: cat.slug, title, url, provider, cost });
+    for (const group of cat.groups) {
+      for (const [title, url, provider, cost, level] of group.links) {
+        all.push({
+          category: cat.name, slug: cat.slug, group: group.name,
+          title: title, url: url, provider: provider, cost: cost, level: level
+        });
+      }
     }
   }
 
@@ -145,7 +150,9 @@ async function pool(items, size, worker) {
 
   if (!JSON_OUT) {
     console.log('\ncheck-links.js');
-    console.log('  ' + all.length + ' links across ' + CATEGORIES.length + ' categories\n');
+    const groupCount = CATEGORIES.reduce(function (n, c) { return n + c.groups.length; }, 0);
+    console.log('  ' + all.length + ' links across ' + groupCount + ' groups in ' +
+      CATEGORIES.length + ' categories\n');
   }
 
   const results = await pool(all, CONCURRENCY, async function (link) {

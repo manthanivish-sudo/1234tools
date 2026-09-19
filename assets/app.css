@@ -1002,6 +1002,59 @@ a.scan-go { display: inline-flex; align-items: center; justify-content: center; 
 .learn-guidance p:last-child { margin-bottom: 0; }
 .learn-guidance strong { color: var(--text-1); }
 
+/* Sub-groups. The heading is the editorial claim: these five belong together
+   and in this order. Sticky-free and anchored, so the jump nav can reach it. */
+.learn-group { margin: 0 0 26px; scroll-margin-top: 96px; }
+.learn-group-name {
+  display: flex; align-items: baseline; gap: 10px;
+  margin: 0 0 4px; font-size: 1.04rem; letter-spacing: -.01em;
+}
+.learn-group-count {
+  font-family: var(--font-mono); font-size: .72rem; font-weight: 500;
+  color: var(--text-3); background: var(--bg-1);
+  border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px;
+}
+.learn-group-blurb { margin: 0 0 12px; font-size: .85rem; line-height: 1.55; color: var(--text-3); }
+
+/* Jump links. Fourteen categories of forty links each needs a way down the
+   page that is not the scrollbar. */
+.learn-jump {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin: 0 0 24px; padding: 12px;
+  background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.learn-jump a {
+  padding: 5px 11px; border-radius: 999px;
+  font-size: .78rem; text-decoration: none; color: var(--text-2);
+  background: var(--bg-0); border: 1px solid var(--border);
+  transition: color .15s, border-color .15s, background .15s;
+}
+.learn-jump a:hover, .learn-jump a:focus-visible {
+  color: var(--accent); border-color: var(--border-gold); background: var(--surface-strong);
+}
+
+/* The one category that needs a warning before anything else on the page. */
+.learn-caution {
+  margin: 0 0 20px; padding: 14px 16px;
+  font-size: .87rem; line-height: 1.6; color: #ff9d8a;
+  background: rgba(255,90,60,.09);
+  border: 1px solid rgba(255,90,60,.35); border-left-width: 3px;
+  border-radius: var(--radius-sm);
+}
+[data-theme="light"] .learn-caution { color: #8c1d0c; background: rgba(200,40,20,.07); }
+
+.learn-badges { display: inline-flex; gap: 6px; margin-left: auto; flex: none; }
+/* What it assumes of you, before you click. */
+.learn-level {
+  padding: 3px 9px; border-radius: 999px;
+  font-size: .64rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  white-space: nowrap; background: var(--surface); color: var(--text-3);
+}
+.learn-level.is-basic { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--gold-2); }
+.learn-level.is-advanced { background: rgba(108,75,216,.18); color: #b9a2ff; }
+[data-theme="light"] .learn-level.is-basic { color: #7d5200; }
+[data-theme="light"] .learn-level.is-advanced { color: #4a2fa8; }
+
 .learn-list { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; }
 .learn-item {
   padding: 15px 16px;
@@ -1021,7 +1074,7 @@ a.scan-go { display: inline-flex; align-items: center; justify-content: center; 
 .learn-title:hover::after { color: var(--accent); }
 
 .learn-cost {
-  flex: none; margin-left: auto; padding: 3px 9px; border-radius: 999px;
+  flex: none; padding: 3px 9px; border-radius: 999px;
   font-size: .64rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
   background: var(--surface); color: var(--text-3); white-space: nowrap;
 }
@@ -1044,7 +1097,9 @@ a.scan-go { display: inline-flex; align-items: center; justify-content: center; 
 
 @media (max-width: 640px) {
   .learn-item-head { gap: 8px; }
-  .learn-cost { margin-left: 0; }
+  .learn-badges { margin-left: 0; width: 100%; }
+  .learn-jump { padding: 10px; gap: 5px; }
+  .learn-jump a { font-size: .74rem; padding: 4px 9px; }
 }
 
 /* file tools */

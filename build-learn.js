@@ -27,7 +27,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { CATEGORIES } = require('./build/learn-data.js');
+const { CATEGORIES, allLinks } = require('./build/learn-data.js');
 
 const ROOT = __dirname;
 const CHECK = process.argv.includes('--check');
@@ -119,11 +119,18 @@ function jsonLd(obj) {
 
 const COST_LABEL = { free: 'Free', 'free-tier': 'Free tier', paid: 'Paid' };
 
+/* Stated rather than implied. A directory that does not say whether something
+   assumes a maths degree wastes an evening per reader who guesses wrong. */
+const LEVEL_LABEL = { basic: 'Start here', core: 'Core', advanced: 'Advanced' };
+
 const icon = (id) =>
   '<svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#' + id + '"></use></svg>';
 
+const slugify = (s) => String(s).toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
 function linkRow(link) {
-  const [title, url, provider, cost, note] = link;
+  const [title, url, provider, cost, level, note] = link;
   let host;
   try { host = new URL(url).hostname.replace(/^www\./, ''); } catch (e) { host = ''; }
   return '<li class="learn-item">' +
@@ -132,7 +139,10 @@ function linkRow(link) {
          is something to come back to. noopener because target=_blank without
          it hands the new page a handle on this one. */
       '<a class="learn-title" href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(title) + '</a>' +
-      '<span class="learn-cost is-' + cost + '">' + COST_LABEL[cost] + '</span>' +
+      '<span class="learn-badges">' +
+        '<span class="learn-level is-' + level + '">' + (LEVEL_LABEL[level] || level) + '</span>' +
+        '<span class="learn-cost is-' + cost + '">' + COST_LABEL[cost] + '</span>' +
+      '</span>' +
     '</div>' +
     '<p class="learn-note">' + esc(note) + '</p>' +
     '<p class="learn-meta"><span class="learn-provider">' + esc(provider) + '</span>' +
@@ -143,10 +153,22 @@ function linkRow(link) {
 function categoryPage(cat, parts) {
   const url = SITE + '/learn/' + cat.slug + '/';
   const title = cat.name + ' — Learning Resources | 1234Tools';
-  const counts = cat.links.reduce(function (n, l) { n[l[3]] = (n[l[3]] || 0) + 1; return n; }, {});
-  const free = (counts.free || 0);
-  const description = cat.links.length + ' hand-picked ' + cat.name.toLowerCase() +
-    ' courses, references and practice sites, ' + free + ' of them free. What each one is, who made it, and what it costs.';
+  const flat = allLinks(cat);
+  const free = flat.filter(function (l) { return l[3] === 'free'; }).length;
+  const description = flat.length + ' hand-picked ' + cat.name.toLowerCase() +
+    ' resources in ' + cat.groups.length + ' groups, ' + free + ' of them free. What each one is, who made it, ' +
+    'what level it assumes and what it costs.';
+
+  /* Sub-headings are the editorial work. Forty links in one list is a pile;
+     the same forty split into "start here / go deeper / reference" is a path. */
+  const groupsHtml = cat.groups.map(function (g) {
+    return '<section class="learn-group">' +
+      '<h2 class="learn-group-name" id="' + slugify(g.name) + '">' + esc(g.name) +
+        '<span class="learn-group-count">' + g.links.length + '</span></h2>' +
+      (g.blurb ? '<p class="learn-group-blurb">' + esc(g.blurb) + '</p>' : '') +
+      '<ul class="learn-list">' + g.links.map(linkRow).join('') + '</ul>' +
+    '</section>';
+  }).join('');
 
   const body =
     '<nav class="crumbs"><a href="/">Home</a> › <a href="/learn/">Learning</a> › <span>' + esc(cat.name) + '</span></nav>\n' +
@@ -154,10 +176,15 @@ function categoryPage(cat, parts) {
     '  <p class="eyebrow">Learning</p>\n' +
     '  <h1><svg class="ico ico-title" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#' + cat.icon + '"></use></svg>' + esc(cat.name) + '</h1>\n' +
     '  <p class="lede">' + esc(cat.blurb) + '</p>\n' +
+    (cat.caution ? '  <p class="learn-caution">' + esc(cat.caution) + '</p>\n' : '') +
     '  <section class="panel learn-guidance"><h2>Where to start</h2><p>' + esc(cat.guidance) + '</p></section>\n' +
-    '  <ul class="learn-list">' + cat.links.map(linkRow).join('') + '</ul>\n' +
+    '  <nav class="learn-jump" aria-label="Sections on this page">' +
+      cat.groups.map(function (g) {
+        return '<a href="#' + slugify(g.name) + '">' + esc(g.name) + '</a>';
+      }).join('') + '</nav>\n' +
+    groupsHtml + '\n' +
     '  <section class="panel"><h2>About this list</h2><p class="privacy-line">' +
-      cat.links.length + ' resources, checked automatically every week so dead links do not sit here unnoticed. ' +
+      flat.length + ' resources, checked automatically every week so dead links do not sit here unnoticed. ' +
       'Nothing on this page is sponsored and none of these links pay us — which is the only reason a recommendation on it is worth anything. ' +
       'Every link goes to the original source, and we take nothing with you when you leave.' +
     '</p></section>\n' +
@@ -175,8 +202,8 @@ function categoryPage(cat, parts) {
         description: description, url: url,
         /* ItemList rather than pretending each link is our content. */
         mainEntity: {
-          '@type': 'ItemList', numberOfItems: cat.links.length,
-          itemListElement: cat.links.map(function (l, i) {
+          '@type': 'ItemList', numberOfItems: flat.length,
+          itemListElement: flat.map(function (l, i) {
             return { '@type': 'ListItem', position: i + 1, name: l[0], url: l[1] };
           })
         }
@@ -197,7 +224,7 @@ function categoryPage(cat, parts) {
 
 function hubPage(parts) {
   const url = SITE + '/learn/';
-  const total = CATEGORIES.reduce(function (n, c) { return n + c.links.length; }, 0);
+  const total = CATEGORIES.reduce(function (n, c) { return n + allLinks(c).length; }, 0);
   const title = 'Learning Resources — Curated Courses, Labs & Practice | 1234Tools';
   const description = total + ' hand-picked places to learn, across ' + CATEGORIES.length +
     ' subjects: AI, programming, data, cloud, security, labs, mock interviews and certifications. No affiliate links, checked weekly.';
@@ -207,7 +234,7 @@ function hubPage(parts) {
       '<span class="card-icon">' + icon(c.icon) + '</span>' +
       '<strong>' + esc(c.name) + '</strong>' +
       '<span class="card-desc">' + esc(c.blurb) + '</span>' +
-      '<span class="card-count">' + c.links.length + ' resources</span>' +
+      '<span class="card-count">' + allLinks(c).length + ' resources · ' + c.groups.length + ' groups</span>' +
     '</a>';
   }).join('');
 
@@ -365,7 +392,7 @@ function unpublished() {
 function patchHome() {
   const rel = 'index.html';
   const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
-  const total = CATEGORIES.reduce(function (n, c) { return n + c.links.length; }, 0);
+  const total = CATEGORIES.reduce(function (n, c) { return n + allLinks(c).length; }, 0);
   const block = HOME_START +
     '<a class="card card-lg" href="/learn/"><span class="card-icon">' + icon('i-learn') + '</span>' +
     '<strong>Learning</strong><span class="card-desc">' + total + ' curated resources</span></a>' +
@@ -412,12 +439,13 @@ function main() {
   }
   const home = patchHome();
   const added = patchSitemap();
-  const total = CATEGORIES.reduce(function (n, c) { return n + c.links.length; }, 0);
+  const total = CATEGORIES.reduce(function (n, c) { return n + allLinks(c).length; }, 0);
   const nav = patchSidebar(total);
 
   console.log('\nbuild-learn.js' + (CHECK ? '  (--check: nothing will be written)' : ''));
   console.log('  categories          ' + CATEGORIES.length);
   console.log('  resources           ' + total);
+  console.log('  sub-groups          ' + CATEGORIES.reduce(function (n, c) { return n + c.groups.length; }, 0));
   console.log('  pages               ' + pages);
   console.log('  homepage card       ' + (home.patched ? 'updated' : (home.why || 'unchanged')));
   console.log('  sitemap             ' + (added ? added + ' added' : 'unchanged'));

@@ -1170,4 +1170,21 @@
   <path d="M12 9.2v4.4l2.8 1.6" class="thin"/>
   <path d="M9.2 2.8h5.6M12 2.8v2.8" class="thin"/>
 </symbol>
+<symbol id="i-trading" viewBox="0 0 24 24">
+  <path d="M3.2 20.4h17.6"/>
+  <path d="M4.8 16.8 9.2 11.2l3.6 3.2 6-7.2" class="thin"/>
+  <path d="M15.6 6.8h3.6v3.6" class="thin"/>
+  <rect x="4" y="17.2" width="2.8" height="3.2" rx="0.6" class="fill"/>
+  <rect x="9.2" y="14" width="2.8" height="6.4" rx="0.6" class="fill"/>
+</symbol>
+<symbol id="i-hardware" viewBox="0 0 24 24">
+  <rect x="6.4" y="6.4" width="11.2" height="11.2" rx="1.6"/>
+  <rect x="9.8" y="9.8" width="4.4" height="4.4" rx="0.8" class="fill"/>
+  <path d="M9.6 6.4V3.2M14.4 6.4V3.2M9.6 20.8v-3.2M14.4 20.8v-3.2M6.4 9.6H3.2M6.4 14.4H3.2M20.8 9.6h-3.2M20.8 14.4h-3.2" class="thin"/>
+</symbol>
+<symbol id="i-feed" viewBox="0 0 24 24">
+  <path d="M4.8 4.8a14.4 14.4 0 0 1 14.4 14.4"/>
+  <path d="M4.8 10.4a8.8 8.8 0 0 1 8.8 8.8" class="thin"/>
+  <circle cx="6" cy="18" r="1.8" class="fill"/>
+</symbol>
 </svg>
