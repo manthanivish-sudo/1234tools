@@ -129,7 +129,40 @@ function active(html, rel) {
 
 const BLOCK = /<aside class="sidebar"[\s\S]*?<\/aside>/;
 
+/* Glyphs this file asks for that the sprite may not have. A generator
+   that references an id it does not ship draws an empty box, silently,
+   on every page — which is exactly what happened to i-collections. */
+const OWN_GLYPHS = {
+  'i-collections': '<symbol id="i-collections" viewBox="0 0 24 24">\n  <rect x="3" y="9" width="13" height="12" rx="2"/>\n  <path d="M6.5 6h11a2 2 0 0 1 2 2v9" class="thin"/>\n  <path d="M9.5 3h8a3 3 0 0 1 3 3v8" class="thin"/>\n  <path d="M6.5 13h6M6.5 16.5h4" class="thin"/>\n</symbol>'
+};
+function patchIcons() {
+  const rel = 'assets/icons.svg';
+  let svg = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+  let added = 0;
+  for (const id of Object.keys(OWN_GLYPHS)) {
+    if (svg.indexOf('id="' + id + '"') >= 0) continue;
+    svg = svg.replace('</svg>', OWN_GLYPHS[id] + '\n</svg>');
+    added++;
+  }
+  if (added) {
+    changes.push('update ' + rel);
+    if (!CHECK) fs.writeFileSync(path.join(ROOT, rel), svg);
+  }
+  return added;
+}
+
+/* every id the sidebar names must exist, or a row shows an empty box */
+function checkGlyphs() {
+  const svg = fs.readFileSync(path.join(ROOT, 'assets/icons.svg'), 'utf8');
+  const want = ['i-home', 'i-grid', 'i-collections', 'i-close', 'i-conversions', 'i-learn']
+    .concat(ORDER.map(x => x[1])).concat(FAMILIES.map(x => x[1]));
+  const missing = [...new Set(want)].filter(id => svg.indexOf('id="' + id + '"') < 0);
+  if (missing.length) throw new Error('the sidebar names glyphs the sprite does not have: ' + missing.join(', '));
+  return want.length;
+}
 function main() {
+  const glyphs = patchIcons();
+  checkGlyphs();
   const n = counts();
   const canonical = sidebar(n);
   let scanned = 0, written = 0, missing = 0;
@@ -162,6 +195,7 @@ function main() {
   console.log('  order               ' + ORDER.map(x => nameOf(x[0])).slice(0, 5).join(', ') + ', …');
   console.log('  counts              ' + n.total + ' tools across ' + ORDER.length + ' categories, ' + FAMILIES.length + ' conversion families folded');
   console.log('  pages with sidebar  ' + scanned + (missing ? ' (' + missing + ' without one, left alone)' : ''));
+  console.log('  icons               ' + (glyphs ? glyphs + ' glyph(s) added to the sprite' : 'all present'));
   console.log('  pages rewritten     ' + written);
   console.log('\n  ' + changes.length + ' file(s) ' + (CHECK ? 'would change' : 'changed') + '\n');
 }
