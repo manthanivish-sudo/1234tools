@@ -1,0 +1,41 @@
+{
+  "id": "/business/receivables-ageing/",
+  "name": "Receivables Ageing & Payment Reminders — 1234Tools",
+  "short_name": "Receivables Ageing",
+  "description": "Turn a list of unpaid invoices into a proper ageing report — 0–30, 31–60, 61–90, over 90 days, by customer — and get a reminder letter for each debtor that names their invoices and their total, with the tone stepping up the longer it has been. Runs in your browser; your debtors list is not uploaded.",
+  "start_url": "/business/receivables-ageing/?src=pwa",
+  "scope": "/business/receivables-ageing/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ageing.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ageing-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ageing-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
