@@ -22,6 +22,8 @@ const crumbs = require('./build-crumbs.js');
 const outbound = require('./build-outbound.js');
 const { trailFor } = require('./build/sections.js');
 const { COLLECTIONS, PRICING, pricingFor } = require('./build/collections.js');
+/* the sidebar has one owner; ours must match what it would write */
+const { apply: sidebarFor } = require('./build-sidebar.js');
 
 const ROOT = __dirname;
 const CHECK = process.argv.includes('--check');
@@ -84,7 +86,7 @@ function headFor(parts, pathOnly, title, description) {
     .replace(/(<script src="\/engine\/[^"]*"[^>]*><\/script>\n?)+/, '');
 }
 
-const markActive = (html) => html.replace(/ class="side-link is-active"/g, ' class="side-link"');
+
 
 const badge = (p) => '<span class="tag tag-' + p.key + '" title="' + esc(p.blurb) + '">' + esc(p.label) + '</span>';
 
@@ -136,7 +138,7 @@ function collectionPage(c, parts) {
     ]
   }) + '</script>\n';
 
-  const html = markActive(headFor(parts, pathOnly, c.title, c.lede) + ld + parts.mid + '\n' + body + parts.tail);
+  const html = sidebarFor(headFor(parts, pathOnly, c.title, c.lede) + ld + parts.mid + '\n' + body + parts.tail, SECTION + '/' + c.slug + '/index.html');
   return outbound.rewrite(html, SECTION).html;
 }
 
@@ -175,7 +177,7 @@ function hubPage(parts, counts) {
       crumbs.breadcrumbList(trail, 'Collections', pathOnly)
     ]
   }) + '</script>\n';
-  const html = markActive(headFor(parts, pathOnly, title, description) + ld + parts.mid + '\n' + body + parts.tail);
+  const html = sidebarFor(headFor(parts, pathOnly, title, description) + ld + parts.mid + '\n' + body + parts.tail, SECTION + '/index.html');
   return outbound.rewrite(html, SECTION).html;
 }
 

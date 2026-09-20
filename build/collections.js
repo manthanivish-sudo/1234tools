@@ -255,4 +255,11 @@ const COLLECTIONS = [
   }
 ];
 
-module.exports = { COLLECTIONS, PRICING, pricingFor };
+/* A second batch may live in build/collections-extra.js, exporting an
+   array in exactly this shape. Kept separate so it can be written and
+   reviewed without touching the ones already shipped. */
+let EXTRA = [];
+try { EXTRA = require('./collections-extra.js').COLLECTIONS || []; } catch (e) { /* none yet */ }
+const ALL = COLLECTIONS.concat(EXTRA);
+
+module.exports = { COLLECTIONS: ALL, PRICING, pricingFor };
