@@ -444,11 +444,17 @@
     let pdfjs = null;
     async function ensurePdfJs() {
       if (pdfjs) return pdfjs;
+      /* Whatever the run had to say outlives the loading notice. A warning
+         the tool set moments ago must not be wiped by the viewer's own
+         progress message on the one run that loads the engine — which is
+         always the first press of the button, the one that matters most. */
+      const held = { text: msg.textContent, cls: msg.className };
       say('Loading the PDF rendering engine (about 1.7 MB). This happens once, then it is cached.', 'note');
       const mod = await import(`${PDFJS_BASE}pdf.min.mjs`);
       mod.GlobalWorkerOptions.workerSrc = `${PDFJS_BASE}pdf.worker.min.mjs`;
       pdfjs = mod;
-      say('');
+      msg.textContent = held.text;
+      msg.className = held.cls;
       return mod;
     }
 

@@ -1484,4 +1484,28 @@
   <path d="M12 5.4v13" class="thin"/>
   <path d="M16.8 9.8l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6z" class="fill"/>
 </symbol>
+<symbol id="i-quotation" viewBox="0 0 24 24">
+  <path d="M13.2 2.9H6.4a1.5 1.5 0 0 0-1.5 1.5v15.2a1.5 1.5 0 0 0 1.5 1.5h4.2"/>
+  <path d="M13.2 2.9l5.4 5.4v3"/>
+  <path d="M12.9 3.2v5.2h5.2" class="thin"/>
+  <path d="M8.2 11.6h5.2M8.2 14.6h3.2" class="thin"/>
+  <circle cx="17" cy="17.4" r="4"/>
+  <path d="M15.3 17.4l1.3 1.3 2.3-2.5" class="thin"/>
+</symbol>
+<symbol id="i-purchase-order" viewBox="0 0 24 24">
+  <path d="M13.2 2.9H6.4a1.5 1.5 0 0 0-1.5 1.5v15.2a1.5 1.5 0 0 0 1.5 1.5h3.8"/>
+  <path d="M13.2 2.9l5.4 5.4v2.2"/>
+  <path d="M12.9 3.2v5.2h5.2" class="thin"/>
+  <path d="M8.2 11.4h4" class="thin"/>
+  <path d="M11.9 13.2h1.6l1.5 5.1h4.3l1.3-3.6h-6.3"/>
+  <circle cx="15.4" cy="20.4" r=".95" class="fill"/>
+  <circle cx="18.9" cy="20.4" r=".95" class="fill"/>
+</symbol>
+<symbol id="i-challan" viewBox="0 0 24 24">
+  <path d="M1.9 5.9h11.3v11.3H1.9z"/>
+  <path d="M13.2 9.5h3.9l3 3.2v4.5h-6.9z"/>
+  <circle cx="6.6" cy="18.9" r="1.8"/>
+  <circle cx="17.3" cy="18.9" r="1.8"/>
+  <path d="M5.2 9.4h4.6" class="thin"/>
+</symbol>
 </svg>

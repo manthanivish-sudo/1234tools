@@ -1,0 +1,42 @@
+{
+  "id": "/pdf/delivery-challan-pdf/",
+  "name": "Delivery Challan & Packing List Generator (PDF) — 1234Tools",
+  "short_name": "Delivery Challan",
+  "description": "Create the document that travels with the goods: consignor and consignee, purpose of movement, vehicle and transporter details, items with weights and package counts, and an acknowledgement for the receiver to sign — printed as Original, Duplicate and Triplicate copies.",
+  "start_url": "/pdf/delivery-challan-pdf/?src=pwa",
+  "scope": "/pdf/delivery-challan-pdf/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-challan.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-challan-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-challan-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
