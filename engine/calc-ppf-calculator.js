@@ -127,6 +127,8 @@ function countWeekdays(a, b) {
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["ppf-calculator"] = {
+"currencyLocked": true,
+"currencyNote": "the PPF scheme’s rules",
 "currency": "INR",
 "title": "PPF Calculator",
 "category": "india",

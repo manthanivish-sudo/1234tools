@@ -127,6 +127,8 @@ function countWeekdays(a, b) {
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["epf-calculator"] = {
+"currencyLocked": true,
+"currencyNote": "the EPF scheme’s rules",
 "currency": "INR",
 "title": "EPF Calculator",
 "category": "india",

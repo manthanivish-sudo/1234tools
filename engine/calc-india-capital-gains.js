@@ -127,6 +127,8 @@ function countWeekdays(a, b) {
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["india-capital-gains"] = {
+"currencyLocked": true,
+"currencyNote": "Indian capital-gains rules",
 "currency": "INR",
 "title": "Capital Gains Tax Calculator (India)",
 "category": "india",

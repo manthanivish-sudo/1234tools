@@ -127,6 +127,8 @@ function countWeekdays(a, b) {
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["nps-calculator"] = {
+"currencyLocked": true,
+"currencyNote": "the NPS scheme’s rules",
 "currency": "INR",
 "title": "NPS Calculator",
 "category": "india",

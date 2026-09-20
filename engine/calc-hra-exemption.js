@@ -127,6 +127,8 @@ function countWeekdays(a, b) {
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["hra-exemption"] = {
+"currencyLocked": true,
+"currencyNote": "the Indian HRA exemption rules",
 "currency": "INR",
 "title": "HRA Exemption Calculator",
 "category": "india",

@@ -35,6 +35,7 @@ const PACKS = (PLANS.packs && PLANS.packs.items) || [];
    stale the week after — it said 1,196 for months — so it is read from
    the search index, which is the register of what exists. */
 const { counts } = require('./build-collections.js');
+const settings = require('./build/settings.js');
 
 const changes = [];
 function write(rel, content) {
@@ -324,6 +325,52 @@ function accountScript() {
 
 /* ------------------------------------------------------------------ */
 
+/**
+ * The tools whose currency is fixed by a statute, found rather than
+ * listed: an engine that sets currencyLocked, plus the page that loads
+ * it. Walking for the page means a locked engine nobody ships cannot
+ * appear on the settings page as a tool you can visit.
+ */
+function lockedTools() {
+  const dir = path.join(ROOT, 'engine');
+  const found = [];
+  for (const name of fs.readdirSync(dir)) {
+    if (!/^calc-.*\.js$/.test(name)) continue;
+    const src = fs.readFileSync(path.join(dir, name), 'utf8');
+    if (src.indexOf('"currencyLocked": true') < 0) continue;
+    const why = (/"currencyNote": "([^"]+)"/.exec(src) || [])[1] || 'one country\u2019s rules';
+    const title = (/"title": "([^"]+)"/.exec(src) || [])[1] || name;
+    found.push({ engine: '/engine/' + name, title, why });
+  }
+  /* which page carries each one */
+  const byEngine = {};
+  (function walk(d) {
+    for (const ent of fs.readdirSync(d, { withFileTypes: true })) {
+      const abs = path.join(d, ent.name);
+      if (ent.isDirectory()) {
+        if (ent.name === 'node_modules' || ent.name === '.git' || ent.name === 'assets' || ent.name === 'engine') continue;
+        walk(abs); continue;
+      }
+      if (ent.name !== 'index.html') continue;
+      const html = fs.readFileSync(abs, 'utf8');
+      for (const t of found) {
+        if (byEngine[t.engine]) continue;
+        if (html.indexOf('src="' + t.engine + '"') >= 0) {
+          byEngine[t.engine] = '/' + path.relative(ROOT, path.dirname(abs)).split(path.sep).join('/') + '/';
+        }
+      }
+    }
+  })(ROOT);
+  return found.filter(t => byEngine[t.engine])
+    .map(t => ({ title: t.title, why: t.why, url: byEngine[t.engine] }))
+    .sort((a, b) => a.title.localeCompare(b.title));
+}
+
+function settingsBody() {
+  const locked = lockedTools();
+  return settings.body(fs, path, ROOT, locked) + '<script>\n' + settings.script() + '</script>\n';
+}
+
 function trustBody() {
   /* Read, not remembered — and not lifted out of the plan's feature text,
      which now carries a placeholder for exactly this number. */
@@ -380,6 +427,10 @@ function main() {
   const pages = [
     { slug: 'pricing', title: 'Plans and pricing — 1234Tools', description: 'Every tool that runs in your browser is free with no account. Pro and Business pay for what needs a server: AI calls and settings that follow you between devices. Rupees through Razorpay, pounds through Stripe.', body: pricingBody(), name: 'Pricing' },
     { slug: 'account', title: 'Your account — 1234Tools', description: 'Sign in to 1234Tools to use the AI tools and keep saved settings across devices. Nothing else on the site needs an account.', body: accountBody(), name: 'Account' },
+    /* Settings needs no account and is linked from every tool that shows
+       money, so it is public from the start — and it deliberately does
+       not carry the account library: see build/settings.js. */
+    { slug: 'settings', title: 'Settings — currency, dates and paper size — 1234Tools', description: 'Choose your currency, how digits are grouped (lakhs or thousands), how dates are written, paper size and units once. Every tool on 1234Tools then uses them. Kept on your device; no account needed.', body: settingsBody(), name: 'Settings', indexable: true, noAccount: true },
     /* the trust page is public and indexable from the start: it is the part people search for before they sign up */
     { slug: 'trust', title: 'Security, privacy and compliance — 1234Tools', description: 'What runs on your device and what runs in the cloud, what 1234Tools holds about an account, every sub-processor and where it is, how the AI tools mask personal data, and how to exercise your GDPR and DPDP rights.', body: trustBody(), name: 'Trust & security', indexable: true, noAccount: true }
   ];

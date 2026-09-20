@@ -127,6 +127,8 @@ function countWeekdays(a, b) {
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["ctc-take-home"] = {
+"currencyLocked": true,
+"currencyNote": "Indian payroll and income-tax rules",
 "currency": "INR",
 "title": "CTC to In-Hand Salary Calculator",
 "category": "india",

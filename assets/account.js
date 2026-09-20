@@ -55,6 +55,9 @@
       let first = true;
       A.onAuthStateChanged(auth, (u) => {
         user = u;
+        /* A flag, not a fact about anybody: it lets /settings/ offer to sync
+           preferences without loading Firebase first just to ask. */
+        try { window.localStorage.setItem('1234tools.signedIn', u ? '1' : '0'); } catch (e) { /* no storage; the offer just shows its default wording */ }
         if (unsubRecord) { unsubRecord(); unsubRecord = null; }
         record = null;
         if (u) {
@@ -227,6 +230,37 @@
     return snap.exists() ? snap.data() : { calls: 0 };
   }
 
+  /* ---------- preferences, on every machine you sign in on ---------- */
+
+  /**
+   * One document, written from /settings/ and nowhere else. The stored
+   * time is the server's: two machines with two clocks disagreeing about
+   * which copy is newer is a problem best not invented.
+   */
+  async function savePrefs(payload) {
+    guard(); await ready;
+    if (!user) throw new Error('Sign in first.');
+    const values = (payload && payload.values) || {};
+    await F.setDoc(F.doc(db, 'users', user.uid, 'prefs', 'site'), {
+      v: Number(payload && payload.v) || 1,
+      values: values,
+      updatedAt: F.serverTimestamp()
+    });
+    return true;
+  }
+
+  /** The stored copy, or null when there is none to take. */
+  async function loadPrefs() {
+    if (!enabled) return null;
+    await ready;
+    if (!user) return null;
+    const snap = await F.getDoc(F.doc(db, 'users', user.uid, 'prefs', 'site'));
+    if (!snap.exists()) return null;
+    const d = snap.data() || {};
+    const at = d.updatedAt && typeof d.updatedAt.toMillis === 'function' ? d.updatedAt.toMillis() : 0;
+    return { values: d.values || {}, updatedAt: at, v: d.v || 1 };
+  }
+
   /* ---------- your data ---------- */
   async function exportData() {
     guard(); await ready;
@@ -260,6 +294,7 @@
     onChange: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
     signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, signOut,
     checkout, buyCredits, credits: () => Math.max(0, Math.floor((record && record.credits) || 0)),
+    savePrefs, loadPrefs,
     manage, saveMapping, listMappings, deleteMapping, usageThisMonth, ai, exportData, deleteAccount
   };
 })();

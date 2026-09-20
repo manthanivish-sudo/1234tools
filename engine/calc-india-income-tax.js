@@ -127,6 +127,8 @@ function countWeekdays(a, b) {
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["india-income-tax"] = {
+"currencyLocked": true,
+"currencyNote": "Indian income-tax rules",
 "currency": "INR",
 "title": "Income Tax Calculator (New vs Old Regime)",
 "category": "india",

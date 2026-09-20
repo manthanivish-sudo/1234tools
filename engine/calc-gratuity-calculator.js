@@ -127,6 +127,8 @@ function countWeekdays(a, b) {
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["gratuity-calculator"] = {
+"currencyLocked": true,
+"currencyNote": "the Payment of Gratuity Act formula",
 "currency": "INR",
 "title": "Gratuity Calculator",
 "category": "india",

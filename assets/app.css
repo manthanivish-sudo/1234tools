@@ -2183,6 +2183,24 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
 .ask-trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .ask-privacy { margin: 14px 0 0; font-size: .8rem; line-height: 1.6; color: var(--text-3); }
 
+/* ---------- preferences ---------- */
+/* The line under a result that says which currency it is in. Quiet: it is
+   an answer to a question nobody asked out loud, not a control. */
+.cur-note { margin: 10px 0 0; font-size: .78rem; line-height: 1.5; color: var(--text-3); }
+.cur-note a { color: var(--text-2); }
+.pref-group { margin: 0 0 16px; }
+.pref-blurb { margin: 0 0 14px; font-size: .86rem; line-height: 1.55; color: var(--text-2); }
+.pref-fields { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.pref-fields .field { margin-bottom: 0; }
+.pref-preview { background: var(--bg-2); }
+.pref-sample { display: grid; gap: 10px 20px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin: 12px 0 0; }
+.pref-sample dt { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
+.pref-sample dd { margin: 2px 0 0; font-family: var(--font-head); font-size: 1.15rem; color: var(--text-1); }
+.pref-sync { margin: 14px 0 0; }
+.pref-locked { margin: 12px 0 0; padding: 0; list-style: none; font-size: .86rem; line-height: 1.7; }
+.pref-locked li { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.pref-why { color: var(--text-3); font-size: .8rem; }
+
 /* ---------- account ---------- */
 .acct-providers { margin: 0 0 12px; }
 .acct-or { margin: 0 0 10px; font-size: .78rem; color: var(--text-3); letter-spacing: .06em; text-transform: uppercase; }

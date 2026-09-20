@@ -127,6 +127,8 @@ function countWeekdays(a, b) {
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["gst-calculator"] = {
+"currencyLocked": true,
+"currencyNote": "Indian GST rates",
 "currency": "INR",
 "title": "GST Calculator (India)",
 "category": "india",

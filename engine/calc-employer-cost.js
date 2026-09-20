@@ -127,6 +127,8 @@ function countWeekdays(a, b) {
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["employer-cost"] = {
+"currencyLocked": true,
+"currencyNote": "UK employer National Insurance",
 "currency": "GBP",
 "title": "True Cost of an Employee Calculator",
 "category": "business",

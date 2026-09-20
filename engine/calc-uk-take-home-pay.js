@@ -127,6 +127,8 @@ function countWeekdays(a, b) {
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["uk-take-home-pay"] = {
+"currencyLocked": true,
+"currencyNote": "UK income tax and National Insurance",
 "currency": "GBP",
 "title": "UK Take-Home Pay Calculator",
 "category": "business",

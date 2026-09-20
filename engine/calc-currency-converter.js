@@ -127,6 +127,8 @@ function countWeekdays(a, b) {
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["currency-converter"] = {
+"currencyLocked": true,
+"currencyNote": "rates between two currencies you pick on the page itself",
 "currency": "GBP",
 "title": "Currency Converter",
 "category": "business",

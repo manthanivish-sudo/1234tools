@@ -127,6 +127,8 @@ function countWeekdays(a, b) {
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["fd-rd-calculator"] = {
+"currencyLocked": true,
+"currencyNote": "Indian deposit and TDS rules",
 "currency": "INR",
 "title": "FD & RD Calculator",
 "category": "india",

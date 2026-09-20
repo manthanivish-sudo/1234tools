@@ -8,6 +8,24 @@
 (function () {
   'use strict';
 
+  /* Preferences load ahead of this file and may be absent (an old cached
+     page, or a browser that refused the script). Everything below falls
+     back to what the tool itself asked for, which is what happened
+     before preferences existed. */
+  const P = () => window.Prefs || null;
+
+  /* The spec's currency is a suggestion. It stops being one when the
+     tool applies a country's rules: Indian income tax in dollars is not
+     a translation, it is a wrong answer. Those specs set currencyLocked
+     and the page says why rather than quietly overruling the reader. */
+  const curFor = (spec) => {
+    const asked = (spec && spec.currency) || 'GBP';
+    if (spec && spec.currencyLocked) return asked;
+    return P() ? P().currency(asked) : asked;
+  };
+  const locFor = (code) => P() ? P().locale(code)
+    : (code === 'INR' ? 'en-IN' : code === 'USD' ? 'en-US' : code === 'EUR' ? 'de-DE' : 'en-GB');
+
   const fmt = {
     number(v, unit, code) {
       if (v === null || v === undefined || v === '') return '—';
@@ -18,16 +36,17 @@
       if (abs !== 0 && (abs < 1e-4 || abs >= 1e12)) s = v.toExponential(6);
       else {
         const dp = abs >= 1000 ? 2 : abs >= 1 ? 4 : 6;
-        const nloc = code === 'INR' ? 'en-IN' : code === 'USD' ? 'en-US' : 'en-GB';
+        const nloc = locFor(code);
         s = Number(v.toFixed(dp)).toLocaleString(nloc, { maximumFractionDigits: dp });
       }
       return unit ? `${s} ${unit}` : s;
     },
-    /* Currency is per-spec, not global: these tools are used from the UK
-       but the maths is identical everywhere, so the symbol is data. */
+    /* The symbol is data, and now the reader's data as often as the
+       tool's. `code` arrives already resolved by curFor(). */
     currency(v, unit, code) {
       if (!isFinite(v)) return '—';
       const cur = code || window.__CURRENCY__ || 'GBP';
+      if (P()) return P().money(v, { code: cur, locked: true, decimals: 2 });
       /* Locale drives digit grouping, not just the symbol. INR groups in
          lakhs and crores (3,19,800), which is what Indian users read. */
       const loc = cur === 'USD' ? 'en-US' : cur === 'EUR' ? 'de-DE'
@@ -39,7 +58,7 @@
       }
     },
     percent(v, unit, code) {
-      const loc = code === 'INR' ? 'en-IN' : code === 'USD' ? 'en-US' : 'en-GB';
+      const loc = locFor(code);
       return isFinite(v) ? `${Number(v.toFixed(4)).toLocaleString(loc)}%` : '—';
     },
     text(v) { return v === null || v === undefined ? '' : String(v); },
@@ -99,6 +118,25 @@
     return vals;
   }
 
+  /* The symbol on its own does not tell somebody they may change it,
+     and a preference nobody can find is not a preference. One line,
+     under the results, only where money is actually shown. */
+  const SYMBOL = { INR: '₹', GBP: '£', USD: '$', EUR: '€', AED: 'د.إ', SGD: 'S$', AUD: 'A$', CAD: 'C$', ZAR: 'R' };
+  function currencyNote(spec) {
+    if (!spec.outputs || !spec.outputs.some(o => o.format === 'currency')) return null;
+    const code = curFor(spec);
+    const sym = SYMBOL[code] || code;
+    const note = document.createElement('p');
+    note.className = 'cur-note';
+    if (spec.currencyLocked) {
+      note.innerHTML = 'Shown in ' + sym + ' because this tool applies '
+        + (spec.currencyNote || 'one country\u2019s rules') + ', and the currency is part of the rule rather than a label on it.';
+      return note;
+    }
+    note.innerHTML = 'Amounts in ' + sym + ' \u00b7 <a href="/settings/">change the currency and grouping</a>';
+    return note;
+  }
+
   function renderResults(spec, results, container) {
     container.innerHTML = '';
     spec.outputs.forEach(out => {
@@ -119,7 +157,7 @@
       const val = document.createElement('span');
       val.className = 'result-value';
       const f = fmt[out.format] || fmt.number;
-      val.textContent = f(v, out.unit, spec.currency);
+      val.textContent = f(v, out.unit, curFor(spec));
       row.appendChild(val);
 
       const copy = document.createElement('button');
@@ -137,6 +175,8 @@
 
       container.appendChild(row);
     });
+    const note = currencyNote(spec);
+    if (note) container.appendChild(note);
   }
 
   window.MVRTool = {
@@ -165,6 +205,9 @@
 
       let touched = false;
       const touchedRun = () => { touched = true; run(); };
+      /* A preference changed here or in another tab repaints the page,
+         without counting as use: the reader did not touch the inputs. */
+      if (window.Prefs) window.Prefs.onChange(() => run());
       form.addEventListener('input', touchedRun);
       form.addEventListener('change', touchedRun);
       run();

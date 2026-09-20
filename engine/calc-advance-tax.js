@@ -127,6 +127,8 @@ function countWeekdays(a, b) {
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["advance-tax"] = {
+"currencyLocked": true,
+"currencyNote": "Indian income-tax rules",
 "currency": "INR",
 "title": "Advance Tax Calculator",
 "category": "india",

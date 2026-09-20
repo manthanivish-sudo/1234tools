@@ -127,6 +127,8 @@ function countWeekdays(a, b) {
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["tds-calculator"] = {
+"currencyLocked": true,
+"currencyNote": "Indian TDS rates",
 "currency": "INR",
 "title": "TDS Calculator",
 "category": "india",
