@@ -2,7 +2,7 @@
   "_comment": "What the pricing page shows. Amounts are display values; the backend's functions/plans.json is what actually charges. Keep them in step.",
   "currencies": {
     "INR": { "symbol": "₹", "provider": "razorpay", "label": "India · UPI, cards, net banking through Razorpay" },
-    "GBP": { "symbol": "£", "provider": "stripe", "label": "United Kingdom and everywhere else · card through Stripe" }
+    "GBP": { "symbol": "£", "provider": "stripe", "label": "United Kingdom and everywhere else · card through Stripe", "note": "inc. VAT" }
   },
   "plans": [
     {
