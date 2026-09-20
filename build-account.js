@@ -86,7 +86,7 @@ function pricingBody() {
         Object.keys(PLANS.currencies).map(cur => ['monthly', 'annual'].map(per =>
           '<span class="plan-amount" data-cur="' + cur + '" data-period="' + per + '" hidden>' +
             (price(cur, per) === 0 ? '<strong>' + esc(PLANS.currencies[cur].symbol) + '0</strong><small>always</small>' :
-              '<strong>' + esc(fmt(cur, per === 'annual' ? Math.round(price(cur, per) / 12 * 100) / 100 : price(cur, per))) + '</strong><small>/month' + (per === 'annual' ? ', billed ' + esc(fmt(cur, price(cur, per))) + ' a year' : '') + '</small>') +
+              '<strong>' + esc(fmt(cur, per === 'annual' ? Math.round(price(cur, per) / 12 * 100) / 100 : price(cur, per))) + '</strong><small>/month' + (per === 'annual' ? ', billed ' + esc(fmt(cur, price(cur, per))) + ' a year' : '') + (PLANS.currencies[cur].note ? ' ' + esc(PLANS.currencies[cur].note) : '') + '</small>') +
           '</span>').join('')).join('') +
       '</p>' +
       '<ul class="plan-features">' + p.features.map(f => '<li>' + esc(f) + '</li>').join('') + '</ul>' +

@@ -53,7 +53,10 @@ const SHIPPING = [
   ['pdf-editor', 'i-pdf-editor'],
   ['pdf-signature', 'i-pdf-signature'],
   ['payslip-pdf', 'i-payslip'],
-  ['mail-merge-pdf', 'i-mail-merge']
+  ['mail-merge-pdf', 'i-mail-merge'],
+  ['quotation-pdf', 'i-quotation'],
+  ['purchase-order-pdf', 'i-purchase-order'],
+  ['delivery-challan-pdf', 'i-challan']
 ].filter(([slug]) => fs.existsSync(path.join(__dirname, 'engine', 'pdf-' + slug + '.js')));
 
 function patchIcons() {

@@ -1,0 +1,41 @@
+{
+  "id": "/education/timetable/",
+  "name": "School Timetable Generator — 1234Tools",
+  "short_name": "School Timetable",
+  "description": "Give it the subject allocation — class, subject, teacher, periods a week — and get a clash-free timetable: a grid for every class, a grid for every teacher, double periods kept together, teacher free days honoured, and a plain list of anything that would not fit. Runs in your browser; no staff names are uploaded.",
+  "start_url": "/education/timetable/?src=pwa",
+  "scope": "/education/timetable/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-timetable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-timetable-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-timetable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
