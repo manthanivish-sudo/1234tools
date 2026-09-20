@@ -1,0 +1,41 @@
+{
+  "id": "/ai/parent-message-writer/",
+  "name": "Parent Communication Writer — 1234Tools",
+  "short_name": "Parent Communication",
+  "description": "The message home, written properly — absence, progress, behaviour, fees, trips, exams, closures — in the shape of the channel you are sending it on, and in a second language if the family reads one more easily.",
+  "start_url": "/ai/parent-message-writer/?src=pwa",
+  "scope": "/ai/parent-message-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-parent.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-parent-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-parent-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

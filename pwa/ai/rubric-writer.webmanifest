@@ -1,0 +1,41 @@
+{
+  "id": "/ai/rubric-writer/",
+  "name": "Marking Rubric & Assessment Criteria Builder — 1234Tools",
+  "short_name": "Marking Rubric",
+  "description": "A marking rubric for a task you set — criteria against bands, with descriptors that actually tell a 7 from a 5, the marks allotted to each criterion, and a note on what a top answer does.",
+  "start_url": "/ai/rubric-writer/?src=pwa",
+  "scope": "/ai/rubric-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-rubric.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-rubric-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-rubric-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

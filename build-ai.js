@@ -105,7 +105,11 @@ function toolPage(t, parts, all) {
   const url = SITE + pathOnly;
   const trail = trailFor(pathOnly);
   const s = t.spec;
-  const related = all.filter(x => x.slug !== t.slug).slice(0, 5).map(x => '<li><a href="/' + SECTION + '/' + x.slug + '/">' + esc(x.spec.title) + '</a></li>')
+  /* the tools that shipped together sit first: a school tool lists school
+     tools, a marketing tool lists marketing tools, and the section stops
+     pointing all 33 of its pages at the same five */
+  const sibling = (x) => x.spec.scripts[x.spec.scripts.length - 1] === s.scripts[s.scripts.length - 1];
+  const related = all.filter(x => x.slug !== t.slug).sort((p, q) => (sibling(q) ? 1 : 0) - (sibling(p) ? 1 : 0)).slice(0, 5).map(x => '<li><a href="/' + SECTION + '/' + x.slug + '/">' + esc(x.spec.title) + '</a></li>')
     .concat(['<li><a href="/business/tally-converter/">Excel / CSV to Tally Converter</a></li>', '<li><a href="/pricing/">Plans and pricing</a></li>']).join('');
   const body =
     crumbs.render(trail, s.title) + '\n' +

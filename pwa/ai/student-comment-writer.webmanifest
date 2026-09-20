@@ -1,0 +1,41 @@
+{
+  "id": "/ai/student-comment-writer/",
+  "name": "Report Card Comment Writer — 1234Tools",
+  "short_name": "Report Card Comment",
+  "description": "Paste the class list with marks, attendance and a few words about each pupil, and get a report card comment for every one of them — in their own name, about their own term, with the next step spelt out.",
+  "start_url": "/ai/student-comment-writer/?src=pwa",
+  "scope": "/ai/student-comment-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-report.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-report-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-report-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
