@@ -20,6 +20,13 @@
 const fs = require('fs');
 const path = require('path');
 const crumbs = require('./build-crumbs.js');
+/* One owner for the sidebar. These pages are cut from a shell whose
+   sidebar belongs to whichever page it was copied from, and now that
+   /settings/ is a row in it, build-sidebar wants to mark that row active
+   while this builder keeps pasting the shell's version back. The pipeline
+   never settles until the page is written with the sidebar it should
+   have. */
+const { apply: sidebarFor } = require('./build-sidebar.js');
 const { trailFor } = require('./build/sections.js');
 /* outbound links are tagged the way build-outbound.js tags them, at write
    time, so the two never rewrite each other */
@@ -440,7 +447,7 @@ function main() {
     let html = headFor(parts, p.slug, p.title, p.description) + parts.mid + '\n' + crumbs.render(trailFor(pathOnly), p.name) + '\n' + p.body + parts.tail;
     if (p.indexable) html = html.replace('<meta name="robots" content="noindex,nofollow">\n', '');
     if (p.noAccount) html = html.replace('<script src="/assets/firebase-config.js"></script>\n<script src="/assets/account.js" defer></script>\n', '');
-    html = outbound.rewrite(html, p.slug).html;
+    html = sidebarFor(outbound.rewrite(html, p.slug).html, p.slug + '/index.html');
     if (write(p.slug + '/index.html', html)) built++;
   }
   /* indexable pages belong in the sitemap; the dark ones stay out of it */

@@ -215,6 +215,18 @@ input, select, .result-value, .formula, .stat-num { font-variant-numeric: tabula
 }
 .theme-switch svg { width: 15px; height: 15px; display: block; }
 
+/* The gear beside the theme switch. Same size and same hit area, because
+   it is the same kind of control: something you press once and forget. */
+.hdr-prefs {
+  width: 34px; height: 34px; flex: none;
+  display: grid; place-items: center;
+  color: var(--text-3); border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface); text-decoration: none;
+  transition: background .2s, color .2s, border-color .2s;
+}
+.hdr-prefs:hover { color: var(--accent); border-color: var(--border-gold); background: var(--surface-strong); }
+.hdr-prefs svg { width: 16px; height: 16px; display: block; }
+
 /* ---- search results ---- */
 .search-results {
   position: absolute; z-index: 99; left: 0; right: 0; top: calc(100% + 8px);

@@ -1644,4 +1644,10 @@
   <path d="M12 6.6v13.2" class="thin"/>
   <path d="M6.4 9h3.2M6.4 11.6h3.2M14.4 9h3.2M14.4 11.6h3.2" class="thin"/>
 </symbol>
+<symbol id="i-settings" viewBox="0 0 24 24">
+  <circle cx="12" cy="12" r="3.2"/>
+  <path d="M4.2 9.5h2.1M17.7 9.5h2.1M4.2 14.5h2.1M17.7 14.5h2.1" class="thin"/>
+  <path d="M9.5 4.2v2.1M14.5 4.2v2.1M9.5 17.7v2.1M14.5 17.7v2.1" class="thin"/>
+  <circle cx="12" cy="12" r="8.2" class="thin"/>
+</symbol>
 </svg>

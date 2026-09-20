@@ -138,11 +138,35 @@
     document.head.appendChild(s);
   }
 
+  /* Pages that are not tools. They are deliberately NOT in
+     assets/search-index.js: that file is the register the site counts
+     tools from, so a page in it would make every total on the site one
+     too many. Keywords are the words somebody would actually type when
+     they want the thing, not the words on the page. */
+  var SEARCH_PAGES = [
+    ['Settings', 'settings/', 'settings', 'currency rupee pound dollar euro symbol lakh crore grouping comma separator decimal date format dd mm paper size a4 letter legal units metric imperial week preferences options language locale'],
+    ['All tools', 'tools/', 'grid', 'directory list browse everything index'],
+    ['Collections', 'for/', 'collections', 'accountant bookkeeper school teacher landlord shop freelancer developer role job'],
+    ['How-to guides', 'guides/', 'feed', 'guide how to walkthrough steps tutorial'],
+    ['Comparisons', 'compare/', 'compare', 'alternative versus vs instead of tally capium quickbooks zoho bridging'],
+    ['Plans and pricing', 'pricing/', 'employer-cost', 'price cost subscription credits pay per use free plan pro business'],
+    ['Privacy and security', 'trust/', 'shield', 'privacy gdpr dpdp data security processor compliance what you hold'],
+    ['Your account', 'account/', 'shield', 'sign in login register account profile']
+  ];
+
   function search(term) {
     var idx = window.SEARCH_INDEX || [], hits = [];
     for (var i = 0; i < idx.length; i++) {
       var s = score(idx[i][0], term);
       if (s > 0) hits.push([s, idx[i]]);
+    }
+    /* A page matches on its title or on any of its keywords, and is
+       scored a little below an equally good tool match, because
+       somebody typing into a tool site usually wants a tool. */
+    for (var j = 0; j < SEARCH_PAGES.length; j++) {
+      var pg = SEARCH_PAGES[j];
+      var ps = Math.max(score(pg[0], term), score(pg[3], term) ? 60 : 0);
+      if (ps > 0) hits.push([ps - 1, pg]);
     }
     hits.sort(function (a, b) { return b[0] - a[0]; });
     return hits.slice(0, 20).map(function (h) { return h[1]; });
