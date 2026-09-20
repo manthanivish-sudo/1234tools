@@ -325,13 +325,16 @@ function accountScript() {
 /* ------------------------------------------------------------------ */
 
 function trustBody() {
+  /* Read, not remembered — and not lifted out of the plan's feature text,
+     which now carries a placeholder for exactly this number. */
+  const total = counts().total.toLocaleString('en-GB');
   const row = (k, v) => '<tr><th scope="row">' + k + '</th><td>' + v + '</td></tr>';
   return '<article class="trust">\n' +
     '  <p class="eyebrow">Trust</p>\n' +
     '  <h1>Security, privacy and compliance</h1>\n' +
     '  <p class="lede">What runs where, what we hold, who else touches it, and how to exercise your rights. Written to be checked, not to reassure.</p>\n' +
     '  <section class="panel"><h2>Two kinds of tool</h2>' +
-    '<p><strong>On your device.</strong> ' + esc(String(PLANS.plans[0].features[0]).replace(/^All /, '').replace(/,.*$/, '')) + ' that run entirely in your browser: PDF, image, QR, text, calculators, converters, the Tally converter. Nothing you put into them is transmitted, stored or seen by us. No account is needed and none is created. They work with the network off.</p>' +
+    '<p><strong>On your device.</strong> ' + total + ' tools that run entirely in your browser: PDF, image, QR, text, calculators, converters, the Tally converter. Nothing you put into them is transmitted, stored or seen by us. No account is needed and none is created. They work with the network off.</p>' +
     '<p><strong>In the cloud.</strong> The <a href="/ai/">AI tools</a>, which need a language model on a server. Each page states above the button exactly what it will send; files are read on your device so that only their text goes; personal identifiers are masked on the device before sending and restored in the answer; and neither what you send nor what comes back is stored by us. An account is needed only for these and for settings you want on more than one device.</p></section>\n' +
     '  <section class="panel"><h2>What we hold, if you have an account</h2><div class="table-scroll"><table class="biz-table trust-table"><tbody>' +
     row('Email address', 'to sign you in and to reach you about your account') +
@@ -339,6 +342,7 @@ function trustBody() {
     row('Payment references', 'a subscription id and, for Stripe, a customer id — never card or bank details, which we never receive') +
     row('AI usage count, per month', 'to enforce the monthly allowance; pruned after 13 months') +
     row('Saved tool settings', 'only if you choose to save them, e.g. a Tally column mapping') +
+    row('Credits in hand', 'the balance of any credits bought outright, and one row per payment so the same money cannot be credited twice') +
     row('Webhook records from payment providers', 'for reconciliation and disputes; pruned after 13 months') +
     row('AI inputs and outputs', '<strong>not stored.</strong> We count that a call happened; the text is not kept') +
     '</tbody></table></div><p class="acct-hint">All of it is downloadable from your <a href="/account/">account page</a> as one file, and deletable there in one step.</p></section>\n' +
