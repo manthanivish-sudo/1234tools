@@ -1,0 +1,41 @@
+{
+  "id": "/ai/case-summariser/",
+  "name": "Case & Bundle Summariser — 1234Tools",
+  "short_name": "Case & Bundle",
+  "description": "A chronology and an issues list for a qualified lawyer to check against the file — a working summary, not advice and not evidence. Dates and events with the party and the source, the issues the papers raise, every document referred to, the figures, the inconsistencies, and the gaps where the papers stop short.",
+  "start_url": "/ai/case-summariser/?src=pwa",
+  "scope": "/ai/case-summariser/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-case.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-case-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-case-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

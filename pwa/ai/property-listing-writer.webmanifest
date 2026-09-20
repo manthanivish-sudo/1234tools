@@ -1,0 +1,41 @@
+{
+  "id": "/ai/property-listing-writer/",
+  "name": "Property Listing Writer — 1234Tools",
+  "short_name": "Property Listing",
+  "description": "A draft listing for the agent to check and evidence before it is published — property particulars are regulated, nothing here has been verified, and no claim in it is a claim we make. Headline, description and key features from your facts, plus a list of every statement that needs proof on file before it goes live and every fact a buyer will ask for that you have not given.",
+  "start_url": "/ai/property-listing-writer/?src=pwa",
+  "scope": "/ai/property-listing-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-property-listing.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-property-listing-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-property-listing-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

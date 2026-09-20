@@ -1,0 +1,41 @@
+{
+  "id": "/ai/property-document-reader/",
+  "name": "Property Document Reader (photo or scan) — 1234Tools",
+  "short_name": "Property Document",
+  "description": "The typed fields from a photograph or scan, with a checklist of what to verify against the original — it reads, it does not verify, and nothing it returns is advice or a statement that the document is genuine. Title documents, surveys, energy certificates, sale deeds and rent agreements come back as names, dates, numbers and terms for a conveyancer or an agent to check.",
+  "start_url": "/ai/property-document-reader/?src=pwa",
+  "scope": "/ai/property-document-reader/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-property-doc.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-property-doc-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-property-doc-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "id": "/ai/clinic-letter-writer/",
+  "name": "Clinic Letter Writer (administrative) — 1234Tools",
+  "short_name": "Clinic Letter Writer",
+  "description": "A draft administrative letter for the clinician to check and sign — it carries no clinical content of its own, gives no advice, and adds nothing you did not dictate. Referral cover letters, appointment and recall letters, did-not-attend follow-ups, results-ready notices and fit-note cover letters, written around your own words with everything else left as a [placeholder].",
+  "start_url": "/ai/clinic-letter-writer/?src=pwa",
+  "scope": "/ai/clinic-letter-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-clinic-letter.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-clinic-letter-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-clinic-letter-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

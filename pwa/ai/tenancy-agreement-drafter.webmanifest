@@ -1,0 +1,41 @@
+{
+  "id": "/ai/tenancy-agreement-drafter/",
+  "name": "Tenancy & Leave-and-Licence Drafter — 1234Tools",
+  "short_name": "Tenancy",
+  "description": "A first draft for a solicitor or advocate to settle before anyone signs, and every draft opens with a banner that says exactly that — it is not advice and it is not a form you can rely on. A residential tenancy for England and Wales, or a leave and licence or rent agreement for India, built only from the terms you give, with a [placeholder] wherever you did not decide.",
+  "start_url": "/ai/tenancy-agreement-drafter/?src=pwa",
+  "scope": "/ai/tenancy-agreement-drafter/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-tenancy.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-tenancy-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-tenancy-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

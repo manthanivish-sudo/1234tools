@@ -1,0 +1,41 @@
+{
+  "id": "/ai/legal-letter-writer/",
+  "name": "Legal Letter Writer — 1234Tools",
+  "short_name": "Legal Letter Writer",
+  "description": "A draft letter for the fee-earner responsible to check and sign — it is not advice, it takes no view on the merits, and every draft says so on its first line. Letter before action, client care letter, instructions to counsel, settlement proposal, chaser or update: give the facts, get a properly structured letter back, with a [placeholder] wherever you did not say.",
+  "start_url": "/ai/legal-letter-writer/?src=pwa",
+  "scope": "/ai/legal-letter-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-legal-letter.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-legal-letter-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-legal-letter-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
