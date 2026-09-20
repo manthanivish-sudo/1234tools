@@ -368,6 +368,47 @@ select.control { font-family: var(--font-body); }
 }
 .tips { margin: 0; padding-left: 18px; }
 .tips li { margin-bottom: 8px; color: var(--text-2); font-size: .94rem; }
+/* ---------- collections: finding a tool by who you are, or by the job
+   in front of you. The chip row is the way in from the home page; the
+   pages themselves reuse the card grid every section already uses. */
+.home-collections { margin: 0 0 40px; }
+.section-lede { margin: -6px 0 16px; color: var(--text-2); font-size: .95rem; max-width: 62ch; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-block; padding: 8px 14px; border-radius: 999px;
+  background: var(--bg-1); border: 1px solid var(--border);
+  color: var(--text-1); font-size: .88rem; text-decoration: none;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.chip:hover, .chip:focus-visible { border-color: var(--accent); color: var(--accent); }
+.chip-more { border-style: dashed; color: var(--text-2); }
+
+.collection-count {
+  margin: 0 0 18px; font-family: var(--font-mono); font-size: .8rem;
+  letter-spacing: .02em; color: var(--text-3);
+}
+.collection-intro { margin: 0 0 14px; max-width: 70ch; color: var(--text-2); line-height: 1.7; }
+.collection-group { margin: 34px 0 0; }
+.collection-group h2 {
+  margin: 0 0 4px; font-family: var(--font-head); font-size: 1.12rem; color: var(--text-1);
+}
+.group-blurb { margin: 0 0 14px; color: var(--text-3); font-size: .9rem; }
+
+/* What a tool costs, said on the card rather than after the click. */
+.tag {
+  align-self: flex-start; margin-top: 10px; padding: 3px 9px; border-radius: 999px;
+  font-family: var(--font-mono); font-size: .66rem; letter-spacing: .08em;
+  text-transform: uppercase; white-space: nowrap; cursor: help;
+}
+.tag-free { color: var(--text-3); background: var(--bg-2); border: 1px solid var(--border); }
+.tag-freemium { color: var(--gold-2); background: rgba(247,201,72,.1); border: 1px solid var(--border-gold); }
+[data-theme="light"] .tag-freemium { color: #7d5200; }
+.collection .card { display: flex; flex-direction: column; }
+
+@media (max-width: 640px) {
+  .chip { padding: 7px 12px; font-size: .84rem; }
+  .collection-group { margin-top: 26px; }
+}
 /* Sources and the date the rules were last checked. Quieter than the
    rest of the page: it is there to be found when somebody wants to
    verify a figure, not to be read first. */
