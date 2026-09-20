@@ -1,0 +1,41 @@
+{
+  "id": "/business/full-final-settlement/",
+  "name": "Full & Final Settlement Calculator — 1234Tools",
+  "short_name": "Full & Final",
+  "description": "Work out exactly what a leaving employee is owed: pro-rated salary for the final month, leave encashment, gratuity under the 15/26 formula with the rounding rule and the Rs 20 lakh cap, notice pay recovered or paid in lieu, reimbursements, advances, loans and asset recovery — then download a signable settlement statement as PDF and the working as a spreadsheet. Runs in your browser; nothing is uploaded.",
+  "start_url": "/business/full-final-settlement/?src=pwa",
+  "scope": "/business/full-final-settlement/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-fnf.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-fnf-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-fnf-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

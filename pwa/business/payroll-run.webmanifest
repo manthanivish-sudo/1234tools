@@ -1,0 +1,41 @@
+{
+  "id": "/business/payroll-run/",
+  "name": "Monthly Payroll Run: Payslips, Bank File & Statutory Summary — 1234Tools",
+  "short_name": "Monthly Payroll",
+  "description": "Drop in a salary sheet and get the whole month's payroll: a payslip PDF for every employee in a zip, a combined PDF, the bank bulk-transfer CSV, and a register workbook with PF, ESI, professional tax and TDS summaries. Pro-rates by paid days, computes the statutory deductions or takes them from your sheet, and refuses to run if anyone's net pay is negative. Runs in your browser; nothing is uploaded.",
+  "start_url": "/business/payroll-run/?src=pwa",
+  "scope": "/business/payroll-run/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-payroll-run.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-payroll-run-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-payroll-run-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

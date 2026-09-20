@@ -1,0 +1,41 @@
+{
+  "id": "/business/ctc-structure/",
+  "name": "CTC to Take-Home Salary Calculator (India) — 1234Tools",
+  "short_name": "CTC → Take-Home",
+  "description": "Turn an annual CTC into the full salary structure and the monthly in-hand: Basic, HRA, allowances, employer PF, gratuity, ESI, professional tax by state, and income tax under both the new and the old regime side by side — with a reverse mode that finds the CTC for the take-home you want. Runs in your browser; nothing is uploaded.",
+  "start_url": "/business/ctc-structure/?src=pwa",
+  "scope": "/business/ctc-structure/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ctc-split.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ctc-split-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ctc-split-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
