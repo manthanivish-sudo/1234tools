@@ -19,6 +19,12 @@
 const fs = require('fs');
 const path = require('path');
 const crumbs = require('./build-crumbs.js');
+const sources = require('./build/sources.js');
+/* this builder writes outbound links of its own now (the sources panel),
+   so it tags them here, at write time — a pass that tagged them afterwards
+   would be undone by the next run of this one, and the two would rewrite
+   each other for ever */
+const outbound = require('./build-outbound.js');
 const { SECTIONS, trailFor } = require('./build/sections.js');
 const PLANS = require('./build/plans.json');
 
@@ -121,18 +127,19 @@ function toolPage(t, parts, all) {
     '  <div class="tool-io"></div>\n' +
     '  <section class="panel"><h2>Tips</h2><ul class="tips">' + (s.tips || []).map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></section>\n' +
     '  <section class="panel"><h2>Frequently asked questions</h2>' + (s.faq || []).map(f => '<details><summary>' + esc(f.q) + '</summary><p>' + esc(f.a) + '</p></details>').join('') + '</section>\n' +
+    sources.panel(t.slug, s) +
     '  <section class="panel"><h2>Related tools</h2><ul class="related">' + related + '</ul></section>\n' +
     '</article>\n';
   const ld = '<script type="application/ld+json">' + JSON.stringify({
     '@context': 'https://schema.org',
     '@graph': [
-      { '@type': 'SoftwareApplication', name: s.title, description: s.description, url, applicationCategory: 'BusinessApplication', operatingSystem: 'Any', offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR', description: LIMITS.free + ' calls a month free; more on Pro' } },
+      { '@type': 'SoftwareApplication', name: s.title, description: s.description, url, applicationCategory: 'BusinessApplication', operatingSystem: 'Any', dateModified: sources.dateModified(t.slug, s) || undefined, offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR', description: LIMITS.free + ' calls a month free; more on Pro' } },
       crumbs.breadcrumbList(trail, s.title, pathOnly),
       { '@type': 'FAQPage', mainEntity: (s.faq || []).map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }
     ]
   }) + '</script>\n';
   const rel = SECTION + '/' + t.slug + '/index.html';
-  return keepPwa(rel, markActive(headFor(parts, pathOnly, s.title + ' — AI for Business | 1234Tools', s.description, s.scripts) + accountScripts + ld + parts.mid + '\n' + body + parts.tail));
+  return outbound.rewrite(keepPwa(rel, markActive(headFor(parts, pathOnly, s.title + ' — AI for Business | 1234Tools', s.description, s.scripts) + accountScripts + ld + parts.mid + '\n' + body + parts.tail)), SECTION).html;
 }
 
 function hubPage(parts, all) {

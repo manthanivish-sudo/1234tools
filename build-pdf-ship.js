@@ -45,6 +45,12 @@ const SITE = 'https://www.1234tools.com';
    as every other page, from the same function, so a page generated here can
    never disagree with the pass that maintains the rest. */
 const crumbs = require('./build-crumbs.js');
+const sources = require('./build/sources.js');
+/* this builder writes outbound links of its own now (the sources panel),
+   so it tags them here, at write time — a pass that tagged them afterwards
+   would be undone by the next run of this one, and the two would rewrite
+   each other for ever */
+const outbound = require('./build-outbound.js');
 const { trailFor } = require('./build/sections.js');
 
 /* slug -> icon glyph. Only what has been verified to work. A spec may carry
@@ -181,6 +187,7 @@ function toolPage(slug, glyph, parts) {
       ? '  <section class="panel"><h2>Frequently asked questions</h2>' +
         t.faq.map(function (f) { return '<details><summary>' + esc(f.q) + '</summary><p>' + esc(f.a) + '</p></details>'; }).join('') +
         '</section>\n' : '') +
+    sources.panel(slug, t) +
     '  <section class="panel"><h2>Related tools</h2><ul class="related">' + related + '</ul></section>\n' +
     '</article>\n' +
     '<script>\n' +
@@ -201,7 +208,7 @@ function toolPage(slug, glyph, parts) {
     '@graph': [
       {
         '@type': 'SoftwareApplication', name: t.title, description: t.description, url: url,
-        applicationCategory: 'UtilitiesApplication', operatingSystem: 'Any',
+        applicationCategory: 'UtilitiesApplication', operatingSystem: 'Any', dateModified: sources.dateModified(slug, t) || undefined,
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
       },
       crumbs.breadcrumbList(trail, t.title, pathOnly)
@@ -213,7 +220,7 @@ function toolPage(slug, glyph, parts) {
     }] : [])
   }) + '</script>\n';
 
-  return markActive(head(parts, slug, title, t.description, url) + ld + parts.mid + '\n' + body + parts.tail);
+  return outbound.rewrite(markActive(head(parts, slug, title, t.description, url) + ld + parts.mid + '\n' + body + parts.tail), 'pdf').html;
 }
 
 /* ------------------------------------------------------------------ */
