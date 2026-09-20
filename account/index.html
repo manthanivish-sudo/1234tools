@@ -193,6 +193,12 @@
       </details>
 
       <p class="side-group">Reading</p>
+      <a class="side-link" href="/compare/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-compare"></use></svg><span class="side-name">Comparisons</span>
+      </a>
+      <a class="side-link" href="/guides/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-feed"></use></svg><span class="side-name">Guides</span>
+      </a>
       <a class="side-link" href="/learn/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-learn"></use></svg><span class="side-name">Learning resources</span><span class="side-count">14</span>
       </a>
@@ -221,8 +227,8 @@
   <section class="acct-me" id="acct-me" hidden>
     <div class="acct-card">
       <div class="acct-who"><span class="acct-avatar" id="acct-avatar"></span><div><strong id="acct-email-out"></strong><span class="acct-plan" id="acct-plan"></span></div></div>
-      <dl class="acct-facts"><div><dt>Plan</dt><dd id="acct-plan-name"></dd></div><div><dt>Renews</dt><dd id="acct-renews"></dd></div><div><dt>AI calls this month</dt><dd id="acct-usage"></dd></div><div><dt>Paid through</dt><dd id="acct-provider"></dd></div></dl>
-      <div class="io-actions"><a class="btn-primary" id="acct-upgrade" href="/pricing/">See plans</a><button type="button" class="btn-ghost" id="acct-manage" hidden>Manage billing</button><button type="button" class="btn-ghost" id="acct-cancel" hidden>Cancel at period end</button><button type="button" class="btn-ghost" id="acct-signout">Sign out</button></div>
+      <dl class="acct-facts"><div><dt>Plan</dt><dd id="acct-plan-name"></dd></div><div><dt>Renews</dt><dd id="acct-renews"></dd></div><div><dt>AI calls this month</dt><dd id="acct-usage"></dd></div><div><dt>Credits in hand</dt><dd id="acct-credits"></dd></div><div><dt>Paid through</dt><dd id="acct-provider"></dd></div></dl>
+      <div class="io-actions"><a class="btn-primary" id="acct-upgrade" href="/pricing/">See plans</a><a class="btn-ghost" id="acct-credits-buy" href="/pricing/#credits">Buy credits</a><button type="button" class="btn-ghost" id="acct-manage" hidden>Manage billing</button><button type="button" class="btn-ghost" id="acct-cancel" hidden>Cancel at period end</button><button type="button" class="btn-ghost" id="acct-signout">Sign out</button></div>
     </div>
     <section class="panel"><h2>Saved settings</h2><p class="acct-hint">Tool settings you save while signed in — a Tally column mapping, for instance — are kept here and offered on any device.</p><ul class="acct-saved" id="acct-saved"><li class="acct-empty">Nothing saved yet.</li></ul></section>
     <section class="panel"><h2>Your data</h2><p class="acct-hint">Everything we hold about this account, as one file — or gone. Deleting cancels any subscription first, then removes the saved settings, the usage counts and the sign-in itself. It cannot be undone. <a href="/trust/">What we hold and why</a>.</p><div class="io-actions"><button type="button" class="btn-ghost" id="acct-export">Download my data</button><button type="button" class="btn-ghost acct-danger" id="acct-delete">Delete my account</button></div></section>
@@ -237,6 +243,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!A || !A.enabled) { $('acct-off').hidden = false; return; }
   var next = new URLSearchParams(location.search).get('next');
   if (/checkout=success/.test(location.search)) say('Payment received. Your plan appears below as soon as the provider confirms it — usually within a minute. This page updates on its own.', 'note');
+  if (/credits=added/.test(location.search)) say('Payment received. The credits appear below as soon as the provider confirms it — usually within a minute. They do not expire.', 'note');
 
   function show(s) {
     $('acct-signin').hidden = !!s.user;
@@ -256,7 +263,13 @@ document.addEventListener('DOMContentLoaded', function () {
     $('acct-upgrade').textContent = plan === 'free' ? 'See plans' : 'Change plan';
     $('acct-manage').hidden = !(r.provider === 'stripe' && r.subscriptionId);
     $('acct-cancel').hidden = !(r.provider === 'razorpay' && r.subscriptionId && r.status === 'active');
-    A.usageThisMonth().then(function (u) { $('acct-usage').textContent = u ? String(u.calls || 0) : '0'; }).catch(function () {});
+    A.usageThisMonth().then(function (u) {
+      var used = u ? (u.calls || 0) : 0, fromPack = u ? (u.packCalls || 0) : 0;
+      $('acct-usage').textContent = String(used) + (fromPack ? ' + ' + fromPack + ' from credits' : '');
+    }).catch(function () {});
+    /* the balance is on the record itself, which is already loaded */
+    var credits = Math.max(0, Math.floor(r.credits || 0));
+    $('acct-credits').textContent = credits ? String(credits) + (credits === 1 ? ' credit' : ' credits') : 'none';
     A.listMappings('tally').then(function (list) {
       var ul = $('acct-saved'); ul.innerHTML = '';
       if (!list.length) { ul.innerHTML = '<li class="acct-empty">Nothing saved yet.</li>'; return; }

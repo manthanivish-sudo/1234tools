@@ -1,17 +1,35 @@
 {
   "_comment": "What the pricing page shows. Amounts are display values; the backend's functions/plans.json is what actually charges. Keep them in step.",
   "currencies": {
-    "INR": { "symbol": "₹", "provider": "razorpay", "label": "India · UPI, cards, net banking through Razorpay" },
-    "GBP": { "symbol": "£", "provider": "stripe", "label": "United Kingdom and everywhere else · card through Stripe", "note": "inc. VAT" }
+    "INR": {
+      "symbol": "₹",
+      "provider": "razorpay",
+      "label": "India · UPI, cards, net banking through Razorpay"
+    },
+    "GBP": {
+      "symbol": "£",
+      "provider": "stripe",
+      "label": "United Kingdom and everywhere else · card through Stripe",
+      "note": "inc. VAT"
+    }
   },
   "plans": [
     {
       "id": "free",
       "name": "Free",
       "tagline": "Every tool, on your device, forever.",
-      "price": { "INR": { "monthly": 0, "annual": 0 }, "GBP": { "monthly": 0, "annual": 0 } },
+      "price": {
+        "INR": {
+          "monthly": 0,
+          "annual": 0
+        },
+        "GBP": {
+          "monthly": 0,
+          "annual": 0
+        }
+      },
       "features": [
-        "All 1,196 tools, with no limits on the ones that run in your browser",
+        "All {TOTAL} tools, with no limits on the ones that run in your browser",
         "Nothing uploaded, no account needed",
         "Tally converter, PDF tools, QR tools, calculators",
         "10 AI calls a month, to try them"
@@ -22,7 +40,16 @@
       "name": "Pro",
       "tagline": "For the person who does this every week.",
       "highlight": true,
-      "price": { "INR": { "monthly": 299, "annual": 2499 }, "GBP": { "monthly": 4.99, "annual": 39 } },
+      "price": {
+        "INR": {
+          "monthly": 299,
+          "annual": 2499
+        },
+        "GBP": {
+          "monthly": 4.99,
+          "annual": 39
+        }
+      },
       "features": [
         "Everything in Free",
         "300 AI calls a month — rewrite, summarise, extract, draft",
@@ -35,7 +62,16 @@
       "id": "business",
       "name": "Business",
       "tagline": "For a firm, a shop, a practice.",
-      "price": { "INR": { "monthly": 999, "annual": 7999 }, "GBP": { "monthly": 14.99, "annual": 119 } },
+      "price": {
+        "INR": {
+          "monthly": 999,
+          "annual": 7999
+        },
+        "GBP": {
+          "monthly": 14.99,
+          "annual": 119
+        }
+      },
       "features": [
         "Everything in Pro",
         "2,000 AI calls a month",
@@ -46,10 +82,73 @@
     }
   ],
   "faq": [
-    { "q": "Do I need an account to use the tools?", "a": "No. Every tool that runs in your browser stays free and needs no account — that is the point of the site. An account is for the things that cannot run in a browser: AI calls, which need a model on a server, and settings you want on more than one device." },
-    { "q": "What changes about my privacy if I sign in?", "a": "Signing in means Google’s sign-in library loads on that page and your email is stored with your account. The free tools do not change: a PDF you merge or a spreadsheet you convert still never leaves your device, signed in or not. AI tools are different by nature — the text you send to one is sent to the model — and every AI tool says so on its page." },
-    { "q": "Which currency will I be charged in?", "a": "Rupees through Razorpay if you choose India — UPI, cards and net banking — or pounds sterling through Stripe by card if you choose the UK, which also covers everywhere else. 1234Tools is run by MVR IT Services LTD, a UK company, so UK customers get a UK VAT invoice. The site guesses from your location; switch it above the plans if it guessed wrong." },
-    { "q": "Can I cancel?", "a": "Yes, from your account page, at any time. Access runs to the end of the period you paid for and does not renew." },
-    { "q": "Is there a refund?", "a": "If a paid feature did not work for you, write within 14 days of the charge and it is refunded. No forms." }
-  ]
+    {
+      "q": "Do I need an account to use the tools?",
+      "a": "No. Every tool that runs in your browser stays free and needs no account — that is the point of the site. An account is for the things that cannot run in a browser: AI calls, which need a model on a server, and settings you want on more than one device."
+    },
+    {
+      "q": "What changes about my privacy if I sign in?",
+      "a": "Signing in means Google’s sign-in library loads on that page and your email is stored with your account. The free tools do not change: a PDF you merge or a spreadsheet you convert still never leaves your device, signed in or not. AI tools are different by nature — the text you send to one is sent to the model — and every AI tool says so on its page."
+    },
+    {
+      "q": "Can I pay only for what I use?",
+      "a": "Yes. Credits are bought outright — 50, 200 or 1,000 — and one credit is one AI call. They do not expire, there is no renewal and no card is kept on file for them. If you need the AI tools twice a year, this is the cheaper way round; if you use them most weeks, a plan works out at less per call."
+    },
+    {
+      "q": "What happens if I have a plan and credits at the same time?",
+      "a": "The month's included calls are spent first and your credits only after them, so you are never charged twice for the same call. Credits left at the end of a month stay where they are."
+    },
+    {
+      "q": "Do credits expire?",
+      "a": "No. They sit on your account until they are used. If you close your account they go with it, which is worth knowing before you buy a large pack."
+    },
+    {
+      "q": "Which currency will I be charged in?",
+      "a": "Rupees through Razorpay if you choose India — UPI, cards and net banking — or pounds sterling through Stripe by card if you choose the UK, which also covers everywhere else. 1234Tools is run by MVR IT Services LTD, a UK company, so UK customers get a UK VAT invoice. The site guesses from your location; switch it above the plans if it guessed wrong."
+    },
+    {
+      "q": "Can I cancel?",
+      "a": "Yes, from your account page, at any time. Access runs to the end of the period you paid for and does not renew."
+    },
+    {
+      "q": "Is there a refund?",
+      "a": "If a paid feature did not work for you, write within 14 days of the charge and it is refunded. No forms."
+    }
+  ],
+  "packs": {
+    "_note": "Pay as you go. A credit is one AI call. Bought outright, never expires, spent only after the month's included allowance. Keep in step with functions/plans.json in the backend, which is what actually charges.",
+    "items": [
+      {
+        "id": "pack50",
+        "name": "50 credits",
+        "credits": 50,
+        "price": {
+          "INR": 149,
+          "GBP": 3
+        },
+        "blurb": "A one-off job: a batch of letters, a stack of receipts read."
+      },
+      {
+        "id": "pack200",
+        "name": "200 credits",
+        "credits": 200,
+        "price": {
+          "INR": 499,
+          "GBP": 9
+        },
+        "blurb": "A busy fortnight, or a quarter of ordinary use.",
+        "highlight": true
+      },
+      {
+        "id": "pack1000",
+        "name": "1,000 credits",
+        "credits": 1000,
+        "price": {
+          "INR": 1999,
+          "GBP": 35
+        },
+        "blurb": "A season's work, or a small team sharing one account."
+      }
+    ]
+  }
 }

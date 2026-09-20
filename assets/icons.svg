@@ -1543,4 +1543,11 @@
   <path d="M9.5 3h8a3 3 0 0 1 3 3v8" class="thin"/>
   <path d="M6.5 13h6M6.5 16.5h4" class="thin"/>
 </symbol>
+<symbol id="i-compare" viewBox="0 0 24 24">
+  <path d="M12 4.2v15.6"/>
+  <path d="M8.2 19.8h7.6" class="thin"/>
+  <path d="M4.6 7.4h14.8" class="thin"/>
+  <path d="M4.6 7.4 2 13.2h5.2z" class="thin"/>
+  <path d="M19.4 7.4 16.8 13.2H22z" class="thin"/>
+</symbol>
 </svg>

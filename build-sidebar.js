@@ -109,6 +109,8 @@ function sidebar(n) {
     FAMILIES.map(([url, glyph]) => row(url, glyph, nameOf(url), num(n[url]), true)).join('') +
     '      </details>\n' +
     '\n      <p class="side-group">Reading</p>\n' +
+    row('/compare/', 'i-compare', 'Comparisons', null) +
+    row('/guides/', 'i-feed', 'Guides', null) +
     row('/learn/', 'i-learn', nameOf('/learn/'), num(n['/learn/'])) +
     '    </nav>\n' +
     '  </aside>';
@@ -119,7 +121,7 @@ function sidebar(n) {
 function active(html, rel) {
   const p = '/' + rel.replace(/index\.html$/, '');
   let best = '';
-  for (const [url] of ORDER.concat(FAMILIES).concat([['/conversions/'], ['/learn/'], ['/tools/'], ['/for/']])) {
+  for (const [url] of ORDER.concat(FAMILIES).concat([['/guides/'], ['/compare/'], ['/conversions/'], ['/learn/'], ['/tools/'], ['/for/']])) {
     if (p.indexOf(url) === 0 && url.length > best.length) best = url;
   }
   if (!best) return html;
@@ -133,7 +135,8 @@ const BLOCK = /<aside class="sidebar"[\s\S]*?<\/aside>/;
    that references an id it does not ship draws an empty box, silently,
    on every page — which is exactly what happened to i-collections. */
 const OWN_GLYPHS = {
-  'i-collections': '<symbol id="i-collections" viewBox="0 0 24 24">\n  <rect x="3" y="9" width="13" height="12" rx="2"/>\n  <path d="M6.5 6h11a2 2 0 0 1 2 2v9" class="thin"/>\n  <path d="M9.5 3h8a3 3 0 0 1 3 3v8" class="thin"/>\n  <path d="M6.5 13h6M6.5 16.5h4" class="thin"/>\n</symbol>'
+  'i-collections': '<symbol id="i-collections" viewBox="0 0 24 24">\n  <rect x="3" y="9" width="13" height="12" rx="2"/>\n  <path d="M6.5 6h11a2 2 0 0 1 2 2v9" class="thin"/>\n  <path d="M9.5 3h8a3 3 0 0 1 3 3v8" class="thin"/>\n  <path d="M6.5 13h6M6.5 16.5h4" class="thin"/>\n</symbol>',
+  'i-compare': '<symbol id="i-compare" viewBox="0 0 24 24">\n  <path d="M12 4.2v15.6"/>\n  <path d="M8.2 19.8h7.6" class="thin"/>\n  <path d="M4.6 7.4h14.8" class="thin"/>\n  <path d="M4.6 7.4 2 13.2h5.2z" class="thin"/>\n  <path d="M19.4 7.4 16.8 13.2H22z" class="thin"/>\n</symbol>'
 };
 function patchIcons() {
   const rel = 'assets/icons.svg';
@@ -154,7 +157,7 @@ function patchIcons() {
 /* every id the sidebar names must exist, or a row shows an empty box */
 function checkGlyphs() {
   const svg = fs.readFileSync(path.join(ROOT, 'assets/icons.svg'), 'utf8');
-  const want = ['i-home', 'i-grid', 'i-collections', 'i-close', 'i-conversions', 'i-learn']
+  const want = ['i-home', 'i-grid', 'i-collections', 'i-compare', 'i-feed', 'i-close', 'i-conversions', 'i-learn']
     .concat(ORDER.map(x => x[1])).concat(FAMILIES.map(x => x[1]));
   const missing = [...new Set(want)].filter(id => svg.indexOf('id="' + id + '"') < 0);
   if (missing.length) throw new Error('the sidebar names glyphs the sprite does not have: ' + missing.join(', '));

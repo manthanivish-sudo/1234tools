@@ -30,6 +30,11 @@ const CHECK = process.argv.includes('--check');
 const LIVE = process.argv.includes('--live');
 const SITE = 'https://www.1234tools.com';
 const PLANS = require('./build/plans.json');
+const PACKS = (PLANS.packs && PLANS.packs.items) || [];
+/* The free plan's feature list states a total. Written by hand it goes
+   stale the week after — it said 1,196 for months — so it is read from
+   the search index, which is the register of what exists. */
+const { counts } = require('./build-collections.js');
 
 const changes = [];
 function write(rel, content) {
@@ -71,11 +76,39 @@ function headFor(parts, slug, title, description) {
   return h;
 }
 
+/* What one call costs on a pack, which is the only number that lets
+   anybody compare this with a plan. Pence read better than pounds. */
+function perCall(cur, price, credits) {
+  const each = price / credits;
+  if (cur === 'GBP') return each < 1 ? Math.round(each * 100) + 'p a call' : '\u00a3' + each.toFixed(2) + ' a call';
+  return '\u20b9' + (each < 10 ? each.toFixed(2) : Math.round(each)) + ' a call';
+}
+
 const fmt = (cur, n) => PLANS.currencies[cur].symbol + (Number.isInteger(n) ? n.toLocaleString('en-IN') : n.toFixed(2));
 
 /* ------------------------------------------------------------------ */
 
+function packsBody(total) {
+  const cards = PACKS.map(k =>
+    '<div class="pack' + (k.highlight ? ' is-highlight' : '') + '" data-pack="' + k.id + '">' +
+      '<h3 class="pack-name">' + esc(k.name) + '</h3>' +
+      '<p class="pack-price">' + Object.keys(PLANS.currencies).map(cur =>
+        '<span class="pack-amount" data-cur="' + cur + '" hidden><strong>' + esc(fmt(cur, k.price[cur])) + '</strong>' +
+        '<small>once' + (PLANS.currencies[cur].note ? ', ' + esc(PLANS.currencies[cur].note) : '') + ' \u00b7 ' + esc(perCall(cur, k.price[cur], k.credits)) + '</small></span>').join('') + '</p>' +
+      '<p class="pack-blurb">' + esc(k.blurb) + '</p>' +
+      '<button type="button" class="btn-ghost pack-cta" data-buy="' + k.id + '">Buy ' + esc(k.name) + '</button>' +
+    '</div>').join('');
+  return '  <section class="panel packs" id="credits">\n' +
+    '    <h2>Or pay for what you use, and nothing else</h2>\n' +
+    '    <p>One credit is one AI call. Credits are bought outright: no renewal, no card kept on file, and they do not expire. If you need these tools twice a year, this is the cheaper way round \u2014 and if you use them most weeks, a plan works out at less per call, which is why both are here.</p>\n' +
+    '    <div class="pack-grid">' + cards + '</div>\n' +
+    '    <p class="pack-note">Have a plan as well? The calls it includes are spent first and your credits only after them, so the same call is never charged twice. All ' + total + ' tools that run in your browser stay free either way, credits or no credits.</p>\n' +
+    '  </section>\n';
+}
+
 function pricingBody() {
+  const n = counts();
+  const total = n.total.toLocaleString('en-GB');
   const cards = PLANS.plans.map(p => {
     const price = (cur, period) => p.price[cur][period];
     return '<div class="plan' + (p.highlight ? ' is-highlight' : '') + '" data-plan="' + p.id + '">' +
@@ -89,7 +122,7 @@ function pricingBody() {
               '<strong>' + esc(fmt(cur, per === 'annual' ? Math.round(price(cur, per) / 12 * 100) / 100 : price(cur, per))) + '</strong><small>/month' + (per === 'annual' ? ', billed ' + esc(fmt(cur, price(cur, per))) + ' a year' : '') + (PLANS.currencies[cur].note ? ' ' + esc(PLANS.currencies[cur].note) : '') + '</small>') +
           '</span>').join('')).join('') +
       '</p>' +
-      '<ul class="plan-features">' + p.features.map(f => '<li>' + esc(f) + '</li>').join('') + '</ul>' +
+      '<ul class="plan-features">' + p.features.map(f => '<li>' + esc(String(f).replace('{TOTAL}', total)) + '</li>').join('') + '</ul>' +
       (p.id === 'free'
         ? '<a class="btn-ghost plan-cta" href="/">Use the tools</a>'
         : '<button type="button" class="btn-primary plan-cta" data-checkout="' + p.id + '">Choose ' + esc(p.name) + '</button>') +
@@ -99,7 +132,7 @@ function pricingBody() {
   return '<article class="pricing">\n' +
     '  <p class="eyebrow">Plans</p>\n' +
     '  <h1>Free for everything that runs on your device. Paid for what cannot.</h1>\n' +
-    '  <p class="lede">All ' + esc(String(PLANS.plans[0].features[0]).replace(/^All /, '').replace(/,.*$/, '')) + ' stay free with no account. Pro and Business pay for the parts that need a server: AI calls, and settings that follow you between devices.</p>\n' +
+    '  <p class="lede">All ' + total + ' tools stay free with no account. What is paid for is the part that needs a server: AI calls, and settings that follow you between devices. Take those by the month, or buy credits once and use them whenever.</p>\n' +
     '  <div class="io-msg" id="pricing-msg"></div>\n' +
     '  <div class="plan-controls">\n' +
     '    <div class="biz-seg" role="tablist" aria-label="Billing period"><button type="button" class="biz-seg-btn is-on" data-period="monthly">Monthly</button><button type="button" class="biz-seg-btn" data-period="annual">Annual <small>2 months free</small></button></div>\n' +
@@ -107,6 +140,7 @@ function pricingBody() {
     '  </div>\n' +
     '  <div class="plan-grid">' + cards + '</div>\n' +
     '  <p class="plan-note" id="plan-note"></p>\n' +
+    packsBody(total) +
     '  <section class="panel"><h2>Questions</h2>' + PLANS.faq.map(f => '<details><summary>' + esc(f.q) + '</summary><p>' + esc(f.a) + '</p></details>').join('') + '</section>\n' +
     '</article>\n' +
     '<script>\n' + pricingScript() + '</script>\n';
@@ -122,6 +156,7 @@ function pricingScript() {
   var providers = ${JSON.stringify(Object.fromEntries(Object.entries(PLANS.currencies).map(([k, v]) => [k, v.provider])))};
   function paint() {
     document.querySelectorAll('.plan-amount').forEach(function (el) { el.hidden = !(el.dataset.cur === cur && el.dataset.period === period); });
+    document.querySelectorAll('.pack-amount').forEach(function (el) { el.hidden = el.dataset.cur !== cur; });
     document.querySelectorAll('[data-period]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.period === period); });
     document.querySelectorAll('[data-cur]').forEach(function (b) { if (b.classList.contains('biz-seg-btn')) b.classList.toggle('is-on', b.dataset.cur === cur); });
     note.textContent = cur === 'INR' ? 'Charged in rupees through Razorpay: UPI, cards, net banking. GST invoice on request.' : 'Charged in pounds sterling through Stripe, by card, by MVR IT Services LTD (UK). VAT invoice on request; the same rail serves customers outside India and the UK.';
@@ -138,6 +173,18 @@ function pricingScript() {
         b.disabled = true; say('Opening checkout…', 'note');
         return window.Account.checkout(b.dataset.checkout, period, providers[cur]).then(function (r) {
           if (r && r.paid) { say('Thank you. Your plan is being activated — the account page will show it in a moment.', 'note'); setTimeout(function () { location.href = '/account/?checkout=success'; }, 1500); }
+        });
+      }).catch(function (e) { say(e.message || String(e), 'error'); }).then(function () { b.disabled = false; });
+    });
+  });
+  document.querySelectorAll('[data-buy]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (!window.Account || !window.Account.enabled) { say('Credits are not switched on yet. Everything that runs on your device is free and needs no account.', 'note'); return; }
+      window.Account.ready.then(function (s) {
+        if (!s.user) { location.href = '/account/?next=' + encodeURIComponent('/pricing/#credits'); return; }
+        b.disabled = true; say('Opening checkout\u2026', 'note');
+        return window.Account.buyCredits(b.dataset.buy, providers[cur]).then(function (r) {
+          if (r && r.paid) { say('Thank you. The credits appear on your account page within a minute.', 'note'); setTimeout(function () { location.href = '/account/?credits=added'; }, 1500); }
         });
       }).catch(function (e) { say(e.message || String(e), 'error'); }).then(function () { b.disabled = false; });
     });
@@ -170,8 +217,8 @@ function accountBody() {
     '  <section class="acct-me" id="acct-me" hidden>\n' +
     '    <div class="acct-card">\n' +
     '      <div class="acct-who"><span class="acct-avatar" id="acct-avatar"></span><div><strong id="acct-email-out"></strong><span class="acct-plan" id="acct-plan"></span></div></div>\n' +
-    '      <dl class="acct-facts"><div><dt>Plan</dt><dd id="acct-plan-name"></dd></div><div><dt>Renews</dt><dd id="acct-renews"></dd></div><div><dt>AI calls this month</dt><dd id="acct-usage"></dd></div><div><dt>Paid through</dt><dd id="acct-provider"></dd></div></dl>\n' +
-    '      <div class="io-actions"><a class="btn-primary" id="acct-upgrade" href="/pricing/">See plans</a><button type="button" class="btn-ghost" id="acct-manage" hidden>Manage billing</button><button type="button" class="btn-ghost" id="acct-cancel" hidden>Cancel at period end</button><button type="button" class="btn-ghost" id="acct-signout">Sign out</button></div>\n' +
+    '      <dl class="acct-facts"><div><dt>Plan</dt><dd id="acct-plan-name"></dd></div><div><dt>Renews</dt><dd id="acct-renews"></dd></div><div><dt>AI calls this month</dt><dd id="acct-usage"></dd></div><div><dt>Credits in hand</dt><dd id="acct-credits"></dd></div><div><dt>Paid through</dt><dd id="acct-provider"></dd></div></dl>\n' +
+    '      <div class="io-actions"><a class="btn-primary" id="acct-upgrade" href="/pricing/">See plans</a><a class="btn-ghost" id="acct-credits-buy" href="/pricing/#credits">Buy credits</a><button type="button" class="btn-ghost" id="acct-manage" hidden>Manage billing</button><button type="button" class="btn-ghost" id="acct-cancel" hidden>Cancel at period end</button><button type="button" class="btn-ghost" id="acct-signout">Sign out</button></div>\n' +
     '    </div>\n' +
     '    <section class="panel"><h2>Saved settings</h2><p class="acct-hint">Tool settings you save while signed in — a Tally column mapping, for instance — are kept here and offered on any device.</p><ul class="acct-saved" id="acct-saved"><li class="acct-empty">Nothing saved yet.</li></ul></section>\n' +
     '    <section class="panel"><h2>Your data</h2><p class="acct-hint">Everything we hold about this account, as one file — or gone. Deleting cancels any subscription first, then removes the saved settings, the usage counts and the sign-in itself. It cannot be undone. <a href="/trust/">What we hold and why</a>.</p><div class="io-actions"><button type="button" class="btn-ghost" id="acct-export">Download my data</button><button type="button" class="btn-ghost acct-danger" id="acct-delete">Delete my account</button></div></section>\n' +
@@ -188,7 +235,8 @@ function accountScript() {
   var A = window.Account;
   if (!A || !A.enabled) { $('acct-off').hidden = false; return; }
   var next = new URLSearchParams(location.search).get('next');
-  if (/checkout=success/.test(location.search)) say('Payment received. Your plan appears below as soon as the provider confirms it — usually within a minute. This page updates on its own.', 'note');
+  if (/checkout=success/.test(location.search)) say('Payment received. Your plan appears below as soon as the provider confirms it \u2014 usually within a minute. This page updates on its own.', 'note');
+  if (/credits=added/.test(location.search)) say('Payment received. The credits appear below as soon as the provider confirms it \u2014 usually within a minute. They do not expire.', 'note');
 
   function show(s) {
     $('acct-signin').hidden = !!s.user;
@@ -208,7 +256,13 @@ function accountScript() {
     $('acct-upgrade').textContent = plan === 'free' ? 'See plans' : 'Change plan';
     $('acct-manage').hidden = !(r.provider === 'stripe' && r.subscriptionId);
     $('acct-cancel').hidden = !(r.provider === 'razorpay' && r.subscriptionId && r.status === 'active');
-    A.usageThisMonth().then(function (u) { $('acct-usage').textContent = u ? String(u.calls || 0) : '0'; }).catch(function () {});
+    A.usageThisMonth().then(function (u) {
+      var used = u ? (u.calls || 0) : 0, fromPack = u ? (u.packCalls || 0) : 0;
+      $('acct-usage').textContent = String(used) + (fromPack ? ' + ' + fromPack + ' from credits' : '');
+    }).catch(function () {});
+    /* the balance is on the record itself, which is already loaded */
+    var credits = Math.max(0, Math.floor(r.credits || 0));
+    $('acct-credits').textContent = credits ? String(credits) + (credits === 1 ? ' credit' : ' credits') : 'none';
     A.listMappings('tally').then(function (list) {
       var ul = $('acct-saved'); ul.innerHTML = '';
       if (!list.length) { ul.innerHTML = '<li class="acct-empty">Nothing saved yet.</li>'; return; }

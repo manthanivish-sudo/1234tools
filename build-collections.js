@@ -54,7 +54,14 @@ function toolMeta(p) {
   const t = /<title>([^<]*)<\/title>/.exec(src);
   const d = /<meta name="description" content="([^"]*)">/.exec(src);
   if (!t || !d) throw new Error(p + ' has no title or description to read');
-  const title = unesc(t[1]).replace(/\s*[—|]\s*(Free Online|AI for Business).*$/, '').trim();
+  /* The tail of a page title is for search results, not for a card. Two
+     passes because the shapes differ: some end "| 1234Tools", some carry a
+     selling phrase after a dash. A bare hyphen is deliberately NOT a
+     separator here — it would cut "Sugar-Free" down to "Sugar". */
+  const title = unesc(t[1])
+    .replace(/\s*\|\s*1234Tools\s*$/i, '')
+    .replace(/\s*[—–|]\s*(Free|AI for Business).*$/i, '')
+    .trim();
   metaCache[p] = { path: p, title, description: unesc(d[1]), pricing: pricingFor(p) };
   return metaCache[p];
 }

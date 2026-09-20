@@ -153,6 +153,35 @@
     });
   }
 
+  /**
+   * Buy a pack of credits. A single payment and no subscription, so
+   * Razorpay gets an order rather than a plan and Stripe a one-off
+   * session. As with a plan, the balance moves when the provider's
+   * webhook says the money arrived, not when this resolves.
+   */
+  async function buyCredits(packId, provider) {
+    guard(); await ready;
+    if (!user) throw new Error('Sign in first.');
+    const call = FN.httpsCallable(fns, 'createCheckout');
+    let res;
+    try { res = (await call({ packId, provider })).data; }
+    catch (e) { throw new Error(friendly(e)); }
+    if (res.provider === 'stripe') { location.href = res.url; return { redirected: true }; }
+    await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+    return new Promise((resolve, reject) => {
+      const rz = new window.Razorpay({
+        key: res.keyId, order_id: res.orderId, amount: res.amount, currency: res.currency,
+        name: '1234Tools', description: res.credits + ' AI credits, which do not expire',
+        prefill: { email: res.email || user.email || '' },
+        theme: { color: '#f7c948' },
+        handler: () => resolve({ paid: true }),
+        modal: { ondismiss: () => reject(new Error('The payment window was closed.')) }
+      });
+      rz.on('payment.failed', (r) => reject(new Error((r.error && r.error.description) || 'The payment failed.')));
+      rz.open();
+    });
+  }
+
   async function manage(action) {
     guard(); await ready;
     if (!user) throw new Error('Sign in first.');
@@ -230,6 +259,7 @@
     enabled, ready, state, plan: () => planOf(record),
     onChange: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
     signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, signOut,
-    checkout, manage, saveMapping, listMappings, deleteMapping, usageThisMonth, ai, exportData, deleteAccount
+    checkout, buyCredits, credits: () => Math.max(0, Math.floor((record && record.credits) || 0)),
+    manage, saveMapping, listMappings, deleteMapping, usageThisMonth, ai, exportData, deleteAccount
   };
 })();

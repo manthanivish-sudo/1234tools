@@ -2100,6 +2100,79 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
 .plan-cta { margin-top: 6px; text-align: center; text-decoration: none; }
 .plan-note { margin: 0 0 22px; font-size: .8rem; color: var(--text-3); }
 
+/* pay as you go: smaller than a plan card on purpose, because it is the
+   lighter commitment and should not shout over the plans above it */
+.packs { margin: 0 0 22px; }
+.pack-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin: 14px 0 12px; }
+.pack {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 16px 15px; background: var(--bg-2);
+  border: 1px solid var(--border); border-radius: var(--radius);
+}
+.pack.is-highlight { border-color: var(--border-gold); }
+.pack-name { margin: 0; font-size: 1rem; }
+.pack-price { margin: 0; }
+.pack-amount strong { font-family: var(--font-head); font-size: 1.5rem; letter-spacing: -.02em; color: var(--text-1); }
+.pack-amount small { display: block; font-size: .74rem; color: var(--text-3); margin-top: 2px; }
+.pack-blurb { margin: 0; font-size: .82rem; line-height: 1.5; color: var(--text-2); flex: 1; }
+.pack-cta { margin-top: 4px; text-align: center; }
+.pack-note { margin: 0; font-size: .8rem; line-height: 1.6; color: var(--text-3); }
+
+/* A three-column comparison at 390px scrolls inside its own box, and
+   swiping to the third column takes the row's own heading off screen with
+   it — so on the page whose whole point is a fair table, the rows go
+   anonymous. Below 720px each row becomes a labelled block instead; the
+   generator already writes data-col on every cell. */
+/* ---------- comparisons: the table on a phone ----------------------
+   The pages work without this. Left alone, the comparison table behaves
+   exactly like the processor table on /trust/ — it scrolls inside its own
+   .table-scroll and the page does not scroll sideways, which the harness
+   checks at 390px.
+
+   What it does not do is stay readable. Three columns of sentences come to
+   about 570px, so a phone shows two of them and swiping to the third takes
+   the row header off the screen with it. Below 720px this turns each row
+   into a block: the capability as its heading, then the two answers, each
+   labelled from the data-col attribute the builder already writes.
+
+   Paste into assets/app.css after the .trust-table rules. Nothing else on
+   the site uses .compare-table, so it cannot reach another page. */
+
+@media (max-width: 720px) {
+  .compare-table .table-scroll { overflow-x: visible; padding: 4px 4px 0; }
+
+  .compare-table .biz-table thead {
+    position: absolute; width: 1px; height: 1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .compare-table .biz-table,
+  .compare-table .biz-table tbody,
+  .compare-table .biz-table tr,
+  .compare-table .biz-table th,
+  .compare-table .biz-table td {
+    display: block; width: auto; max-width: none;
+    white-space: normal; overflow: visible; text-overflow: clip;
+  }
+  .compare-table .biz-table tr {
+    padding: 10px 6px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-table .biz-table tr:last-child { border-bottom: 0; }
+  .compare-table .biz-table th[scope="row"] {
+    position: static; padding: 0 0 6px; border-bottom: 0;
+    font-size: .93rem; font-weight: 600; color: var(--text-1);
+  }
+  .compare-table .biz-table td {
+    padding: 3px 0; border-bottom: 0;
+    font-size: .88rem; line-height: 1.55; color: var(--text-2);
+  }
+  .compare-table .biz-table td::before {
+    content: attr(data-col) " — ";
+    color: var(--text-3); font-size: .72rem; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase;
+  }
+}
+
 /* ---------- account ---------- */
 .acct-providers { margin: 0 0 12px; }
 .acct-or { margin: 0 0 10px; font-size: .78rem; color: var(--text-3); letter-spacing: .06em; text-transform: uppercase; }
