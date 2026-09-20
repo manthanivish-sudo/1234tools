@@ -52,7 +52,7 @@
 
 <header class="site-header">
   <div class="container nav-wrap">
-    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,250+ free tools</small></span></a>
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,251+ free tools</small></span></a>
 
     <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navlinks">
       <span></span><span></span><span></span>
@@ -60,7 +60,7 @@
 
     <div class="header-tools">
       <div class="search-wrap">
-        <input id="q" type="search" placeholder="Search 1,250 tools…" autocomplete="off" aria-label="Search tools">
+        <input id="q" type="search" placeholder="Search 1,251 tools…" autocomplete="off" aria-label="Search tools">
         <div id="results" class="search-results" hidden></div>
       </div>
       <div class="theme-switch" role="group" aria-label="Colour theme">
@@ -87,7 +87,7 @@
 
 <div class="layout container">
   <button class="sidebar-open" id="sidebarOpen" aria-expanded="false" aria-controls="sidebar">
-    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,250 tools</span>
+    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,251 tools</span>
   </button>
 
   <aside class="sidebar" id="sidebar" aria-label="Tool categories">
@@ -98,7 +98,7 @@
 
     <nav class="side-nav">
       <a class="side-link" href="/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,250</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,251</span>
       </a>
 
       <p class="side-group">Categories</p>
@@ -118,7 +118,7 @@
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-india"></use></svg><span class="side-name">India</span><span class="side-count">15</span>
       </a>
       <a class="side-link is-active" href="/business/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-business"></use></svg><span class="side-name">Business</span><span class="side-count">29</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-business"></use></svg><span class="side-name">Business</span><span class="side-count">30</span>
       </a>
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
@@ -211,7 +211,7 @@
   <section class="panel"><h2>Privacy</h2><p class="privacy-line">Your file never leaves your device. It is read and converted by your own browser, so nothing is uploaded, queued or logged — which is what makes this safe for a client’s books.</p></section>
   <section class="panel"><h2>Tips</h2><ul class="tips"><li>One row per employee. Column names are matched for you — Employee ID, Name, Basic, HRA, Paid Days, PF, TDS and so on — and every match is shown in a dropdown you can correct. Only the employee name is genuinely required; everything else can be blank.</li><li>Any numeric column the mapping did not claim is offered back to you as an extra earning or an extra deduction, so an &quot;Arrears&quot;, &quot;Shift allowance&quot; or &quot;Canteen recovery&quot; column prints on the payslip under its own name without any setup.</li><li>Pro-rating applies to Basic, DA, HRA, conveyance and other allowances, at paid days ÷ days in the month. Overtime, incentive and any extra earning column are paid as typed, because those figures are already for the days worked.</li><li>Statutory rates and the professional tax slabs are written in one clearly-marked constant at the top of this file with the date they were last checked. PF is 12%, the employer's 12% splits 8.33% to the pension scheme (on wages up to Rs 15,000) and the rest to EPF, EDLI is 0.5%, ESI is 0.75% and 3.25% on gross wages up to Rs 21,000, and ESI contributions are rounded up to the next rupee. Check all of it against the current rules before you file.</li><li>The run stops, and writes nothing, if anyone's deductions exceed their earnings — those people are named. It warns, but still runs, when paid days plus loss of pay do not add up to the days in the month, or when a bank account or IFSC is missing from someone whose net pay is positive.</li><li>Banks differ on the bulk-transfer format: some want a header row, some a fixed column order, some a debit-account line on top. The CSV here has the five fields every format is built from — account number, IFSC, name, amount and narration — and the register workbook repeats them with a note, so you can reorder for your bank in a minute.</li><li>The rupee sign cannot be drawn with the standard PDF fonts, so the payslips print &quot;Rs&quot;. Every bank and auditor reads it the same way.</li></ul></section>
   <section class="panel"><h2>Frequently asked questions</h2><details><summary>What does it actually produce from one run?</summary><p>Four downloads: payslips.zip with one PDF per employee named by employee ID, name and month; payslips-combined.pdf with every slip in order for printing; bank-transfer.csv with the account number, IFSC, beneficiary name, amount and narration; and payroll-register.xlsx with a Register sheet listing every component for every employee, plus PF, ESI, professional tax, TDS and bank-transfer summary sheets whose totals tie back to the slips.</p></details><details><summary>Does it compute PF, ESI and professional tax, or do I supply them?</summary><p>Either. Leave it on &quot;compute&quot; and PF is 12% of Basic+DA (capped at the Rs 15,000 wage ceiling if you choose), ESI applies while gross wages are Rs 21,000 or less, and professional tax comes from the state you pick. Switch it to &quot;take from the sheet&quot; and your own columns are used untouched — useful when your consultant has already computed them.</p></details><details><summary>Is TDS calculated?</summary><p>No. Monthly TDS depends on each employee's projected annual income, their regime, their declarations and what has already been deducted this year — none of which is in a salary sheet. Put your computed TDS in a column and it is carried through to the payslip, the register and the TDS summary. The CTC calculator on this site will estimate a year's tax if you need a starting figure.</p></details><details><summary>How many employees can it handle?</summary><p>It is arithmetic and PDF drawing in your browser, so a few hundred rows is comfortable. Every payslip is one A4 page; a very long list of components will be trimmed to what fits the page and the register workbook still carries everything.</p></details><details><summary>Does the salary sheet leave my device?</summary><p>No. It is read by your own browser, the PDFs and the workbook are written there, and the downloads come from memory. Nothing is uploaded, queued or logged.</p></details></section>
-  <section class="panel"><h2>Related tools</h2><ul class="related"><li><a href="/business/accounting-converter/">QuickBooks / Zoho Books / Tally Converter</a></li><li><a href="/business/bank-reconciliation/">Bank Reconciliation</a></li><li><a href="/business/bookkeeping/">Bookkeeping: Trial Balance, P&amp;L and Balance Sheet</a></li><li><a href="/business/ctc-structure/">CTC to Take-Home Salary Calculator (India)</a></li><li><a href="/business/einvoice-json/">E-Invoice JSON Generator (IRP schema)</a></li><li><a href="/business/full-final-settlement/">Full &amp; Final Settlement Calculator</a></li><li><a href="/business/gst-reconciler/">GSTR-2B Reconciliation</a></li><li><a href="/business/id-validator/">GSTIN, PAN, IFSC &amp; ID Validator (Bulk)</a></li><li><a href="/business/mail-merge/">Letter Mail Merge to PDF</a></li><li><a href="/business/mtd-checker/">Making Tax Digital: Does It Apply to Me?</a></li><li><a href="/business/mtd-quarterly-update/">MTD Quarterly Update Builder</a></li><li><a href="/business/receivables-ageing/">Receivables Ageing &amp; Payment Reminders</a></li><li><a href="/business/sheet-merge/">Merge &amp; Dedupe Spreadsheets</a></li><li><a href="/business/tally-converter/">Excel / CSV to Tally Converter</a></li><li><a href="/india/gst-calculator/">GST Calculator (India)</a></li><li><a href="/business/invoice-payment-terms/">Invoice Due Date &amp; Settlement Discount Calculator</a></li><li><a href="/developer/csv-to-json/">CSV to JSON Converter</a></li><li><a href="/pdf/invoice-pdf/">Invoice Generator (PDF)</a></li></ul></section>
+  <section class="panel"><h2>Related tools</h2><ul class="related"><li><a href="/business/accounting-converter/">QuickBooks / Zoho Books / Tally Converter</a></li><li><a href="/business/bank-reconciliation/">Bank Reconciliation</a></li><li><a href="/business/bookkeeping/">Bookkeeping: Trial Balance, P&amp;L and Balance Sheet</a></li><li><a href="/business/ctc-structure/">CTC to Take-Home Salary Calculator (India)</a></li><li><a href="/business/einvoice-json/">E-Invoice JSON Generator (IRP schema)</a></li><li><a href="/business/full-final-settlement/">Full &amp; Final Settlement Calculator</a></li><li><a href="/business/gst-reconciler/">GSTR-2B Reconciliation</a></li><li><a href="/business/id-validator/">GSTIN, PAN, IFSC &amp; ID Validator (Bulk)</a></li><li><a href="/business/mail-merge/">Letter Mail Merge to PDF</a></li><li><a href="/business/mtd-checker/">Making Tax Digital: Does It Apply to Me?</a></li><li><a href="/business/mtd-quarterly-update/">MTD Quarterly Update Builder</a></li><li><a href="/business/receivables-ageing/">Receivables Ageing &amp; Payment Reminders</a></li><li><a href="/business/sheet-merge/">Merge &amp; Dedupe Spreadsheets</a></li><li><a href="/business/tally-converter/">Excel / CSV to Tally Converter</a></li><li><a href="/business/vat-return/">VAT Return from a Spreadsheet (the nine boxes)</a></li><li><a href="/india/gst-calculator/">GST Calculator (India)</a></li><li><a href="/business/invoice-payment-terms/">Invoice Due Date &amp; Settlement Discount Calculator</a></li><li><a href="/developer/csv-to-json/">CSV to JSON Converter</a></li><li><a href="/pdf/invoice-pdf/">Invoice Generator (PDF)</a></li></ul></section>
 </article>
 </main>
 </div>
@@ -221,8 +221,8 @@
   <div class="container">
     <div class="footer-grid">
       <div class="footer-about">
-        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,250+ free tools</small></span></a>
-        <p>1,250+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
+        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,251+ free tools</small></span></a>
+        <p>1,251+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
       </div>
       <div>
         <h4>1234Tools</h4>

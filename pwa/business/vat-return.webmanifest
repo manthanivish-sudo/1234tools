@@ -1,0 +1,41 @@
+{
+  "id": "/business/vat-return/",
+  "name": "VAT Return from a Spreadsheet (the nine boxes) — 1234Tools",
+  "short_name": "VAT Return from a",
+  "description": "Turn a spreadsheet of sales and purchases into the nine boxes of a UK VAT return — standard accrual, cash accounting or the flat rate scheme — with every box opened up to show the rows behind it, and the sheet checked for net-plus-VAT that does not equal gross, duplicate invoice numbers and rows outside the period. It computes the figures; it does not file them. Runs entirely in your browser.",
+  "start_url": "/business/vat-return/?src=pwa",
+  "scope": "/business/vat-return/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-vat-boxes.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-vat-boxes-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-vat-boxes-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

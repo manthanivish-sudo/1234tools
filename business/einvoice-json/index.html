@@ -51,7 +51,7 @@
 
 <header class="site-header">
   <div class="container nav-wrap">
-    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,250+ free tools</small></span></a>
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,251+ free tools</small></span></a>
 
     <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navlinks">
       <span></span><span></span><span></span>
@@ -59,7 +59,7 @@
 
     <div class="header-tools">
       <div class="search-wrap">
-        <input id="q" type="search" placeholder="Search 1,250 tools…" autocomplete="off" aria-label="Search tools">
+        <input id="q" type="search" placeholder="Search 1,251 tools…" autocomplete="off" aria-label="Search tools">
         <div id="results" class="search-results" hidden></div>
       </div>
       <div class="theme-switch" role="group" aria-label="Colour theme">
@@ -86,7 +86,7 @@
 
 <div class="layout container">
   <button class="sidebar-open" id="sidebarOpen" aria-expanded="false" aria-controls="sidebar">
-    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,250 tools</span>
+    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,251 tools</span>
   </button>
 
   <aside class="sidebar" id="sidebar" aria-label="Tool categories">
@@ -97,7 +97,7 @@
 
     <nav class="side-nav">
       <a class="side-link" href="/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,250</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,251</span>
       </a>
 
       <p class="side-group">Categories</p>
@@ -117,7 +117,7 @@
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-india"></use></svg><span class="side-name">India</span><span class="side-count">15</span>
       </a>
       <a class="side-link is-active" href="/business/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-business"></use></svg><span class="side-name">Business</span><span class="side-count">29</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-business"></use></svg><span class="side-name">Business</span><span class="side-count">30</span>
       </a>
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
@@ -210,7 +210,7 @@
   <section class="panel"><h2>Privacy</h2><p class="privacy-line">Your file never leaves your device. It is read and converted by your own browser, so nothing is uploaded, queued or logged — which is what makes this safe for a client’s books.</p></section>
   <section class="panel"><h2>Tips</h2><ul class="tips"><li>One row per line item: invoice number, date, buyer GSTIN and name, item description, HSN, quantity, unit, unit price, GST rate. Rows with the same invoice number become one invoice.</li><li>The tax split is decided by the state codes — the first two digits of the seller’s and buyer’s GSTINs (or the place of supply you give). Same state, CGST + SGST; different, IGST. You cannot get this wrong by typing.</li><li>Every GSTIN is checked against its checksum digit, PINs must be six digits, HSN four to eight, and totals are computed from the items, so what you upload is arithmetically consistent.</li><li>Upload the file on the e-invoice portal (Bulk upload → JSON) or through your GSP. The portal returns the IRN, acknowledgement and signed QR for each invoice.</li></ul></section>
   <section class="panel"><h2>Frequently asked questions</h2><details><summary>Which schema version is this?</summary><p>E-invoice schema version 1.1, the one the IRP has accepted since 2020 and still does. The output is an array of invoice objects, which is what the bulk upload takes; a single invoice is an array of one.</p></details><details><summary>Can it generate the IRN or QR code?</summary><p>No, and nothing offline can: the IRN is issued by the portal when it accepts the JSON. This produces the JSON the portal issues it against.</p></details><details><summary>What about B2C, exports, SEZ?</summary><p>Supply type can be set to B2B, SEZ with or without payment, export with or without payment, or deemed export. B2C invoices do not need an IRN (unless the dynamic QR rules apply to you) and are not e-invoiced.</p></details></section>
-  <section class="panel"><h2>Related tools</h2><ul class="related"><li><a href="/business/accounting-converter/">QuickBooks / Zoho Books / Tally Converter</a></li><li><a href="/business/bank-reconciliation/">Bank Reconciliation</a></li><li><a href="/business/bookkeeping/">Bookkeeping: Trial Balance, P&amp;L and Balance Sheet</a></li><li><a href="/business/ctc-structure/">CTC to Take-Home Salary Calculator (India)</a></li><li><a href="/business/full-final-settlement/">Full &amp; Final Settlement Calculator</a></li><li><a href="/business/gst-reconciler/">GSTR-2B Reconciliation</a></li><li><a href="/business/id-validator/">GSTIN, PAN, IFSC &amp; ID Validator (Bulk)</a></li><li><a href="/business/mail-merge/">Letter Mail Merge to PDF</a></li><li><a href="/business/mtd-checker/">Making Tax Digital: Does It Apply to Me?</a></li><li><a href="/business/mtd-quarterly-update/">MTD Quarterly Update Builder</a></li><li><a href="/business/payroll-run/">Monthly Payroll Run: Payslips, Bank File &amp; Statutory Summary</a></li><li><a href="/business/receivables-ageing/">Receivables Ageing &amp; Payment Reminders</a></li><li><a href="/business/sheet-merge/">Merge &amp; Dedupe Spreadsheets</a></li><li><a href="/business/tally-converter/">Excel / CSV to Tally Converter</a></li><li><a href="/india/gst-calculator/">GST Calculator (India)</a></li><li><a href="/business/invoice-payment-terms/">Invoice Due Date &amp; Settlement Discount Calculator</a></li><li><a href="/developer/csv-to-json/">CSV to JSON Converter</a></li><li><a href="/pdf/invoice-pdf/">Invoice Generator (PDF)</a></li></ul></section>
+  <section class="panel"><h2>Related tools</h2><ul class="related"><li><a href="/business/accounting-converter/">QuickBooks / Zoho Books / Tally Converter</a></li><li><a href="/business/bank-reconciliation/">Bank Reconciliation</a></li><li><a href="/business/bookkeeping/">Bookkeeping: Trial Balance, P&amp;L and Balance Sheet</a></li><li><a href="/business/ctc-structure/">CTC to Take-Home Salary Calculator (India)</a></li><li><a href="/business/full-final-settlement/">Full &amp; Final Settlement Calculator</a></li><li><a href="/business/gst-reconciler/">GSTR-2B Reconciliation</a></li><li><a href="/business/id-validator/">GSTIN, PAN, IFSC &amp; ID Validator (Bulk)</a></li><li><a href="/business/mail-merge/">Letter Mail Merge to PDF</a></li><li><a href="/business/mtd-checker/">Making Tax Digital: Does It Apply to Me?</a></li><li><a href="/business/mtd-quarterly-update/">MTD Quarterly Update Builder</a></li><li><a href="/business/payroll-run/">Monthly Payroll Run: Payslips, Bank File &amp; Statutory Summary</a></li><li><a href="/business/receivables-ageing/">Receivables Ageing &amp; Payment Reminders</a></li><li><a href="/business/sheet-merge/">Merge &amp; Dedupe Spreadsheets</a></li><li><a href="/business/tally-converter/">Excel / CSV to Tally Converter</a></li><li><a href="/business/vat-return/">VAT Return from a Spreadsheet (the nine boxes)</a></li><li><a href="/india/gst-calculator/">GST Calculator (India)</a></li><li><a href="/business/invoice-payment-terms/">Invoice Due Date &amp; Settlement Discount Calculator</a></li><li><a href="/developer/csv-to-json/">CSV to JSON Converter</a></li><li><a href="/pdf/invoice-pdf/">Invoice Generator (PDF)</a></li></ul></section>
 </article>
 </main>
 </div>
@@ -220,8 +220,8 @@
   <div class="container">
     <div class="footer-grid">
       <div class="footer-about">
-        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,250+ free tools</small></span></a>
-        <p>1,250+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
+        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,251+ free tools</small></span></a>
+        <p>1,251+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
       </div>
       <div>
         <h4>1234Tools</h4>

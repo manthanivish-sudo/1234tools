@@ -51,7 +51,7 @@
 
 <header class="site-header">
   <div class="container nav-wrap">
-    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,250+ free tools</small></span></a>
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,251+ free tools</small></span></a>
 
     <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navlinks">
       <span></span><span></span><span></span>
@@ -59,7 +59,7 @@
 
     <div class="header-tools">
       <div class="search-wrap">
-        <input id="q" type="search" placeholder="Search 1,250 tools…" autocomplete="off" aria-label="Search tools">
+        <input id="q" type="search" placeholder="Search 1,251 tools…" autocomplete="off" aria-label="Search tools">
         <div id="results" class="search-results" hidden></div>
       </div>
       <div class="theme-switch" role="group" aria-label="Colour theme">
@@ -86,7 +86,7 @@
 
 <div class="layout container">
   <button class="sidebar-open" id="sidebarOpen" aria-expanded="false" aria-controls="sidebar">
-    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,250 tools</span>
+    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,251 tools</span>
   </button>
 
   <aside class="sidebar" id="sidebar" aria-label="Tool categories">
@@ -97,7 +97,7 @@
 
     <nav class="side-nav">
       <a class="side-link" href="/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,250</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,251</span>
       </a>
 
       <p class="side-group">Categories</p>
@@ -117,7 +117,7 @@
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-india"></use></svg><span class="side-name">India</span><span class="side-count">15</span>
       </a>
       <a class="side-link is-active" href="/business/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-business"></use></svg><span class="side-name">Business</span><span class="side-count">29</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-business"></use></svg><span class="side-name">Business</span><span class="side-count">30</span>
       </a>
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
@@ -210,7 +210,7 @@
   <section class="panel"><h2>Privacy</h2><p class="privacy-line">Your file never leaves your device. It is read and converted by your own browser, so nothing is uploaded, queued or logged — which is what makes this safe for a client’s books.</p></section>
   <section class="panel"><h2>Tips</h2><ul class="tips"><li>Download GSTR-2B from the portal as JSON (Returns → GSTR-2B → Download → Generate JSON) — it carries everything, including credit notes. The Excel download works too.</li><li>The purchase register can be any spreadsheet with a supplier GSTIN, an invoice number, a date and the tax amounts; columns are matched by name and can be corrected.</li><li>Invoice numbers are compared loosely: INV/2026/0417, inv-2026-0417 and 0417 are treated as the same document, and a date within five days is tolerated. The tolerance on tax is one rupee.</li><li>&quot;Only in books&quot; is the sheet that costs money: those suppliers have not filed, so the credit is not available until they do. Chase them before the 3B is due.</li><li>&quot;Only in 2B&quot; is credit you are entitled to and have not recorded — a missing purchase entry, or an invoice that went to a different branch.</li></ul></section>
   <section class="panel"><h2>Frequently asked questions</h2><details><summary>Which GSTR-2B formats are read?</summary><p>The JSON the portal generates (with B2B, B2BA, CDNR and CDNRA sections) and the Excel it offers, using the B2B sheet. Credit notes reduce the supplier’s total and are matched separately.</p></details><details><summary>How does matching work?</summary><p>First on supplier GSTIN plus a normalised invoice number. Then, for what is left, on GSTIN plus the numeric tail of the invoice number with the date within five days and the taxable value within a rupee — which catches INV-0417 against 417. Anything still unmatched is reported on the side it appears.</p></details><details><summary>Is the result the ITC I can claim in 3B?</summary><p>The Matched sheet is the credit that is both in your books and filed by the supplier, which is the condition for claiming it. Whether a particular line is eligible — blocked credit under section 17(5), reverse charge, personal use — is still your call and your CA’s; the tool reconciles, it does not adjudicate.</p></details><details><summary>Is any of this uploaded?</summary><p>No. Both files are read and compared by your own browser, and the report is written there too. Nothing leaves your device.</p></details></section>
-  <section class="panel"><h2>Related tools</h2><ul class="related"><li><a href="/business/accounting-converter/">QuickBooks / Zoho Books / Tally Converter</a></li><li><a href="/business/bank-reconciliation/">Bank Reconciliation</a></li><li><a href="/business/bookkeeping/">Bookkeeping: Trial Balance, P&amp;L and Balance Sheet</a></li><li><a href="/business/ctc-structure/">CTC to Take-Home Salary Calculator (India)</a></li><li><a href="/business/einvoice-json/">E-Invoice JSON Generator (IRP schema)</a></li><li><a href="/business/full-final-settlement/">Full &amp; Final Settlement Calculator</a></li><li><a href="/business/id-validator/">GSTIN, PAN, IFSC &amp; ID Validator (Bulk)</a></li><li><a href="/business/mail-merge/">Letter Mail Merge to PDF</a></li><li><a href="/business/mtd-checker/">Making Tax Digital: Does It Apply to Me?</a></li><li><a href="/business/mtd-quarterly-update/">MTD Quarterly Update Builder</a></li><li><a href="/business/payroll-run/">Monthly Payroll Run: Payslips, Bank File &amp; Statutory Summary</a></li><li><a href="/business/receivables-ageing/">Receivables Ageing &amp; Payment Reminders</a></li><li><a href="/business/sheet-merge/">Merge &amp; Dedupe Spreadsheets</a></li><li><a href="/business/tally-converter/">Excel / CSV to Tally Converter</a></li><li><a href="/india/gst-calculator/">GST Calculator (India)</a></li><li><a href="/business/invoice-payment-terms/">Invoice Due Date &amp; Settlement Discount Calculator</a></li><li><a href="/developer/csv-to-json/">CSV to JSON Converter</a></li><li><a href="/pdf/invoice-pdf/">Invoice Generator (PDF)</a></li></ul></section>
+  <section class="panel"><h2>Related tools</h2><ul class="related"><li><a href="/business/accounting-converter/">QuickBooks / Zoho Books / Tally Converter</a></li><li><a href="/business/bank-reconciliation/">Bank Reconciliation</a></li><li><a href="/business/bookkeeping/">Bookkeeping: Trial Balance, P&amp;L and Balance Sheet</a></li><li><a href="/business/ctc-structure/">CTC to Take-Home Salary Calculator (India)</a></li><li><a href="/business/einvoice-json/">E-Invoice JSON Generator (IRP schema)</a></li><li><a href="/business/full-final-settlement/">Full &amp; Final Settlement Calculator</a></li><li><a href="/business/id-validator/">GSTIN, PAN, IFSC &amp; ID Validator (Bulk)</a></li><li><a href="/business/mail-merge/">Letter Mail Merge to PDF</a></li><li><a href="/business/mtd-checker/">Making Tax Digital: Does It Apply to Me?</a></li><li><a href="/business/mtd-quarterly-update/">MTD Quarterly Update Builder</a></li><li><a href="/business/payroll-run/">Monthly Payroll Run: Payslips, Bank File &amp; Statutory Summary</a></li><li><a href="/business/receivables-ageing/">Receivables Ageing &amp; Payment Reminders</a></li><li><a href="/business/sheet-merge/">Merge &amp; Dedupe Spreadsheets</a></li><li><a href="/business/tally-converter/">Excel / CSV to Tally Converter</a></li><li><a href="/business/vat-return/">VAT Return from a Spreadsheet (the nine boxes)</a></li><li><a href="/india/gst-calculator/">GST Calculator (India)</a></li><li><a href="/business/invoice-payment-terms/">Invoice Due Date &amp; Settlement Discount Calculator</a></li><li><a href="/developer/csv-to-json/">CSV to JSON Converter</a></li><li><a href="/pdf/invoice-pdf/">Invoice Generator (PDF)</a></li></ul></section>
 </article>
 </main>
 </div>
@@ -220,8 +220,8 @@
   <div class="container">
     <div class="footer-grid">
       <div class="footer-about">
-        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,250+ free tools</small></span></a>
-        <p>1,250+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
+        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,251+ free tools</small></span></a>
+        <p>1,251+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
       </div>
       <div>
         <h4>1234Tools</h4>
