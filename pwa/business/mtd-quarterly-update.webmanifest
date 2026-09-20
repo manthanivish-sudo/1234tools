@@ -1,0 +1,41 @@
+{
+  "id": "/business/mtd-quarterly-update/",
+  "name": "MTD Quarterly Update Builder — 1234Tools",
+  "short_name": "MTD Quarterly",
+  "description": "Turn the income and expense spreadsheet you already keep into the figures a Making Tax Digital quarterly update asks for. It maps your own category names onto the standard self-employment or property headings, cuts the tax year into its four quarterly periods - standard or calendar - and gives the cumulative year-to-date total alongside the standalone quarter, with every unmatched row listed by name. It produces the figures; filing them needs software HMRC has recognised. Runs in your browser.",
+  "start_url": "/business/mtd-quarterly-update/?src=pwa",
+  "scope": "/business/mtd-quarterly-update/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-mtd-quarter.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-mtd-quarter-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-mtd-quarter-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

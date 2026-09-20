@@ -52,7 +52,7 @@
 
 <header class="site-header">
   <div class="container nav-wrap">
-    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,248+ free tools</small></span></a>
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,250+ free tools</small></span></a>
 
     <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navlinks">
       <span></span><span></span><span></span>
@@ -60,7 +60,7 @@
 
     <div class="header-tools">
       <div class="search-wrap">
-        <input id="q" type="search" placeholder="Search 1,248 tools…" autocomplete="off" aria-label="Search tools">
+        <input id="q" type="search" placeholder="Search 1,250 tools…" autocomplete="off" aria-label="Search tools">
         <div id="results" class="search-results" hidden></div>
       </div>
       <div class="theme-switch" role="group" aria-label="Colour theme">
@@ -87,7 +87,7 @@
 
 <div class="layout container">
   <button class="sidebar-open" id="sidebarOpen" aria-expanded="false" aria-controls="sidebar">
-    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,248 tools</span>
+    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,250 tools</span>
   </button>
 
   <aside class="sidebar" id="sidebar" aria-label="Tool categories">
@@ -98,7 +98,7 @@
 
     <nav class="side-nav">
       <a class="side-link" href="/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,248</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">All tools</span><span class="side-count">1,250</span>
       </a>
 
       <p class="side-group">Categories</p>
@@ -118,7 +118,7 @@
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-india"></use></svg><span class="side-name">India</span><span class="side-count">15</span>
       </a>
       <a class="side-link is-active" href="/business/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-business"></use></svg><span class="side-name">Business</span><span class="side-count">27</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-business"></use></svg><span class="side-name">Business</span><span class="side-count">29</span>
       </a>
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
@@ -211,7 +211,7 @@
   <section class="panel"><h2>Privacy</h2><p class="privacy-line">Your file never leaves your device. It is read and converted by your own browser, so nothing is uploaded, queued or logged — which is what makes this safe for a client’s books.</p></section>
   <section class="panel"><h2>Tips</h2><ul class="tips"><li>Start a book, choose the chart of accounts and the financial year, then bring transactions in. Save the book to a file when you stop; open it again to carry on. Nothing is stored on our side, so the file is the book.</li><li>Four kinds of import are understood: bank lines, sales invoices, purchase invoices, and plain journals with a debit and a credit column. Journals are grouped by their reference, so a multi-line entry stays one entry.</li><li>The AI Bank Statement Categoriser on this site writes a sheet with a ledger name against every row. Import that sheet as bank lines and the names are matched to your accounts; anything it cannot match goes to Suspense and is listed, never guessed.</li><li>Every journal must sum to zero and every amount is whole pence or paise. A row that would break either is refused with the reason, and the rest of the file still posts — no half-written import.</li><li>The VAT or GST figures are computed from the tax recorded on each line, and the report shows them beside the balances on the tax accounts. If those two ever disagreed the book would be wrong; they cannot, because both come from the same postings.</li><li>Locking a date closes everything on or before it. That is what stops a corrected invoice quietly changing a quarter you have already reported.</li></ul></section>
   <section class="panel"><h2>Frequently asked questions</h2><details><summary>Can this file my VAT return?</summary><p>No. It works out the nine box figures from your own postings, and shows them beside the ledger balances so you can check them. Filing under Making Tax Digital has to go through software HMRC has recognised, which involves registering as a vendor, passing their tests and sending fraud prevention headers with every call. That is a licence and an approval, not a feature, and this tool does not pretend to have it.</p></details><details><summary>Are these statutory accounts?</summary><p>No. The profit and loss and the balance sheet here are management accounts: correct arithmetic, your own account names, no statutory formats and no iXBRL tagging. Accounts filed at Companies House must follow FRS 105 or FRS 102 Section 1A and be tagged to the FRC taxonomy, which is a separate piece of work.</p></details><details><summary>Where is the book kept?</summary><p>In the page, while it is open, and in the file you save. Nothing is uploaded, which is why an accountant can put a client’s ledger through it without a data processing agreement. The trade is that you look after the file — close the tab without saving and the work is gone.</p></details><details><summary>How is money handled?</summary><p>As whole pence or paise, never as decimals. Binary floating point cannot represent 0.1 exactly, which is how ledgers end up a penny out; this one adds integers, and splits a tax amount so the parts always add back to the whole.</p></details><details><summary>Which charts of accounts are there?</summary><p>A UK small-company chart in the usual nominal ranges, and an Indian one in Tally’s groups with separate CGST, SGST and IGST accounts. You can add your own accounts to either. The tax split for an Indian sale follows whether you mark it intra-state or inter-state, so it cannot disagree with the GSTINs.</p></details></section>
-  <section class="panel"><h2>Related tools</h2><ul class="related"><li><a href="/business/accounting-converter/">QuickBooks / Zoho Books / Tally Converter</a></li><li><a href="/business/bank-reconciliation/">Bank Reconciliation</a></li><li><a href="/business/ctc-structure/">CTC to Take-Home Salary Calculator (India)</a></li><li><a href="/business/einvoice-json/">E-Invoice JSON Generator (IRP schema)</a></li><li><a href="/business/full-final-settlement/">Full &amp; Final Settlement Calculator</a></li><li><a href="/business/gst-reconciler/">GSTR-2B Reconciliation</a></li><li><a href="/business/id-validator/">GSTIN, PAN, IFSC &amp; ID Validator (Bulk)</a></li><li><a href="/business/mail-merge/">Letter Mail Merge to PDF</a></li><li><a href="/business/payroll-run/">Monthly Payroll Run: Payslips, Bank File &amp; Statutory Summary</a></li><li><a href="/business/receivables-ageing/">Receivables Ageing &amp; Payment Reminders</a></li><li><a href="/business/sheet-merge/">Merge &amp; Dedupe Spreadsheets</a></li><li><a href="/business/tally-converter/">Excel / CSV to Tally Converter</a></li><li><a href="/india/gst-calculator/">GST Calculator (India)</a></li><li><a href="/business/invoice-payment-terms/">Invoice Due Date &amp; Settlement Discount Calculator</a></li><li><a href="/developer/csv-to-json/">CSV to JSON Converter</a></li><li><a href="/pdf/invoice-pdf/">Invoice Generator (PDF)</a></li></ul></section>
+  <section class="panel"><h2>Related tools</h2><ul class="related"><li><a href="/business/accounting-converter/">QuickBooks / Zoho Books / Tally Converter</a></li><li><a href="/business/bank-reconciliation/">Bank Reconciliation</a></li><li><a href="/business/ctc-structure/">CTC to Take-Home Salary Calculator (India)</a></li><li><a href="/business/einvoice-json/">E-Invoice JSON Generator (IRP schema)</a></li><li><a href="/business/full-final-settlement/">Full &amp; Final Settlement Calculator</a></li><li><a href="/business/gst-reconciler/">GSTR-2B Reconciliation</a></li><li><a href="/business/id-validator/">GSTIN, PAN, IFSC &amp; ID Validator (Bulk)</a></li><li><a href="/business/mail-merge/">Letter Mail Merge to PDF</a></li><li><a href="/business/mtd-checker/">Making Tax Digital: Does It Apply to Me?</a></li><li><a href="/business/mtd-quarterly-update/">MTD Quarterly Update Builder</a></li><li><a href="/business/payroll-run/">Monthly Payroll Run: Payslips, Bank File &amp; Statutory Summary</a></li><li><a href="/business/receivables-ageing/">Receivables Ageing &amp; Payment Reminders</a></li><li><a href="/business/sheet-merge/">Merge &amp; Dedupe Spreadsheets</a></li><li><a href="/business/tally-converter/">Excel / CSV to Tally Converter</a></li><li><a href="/india/gst-calculator/">GST Calculator (India)</a></li><li><a href="/business/invoice-payment-terms/">Invoice Due Date &amp; Settlement Discount Calculator</a></li><li><a href="/developer/csv-to-json/">CSV to JSON Converter</a></li><li><a href="/pdf/invoice-pdf/">Invoice Generator (PDF)</a></li></ul></section>
 </article>
 </main>
 </div>
@@ -221,8 +221,8 @@
   <div class="container">
     <div class="footer-grid">
       <div class="footer-about">
-        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,248+ free tools</small></span></a>
-        <p>1,248+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
+        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,250+ free tools</small></span></a>
+        <p>1,250+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services and running entirely in your browser.</p>
       </div>
       <div>
         <h4>1234Tools</h4>
