@@ -1287,4 +1287,6 @@
 <url><loc>https://www.1234tools.com/business/ctc-structure/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/business/full-final-settlement/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/business/payroll-run/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/education/exam-seating/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/education/report-card/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 </urlset>

@@ -1,0 +1,41 @@
+{
+  "id": "/education/report-card/",
+  "name": "Report Card & Marksheet Generator (PDF) — 1234Tools",
+  "short_name": "Report Card",
+  "description": "Turn a class marks spreadsheet into a printed report card for every student — subject grades, total, percentage, rank and the class average — as one PDF each in a ZIP, one combined PDF for printing, and a results workbook. Runs in your browser; no marks are uploaded.",
+  "start_url": "/education/report-card/?src=pwa",
+  "scope": "/education/report-card/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-report-card.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-report-card-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-report-card-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
