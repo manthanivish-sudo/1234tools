@@ -1,0 +1,41 @@
+{
+  "id": "/ai/article-writer/",
+  "name": "Long-Form Article Writer — 1234Tools",
+  "short_name": "Long-Form Article",
+  "description": "A brief in, a full article out — a standfirst, sections that go somewhere, and an ending that lands. Every claim it cannot support is marked [source needed] and no statistic is ever invented, because a wrong number in a published piece costs more than a gap does.",
+  "start_url": "/ai/article-writer/?src=pwa",
+  "scope": "/ai/article-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-article.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-article-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-article-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

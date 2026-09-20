@@ -1,0 +1,41 @@
+{
+  "id": "/ai/video-script-writer/",
+  "name": "YouTube & Vlog Script Writer — 1234Tools",
+  "short_name": "YouTube & Vlog",
+  "description": "A topic in; a script you can read to camera out — a hook worth the first fifteen seconds, a beat-by-beat outline whose timings add up to the length you asked for, the spoken words in full, one call to action, and a B-roll list for the edit.",
+  "start_url": "/ai/video-script-writer/?src=pwa",
+  "scope": "/ai/video-script-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-script.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-script-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-script-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

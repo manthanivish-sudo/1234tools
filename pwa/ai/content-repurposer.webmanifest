@@ -1,0 +1,41 @@
+{
+  "id": "/ai/content-repurposer/",
+  "name": "Content Repurposer — One Piece, Six Formats — 1234Tools",
+  "short_name": "Content Repurposer",
+  "description": "One thing you already made goes in; the other formats come out — a blog outline, a thread, three short-form scripts cut from the strongest moments, a newsletter blurb and five captions. Nothing new is invented: repurposing is re-cutting, not re-researching.",
+  "start_url": "/ai/content-repurposer/?src=pwa",
+  "scope": "/ai/content-repurposer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-repurpose.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-repurpose-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-repurpose-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

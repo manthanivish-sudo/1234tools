@@ -2173,6 +2173,16 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
   }
 }
 
+/* "the tool you need is not here" — the last thing on the home page */
+.home-ask { margin: 26px 0 0; }
+.ask-form { max-width: 560px; margin: 16px 0 0; }
+.ask-form textarea.control { resize: vertical; min-height: 84px; font: inherit; }
+.ask-opt { font-weight: 400; color: var(--text-3); }
+/* Off screen rather than display:none: a bot that skips hidden fields walks
+   past the honeypot, and one that fills everything trips it. */
+.ask-trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.ask-privacy { margin: 14px 0 0; font-size: .8rem; line-height: 1.6; color: var(--text-3); }
+
 /* ---------- account ---------- */
 .acct-providers { margin: 0 0 12px; }
 .acct-or { margin: 0 0 10px; font-size: .78rem; color: var(--text-3); letter-spacing: .06em; text-transform: uppercase; }

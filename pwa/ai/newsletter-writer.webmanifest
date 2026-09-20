@@ -1,0 +1,41 @@
+{
+  "id": "/ai/newsletter-writer/",
+  "name": "Newsletter Issue Writer — 1234Tools",
+  "short_name": "Newsletter Issue",
+  "description": "Your notes for this week in; a finished issue out — five subject lines with preview text and their lengths counted here, an opening that is not \"hope you’re well\", the body in sections, one thing to click, and a sign-off that sounds like a person.",
+  "start_url": "/ai/newsletter-writer/?src=pwa",
+  "scope": "/ai/newsletter-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-newsletter.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-newsletter-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-newsletter-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

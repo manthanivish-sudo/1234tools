@@ -1,0 +1,41 @@
+{
+  "id": "/ai/podcast-show-notes/",
+  "name": "Podcast Show Notes from a Transcript — 1234Tools",
+  "short_name": "Podcast Show Notes",
+  "description": "Paste or upload a transcript and get the show notes: a summary, chapter timestamps taken from the transcript’s own timings, quotable lines with the time they were said, the links mentioned, the topics, and a short blurb to post. No time is ever estimated and no quotation is ever tidied.",
+  "start_url": "/ai/podcast-show-notes/?src=pwa",
+  "scope": "/ai/podcast-show-notes/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-podcast.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-podcast-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-podcast-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

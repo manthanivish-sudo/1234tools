@@ -55,6 +55,17 @@ const PICKS = [
   '/ai/invoice-extractor/'
 ];
 
+/* The callable's address, built from the same config the account pages
+   use so there is one place a project id is written down. While it says
+   REPLACE_ME there is nothing to post to and the block is left out. */
+function endpoint() {
+  const src = fs.readFileSync(path.join(ROOT, 'assets/firebase-config.js'), 'utf8');
+  const get = (k) => (new RegExp(k + ": '([^']+)'").exec(src) || [])[1] || '';
+  const project = get('projectId'), region = get('region') || 'asia-south1';
+  if (!project || /REPLACE_ME/.test(project)) return null;
+  return 'https://' + region + '-' + project + '.cloudfunctions.net/submitToolRequest';
+}
+
 const changes = [];
 function write(rel, content) {
   const abs = path.join(ROOT, rel);
@@ -177,6 +188,51 @@ function picksBlock(metas) {
 
 /* ---------- patching ---------- */
 
+function askBlock(url) {
+  return '<section class="panel home-ask" id="ask">\n' +
+    '  <h2>The tool you need is not here</h2>\n' +
+    '  <p>Then say so. Most of what is on this site exists because somebody had a job to do that nothing else did properly \u2014 a statement in the wrong format, a return that had to be typed out twice, a timetable done by hand every July. If that is you, describe it. You do not need an account, and there is nothing to sign up to.</p>\n' +
+    '  <form class="ask-form" id="ask-form" novalidate>\n' +
+    '    <div class="field"><label for="ask-what">What should the tool do?</label>' +
+    '<textarea class="control" id="ask-what" rows="3" maxlength="2000" required placeholder="Turn the PDF statement my bank gives me into the CSV my accountant asks for, without uploading it anywhere."></textarea>' +
+    '<span class="field-hint">One sentence is plenty. What the job is beats what the feature should be called.</span></div>\n' +
+    '    <div class="field"><label for="ask-who">What do you do? <span class="ask-opt">(optional)</span></label>' +
+    '<input class="control" id="ask-who" type="text" maxlength="120" autocomplete="organization-title" placeholder="Bookkeeper, school office, letting agent, solicitor\u2026">' +
+    '<span class="field-hint">It decides what gets built first: five people with the same job beats fifty with fifty.</span></div>\n' +
+    '    <div class="field"><label for="ask-email">Email, if you want an answer <span class="ask-opt">(optional)</span></label>' +
+    '<input class="control" id="ask-email" type="email" maxlength="200" autocomplete="email" placeholder="you@example.com">' +
+    '<span class="field-hint">Used to reply to this and nothing else. No list, no newsletter.</span></div>\n' +
+    /* the honeypot: off screen rather than display:none, which some bots check */
+    '    <div class="ask-trap" aria-hidden="true"><label for="ask-company">Company</label><input id="ask-company" type="text" tabindex="-1" autocomplete="off"></div>\n' +
+    '    <div class="io-actions"><button type="submit" class="btn-primary" id="ask-send">Send the request</button></div>\n' +
+    '    <div class="io-msg" id="ask-msg"></div>\n' +
+    '  </form>\n' +
+    '  <p class="ask-privacy">What you type here is sent to our server and kept until the request is dealt with \u2014 it is the only part of this page that leaves your device, and it only goes when you press the button. Your email is used to reply and for nothing else. <a href="/trust/">What we hold</a> \u00b7 <a href="/contact/">Other ways to reach us</a></p>\n' +
+    '</section>\n' +
+    '<script>' + askScript(url) + '</script>\n';
+}
+
+function askScript(url) {
+  return "document.addEventListener('DOMContentLoaded',function(){" +
+    "var f=document.getElementById('ask-form');if(!f)return;" +
+    "var msg=document.getElementById('ask-msg'),btn=document.getElementById('ask-send');" +
+    "var opened=Date.now();" +
+    "function say(t,k){msg.textContent=t||'';msg.className='io-msg'+(k?' is-'+k:'');}" +
+    "f.addEventListener('submit',function(e){e.preventDefault();" +
+    "var what=document.getElementById('ask-what').value.trim();" +
+    "if(what.length<10){say('Tell us a little more about what the tool should do \\u2014 one sentence is plenty.','error');return;}" +
+    "btn.disabled=true;say('Sending\\u2026','note');" +
+    "fetch('" + url + "',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({data:{" +
+    "what:what,who:document.getElementById('ask-who').value,email:document.getElementById('ask-email').value," +
+    "trap:document.getElementById('ask-company').value,tookMs:Date.now()-opened,page:location.pathname}})})" +
+    ".then(function(r){return r.json().then(function(b){return{ok:r.ok,b:b};});})" +
+    ".then(function(x){" +
+    "if(x.ok&&x.b&&x.b.result&&x.b.result.ok){f.reset();say('Thank you \\u2014 that is in the list. If you left an email you will hear back when it is built, or when it turns out it cannot be.','note');return;}" +
+    "say((x.b&&x.b.error&&x.b.error.message)||'That did not send. Try again in a moment, or use the contact page.','error');})" +
+    ".catch(function(){say('That did not send \\u2014 the network refused it. Try again, or use the contact page.','error');})" +
+    ".then(function(){btn.disabled=false;});});});";
+}
+
 const open = (name) => '<!-- ' + name + ': generated by build-home.js, do not edit -->';
 const close = (name) => '<!-- /' + name + ' -->';
 const wrap = (name, body) => open(name) + '\n' + body + '\n' + close(name);
@@ -231,8 +287,19 @@ function patchHome() {
     return h.slice(0, at) + block + '\n' + h.slice(at);
   });
 
+  /* Last thing on the page on purpose: somebody who has read this far
+     and not found what they came for is exactly who should be asked. */
+  const url = endpoint();
+  if (url) {
+    html = put(html, 'HOME-ASK', askBlock(url), (h, block) => {
+      const at = h.indexOf('</main>');
+      if (at < 0) throw new Error('could not find the end of main on the homepage');
+      return h.slice(0, at) + block + h.slice(at);
+    });
+  }
+
   const changed = write(rel, outbound.rewrite(html, 'home').html);
-  return { changed, c, checked, metas };
+  return { changed, c, checked, metas, asking: !!url };
 }
 
 function bumpServiceWorker() {
@@ -242,7 +309,7 @@ function bumpServiceWorker() {
 }
 
 function main() {
-  const { changed, c, checked, metas } = patchHome();
+  const { changed, c, checked, metas, asking } = patchHome();
   const sw = changed ? bumpServiceWorker() : false;
 
   console.log('\nbuild-home.js' + (CHECK ? '  (--check: nothing will be written)' : ''));
@@ -250,7 +317,8 @@ function main() {
   console.log('  pricing             ' + c.free + ' free with no account, ' + c.freemium + ' free to try');
   console.log('  checked pages       ' + checked + ' carry a sources panel');
   console.log('  picks               ' + metas.map(m => m.path).join(', '));
-  console.log('  homepage            ' + (changed ? 'hero, why and picks written' : 'unchanged'));
+  console.log('  tool requests       ' + (asking ? 'form posts to the callable' : 'left out: firebase-config still says REPLACE_ME'));
+  console.log('  homepage            ' + (changed ? 'hero, why, picks and the request form written' : 'unchanged'));
   console.log('  service worker      ' + (sw ? 'bumped' : 'unchanged'));
   console.log('\n  ' + changes.length + ' file(s) ' + (CHECK ? 'would change' : 'changed') + '\n');
 }

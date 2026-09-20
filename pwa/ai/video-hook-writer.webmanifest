@@ -1,0 +1,41 @@
+{
+  "id": "/ai/video-hook-writer/",
+  "name": "Video Hook Writer — Ten Openings — 1234Tools",
+  "short_name": "Video Hook Writer",
+  "description": "One video idea in; ten opening lines out, each built on a different angle — a question, a claim, a story, a contradiction, a demonstration, a stake and four more — with the shot it opens on, the viewer it suits, its spoken length counted here, and the honest reason it might not work.",
+  "start_url": "/ai/video-hook-writer/?src=pwa",
+  "scope": "/ai/video-hook-writer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-hook.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-hook-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-hook-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
