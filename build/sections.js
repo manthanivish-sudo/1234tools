@@ -77,6 +77,7 @@ const SECTIONS = {
   '/for/':     { name: 'Collections', crumb: 'Collections', meta: true },
   '/compare/': { name: 'Comparisons', crumb: 'Comparisons', meta: true },
   '/guides/': { name: 'Guides', crumb: 'Guides', meta: true },
+  '/practice/': { name: 'Practice', crumb: 'Practice', meta: true },
   '/contact/': { name: 'Contact', meta: true },
   '/privacy/': { name: 'Privacy', meta: true },
   '/terms/':   { name: 'Terms', meta: true },

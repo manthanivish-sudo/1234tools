@@ -2195,6 +2195,21 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
 .ask-trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .ask-privacy { margin: 14px 0 0; font-size: .8rem; line-height: 1.6; color: var(--text-3); }
 
+/* ---------- the practice product ---------- */
+.practice .panel { margin-bottom: 16px; }
+.prac-list { margin: 0; padding: 0; list-style: none; }
+.prac-list li {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--border); font-size: .95rem;
+}
+.prac-list li:last-child { border-bottom: 0; }
+.prac-role { font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
+.prac-note { font-size: .8rem; color: var(--text-3); }
+/* The invitation link: readonly, wide, and selected on sight, because the
+   only thing anybody does with it is copy it. */
+.prac-link { margin: 12px 0 0; }
+.prac-link input { font-family: var(--font-mono, monospace); font-size: .82rem; }
+
 /* ---------- preferences ---------- */
 /* The line under a result that says which currency it is in. Quiet: it is
    an answer to a question nobody asked out loud, not a control. */
