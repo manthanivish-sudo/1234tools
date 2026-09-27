@@ -1155,21 +1155,21 @@ It is not uploaded to 1234Tools for image processing.
 
 <div class="ai-toolbar">
 
-<button type="button" id="uploadBtn">
+<button id="uploadBtn">
 📷 Upload
 </button>
 
-<button type="button" id="analyseBtn"
+<button id="analyseBtn"
         disabled>
 ✨ Analyse
 </button>
 
-<button type="button" id="undoBtn"
+<button id="undoBtn"
         disabled>
 ↶
 </button>
 
-<button type="button" id="redoBtn"
+<button id="redoBtn"
         disabled>
 ↷
 </button>
@@ -1178,17 +1178,17 @@ It is not uploaded to 1234Tools for image processing.
 
 <div class="ai-zoom">
 
-<button type="button" id="zoomOut">−</button>
+<button id="zoomOut">−</button>
 
 <span id="zoomValue">100%</span>
 
-<button type="button" id="zoomIn">+</button>
+<button id="zoomIn">+</button>
 
-<button type="button" id="zoomFit">Fit</button>
+<button id="zoomFit">Fit</button>
 
 </div>
 
-<button type="button" id="exportBtn"
+<button id="exportBtn"
         class="primary ai-btn"
         disabled>
 Download
@@ -1217,7 +1217,7 @@ cars, pets and other objects. Select what the
 text should appear behind.
 </p>
 
-<button type="button" id="emptyUpload"
+<button id="emptyUpload"
         class="ai-btn primary">
 Choose an image
 </button>
@@ -1930,7 +1930,7 @@ Image to PDF Converter
 const MODEL_ID =
   'Xenova/detr-resnet-50-panoptic';
 
-const MAX_WORKING_DIM = 1600;
+const MAX_WORKING_DIM = 2048;
 
 const state = {
 
@@ -2363,98 +2363,231 @@ function maskToCanvas(mask) {
 
 async function getSegmenter() {
 
-  if (state.pipeline) {
+  if (state.pipeline)
     return state.pipeline;
-  }
 
-  showStatus('Loading browser AI…', 5);
+  showStatus(
+    'Loading browser AI…',
+    5
+  );
 
   try {
 
     /*
-     * IMPORTANT:
-     *
-     * Do not automatically use WebGPU here.
-     * A WebGPU context can exist while the browser/GPU driver
-     * still cannot run this particular ONNX model. On some
-     * mobile browsers this can terminate/reload the page instead
-     * of producing a normal JavaScript exception.
-     *
-     * CPU/WASM is deliberately the safe default for this tool.
+     * Use the current stable Transformers.js 3.x browser build.
+     * Hugging Face documents this ESM/CDN usage for vanilla JS.
      */
-    const { pipeline, env } = await import(
+    const {
+      pipeline,
+      env
+    } = await import(
       'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1'
     );
 
+    /*
+     * The image itself is passed directly to the local browser
+     * inference pipeline. Remote access is only used for the
+     * library/model files.
+     */
     env.allowRemoteModels = true;
     env.allowLocalModels = false;
     env.useBrowserCache = true;
 
-    /* Keep WASM memory use conservative on mobile browsers. */
-    try {
-      if (env.backends?.onnx?.wasm) {
-        env.backends.onnx.wasm.numThreads = 1;
-        env.backends.onnx.wasm.proxy = false;
-      }
-    } catch (wasmConfigError) {
-      console.warn('WASM configuration warning:', wasmConfigError);
-    }
+    const baseOptions = {
+      progress_callback: info => {
 
-    const progress_callback = info => {
+        if (!info)
+          return;
 
-      if (!info) return;
+        const status =
+          info.status || '';
 
-      if (info.status === 'initiate') {
-        showStatus('Downloading AI model…', 10);
-        return;
-      }
+        const file =
+          info.file || '';
 
-      if (info.status === 'progress') {
-        const progress = Number(info.progress);
+        if (status === 'initiate') {
 
-        if (Number.isFinite(progress)) {
           showStatus(
-            'Downloading AI model… ' + Math.round(progress) + '%',
-            Math.min(35, 10 + progress * 0.25)
+            'Downloading AI model…',
+            10
           );
-        }
-        return;
-      }
 
-      if (info.status === 'done') {
-        showStatus('Preparing browser AI…', 35);
+        } else if (status === 'progress') {
+
+          const progress =
+            Number(info.progress);
+
+          if (
+            Number.isFinite(progress)
+          ) {
+
+            showStatus(
+              'Downloading AI model… ' +
+              Math.round(progress) +
+              '%',
+              Math.min(
+                30,
+                10 + progress * .2
+              )
+            );
+
+          }
+
+        } else if (status === 'done') {
+
+          showStatus(
+            'Preparing browser AI…',
+            30
+          );
+
+        } else if (file) {
+
+          showStatus(
+            'Preparing browser AI…',
+            20
+          );
+
+        }
+
       }
     };
 
     /*
-     * First choice: quantized WASM.
-     * This dramatically reduces the memory required by the model
-     * compared with loading the full FP32 weights.
+     * WebGPU is optional. Do not assume that navigator.gpu
+     * existing means an adapter can actually be created.
      */
-    showStatus('Starting CPU AI…', 35);
+    let useWebGPU = false;
 
-    state.pipeline = await pipeline(
-      'image-segmentation',
-      MODEL_ID,
-      {
-        device: 'wasm',
-        dtype: 'q8',
-        progress_callback
+    try {
+
+      if (
+        navigator.gpu &&
+        typeof navigator.gpu.requestAdapter ===
+          'function'
+      ) {
+
+        const adapter =
+          await navigator.gpu.requestAdapter();
+
+        useWebGPU =
+          !!adapter;
+
       }
-    );
 
-    state.modelReady = true;
+    } catch (gpuCheckError) {
+
+      console.warn(
+        'WebGPU check failed; using WASM.',
+        gpuCheckError
+      );
+
+      useWebGPU = false;
+
+    }
+
+    if (useWebGPU) {
+
+      try {
+
+        showStatus(
+          'Starting GPU AI…',
+          30
+        );
+
+        state.pipeline =
+          await pipeline(
+            'image-segmentation',
+            MODEL_ID,
+            {
+              ...baseOptions,
+              device: 'webgpu',
+              dtype: 'fp32'
+            }
+          );
+
+        state.modelReady =
+          true;
+
+        return state.pipeline;
+
+      } catch (webgpuError) {
+
+        console.warn(
+          'WebGPU model load/inference setup failed. Falling back to WASM.',
+          webgpuError
+        );
+
+        state.pipeline =
+          null;
+
+      }
+
+    }
+
+    /*
+     * WASM is the reliable browser fallback.
+     * q8 reduces memory/bandwidth where the model provides
+     * a quantized ONNX weight.
+     */
+    try {
+
+      showStatus(
+        'Starting CPU AI…',
+        35
+      );
+
+      state.pipeline =
+        await pipeline(
+          'image-segmentation',
+          MODEL_ID,
+          {
+            ...baseOptions,
+            device: 'wasm',
+            dtype: 'q8'
+          }
+        );
+
+    } catch (wasmQuantizedError) {
+
+      console.warn(
+        'Quantized WASM model failed; retrying default WASM.',
+        wasmQuantizedError
+      );
+
+      state.pipeline =
+        await pipeline(
+          'image-segmentation',
+          MODEL_ID,
+          {
+            ...baseOptions,
+            device: 'wasm'
+          }
+        );
+
+    }
+
+    state.modelReady =
+      true;
+
     return state.pipeline;
 
   } catch (error) {
 
-    state.pipeline = null;
-    state.modelReady = false;
+    state.pipeline =
+      null;
 
-    console.error('Unable to initialise browser AI:', error);
+    state.modelReady =
+      false;
+
+    console.error(
+      'Unable to initialise Transformers.js:',
+      error
+    );
 
     throw error;
+
   }
+
 }
 
 /* =====================================================
@@ -4436,11 +4569,7 @@ $('emptyUpload').onclick =
 
 
 $('analyseBtn').onclick =
-  event => {
-    event.preventDefault();
-    event.stopPropagation();
-    analyse();
-  };
+  analyse;
 
 
 $('undoBtn').onclick =
