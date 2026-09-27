@@ -69,6 +69,7 @@
 <!-- /PWA -->
 
 <link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2/dist/transformers.min.css">
 
 <script src="/assets/prefs.js" defer></script>
 
@@ -2193,120 +2194,71 @@ function maskToCanvas(mask) {
   if (!mask)
     return null;
 
-  /*
-   * Transformers.js returns segmentation masks as RawImage.
-   * RawImage exposes width, height, channels and data.
-   * Some versions may return a Tensor-like object, so keep
-   * this conversion deliberately defensive.
-   */
-
-  const w = Number(
+  const w =
     mask.width ||
     mask.dims?.[1] ||
-    state.workWidth
-  );
+    state.workWidth;
 
-  const h = Number(
+  const h =
     mask.height ||
     mask.dims?.[0] ||
-    state.workHeight
-  );
-
-  const channels = Number(
-    mask.channels ||
-    1
-  );
+    state.workHeight;
 
   const data =
     mask.data ||
     mask;
 
-  if (
-    !data ||
-    !w ||
-    !h ||
-    !Number.isFinite(w) ||
-    !Number.isFinite(h)
-  ) {
+  if (!data)
     return null;
-  }
 
   const maskCanvas =
     document.createElement('canvas');
 
-  maskCanvas.width = w;
-  maskCanvas.height = h;
+  maskCanvas.width =
+    w;
+
+  maskCanvas.height =
+    h;
 
   const maskCtx =
-    maskCanvas.getContext('2d', {
-      willReadFrequently: true
-    });
+    maskCanvas.getContext('2d');
 
   const imageData =
     maskCtx.createImageData(w, h);
 
-  const pixelCount =
-    w * h;
+  const length =
+    Math.min(
+      data.length,
+      w * h
+    );
 
-  /*
-   * A segmentation mask is normally one channel.
-   * If a multi-channel RawImage is ever returned, use:
-   *   - channel 0 for RGB/grayscale masks
-   *   - alpha for RGBA masks when alpha is meaningful.
-   */
   for (
     let i = 0;
-    i < pixelCount;
+    i < length;
     i++
   ) {
 
-    let value;
+    const value =
+      Number(data[i]);
 
-    if (channels === 1) {
+    const alpha =
+      value > 1
+        ? value
+        : value * 255;
 
-      value =
-        Number(data[i]);
+    imageData.data[i * 4] =
+      255;
 
-    } else if (channels === 4) {
+    imageData.data[i * 4 + 1] =
+      255;
 
-      const base =
-        i * 4;
+    imageData.data[i * 4 + 2] =
+      255;
 
-      const alpha =
-        Number(data[base + 3]);
-
-      const rgb =
-        Math.max(
-          Number(data[base] || 0),
-          Number(data[base + 1] || 0),
-          Number(data[base + 2] || 0)
-        );
-
-      value =
-        alpha > 0
-          ? alpha
-          : rgb;
-
-    } else {
-
-      value =
-        Number(data[i * channels]);
-
-    }
-
-    /*
-     * RawImage masks are commonly uint8 0..255.
-     * Be tolerant of floating-point masks 0..1 too.
-     */
-    if (value <= 1) {
-      value *= 255;
-    }
-
-    imageData.data[i * 4] = 255;
-    imageData.data[i * 4 + 1] = 255;
-    imageData.data[i * 4 + 2] = 255;
     imageData.data[i * 4 + 3] =
-      value >= 128 ? 255 : 0;
+      alpha >= 128
+        ? 255
+        : 0;
 
   }
 
@@ -2316,46 +2268,10 @@ function maskToCanvas(mask) {
     0
   );
 
-  /*
-   * The AI model may return a mask at a different resolution.
-   * Resize it to the editor's working dimensions once, rather
-   * than resizing repeatedly while drawing.
-   */
-  if (
-    w !== state.workWidth ||
-    h !== state.workHeight
-  ) {
-
-    const resized =
-      document.createElement('canvas');
-
-    resized.width =
-      state.workWidth;
-
-    resized.height =
-      state.workHeight;
-
-    const rctx =
-      resized.getContext('2d');
-
-    rctx.imageSmoothingEnabled =
-      false;
-
-    rctx.drawImage(
-      maskCanvas,
-      0,
-      0,
-      state.workWidth,
-      state.workHeight
-    );
-
-    return resized;
-
-  }
-
   return maskCanvas;
 
 }
+
 
 /* =====================================================
    OBJECT SEGMENTATION
@@ -2367,228 +2283,82 @@ async function getSegmenter() {
     return state.pipeline;
 
   showStatus(
-    'Loading browser AI…',
+    'Loading AI model…',
     5
   );
 
-  try {
+  const {
+    pipeline,
+    env
+  } = await import(
+    'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2'
+  );
 
-    /*
-     * Use the current stable Transformers.js 3.x browser build.
-     * Hugging Face documents this ESM/CDN usage for vanilla JS.
-     */
-    const {
-      pipeline,
-      env
-    } = await import(
-      'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1'
-    );
+  /*
+   * Allow browser cache.
+   * The image itself is never sent to our server.
+   */
 
-    /*
-     * The image itself is passed directly to the local browser
-     * inference pipeline. Remote access is only used for the
-     * library/model files.
-     */
-    env.allowRemoteModels = true;
-    env.allowLocalModels = false;
-    env.useBrowserCache = true;
+  env.allowLocalModels =
+    false;
 
-    const baseOptions = {
-      progress_callback: info => {
+  env.useBrowserCache =
+    true;
 
-        if (!info)
-          return;
+  let options = {};
 
-        const status =
-          info.status || '';
+  if (
+    'gpu' in navigator &&
+    navigator.gpu
+  ) {
 
-        const file =
-          info.file || '';
-
-        if (status === 'initiate') {
-
-          showStatus(
-            'Downloading AI model…',
-            10
-          );
-
-        } else if (status === 'progress') {
-
-          const progress =
-            Number(info.progress);
-
-          if (
-            Number.isFinite(progress)
-          ) {
-
-            showStatus(
-              'Downloading AI model… ' +
-              Math.round(progress) +
-              '%',
-              Math.min(
-                30,
-                10 + progress * .2
-              )
-            );
-
-          }
-
-        } else if (status === 'done') {
-
-          showStatus(
-            'Preparing browser AI…',
-            30
-          );
-
-        } else if (file) {
-
-          showStatus(
-            'Preparing browser AI…',
-            20
-          );
-
-        }
-
-      }
-    };
-
-    /*
-     * WebGPU is optional. Do not assume that navigator.gpu
-     * existing means an adapter can actually be created.
-     */
-    let useWebGPU = false;
-
-    try {
-
-      if (
-        navigator.gpu &&
-        typeof navigator.gpu.requestAdapter ===
-          'function'
-      ) {
-
-        const adapter =
-          await navigator.gpu.requestAdapter();
-
-        useWebGPU =
-          !!adapter;
-
-      }
-
-    } catch (gpuCheckError) {
-
-      console.warn(
-        'WebGPU check failed; using WASM.',
-        gpuCheckError
-      );
-
-      useWebGPU = false;
-
-    }
-
-    if (useWebGPU) {
-
-      try {
-
-        showStatus(
-          'Starting GPU AI…',
-          30
-        );
-
-        state.pipeline =
-          await pipeline(
-            'image-segmentation',
-            MODEL_ID,
-            {
-              ...baseOptions,
-              device: 'webgpu',
-              dtype: 'fp32'
-            }
-          );
-
-        state.modelReady =
-          true;
-
-        return state.pipeline;
-
-      } catch (webgpuError) {
-
-        console.warn(
-          'WebGPU model load/inference setup failed. Falling back to WASM.',
-          webgpuError
-        );
-
-        state.pipeline =
-          null;
-
-      }
-
-    }
-
-    /*
-     * WASM is the reliable browser fallback.
-     * q8 reduces memory/bandwidth where the model provides
-     * a quantized ONNX weight.
-     */
-    try {
-
-      showStatus(
-        'Starting CPU AI…',
-        35
-      );
-
-      state.pipeline =
-        await pipeline(
-          'image-segmentation',
-          MODEL_ID,
-          {
-            ...baseOptions,
-            device: 'wasm',
-            dtype: 'q8'
-          }
-        );
-
-    } catch (wasmQuantizedError) {
-
-      console.warn(
-        'Quantized WASM model failed; retrying default WASM.',
-        wasmQuantizedError
-      );
-
-      state.pipeline =
-        await pipeline(
-          'image-segmentation',
-          MODEL_ID,
-          {
-            ...baseOptions,
-            device: 'wasm'
-          }
-        );
-
-    }
-
-    state.modelReady =
-      true;
-
-    return state.pipeline;
-
-  } catch (error) {
-
-    state.pipeline =
-      null;
-
-    state.modelReady =
-      false;
-
-    console.error(
-      'Unable to initialise Transformers.js:',
-      error
-    );
-
-    throw error;
+    options.device =
+      'webgpu';
 
   }
 
+  try {
+
+    showStatus(
+      'Preparing browser AI…',
+      15
+    );
+
+    state.pipeline =
+      await pipeline(
+        'image-segmentation',
+        MODEL_ID,
+        options
+      );
+
+  } catch (webgpuError) {
+
+    /*
+     * WebGPU may not be available or
+     * may fail for a particular browser/GPU.
+     * Retry using WASM.
+     */
+
+    console.warn(
+      'WebGPU unavailable, using WASM.',
+      webgpuError
+    );
+
+    state.pipeline =
+      await pipeline(
+        'image-segmentation',
+        MODEL_ID
+      );
+
+  }
+
+  state.modelReady =
+    true;
+
+  return state.pipeline;
+
 }
+
 
 /* =====================================================
    IMAGE FOR AI
@@ -2627,12 +2397,9 @@ function createAIInput() {
 
 async function analyse() {
 
-  if (
-    !state.image ||
-    state.analysing
-  ) {
+  if (!state.image ||
+      state.analysing)
     return;
-  }
 
   state.analysing =
     true;
@@ -2647,23 +2414,15 @@ async function analyse() {
 
     showStatus(
       'Analysing your image…',
-      45
+      30
     );
 
     const input =
       createAIInput();
 
-    /*
-     * The segmentation pipeline accepts an HTMLCanvasElement
-     * directly. No upload to a 1234Tools server is performed.
-     */
     const results =
       await segmenter(
-        input,
-        {
-          threshold: 0.45,
-          mask_threshold: 0.5
-        }
+        input
       );
 
     showStatus(
@@ -2686,44 +2445,22 @@ async function analyse() {
 
     saveHistory();
 
-    if (state.objects.length) {
-
-      showStatus(
-        state.objects.length +
-        ' object' +
-        (
-          state.objects.length === 1
-            ? ''
-            : 's'
-        ) +
-        ' detected.',
-        100
-      );
-
-    } else {
-
-      showStatus(
-        'No supported objects were detected. Try another image.',
-        100
-      );
-
-    }
+    showStatus(
+      state.objects.length +
+      ' object' +
+      (state.objects.length === 1 ? '' : 's') +
+      ' detected.',
+      100
+    );
 
     setTimeout(
       hideStatus,
-      1800
+      1400
     );
 
   } catch (error) {
 
-    console.error(
-      'AI analysis failed:',
-      error
-    );
-
-    const message =
-      error?.message ||
-      String(error);
+    console.error(error);
 
     showStatus(
       'AI analysis failed.',
@@ -2731,11 +2468,8 @@ async function analyse() {
     );
 
     statusText.innerHTML =
-      'AI analysis failed. ' +
-      '<button id="retryAI" class="ai-btn">Retry</button>' +
-      '<div style="margin-top:6px;font-size:11px;opacity:.75;word-break:break-word;">' +
-      escapeHTML(message) +
-      '</div>';
+      'AI analysis could not be completed. ' +
+      '<button id="retryAI" class="ai-btn">Retry</button>';
 
     const retry =
       $('retryAI');
@@ -2743,17 +2477,7 @@ async function analyse() {
     if (retry) {
 
       retry.onclick =
-        () => {
-
-          state.pipeline =
-            null;
-
-          state.modelReady =
-            false;
-
-          analyse();
-
-        };
+        analyse;
 
     }
 
@@ -2768,6 +2492,7 @@ async function analyse() {
   }
 
 }
+
 
 /* =====================================================
    NORMALISE AI OUTPUT
