@@ -1,0 +1,42 @@
+{
+  "id": "/pdf/pdf-redaction.html",
+  "name": "PDF Redaction Tool — 1234Tools",
+  "short_name": "PDF Redaction Tool",
+  "description": "Securely remove sensitive information from PDFs by permanently covering content.",
+  "start_url": "/pdf/pdf-redaction.html?src=pwa",
+  "scope": "/pdf/pdf-redaction.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-pdf-redaction.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-pdf-redaction-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-pdf-redaction-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

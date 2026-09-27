@@ -1,0 +1,42 @@
+{
+  "id": "/pdf/pdf-ocr.html",
+  "name": "PDF OCR Tool — 1234Tools",
+  "short_name": "PDF OCR Tool",
+  "description": "Extract text from scanned PDFs using optical character recognition, entirely in your browser.",
+  "start_url": "/pdf/pdf-ocr.html?src=pwa",
+  "scope": "/pdf/pdf-ocr.html",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-pdf-ocr.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-pdf-ocr-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-pdf-ocr-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
