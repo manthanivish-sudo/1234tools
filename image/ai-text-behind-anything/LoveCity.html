@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+<title>Text Behind Person - 1234tools.com</title>
+
+<meta
+    name="description"
+    content="Put text behind people in photos using AI directly in your browser. Free, private and no image upload.">
+
+<style>
+/* =========================================================
+   RESET
+   ========================================================= */
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+    margin: 0;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #f3f4f6;
+    color: #111827;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+.site-header { background: #111827; color: #ffffff; padding: 22px 20px; }
+.header-inner { max-width: 1250px; margin: auto; }
+.brand { font-size: 14px; font-weight: 700; letter-spacing: 0.04em; opacity: 0.75; margin-bottom: 5px; }
+.site-header h1 { margin: 0; font-size: clamp(24px, 4vw, 34px); line-height: 1.15; }
+.site-header p { margin: 8px 0 0; color: #d1d5db; font-size: 15px; }
+.privacy-badge {
+    display: inline-flex; align-items: center; gap: 7px; margin-top: 14px;
+    padding: 7px 12px; border-radius: 999px; background: rgba(255,255,255,0.10);
+    color: #e5e7eb; font-size: 12px;
+}
+
+/* =========================================================
+   MAIN & PANELS
+   ========================================================= */
+.container { width: min(1250px, calc(100% - 30px)); margin: 22px auto 50px; }
+.app-grid { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.panel { background: #ffffff; border-radius: 14px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.05), 0 10px 30px rgba(0,0,0,0.04); }
+.panel-title { margin: 0 0 16px; font-size: 18px; font-weight: 700; }
+.section-divider { border-top: 1px solid #e5e7eb; margin: 20px 0; padding-top: 15px; font-weight: 600; font-size: 14px; color: #4b5563; }
+
+/* =========================================================
+   CONTROLS
+   ========================================================= */
+.control { margin-bottom: 17px; }
+.control:last-child { margin-bottom: 0; }
+.control-label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 700; color: #374151; }
+input[type="text"], select {
+    width: 100%; height: 42px; padding: 0 11px; border: 1px solid #d1d5db;
+    border-radius: 8px; background: #ffffff; color: #111827; font-size: 14px; outline: none;
+}
+input[type="text"]:focus, select:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,0.12); }
+
+/* =========================================================
+   FILE UPLOAD
+   ========================================================= */
+.upload-area {
+    position: relative; display: block; padding: 20px 12px; border: 2px dashed #cbd5e1;
+    border-radius: 10px; background: #f8fafc; text-align: center; cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+.upload-area:hover { border-color: #818cf8; background: #f5f7ff; }
+.upload-icon { font-size: 30px; margin-bottom: 5px; }
+.upload-main { display: block; font-weight: 700; color: #111827; }
+.upload-sub { display: block; margin-top: 4px; font-size: 11px; color: #64748b; }
+.upload-area input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+
+/* =========================================================
+   RANGES & COLORS
+   ========================================================= */
+.range-row { display: grid; grid-template-columns: 1fr 52px; gap: 9px; align-items: center; }
+input[type="range"] { width: 100%; accent-color: #4f46e5; cursor: pointer; }
+.range-value { height: 30px; display: flex; align-items: center; justify-content: center; border: 1px solid #e5e7eb; border-radius: 6px; background: #f9fafb; color: #4b5563; font-size: 11px; }
+.color-row { display: flex; align-items: center; gap: 10px; }
+input[type="color"] { width: 52px; height: 38px; padding: 2px; border: 1px solid #d1d5db; border-radius: 7px; background: #ffffff; cursor: pointer; }
+
+/* =========================================================
+   CHECKBOX
+   ========================================================= */
+.checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.checkbox-row input { width: 17px; height: 17px; accent-color: #4f46e5; }
+.checkbox-row label { font-size: 13px; color: #374151; cursor: pointer; }
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+.button-group { display: grid; gap: 9px; margin-top: 20px; }
+button { min-height: 43px; border: 0; border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: 700; cursor: pointer; transition: transform 0.05s, opacity 0.15s, background 0.15s; }
+button:active { transform: translateY(1px); }
+button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.btn-primary { background: #111827; color: #ffffff; }
+.btn-primary:hover:not(:disabled) { background: #1f2937; }
+.btn-success { background: #15803d; color: #ffffff; }
+.btn-success:hover:not(:disabled) { background: #166534; }
+.btn-video { background: #991b1b; color: #ffffff; }
+.btn-video:hover:not(:disabled) { background: #7f1d1d; }
+.btn-video.recording { animation: pulse 1s infinite alternate; }
+.btn-secondary { background: #e5e7eb; color: #111827; }
+.btn-secondary:hover:not(:disabled) { background: #d1d5db; }
+
+@keyframes pulse {
+    from { background-color: #991b1b; }
+    to { background-color: #ef4444; }
+}
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+.status { margin-top: 15px; padding: 11px; border-radius: 8px; background: #f1f5f9; color: #475569; font-size: 12px; line-height: 1.5; }
+.status.success { background: #ecfdf5; color: #166534; }
+.status.error { background: #fef2f2; color: #991b1b; }
+.status.info { background: #eff6ff; color: #1e40af; }
+.privacy-info { margin-top: 14px; padding: 11px; border-radius: 8px; background: #fafafa; color: #64748b; font-size: 11px; line-height: 1.55; }
+
+/* =========================================================
+   CANVAS AREA
+   ========================================================= */
+.preview-panel { min-width: 0; }
+.canvas-container {
+    position: relative; min-height: 620px; display: flex; justify-content: center; align-items: center;
+    overflow: auto; padding: 20px; border-radius: 10px;
+    background: repeating-conic-gradient(#e5e7eb 0% 25%, #ffffff 0% 50%) 50% / 20px 20px;
+}
+.canvas-container canvas { display: block; max-width: 100%; height: auto; box-shadow: 0 8px 35px rgba(0,0,0,0.25); cursor: move; touch-action: none; user-select: none; }
+.empty-preview { text-align: center; color: #64748b; padding: 50px 20px; pointer-events: none; }
+.empty-preview-icon { font-size: 56px; margin-bottom: 10px; }
+.empty-preview strong { display: block; color: #334155; font-size: 16px; margin-bottom: 5px; }
+.empty-preview span { font-size: 13px; }
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+.loading-overlay { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(15,23,42,0.72); }
+.loading-overlay.visible { display: flex; }
+.loading-box { width: min(420px, 100%); padding: 26px; border-radius: 14px; background: #111827; color: #ffffff; text-align: center; box-shadow: 0 25px 70px rgba(0,0,0,0.35); }
+.spinner { width: 42px; height: 42px; margin: 0 auto 15px; border: 4px solid rgba(255,255,255,0.20); border-top-color: #ffffff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.loading-title { font-weight: 700; margin-bottom: 6px; }
+.loading-message { color: #cbd5e1; font-size: 12px; line-height: 1.5; }
+
+footer { margin-top: 25px; text-align: center; color: #64748b; font-size: 12px; }
+
+@media (max-width: 850px) {
+    .container { width: min(100% - 20px, 700px); margin-top: 12px; }
+    .app-grid { grid-template-columns: 1fr; }
+    .canvas-container { min-height: 400px; padding: 10px; }
+}
+</style>
+</head>
+
+<body>
+
+<header class="site-header">
+    <div class="header-inner">
+        <div class="brand">1234TOOLS.COM</div>
+        <h1>Text Behind Person</h1>
+        <p>Put animated text behind people in your photos using AI.</p>
+        <div class="privacy-badge">🔒 Your photo stays on your device</div>
+    </div>
+</header>
+
+<main class="container">
+    <div class="app-grid">
+
+        <!-- CONTROLS -->
+        <section class="panel">
+            <h2 class="panel-title">Edit</h2>
+
+            <div class="control">
+                <span class="control-label">Photo</span>
+                <label class="upload-area" for="imageInput">
+                    <span class="upload-icon">📷</span>
+                    <span class="upload-main">Choose an image</span>
+                    <span class="upload-sub">JPG, PNG or WebP · max 25 MB</span>
+                    <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp">
+                </label>
+            </div>
+
+            <!-- TEXT (EMOJIS SUPPORTED) -->
+            <div class="control">
+                <label class="control-label" for="textInput">Text (Emojis Supported ❤️)</label>
+                <!-- Default set to an emoji to demonstrate the "I LOVE CITY" functionality natively -->
+                <input id="textInput" type="text" value="I ❤️ CITY" maxlength="100" autocomplete="off" spellcheck="false">
+            </div>
+
+            <div class="control">
+                <label class="control-label" for="fontSelect">Font</label>
+                <select id="fontSelect">
+                    <option value="Arial" selected>Arial</option>
+                    <option value="Impact">Impact</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Trebuchet MS">Trebuchet MS</option>
+                </select>
+            </div>
+
+            <div class="control">
+                <label class="control-label">Font size</label>
+                <div class="range-row">
+                    <input id="fontSize" type="range" min="20" max="1000" value="180">
+                    <span class="range-value" id="fontSizeValue">180</span>
+                </div>
+            </div>
+
+            <!-- ENHANCED STYLING: GRADIENTS & COLORS -->
+            <div class="control">
+                <label class="control-label">Text Colors (Solid or Gradient)</label>
+                <div class="color-row">
+                    <input id="textColor1" type="color" value="#ffffff" title="Primary Color">
+                    <input id="textColor2" type="color" value="#ffaaaa" title="Gradient Secondary Color">
+                    <div class="checkbox-row" style="margin-bottom:0;">
+                        <input id="useGradient" type="checkbox">
+                        <label for="useGradient">Gradient</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TEXT EFFECTS -->
+            <div class="control">
+                <div class="checkbox-row">
+                    <input id="bold" type="checkbox" checked>
+                    <label for="bold">Bold text</label>
+                </div>
+                <div class="checkbox-row">
+                    <input id="stroke" type="checkbox" checked>
+                    <label for="stroke">Text outline (Stroke)</label>
+                </div>
+                <div class="checkbox-row">
+                    <input id="shadow" type="checkbox" checked>
+                    <label for="shadow">Text shadow</label>
+                </div>
+            </div>
+
+            <div class="control">
+                <label class="control-label">Text opacity</label>
+                <div class="range-row">
+                    <input id="textOpacity" type="range" min="10" max="100" value="100">
+                    <span class="range-value" id="opacityValue">100%</span>
+                </div>
+            </div>
+
+            <div class="control">
+                <label class="control-label">Horizontal / Vertical position</label>
+                <div class="range-row" style="margin-bottom: 5px;">
+                    <input id="textX" type="range" min="0" max="100" value="50">
+                    <span class="range-value" id="textXValue">50%</span>
+                </div>
+                <div class="range-row">
+                    <input id="textY" type="range" min="0" max="100" value="50">
+                    <span class="range-value" id="textYValue">50%</span>
+                </div>
+            </div>
+
+            <!-- ANIMATION SECTION -->
+            <div class="section-divider">Animation & Video</div>
+            <div class="control">
+                <div class="checkbox-row">
+                    <input id="animateText" type="checkbox">
+                    <label for="animateText">Scrolling Text (Auto Animate)</label>
+                </div>
+            </div>
+            <div class="control" id="speedControlContainer" style="opacity: 0.5; pointer-events: none;">
+                <label class="control-label">Scroll Speed</label>
+                <div class="range-row">
+                    <input id="scrollSpeed" type="range" min="1" max="20" value="5">
+                    <span class="range-value" id="scrollSpeedValue">5</span>
+                </div>
+            </div>
+
+            <!-- BUTTONS -->
+            <div class="button-group">
+                <button id="processButton" class="btn-primary" type="button" disabled>
+                    ✨ Detect Person & Create
+                </button>
+                <button id="downloadButton" class="btn-success" type="button" disabled>
+                    ⬇ Download PNG
+                </button>
+                <button id="recordVideoButton" class="btn-video" type="button" disabled>
+                    🎥 Record 4s Video (WebM)
+                </button>
+                <button id="resetButton" class="btn-secondary" type="button">
+                    Reset
+                </button>
+            </div>
+
+            <div id="status" class="status">Select a photo to begin.</div>
+            <div class="privacy-info">
+                <strong>Privacy:</strong> Image processing happens locally in your browser. The selected photograph is not uploaded to 1234tools.com.
+            </div>
+        </section>
+
+        <!-- PREVIEW -->
+        <section class="panel preview-panel">
+            <h2 class="panel-title">Preview</h2>
+            <div id="canvasContainer" class="canvas-container">
+                <div id="emptyPreview" class="empty-preview">
+                    <div class="empty-preview-icon">🖼️</div>
+                    <strong>Upload a photo</strong>
+                    <span>Your finished image will appear here.</span>
+                </div>
+                <canvas id="canvas" aria-label="Edited image preview" style="display:none;"></canvas>
+            </div>
+        </section>
+
+    </div>
+    <footer>1234tools.com · Browser-based image & video editing · Your image stays on your device</footer>
+</main>
+
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay" class="loading-overlay" role="dialog" aria-modal="true" aria-live="polite">
+    <div class="loading-box">
+        <div class="spinner"></div>
+        <div id="loadingTitle" class="loading-title">Loading AI</div>
+        <div id="loadingMessage" class="loading-message">Please wait...</div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.2.0/dist/body-pix.min.js"></script>
+
+<script>
+const CONFIG = {
+    MAX_WORKING_DIMENSION: 4096,
+    MAX_FILE_SIZE: 25 * 1024 * 1024,
+    BODYPIX: { architecture: "MobileNetV1", outputStride: 16, multiplier: 0.75, quantBytes: 2 },
+    SEGMENTATION_THRESHOLD: 0.70,
+    MASK_FEATHER_PX: 0.8
+};
+
+const state = {
+    model: null,
+    originalImage: null,
+    personCanvas: null,
+    textDragging: false,
+    renderQueued: false,
+    busy: false,
+    // Animation specific variables
+    scrollOffsetX: 0,
+    isAnimating: false,
+    lastTime: 0,
+    animFrameId: null
+};
+
+const $ = id => document.getElementById(id);
+const imageInput = $("imageInput");
+const canvas = $("canvas");
+const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
+const emptyPreview = $("emptyPreview");
+const processButton = $("processButton");
+const downloadButton = $("downloadButton");
+const recordVideoButton = $("recordVideoButton");
+const resetButton = $("resetButton");
+const statusElement = $("status");
+
+const textInput = $("textInput");
+const fontSelect = $("fontSelect");
+const fontSize = $("fontSize");
+const textColor1 = $("textColor1");
+const textColor2 = $("textColor2");
+const useGradient = $("useGradient");
+const textOpacity = $("textOpacity");
+const textX = $("textX");
+const textY = $("textY");
+const bold = $("bold");
+const stroke = $("stroke");
+const shadow = $("shadow");
+
+const animateText = $("animateText");
+const scrollSpeed = $("scrollSpeed");
+const speedControlContainer = $("speedControlContainer");
+
+function setStatus(message, type = "normal") {
+    statusElement.textContent = message;
+    statusElement.className = "status " + (type !== "normal" ? type : "");
+}
+
+function showLoading(title, message) {
+    $("loadingTitle").textContent = title;
+    $("loadingMessage").textContent = message;
+    $("loadingOverlay").classList.add("visible");
+}
+function hideLoading() { $("loadingOverlay").classList.remove("visible"); }
+
+async function decodeImage(file) {
+    const url = URL.createObjectURL(file);
+    try {
+        const image = await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error("Unable to decode image."));
+            img.src = url;
+        });
+        return image;
+    } finally {
+        URL.revokeObjectURL(url);
+    }
+}
+
+function calculateWorkingDimensions(width, height) {
+    const maxDimension = Math.max(width, height);
+    if (maxDimension <= CONFIG.MAX_WORKING_DIMENSION) return { width, height, scale: 1 };
+    const scale = CONFIG.MAX_WORKING_DIMENSION / maxDimension;
+    return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)), scale };
+}
+
+function createWorkingImageCanvas(image) {
+    const dims = calculateWorkingDimensions(image.width || image.naturalWidth, image.height || image.naturalHeight);
+    const wc = document.createElement("canvas");
+    wc.width = dims.width; wc.height = dims.height;
+    const wCtx = wc.getContext("2d");
+    wCtx.imageSmoothingEnabled = true; wCtx.imageSmoothingQuality = "high";
+    wCtx.drawImage(image, 0, 0, dims.width, dims.height);
+    return { canvas: wc, width: dims.width, height: dims.height };
+}
+
+async function getModel() {
+    if (state.model) return state.model;
+    showLoading("Loading AI model", "The first load can take a little longer.");
+    try {
+        await tf.ready();
+        try { await tf.setBackend("webgl"); await tf.ready(); } catch (e) {}
+        state.model = await bodyPix.load(CONFIG.BODYPIX);
+        return state.model;
+    } finally { hideLoading(); }
+}
+
+async function createPersonForeground(workingCanvas) {
+    const model = await getModel();
+    showLoading("Detecting person", "Analysing locally...");
+    try {
+        const segmentation = await model.segmentPerson(workingCanvas, { internalResolution: "medium", segmentationThreshold: CONFIG.SEGMENTATION_THRESHOLD });
+        
+        const maskCanvas = document.createElement("canvas");
+        maskCanvas.width = segmentation.width; maskCanvas.height = segmentation.height;
+        const maskCtx = maskCanvas.getContext("2d");
+        const maskImageData = maskCtx.createImageData(maskCanvas.width, maskCanvas.height);
+        
+        for (let i = 0; i < segmentation.data.length; i++) {
+            const offset = i * 4;
+            maskImageData.data[offset] = 255; maskImageData.data[offset+1] = 255; maskImageData.data[offset+2] = 255;
+            maskImageData.data[offset+3] = segmentation.data[i] ? 255 : 0;
+        }
+        maskCtx.putImageData(maskImageData, 0, 0);
+
+        const personCanvas = document.createElement("canvas");
+        personCanvas.width = workingCanvas.width; personCanvas.height = workingCanvas.height;
+        const personCtx = personCanvas.getContext("2d");
+        personCtx.drawImage(workingCanvas, 0, 0);
+        
+        personCtx.globalCompositeOperation = "destination-in";
+        if (CONFIG.MASK_FEATHER_PX > 0) personCtx.filter = `blur(${CONFIG.MASK_FEATHER_PX}px)`;
+        personCtx.drawImage(maskCanvas, 0, 0, workingCanvas.width, workingCanvas.height);
+        personCtx.filter = "none";
+        personCtx.globalCompositeOperation = "source-over";
+        
+        state.personCanvas = personCanvas;
+    } finally {
+        hideLoading();
+    }
+}
+
+function drawText() {
+    const text = textInput.value.trim();
+    if (!text) return;
+
+    const size = Number(fontSize.value);
+    const baseX = canvas.width * Number(textX.value) / 100;
+    const y = canvas.height * Number(textY.value) / 100;
+    const opacity = Number(textOpacity.value) / 100;
+    const weight = bold.checked ? "700" : "400";
+
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    
+    // Add animation offset if scrolling is enabled
+    const animatedX = state.isAnimating ? baseX + state.scrollOffsetX : baseX;
+    ctx.translate(animatedX, y);
+    ctx.font = `${weight} ${size}px "${fontSelect.value}"`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    if (shadow.checked) {
+        ctx.shadowColor = "rgba(0,0,0,0.55)";
+        ctx.shadowBlur = Math.max(2, size * 0.035);
+        ctx.shadowOffsetX = size * 0.015;
+        ctx.shadowOffsetY = size * 0.015;
+    } else {
+        ctx.shadowColor = "transparent";
+    }
+
+    // Determine Color / Gradient
+    if (useGradient.checked) {
+        let metrics = ctx.measureText(text);
+        let grad = ctx.createLinearGradient(-metrics.width/2, 0, metrics.width/2, 0);
+        grad.addColorStop(0, textColor1.value);
+        grad.addColorStop(1, textColor2.value);
+        ctx.fillStyle = grad;
+    } else {
+        ctx.fillStyle = textColor1.value;
+    }
+
+    ctx.fillText(text, 0, 0);
+
+    // Apply Stroke / Outline for better visibility
+    if (stroke.checked) {
+        ctx.lineWidth = Math.max(2, size * 0.04);
+        ctx.strokeStyle = "#000000";
+        ctx.strokeText(text, 0, 0);
+    }
+    
+    ctx.restore();
+}
+
+function render() {
+    if (!state.originalImage) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 1. Draw Background Original Image
+    ctx.drawImage(state.originalImage, 0, 0, canvas.width, canvas.height);
+    
+    if (!state.personCanvas) return;
+    
+    // 2. Draw Text Layer behind person
+    drawText();
+    
+    // 3. Draw Person Foreground Layer
+    ctx.drawImage(state.personCanvas, 0, 0);
+}
+
+function scheduleRender() {
+    if (state.renderQueued || state.isAnimating) return; 
+    state.renderQueued = true;
+    requestAnimationFrame(() => { state.renderQueued = false; render(); });
+}
+
+/* =========================================================
+   ANIMATION LOOP
+   ========================================================= */
+function startAnimationLoop() {
+    state.lastTime = performance.now();
+    
+    function loop(currentTime) {
+        if (!state.isAnimating) return;
+        
+        const deltaTime = currentTime - state.lastTime;
+        state.lastTime = currentTime;
+        
+        // Calculate speed offset
+        const speed = Number(scrollSpeed.value) * 2; 
+        state.scrollOffsetX -= speed * (deltaTime / 16); 
+        
+        // Reset scroll when it goes off screen left
+        const textW = ctx.measureText(textInput.value).width;
+        if (state.scrollOffsetX < -canvas.width - textW) {
+            state.scrollOffsetX = canvas.width + textW;
+        }
+
+        render();
+        state.animFrameId = requestAnimationFrame(loop);
+    }
+    state.animFrameId = requestAnimationFrame(loop);
+}
+
+animateText.addEventListener("change", (e) => {
+    state.isAnimating = e.target.checked;
+    if (state.isAnimating) {
+        speedControlContainer.style.opacity = "1";
+        speedControlContainer.style.pointerEvents = "auto";
+        state.scrollOffsetX = 0; // Reset offset on start
+        startAnimationLoop();
+    } else {
+        speedControlContainer.style.opacity = "0.5";
+        speedControlContainer.style.pointerEvents = "none";
+        state.scrollOffsetX = 0;
+        cancelAnimationFrame(state.animFrameId);
+        scheduleRender(); // Force final static render
+    }
+});
+
+/* =========================================================
+   VIDEO RECORDING (WebM)
+   ========================================================= */
+recordVideoButton.addEventListener("click", async () => {
+    if (!state.personCanvas) return;
+
+    recordVideoButton.disabled = true;
+    recordVideoButton.classList.add("recording");
+    recordVideoButton.textContent = "🔴 Recording...";
+    setStatus("Recording a 4-second video...", "info");
+    
+    // If animation isn't checked, quickly toggle it internally to give movement for video
+    const wasAnimating = state.isAnimating;
+    if (!wasAnimating) {
+        state.isAnimating = true;
+        startAnimationLoop();
+    }
+
+    try {
+        // Capture stream at 30 fps
+        const stream = canvas.captureStream(30);
+        let mimeType = 'video/webm';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/mp4'; // Safari fallback
+        }
+        
+        const recorder = new MediaRecorder(stream, { mimeType });
+        const chunks = [];
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        
+        recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = mimeType === 'video/mp4' ? "1234tools-video.mp4" : "1234tools-video.webm";
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            recordVideoButton.disabled = false;
+            recordVideoButton.classList.remove("recording");
+            recordVideoButton.textContent = "🎥 Record 4s Video (WebM)";
+            setStatus("Video downloaded successfully!", "success");
+            
+            // Revert animation state if we auto-started it
+            if (!wasAnimating) {
+                state.isAnimating = false;
+                cancelAnimationFrame(state.animFrameId);
+                state.scrollOffsetX = 0;
+                scheduleRender();
+            }
+        };
+
+        recorder.start();
+        // Record for 4000ms (4 seconds)
+        setTimeout(() => recorder.stop(), 4000);
+        
+    } catch (err) {
+        console.error(err);
+        setStatus("Could not record video. Your browser may not support it.", "error");
+        recordVideoButton.disabled = false;
+        recordVideoButton.classList.remove("recording");
+    }
+});
+
+/* =========================================================
+   EVENTS
+   ========================================================= */
+imageInput.addEventListener("change", async event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > CONFIG.MAX_FILE_SIZE) return setStatus("Image too large (max 25MB).", "error");
+    
+    state.busy = true; processButton.disabled = true; downloadButton.disabled = true; recordVideoButton.disabled = true;
+    try {
+        setStatus("Reading your image locally...", "info");
+        const decoded = await decodeImage(file);
+        const working = createWorkingImageCanvas(decoded);
+        
+        state.originalImage = working.canvas;
+        state.personCanvas = null;
+        
+        canvas.width = working.width; canvas.height = working.height;
+        ctx.drawImage(working.canvas, 0, 0);
+        canvas.style.display = "block"; emptyPreview.style.display = "none";
+        
+        updateLabels();
+        processButton.disabled = false;
+        setStatus(`Image loaded. Click "Detect Person & Create".`, "success");
+    } catch (e) { setStatus("Unable to read image.", "error"); }
+    finally { state.busy = false; }
+});
+
+processButton.addEventListener("click", async () => {
+    if (state.busy || !state.originalImage) return;
+    state.busy = true; processButton.disabled = true; downloadButton.disabled = true; recordVideoButton.disabled = true;
+    try {
+        setStatus("Preparing AI person detection...", "info");
+        await createPersonForeground(state.originalImage);
+        render();
+        downloadButton.disabled = false; recordVideoButton.disabled = false;
+        setStatus("Done. Move the text or adjust the controls.", "success");
+    } catch (e) { setStatus(e.message || "Error detecting person.", "error"); }
+    finally { state.busy = false; processButton.disabled = false; }
+});
+
+downloadButton.addEventListener("click", () => {
+    if (!state.personCanvas) return;
+    render();
+    canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "1234tools-text.png"; a.click();
+        URL.revokeObjectURL(url);
+    }, "image/png");
+});
+
+function getCanvasPoint(event) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (event.clientX - rect.left) * (canvas.width / rect.width),
+        y: (event.clientY - rect.top) * (canvas.height / rect.height)
+    };
+}
+
+canvas.addEventListener("pointerdown", e => {
+    if (!state.personCanvas || state.isAnimating) return; // Disable drag during animation
+    state.textDragging = true;
+    canvas.setPointerCapture(e.pointerId);
+    updateTextPositionFromPoint(getCanvasPoint(e));
+});
+canvas.addEventListener("pointermove", e => { if (state.textDragging) updateTextPositionFromPoint(getCanvasPoint(e)); });
+const stopDragging = e => { state.textDragging = false; try { canvas.releasePointerCapture(e.pointerId); } catch(e){} };
+canvas.addEventListener("pointerup", stopDragging);
+canvas.addEventListener("pointercancel", stopDragging);
+
+function updateTextPositionFromPoint(p) {
+    textX.value = String(Math.round(Math.max(0, Math.min(100, p.x / canvas.width * 100))));
+    textY.value = String(Math.round(Math.max(0, Math.min(100, p.y / canvas.height * 100))));
+    updateLabels(); scheduleRender();
+}
+
+function updateLabels() {
+    $("fontSizeValue").textContent = fontSize.value;
+    $("opacityValue").textContent = `${textOpacity.value}%`;
+    $("textXValue").textContent = `${textX.value}%`;
+    $("textYValue").textContent = `${textY.value}%`;
+    $("scrollSpeedValue").textContent = scrollSpeed.value;
+}
+
+[fontSize, textOpacity, textX, textY, scrollSpeed].forEach(el => el.addEventListener("input", () => { updateLabels(); scheduleRender(); }));
+[textInput, fontSelect, textColor1, textColor2, useGradient, bold, stroke, shadow].forEach(el => el.addEventListener("input", scheduleRender));
+
+resetButton.addEventListener("click", () => {
+    state.originalImage = null; state.personCanvas = null; imageInput.value = "";
+    canvas.style.display = "none"; emptyPreview.style.display = "block";
+    processButton.disabled = true; downloadButton.disabled = true; recordVideoButton.disabled = true;
+    
+    if (state.isAnimating) { animateText.click(); }
+    
+    setStatus("Select a photo to begin.");
+});
+
+updateLabels();
+</script>
+</body>
+</html>
