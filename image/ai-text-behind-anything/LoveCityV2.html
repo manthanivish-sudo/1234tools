@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Text Behind Object & Person Studio</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Cinzel:wght@700;900&family=Impact&family=Inter:wght@400;600;700;900&family=Montserrat:wght@400;700;900&family=Orbitron:wght@700;900&family=Oswald:wght@600;700&family=Pacifico&family=Playfair+Display:ital,wght@0,700;1,700&family=Poppins:wght@600;800;900&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- TensorFlow.js & COCO-SSD Object Detection -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+
+  <!-- GIF Encoder Library -->
+  <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.min.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --panel-bg: rgba(30, 41, 59, 0.85);
+      --panel-border: rgba(255, 255, 255, 0.1);
+      --accent-primary: #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-secondary: #ec4899;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header */
+    header {
+      height: 60px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 10;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 1.1rem;
+      background: linear-gradient(135deg, #a855f7, #6366f1, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .badge {
+      background: rgba(99, 102, 241, 0.2);
+      color: #818cf8;
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border: 1px solid var(--panel-border);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      border: none;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-primary:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+
+    /* Main Layout */
+    .app-container {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 60px);
+    }
+
+    /* Sidebar Controls */
+    .sidebar {
+      width: 380px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      border-right: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      z-index: 5;
+    }
+
+    .tabs {
+      display: flex;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 14px 8px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: var(--text-main);
+      border-bottom: 2px solid var(--accent-primary);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .tab-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Control Groups */
+    .control-group {
+      margin-bottom: 20px;
+    }
+
+    .control-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .input-text, .select-input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--panel-border);
+      color: var(--text-main);
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-text:focus, .select-input:focus {
+      border-color: var(--accent-primary);
+    }
+
+    .range-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .range-input {
+      flex: 1;
+      accent-color: var(--accent-primary);
+    }
+
+    .range-value {
+      width: 45px;
+      text-align: right;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* Object Detection Chips */
+    .chips-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .chip {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--panel-border);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .chip.active {
+      background: rgba(99, 102, 241, 0.25);
+      border-color: var(--accent-primary);
+      color: #a5b4fc;
+    }
+
+    .chip:hover {
+      border-color: var(--accent-primary);
+    }
+
+    /* Dropzone */
+    .dropzone {
+      border: 2px dashed var(--panel-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      background: rgba(0, 0, 0, 0.15);
+      transition: all 0.2s;
+    }
+
+    .dropzone:hover {
+      border-color: var(--accent-primary);
+      background: rgba(99, 102, 241, 0.05);
+    }
+
+    /* Color Grid */
+    .color-picker-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .color-swatch {
+      width: 100%;
+      height: 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.15s;
+    }
+
+    .color-swatch:hover {
+      transform: scale(1.1);
+    }
+
+    .color-swatch.active {
+      border-color: #ffffff;
+    }
+
+    /* Canvas Stage Area */
+    .stage-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #090d16;
+      position: relative;
+      overflow: hidden;
+      padding: 20px;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      border-radius: 8px;
+      overflow: hidden;
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    #mainCanvas {
+      display: block;
+      background: #000;
+      cursor: crosshair;
+    }
+
+    .stage-toolbar {
+      position: absolute;
+      bottom: 24px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      padding: 8px 16px;
+      border-radius: 30px;
+      border: 1px solid var(--panel-border);
+      display: flex;
+      gap: 16px;
+      z-index: 10;
+    }
+
+    .tool-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 6px;
+      border-radius: 50%;
+      transition: color 0.2s;
+    }
+
+    .tool-btn:hover, .tool-btn.active {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Progress Overlay */
+    .progress-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .progress-modal.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .progress-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      padding: 32px;
+      border-radius: 16px;
+      width: 360px;
+      text-align: center;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      margin: 20px 0 10px 0;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+      transition: width 0.1s linear;
+    }
+
+    /* Option Radio Buttons */
+    .radio-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .radio-btn {
+      flex: 1;
+      text-align: center;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .radio-btn.active {
+      background: rgba(99, 102, 241, 0.2);
+      border-color: var(--accent-primary);
+      color: #a5b4fc;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <i class="fa-solid fa-layer-group"></i>
+      <span>Text Depth Studio</span>
+      <span class="badge">AI Object Detection • MP4/GIF</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn" id="btnSamples"><i class="fa-solid fa-images"></i> Sample Images</button>
+      <button class="btn" id="btnReset"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+      <button class="btn btn-primary" id="btnExportModal"><i class="fa-solid fa-download"></i> Export High Quality</button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="tab-objects">
+          <i class="fa-solid fa-bullseye"></i>
+          <span>Objects</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-text">
+          <i class="fa-solid fa-font"></i>
+          <span>Text Layer</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-animation">
+          <i class="fa-solid fa-film"></i>
+          <span>Motion</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-export">
+          <i class="fa-solid fa-sliders"></i>
+          <span>Export</span>
+        </button>
+      </div>
+
+      <!-- Tab 1: Objects & Masking -->
+      <div class="tab-content active" id="tab-objects">
+        <div class="control-group">
+          <label>Upload Image</label>
+          <div class="dropzone" id="dropzone">
+            <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: var(--accent-primary); margin-bottom: 8px;"></i>
+            <p style="font-size: 0.85rem; font-weight: 600;">Drag & Drop or Click to Browse</p>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">PNG, JPG, WebP supported</p>
+            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>Detected AI Objects</label>
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 6px;">
+            Click objects to toggle which ones text goes BEHIND:
+          </p>
+          <div class="chips-container" id="objectChips">
+            <span class="chip active" data-id="all"><i class="fa-solid fa-user-group"></i> All Foreground</span>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>Mask Feathering (Edge Softness)</label>
+          <div class="range-container">
+            <input type="range" class="range-input" id="featherSlider" min="0" max="25" value="4">
+            <span class="range-value" id="featherVal">4px</span>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>Manual Mask Refinement Brush</label>
+          <div class="radio-group" style="margin-bottom: 10px;">
+            <div class="radio-btn active" id="btnBrushMode"><i class="fa-solid fa-paint-brush"></i> Add Mask</div>
+            <div class="radio-btn" id="btnEraseMode"><i class="fa-solid fa-eraser"></i> Erase Mask</div>
+          </div>
+          <div class="range-container">
+            <input type="range" class="range-input" id="brushSizeSlider" min="5" max="100" value="30">
+            <span class="range-value" id="brushSizeVal">30px</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Text Styling -->
+      <div class="tab-content" id="tab-text">
+        <div class="control-group">
+          <label>Depth Placement</label>
+          <div class="radio-group">
+            <div class="radio-btn active" id="depthBehind"><i class="fa-solid fa-layer-group"></i> Behind Object</div>
+            <div class="radio-btn" id="depthFront"><i class="fa-solid fa-square"></i> In Front</div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>Text Content</label>
+          <input type="text" class="input-text" id="textInput" value="DESIRE">
+        </div>
+
+        <div class="control-group">
+          <label>Font Style</label>
+          <select class="select-input" id="fontFamilySelect">
+            <option value="Impact">Impact (Classic Bold)</option>
+            <option value="Bebas Neue">Bebas Neue (Poster / Story)</option>
+            <option value="Montserrat">Montserrat (Clean Modern)</option>
+            <option value="Anton">Anton (Heavy Impact)</option>
+            <option value="Cinzel">Cinzel (Luxury / Serif)</option>
+            <option value="Orbitron">Orbitron (Cyberpunk / Sci-Fi)</option>
+            <option value="Playfair Display">Playfair Display (Fashion)</option>
+            <option value="Pacifico">Pacifico (Handwritten)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label>Font Size & Spacing</label>
+          <div class="range-container" style="margin-bottom: 10px;">
+            <input type="range" class="range-input" id="fontSizeSlider" min="20" max="300" value="120">
+            <span class="range-value" id="fontSizeVal">120px</span>
+          </div>
+          <label>Letter Spacing</label>
+          <div class="range-container">
+            <input type="range" class="range-input" id="spacingSlider" min="-10" max="50" value="0">
+            <span class="range-value" id="spacingVal">0px</span>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>Text Color</label>
+          <div class="color-picker-grid" id="colorGrid">
+            <div class="color-swatch active" style="background: #ffffff;" data-color="#ffffff"></div>
+            <div class="color-swatch" style="background: #facc15;" data-color="#facc15"></div>
+            <div class="color-swatch" style="background: #ef4444;" data-color="#ef4444"></div>
+            <div class="color-swatch" style="background: #3b82f6;" data-color="#3b82f6"></div>
+            <div class="color-swatch" style="background: #10b981;" data-color="#10b981"></div>
+            <div class="color-swatch" style="background: #ec4899;" data-color="#ec4899"></div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>3D Curve & Arc</label>
+          <div class="range-container">
+            <input type="range" class="range-input" id="arcSlider" min="-100" max="100" value="0">
+            <span class="range-value" id="arcVal">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Motion & Animation -->
+      <div class="tab-content" id="tab-animation">
+        <div class="control-group">
+          <label>Motion Preset</label>
+          <select class="select-input" id="motionPresetSelect">
+            <option value="none">Static (No Animation)</option>
+            <option value="pulse">Breathing Size Pulse</option>
+            <option value="float">Floating Up & Down</option>
+            <option value="glitch">Cyberpunk Glitch & Flicker</option>
+            <option value="wave">Wave Oscillate</option>
+            <option value="shimmer">Metallic Shimmer Light</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label>Motion Speed</label>
+          <div class="range-container">
+            <input type="range" class="range-input" id="motionSpeedSlider" min="0.2" max="3.0" step="0.1" value="1.0">
+            <span class="range-value" id="motionSpeedVal">1.0x</span>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>Motion Amplitude / Distance</label>
+          <div class="range-container">
+            <input type="range" class="range-input" id="motionAmpSlider" min="0.1" max="2.0" step="0.1" value="1.0">
+            <span class="range-value" id="motionAmpVal">1.0x</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: Export Options -->
+      <div class="tab-content" id="tab-export">
+        <div class="control-group">
+          <label>Export Format</label>
+          <div class="radio-group" style="flex-wrap: wrap;">
+            <div class="radio-btn active" id="fmtMP4"><i class="fa-solid fa-video"></i> MP4 Video</div>
+            <div class="radio-btn" id="fmtGIF"><i class="fa-solid fa-file-image"></i> GIF Anim</div>
+            <div class="radio-btn" id="fmtPNG"><i class="fa-solid fa-image"></i> PNG Photo</div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>Resolution Quality</label>
+          <select class="select-input" id="exportResSelect">
+            <option value="1080">1080p Full HD (Recommended)</option>
+            <option value="720">720p HD (Faster Render)</option>
+            <option value="native">Original Native Image Size</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label>Frame Rate (FPS)</label>
+          <select class="select-input" id="exportFpsSelect">
+            <option value="30">30 FPS (Standard Smooth)</option>
+            <option value="60">60 FPS (Ultra Smooth)</option>
+            <option value="24">24 FPS (Cinematic)</option>
+            <option value="15">15 FPS (Compact GIF File)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label>Animation Loop Duration</label>
+          <div class="range-container">
+            <input type="range" class="range-input" id="exportDurationSlider" min="1" max="10" value="3">
+            <span class="range-value" id="exportDurationVal">3 Sec</span>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="btnStartExport" style="width: 100%; justify-content: center; padding: 14px; margin-top: 10px;">
+          <i class="fa-solid fa-bolt"></i> Render & Download
+        </button>
+      </div>
+    </aside>
+
+    <!-- Stage Area -->
+    <main class="stage-area">
+      <div class="canvas-wrapper">
+        <canvas id="mainCanvas"></canvas>
+      </div>
+
+      <div class="stage-toolbar">
+        <button class="tool-btn active" id="btnToggleMaskView" title="Toggle Mask Preview Overlay"><i class="fa-solid fa-eye"></i></button>
+        <button class="tool-btn" id="btnFitScreen" title="Fit to Screen"><i class="fa-solid fa-expand"></i></button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Render Progress Overlay Modal -->
+  <div class="progress-modal" id="progressModal">
+    <div class="progress-card">
+      <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2.5rem; color: var(--accent-primary); margin-bottom: 16px;"></i>
+      <h3 style="font-size: 1.1rem; font-weight: 700;" id="progressTitle">Rendering High Quality Video...</h3>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-muted);" id="progressText">Processing Frames (0%)</p>
+    </div>
+  </div>
+
+  <script>
+    // State Management
+    const state = {
+      image: null,
+      imageWidth: 800,
+      imageHeight: 600,
+      detectedObjects: [],
+      selectedObjectIds: ['all'],
+      text: "DESIRE",
+      fontFamily: "Impact",
+      fontSize: 120,
+      letterSpacing: 0,
+      color: "#ffffff",
+      arc: 0,
+      depth: "behind", // "behind" | "in_front"
+      textX: 400,
+      textY: 300,
+      isDraggingText: false,
+      dragOffsetX: 0,
+      dragOffsetY: 0,
+      feather: 4,
+      brushMode: "add", // "add" | "erase"
+      brushSize: 30,
+      isPaintingMask: false,
+      motionPreset: "none",
+      motionSpeed: 1.0,
+      motionAmp: 1.0,
+      exportFormat: "mp4", // "mp4" | "gif" | "png"
+      exportRes: "1080",
+      exportFps: 30,
+      exportDuration: 3,
+      showMaskOverlay: false,
+      cocoModel: null
+    };
+
+    // Canvas Elements
+    const mainCanvas = document.getElementById('mainCanvas');
+    const ctx = mainCanvas.getContext('2d');
+
+    // Offscreen Canvas for Masking
+    const maskCanvas = document.createElement('canvas');
+    const maskCtx = maskCanvas.getContext('2d');
+    const cutoutCanvas = document.createElement('canvas');
+    const cutoutCtx = cutoutCanvas.getContext('2d');
+
+    // Initialize TensorFlow.js Object Detection
+    async function initAI() {
+      try {
+        state.cocoModel = await cocoSsd.load();
+        console.log("COCO-SSD AI Model Loaded Successfully.");
+      } catch (err) {
+        console.warn("Could not load AI model automatically:", err);
+      }
+    }
+    initAI();
+
+    // Default Sample Image
+    function loadSampleImage() {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=80";
+      img.onload = () => {
+        setImage(img);
+      };
+    }
+
+    function setImage(img) {
+      state.image = img;
+      state.imageWidth = img.naturalWidth || img.width;
+      state.imageHeight = img.naturalHeight || img.height;
+
+      mainCanvas.width = state.imageWidth;
+      mainCanvas.height = state.imageHeight;
+      maskCanvas.width = state.imageWidth;
+      maskCanvas.height = state.imageHeight;
+      cutoutCanvas.width = state.imageWidth;
+      cutoutCanvas.height = state.imageHeight;
+
+      state.textX = state.imageWidth / 2;
+      state.textY = state.imageHeight / 2;
+
+      runObjectDetection();
+      generateDefaultMask();
+      render();
+    }
+
+    // AI Object Detection Function
+    async function runObjectDetection() {
+      if (!state.cocoModel || !state.image) {
+        return;
+      }
+      try {
+        const predictions = await state.cocoModel.detect(state.image);
+        state.detectedObjects = predictions;
+        renderObjectChips();
+      } catch (err) {
+        console.error("Detection error:", err);
+      }
+    }
+
+    function renderObjectChips() {
+      const container = document.getElementById('objectChips');
+      container.innerHTML = `<span class="chip ${state.selectedObjectIds.includes('all') ? 'active' : ''}" data-id="all"><i class="fa-solid fa-user-group"></i> All Foreground</span>`;
+
+      state.detectedObjects.forEach((obj, idx) => {
+        const id = `obj_${idx}`;
+        const isSel = state.selectedObjectIds.includes(id);
+        const chip = document.createElement('span');
+        chip.className = `chip ${isSel ? 'active' : ''}`;
+        chip.dataset.id = id;
+        chip.innerHTML = `<i class="fa-solid fa-cube"></i> ${obj.class} (${Math.round(obj.score * 100)}%)`;
+        chip.addEventListener('click', () => toggleObjectSelection(id));
+        container.appendChild(chip);
+      });
+    }
+
+    function toggleObjectSelection(id) {
+      if (id === 'all') {
+        state.selectedObjectIds = ['all'];
+      } else {
+        state.selectedObjectIds = state.selectedObjectIds.filter(i => i !== 'all');
+        if (state.selectedObjectIds.includes(id)) {
+          state.selectedObjectIds = state.selectedObjectIds.filter(i => i !== id);
+        } else {
+          state.selectedObjectIds.push(id);
+        }
+        if (state.selectedObjectIds.length === 0) state.selectedObjectIds = ['all'];
+      }
+      renderObjectChips();
+      generateDefaultMask();
+      render();
+    }
+
+    // Mask Generation & Cutout
+    function generateDefaultMask() {
+      if (!state.image) return;
+
+      maskCtx.fillStyle = '#000000';
+      maskCtx.fillRect(0, 0, state.imageWidth, state.imageHeight);
+
+      // Create high-contrast saliency/center foreground mask
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = state.imageWidth;
+      tempCanvas.height = state.imageHeight;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.drawImage(state.image, 0, 0);
+
+      const imgData = tempCtx.getImageData(0, 0, state.imageWidth, state.imageHeight);
+      const data = imgData.data;
+
+      const maskData = maskCtx.createImageData(state.imageWidth, state.imageHeight);
+      const mData = maskData.data;
+
+      const cx = state.imageWidth / 2;
+      const cy = state.imageHeight / 2;
+      const maxDist = Math.sqrt(cx * cx + cy * cy);
+
+      for (let i = 0; i < data.length; i += 4) {
+        const x = (i / 4) % state.imageWidth;
+        const y = Math.floor((i / 4) / state.imageWidth);
+
+        let inSelectedBox = false;
+
+        if (state.selectedObjectIds.includes('all')) {
+          inSelectedBox = true;
+        } else {
+          state.detectedObjects.forEach((obj, idx) => {
+            if (state.selectedObjectIds.includes(`obj_${idx}`)) {
+              const [bx, by, bw, bh] = obj.bbox;
+              if (x >= bx && x <= bx + bw && y >= by && y <= by + bh) {
+                inSelectedBox = true;
+              }
+            }
+          });
+        }
+
+        if (inSelectedBox) {
+          const r = data[i], g = data[i+1], b = data[i+2];
+          // Saliency thresholding
+          const brightness = (r + g + b) / 3;
+          const dist = Math.sqrt((x - cx)*(x - cx) + (y - cy)*(y - cy));
+          const weight = 1 - (dist / maxDist) * 0.4;
+
+          if (brightness > 40 && weight > 0.3) {
+            mData[i] = 255;
+            mData[i+1] = 255;
+            mData[i+2] = 255;
+            mData[i+3] = 255;
+          }
+        }
+      }
+
+      maskCtx.putImageData(maskData, 0, 0);
+      updateCutout();
+    }
+
+    function updateCutout() {
+      cutoutCtx.clearRect(0, 0, state.imageWidth, state.imageHeight);
+      cutoutCtx.drawImage(state.image, 0, 0);
+
+      cutoutCtx.globalCompositeOperation = 'destination-in';
+      if (state.feather > 0) {
+        cutoutCtx.filter = `blur(${state.feather}px)`;
+      }
+      cutoutCtx.drawImage(maskCanvas, 0, 0);
+      cutoutCtx.filter = 'none';
+      cutoutCtx.globalCompositeOperation = 'source-over';
+    }
+
+    // Main Canvas Render Loop
+    function render(time = 0) {
+      if (!state.image) return;
+
+      ctx.clearRect(0, 0, state.imageWidth, state.imageHeight);
+
+      // 1. Draw Base Image
+      ctx.drawImage(state.image, 0, 0, state.imageWidth, state.imageHeight);
+
+      // 2. Draw "Behind" Text
+      if (state.depth === "behind") {
+        drawText(time);
+      }
+
+      // 3. Draw Foreground Object Cutout
+      ctx.drawImage(cutoutCanvas, 0, 0, state.imageWidth, state.imageHeight);
+
+      // 4. Draw "In Front" Text
+      if (state.depth === "in_front") {
+        drawText(time);
+      }
+
+      // 5. Mask Overlay Preview
+      if (state.showMaskOverlay) {
+        ctx.save();
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(0, 0, state.imageWidth, state.imageHeight);
+        ctx.restore();
+      }
+    }
+
+    // Draw Stylized Animated Text
+    function drawText(time = 0) {
+      ctx.save();
+
+      // Calculate Motion Effects
+      let animatedX = state.textX;
+      let animatedY = state.textY;
+      let animatedScale = 1.0;
+      let animatedAlpha = 1.0;
+
+      const t = (time / 1000) * state.motionSpeed;
+
+      if (state.motionPreset === "pulse") {
+        animatedScale = 1 + Math.sin(t * 3) * 0.08 * state.motionAmp;
+      } else if (state.motionPreset === "float") {
+        animatedY += Math.sin(t * 2) * 15 * state.motionAmp;
+      } else if (state.motionPreset === "glitch") {
+        if (Math.random() > 0.92) {
+          animatedX += (Math.random() - 0.5) * 12 * state.motionAmp;
+          animatedAlpha = 0.6;
+        }
+      }
+
+      ctx.translate(animatedX, animatedY);
+      ctx.scale(animatedScale, animatedScale);
+      ctx.globalAlpha = animatedAlpha;
+
+      ctx.font = `900 ${state.fontSize}px "${state.fontFamily}"`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = state.color;
+
+      // Drop Shadow
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+      ctx.shadowBlur = 20;
+      ctx.shadowOffsetY = 10;
+
+      // Draw Curved / Curved Arc Text or Normal
+      if (state.arc !== 0) {
+        drawArcText(state.text, 0, 0, state.arc);
+      } else {
+        ctx.fillText(state.text, 0, 0);
+      }
+
+      ctx.restore();
+    }
+
+    function drawArcText(text, x, y, arcVal) {
+      const radius = 10000 / Math.abs(arcVal);
+      const angle = text.length * (state.fontSize * 0.5) / radius;
+      ctx.save();
+      ctx.rotate(arcVal > 0 ? -angle / 2 : angle / 2);
+
+      for (let i = 0; i < text.length; i++) {
+        ctx.save();
+        const charAngle = (i / text.length) * angle;
+        ctx.rotate(arcVal > 0 ? charAngle : -charAngle);
+        ctx.fillText(text[i], 0, arcVal > 0 ? -radius : radius);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    // Continuous Motion Animation Frame Loop
+    function animLoop(timestamp) {
+      if (state.motionPreset !== "none") {
+        render(timestamp);
+      }
+      requestAnimationFrame(animLoop);
+    }
+    requestAnimationFrame(animLoop);
+
+    // Canvas Interactive Dragging
+    let isDragging = false;
+    mainCanvas.addEventListener('mousedown', (e) => {
+      const rect = mainCanvas.getBoundingClientRect();
+      const scaleX = state.imageWidth / rect.width;
+      const scaleY = state.imageHeight / rect.height;
+      const mouseX = (e.clientX - rect.left) * scaleX;
+      const mouseY = (e.clientY - rect.top) * scaleY;
+
+      // Check if clicking near text position
+      const dist = Math.sqrt((mouseX - state.textX)**2 + (mouseY - state.textY)**2);
+      if (dist < state.fontSize * 1.5) {
+        isDragging = true;
+        state.dragOffsetX = mouseX - state.textX;
+        state.dragOffsetY = mouseY - state.textY;
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        const rect = mainCanvas.getBoundingClientRect();
+        const scaleX = state.imageWidth / rect.width;
+        const scaleY = state.imageHeight / rect.height;
+        state.textX = (e.clientX - rect.left) * scaleX - state.dragOffsetX;
+        state.textY = (e.clientY - rect.top) * scaleY - state.dragOffsetY;
+        render();
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    // High Quality Export Engine (MP4 Video / Animated GIF / Static Image)
+    async function startExport() {
+      const modal = document.getElementById('progressModal');
+      const fill = document.getElementById('progressFill');
+      const text = document.getElementById('progressText');
+      modal.classList.add('show');
+
+      const targetFps = parseInt(state.exportFps);
+      const totalFrames = targetFps * parseInt(state.exportDuration);
+
+      if (state.exportFormat === "mp4") {
+        // MP4 / WebM High Quality Recording
+        let mimeType = 'video/mp4';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'video/webm;codecs=vp9';
+        }
+
+        const stream = mainCanvas.captureStream(targetFps);
+        const recorder = new MediaRecorder(stream, {
+          mimeType: mimeType,
+          videoBitsPerSecond: 25000000 // 25 Mbps High Quality
+        });
+
+        const chunks = [];
+        recorder.ondataavailable = e => chunks.push(e.data);
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: mimeType });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `3D_Text_Behind_Object.${mimeType.includes('mp4') ? 'mp4' : 'webm'}`;
+          a.click();
+          modal.classList.remove('show');
+        };
+
+        recorder.start();
+        let frame = 0;
+        const interval = setInterval(() => {
+          frame++;
+          const pct = Math.round((frame / totalFrames) * 100);
+          fill.style.width = `${pct}%`;
+          text.innerText = `Encoding Frame ${frame} of ${totalFrames} (${pct}%)`;
+          render(frame * (1000 / targetFps));
+
+          if (frame >= totalFrames) {
+            clearInterval(interval);
+            recorder.stop();
+          }
+        }, 1000 / targetFps);
+
+      } else if (state.exportFormat === "gif") {
+        // GIF Encoding
+        try {
+          const response = await fetch('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js');
+          const workerBlob = await response.blob();
+          const gif = new GIF({
+            workers: 2,
+            quality: 10,
+            workerScript: URL.createObjectURL(workerBlob),
+            width: state.imageWidth,
+            height: state.imageHeight
+          });
+
+          for (let f = 0; f < totalFrames; f++) {
+            render(f * (1000 / targetFps));
+            gif.addFrame(mainCanvas, { copy: true, delay: 1000 / targetFps });
+            const pct = Math.round((f / totalFrames) * 50);
+            fill.style.width = `${pct}%`;
+            text.innerText = `Capturing Frame ${f}/${totalFrames}`;
+          }
+
+          gif.on('progress', p => {
+            const pct = 50 + Math.round(p * 50);
+            fill.style.width = `${pct}%`;
+            text.innerText = `Compiling GIF Palette... (${pct}%)`;
+          });
+
+          gif.on('finished', blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `3D_Text_Behind_Object.gif`;
+            a.click();
+            modal.classList.remove('show');
+          });
+
+          gif.render();
+        } catch (err) {
+          alert("GIF Export Error: " + err.message);
+          modal.classList.remove('show');
+        }
+      } else {
+        // Static PNG Export
+        render();
+        const url = mainCanvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `3D_Text_Behind_Object.png`;
+        a.click();
+        modal.classList.remove('show');
+      }
+    }
+
+    // UI Controls Event Listeners Setup
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    document.getElementById('textInput').addEventListener('input', (e) => {
+      state.text = e.target.value;
+      render();
+    });
+
+    document.getElementById('fontFamilySelect').addEventListener('change', (e) => {
+      state.fontFamily = e.target.value;
+      render();
+    });
+
+    document.getElementById('fontSizeSlider').addEventListener('input', (e) => {
+      state.fontSize = parseInt(e.target.value);
+      document.getElementById('fontSizeVal').innerText = `${state.fontSize}px`;
+      render();
+    });
+
+    document.getElementById('featherSlider').addEventListener('input', (e) => {
+      state.feather = parseInt(e.target.value);
+      document.getElementById('featherVal').innerText = `${state.feather}px`;
+      updateCutout();
+      render();
+    });
+
+    document.getElementById('motionPresetSelect').addEventListener('change', (e) => {
+      state.motionPreset = e.target.value;
+      render();
+    });
+
+    document.getElementById('depthBehind').addEventListener('click', () => {
+      state.depth = "behind";
+      document.getElementById('depthBehind').classList.add('active');
+      document.getElementById('depthFront').classList.remove('active');
+      render();
+    });
+
+    document.getElementById('depthFront').addEventListener('click', () => {
+      state.depth = "in_front";
+      document.getElementById('depthFront').classList.add('active');
+      document.getElementById('depthBehind').classList.remove('active');
+      render();
+    });
+
+    document.querySelectorAll('.color-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+        state.color = swatch.dataset.color;
+        render();
+      });
+    });
+
+    document.getElementById('fmtMP4').addEventListener('click', () => {
+      state.exportFormat = "mp4";
+      document.getElementById('fmtMP4').classList.add('active');
+      document.getElementById('fmtGIF').classList.remove('active');
+      document.getElementById('fmtPNG').classList.remove('active');
+    });
+
+    document.getElementById('fmtGIF').addEventListener('click', () => {
+      state.exportFormat = "gif";
+      document.getElementById('fmtGIF').classList.add('active');
+      document.getElementById('fmtMP4').classList.remove('active');
+      document.getElementById('fmtPNG').classList.remove('active');
+    });
+
+    document.getElementById('fmtPNG').addEventListener('click', () => {
+      state.exportFormat = "png";
+      document.getElementById('fmtPNG').classList.add('active');
+      document.getElementById('fmtMP4').classList.remove('active');
+      document.getElementById('fmtGIF').classList.remove('active');
+    });
+
+    document.getElementById('btnStartExport').addEventListener('click', startExport);
+    document.getElementById('btnExportModal').addEventListener('click', () => {
+      document.querySelector('[data-tab="tab-export"]').click();
+    });
+
+    document.getElementById('btnSamples').addEventListener('click', loadSampleImage);
+    document.getElementById('btnReset').addEventListener('click', loadSampleImage);
+
+    // Dropzone upload handler
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target.result;
+          img.onload = () => setImage(img);
+        };
+        reader.readAsDataURL(e.target.files[0]);
+      }
+    });
+
+    // Initial Load
+    loadSampleImage();
+  </script>
+</body>
+</html>
