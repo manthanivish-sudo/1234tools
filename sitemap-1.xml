@@ -1362,4 +1362,5 @@
 <url><loc>https://www.1234tools.com/settings/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/tools/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/trust/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/utilities/tool-finder/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>

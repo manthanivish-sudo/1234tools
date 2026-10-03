@@ -184,7 +184,7 @@ function hubPage(parts, all) {
 
 /* The redirect stub, in the shape the rest of the site uses, so every
    builder recognises it as one and leaves it out of the sitemap. */
-function stub(title, to) {
+function stub(title, to, isIndex) {
   return '<!DOCTYPE html>\n<html lang="en-GB">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n' +
     '<title>' + esc(title) + ' has moved | 1234Tools</title>\n' +
     '<link rel="canonical" href="' + SITE + to + '">\n' +
@@ -192,6 +192,11 @@ function stub(title, to) {
     '<meta http-equiv="refresh" content="0; url=' + to + '">\n' +
     '<script>location.replace(\'' + to + '\' + location.search + location.hash);</script>\n' +
     '<style>\n  body { margin: 0; display: grid; place-items: center; min-height: 100vh;\n         font-family: system-ui, -apple-system, "Segoe UI", sans-serif;\n         background: #06080f; color: #f4f6fb; text-align: center; padding: 24px; }\n  a { color: #f7c948; }\n</style>\n' +
+    /* build-prefs puts its tag on every index.html, stubs included, before
+       </head> when there is no stylesheet; written here so the two scripts
+       do not rewrite each other. The .html stub is not an index and is left
+       alone by it, so it carries none. */
+    (isIndex ? '<script src="/assets/prefs.js" defer></script>\n' : '') +
     '</head>\n<body>\n<main>\n  <h1>' + esc(title) + ' has moved</h1>\n  <p>It now lives at <a href="' + to + '">' + to + '</a>.</p>\n  <p>You should arrive there automatically.</p>\n</main>\n</body>\n</html>\n';
 }
 function writeMoved(list) {
@@ -200,8 +205,8 @@ function writeMoved(list) {
     const t = list.find((x) => '/' + SECTION + '/' + x.slug + '/' === to);
     const title = t ? t.spec.title : 'This tool';
     const dir = from.replace(/^\/+|\/+$/g, '');
-    if (write(dir + '/index.html', stub(title, to))) n++;
-    if (write(dir + '.html', stub(title, to))) n++;
+    if (write(dir + '/index.html', stub(title, to, true))) n++;
+    if (write(dir + '.html', stub(title, to, false))) n++;
   }
   return n;
 }
@@ -273,39 +278,10 @@ function patchIcons(list) {
   return added;
 }
 
-/* The header, the search box and the footer carry the site total on every
-   page. The total is the length of the search index — the register the
-   sidebar and the hubs already count from — and the four phrases that
-   print it are rewritten wherever they hold any other number. Anchoring on
-   the phrase rather than on the old digits is what repairs a page that was
-   reverted to an older total by hand. */
-function indexTotal() {
-  const box = {};
-  new Function('window', fs.readFileSync(path.join(ROOT, 'assets/search-index.js'), 'utf8'))(box);
-  return (box.SEARCH_INDEX || []).length;
-}
-function patchTotal(total) {
-  const t = Number(total).toLocaleString('en-GB');
-  const swaps = [
-    [/<small>[\d,]+\+ free tools<\/small>/g, '<small>' + t + '+ free tools</small>'],
-    [/Search [\d,]+ tools…/g, 'Search ' + t + ' tools…'],
-    [/<span>All [\d,]+ tools<\/span>/g, '<span>All ' + t + ' tools</span>'],
-    [/[\d,]+\+ free calculators and converters/g, t + '+ free calculators and converters']
-  ];
-  let n = 0;
-  for (const abs of pages()) {
-    const before = fs.readFileSync(abs, 'utf8');
-    if (isStub(before)) continue;
-    let after = before;
-    for (const [re, b] of swaps) after = after.replace(re, b);
-    if (after === before) continue;
-    const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
-    changes.push('update ' + rel);
-    if (!CHECK) fs.writeFileSync(abs, after);
-    n++;
-  }
-  return n;
-}
+/* The site total on every page is owned by build/totals.js, which reads the
+   length of the search index and rewrites the phrases that print it. */
+const { indexTotal, patchTotal: patchTotalPages } = require('./build/totals.js');
+const patchTotal = (total) => patchTotalPages(total, changes, CHECK);
 function bumpServiceWorker() {
   const rel = 'sw.js';
   const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');

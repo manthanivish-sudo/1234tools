@@ -1661,4 +1661,9 @@
   <circle cx="12.5" cy="11.3" r="2.9"/>
   <path d="M6.6 21.2a5.9 5.9 0 0 1 11.8 0z"/>
 </symbol>
+<symbol id="i-tool-finder" viewBox="0 0 24 24">
+  <path d="M4 5.5h13a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9.5L5.5 20v-3.5H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z"/>
+  <path d="M6.5 9.5h6M6.5 12.5h4" class="thin"/>
+  <path d="M19.5 2.5l.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7z" class="fill"/>
+</symbol>
 </svg>

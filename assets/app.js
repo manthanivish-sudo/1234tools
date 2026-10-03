@@ -172,6 +172,16 @@
     return hits.slice(0, 20).map(function (h) { return h[1]; });
   }
 
+  /* The box matches names. When the name is not the word in the visitor's
+     head, the Tool Finder takes the job in plain words instead, so every
+     result list — and especially the empty one — ends with a way there. */
+  function finderLink(term) {
+    var a = document.createElement('a');
+    a.className = 'search-more';
+    a.href = base + 'utilities/tool-finder/?q=' + encodeURIComponent(term);
+    a.textContent = 'Not the name? Describe the job to the Tool Finder →';
+    return a;
+  }
   function render(term) {
     if (!term) { box.hidden = true; box.innerHTML = ''; return; }
     var hits = search(term);
@@ -181,6 +191,7 @@
       p.className = 'search-empty';
       p.textContent = 'No tool matches “' + term + '”. Try a unit name, or the quantity you want to work out.';
       box.appendChild(p);
+      box.appendChild(finderLink(term));
       box.hidden = false;
       return;
     }
@@ -189,6 +200,7 @@
              '<svg class="ico" aria-hidden="true"><use href="' + base + 'assets/icons.svg#i-' + h[2] + '"></use></svg>' +
              '<span>' + h[0] + '</span></a>';
     }).join('');
+    box.appendChild(finderLink(term));
     box.hidden = false;
   }
 
