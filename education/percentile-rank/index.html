@@ -45,7 +45,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Percentile and Rank Calculator","description":"Convert between rank and percentile for any competitive exam, both directions, using either the standard formula or the NTA one.","url":"https://www.1234tools.com/education/percentile-rank/","applicationCategory":"EducationalApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"Education & Exams","item":"https://www.1234tools.com/education/"},{"@type":"ListItem","position":3,"name":"Percentile and Rank Calculator","item":"https://www.1234tools.com/education/percentile-rank/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is the difference between percentile and percentage?","acceptedAnswer":{"@type":"Answer","text":"A percentage is your share of the available marks. A percentile is your position against everyone else who sat the exam. You can score 60% and be at the 99th percentile if the paper was hard, or score 90% and be at the 60th if it was not."}},{"@type":"Question","name":"Which formula does my exam use?","acceptedAnswer":{"@type":"Answer","text":"NTA, which runs JEE Main, NEET and several others, counts your own place among those at or below your score, which is the first option here. Many other bodies count strictly below you. They differ by one candidate out of the total, so on a large exam the choice barely matters."}},{"@type":"Question","name":"Can this predict my college or my cut-off?","acceptedAnswer":{"@type":"Answer","text":"No, and nothing honestly can from rank alone. Cut-offs move every year with the paper, the number of seats, the category and the counselling round. This gives you the arithmetic relationship between rank and percentile, which is one input into that decision rather than an answer to it."}},{"@type":"Question","name":"Why does my percentile look different from the official one?","acceptedAnswer":{"@type":"Answer","text":"Usually because the total is different from what you assumed, or because the exam normalised across sessions. Official percentiles are computed on normalised scores within each session, so the rank you were given already reflects that and the conversion here is applied to it rather than to your raw marks."}}]}]}</script>
 </head>
-<body>
+<body data-sec="education">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -96,6 +96,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -140,27 +143,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -218,6 +224,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/education/">Education &amp; Exams</a></li><li><span aria-current="page">Percentile and Rank Calculator</span></li></ol></nav>

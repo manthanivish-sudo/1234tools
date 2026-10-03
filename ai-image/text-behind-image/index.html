@@ -46,7 +46,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Text Behind Image","description":"Put text behind a person, car, building or sky in any photo. AI finds the layers in your browser — nothing is uploaded. Animate the text and export PNG, JPEG, GIF or MP4.","url":"https://www.1234tools.com/ai-image/text-behind-image/","applicationCategory":"MultimediaApplication","operatingSystem":"Any","browserRequirements":"Requires a current browser; nothing is uploaded.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"keywords":"text behind image, text behind person, text behind object, put text behind subject in photo, ai text behind image free, animated text behind image, text behind image video maker, text behind image gif"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI Image Tools","item":"https://www.1234tools.com/ai-image/"},{"@type":"ListItem","position":3,"name":"Text Behind Image","item":"https://www.1234tools.com/ai-image/text-behind-image/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"How does it know where the person ends and the background begins?","acceptedAnswer":{"@type":"Answer","text":"A semantic segmentation network (EfficientViT-Seg, trained on the ADE20K scene dataset and published under the Apache-2.0 licence) labels every pixel as one of 150 kinds of thing — person, car, bicycle, building, sky, tree, road, wall and so on. It runs inside your browser through WebAssembly. The boundary it draws is then refined against the real pixels of your photo, so it follows edges rather than blobs."}},{"@type":"Question","name":"Is my photo uploaded anywhere?","acceptedAnswer":{"@type":"Answer","text":"No. The only downloads are the model (18 MB) and the runtime that runs it, both served from 1234tools.com itself, fetched once and kept by your browser. No third-party server is contacted. Your picture is read, split, drawn and encoded on your device. We never see it, and there is no account and no watermark."}},{"@type":"Question","name":"Can I put text behind a car, a building or the sky, not only behind a person?","acceptedAnswer":{"@type":"Answer","text":"Yes. Every layer the model finds has an \"in front of the text\" switch. Untick People to put the text in front of someone; tick Sky or Buildings to put it behind them. Each text layer can also be set to sit in front of everything, so a second line can float on top."}},{"@type":"Question","name":"The edge around hair or a thin object looks rough. What helps?","acceptedAnswer":{"@type":"Answer","text":"Three things, in order: raise Edge softness so the cut follows fine detail; switch Detail to High or Maximum, which shows the model the picture at a higher resolution and is sharper on small parts; and paint the remainder by hand with the brush. A well-lit, in-focus photo also helps — at the Standard setting the model sees the picture at 512 pixels across, so very small subjects are hard for it."}},{"@type":"Question","name":"What can I export?","acceptedAnswer":{"@type":"Answer","text":"Stills as PNG, JPEG or WebP at up to the original resolution (4,096 px on the long edge). Clips as H.264 MP4, or animated GIF, at 480 to 1,920 pixels and 10 to 60 frames a second, up to 20 seconds long. The subject cut-out alone exports as a transparent PNG."}},{"@type":"Question","name":"Why did I get a WebM instead of an MP4?","acceptedAnswer":{"@type":"Answer","text":"MP4 is encoded on the device with the browser’s WebCodecs API, which Chrome, Edge, Opera, Brave and Safari 16.4+ provide. Firefox does not yet, so there the clip is recorded in real time as WebM, which every browser and most apps play. Convert it if a site insists on MP4, or open the page in Chrome or Edge."}},{"@type":"Question","name":"Can I use my own font?","acceptedAnswer":{"@type":"Answer","text":"Yes — choose \"Upload a font file\" in the font list and pick a TTF, OTF, WOFF or WOFF2. It is loaded into this page only, never uploaded, and forgotten when you leave."}},{"@type":"Question","name":"Does it work on a phone?","acceptedAnswer":{"@type":"Answer","text":"Yes, in Safari on iOS and Chrome on Android. The first run downloads the 18 MB model and the 14 MB runtime; after that both are cached. Export clips at 720 px or under on a phone — encoding a long 1080p clip is work for a laptop."}},{"@type":"Question","name":"Which motions are there, and will the loop be seamless?","acceptedAnswer":{"@type":"Answer","text":"Scroll across in eight directions, wave, wave and scroll together, slide in and out, zoom in, typewriter, bounce, pulse, fade, float and spin. The cyclic ones complete a whole number of cycles per clip, so a GIF or a looping video joins up with itself."}},{"@type":"Question","name":"Is there a watermark? What is the optional credit?","acceptedAnswer":{"@type":"Answer","text":"There is no watermark. In the Export pane there is a box, off unless you tick it, that adds a small “1234tools.com” to the bottom corner of GIF and MP4 clips — a way to tell friends where you made it, if you want to. It is never added to a still image or a cut-out, and the choice is remembered on this device only."}},{"@type":"Question","name":"Can I share a link to a particular text style?","acceptedAnswer":{"@type":"Answer","text":"Yes. Pick a look in the Text pane — Neon sunset, Bold white, Outline, Gold headline, Typewriter or Wave — and press “Copy link to this look”. The link opens this page with that look ready to apply to whatever photo the other person chooses. It carries only the name of the style: no photo and no words of yours."}}]}]}</script>
 </head>
-<body>
+<body data-sec="ai-image">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -97,6 +97,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -141,27 +144,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -219,6 +225,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/ai-image/">AI Image Tools</a></li><li><span aria-current="page">Text Behind Image</span></li></ol></nav>

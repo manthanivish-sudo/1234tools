@@ -53,7 +53,7 @@
 <script src="/assets/account.js" defer></script>
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Parent Communication Writer","description":"The message home, written properly — absence, progress, behaviour, fees, trips, exams, closures — in the shape of the channel you are sending it on, and in a second language if the family reads one more easily.","url":"https://www.1234tools.com/ai/parent-message-writer/","applicationCategory":"BusinessApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"INR","description":"10 calls a month free; more on Pro"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI for Business","item":"https://www.1234tools.com/ai/"},{"@type":"ListItem","position":3,"name":"Parent Communication Writer","item":"https://www.1234tools.com/ai/parent-message-writer/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Can it send the message?","acceptedAnswer":{"@type":"Answer","text":"No. It writes the text; you paste it into your school’s SMS gateway, mail merge or WhatsApp Business account. Nothing here connects to a parent contact list, which is deliberate — that list is the most sensitive thing a school holds."}},{"@type":"Question","name":"Is the translation good enough to send?","acceptedAnswer":{"@type":"Answer","text":"It is good enough to be understood and usually good enough to send, and it is not good enough to send unread to hundreds of families. Have a colleague or a parent who speaks the language read it once. The tool keeps names, dates, times and amounts identical across both versions, so what you are checking is the tone, not the facts."}},{"@type":"Question","name":"Why will it not write a stronger letter about unpaid fees?","acceptedAnswer":{"@type":"Answer","text":"Because a demand with a threat in it is a legal document as much as a letter, and the consequences belong to the school that has decided them, not to a writing tool. State a decision the school has already taken and it will report that decision plainly. Ask it to invent pressure and it will not."}},{"@type":"Question","name":"Should I put the pupil’s name in?","acceptedAnswer":{"@type":"Answer","text":"Only if you want it in the letter. Type [pupil] instead and the message comes back with the placeholder in place for your mail merge to fill in — which is also how you send the same letter to thirty families without thirty runs."}}]}]}</script>
 </head>
-<body>
+<body data-sec="ai">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -104,6 +104,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -148,27 +151,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -226,6 +232,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/ai/">AI for Business</a></li><li><span aria-current="page">Parent Communication Writer</span></li></ol></nav>

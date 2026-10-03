@@ -45,7 +45,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"YouTube Thumbnail Maker","description":"Face cut out with a glow, background punched up, a bold title on top; export 1280×720 PNG or JPEG under 2 MB, three variants in one click. Nothing is uploaded.","url":"https://www.1234tools.com/ai-image/thumbnail-maker/","applicationCategory":"MultimediaApplication","operatingSystem":"Any","browserRequirements":"Requires a current browser; nothing is uploaded.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"keywords":"youtube thumbnail maker, thumbnail face cutout, thumbnail background remover, glow outline thumbnail, thumbnail maker free no watermark, 1280x720 thumbnail, pop out effect thumbnail"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI Image Tools","item":"https://www.1234tools.com/ai-image/"},{"@type":"ListItem","position":3,"name":"YouTube Thumbnail Maker","item":"https://www.1234tools.com/ai-image/thumbnail-maker/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is my photo uploaded anywhere?","acceptedAnswer":{"@type":"Answer","text":"No. The only downloads are the model — EfficientViT-Seg B1, 18 MB, Apache-2.0 — and the runtime that runs it, both served from 1234tools.com and kept by your browser after the first visit. No third-party server is contacted. Your picture is cut out, composed and encoded on your own device, and there is no account and no watermark."}},{"@type":"Question","name":"What size does YouTube want?","acceptedAnswer":{"@type":"Answer","text":"1280×720 pixels, 16:9, under 2 MB, as JPG, PNG, GIF or BMP, and at least 640 pixels wide. This tool exports exactly 1280×720, or 1920×1080 at the same proportions, and the JPEG export lowers its quality until the file is under 2 MB. YouTube shows the thumbnail at anything from 168 pixels wide on a phone to 1280 on a television, so keep the words few and large."}},{"@type":"Question","name":"How does it cut me out?","acceptedAnswer":{"@type":"Answer","text":"A semantic segmentation network trained on the ADE20K dataset labels every pixel — person, car, animal, building, sky and 145 more — and the person pixels become the cut-out. The outline is then refined against the real pixels of your photo, so it follows hair and shoulders. Edge softness and Shrink or grow in the Subject pane fix a halo or a lost fringe, and Detail: High looks at the picture more closely."}},{"@type":"Question","name":"Can I use a different subject than a person?","acceptedAnswer":{"@type":"Answer","text":"Yes. Every layer the model found is listed; tick a car, an animal, a bottle, a plate of food or any combination and that becomes the cut-out with the glow."}},{"@type":"Question","name":"What are the three variants?","acceptedAnswer":{"@type":"Answer","text":"The same photo, cut-out and words with three different accent colours, three background treatments and three title positions — A, B and C — exported as 1280×720 PNGs named -a, -b and -c. Upload them to a YouTube thumbnail test, or to a poll, and keep the winner."}},{"@type":"Question","name":"Can I use it commercially, and is there a watermark?","acceptedAnswer":{"@type":"Answer","text":"Yes, and no. The output is yours, the model is EfficientViT-Seg from the MIT HAN Lab under the Apache-2.0 licence, and nothing is added to the picture. The photo itself must be one you have the right to use."}},{"@type":"Question","name":"Why is the first run slow?","acceptedAnswer":{"@type":"Answer","text":"The first run on a device downloads the 18 MB model and the 14 MB runtime, then warms the runtime up. After that both come from your browser’s cache and the cut-out appears in about a second on a laptop, a few seconds on a phone."}},{"@type":"Question","name":"My photo is portrait or square. What happens to it?","acceptedAnswer":{"@type":"Answer","text":"The background is cropped to 16:9 around the subject, and the cut-out is placed on top at its own scale and position, so a tall phone photo still gives a wide thumbnail with the face large. If the crop misses what you wanted, drag the cut-out, scale it, or pick a solid or gradient background instead."}},{"@type":"Question","name":"Can I use my own font or brand colours?","acceptedAnswer":{"@type":"Answer","text":"The six fonts are the heavy ones that read at thumbnail size — Impact, Arial Black, Sora, Inter, Verdana and Georgia. Every colour is a free picker, so the glow, the title, the gradient and the accent can be your brand’s exactly."}}]}]}</script>
 </head>
-<body>
+<body data-sec="ai-image">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -96,6 +96,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -140,27 +143,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -218,6 +224,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/ai-image/">AI Image Tools</a></li><li><span aria-current="page">YouTube Thumbnail Maker</span></li></ol></nav>

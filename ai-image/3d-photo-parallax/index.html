@@ -46,7 +46,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"3D Photo Parallax Video","description":"Turn one still photo into a looping 3D parallax clip. AI depth runs in your browser — nothing is uploaded. Export a 6-second MP4 or GIF in 9:16, 1:1 or 16:9.","url":"https://www.1234tools.com/ai-image/3d-photo-parallax/","applicationCategory":"MultimediaApplication","operatingSystem":"Any","browserRequirements":"Requires a current browser; nothing is uploaded.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"keywords":"3d photo effect, parallax photo effect, 2.5d photo animation, 3d zoom effect online, photo to video parallax, ken burns 3d, tiktok 3d photo trend, capcut 3d zoom alternative"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI Image Tools","item":"https://www.1234tools.com/ai-image/"},{"@type":"ListItem","position":3,"name":"3D Photo Parallax Video","item":"https://www.1234tools.com/ai-image/3d-photo-parallax/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is my photo uploaded?","acceptedAnswer":{"@type":"Answer","text":"No. Two models are downloaded once from this site and kept by your browser: Depth Anything V2 Small (26 MB, Apache-2.0), which estimates distance, and EfficientViT-Seg B1 (18 MB, Apache-2.0), which finds the subject for framing. The runtime that runs them is served from here too. The 3D scene is drawn by your own device through WebGL and the clip is encoded in your browser; no third-party server is contacted, and there is no account and no watermark."}},{"@type":"Question","name":"How does it know what is near and what is far?","acceptedAnswer":{"@type":"Answer","text":"A monocular depth network — Depth Anything V2, trained on tens of millions of images — predicts the relative distance of every pixel from a single photo, much as you can judge depth with one eye closed. It is relative, not measured. It can be wrong on reflections, glass, water, a featureless sky and repeating patterns, which is where the Edge softening control helps."}},{"@type":"Question","name":"Why do edges smear or stretch in the video?","acceptedAnswer":{"@type":"Answer","text":"A single photo holds no picture of what was behind the subject. When the camera moves, the pixels along a depth edge have to cover the gap that opens up, so they stretch. This tool fills those gaps with a softened copy of the background instead of a hole, and Edge softening blends the stretched pixels into it. Small amounts and the sway, circle and drift moves show it least; a dolly shows it most."}},{"@type":"Question","name":"Can I use the result commercially?","acceptedAnswer":{"@type":"Answer","text":"Yes. The clip is yours. Both models are published under the Apache-2.0 licence — Depth Anything V2 Small by its authors and EfficientViT-Seg by the MIT HAN Lab — and nothing we make adds a watermark or a credit."}},{"@type":"Question","name":"Why is the first run slow, and how big is the download?","acceptedAnswer":{"@type":"Answer","text":"The first use downloads the depth model (26 MB), the segmentation model (18 MB) and the 14 MB runtime, all from this site, and your browser keeps them. After that, estimating depth takes a few seconds on your processor through WebAssembly; the clip itself is drawn by your graphics chip and encoded in a few more. The tools in this section share the same downloads."}},{"@type":"Question","name":"Does it work on a phone?","acceptedAnswer":{"@type":"Answer","text":"Yes, in Safari on iOS and Chrome on Android — WebGL is on every current phone. The picture is worked on at up to 1,536 px on the long edge to keep memory in check. Export MP4 at 1080 on a recent phone; on an older one choose the 720 size."}},{"@type":"Question","name":"What if WebGL is not available?","acceptedAnswer":{"@type":"Answer","text":"The tool falls back to a simpler version drawn on a plain canvas: the picture is sliced into a few depth bands that slide at different speeds. It is less smooth than the mesh but exports the same loop."}},{"@type":"Question","name":"Why did I get a WebM instead of an MP4?","acceptedAnswer":{"@type":"Answer","text":"MP4 is encoded on the device with the browser’s WebCodecs API, which Chrome, Edge, Opera, Brave and Safari 16.4+ provide. Firefox does not yet, so there the clip is recorded in real time as WebM, which every browser and most apps play. Convert it if a site insists on MP4, or use Chrome or Edge."}},{"@type":"Question","name":"Will the loop be seamless?","acceptedAnswer":{"@type":"Answer","text":"Yes. Every camera move is a cycle that returns exactly to its start, and the clip holds a whole number of cycles, so when a player loops it the join is invisible."}}]}]}</script>
 </head>
-<body>
+<body data-sec="ai-image">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -97,6 +97,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -141,27 +144,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -219,6 +225,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/ai-image/">AI Image Tools</a></li><li><span aria-current="page">3D Photo Parallax Video</span></li></ol></nav>

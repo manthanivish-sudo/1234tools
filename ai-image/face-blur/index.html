@@ -45,7 +45,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Face Blur (everyone but me)","description":"Blur or pixelate every face in a photo or short video and tap the ones to keep. The face detector runs in your browser — nothing is uploaded. PNG or MP4 out.","url":"https://www.1234tools.com/ai-image/face-blur/","applicationCategory":"MultimediaApplication","operatingSystem":"Any","browserRequirements":"Requires a current browser; nothing is uploaded.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"keywords":"blur face in video, face blur online, blur faces, anonymize video, anonymise faces in photo, pixelate faces, blur faces except mine, hide faces in video free"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI Image Tools","item":"https://www.1234tools.com/ai-image/"},{"@type":"ListItem","position":3,"name":"Face Blur (everyone but me)","item":"https://www.1234tools.com/ai-image/face-blur/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is my photo or video uploaded?","acceptedAnswer":{"@type":"Answer","text":"No. The only download is the face detector — Ultra-Light-Fast-Generic-Face-Detector-1MB, 1.5 MB, published under the MIT licence — and the WebAssembly runtime that runs it, both served from 1234tools.com itself and kept by your browser after the first visit. Your file is opened on your device; each frame is read, blurred and re-encoded by your own browser; nothing is sent anywhere. We never see it, and there is no account and no watermark."}},{"@type":"Question","name":"Does blurring really anonymise someone?","acceptedAnswer":{"@type":"Answer","text":"A strong blur or pixel blocks over an expanded box is the standard practice of broadcasters and courts, and at the default strength nothing of the face survives: the blur reduces the area to a few samples, so there is nothing to reverse. Two cautions. First, a face is not the only identifier — a name badge, a tattoo, a number plate or a distinctive coat may need a box drawn by hand too. Second, keep the original private; a blurred copy protects no one if the original is on the same public feed."}},{"@type":"Question","name":"Why did it miss a face?","acceptedAnswer":{"@type":"Answer","text":"The detector is 1.5 MB and sees the picture at 640×480, so it misses faces that are very small, turned well away, in deep shadow, or covered by a mask, a visor or a hand. Lower the detection threshold, choose Small faces, or drag a box over the face yourself — a hand-drawn box is blurred like any other. In a video, a face that is missed on a frame or two is carried over from the frames around it."}},{"@type":"Question","name":"Will the sound stay?","acceptedAnswer":{"@type":"Answer","text":"Yes, in browsers whose on-device encoder can write AAC or Opus audio — Chrome, Edge and Opera, and Safari 17 and later. The original soundtrack is decoded and written back into the new file unchanged in content. Where the browser cannot encode audio, the clip is exported without sound and the result says so in plain words."}},{"@type":"Question","name":"What formats go in and out?","acceptedAnswer":{"@type":"Answer","text":"Photos: JPEG, PNG, WebP, HEIC in Safari; out as PNG or JPEG at the original resolution. Videos: anything the browser can play — MP4, MOV and WebM from a phone or a screen recorder — up to 60 seconds (a longer clip is cut at the minute). Out as H.264 MP4 at up to 1280×720 where the browser has WebCodecs (Chrome, Edge, Safari 16.4+); Firefox records the clip in real time as WebM instead."}},{"@type":"Question","name":"Can I keep more than one face?","acceptedAnswer":{"@type":"Answer","text":"Yes, tap as many as you like; each kept face is followed separately. Tap a kept face again to blur it. In a video, a kept face that leaves the frame and comes back is treated as new when it returns, so scrub to that moment and tap it again before exporting."}},{"@type":"Question","name":"Why is it slow on a phone?","acceptedAnswer":{"@type":"Answer","text":"Each frame of a video is decoded, searched for faces, blurred and encoded again, all on the phone’s processor; a 30-second clip is 900 frames of work. The tool looks for faces on every second or third frame and follows them in between, and it scales the output to 720p, but a laptop is still three to five times faster. Plug the phone in and keep the clip short."}},{"@type":"Question","name":"Can I use the result commercially?","acceptedAnswer":{"@type":"Answer","text":"Yes. The output is yours. The detector is published under the MIT licence, the runtime under MIT too, and nothing here adds a watermark or a credit."}}]}]}</script>
 </head>
-<body>
+<body data-sec="ai-image">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -96,6 +96,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -140,27 +143,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -218,6 +224,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/ai-image/">AI Image Tools</a></li><li><span aria-current="page">Face Blur (everyone but me)</span></li></ol></nav>

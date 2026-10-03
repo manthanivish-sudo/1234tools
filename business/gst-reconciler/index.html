@@ -47,7 +47,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"GSTR-2B Reconciliation","description":"Match your purchase register against GSTR-2B — the portal’s JSON or Excel — and see which input tax credit is safe to claim, which suppliers have not filed, what is in 2B but not in your books, and where the tax amounts differ. Runs in your browser; nothing is uploaded.","url":"https://www.1234tools.com/business/gst-reconciler/","applicationCategory":"BusinessApplication","operatingSystem":"Any","dateModified":"2026-09-20","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"Business","item":"https://www.1234tools.com/business/"},{"@type":"ListItem","position":3,"name":"GSTR-2B Reconciliation","item":"https://www.1234tools.com/business/gst-reconciler/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Which GSTR-2B formats are read?","acceptedAnswer":{"@type":"Answer","text":"The JSON the portal generates (with B2B, B2BA, CDNR and CDNRA sections) and the Excel it offers, using the B2B sheet. Credit notes reduce the supplier’s total and are matched separately."}},{"@type":"Question","name":"How does matching work?","acceptedAnswer":{"@type":"Answer","text":"First on supplier GSTIN plus a normalised invoice number. Then, for what is left, on GSTIN plus the numeric tail of the invoice number with the date within five days and the taxable value within a rupee — which catches INV-0417 against 417. Anything still unmatched is reported on the side it appears."}},{"@type":"Question","name":"Is the result the ITC I can claim in 3B?","acceptedAnswer":{"@type":"Answer","text":"The Matched sheet is the credit that is both in your books and filed by the supplier, which is the condition for claiming it. Whether a particular line is eligible — blocked credit under section 17(5), reverse charge, personal use — is still your call and your CA’s; the tool reconciles, it does not adjudicate."}},{"@type":"Question","name":"Is any of this uploaded?","acceptedAnswer":{"@type":"Answer","text":"No. Both files are read and compared by your own browser, and the report is written there too. Nothing leaves your device."}}]}]}</script>
 </head>
-<body>
+<body data-sec="business">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -98,6 +98,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -142,27 +145,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -220,6 +226,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/business/">Business</a></li><li><span aria-current="page">GSTR-2B Reconciliation</span></li></ol></nav>

@@ -45,7 +45,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"AI Image Upscaler","description":"Upscale a photo 2× or 4×, or unblur it at its own size, with Real-ESRGAN running in your browser. Nothing is uploaded. Before/after slider; PNG, JPEG or WebP.","url":"https://www.1234tools.com/ai-image/image-upscaler/","applicationCategory":"MultimediaApplication","operatingSystem":"Any","browserRequirements":"Requires a current browser; nothing is uploaded.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"keywords":"image upscaler, upscale image, unblur image, enhance photo quality, ai upscaler free no upload, 4x upscale, increase image resolution, sharpen blurry photo"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI Image Tools","item":"https://www.1234tools.com/ai-image/"},{"@type":"ListItem","position":3,"name":"AI Image Upscaler","item":"https://www.1234tools.com/ai-image/image-upscaler/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is my photo uploaded?","acceptedAnswer":{"@type":"Answer","text":"No. The model — Real-ESRGAN general-x4v3, 4.7 MB, published under the BSD-3-Clause licence — and the runtime that executes it are served from this site, fetched once and kept by your browser. No third-party server is contacted. The picture is tiled, processed and reassembled on your device, and we never see it. There is no account and no watermark."}},{"@type":"Question","name":"What does Unblur actually do?","acceptedAnswer":{"@type":"Answer","text":"It runs the same 4× network and then reduces the result back to the original size with a high-quality resample. The network firms up edges and removes compression blocking; shrinking it again folds that into the original pixel grid, so the picture is the same size and visibly crisper. It is a sharpener that understands edges, not a deconvolution: strong motion blur or a badly missed focus does not come back."}},{"@type":"Question","name":"Why does it take time, and what are the tiles?","acceptedAnswer":{"@type":"Answer","text":"The network looks at every pixel through 34 layers of convolutions — about 1.2 million multiplications per input pixel — on one processor core through WebAssembly. A 1,000-pixel photo is a million pixels, so it is cut into tiles of up to 160 pixels that run in turn; that keeps memory flat and lets the bar move and the Cancel button work. Tiles overlap by 16 pixels and are blended across the overlap, so there are no seams. Expect a second or two per tile on a laptop."}},{"@type":"Question","name":"How big can the output be?","acceptedAnswer":{"@type":"Answer","text":"4,000 pixels on the long edge. For 4× that means a photo of up to 1,000 pixels; for 2×, up to 2,000. Bigger inputs are reduced first and the tool says so. Unblur works at the original size up to 2,000 pixels."}},{"@type":"Question","name":"Can I use the result commercially?","acceptedAnswer":{"@type":"Answer","text":"Yes. The output is yours to use however you may use the original. The network is Real-ESRGAN by Xintao Wang, published under the BSD-3-Clause licence, which permits commercial use; nothing we make adds a watermark or a credit."}},{"@type":"Question","name":"What is Denoise?","acceptedAnswer":{"@type":"Answer","text":"A second set of weights for the same network, trained with noise and compression in the input — the \"wdn\" variant of Real-ESRGAN. At 0 the standard model runs; at 100 only the denoising one; in between, both run on each tile and the outputs are blended. The standard model keeps more texture and film grain; the denoising one gives cleaner skies, skin and flat colour from a grainy or heavily compressed original. It doubles the time when both run."}},{"@type":"Question","name":"Which pictures gain the most?","acceptedAnswer":{"@type":"Answer","text":"Photographs of things with edges — buildings, products, cars, text, faces at a reasonable size — and anything that was saved small or compressed hard. Pictures that are already large and sharp gain little, and pure noise or heavy motion blur cannot be undone."}},{"@type":"Question","name":"Does it work on a phone?","acceptedAnswer":{"@type":"Answer","text":"Yes, in Safari on iOS and Chrome on Android. The first run downloads the 4.7 MB model and the 14 MB runtime, after which both are cached. Phones are slower per tile and have less memory, so a 4× of a 1,000-pixel picture can take a few minutes there; 2× or Unblur of the same photo is the same work, so pick by the size you need."}}]}]}</script>
 </head>
-<body>
+<body data-sec="ai-image">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -96,6 +96,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -140,27 +143,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -218,6 +224,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/ai-image/">AI Image Tools</a></li><li><span aria-current="page">AI Image Upscaler</span></li></ol></nav>

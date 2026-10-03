@@ -43,6 +43,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const hubs = require('./build-hubs.js');
 const crumbs = require('./build-crumbs.js');
 const outbound = require('./build-outbound.js');
 const { trailFor, SECTIONS } = require('./build/sections.js');
@@ -327,7 +328,7 @@ function guidePage(g, parts) {
   }) + '</script>\n';
 
   const html = sidebarFor(headFor(parts, pathOnly, g.title, g.description) + ld + parts.mid + '\n' + withTime + parts.tail, SECTION + '/' + g.slug + '/index.html');
-  return outbound.rewrite(html, SECTION).html;
+  return outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html;
 }
 
 function hubPage(parts) {
@@ -378,7 +379,7 @@ function hubPage(parts) {
   }) + '</script>\n';
 
   const html = sidebarFor(headFor(parts, pathOnly, title, description) + ld + parts.mid + '\n' + body + parts.tail, SECTION + '/index.html');
-  return outbound.rewrite(html, SECTION).html;
+  return outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html;
 }
 
 /* ---------- wiring ---------- */

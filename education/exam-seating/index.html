@@ -49,7 +49,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Exam Seating Plan Generator","description":"Seat a whole exam from a student list and a set of rooms: no two of the same class side by side, classes alternating down a column or across a row, every n-th seat left empty. Download the plan as a workbook, a chart for every room door and an attendance sheet per room. Runs in your browser.","url":"https://www.1234tools.com/education/exam-seating/","applicationCategory":"EducationalApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"Education & Exams","item":"https://www.1234tools.com/education/"},{"@type":"ListItem","position":3,"name":"Exam Seating Plan Generator","item":"https://www.1234tools.com/education/exam-seating/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"How does it stop two students of the same class sitting together?","acceptedAnswer":{"@type":"Answer","text":"It fills the seats in the order you choose — down each column or across each row — and at every seat takes the class with the most students still waiting that is not already beside that seat. After the plan is built, every pair of neighbours is checked again and any that share a class is reported with its room, row and seat. That second pass is why the violation count can be trusted."}},{"@type":"Question","name":"What if it is impossible?","acceptedAnswer":{"@type":"Answer","text":"It says so. If one class is more than half the students in a room, at least one pair must end up adjacent — that is arithmetic, not a bug. The tool names the room, says which class is over half, produces the best plan it can, and counts the seats where the rule was relaxed."}},{"@type":"Question","name":"What do I get?","acceptedAnswer":{"@type":"Answer","text":"seating-plan.xlsx with a row per student, a grid per room and a summary; room-charts.pdf with one landscape page per room showing the seats, the roll numbers and the door; attendance-sheets.pdf with a signature sheet per room in seat order; and a notice you can paste into a circular."}},{"@type":"Question","name":"Is the student list uploaded?","acceptedAnswer":{"@type":"Answer","text":"No. The spreadsheet is read by your browser and the plan, the workbook and both PDFs are made there. Roll numbers and names never leave the device."}}]}]}</script>
 </head>
-<body>
+<body data-sec="education">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -100,6 +100,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -144,27 +147,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -222,6 +228,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/education/">Education &amp; Exams</a></li><li><span aria-current="page">Exam Seating Plan Generator</span></li></ol></nav>

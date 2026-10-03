@@ -18,6 +18,17 @@
  * under their parent — still in the HTML, still crawlable, no longer
  * twelve rows of furniture on a page about payroll.
  *
+ * Two later additions, both derived from the same counts:
+ *
+ * - The first row is "Find a tool", the finder, because somebody who does
+ *   not know the site's vocabulary cannot pick a category. On a phone the
+ *   sidebar is a drawer, so the same link is also a fixed button at the
+ *   bottom right of the page — written directly after the aside, because
+ *   a fixed child of a transformed drawer is transformed off-screen with it.
+ * - A section with three tools or fewer folds under "More sections", in
+ *   the same order. It unfolds itself the day a fourth tool lands in the
+ *   index, and it is open on its own pages so the active row is visible.
+ *
  * Run it on a clean export, never on the working tree.
  */
 'use strict';
@@ -35,7 +46,7 @@ const changes = [];
 /* The order a visitor should meet them in: what the site is for first,
    the general-purpose sections next, the long tail last. A section with
    one tool still earns a row — it is a promise about what is coming — but
-   it earns it near the bottom. */
+   it earns it near the bottom, folded. */
 const ORDER = [
   ['/business/', 'i-business'],
   ['/ai/', 'i-ai'],
@@ -62,6 +73,12 @@ const FAMILIES = [
   ['/conversions/power/', 'i-power'], ['/conversions/data/', 'i-data'], ['/conversions/angle/', 'i-angle']
 ];
 
+/* A section with this many tools or fewer sits under "More sections". */
+const FOLD_AT = 3;
+
+const FINDER = '/utilities/tool-finder/';
+const FINDER_GLYPH = 'i-tool-finder';
+
 /** url -> how many tools live under it, from the register of what exists. */
 function counts() {
   const box = {};
@@ -80,6 +97,9 @@ function counts() {
   return n;
 }
 
+/** The sections small enough to fold, in ORDER order. */
+const folded = (n) => ORDER.filter(([url]) => (n[url] || 0) <= FOLD_AT);
+
 const row = (url, glyph, name, count, sub) =>
   '      <a class="side-link' + (sub ? ' side-sub' : '') + '" href="' + url + '">\n' +
   '        ' + icon(glyph) + '<span class="side-name">' + esc(name) + '</span>' +
@@ -88,8 +108,14 @@ const row = (url, glyph, name, count, sub) =>
 
 const nameOf = (url) => (SECTIONS[url] && SECTIONS[url].name) || url;
 
+/* The phone button: the same link as the first row, outside the drawer. */
+const fab = () =>
+  '<a class="side-find-fab" href="' + FINDER + '" aria-label="Find a tool">' + icon(FINDER_GLYPH) + '<span>Find</span></a>';
+
 function sidebar(n) {
   const num = (x) => (x || 0).toLocaleString('en-GB');
+  const small = folded(n);
+  const large = ORDER.filter(([url]) => (n[url] || 0) > FOLD_AT);
   let out =
     '<aside class="sidebar" id="sidebar" aria-label="Tool categories">\n' +
     '    <div class="sidebar-head">\n' +
@@ -97,12 +123,20 @@ function sidebar(n) {
     '      <button class="sidebar-close" id="sidebarClose" aria-label="Close categories">' + icon('i-close') + '</button>\n' +
     '    </div>\n\n' +
     '    <nav class="side-nav">\n' +
+    row(FINDER, FINDER_GLYPH, 'Find a tool', null) +
     row('/', 'i-home', 'Home', null) +
     row('/tools/', 'i-grid', 'All tools', num(n.total)) +
     row('/for/', 'i-collections', 'Collections', null) +
     row('/settings/', 'i-settings', 'Settings', null) +
     '\n      <p class="side-group">Categories</p>\n';
-  for (const [url, glyph] of ORDER) out += row(url, glyph, nameOf(url), num(n[url]));
+  for (const [url, glyph] of large) out += row(url, glyph, nameOf(url), num(n[url]));
+  if (small.length) {
+    out +=
+      '      <details class="side-fold side-fold-more">\n' +
+      '        <summary>More sections</summary>\n' +
+      small.map(([url, glyph]) => row(url, glyph, nameOf(url), num(n[url]), true)).join('') +
+      '      </details>\n';
+  }
   out +=
     '\n      <p class="side-group">Unit conversions</p>\n' +
     row('/conversions/', 'i-conversions', nameOf('/conversions/'), num(n['/conversions/'])) +
@@ -115,23 +149,35 @@ function sidebar(n) {
     row('/guides/', 'i-feed', 'Guides', null) +
     row('/learn/', 'i-learn', nameOf('/learn/'), num(n['/learn/'])) +
     '    </nav>\n' +
-    '  </aside>';
+    '  </aside>\n' +
+    fab();
   return out;
 }
 
-/** The link for the page's own section carries is-active, as before. */
-function active(html, rel) {
+/**
+ * The link for the page's own section carries is-active, as before, and a
+ * fold that holds the active row is open so the row can be seen. Works on
+ * the sidebar block itself, not the page, so a <details> in the content is
+ * never touched.
+ */
+function active(block, rel) {
   const p = '/' + rel.replace(/index\.html$/, '');
   let best = '';
-  for (const [url] of ORDER.concat(FAMILIES).concat([['/guides/'], ['/compare/'], ['/conversions/'], ['/learn/'], ['/tools/'], ['/for/'], ['/settings/']])) {
+  for (const [url] of ORDER.concat(FAMILIES).concat([['/guides/'], ['/compare/'], ['/conversions/'], ['/learn/'], ['/tools/'], ['/for/'], ['/settings/'], [FINDER]])) {
     if (p.indexOf(url) === 0 && url.length > best.length) best = url;
   }
-  if (!best) return html;
-  return html.replace('<a class="side-link" href="' + best + '">', '<a class="side-link is-active" href="' + best + '">')
+  if (!best) return block;
+  let out = block.replace('<a class="side-link" href="' + best + '">', '<a class="side-link is-active" href="' + best + '">')
     .replace('<a class="side-link side-sub" href="' + best + '">', '<a class="side-link side-sub is-active" href="' + best + '">');
+  out = out.replace(/<details class="side-fold[^"]*">[\s\S]*?<\/details>/g, function (d) {
+    return d.indexOf('is-active') >= 0 ? d.replace(/^<details class="([^"]*)">/, '<details class="$1" open>') : d;
+  });
+  return out;
 }
 
-const BLOCK = /<aside class="sidebar"[\s\S]*?<\/aside>/;
+/* The aside, plus the phone button that follows it when a page has one. A
+   page without the button yet gets it; a page with it does not get two. */
+const BLOCK = /<aside class="sidebar"[\s\S]*?<\/aside>(?:\n<a class="side-find-fab"[\s\S]*?<\/a>)?/;
 
 /* Glyphs this file asks for that the sprite may not have. A generator
    that references an id it does not ship draws an empty box, silently,
@@ -139,7 +185,9 @@ const BLOCK = /<aside class="sidebar"[\s\S]*?<\/aside>/;
 const OWN_GLYPHS = {
   'i-collections': '<symbol id="i-collections" viewBox="0 0 24 24">\n  <rect x="3" y="9" width="13" height="12" rx="2"/>\n  <path d="M6.5 6h11a2 2 0 0 1 2 2v9" class="thin"/>\n  <path d="M9.5 3h8a3 3 0 0 1 3 3v8" class="thin"/>\n  <path d="M6.5 13h6M6.5 16.5h4" class="thin"/>\n</symbol>',
   'i-compare': '<symbol id="i-compare" viewBox="0 0 24 24">\n  <path d="M12 4.2v15.6"/>\n  <path d="M8.2 19.8h7.6" class="thin"/>\n  <path d="M4.6 7.4h14.8" class="thin"/>\n  <path d="M4.6 7.4 2 13.2h5.2z" class="thin"/>\n  <path d="M19.4 7.4 16.8 13.2H22z" class="thin"/>\n</symbol>',
-  'i-settings': '<symbol id="i-settings" viewBox="0 0 24 24">\n  <circle cx="12" cy="12" r="3.2"/>\n  <path d="M4.2 9.5h2.1M17.7 9.5h2.1M4.2 14.5h2.1M17.7 14.5h2.1" class="thin"/>\n  <path d="M9.5 4.2v2.1M14.5 4.2v2.1M9.5 17.7v2.1M14.5 17.7v2.1" class="thin"/>\n  <circle cx="12" cy="12" r="8.2" class="thin"/>\n</symbol>'
+  'i-settings': '<symbol id="i-settings" viewBox="0 0 24 24">\n  <circle cx="12" cy="12" r="3.2"/>\n  <path d="M4.2 9.5h2.1M17.7 9.5h2.1M4.2 14.5h2.1M17.7 14.5h2.1" class="thin"/>\n  <path d="M9.5 4.2v2.1M14.5 4.2v2.1M9.5 17.7v2.1M14.5 17.7v2.1" class="thin"/>\n  <circle cx="12" cy="12" r="8.2" class="thin"/>\n</symbol>',
+  /* the same symbol build-finder.js ships, for an export built before it ran */
+  [FINDER_GLYPH]: '<symbol id="' + FINDER_GLYPH + '" viewBox="0 0 24 24">\n  <path d="M4 5.5h13a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9.5L5.5 20v-3.5H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z"/>\n  <path d="M6.5 9.5h6M6.5 12.5h4" class="thin"/>\n  <path d="M19.5 2.5l.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7z" class="fill"/>\n</symbol>'
 };
 function patchIcons() {
   const rel = 'assets/icons.svg';
@@ -160,7 +208,7 @@ function patchIcons() {
 /* every id the sidebar names must exist, or a row shows an empty box */
 function checkGlyphs() {
   const svg = fs.readFileSync(path.join(ROOT, 'assets/icons.svg'), 'utf8');
-  const want = ['i-home', 'i-grid', 'i-collections', 'i-compare', 'i-settings', 'i-feed', 'i-close', 'i-conversions', 'i-learn']
+  const want = ['i-home', 'i-grid', 'i-collections', 'i-compare', 'i-settings', 'i-feed', 'i-close', 'i-conversions', 'i-learn', FINDER_GLYPH]
     .concat(ORDER.map(x => x[1])).concat(FAMILIES.map(x => x[1]));
   const missing = [...new Set(want)].filter(id => svg.indexOf('id="' + id + '"') < 0);
   if (missing.length) throw new Error('the sidebar names glyphs the sprite does not have: ' + missing.join(', '));
@@ -182,7 +230,7 @@ function main() {
       if (!BLOCK.test(before)) { missing++; continue; }
       scanned++;
       const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
-      const after = active(before.replace(BLOCK, canonical), rel);
+      const after = before.replace(BLOCK, function () { return active(canonical, rel); });
       if (after === before) continue;
       changes.push('update ' + rel);
       if (!CHECK) fs.writeFileSync(abs, after);
@@ -197,9 +245,12 @@ function main() {
     if (out !== src) { fs.writeFileSync(path.join(ROOT, rel), out); changes.push('update sw.js'); }
   }
 
+  const small = folded(n);
   console.log('\nbuild-sidebar.js' + (CHECK ? '  (--check: nothing will be written)' : ''));
+  console.log('  first row           Find a tool -> ' + FINDER);
   console.log('  order               ' + ORDER.map(x => nameOf(x[0])).slice(0, 5).join(', ') + ', …');
   console.log('  counts              ' + n.total + ' tools across ' + ORDER.length + ' categories, ' + FAMILIES.length + ' conversion families folded');
+  console.log('  more sections       ' + (small.length ? small.map(([u]) => nameOf(u) + ' (' + (n[u] || 0) + ')').join(', ') : 'none') + ' — ' + FOLD_AT + ' tools or fewer');
   console.log('  pages with sidebar  ' + scanned + (missing ? ' (' + missing + ' without one, left alone)' : ''));
   console.log('  icons               ' + (glyphs ? glyphs + ' glyph(s) added to the sprite' : 'all present'));
   console.log('  pages rewritten     ' + written);
@@ -213,8 +264,8 @@ let _cached = null;
 function apply(html, rel) {
   if (!_cached) _cached = sidebar(counts());
   if (!BLOCK.test(html)) return html;
-  return active(html.replace(BLOCK, _cached), rel);
+  return html.replace(BLOCK, function () { return active(_cached, rel); });
 }
 
 if (require.main === module) main();
-module.exports = { counts, sidebar, apply, ORDER, FAMILIES };
+module.exports = { counts, sidebar, apply, active, folded, ORDER, FAMILIES, FOLD_AT, FINDER };

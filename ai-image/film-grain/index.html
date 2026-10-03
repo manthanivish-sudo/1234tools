@@ -45,7 +45,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Film Grain & VHS Effect","description":"Give a photo film grain, light leaks, VHS tracking, a date stamp and faded colour. Seven presets, a random roll; PNG still or a looping GIF and MP4. No upload.","url":"https://www.1234tools.com/ai-image/film-grain/","applicationCategory":"MultimediaApplication","operatingSystem":"Any","browserRequirements":"Requires a current browser; nothing is uploaded.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"keywords":"film grain overlay, vhs effect, vintage photo filter, disposable camera effect, retro filter online, 90s camera effect, film grain photo editor, vhs filter free"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI Image Tools","item":"https://www.1234tools.com/ai-image/"},{"@type":"ListItem","position":3,"name":"Film Grain & VHS Effect","item":"https://www.1234tools.com/ai-image/film-grain/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is my photo uploaded?","acceptedAnswer":{"@type":"Answer","text":"No. There is no model and no server. The effects are shaders that run on your device’s graphics chip through WebGL, and the exports are encoded by your browser. Nothing is uploaded, there is no account, and there is no watermark."}},{"@type":"Question","name":"Why does the grain flicker in the GIF?","acceptedAnswer":{"@type":"Answer","text":"Because that is what film and tape do: every frame has its own grain and the tracking line drifts, and that flicker is what makes a loop look alive rather than like a filtered photo. If you want one fixed frame, export a still; it is a PNG of exactly what is on the preview."}},{"@type":"Question","name":"What do the presets change?","acceptedAnswer":{"@type":"Answer","text":"Everything on the panels at once: grain amount, size and colour, the leaks, scan lines, tracking, colour fringing, vignette, fade, saturation, warmth, halation, the stamp and the crop. Random roll keeps the preset’s character and reshuffles the amounts and the leak positions; press it until you like one, then fine-tune."}},{"@type":"Question","name":"Can I use the result commercially?","acceptedAnswer":{"@type":"Answer","text":"Yes. It is your photo with an effect on it; the output is yours, and nothing here is licensed from anyone else."}},{"@type":"Question","name":"Does it work on a phone?","acceptedAnswer":{"@type":"Answer","text":"Yes, in Safari on iOS and Chrome on Android; the shaders are light enough for any phone of the last decade. Export GIFs at 480 or 640 px on a phone, and MP4 at 720 px."}},{"@type":"Question","name":"Does it need WebGL?","acceptedAnswer":{"@type":"Answer","text":"It uses WebGL where it is available, which is every current browser. Where it is switched off, a simpler version draws the grain, leaks, vignette, fade, tint and scan lines on a plain canvas, without the tracking wobble, colour fringing or halation."}},{"@type":"Question","name":"What is the difference between film grain and noise?","acceptedAnswer":{"@type":"Answer","text":"Noise from a camera sensor is per-pixel and coloured; film grain is clumps of silver, larger than a pixel, mostly monochrome, and densest in the mid-tones. Grain size sets the clump size, Colour grain adds the sensor-style colour, and the amount is weighted toward the mid-tones, which is why the grain here sits inside the picture rather than on top of it."}},{"@type":"Question","name":"Why did I get a WebM instead of an MP4?","acceptedAnswer":{"@type":"Answer","text":"MP4 is encoded on the device with the browser’s WebCodecs API, which Chrome, Edge, Opera, Brave and Safari 16.4+ provide. Firefox does not yet, so there the clip is recorded in real time as WebM, which every browser and most apps play. Convert it if a site insists on MP4, or open the page in Chrome or Edge."}}]}]}</script>
 </head>
-<body>
+<body data-sec="ai-image">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -96,6 +96,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -140,27 +143,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -218,6 +224,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/ai-image/">AI Image Tools</a></li><li><span aria-current="page">Film Grain &amp; VHS Effect</span></li></ol></nav>

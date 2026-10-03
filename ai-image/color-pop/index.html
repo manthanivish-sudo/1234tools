@@ -45,7 +45,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Colour Pop & Duotone","description":"Keep one layer or one colour and turn the rest black and white, sepia or duotone. AI finds the layers in your browser; nothing is uploaded. PNG, MP4 or GIF.","url":"https://www.1234tools.com/ai-image/color-pop/","applicationCategory":"MultimediaApplication","operatingSystem":"Any","browserRequirements":"Requires a current browser; nothing is uploaded.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"keywords":"color pop effect, colour pop, selective color, color splash effect, black and white with one color, duotone photo effect, keep one colour in photo, selective colour online"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI Image Tools","item":"https://www.1234tools.com/ai-image/"},{"@type":"ListItem","position":3,"name":"Colour Pop & Duotone","item":"https://www.1234tools.com/ai-image/color-pop/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is my photo uploaded anywhere?","acceptedAnswer":{"@type":"Answer","text":"No. The only downloads are the model — EfficientViT-Seg B1, 18 MB, Apache-2.0 — and the runtime that runs it, both served from 1234tools.com and kept by your browser after the first visit. No third-party server is contacted. Your picture is read, split into layers, recoloured and encoded on your own device, and there is no account and no watermark."}},{"@type":"Question","name":"How does it know which part is the car?","acceptedAnswer":{"@type":"Answer","text":"A semantic segmentation network trained on the ADE20K scene dataset labels every pixel as one of 150 kinds of thing — person, car, bicycle, sky, tree, building, road and so on. The boundary it draws is then refined against the real pixels of your photo with a guided filter, so it follows the edge of a door or a sleeve rather than a blob. You can tick any combination of layers to keep in colour."}},{"@type":"Question","name":"What if the car is red but I want only the red, not the chrome and the windows?","acceptedAnswer":{"@type":"Answer","text":"Switch on \"Only one colour\" in the Colour pane. The tool finds the six main hues inside the kept layer and shows them as swatches; click one and only pixels within that band of hue (and above the saturation floor) keep their colour. Widen the band if parts of the paint drop out in shadow, narrow it if the brake lights are joining in."}},{"@type":"Question","name":"What is a duotone?","acceptedAnswer":{"@type":"Answer","text":"Every pixel is mapped by its brightness to a colour between two you choose — dark shadows become one colour, bright highlights the other, with a mid-point control that decides where they meet. It is how the classic teal–orange poster, the noir print and the neon album cover are made. You can apply one duotone to the background and another, or full colour, to the subject."}},{"@type":"Question","name":"Can I use the result commercially?","acceptedAnswer":{"@type":"Answer","text":"Yes. The output is yours. The model is EfficientViT-Seg from the MIT HAN Lab, published under the Apache-2.0 licence, and nothing we make adds a watermark or a credit. The photo itself must of course be one you have the right to use."}},{"@type":"Question","name":"Why is the first run slow?","acceptedAnswer":{"@type":"Answer","text":"The first run on a device downloads the 18 MB model and the 14 MB runtime, then warms the runtime up. After that both come from your browser’s cache and a photo is split into layers in about a second on a laptop, a few seconds on a phone."}},{"@type":"Question","name":"The edge around hair or a thin object looks rough. What helps?","acceptedAnswer":{"@type":"Answer","text":"Raise Edge softness so the cut follows fine detail; set Detail to High, which shows the model the picture at a higher resolution; and if a hand or a bag strap is still missing, tick the layer it was mistaken for — a bag is its own layer. A sharp, well-lit photo helps most."}},{"@type":"Question","name":"What can I export?","acceptedAnswer":{"@type":"Answer","text":"A still as PNG, JPEG or WebP at up to the original resolution (4,096 px on the long edge), or the reveal clip as H.264 MP4 or animated GIF, 3 to 10 seconds, 480 to 1,920 px. In Firefox, which has no on-device MP4 encoder yet, the clip is recorded as WebM instead."}},{"@type":"Question","name":"Does it work on a phone?","acceptedAnswer":{"@type":"Answer","text":"Yes, in Safari on iOS and Chrome on Android. Keep clip exports at 720 px or under on a phone; a still exports at full size anywhere."}}]}]}</script>
 </head>
-<body>
+<body data-sec="ai-image">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -96,6 +96,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -140,27 +143,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -218,6 +224,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/ai-image/">AI Image Tools</a></li><li><span aria-current="page">Colour Pop &amp; Duotone</span></li></ol></nav>

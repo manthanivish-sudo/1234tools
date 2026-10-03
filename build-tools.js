@@ -5,8 +5,12 @@
  *   node build-tools.js --check  report what would change, write nothing
  *
  * Every tool the site has that is not a unit conversion, on one page,
- * grouped by section, with what it does and what it costs, and a filter
- * that narrows by words, by category and by price without a request.
+ * grouped by section, with what it does, what goes in and comes out, and
+ * what it costs, and a filter that narrows by words, by category, by price
+ * and by the job (Make, Convert, Check, Calculate, Clean up) without a
+ * request. The verb, the in → out line and the short description come from
+ * build/jobs.js, the same table the hubs read. The list can be walked from
+ * the keyboard: / to the search box, ↓ into the rows, Escape back.
  *
  * The unit conversions are listed as their twelve families rather than as
  * 1,048 rows. Each family already has a hub that lists its own, and a
@@ -24,6 +28,8 @@ const outbound = require('./build-outbound.js');
 const { trailFor, SECTIONS } = require('./build/sections.js');
 const { PRICING, pricingFor } = require('./build/collections.js');
 const { ORDER, FAMILIES, apply: sidebarFor } = require('./build-sidebar.js');
+const jobs = require('./build/jobs.js');
+const hubs = require('./build-hubs.js');
 
 const ROOT = __dirname;
 const CHECK = process.argv.includes('--check');
@@ -64,7 +70,11 @@ function inventory() {
       if (!fs.existsSync(abs)) throw new Error('the index lists ' + t.path + ', which has no page');
       const src = fs.readFileSync(abs, 'utf8');
       const d = /<meta name="description" content="([^"]*)">/.exec(src);
-      t.description = d ? unesc(d[1]) : '';
+      t.meta = d ? unesc(d[1]) : '';
+      /* the short description and the verb come from the one table the hubs read */
+      t.description = jobs.descOf(t.path) || t.meta;
+      t.job = jobs.jobOf(t.path);
+      if (!t.job) throw new Error('build/jobs.js has no verb for ' + t.path);
       t.pricing = pricingFor(t.path);
     }
     bySection[url].sort((a, b) => a.title.localeCompare(b.title));
@@ -83,7 +93,7 @@ function shell() {
 }
 
 const TITLE = 'All tools — the full directory';
-const DESC = 'Every tool on 1234Tools in one list, with what each one does and what it costs. Filter by words, by category or by price. Most run entirely in your browser with no account at all.';
+const DESC = 'Every tool on 1234Tools in one list, with what each one does and what it costs. Filter by words, by category, by the job or by price. Most run entirely in your browser with no account at all.';
 
 function page(parts, inv) {
   const pathOnly = '/tools/';
@@ -100,8 +110,8 @@ function page(parts, inv) {
 
   const groups = sections.map(([url, glyph]) => {
     const rows = inv.bySection[url].map(t =>
-      '<a class="dir-row" href="' + t.path + '" data-cat="' + esc(url) + '" data-price="' + t.pricing.key + '">' +
-      '<span class="dir-name">' + esc(t.title) + '</span>' +
+      '<a class="dir-row" href="' + t.path + '" data-cat="' + esc(url) + '" data-price="' + t.pricing.key + '" data-verb="' + esc(t.job.verb) + '">' +
+      '<span class="dir-name">' + esc(t.title) + '<span class="dir-io">' + esc(t.job.io) + '</span></span>' +
       '<span class="dir-desc">' + esc(t.description) + '</span>' +
       '<span class="tag tag-' + t.pricing.key + '">' + esc(t.pricing.label) + '</span></a>').join('');
     return '<section class="dir-section" data-cat="' + esc(url) + '">' +
@@ -124,8 +134,11 @@ function page(parts, inv) {
       (inv.total - freemium).toLocaleString('en-GB') + ' free with no account · ' + freemium + ' free to try with one</p>\n' +
     '  <div class="dir-filter">\n' +
     '    <label class="visually-hidden" for="dirSearch">Search the directory</label>\n' +
-    '    <input id="dirSearch" class="control dir-search" type="search" placeholder="Search ' + listed + ' tools by name or by what they do…" autocomplete="off">\n' +
+    '    <input id="dirSearch" class="control dir-search" type="search" placeholder="Search ' + listed + ' tools by name or by what they do…  ( / to focus, ↓ to the list )" autocomplete="off" aria-keyshortcuts="/">\n' +
     '    ' + chips + '\n' +
+    '    <div class="chip-row filter-verb" role="group" aria-label="Filter by job">' +
+      '<button type="button" class="chip is-on" data-verb="all">Any job</button>' +
+      jobs.VERBS.map(v => '<button type="button" class="chip" data-verb="' + esc(v) + '">' + esc(v) + '</button>').join('') + '</div>\n' +
     '    <div class="chip-row filter-price">' +
       '<button type="button" class="chip is-on" data-price="all">Any price</button>' +
       '<button type="button" class="chip" data-price="free">Free, no account</button>' +
@@ -167,7 +180,9 @@ function page(parts, inv) {
        string matched nothing and silently dropped the script. */
     + '  <script src="/assets/directory.js" defer></script>';
 
-  const html = sidebarFor(head + ld + parts.mid + '\n' + body + parts.tail, 'tools/index.html');
+  /* the shell is a section hub's, so its <body> carries that section's
+     data-sec; hubs.apply takes it off, as build-hubs.js would */
+  const html = hubs.apply(sidebarFor(head + ld + parts.mid + '\n' + body + parts.tail, 'tools/index.html'), 'tools/index.html');
   return outbound.rewrite(html, 'tools').html;
 }
 

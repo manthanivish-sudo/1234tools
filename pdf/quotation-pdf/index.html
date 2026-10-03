@@ -46,7 +46,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Quotation & Proforma Invoice Generator (PDF)","description":"Create a quotation, proforma invoice or estimate as a clean PDF: line items with HSN/SAC and discounts, GST or VAT worked out for you, terms, bank details and an acceptance block for the client to sign and return.","url":"https://www.1234tools.com/pdf/quotation-pdf/","applicationCategory":"UtilitiesApplication","operatingSystem":"Any","dateModified":"2026-09-20","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"PDF Tools","item":"https://www.1234tools.com/pdf/"},{"@type":"ListItem","position":3,"name":"Quotation & Proforma Invoice Generator (PDF)","item":"https://www.1234tools.com/pdf/quotation-pdf/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is the difference between a quotation, an estimate and a proforma invoice?","acceptedAnswer":{"@type":"Answer","text":"A quotation is a firm offer to supply at a stated price, open until it expires. An estimate is an indication of the likely price and is not binding. A proforma invoice is a full invoice-shaped document sent before the supply, usually so the buyer can raise a purchase order, open a letter of credit or pay in advance — but it is not a tax invoice and no input tax credit arises from it."}},{"@type":"Question","name":"Does a proforma invoice need a GST invoice number series?","acceptedAnswer":{"@type":"Answer","text":"No. Only tax invoices must run in an unbroken serial series. A proforma is best given its own prefix — PI- or QT- — so it can never be mistaken for a tax invoice in your books or the buyer's."}},{"@type":"Question","name":"Can I use this for a UK VAT quotation?","acceptedAnswer":{"@type":"Answer","text":"Yes. Choose a UK VAT rate in the tax list, switch the currency to pounds and put your VAT registration number in the tax field; the HSN/SAC column disappears if none of your lines carry one. Whether a quotation must show VAT separately is a commercial choice, but showing it avoids an argument later about whether the price was VAT-inclusive."}},{"@type":"Question","name":"Why does the total sometimes end in .00 when the tax does not?","acceptedAnswer":{"@type":"Answer","text":"Because rounding is set to the nearest whole unit, which is the convention on Indian invoices. The rounding line shows exactly how much was added or taken off, so the arithmetic still reconciles. Set rounding to \"Do not round\" to keep the paise or pence."}},{"@type":"Question","name":"Can different line items carry different tax rates?","acceptedAnswer":{"@type":"Answer","text":"Not in this version. One rate applies to the whole document, which covers most quotations but not a mixed basket where, say, a 5% item and an 18% item sit on the same page. Where the rates differ, raise one quotation per rate, or quote the goods net and state the rates in the terms. The arithmetic on the page always reconciles to the rate it shows."}},{"@type":"Question","name":"How many line items fit?","acceptedAnswer":{"@type":"Answer","text":"As many as you need, up to 200. The table continues onto further pages with the column headings repeated and \"Page n of m\" in the footer; the totals, terms and acceptance block print once, at the end."}}]}]}</script>
 </head>
-<body>
+<body data-sec="pdf">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -97,6 +97,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -141,27 +144,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -219,6 +225,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/pdf/">PDF Tools</a></li><li><span aria-current="page">Quotation &amp; Proforma Invoice Generator (PDF)</span></li></ol></nav>

@@ -48,7 +48,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"QuickBooks / Zoho Books / Tally Converter","description":"Move journals and invoices between QuickBooks, Zoho Books and Tally: a QuickBooks or Zoho journal CSV becomes Tally vouchers, a Zoho invoice export becomes Tally sales vouchers, and a Tally day-book export becomes the journal CSV QuickBooks or Zoho imports. Every voucher is checked to balance. Runs in your browser.","url":"https://www.1234tools.com/business/accounting-converter/","applicationCategory":"BusinessApplication","operatingSystem":"Any","dateModified":"2026-09-20","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"Business","item":"https://www.1234tools.com/business/"},{"@type":"ListItem","position":3,"name":"QuickBooks / Zoho Books / Tally Converter","item":"https://www.1234tools.com/business/accounting-converter/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Which direction and which documents?","acceptedAnswer":{"@type":"Answer","text":"Journals in every direction between the three, and Zoho invoices into Tally sales vouchers (party debited, sales and tax ledgers credited by rate). Invoices into QuickBooks or Zoho need their invoice import format with items and customers, which is a bigger job — say if you need it."}},{"@type":"Question","name":"Will the imported entries look right?","acceptedAnswer":{"@type":"Answer","text":"They will balance and carry the date, number, narration and lines. What each package does with an unknown account name differs: QuickBooks and Zoho create or ask; Tally refuses the import until the ledger exists. Check account names first."}},{"@type":"Question","name":"Is my accounting data uploaded?","acceptedAnswer":{"@type":"Answer","text":"No. Files are read, converted and written in your browser."}}]}]}</script>
 </head>
-<body>
+<body data-sec="business">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -99,6 +99,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -143,27 +146,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -221,6 +227,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/business/">Business</a></li><li><span aria-current="page">QuickBooks / Zoho Books / Tally Converter</span></li></ol></nav>

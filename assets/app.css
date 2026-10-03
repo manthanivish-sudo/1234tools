@@ -2960,3 +2960,106 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
   .finder-inline .finder-avatar { display: none; }
 }
 /* ==== /B1-home-finder ==== */
+
+/* ==== B2-hubs-nav: hubs by job, section hues, sidebar, directory ==== */
+/* One hue per section. Set on <body> of a section's hub and tool pages,
+   and on each hub card, by build-hubs.js. A page without the attribute
+   keeps the gold look it always had. */
+[data-sec="pdf"] { --sec-h: 0; }
+[data-sec="india"] { --sec-h: 20; }
+[data-sec="education"] { --sec-h: 40; }
+[data-sec="finance"] { --sec-h: 60; }
+[data-sec="utilities"] { --sec-h: 80; }
+[data-sec="qr"] { --sec-h: 100; }
+[data-sec="health"] { --sec-h: 120; }
+[data-sec="mathematics"] { --sec-h: 140; }
+[data-sec="time"] { --sec-h: 160; }
+[data-sec="developer"] { --sec-h: 180; }
+[data-sec="conversions"] { --sec-h: 200; }
+[data-sec="business"] { --sec-h: 220; }
+[data-sec="text"] { --sec-h: 240; }
+[data-sec="ai"] { --sec-h: 260; }
+[data-sec="ai-image"] { --sec-h: 280; }
+[data-sec="image"] { --sec-h: 300; }
+[data-sec="design"] { --sec-h: 320; }
+[data-sec="engineering"] { --sec-h: 340; }
+[data-sec] { --sec-l: 64%; --sec: hsl(var(--sec-h) 70% var(--sec-l)); }
+[data-theme="light"] [data-sec], [data-theme="light"] [data-sec] [data-sec], [data-theme="light"][data-sec] { --sec-l: 36%; }
+@media (prefers-color-scheme: light) {
+  [data-theme="system"] [data-sec], [data-theme="system"][data-sec] { --sec-l: 36%; }
+}
+
+[data-sec] .card-icon {
+  background: color-mix(in srgb, var(--sec) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--sec) 35%, transparent);
+  border-radius: 10px; padding: 6px;
+  color: var(--sec);
+}
+[data-sec] .card-icon .ico { color: var(--sec); }
+[data-sec] .card:hover .card-icon { background: color-mix(in srgb, var(--sec) 24%, var(--surface)); }
+.card[data-sec]:hover { border-color: color-mix(in srgb, var(--sec) 45%, transparent); }
+
+/* the card's in → out line and its price tags */
+.card .card-io {
+  font-family: var(--font-mono); font-size: .72rem; letter-spacing: .01em;
+  color: var(--text-3); line-height: 1.4;
+}
+.card .card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 6px; }
+.card .card-tags .tag { margin-top: 0; }
+.card .card-desc + .card-io { margin-top: 2px; }
+
+/* the hub's own block: intro, start line, finder, verb groups */
+.hub-intro { margin: -12px 0 14px; max-width: 70ch; color: var(--text-2); line-height: 1.65; font-size: .95rem; }
+.hub-start { margin: 0 0 18px; color: var(--text-2); font-size: .95rem; }
+.hub-start strong { font-family: var(--font-head); color: var(--text-1); font-weight: 600; }
+.hub-start a { color: var(--link); }
+.finder-inline { margin: 0 0 30px; }
+.finder-inline .tool-io:empty { min-height: 64px; border: 1px dashed var(--border); border-radius: var(--radius); }
+h2.hub-verb {
+  display: flex; align-items: center; gap: 10px; margin: 8px 0 14px;
+  font-family: var(--font-head); font-size: 1.08rem; font-weight: 700;
+  letter-spacing: 0; text-transform: none; color: var(--text-1);
+}
+h2.hub-verb::before {
+  content: ""; width: 4px; height: 1.05em; border-radius: 2px;
+  background: var(--sec, var(--accent));
+}
+.hub-faq { margin-top: 8px; }
+
+/* sidebar: the finder row, the fold for small sections */
+.side-link[href="/utilities/tool-finder/"] .ico { color: var(--accent); }
+.side-fold-more > summary { padding-left: 14px; }
+.side-fold-more { margin-top: 2px; }
+
+/* the phone's way to the finder: the drawer is off-screen, this is not */
+.side-find-fab { display: none; }
+@media (max-width: 720px) {
+  .side-find-fab {
+    position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 85;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 18px 12px 14px; border-radius: 999px;
+    background: var(--accent); color: var(--nav-cta-ink);
+    font-family: var(--font-head); font-size: .9rem; font-weight: 700; text-decoration: none;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .35);
+  }
+  .side-find-fab:hover, .side-find-fab:focus-visible { text-decoration: none; filter: brightness(1.06); }
+  .side-find-fab .ico { width: 18px; height: 18px; }
+  [data-theme="light"] .side-find-fab { color: #fff; }
+  /* the cookie banner owns the bottom of the screen while it is up */
+  body:has(> .cc) .side-find-fab { display: none; }
+  body.nav-locked .side-find-fab { display: none; }
+  /* room under the last thing on the page */
+  .site-footer { padding-bottom: 72px; }
+}
+.is-installed .side-find-fab { display: none !important; }
+@media print { .side-find-fab, .finder-inline { display: none !important; } }
+
+/* directory: the job facet, the in → out line */
+.filter-verb { margin-bottom: 8px; }
+.filter-verb .chip { cursor: pointer; font: inherit; font-size: .84rem; }
+.dir-name .dir-io {
+  display: block; margin-top: 2px; font-family: var(--font-mono); font-weight: 400;
+  font-size: .72rem; color: var(--text-3);
+}
+.dir-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* ==== /B2-hubs-nav ==== */

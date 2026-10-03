@@ -49,7 +49,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"VAT Return from a Spreadsheet (the nine boxes)","description":"Turn a spreadsheet of sales and purchases into the nine boxes of a UK VAT return — standard accrual, cash accounting or the flat rate scheme — with every box opened up to show the rows behind it, and the sheet checked for net-plus-VAT that does not equal gross, duplicate invoice numbers and rows outside the period. It computes the figures; it does not file them. Runs entirely in your browser.","url":"https://www.1234tools.com/business/vat-return/","applicationCategory":"BusinessApplication","operatingSystem":"Any","dateModified":"2026-09-20","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"Business","item":"https://www.1234tools.com/business/"},{"@type":"ListItem","position":3,"name":"VAT Return from a Spreadsheet (the nine boxes)","item":"https://www.1234tools.com/business/vat-return/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Can I file my VAT return with this?","acceptedAnswer":{"@type":"Answer","text":"No. Under Making Tax Digital a VAT return must be submitted through software that HMRC has recognised, using their API. This tool produces the nine figures and the working behind them; it has no connection to HMRC and sends nothing anywhere. Bridging software is the recognised category for exactly this job — software that reads a spreadsheet and submits the nine boxes without being a full accounting package — and adding the submission is the intended next step. Until it is on HMRC’s list, use these figures as your working and file through whatever you already use."}},{"@type":"Question","name":"Are the rates and thresholds up to date?","acceptedAnswer":{"@type":"Answer","text":"They are written down in one place, dated, and honestly labelled as unverified. The engine file carries a constants block with the standard, reduced and zero rates, the registration and scheme thresholds, the flat rate first-year discount and the limited cost trader percentage, each with the date it was written and a note that it was not checked against a live gov.uk page. Check them against VAT Notice 700/12 and VAT Notice 733 before you rely on a pound figure. If something has moved, the fix is one block in one file."}},{"@type":"Question","name":"What do boxes 2, 8 and 9 actually cover now?","acceptedAnswer":{"@type":"Answer","text":"Since the Northern Ireland Protocol they are about goods moving between Northern Ireland and EU member states, not between Great Britain and the EU. Box 2 is the VAT due on goods acquired in Northern Ireland from an EU member state, box 8 is the value of goods supplied from Northern Ireland to EU member states, and box 9 is the value of those acquisitions. If your business does not move goods that way, leave the Northern Ireland switch off and those three boxes stay at nil, which is correct for most businesses. When the switch is on, the tool uses your country column and the list of the twenty-seven member states to decide which rows count."}},{"@type":"Question","name":"How does cash accounting change the figures?","acceptedAnswer":{"@type":"Answer","text":"Under the standard scheme a sale counts when you invoice it. Under cash accounting it counts when the customer actually pays, and a purchase when you pay it. So the tool uses the paid date, not the invoice date, to decide whether a row falls in the period — which means an invoice raised in March and paid in April moves from one return to the next. It insists on a paid date column for exactly that reason. Map a paid amount as well and a part payment is counted in proportion, with the pence made to add back to the amount actually received."}},{"@type":"Question","name":"Why does box 4 come out at nil under the flat rate scheme?","acceptedAnswer":{"@type":"Answer","text":"That is how the scheme works: you pay a flat percentage of your VAT-inclusive turnover and, in exchange, you do not reclaim VAT on ordinary purchases. The exception is a single capital purchase of £2,000 or more including VAT, which you can reclaim. Map a capital asset column, or use a VAT code containing CAP, and those rows are picked up; otherwise box 4 is nil and the tool says why on screen rather than leaving you to wonder."}},{"@type":"Question","name":"What does it check my spreadsheet for?","acceptedAnswer":{"@type":"Answer","text":"Rows where net plus VAT does not equal the gross you typed; rows where the VAT is not the stated rate of the net, separating a genuine mismatch from a penny of rounding; duplicate invoice references; rows dated outside the period, which are excluded and counted; negative rows, which are usually credit notes and are perfectly legitimate but worth seeing; and rows with no rate or VAT code at all. Every one names the row number and the reference, so you can go and look at it."}},{"@type":"Question","name":"Is my sales ledger uploaded anywhere?","acceptedAnswer":{"@type":"Answer","text":"No. The file is read by your own browser, the arithmetic happens there, and the workbook and PDF are written there too. A VAT period’s sales and purchases is a complete picture of a business, which is precisely why it should not be sitting on somebody else’s server."}}]}]}</script>
 </head>
-<body>
+<body data-sec="business">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -100,6 +100,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -144,27 +147,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -222,6 +228,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/business/">Business</a></li><li><span aria-current="page">VAT Return from a Spreadsheet (the nine boxes)</span></li></ol></nav>

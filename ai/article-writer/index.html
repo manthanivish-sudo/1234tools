@@ -53,7 +53,7 @@
 <script src="/assets/account.js" defer></script>
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Long-Form Article Writer","description":"A brief in, a full article out — a standfirst, sections that go somewhere, and an ending that lands. Every claim it cannot support is marked [source needed] and no statistic is ever invented, because a wrong number in a published piece costs more than a gap does.","url":"https://www.1234tools.com/ai/article-writer/","applicationCategory":"BusinessApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"INR","description":"10 calls a month free; more on Pro"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI for Business","item":"https://www.1234tools.com/ai/"},{"@type":"ListItem","position":3,"name":"Long-Form Article Writer","item":"https://www.1234tools.com/ai/article-writer/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Why will it not give me statistics?","acceptedAnswer":{"@type":"Answer","text":"Because it would be producing plausible numbers rather than true ones, and a fabricated figure in a published article is the kind of mistake that follows a byline around. Where you have the number, put it in the brief; where you do not, the marker tells you exactly which sentence needs an afternoon in a source."}},{"@type":"Question","name":"Is this publishable as it stands?","acceptedAnswer":{"@type":"Answer","text":"It is a good first draft that took a minute. It will be structurally sound, correctly spelt and free of invented facts. It will not have your judgement, your best sentence, or the anecdote that makes the piece — those are what you add. Run the result through the Story Editor if you want a second read."}},{"@type":"Question","name":"Can it write in another language?","acceptedAnswer":{"@type":"Answer","text":"Say so in the brief — \"write this in Hindi\" — and it will; the structure and length options still apply, though the spelling rules are written for English."}}]}]}</script>
 </head>
-<body>
+<body data-sec="ai">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -104,6 +104,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -148,27 +151,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -226,6 +232,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/ai/">AI for Business</a></li><li><span aria-current="page">Long-Form Article Writer</span></li></ol></nav>

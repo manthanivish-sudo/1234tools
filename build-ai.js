@@ -18,6 +18,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const hubs = require('./build-hubs.js');
 const crumbs = require('./build-crumbs.js');
 const sources = require('./build/sources.js');
 /* this builder writes outbound links of its own now (the sources panel),
@@ -139,7 +140,7 @@ function toolPage(t, parts, all) {
     ]
   }) + '</script>\n';
   const rel = SECTION + '/' + t.slug + '/index.html';
-  return outbound.rewrite(keepPwa(rel, markActive(headFor(parts, pathOnly, s.title + ' — AI for Business | 1234Tools', s.description, s.scripts) + accountScripts + ld + parts.mid + '\n' + body + parts.tail)), SECTION).html;
+  return outbound.rewrite(keepPwa(rel, hubs.apply(markActive(headFor(parts, pathOnly, s.title + ' — AI for Business | 1234Tools', s.description, s.scripts) + accountScripts + ld + parts.mid + '\n' + body + parts.tail), rel)), SECTION).html;
 }
 
 function hubPage(parts, all) {
@@ -174,7 +175,7 @@ function hubPage(parts, all) {
     ]
   }) + '</script>\n';
   const rel = SECTION + '/index.html';
-  return keepPwa(rel, markActive(headFor(parts, '/' + SECTION + '/', title, description, []) + ld + parts.mid + '\n' + body + parts.tail));
+  return keepPwa(rel, hubs.apply(markActive(headFor(parts, '/' + SECTION + '/', title, description, []) + ld + parts.mid + '\n' + body + parts.tail), rel));
 }
 
 /* ---------- wiring ---------- */

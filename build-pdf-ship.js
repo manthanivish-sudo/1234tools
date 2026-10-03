@@ -307,7 +307,7 @@ const unesc = (s) => String(s)
 function hubCards(html) {
   const out = [];
   for (const grid of html.matchAll(/<div class="grid(?: [^"]*)?">([\s\S]*?)<\/div>/g)) {
-    for (const card of grid[1].matchAll(/<a class="card" href="([^"]+)">([\s\S]*?)<\/a>/g)) {
+    for (const card of grid[1].matchAll(/<a class="card" href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)) {
       const s = /<strong>([^<]*)<\/strong>/.exec(card[2]);
       if (!s) throw new Error('a card on the PDF hub has no <strong> title: ' + card[1]);
       out.push({ href: card[1], name: unesc(s[1]) });

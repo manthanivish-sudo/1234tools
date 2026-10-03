@@ -47,7 +47,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Sticker Maker","description":"Cut a sticker from any photo, white outline and all: a WhatsApp or Telegram pack, a story or a transparent PNG. AI in your browser — nothing is uploaded.","url":"https://www.1234tools.com/ai-image/sticker-maker/","applicationCategory":"MultimediaApplication","operatingSystem":"Any","browserRequirements":"Requires a current browser; nothing is uploaded.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"keywords":"sticker maker, cut out sticker, whatsapp sticker maker, png sticker with outline, telegram sticker maker, die cut sticker from photo, sticker with white border"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI Image Tools","item":"https://www.1234tools.com/ai-image/"},{"@type":"ListItem","position":3,"name":"Sticker Maker","item":"https://www.1234tools.com/ai-image/sticker-maker/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is my photo uploaded?","acceptedAnswer":{"@type":"Answer","text":"No. Two models run inside your browser — EfficientViT-Seg (18 MB, Apache-2.0) for the layers and MODNet (25 MB, Apache-2.0) for the edges of people — and both, with the runtime, are served from 1234tools.com and kept by your browser after the first visit. No third-party server is contacted. The sticker is cut, bordered and encoded on your device; we never see the photo, and there is no watermark."}},{"@type":"Question","name":"What are the WhatsApp sticker rules?","acceptedAnswer":{"@type":"Answer","text":"A static sticker is a 512×512 pixel WebP under 100 KB with a transparent background; WhatsApp's design guide also suggests a 16 px margin, an 8 px white outline and a soft shadow. A pack holds 3 to 30 stickers and needs a 96×96 PNG tray icon under 50 KB, which the sticker app you import with makes from one of the stickers. The export here is sized, bordered and compressed to those limits and says so on each result."}},{"@type":"Question","name":"Does it work for Telegram?","acceptedAnswer":{"@type":"Answer","text":"Yes. Telegram's static stickers are 512 px on at least one side, as PNG or WebP, up to 512 KB, so the WhatsApp export qualifies as it is. Send it to the @Stickers bot, or import it with any Telegram sticker app."}},{"@type":"Question","name":"How is the border made?","acceptedAnswer":{"@type":"Answer","text":"The cut-out's silhouette is grown outwards by an exact distance transform — every pixel within the border width of the subject becomes border — then the picture is drawn on top. That is why the border is even all the way round and rounds corners naturally, like a real die cut, instead of being a thick line traced along the edge. Die-cut smoothing first rounds the silhouette, so the outline bridges gaps between strands of hair or between an arm and a body."}},{"@type":"Question","name":"Why do hair edges look better for people than for pets?","acceptedAnswer":{"@type":"Answer","text":"Because the second model, MODNet, is a portrait matting network: it was trained on photographs of people and draws a soft edge for hair. It is used only where the layer model found a person. A cat or a dog gets the layer edge refined against the pixels, which follows fur loosely. With a border, the difference matters less than in a plain cut-out — the outline covers the edge — and Die-cut smoothing hides the rest."}},{"@type":"Question","name":"Can I make a sticker of a car, a building or a dog?","acceptedAnswer":{"@type":"Answer","text":"Yes. Every layer the model finds has a tick: tick Cars, Buildings, Animals, Sky or anything else, and the sticker is whatever is ticked. More than one layer is fine — a person and the bicycle they are holding."}},{"@type":"Question","name":"Can I use the stickers commercially?","acceptedAnswer":{"@type":"Answer","text":"Yes. The output is yours. Both models are published under the Apache-2.0 licence, and nothing here adds a watermark or a credit. The photos themselves must of course be yours to use."}},{"@type":"Question","name":"What does \"Copy to clipboard\" do, and why is it greyed out?","acceptedAnswer":{"@type":"Answer","text":"It puts the sticker PNG on your clipboard, so you can paste it anywhere that takes an image — a chat, a document, an editor. It needs the browser's image clipboard API, which Chrome, Edge and Safari have and Firefox is adding; where it is missing the button is disabled and the download works as usual."}},{"@type":"Question","name":"Why 30 photos at a time?","acceptedAnswer":{"@type":"Answer","text":"A WhatsApp pack holds at most 30 stickers, and 30 keeps the memory of a phone comfortable. Each photo takes a second or two; a full pack, about a minute. Run another batch for the next pack."}}]}]}</script>
 </head>
-<body>
+<body data-sec="ai-image">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -98,6 +98,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -142,27 +145,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -220,6 +226,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/ai-image/">AI Image Tools</a></li><li><span aria-current="page">Sticker Maker</span></li></ol></nav>

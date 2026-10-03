@@ -48,7 +48,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Making Tax Digital: Does It Apply to Me?","description":"Work out whether Making Tax Digital for Income Tax catches you, and from which April. It adds up your qualifying income the way HMRC defines it - gross income before expenses, across every trade and every property business - shows the sum, names the threshold that catches you, counts your quarterly updates, and gives you the first period and its deadline. Guidance as at 2026-09-20; gov.uk is the authority. Runs in your browser.","url":"https://www.1234tools.com/business/mtd-checker/","applicationCategory":"BusinessApplication","operatingSystem":"Any","dateModified":"2026-09-20","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"Business","item":"https://www.1234tools.com/business/"},{"@type":"ListItem","position":3,"name":"Making Tax Digital: Does It Apply to Me?","item":"https://www.1234tools.com/business/mtd-checker/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What exactly is qualifying income?","acceptedAnswer":{"@type":"Answer","text":"Gross income before expenses, from self-employment and from property, added together. Turnover from every trade plus the rent from every property, UK and overseas, before a single cost comes off. It is not your profit, it is not your taxable income, and it does not include employment income, pensions, dividends or savings interest. If you take one thing from this page, take that."}},{"@type":"Question","name":"Which return is it judged on?","acceptedAnswer":{"@type":"Answer","text":"The tax return for the year two years before the start year. The 6 April 2026 start is judged on your 2024-25 return, the 6 April 2027 start on 2025-26, and the 6 April 2028 start on 2026-27. That is why a quiet year now does not get you out of a busy year two years ago - and why a good year now matters for a date that feels a long way off."}},{"@type":"Question","name":"How many quarterly updates will I have to send?","acceptedAnswer":{"@type":"Answer","text":"Four a year for each business. Each separate trade is a business; your UK property letting is one property business and overseas property is a separate one. A sole trader who also lets a UK flat sends eight updates a year, plus one Final Declaration by 31 January after the tax year ends."}},{"@type":"Question","name":"Are these figures right?","acceptedAnswer":{"@type":"Answer","text":"They are the rules as understood on 2026-09-20, written into one constant block so they can be reviewed and corrected in one place. They were not checked against a live gov.uk page, and the things least certain are printed on the results as \"what to re-check\". Treat this as a way of framing the question for your accountant or for gov.uk, not as a ruling."}},{"@type":"Question","name":"Can this get me out of it?","acceptedAnswer":{"@type":"Answer","text":"No, and it does not try. It cannot grant an exemption, decide a digitally excluded application, tell you what HMRC holds on your record, or say when partnerships will be brought in. It works out one thing - whether your qualifying income crosses a threshold, and when - and tells you plainly what it has not decided."}},{"@type":"Question","name":"Is anything I type sent anywhere?","acceptedAnswer":{"@type":"Answer","text":"No. Every figure is added up in your browser, and the PDF and text summary are written there too. Your turnover and your rent never leave the device, and nothing is logged."}}]}]}</script>
 </head>
-<body>
+<body data-sec="business">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -99,6 +99,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -143,27 +146,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -221,6 +227,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/business/">Business</a></li><li><span aria-current="page">Making Tax Digital: Does It Apply to Me?</span></li></ol></nav>

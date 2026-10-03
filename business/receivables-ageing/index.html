@@ -48,7 +48,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Receivables Ageing & Payment Reminders","description":"Turn a list of unpaid invoices into a proper ageing report — 0–30, 31–60, 61–90, over 90 days, by customer — and get a reminder letter for each debtor that names their invoices and their total, with the tone stepping up the longer it has been. Runs in your browser; your debtors list is not uploaded.","url":"https://www.1234tools.com/business/receivables-ageing/","applicationCategory":"BusinessApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"Business","item":"https://www.1234tools.com/business/"},{"@type":"ListItem","position":3,"name":"Receivables Ageing & Payment Reminders","item":"https://www.1234tools.com/business/receivables-ageing/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What counts as overdue?","acceptedAnswer":{"@type":"Answer","text":"Days between the due date and the date you set as \"as on\", counting only whole days past. An invoice due today is not overdue; one due yesterday is one day overdue. Anything with a due date in the future sits under \"Not yet due\" and is left out of every reminder."}},{"@type":"Question","name":"How is the average age worked out?","acceptedAnswer":{"@type":"Answer","text":"It is weighted by money, not by invoice count: a lakh sixty days late moves it far more than a thousand rupees ninety days late. That is the number worth watching month to month, and it is the one a bank asks about."}},{"@type":"Question","name":"Are the letters legally safe to send?","acceptedAnswer":{"@type":"Answer","text":"They state facts — the invoices, the amounts, the dates, and what you would like to happen — and they make no threat. The final letter says the account will be put on hold and recovery considered, which is a statement of intent, not a legal notice. If you need a statutory demand or a notice under your own contract terms, that is a job for your solicitor or chartered accountant."}},{"@type":"Question","name":"Can I add my payment terms or interest clause?","acceptedAnswer":{"@type":"Answer","text":"Yes — whatever you type into the terms line is printed under every letter, so an interest or late-payment clause from your own invoice terms goes in exactly as you word it. The tool does not calculate interest, because the rate and the entitlement depend on your contract and your jurisdiction."}},{"@type":"Question","name":"Is my debtors list uploaded?","acceptedAnswer":{"@type":"Answer","text":"No. It is read, aged and written back out by your own browser. Customer names, amounts and contact details never leave the device."}}]}]}</script>
 </head>
-<body>
+<body data-sec="business">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -99,6 +99,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -143,27 +146,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -221,6 +227,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/business/">Business</a></li><li><span aria-current="page">Receivables Ageing &amp; Payment Reminders</span></li></ol></nav>

@@ -48,7 +48,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Bookkeeping: Trial Balance, P&L and Balance Sheet","description":"Bring a bank statement, a sales day book or a set of journals into a real double-entry ledger and get the trial balance, profit and loss, balance sheet, VAT or GST figures and every account’s ledger back. Charts of accounts for the UK and India. Runs in your browser — a client’s books are never uploaded.","url":"https://www.1234tools.com/business/bookkeeping/","applicationCategory":"BusinessApplication","operatingSystem":"Any","dateModified":"2026-09-20","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"Business","item":"https://www.1234tools.com/business/"},{"@type":"ListItem","position":3,"name":"Bookkeeping: Trial Balance, P&L and Balance Sheet","item":"https://www.1234tools.com/business/bookkeeping/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Can this file my VAT return?","acceptedAnswer":{"@type":"Answer","text":"No. It works out the nine box figures from your own postings, and shows them beside the ledger balances so you can check them. Filing under Making Tax Digital has to go through software HMRC has recognised, which involves registering as a vendor, passing their tests and sending fraud prevention headers with every call. That is a licence and an approval, not a feature, and this tool does not pretend to have it."}},{"@type":"Question","name":"Are these statutory accounts?","acceptedAnswer":{"@type":"Answer","text":"No. The profit and loss and the balance sheet here are management accounts: correct arithmetic, your own account names, no statutory formats and no iXBRL tagging. Accounts filed at Companies House must follow FRS 105 or FRS 102 Section 1A and be tagged to the FRC taxonomy, which is a separate piece of work."}},{"@type":"Question","name":"Where is the book kept?","acceptedAnswer":{"@type":"Answer","text":"In the page, while it is open, and in the file you save. Nothing is uploaded, which is why an accountant can put a client’s ledger through it without a data processing agreement. The trade is that you look after the file — close the tab without saving and the work is gone."}},{"@type":"Question","name":"How is money handled?","acceptedAnswer":{"@type":"Answer","text":"As whole pence or paise, never as decimals. Binary floating point cannot represent 0.1 exactly, which is how ledgers end up a penny out; this one adds integers, and splits a tax amount so the parts always add back to the whole."}},{"@type":"Question","name":"Which charts of accounts are there?","acceptedAnswer":{"@type":"Answer","text":"A UK small-company chart in the usual nominal ranges, and an Indian one in Tally’s groups with separate CGST, SGST and IGST accounts. You can add your own accounts to either. The tax split for an Indian sale follows whether you mark it intra-state or inter-state, so it cannot disagree with the GSTINs."}}]}]}</script>
 </head>
-<body>
+<body data-sec="business">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -99,6 +99,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -143,27 +146,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -221,6 +227,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/business/">Business</a></li><li><span aria-current="page">Bookkeeping: Trial Balance, P&amp;L and Balance Sheet</span></li></ol></nav>

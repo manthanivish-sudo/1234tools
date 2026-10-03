@@ -49,7 +49,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"School Timetable Generator","description":"Give it the subject allocation — class, subject, teacher, periods a week — and get a clash-free timetable: a grid for every class, a grid for every teacher, double periods kept together, teacher free days honoured, and a plain list of anything that would not fit. Runs in your browser; no staff names are uploaded.","url":"https://www.1234tools.com/education/timetable/","applicationCategory":"EducationalApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"Education & Exams","item":"https://www.1234tools.com/education/"},{"@type":"ListItem","position":3,"name":"School Timetable Generator","item":"https://www.1234tools.com/education/timetable/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What does it guarantee?","acceptedAnswer":{"@type":"Answer","text":"No teacher is in two places at once, no class has two lessons at once, no teacher is booked when you said they are unavailable, no teacher exceeds the daily maximum you set, and every double period sits in two adjacent slots on one day. Those are checked after the grid is built, and the tool refuses to call a timetable finished if any of them fails."}},{"@type":"Question","name":"What does it only try to do?","acceptedAnswer":{"@type":"Answer","text":"Spreading a subject across the week rather than twice in a day, keeping teachers’ free periods together instead of scattered, keeping the last period of the day off the subjects you name, and levelling teachers’ daily loads. These are scored, not enforced: a timetable that places every lesson with a few of these imperfect is better than no timetable."}},{"@type":"Question","name":"Why did some lessons not fit?","acceptedAnswer":{"@type":"Answer","text":"Almost always arithmetic rather than bad luck. Add up one teacher’s periods a week: if it is more than the days times periods you have, no arrangement exists. The same goes for a class. The unplaced list names the class, subject and teacher, and the summary shows each teacher’s load against the maximum possible, so the cause is usually visible in one line."}},{"@type":"Question","name":"Can it handle two teachers for one subject, or a class split into sets?","acceptedAnswer":{"@type":"Answer","text":"Write them as separate rows — “7A / Mathematics / R Menon / 4” and “7A / Mathematics / S Iyer / 2” — and both are placed without clashing. A split into sets that run at the same time is not supported: the tool assumes one class is in one place at a time."}},{"@type":"Question","name":"Is any of this uploaded?","acceptedAnswer":{"@type":"Answer","text":"No. The allocation is read by your own browser, the timetable is built there, and the spreadsheet and PDF are written there. Staff names and teaching loads never leave the device."}}]}]}</script>
 </head>
-<body>
+<body data-sec="education">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -100,6 +100,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -144,27 +147,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -222,6 +228,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/education/">Education &amp; Exams</a></li><li><span aria-current="page">School Timetable Generator</span></li></ol></nav>

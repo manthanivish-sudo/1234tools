@@ -53,7 +53,7 @@
 <script src="/assets/account.js" defer></script>
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Tenancy & Leave-and-Licence Drafter","description":"A first draft for a solicitor or advocate to settle before anyone signs, and every draft opens with a banner that says exactly that — it is not advice and it is not a form you can rely on. A residential tenancy for England and Wales, or a leave and licence or rent agreement for India, built only from the terms you give, with a [placeholder] wherever you did not decide.","url":"https://www.1234tools.com/ai/tenancy-agreement-drafter/","applicationCategory":"BusinessApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"INR","description":"10 calls a month free; more on Pro"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI for Business","item":"https://www.1234tools.com/ai/"},{"@type":"ListItem","position":3,"name":"Tenancy & Leave-and-Licence Drafter","item":"https://www.1234tools.com/ai/tenancy-agreement-drafter/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Can I use this as my tenancy agreement?","acceptedAnswer":{"@type":"Answer","text":"Not as it stands. It is a first draft written by a language model from the terms you typed; it can be wrong, incomplete or unsuitable, it deliberately leaves every point of law open, and it owes you no duty of care. A qualified solicitor or advocate settles it before anyone signs."}},{"@type":"Question","name":"Why does it not fill in the notice period?","acceptedAnswer":{"@type":"Answer","text":"Because notice periods in residential tenancies change, they differ by document type and by where the property is, and a wrong one in a signed agreement is expensive in a way that an obvious gap is not. The draft names the point and leaves it bracketed for the person who can check it."}},{"@type":"Question","name":"Does it handle a lodger, a company let or a commercial lease?","acceptedAnswer":{"@type":"Answer","text":"No. It drafts a residential tenancy for England and Wales, and a leave and licence or a residential rent agreement for India. Anything else — a lodger agreement, a company let, a commercial lease, a Scottish tenancy — is a different document with different law behind it, and this tool does not pretend to know it."}}]}]}</script>
 </head>
-<body>
+<body data-sec="ai">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -104,6 +104,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -148,27 +151,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -226,6 +232,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/ai/">AI for Business</a></li><li><span aria-current="page">Tenancy &amp; Leave-and-Licence Drafter</span></li></ol></nav>

@@ -45,7 +45,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"CGPA to Percentage Converter","description":"Convert CGPA to percentage and back, using your university's own formula — CBSE, VTU, GTU, a plain ten-point scale, or one you enter yourself.","url":"https://www.1234tools.com/education/cgpa-to-percentage/","applicationCategory":"EducationalApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"Education & Exams","item":"https://www.1234tools.com/education/"},{"@type":"ListItem","position":3,"name":"CGPA to Percentage Converter","item":"https://www.1234tools.com/education/cgpa-to-percentage/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Which formula should I use?","acceptedAnswer":{"@type":"Answer","text":"Whichever one your university publishes. If you do not know it, the ten-point multiplication is the most common default in India, and CBSE's × 9.5 applies to school board results. Where a university uses a conversion table rather than a formula, no calculator can reproduce it and you should use the table."}},{"@type":"Question","name":"Why do different formulas give such different answers?","acceptedAnswer":{"@type":"Answer","text":"Because they are measuring different things. A plain × 10 assumes the grade points map linearly onto marks; an offset formula assumes the lowest passing grade already represents a percentage well above zero. On a CGPA of 8.2 the two differ by more than four percentage points, which is enough to change an eligibility decision."}},{"@type":"Question","name":"Can a percentage be over 100?","acceptedAnswer":{"@type":"Answer","text":"With some formulas, yes, at the very top of the scale. A CGPA of 10 under the ten-point rule is 100%, but under a rule with a negative offset it would be more. That is a property of the formula rather than a mistake, and it is why the tool shows the highest figure your chosen formula can produce."}},{"@type":"Question","name":"Is the reverse conversion exact?","acceptedAnswer":{"@type":"Answer","text":"It is the exact inverse of the formula, but it is not a way to recover a CGPA the university never issued. Converting a percentage into a CGPA gives you the CGPA that would have produced it, which is useful for comparison and not a substitute for an official figure."}}]}]}</script>
 </head>
-<body>
+<body data-sec="education">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -96,6 +96,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -140,27 +143,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -218,6 +224,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/education/">Education &amp; Exams</a></li><li><span aria-current="page">CGPA to Percentage Converter</span></li></ol></nav>

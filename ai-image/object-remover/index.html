@@ -45,7 +45,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Object & People Remover","description":"Brush over a person, car, bin or cable and it is gone, filled in by AI running in your browser — nothing is uploaded. One tap removes every person in the shot.","url":"https://www.1234tools.com/ai-image/object-remover/","applicationCategory":"MultimediaApplication","operatingSystem":"Any","browserRequirements":"Requires a current browser; nothing is uploaded.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"keywords":"magic eraser, remove object from photo, remove people from photo, photo cleanup, remove tourists from photo, object remover free, inpainting online, remove unwanted objects"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI Image Tools","item":"https://www.1234tools.com/ai-image/"},{"@type":"ListItem","position":3,"name":"Object & People Remover","item":"https://www.1234tools.com/ai-image/object-remover/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is my photo uploaded?","acceptedAnswer":{"@type":"Answer","text":"No. Two models are downloaded once from 1234tools.com itself and kept by your browser: EfficientViT-Seg B1 (18 MB, Apache-2.0 licence) to find the people and objects for the one-tap buttons, and MI-GAN (28 MB, MIT licence) to paint the gap. The runtime that executes them is served from this site too. Your picture is read, brushed, filled and saved on your own device; no third-party server is contacted, we never see the photo, and there is no account and no watermark."}},{"@type":"Question","name":"How does it fill the gap?","acceptedAnswer":{"@type":"Answer","text":"An inpainting network — MI-GAN, from Picsart AI Research, trained on the Places2 scene dataset — looks at the pixels around the hole and generates new ones that continue the textures, colours and lines it can see. It is a guess that fits the surroundings, not a photograph of what was behind the object; it cannot know that, and nothing can. On textured or repetitive backgrounds the guess is usually invisible."}},{"@type":"Question","name":"Why does a large removal look smeared?","acceptedAnswer":{"@type":"Answer","text":"The network works on a 512-pixel square and has to invent every pixel inside the selection from what is left outside it. The bigger the hole relative to its surroundings, the less there is to continue, so it falls back to a soft average. This tool runs a coarse pass over the whole frame first and then refines each tile at full resolution, which helps a great deal on big photos, but a hole that covers half the picture will still look painted. Remove large objects in two or three smaller passes instead."}},{"@type":"Question","name":"Can it remove text or a watermark?","acceptedAnswer":{"@type":"Answer","text":"It fills whatever you brush, so a date stamp or a stray caption on your own photo can be painted out. We do not offer watermark removal, and copyright marks on other people’s work must not be removed."}},{"@type":"Question","name":"Can I use the result commercially?","acceptedAnswer":{"@type":"Answer","text":"Yes, for a photo you have the rights to. The output is yours and nothing is added to it. Both models are published under permissive licences — MI-GAN under MIT and EfficientViT-Seg under Apache-2.0 — and this site adds no watermark or credit."}},{"@type":"Question","name":"Why is the first run slow, and how big is the download?","acceptedAnswer":{"@type":"Answer","text":"The first time, your browser downloads the inpainting model (28 MB) and the runtime (14 MB); using a one-tap button also fetches the segmentation model (18 MB). All three come from this site and are cached, so the next visit skips the download entirely. After that a single removal takes a second or two on a laptop and a few seconds on a phone; a large selection on a big photo is filled in several tiles and takes correspondingly longer. The progress bar shows how far it has got, and Cancel stops it."}},{"@type":"Question","name":"What does \"Remove all people\" actually select?","acceptedAnswer":{"@type":"Answer","text":"Every pixel the segmentation model labelled as a person, snapped to the real edges of the picture, then grown by the margin you set so hair, hands and clothing edges are covered. Tick \"Include shadows\" to extend each selection downwards as well. If the model missed someone — very small or partly hidden figures sometimes — brush them in before pressing Remove."}},{"@type":"Question","name":"What resolution does it work at?","acceptedAnswer":{"@type":"Answer","text":"Up to 2,048 pixels on the long edge. A larger photo is scaled down to that on opening, and the status line says so. Stills export at the working resolution as PNG or JPEG; the before-and-after clip exports at up to 1,080 pixels as MP4 or GIF."}},{"@type":"Question","name":"Does it work on a phone?","acceptedAnswer":{"@type":"Answer","text":"Yes, in Safari on iOS and Chrome on Android. The models are downloaded once and cached. A big photo with a big selection is more work for a phone, so expect a longer wait there; the progress bar and Cancel button apply as they do on a laptop."}}]}]}</script>
 </head>
-<body>
+<body data-sec="ai-image">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -96,6 +96,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -140,27 +143,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -218,6 +224,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/ai-image/">AI Image Tools</a></li><li><span aria-current="page">Object &amp; People Remover</span></li></ol></nav>

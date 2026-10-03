@@ -53,7 +53,7 @@
 <script src="/assets/account.js" defer></script>
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Property Listing Writer","description":"A draft listing for the agent to check and evidence before it is published — property particulars are regulated, nothing here has been verified, and no claim in it is a claim we make. Headline, description and key features from your facts, plus a list of every statement that needs proof on file before it goes live and every fact a buyer will ask for that you have not given.","url":"https://www.1234tools.com/ai/property-listing-writer/","applicationCategory":"BusinessApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"INR","description":"10 calls a month free; more on Pro"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI for Business","item":"https://www.1234tools.com/ai/"},{"@type":"ListItem","position":3,"name":"Property Listing Writer","item":"https://www.1234tools.com/ai/property-listing-writer/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Does this make my particulars compliant?","acceptedAnswer":{"@type":"Answer","text":"No, and nothing could. It drafts copy from your facts, attributes what the vendor said, refuses to invent anything, and hands you a list of every statement that needs evidence on file. Whether the finished particulars satisfy the rules that bind you is a judgement for you and, where it matters, for your compliance adviser or your lawyer."}},{"@type":"Question","name":"Why will it not say the house is two minutes from the station?","acceptedAnswer":{"@type":"Answer","text":"Because it has no map, no timetable and no way to check, and a distance stated in particulars is a statement of fact a buyer may rely on. If you have measured it, put the measurement in the facts and the copy will use it. If the vendor said it, the copy will say the vendor said it."}},{"@type":"Question","name":"Can it write listings for several properties at once?","acceptedAnswer":{"@type":"Answer","text":"One property a run. Each listing depends on the detail of that property and its evidence list, and a batch would flatten both. For a portfolio, run them one after another and keep the evidence lists together."}}]}]}</script>
 </head>
-<body>
+<body data-sec="ai">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -104,6 +104,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -148,27 +151,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -226,6 +232,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/ai/">AI for Business</a></li><li><span aria-current="page">Property Listing Writer</span></li></ol></nav>

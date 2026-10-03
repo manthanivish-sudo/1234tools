@@ -47,7 +47,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"AI Background Remover","description":"Remove the background from any photo, or keep only the people, cars or sky. AI in your browser — nothing is uploaded. Transparent PNG or WebP, 20 at a time.","url":"https://www.1234tools.com/ai-image/background-remover/","applicationCategory":"MultimediaApplication","operatingSystem":"Any","browserRequirements":"Requires a current browser; nothing is uploaded.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"keywords":"remove background, background remover, remove bg free, transparent background maker, cut out person from photo, keep only the sky, remove background from product photo, background remover no upload"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"AI Image Tools","item":"https://www.1234tools.com/ai-image/"},{"@type":"ListItem","position":3,"name":"AI Background Remover","item":"https://www.1234tools.com/ai-image/background-remover/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is my photo uploaded?","acceptedAnswer":{"@type":"Answer","text":"No. The only downloads are the two models and the runtime, served from 1234tools.com itself: EfficientViT-Seg (18 MB, Apache-2.0) for the layers and MODNet (25 MB, Apache-2.0) for the edges of people, both fetched once and kept by your browser. No third-party server is contacted. Your picture is read, cut and encoded on your device; we never see it, and there is no account and no watermark."}},{"@type":"Question","name":"How is this different from the simple background remover?","acceptedAnswer":{"@type":"Answer","text":"The simple one under Image & Photo samples the corners of the picture and removes everything of that colour. It is instant, ideal for a logo or a product on a plain wall, and useless for a person in a room. This one understands the picture: a segmentation network labels every pixel as a person, a car, sky, a building and so on, so you choose what to keep, and a matting network draws the edges of people properly. It needs a one-off download and a second or two per photo."}},{"@type":"Question","name":"Why do hair edges look better for people than for pets?","acceptedAnswer":{"@type":"Answer","text":"Because the second model, MODNet, is a portrait matting network: it was trained on photographs of people and predicts a soft alpha for hair, strands and the edge of a shoulder. It is applied only where the layer model found a person. Fur on a cat or a dog gets the layer edge refined against the pixels, which follows the fur loosely but not strand by strand. Edge softness 5–7 helps with fur."}},{"@type":"Question","name":"Can I use the results commercially?","acceptedAnswer":{"@type":"Answer","text":"Yes. The output is yours. Both models are published under the Apache-2.0 licence — EfficientViT-Seg by the MIT HAN Lab, MODNet by its authors — and nothing here adds a watermark or a credit."}},{"@type":"Question","name":"Can I keep only the sky, or only the car?","acceptedAnswer":{"@type":"Answer","text":"Yes. Every layer the model finds has a tick. Untick People and tick Sky to keep the sky alone; tick Cars and nothing else for the car. A kept layer is cut at the model's boundary and refined against the real pixels of the photo, so it follows the edge of a bumper or a roofline."}},{"@type":"Question","name":"What are the crops for?","acceptedAnswer":{"@type":"Answer","text":"A story or a Reel wants 9:16, Instagram's grid 1:1 or 4:5, a header 16:9. The frame is the largest rectangle of that shape that fits in the photo, centred on the layers you keep, and the export has exactly that shape at up to the original resolution."}},{"@type":"Question","name":"How does the batch work, and why 20?","acceptedAnswer":{"@type":"Answer","text":"Add up to 20 photos and each goes through the same settings as the one on screen: the same kinds of layer kept, the same background, frame, format and size. Each result gets its own download, and \"Download all\" packs them into one zip. Twenty keeps the memory of a phone comfortable; run another batch for the next twenty."}},{"@type":"Question","name":"The edge still looks wrong. What can I do?","acceptedAnswer":{"@type":"Answer","text":"Raise Edge softness for hair and fur, lower it for a crisp product edge. Grow or shrink the cut by a step to lose a halo or recover a fringe. Switch Detail to High for small subjects. For a person, make sure \"Hair-quality edges for people\" is on. A sharp, well-lit photo with the subject in focus always does better than a dim one."}},{"@type":"Question","name":"Does it work on a phone?","acceptedAnswer":{"@type":"Answer","text":"Yes, in Safari on iOS and Chrome on Android. The first run downloads the models (43 MB together) and the runtime (14 MB); after that everything is cached. A photo takes a second or two; a batch of twenty, a minute or so."}}]}]}</script>
 </head>
-<body>
+<body data-sec="ai-image">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -98,6 +98,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -142,27 +145,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -220,6 +226,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/ai-image/">AI Image Tools</a></li><li><span aria-current="page">AI Background Remover</span></li></ol></nav>

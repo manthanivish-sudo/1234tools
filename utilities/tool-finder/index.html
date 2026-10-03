@@ -44,7 +44,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebApplication","name":"Tool Finder","description":"Say what you need in plain words — \"merge two PDFs\", \"km to miles\", \"payslip for one employee\" — and it finds the right tool among 1,280, on your device. If it does not exist yet, ask for it in the same place.","url":"https://www.1234tools.com/utilities/tool-finder/","applicationCategory":"UtilitiesApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"keywords":"find a tool, which tool do I need, tool finder, search tools by description, what tool converts, ai tool finder, tool recommendation"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"Utilities","item":"https://www.1234tools.com/utilities/"},{"@type":"ListItem","position":3,"name":"Tool Finder","item":"https://www.1234tools.com/utilities/tool-finder/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is this an AI chat? Where does my question go?","acceptedAnswer":{"@type":"Answer","text":"Nowhere. It is a conversation in shape, but the matching is done by your browser against a list of the site’s tools, their descriptions and a vocabulary of synonyms and unit names that ships with the page. There is no model on a server reading what you type, which is why it answers instantly and works offline once loaded."}},{"@type":"Question","name":"What happens when I send a request?","acceptedAnswer":{"@type":"Answer","text":"Your description, the optional “what you do” line and the optional email go to our server and are kept until the request is dealt with. That is the only part of the page that leaves your device, and only when you press the button. The email is used to reply and for nothing else."}},{"@type":"Question","name":"Why does it sometimes offer several tools?","acceptedAnswer":{"@type":"Answer","text":"Because several fit. \"Convert a document\" could be PDF to Word, image to PDF or CSV to JSON. It shows the closest few and a row of chips to narrow by family, and you can simply type the detail that settles it."}},{"@type":"Question","name":"Can it find unit conversions?","acceptedAnswer":{"@type":"Answer","text":"Yes — all 1,048 of them. It understands the common names and short forms: km, mi, kg, lb, °C, °F, mph, psi, kWh, GB, and the rest. \"km to miles\" opens the exact page; \"length\" opens the family."}},{"@type":"Question","name":"It did not understand me. What helps?","acceptedAnswer":{"@type":"Answer","text":"Use the noun for the thing and the verb for the job: \"resize photo\", \"merge PDF\", \"GST on invoice\". Avoid brand names unless the tool is an alternative to one — those are on the Comparisons page. If it still draws a blank, that is useful information for us: send it as a request."}},{"@type":"Question","name":"What is the box on the section pages?","acceptedAnswer":{"@type":"Answer","text":"The same finder, kept to that section’s tools: ask the PDF page for \"merge two files\" and it answers from the PDF tools. When the section has nothing for the job it says so and shows what the rest of the site has, so you are never left at a dead end."}}]}]}</script>
 </head>
-<body>
+<body data-sec="utilities">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -95,6 +95,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link is-active" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -139,27 +142,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
-      <a class="side-link is-active" href="/utilities/">
+      <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -217,6 +223,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/utilities/">Utilities</a></li><li><span aria-current="page">Tool Finder</span></li></ol></nav>

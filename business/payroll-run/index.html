@@ -48,7 +48,7 @@
 <!-- /ANALYTICS -->
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Monthly Payroll Run: Payslips, Bank File & Statutory Summary","description":"Drop in a salary sheet and get the whole month's payroll: a payslip PDF for every employee in a zip, a combined PDF, the bank bulk-transfer CSV, and a register workbook with PF, ESI, professional tax and TDS summaries. Pro-rates by paid days, computes the statutory deductions or takes them from your sheet, and refuses to run if anyone's net pay is negative. Runs in your browser; nothing is uploaded.","url":"https://www.1234tools.com/business/payroll-run/","applicationCategory":"BusinessApplication","operatingSystem":"Any","dateModified":"2026-09-20","offers":{"@type":"Offer","price":"0","priceCurrency":"INR"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"Business","item":"https://www.1234tools.com/business/"},{"@type":"ListItem","position":3,"name":"Monthly Payroll Run: Payslips, Bank File & Statutory Summary","item":"https://www.1234tools.com/business/payroll-run/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What does it actually produce from one run?","acceptedAnswer":{"@type":"Answer","text":"Four downloads: payslips.zip with one PDF per employee named by employee ID, name and month; payslips-combined.pdf with every slip in order for printing; bank-transfer.csv with the account number, IFSC, beneficiary name, amount and narration; and payroll-register.xlsx with a Register sheet listing every component for every employee, plus PF, ESI, professional tax, TDS and bank-transfer summary sheets whose totals tie back to the slips."}},{"@type":"Question","name":"Does it compute PF, ESI and professional tax, or do I supply them?","acceptedAnswer":{"@type":"Answer","text":"Either. Leave it on \"compute\" and PF is 12% of Basic+DA (capped at the Rs 15,000 wage ceiling if you choose), ESI applies while gross wages are Rs 21,000 or less, and professional tax comes from the state you pick. Switch it to \"take from the sheet\" and your own columns are used untouched — useful when your consultant has already computed them."}},{"@type":"Question","name":"Is TDS calculated?","acceptedAnswer":{"@type":"Answer","text":"No. Monthly TDS depends on each employee's projected annual income, their regime, their declarations and what has already been deducted this year — none of which is in a salary sheet. Put your computed TDS in a column and it is carried through to the payslip, the register and the TDS summary. The CTC calculator on this site will estimate a year's tax if you need a starting figure."}},{"@type":"Question","name":"How many employees can it handle?","acceptedAnswer":{"@type":"Answer","text":"It is arithmetic and PDF drawing in your browser, so a few hundred rows is comfortable. Every payslip is one A4 page; a very long list of components will be trimmed to what fits the page and the register workbook still carries everything."}},{"@type":"Question","name":"Does the salary sheet leave my device?","acceptedAnswer":{"@type":"Answer","text":"No. It is read by your own browser, the PDFs and the workbook are written there, and the downloads come from memory. Nothing is uploaded, queued or logged."}}]}]}</script>
 </head>
-<body>
+<body data-sec="business">
 <a class="skip" href="#main">Skip to main content</a>
 
 <header class="site-header">
@@ -99,6 +99,9 @@
     </div>
 
     <nav class="side-nav">
+      <a class="side-link" href="/utilities/tool-finder/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span class="side-name">Find a tool</span>
+      </a>
       <a class="side-link" href="/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
@@ -143,27 +146,30 @@
       <a class="side-link" href="/mathematics/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-mathematics"></use></svg><span class="side-name">Mathematics</span><span class="side-count">12</span>
       </a>
-      <a class="side-link" href="/finance/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/time/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-time"></use></svg><span class="side-name">Time &amp; Dates</span><span class="side-count">8</span>
       </a>
       <a class="side-link" href="/health/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-health"></use></svg><span class="side-name">Health</span><span class="side-count">8</span>
       </a>
-      <a class="side-link" href="/qr/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
-      </a>
       <a class="side-link" href="/utilities/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-utilities"></use></svg><span class="side-name">Utilities</span><span class="side-count">9</span>
       </a>
-      <a class="side-link" href="/engineering/">
+      <details class="side-fold side-fold-more">
+        <summary>More sections</summary>
+      <a class="side-link side-sub" href="/finance/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-finance"></use></svg><span class="side-name">Finance &amp; Accounting</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/qr/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-qr"></use></svg><span class="side-name">QR Tools</span><span class="side-count">3</span>
+      </a>
+      <a class="side-link side-sub" href="/engineering/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-engineering"></use></svg><span class="side-name">Engineering &amp; Electronics</span><span class="side-count">1</span>
       </a>
-      <a class="side-link" href="/design/">
+      <a class="side-link side-sub" href="/design/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-design"></use></svg><span class="side-name">Design &amp; Media</span><span class="side-count">1</span>
       </a>
+      </details>
 
       <p class="side-group">Unit conversions</p>
       <a class="side-link" href="/conversions/">
@@ -221,6 +227,7 @@
       </a>
     </nav>
   </aside>
+<a class="side-find-fab" href="/utilities/tool-finder/" aria-label="Find a tool"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-tool-finder"></use></svg><span>Find</span></a>
 
   <main id="main" class="content">
 <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="/business/">Business</a></li><li><span aria-current="page">Monthly Payroll Run: Payslips, Bank File &amp; Statutory Summary</span></li></ol></nav>
