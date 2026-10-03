@@ -1,0 +1,42 @@
+{
+  "id": "/ai-image/sticker-maker/",
+  "name": "Sticker Maker — 1234Tools",
+  "short_name": "Sticker Maker",
+  "description": "Cut a sticker from any photo, white outline and all: a WhatsApp or Telegram pack, a story or a transparent PNG. AI in your browser — nothing is uploaded.",
+  "start_url": "/ai-image/sticker-maker/?src=pwa",
+  "scope": "/ai-image/sticker-maker/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "photo",
+    "graphics"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-sticker-maker.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-sticker-maker-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-sticker-maker-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

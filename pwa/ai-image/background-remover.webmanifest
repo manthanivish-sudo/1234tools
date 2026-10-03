@@ -1,0 +1,42 @@
+{
+  "id": "/ai-image/background-remover/",
+  "name": "AI Background Remover — 1234Tools",
+  "short_name": "AI Background",
+  "description": "Remove the background from any photo, or keep only the people, cars or sky. AI in your browser — nothing is uploaded. Transparent PNG or WebP, 20 at a time.",
+  "start_url": "/ai-image/background-remover/?src=pwa",
+  "scope": "/ai-image/background-remover/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "photo",
+    "graphics"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-background-remover.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-background-remover-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-background-remover-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
