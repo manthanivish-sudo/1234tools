@@ -272,10 +272,22 @@
     if (/^(us )?gallons?$/.test(s)) return ['gallon-us'];
     return null;
   }
+  /** The number as people write it: "1,000" and "12,345.6" are thousands,
+   *  "1,5" is a decimal, "-40" is minus forty. undefined when it is not one. */
+  function typedNumber(n) {
+    let t = n.replace(/\s+/g, '');
+    if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(t)) t = t.replace(/,/g, '');
+    else if (/^-?\d+,\d+$/.test(t)) t = t.replace(',', '.');
+    const v = Number(t);
+    return Number.isFinite(v) ? v : undefined;
+  }
   /** "5 km to miles", "psi in bar", "convert kg into lbs", "celsius fahrenheit" */
   function conversionIntent(text) {
     let s = text.toLowerCase().replace(/→|->|=>/g, ' to ').replace(/\bconvert(ing|er|ed)?\b|\bconversion\b|\bplease\b|\bcalculator\b|\bhow (many|much)\b|\bis\b|\bwhat\b|\bare\b|\?/g, ' ').replace(/\s+/g, ' ').trim();
-    s = s.replace(/^\d+(?:[.,]\d+)?\s*/, '');
+    /* a leading number is the value: it travels to the page as ?v= so the
+       answer is on screen the moment it opens */
+    let value;
+    s = s.replace(/^-?\d+(?:[.,]\d+)*\s*/, (n) => { value = typedNumber(n); return ''; });
     const m = /^(.{1,30}?)\s+(?:to|in|into|as|vs|versus|per|equals?)\s+(.{1,30}?)$/.exec(s);
     const pairs = [];
     if (m) pairs.push([m[1], m[2]]);
@@ -285,7 +297,7 @@
     for (const [a, b] of pairs) {
       const A = unitCandidates(a), B = unitCandidates(b);
       if (!A || !B) continue;
-      for (const x of A) for (const y of B) { if (CONV[x + '>' + y]) return { hit: CONV[x + '>' + y], from: x, to: y }; }
+      for (const x of A) for (const y of B) { if (CONV[x + '>' + y]) return { hit: CONV[x + '>' + y], from: x, to: y, value }; }
     }
     const fam = w.length <= 2 && w.map((x) => FAMILY_WORDS[x]).find(Boolean);
     if (fam && FAMILY_HUBS[fam]) return { family: fam, path: FAMILY_HUBS[fam] };
@@ -365,7 +377,7 @@
   function decide(t, previous, section) {
     if (!section || section === 'conversions') {
       const conv = conversionIntent(t);
-      if (conv && conv.hit) return { kind: 'convert', hit: conv.hit, from: conv.from, to: conv.to };
+      if (conv && conv.hit) return { kind: 'convert', hit: conv.hit, from: conv.from, to: conv.to, value: conv.value };
       if (conv && conv.family) return { kind: 'family', family: conv.family, path: conv.path };
       /* the conversions are matched from their slugs; there is nothing to rank */
       if (section) return { kind: 'none', text: t, fixes: [] };
@@ -581,13 +593,18 @@
       return wrap;
     }
     function textAnd(text, node) { const w = el('div'); w.appendChild(el('p', 'finder-text', text)); if (node) w.appendChild(node); return w; }
-    const convDoc = (hit) => ({ title: hit.title, path: hit.path, glyph: 'i-' + hit.family, section: 'Conversions', desc: 'Type a value and it converts both ways, with the formula shown.' });
+    /* a value the reader typed rides along as ?v=, and the page opens on it */
+    const convDoc = (hit, value) => ({
+      title: hit.title, glyph: 'i-' + hit.family, section: 'Conversions',
+      path: hit.path + (value !== undefined ? '?v=' + encodeURIComponent(value) : ''),
+      desc: value !== undefined ? 'Opens with ' + value + ' already in the box, converted both ways.' : 'Type a value and it converts both ways, with the formula shown.'
+    });
     const familyDoc = (u) => ({ title: u.family[0].toUpperCase() + u.family.slice(1) + ' conversions', path: u.path, glyph: 'i-' + u.family, section: 'Conversions', desc: 'Every pair in the family on one page.' });
     /* the site-wide answer, under a scoped one that found little or nothing */
     function elsewhere(e) {
       const w = el('div', 'finder-elsewhere');
       w.appendChild(el('p', 'finder-text finder-elsewhere-label', 'Elsewhere on the site:'));
-      if (e.kind === 'convert') w.appendChild(cards([{ doc: convDoc(e.hit) }]));
+      if (e.kind === 'convert') w.appendChild(cards([{ doc: convDoc(e.hit, e.value) }]));
       else if (e.kind === 'family') w.appendChild(cards([{ doc: familyDoc(e) }]));
       else w.appendChild(cards(e.results.slice(0, 3)));
       return w;
@@ -654,7 +671,7 @@
         case 'empty': break;
         case 'error': bubble('bot', 'Something went wrong on this page: ' + u.message + ' The full directory still lists everything.'); break;
         case 'convert': {
-          bubble('bot', textAnd('There is a page for exactly that.', cards([{ doc: convDoc(u.hit) }])));
+          bubble('bot', textAnd('There is a page for exactly that.' + (u.value !== undefined ? ' It opens with ' + u.value + ' already in the box.' : ''), cards([{ doc: convDoc(u.hit, u.value) }])));
           setChips([['All ' + u.hit.family + ' conversions', 'convert ' + u.hit.family], ['Reverse it', u.to.replace(/-/g, ' ') + ' to ' + u.from.replace(/-/g, ' ')]].concat(starters.slice(0, 3)), (v, l) => ask(v, l));
           state.previous = { text: raw };
           break;

@@ -4,10 +4,10 @@
  *
  *   node build/tests/home-finder.js --port 8711 --root E:/path/to/site [--out DIR]
  *
- * The server must already be serving --root on --port (any static server;
- * E:/tmp/1234-agents/harness/serve.js <root> <port> is one). --root defaults
- * to the site this file sits in (two levels up) and --out to a folder in the
- * OS temp dir. Exit code 2 when a case fails, 1 when the run itself breaks.
+ * The test serves --root on --port itself through build/tests/serve.js (a
+ * server already listening there is used instead). --root defaults to the
+ * site this file sits in (two levels up) and --out to a folder in the OS
+ * temp dir. Exit code 2 when a case fails, 1 when the run itself breaks.
  *
  * What it proves:
  *   a. /utilities/tool-finder/: the 17 understand() cases, ?section=pdf keeps
@@ -18,6 +18,8 @@
  *   c. analytics: finder_answer fires through a stubbed window.gtag with kind,
  *      mode and section, and never with the typed words
  *   d. header search: several typed words are an AND of word-prefixes
+ *   h. a number typed with a conversion ("5 lbs in kg") rides along as ?v=,
+ *      and the conversion page opens with it in the box
  *   e. the home <title> carries the register total and is 70 chars or fewer;
  *      the descriptions carry it and are 160 or fewer
  *   f. the order of the blocks at the top of main, in the DOM and in the file
@@ -44,6 +46,7 @@ function loadPuppeteer() {
   throw new Error('puppeteer-core not found; npm install puppeteer-core');
 }
 const puppeteer = loadPuppeteer();
+const { serve } = require('./serve.js');
 
 const CASES = [
   ['remove the background from a product photo', 'image/background-remover/'],
@@ -90,6 +93,7 @@ const registerTotal = () => {
 };
 
 (async () => {
+  const server = await serve(ROOT, PORT);
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--window-size=1400,1000'] });
   const external = [];
   const page = await browser.newPage();
@@ -142,6 +146,21 @@ const registerTotal = () => {
   check(scoped.c.kind === 'none' && scoped.c.elsewhere && scoped.c.elsewhere.kind === 'convert' && scoped.c.elsewhere.top === 'conversions/length/kilometer-to-mile/', 'section=pdf: "km to miles" misses in-section, elsewhere is the conversion', JSON.stringify(scoped.c));
   check(scoped.d.kind === 'convert' && scoped.d.top === 'conversions/length/kilometer-to-mile/', 'section=conversions: "km to miles" is the conversion', JSON.stringify(scoped.d));
   check(scoped.e.kind === 'none' && scoped.e.elsewhere && scoped.e.elsewhere.top === 'pdf/merge-pdf/', 'section=conversions: a PDF job misses, elsewhere is Merge PDF', JSON.stringify(scoped.e));
+
+  /* h. a typed number is kept with the conversion */
+  const valued = await page.evaluate(() => {
+    const pick = (r) => ({ kind: r.kind, top: r.hit && r.hit.path, value: r.value, elsewhere: r.elsewhere && r.elsewhere.value });
+    return {
+      a: pick(window.ToolFinder.understand('5 lbs in kg')),
+      b: pick(window.ToolFinder.understand('-40 celsius to fahrenheit')),
+      c: pick(window.ToolFinder.understand('1,5 km to miles')),
+      d: pick(window.ToolFinder.understand('convert 1,000 metres to feet')),
+      e: pick(window.ToolFinder.understand('km to miles')),
+      f: pick(window.ToolFinder.understand('5 km to miles', { section: 'pdf' }))
+    };
+  });
+  check(valued.a.kind === 'convert' && valued.a.value === 5 && valued.b.kind === 'convert' && valued.b.value === -40 && valued.c.value === 1.5 && valued.d.value === 1000, 'the number rides along: 5 lbs -> 5, -40 celsius -> -40, "1,5 km" -> 1.5, "1,000 metres" -> 1000', JSON.stringify(valued));
+  check(valued.e.kind === 'convert' && valued.e.value === undefined && valued.f.kind === 'none' && valued.f.elsewhere === 5, 'no number typed, none carried; a scoped miss keeps it on the site-wide answer', JSON.stringify([valued.e, valued.f]));
 
   /* the scoped page itself, through the URL */
   await page.goto(BASE + '/utilities/tool-finder/?section=pdf&q=' + encodeURIComponent('merge two pdf files'), { waitUntil: 'networkidle0', timeout: 60000 });
@@ -288,13 +307,44 @@ const registerTotal = () => {
   const formState = await page.evaluate(() => ({ bots: document.querySelectorAll('.hero-finder .finder-answer .finder-msg.is-bot').length, prefill: document.querySelector('.hero-finder .finder-form textarea').value, url: location.href }));
   check(formState.bots === 1 && formState.prefill === 'knitting pattern for a scarf' && /\/$/.test(new URL(formState.url).pathname), 'a miss offers the request form inside the same answer, prefilled, still on /');
 
+  /* h. the conversion card carries the typed value (after the chip step: a
+     conversion answer swaps the chips for "All mass conversions" and co.) */
+  await page.$eval('.hero-finder .finder-input', (e) => { e.value = ''; });
+  await page.type('.hero-finder .finder-input', '5 lbs in kg');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => { const a = document.querySelector('.hero-finder .finder-answer .finder-card'); return a && /pound-to-kilogram/.test(a.getAttribute('href')); }, { timeout: 20000 });
+  const valuedCard = await page.evaluate(() => ({
+    href: document.querySelector('.hero-finder .finder-answer .finder-card').getAttribute('href'),
+    sec: document.querySelector('.hero-finder .finder-answer .finder-card').getAttribute('data-sec'),
+    text: document.querySelector('.hero-finder .finder-answer .finder-text').textContent,
+    desc: (document.querySelector('.hero-finder .finder-answer .finder-card-desc') || {}).textContent || '',
+    bots: document.querySelectorAll('.hero-finder .finder-answer .finder-msg.is-bot').length,
+    chips: Array.from(document.querySelectorAll('.hero-finder .finder-chips .chip')).map((c) => c.textContent)
+  }));
+  check(valuedCard.href === '/conversions/mass/pound-to-kilogram/?v=5' && valuedCard.sec === 'conversions' && /opens with 5 already in the box/i.test(valuedCard.text) && /Opens with 5/.test(valuedCard.desc) && valuedCard.bots === 1, '"5 lbs in kg" links to the pair page with ?v=5 and says so: ' + valuedCard.href + ' / ' + valuedCard.text);
+  check(valuedCard.chips[0] === 'All mass conversions' && valuedCard.chips[1] === 'Reverse it', 'a conversion answer offers the family and the reverse: ' + valuedCard.chips.slice(0, 2).join(' / '));
+
   /* c. analytics: shape, never words */
   const calls = await page.evaluate(() => window.__gtagCalls);
   const answers = calls.filter((c) => c[0] === 'event' && c[1] === 'finder_answer');
-  const typed = ['merge two pdf files', 'count the words in my essay', 'knitting', 'scarf', 'merge', 'essay', chipText.toLowerCase()];
+  const typed = ['merge two pdf files', 'count the words in my essay', 'knitting', 'scarf', 'merge', 'essay', '5 lbs', 'lbs in kg', chipText.toLowerCase()];
   const leaked = calls.filter((c) => typed.some((w) => JSON.stringify(c).toLowerCase().indexOf(w) >= 0));
   check(answers.length >= 4 && answers.every((c) => c[2] && typeof c[2].kind === 'string' && c[2].mode === 'inline' && c[2].section === '(all)'), 'finder_answer fired ' + answers.length + 'x with kind/mode/section: ' + JSON.stringify(answers.map((c) => c[2].kind)));
   check(leaked.length === 0 && answers.every((c) => Object.keys(c[2]).sort().join() === 'kind,mode,section'), 'no analytics call carries the typed words; params are exactly kind, mode, section', JSON.stringify(leaked).slice(0, 200));
+
+  /* h. the conversion page opens on the value */
+  await page.goto(BASE + '/conversions/mass/pound-to-kilogram/?v=5', { waitUntil: 'networkidle0', timeout: 60000 });
+  await page.waitForSelector('#u-value', { timeout: 15000 });
+  const prefilled = await page.evaluate(() => ({
+    v: document.getElementById('u-value').value,
+    label: (document.querySelector('.result-primary .result-label') || {}).textContent || '',
+    value: (document.querySelector('.result-primary .result-value') || {}).textContent || ''
+  }));
+  check(prefilled.v === '5' && /^5 lb =$/.test(prefilled.label.trim()) && /^2\.2[67]/.test(prefilled.value), '?v=5 opens the converter on 5: ' + prefilled.label + ' ' + prefilled.value, JSON.stringify(prefilled));
+  await page.goto(BASE + '/conversions/mass/pound-to-kilogram/?v=five', { waitUntil: 'networkidle0', timeout: 60000 });
+  await page.waitForSelector('#u-value', { timeout: 15000 });
+  const notANumber = await page.$eval('#u-value', (e) => e.value);
+  check(notANumber === '1', 'a ?v= that is not a number keeps the worked example of 1 (got ' + notANumber + ')');
 
   /* ---------- d. header search ---------- */
   await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 60000 });
@@ -330,6 +380,7 @@ const registerTotal = () => {
   await page.screenshot({ path: path.join(OUT, '5-home-390-answer.png') });
 
   await browser.close();
+  if (server) server.close();
   check(external.length === 0, 'no request to anything but 127.0.0.1 (' + external.length + ' seen)', external.slice(0, 3).join(' ; '));
   console.log('\nsummary: ' + pass + ' pass, ' + fail + ' fail, ' + stamp() + '; screenshots in ' + OUT);
   if (fail) process.exit(2);

@@ -1,17 +1,30 @@
 /* Hubs by job, the sidebar's finder row and fold, the phone Find button and
    the directory's job facet and keyboard, in a real browser.
-   node test-hubs.js [--port 8712] [--root <export>] [--base <unchanged copy>] [--out <dir>] */
+   node build/tests/hubs-nav.js [--port 8712] [--root <site>] [--base <older copy>] [--out <dir>]
+   --root defaults to the site this file sits in and is served on --port by
+   build/tests/serve.js (a server already on that port is used instead).
+   --base is an older copy of the site: every card link its hubs had must
+   still be present. Without it that check counts the cards instead. --out
+   defaults to a folder in the OS temp dir. */
 'use strict';
 const path = require('path');
 const fs = require('fs');
-const puppeteer = require('E:/projects/1234Tools/node_modules/puppeteer-core');
+const os = require('os');
+const { serve } = require('./serve.js');
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const PORT = Number(arg('port', 8712));
-const ROOT = arg('root', 'E:/tmp/1234-agents/B2-hubs-nav/export');
-const BASE = arg('base', 'E:/tmp/1234-agents/base');
-const OUT = arg('out', 'E:/tmp/1234-agents/B2-hubs-nav/out');
+const ROOT = path.resolve(arg('root', path.join(__dirname, '..', '..')));
+const BASE = arg('base', null);
+const OUT = path.resolve(arg('out', path.join(os.tmpdir(), '1234tools-hubs-nav')));
 const ORIGIN = 'http://127.0.0.1:' + PORT;
 fs.mkdirSync(OUT, { recursive: true });
+function loadPuppeteer() {
+  for (const p of [path.join(ROOT, 'node_modules/puppeteer-core'), path.join(__dirname, '..', '..', 'node_modules/puppeteer-core'), 'puppeteer-core']) {
+    try { return require(p); } catch (e) { /* next */ }
+  }
+  throw new Error('puppeteer-core not found; npm install puppeteer-core');
+}
+const puppeteer = loadPuppeteer();
 
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) pass++; else fail++; console.log((cond ? '  ok   ' : '  FAIL ') + msg); };
@@ -24,7 +37,8 @@ const hrefsOf = (file) => {
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 (async () => {
-  const browser = await puppeteer.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
+  const server = await serve(ROOT, PORT);
+  const browser = await puppeteer.launch({ executablePath: process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
   const page = await browser.newPage();
   const errors = [], foreign = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -64,9 +78,11 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
             ld: [...document.querySelectorAll('script[type="application/ld+json"]')].map((s) => { try { return JSON.parse(s.textContent); } catch (e) { return null; } })
           };
         });
-        const old = hrefsOf(path.join(BASE, hub.slice(1), 'index.html'));
-        const missing = old.filter((x) => info.hrefs.indexOf(x) < 0);
-        ok(missing.length === 0 && old.length > 0, 'all ' + old.length + ' old card links present' + (missing.length ? ' — missing ' + missing.join(', ') : ''));
+        if (BASE) {
+          const old = hrefsOf(path.join(BASE, hub.slice(1), 'index.html'));
+          const missing = old.filter((x) => info.hrefs.indexOf(x) < 0);
+          ok(missing.length === 0 && old.length > 0, 'all ' + old.length + ' old card links present' + (missing.length ? ' — missing ' + missing.join(', ') : ''));
+        } else ok(info.hrefs.length > 0, info.hrefs.length + ' card links on the hub (no --base to compare with)');
         if (hub === '/pdf/') ok(info.verbs.length === 0, 'PDF keeps its hand-made groups (no verb headings)');
         else ok(info.verbs.length >= 2, 'verb headings: ' + info.verbs.join(', '));
         ok(info.io === info.cards && info.tags >= info.cards, '.card-io on all ' + info.cards + ' cards, tags on each');
@@ -142,6 +158,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(foreign.length === 0, 'no request left 127.0.0.1' + (foreign.length ? ': ' + [...new Set(foreign)].slice(0, 5).join(', ') : ''));
   } finally {
     await browser.close();
+    if (server) server.close();
   }
   console.log('\n' + pass + ' passed, ' + fail + ' failed. Screenshots in ' + OUT);
   process.exit(fail ? 1 : 0);

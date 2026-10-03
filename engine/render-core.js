@@ -240,7 +240,13 @@
       vw.innerHTML = '<label for="u-value">Value</label>';
       const vi = document.createElement('input');
       vi.id = 'u-value'; vi.type = 'number'; vi.step = 'any';
-      vi.inputMode = 'decimal'; vi.className = 'control'; vi.value = '1';
+      vi.inputMode = 'decimal'; vi.className = 'control';
+      /* The Tool Finder sends "5 km to miles" here as ?v=5, so the answer is
+         on screen as the page opens. Anything that is not a number keeps the
+         worked example of 1. */
+      let asked = NaN;
+      try { const q = new URLSearchParams(location.search).get('v'); if (q !== null && q.trim() !== '') asked = Number(q); } catch (e) { /* no URL, no prefill */ }
+      vi.value = Number.isFinite(asked) ? String(asked) : '1';
       vw.appendChild(vi);
 
       form.appendChild(vw);

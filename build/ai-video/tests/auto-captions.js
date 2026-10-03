@@ -17,6 +17,11 @@
  *   node build/ai-video/tests/auto-captions.js [--root <export dir>] [--port 8727]
  *        [--wav <speech.wav>] [--out <dir>] [--skip-video] [--recorder]
  *
+ * Without --wav the test sentence is spoken by Windows' own speech
+ * synthesiser (PowerShell, System.Speech) into --out/speech.wav, so nothing
+ * outside the repo is needed; on another OS pass --wav with a recording of
+ * SENTENCE below.
+ *
  * With --root the test serves that directory itself; without it, a server
  * is expected on --port already. --recorder forces the MediaRecorder path
  * (what Firefox would do) instead of WebCodecs. Exits non-zero on failure.
@@ -25,7 +30,6 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const http = require('http');
 let puppeteer;
 try { puppeteer = require('puppeteer-core'); } catch (e) { puppeteer = require('E:/projects/1234Tools/node_modules/puppeteer-core'); }
 
@@ -33,13 +37,35 @@ const args = process.argv.slice(2);
 const flag = (n, d) => { const i = args.indexOf('--' + n); return i >= 0 ? (args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : true) : d; };
 const PORT = Number(flag('port', 8727));
 const ROOT = flag('root', null);
-const WAV = flag('wav', 'E:/tmp/1234-agents/C7-captions/work/speech.wav');
+const WAV_FLAG = flag('wav', null);
 const OUT = flag('out', path.join(__dirname, 'out'));
 const SKIP_VIDEO = flag('skip-video', false) === true;
 const RECORDER = flag('recorder', false) === true;
 const CHROME = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const SENTENCE = 'Hello and welcome. This is a test of automatic captions for short videos. Nothing is uploaded, everything runs in the browser.';
 fs.mkdirSync(OUT, { recursive: true });
+
+/** The speech sample: the recording given with --wav, or SENTENCE spoken by
+ *  the Windows speech synthesiser as 16 kHz mono PCM, which is what Whisper
+ *  hears anyway. */
+function speechSample() {
+  if (WAV_FLAG && WAV_FLAG !== true) return path.resolve(WAV_FLAG);
+  if (process.platform !== 'win32') throw new Error('pass --wav <file>: the built-in speech synthesis needs Windows (PowerShell System.Speech)');
+  const out = path.join(path.resolve(OUT), 'speech.wav');
+  const ps = [
+    'Add-Type -AssemblyName System.Speech',
+    '$s = New-Object System.Speech.Synthesis.SpeechSynthesizer',
+    '$f = New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(16000, [System.Speech.AudioFormat.AudioBitsPerSample]::Sixteen, [System.Speech.AudioFormat.AudioChannel]::Mono)',
+    "$s.SetOutputToWaveFile('" + path.win32.normalize(out) + "', $f)",
+    "$s.Speak('" + SENTENCE.replace(/'/g, "''") + "')",
+    '$s.Dispose()'
+  ].join('; ');
+  const r = require('child_process').spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf8', timeout: 60000 });
+  if (r.status !== 0 || !fs.existsSync(out)) throw new Error('speech synthesis failed: ' + ((r.stderr || r.stdout || '').trim() || 'no output'));
+  console.log('spoke the test sentence into ' + out + ' (' + fs.statSync(out).size + ' bytes)');
+  return out;
+}
+const WAV = speechSample();
 
 const fails = [];
 const check = (ok, what) => { console.log('  ' + (ok ? 'ok  ' : 'FAIL') + ' ' + what); if (!ok) fails.push(what); };
@@ -60,22 +86,7 @@ function parseCues(text, vtt) {
   }
   return cues;
 }
-function serve(root, port) {
-  const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.mjs': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.wasm': 'application/wasm', '.onnx': 'application/octet-stream', '.webmanifest': 'application/manifest+json', '.xml': 'application/xml', '.txt': 'text/plain' };
-  return new Promise((res) => {
-    const s = http.createServer((req, r) => {
-      let p = decodeURIComponent(req.url.split('?')[0]);
-      if (p.endsWith('/')) p += 'index.html';
-      const abs = path.join(root, p);
-      if (!abs.startsWith(path.resolve(root))) { r.writeHead(403); r.end(); return; }
-      fs.stat(abs, (err, st) => {
-        if (err || !st.isFile()) { r.writeHead(404); r.end('not found'); return; }
-        r.writeHead(200, { 'Content-Type': TYPES[path.extname(abs).toLowerCase()] || 'application/octet-stream', 'Content-Length': st.size, 'Cache-Control': 'no-store' });
-        fs.createReadStream(abs).pipe(r);
-      });
-    }).listen(port, '127.0.0.1', () => res(s));
-  });
-}
+const { serve } = require('../../tests/serve.js');
 
 (async () => {
   const t0 = Date.now();
