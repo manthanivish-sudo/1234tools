@@ -1666,4 +1666,11 @@
   <path d="M6.5 9.5h6M6.5 12.5h4" class="thin"/>
   <path d="M19.5 2.5l.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7z" class="fill"/>
 </symbol>
+<symbol id="i-ai-blur-background" viewBox="0 0 24 24">
+  <circle cx="10" cy="9" r="3.2"/>
+  <path d="M4.2 20.5a5.8 5.8 0 0 1 11.6 0z"/>
+  <circle cx="18" cy="6.5" r="1.7" class="thin"/>
+  <circle cx="19.6" cy="12.6" r="1.2" class="thin"/>
+  <path d="M3.5 4.5h3M3.5 8h1.6" class="thin"/>
+</symbol>
 </svg>

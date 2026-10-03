@@ -1,0 +1,42 @@
+{
+  "id": "/ai-image/blur-background/",
+  "name": "Blur Background (Portrait Mode) — 1234Tools",
+  "short_name": "Blur Background",
+  "description": "Blur the background of a photo and keep the subject sharp: bokeh, motion streaks or zoom blur that grows with distance, like portrait mode. Nothing is uploaded.",
+  "start_url": "/ai-image/blur-background/?src=pwa",
+  "scope": "/ai-image/blur-background/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "photo",
+    "graphics"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-blur-background.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-blur-background-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-blur-background-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -2718,3 +2718,34 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
   .aiimg-presets .btn-ghost { margin-left: 0; }
 }
 /* ==== /C0-core ==== */
+
+/* ==== C3-depth ==== */
+/* Blur Background: the result canvas with the original clipped over it,
+   a draggable divider between them, and a ring where the focus was tapped */
+.aiimg-blur-wrap { position: relative; display: inline-block; max-width: 100%; line-height: 0; }
+.aiimg-blur-wrap .aiimg-canvas { cursor: crosshair; }
+.aiimg-blur-compare { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; clip-path: inset(0 100% 0 0); }
+.aiimg-blur-handle {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 2px; margin-left: -1px; background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .35); cursor: ew-resize; touch-action: none; user-select: none; outline: none;
+}
+.aiimg-blur-handle::before { content: ""; position: absolute; top: 0; bottom: 0; left: -12px; width: 26px; }
+.aiimg-blur-handle::after {
+  content: "\25C0 \25B6"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  padding: 5px 9px; border-radius: 999px; background: #fff; color: #111; font: 700 10px/1 var(--font-body);
+  white-space: nowrap; box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+}
+.aiimg-blur-handle:focus-visible::after { box-shadow: 0 0 0 2px var(--accent), 0 2px 8px rgba(0, 0, 0, .35); }
+.aiimg-blur-focus {
+  position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border: 2px solid #f7c948;
+  border-radius: 50%; box-shadow: 0 0 0 1px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(0, 0, 0, .45);
+  pointer-events: none; opacity: 0; transition: opacity .5s;
+}
+.aiimg-blur-focus.is-on { opacity: 1; transition: none; }
+.aiimg-blur-hint { margin: 8px 0 0; font-size: .8rem; color: var(--text-3); }
+/* 3D Photo Parallax: the WebGL canvas keeps the chosen frame's shape */
+.aiimg-par-canvas { background: #000; cursor: default; }
+.aiimg-par-note { margin: 0 0 10px; font-size: .82rem; color: var(--text-3); }
+.aiimg-par-frames { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.aiimg-par-frames .chip { cursor: pointer; font: inherit; font-size: .82rem; padding: 6px 12px; }
+/* ==== /C3-depth ==== */
