@@ -43,6 +43,7 @@ const SECTION_DEFAULT = {
   '/developer/':   ['Convert', 'Text → text'],
   '/image/':       ['Convert', 'Image → image'],
   '/ai-image/':    ['Make', 'Photo → PNG/GIF/MP4'],
+  '/ai-video/':    ['Make', 'Video → MP4'],
   '/text/':        ['Check', 'Text → result'],
   '/mathematics/': ['Calculate', 'Numbers → result'],
   '/finance/':     ['Calculate', 'Figures → result'],
@@ -223,6 +224,8 @@ const JOBS = {
   '/ai-image/face-blur/': ['Clean up', 'Photo/video → blurred faces'],
   '/ai-image/image-upscaler/': ['Clean up', 'Photo → 2×/4× PNG/JPEG/WebP'],
   '/ai-image/film-grain/': ['Make', 'Photo → grainy PNG/GIF/MP4'],
+  /* ai-video */
+  '/ai-video/auto-captions/': ['Make', 'Video → captioned MP4 + SRT'],
 
   /* text */
   '/text/word-counter/': ['Check', 'Text → words, reading time'],
@@ -423,6 +426,7 @@ const DESCS = {
   '/ai-image/face-blur/': 'Blur or pixelate every face in a photo or short video and tap the ones to keep. PNG or MP4 out.',
   '/ai-image/image-upscaler/': 'Upscale a photo 2× or 4×, or unblur it at its own size, with Real-ESRGAN. PNG, JPEG or WebP out.',
   '/ai-image/film-grain/': 'Film grain, light leaks, VHS tracking, a date stamp and faded colour. Seven presets; PNG, GIF or MP4.',
+  '/ai-video/auto-captions/': 'Word-by-word animated captions on a video, transcribed offline by Whisper. MP4 with sound, SRT and VTT.',
   '/utilities/tool-finder/': 'Say what you need in plain words and it finds the right tool among all of them, on your device.'
 };
 
@@ -436,6 +440,7 @@ const START = {
   '/developer/': ['/developer/json-formatter/', '/developer/regex-tester/'],
   '/image/': ['/image/image-compressor/', '/image/image-converter/'],
   '/ai-image/': ['/ai-image/background-remover/', '/ai-image/text-behind-image/'],
+  '/ai-video/': ['/ai-video/auto-captions/'],
   '/text/': ['/text/word-counter/', '/text/text-diff/'],
   '/mathematics/': ['/mathematics/percentage/', '/mathematics/scientific-calculator/'],
   '/finance/': ['/finance/loan-payment/', '/finance/compound-interest/'],

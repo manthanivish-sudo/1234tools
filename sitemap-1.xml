@@ -1281,6 +1281,7 @@
 <url><loc>https://www.1234tools.com/ai-image/face-blur/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/ai-image/image-upscaler/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/ai-image/film-grain/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/ai-video/auto-captions/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/finance/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/mathematics/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/engineering/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
@@ -1298,6 +1299,7 @@
 <url><loc>https://www.1234tools.com/pdf/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/qr/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/ai-image/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/ai-video/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/ai/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/about/</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>
 <url><loc>https://www.1234tools.com/contact/</loc><changefreq>yearly</changefreq><priority>0.5</priority></url>

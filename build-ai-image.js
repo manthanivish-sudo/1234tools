@@ -185,7 +185,7 @@ function hubPage(parts, all) {
     '<p class="lede">AI photo editing that happens on your own device. A small model is downloaded into your browser once; the picture itself never leaves it. ' + n + ' tool' + (n === 1 ? '' : 's') + ' so far, free, with no account and no watermark.</p>\n' +
     '<div class="grid">' + cards + '</div>\n' +
     '<section class="panel ai-how"><h2>How these differ from the AI for Business tools</h2>' +
-    '<p>The <a href="/ai/">AI for Business</a> tools send your text to a language model on a server, say so on every page, and count calls against a monthly allowance. These do not. The models here are small enough to run inside a browser — the segmentation network is 18 MB — so they are served from this site, kept by your browser after the first visit, and run on your own processor through WebAssembly. No third-party server is contacted.</p>' +
+    '<p>The <a href="/ai/">AI for Business</a> tools send your text to a language model on a server, say so on every page, and count calls against a monthly allowance. These do not. The models here are small enough to run inside a browser — between 1.5 MB and 28 MB each, and several tools share one download — so they are served from this site, kept by your browser after the first visit, and run on your own processor through WebAssembly. No third-party server is contacted.</p>' +
     '<p>That is why there is no sign-in and no limit: there is no server bill to cover. It is also why the first run on a device takes a moment longer than the rest.</p></section>\n' +
     '<section class="panel"><h2>What is coming to this section</h2><ul class="tips">' +
     '<li><strong>Layer cut-outs and stickers</strong> — export any layer the model finds, not only the main subject, as a transparent PNG.</li>' +
@@ -197,7 +197,7 @@ function hubPage(parts, all) {
     '<details><summary>Is anything uploaded?</summary><p>No. Two downloads happen on first use — the model and the runtime, both from this site — and your browser keeps both. Your photos are opened, processed and saved on your device. We never receive them and could not look at them if we wanted to.</p></details>' +
     '<details><summary>Why is the first run slow?</summary><p>The model has to be downloaded once and the runtime warmed up. After that both come from your browser’s cache and a photo is split into layers in about a second.</p></details>' +
     '<details><summary>Which browsers work?</summary><p>Current Chrome, Edge, Safari and Firefox, on desktop and on phones. MP4 export uses on-device video encoding, which Firefox does not yet provide; there a clip is saved as WebM instead, and GIF export works everywhere.</p></details>' +
-    '<details><summary>Can I use the results commercially?</summary><p>Yes. The output is yours. The model is EfficientViT-Seg from the MIT HAN Lab, published under the Apache-2.0 licence, and nothing we make adds a watermark or a credit.</p></details></section>\n';
+    '<details><summary>Can I use the results commercially?</summary><p>Yes. The output is yours. The models are published under permissive licences — EfficientViT-Seg from the MIT HAN Lab (Apache-2.0), MODNet (Apache-2.0), Depth Anything V2 Small (Apache-2.0), MI-GAN (MIT), Real-ESRGAN (BSD-3-Clause) and UltraFace (MIT) — and nothing we make adds a watermark or a credit.</p></details></section>\n';
   const ld = '<script type="application/ld+json">' + JSON.stringify({
     '@context': 'https://schema.org',
     '@graph': [

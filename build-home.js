@@ -76,10 +76,12 @@ const HERO_JOBS = [
   'Km to miles'
 ];
 
-/* The order of the blocks at the top of main. Everything after the last of
-   them — "Browse by category", the conversion families, the brand banner and
-   the request form — is left where it is. */
-const ORDER = ['HOME-HERO', 'POPULAR', 'HOME-WHY', 'COLLECTIONS', 'HOME-PICKS'];
+/* The order of the blocks at the top of main: the finder first, then the
+   quickest ways in (popular, categories, collections, picks), and the long
+   explanation last. CATEGORIES is the hand-kept "Browse by category" grid,
+   marked in index.html. Everything after the last block — the conversion
+   families, the brand banner and the request form — is left where it is. */
+const ORDER = ['HOME-HERO', 'POPULAR', 'CATEGORIES', 'COLLECTIONS', 'HOME-PICKS', 'HOME-WHY'];
 
 /* The callable's address, built from the same config the account pages
    use so there is one place a project id is written down. While it says
@@ -180,28 +182,35 @@ function patchHead(html, copy) {
 
 /* ---------- the blocks ---------- */
 
+/* The section glyphs that float beside the heading on a wide screen: an
+   illustration made of the site's own icons, so it costs no image, follows
+   the theme and takes each section's colour. Decorative — hidden from
+   assistive tech and from phones; the category grid below is the way in. */
+const HERO_TILES = ['pdf', 'image', 'ai-image', 'business', 'qr', 'conversions', 'developer', 'education', 'health'];
+
 function heroBlock(c, url) {
-  const stat = (n, label) => '<div><div class="stat-num">' + esc(n) + '</div><div class="stat-lbl">' + esc(label) + '</div></div>';
   /* The chips are real links before the engine mounts, and the way in for
      anybody whose browser cannot run it; the mount hides them and draws
      its own from the same list. */
   const chip = (job) => '<a class="chip" href="/utilities/tool-finder/?q=' + encodeURIComponent(job) + '">' + esc(job) + '</a>';
-  return '<section class="hero hero-with-finder">\n' +
-    '  <p class="eyebrow">Free, and it runs in your browser</p>\n' +
+  const tile = (slug, i) => '<span class="hero-tile" data-sec="' + slug + '" style="--i:' + i + '"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-' + slug + '"></use></svg></span>';
+  const fact = (n, label) => '<li><strong>' + esc(n) + '</strong> ' + esc(label) + '</li>';
+  return '<section class="hero hero-with-finder hero-ask">\n' +
+    '  <div class="hero-art" aria-hidden="true">' + HERO_TILES.map(tile).join('') + '</div>\n' +
+    '  <p class="eyebrow">Free · runs in your browser · nothing uploaded</p>\n' +
     /* One span inside the h1: the h1 is a flex row site-wide, so text put
        straight into it becomes a second column instead of wrapping. */
-    '  <h1><span><span class="grad">' + num(c.rest) + ' tools</span> for everyday work</span></h1>\n' +
-    '  <p class="lede">Bookkeeping, VAT returns, payroll, invoices, PDFs, images, school timetables and ' + num(c.conversions) +
-      ' unit converters, all running inside this browser tab: what you open stays on your device, and the ' + num(c.freemium) +
-      ' AI tools say so before anything is sent.</p>\n' +
+    '  <h1><span><span class="grad">Free online tools.</span> Just say what you need.</span></h1>\n' +
+    '  <p class="lede">Type the job in your own words and the Tool Finder picks the right one of ' + num(c.total) + ' tools. No account, and nothing you type leaves this page.</p>\n' +
+    '  <p class="hero-finder-label"><span class="finder-orb" aria-hidden="true"></span><strong>Tool Finder</strong><span>describe the job, get the tool</span></p>\n' +
     '  <section class="hero-finder" aria-label="Tool Finder"><div class="tool-io" data-endpoint="' + esc(url || '') + '"></div></section>\n' +
     '  <div class="hero-jobs chip-row" id="hero-jobs" aria-label="Jobs people come for">' + HERO_JOBS.map(chip).join('') + '</div>\n' +
-    '  <div class="hero-stats">\n    ' +
-    [stat(num(c.rest), 'Everyday tools'),
-     stat(num(c.conversions), 'Unit converters'),
-     stat(num(c.free), 'Free, no account'),
-     stat(num(c.freemium), 'AI, account needed')].join('\n    ') +
-    '\n  </div>\n</section>\n' +
+    '  <ul class="hero-trust" aria-label="The site in numbers">\n    ' +
+    [fact(num(c.rest), 'everyday tools'),
+     fact(num(c.conversions), 'unit converters'),
+     fact(num(c.free), 'free, no account'),
+     fact(num(c.freemium), 'AI tools that say what they send')].join('\n    ') +
+    '\n  </ul>\n</section>\n' +
     /* The engine, deferred, and the mount. Both travel inside this block so
        they move with the hero and go when it goes. */
     '<script src="/engine/finder.js" defer></script>\n' +
@@ -209,15 +218,26 @@ function heroBlock(c, url) {
 }
 
 /* Mount the short form of the finder once the document is parsed; the
-   deferred engine has run by then if it is going to. If it is not there —
-   blocked, failed, or an old browser that could not parse it — the box
-   becomes a link to the full page, so the space is never blank. */
+   deferred engine has run by then if it is going to. On a wide screen the
+   caret goes into the box at once, as it does on a search page; a phone is
+   left alone so the keyboard stays down until asked. "/" brings the caret
+   back here, as it goes to the header search on every other page (that
+   handler stands down when a field already has focus). If the engine is
+   not there — blocked, failed, or an old browser that could not parse it —
+   the box becomes a link to the full page, so the space is never blank. */
 function heroScript() {
   return "document.addEventListener('DOMContentLoaded',function(){" +
     "var r=document.querySelector('.hero-finder');if(!r)return;" +
     "var jobs=document.getElementById('hero-jobs');" +
-    "if(window.ToolFinder){try{ToolFinder.mount(r,{inline:true,starters:" + JSON.stringify(HERO_JOBS) + "});if(jobs)jobs.hidden=true;return;}catch(e){}}" +
-    "var a=document.createElement('a');a.className='btn-ghost finder-fallback';a.href='/utilities/tool-finder/';a.textContent='Describe the job to the Tool Finder \\u2192';" +
+    "if(window.ToolFinder){try{ToolFinder.mount(r,{inline:true,starters:" + JSON.stringify(HERO_JOBS) + "});if(jobs)jobs.hidden=true;" +
+    "var i=r.querySelector('.finder-input');if(i){" +
+    /* after every DOMContentLoaded listener has run: the consent bar puts
+       focus on its Allow button when it appears, and on this page the
+       finder is the thing to type into (the bar stays, a Tab away) */
+    "setTimeout(function(){var ae=document.activeElement;if(matchMedia('(min-width: 900px)').matches&&!location.hash&&(ae===document.body||(ae&&ae.className==='cc-yes')))i.focus({preventScroll:true});},0);" +
+    "document.addEventListener('keydown',function(e){if(e.key==='/'&&!/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)){e.preventDefault();i.focus({preventScroll:true});}},true);}" +
+    "return;}catch(e){}}" +
+    "var a=document.createElement('a');a.className='btn-ghost finder-fallback';a.href='/utilities/tool-finder/';a.textContent='Describe the job to the Tool Finder \u2192';" +
     "var io=r.querySelector('.tool-io');io.textContent='';io.appendChild(a);});";
 }
 

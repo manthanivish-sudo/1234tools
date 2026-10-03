@@ -48,7 +48,8 @@
       'Die-cut smoothing at 2–4% rounds the outline and bridges hair strands and gaps; turn it off for an outline that follows every strand, which looks better at large sizes and worse on a phone.',
       'For fur, raise Edge softness to 5–7; for a product with a hard edge, lower it to 1–2 and shrink the cut by a step so no fringe of background sits inside the border.',
       'If a WhatsApp export reports that it could not get under 100 KB, a thinner border, a less busy subject or no glow brings it down — the limit is a byte count, and glows are expensive to compress.',
-      'Copy to clipboard puts the PNG itself on the clipboard: paste it into WhatsApp Web, Telegram, Slack, Discord, a Google Doc or an image editor.'
+      'Copy to clipboard puts the PNG itself on the clipboard: paste it into WhatsApp Web, Telegram, Slack, Discord, a Google Doc or an image editor.',
+      'The layer names are the model\x27s best guess, and it learned from street scenes and rooms: a cat can turn up under People, a pet bed under Furniture. Tick whichever layer holds your subject — the cut-out is what matters, not the label on it.'
     ],
     faq: [
       { q: 'Is my photo uploaded?',

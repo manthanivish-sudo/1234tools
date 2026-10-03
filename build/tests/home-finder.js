@@ -214,12 +214,21 @@ const registerTotal = () => {
       recentHead: (document.querySelector('#recent-tools h2') || {}).textContent || ''
     };
   });
-  const seq = [order.hero, order.popular, order.recent, order.why, order.collections, order.picks, order.browse, order.ask];
-  check(seq.every((v, i) => v >= 0 && (i === 0 || v > seq[i - 1])), 'DOM order: hero < Popular tools < recent strip < why < collections < picks < Browse by category < ask  ' + JSON.stringify(seq));
+  const seq = [order.hero, order.popular, order.recent, order.browse, order.collections, order.picks, order.why, order.ask];
+  check(seq.every((v, i) => v >= 0 && (i === 0 || v > seq[i - 1])), 'DOM order: hero < Popular tools < recent strip < Browse by category < collections < picks < why < ask  ' + JSON.stringify(seq));
   check(order.recentShown && order.recentHead === 'Pick up where you left off', '"Pick up where you left off" renders inside Popular tools, under the hero');
   const file = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  const marks = ['<!-- HOME-HERO', '<!-- POPULAR', '<!-- HOME-WHY', '<!-- COLLECTIONS -->', '<!-- HOME-PICKS', 'Browse by category', '<!-- HOME-ASK', '</main>'].map((m) => file.indexOf(m));
-  check(marks.every((v, i) => v > 0 && (i === 0 || v > marks[i - 1])) && marks[0] > file.indexOf('<main id="main" class="content">'), 'file order: HOME-HERO, POPULAR, HOME-WHY, COLLECTIONS, HOME-PICKS, Browse by category, HOME-ASK  ' + JSON.stringify(marks));
+  const marks = ['<!-- HOME-HERO', '<!-- POPULAR', '<!-- CATEGORIES -->', '<!-- COLLECTIONS -->', '<!-- HOME-PICKS', '<!-- HOME-WHY', '<!-- HOME-ASK', '</main>'].map((m) => file.indexOf(m));
+  check(marks.every((v, i) => v > 0 && (i === 0 || v > marks[i - 1])) && marks[0] > file.indexOf('<main id="main" class="content">'), 'file order: HOME-HERO, POPULAR, CATEGORIES, COLLECTIONS, HOME-PICKS, HOME-WHY, HOME-ASK  ' + JSON.stringify(marks));
+
+  /* g. finder-first: the caret is in the box on a wide screen, "/" brings it back, the art shows */
+  const fold = await page.evaluate(() => ({ at: (document.activeElement || {}).className || '', art: getComputedStyle(document.querySelector('.hero-art')).display, tiles: document.querySelectorAll('.hero-tile').length, trust: document.querySelectorAll('.hero-trust li').length, label: (document.querySelector('.hero-finder-label strong') || {}).textContent }));
+  check(/finder-input/.test(fold.at), 'the finder has the caret on load at 1400px: ' + JSON.stringify(fold.at));
+  check(fold.art !== 'none' && fold.tiles === 9 && fold.trust === 4 && fold.label === 'Tool Finder', 'hero art (9 tiles) shows at 1400px, the trust row has four facts, the box is labelled Tool Finder', JSON.stringify(fold));
+  await page.evaluate(() => document.activeElement.blur());
+  await page.keyboard.press('/');
+  const slash = await page.evaluate(() => ({ at: (document.activeElement || {}).className || '', typed: document.querySelector('.hero-finder .finder-input').value }));
+  check(/finder-input/.test(slash.at) && slash.typed === '', '"/" puts the caret in the hero finder, not the header search, and types nothing: ' + JSON.stringify(slash));
 
   /* b. ask in the hero */
   await noBanner();
@@ -311,6 +320,8 @@ const registerTotal = () => {
   await noBanner();
   const scroll = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
   check(scroll, 'no horizontal overflow at 390px');
+  const phone = await page.evaluate(() => ({ art: getComputedStyle(document.querySelector('.hero-art')).display, at: (document.activeElement || {}).className || '', chips: getComputedStyle(document.querySelector('.hero-finder .finder-chips')).flexWrap, inputTop: Math.round(document.querySelector('.hero-finder .finder-input').getBoundingClientRect().top) }));
+  check(phone.art === 'none' && !/finder-input/.test(phone.at) && phone.chips === 'nowrap' && phone.inputTop < 560, 'at 390px: art hidden, no autofocus (keyboard stays down), chips in one scrolling row, input within the first screen (top ' + phone.inputTop + 'px)', JSON.stringify(phone));
   await page.screenshot({ path: path.join(OUT, '4-home-390.png') });
   await page.tap('.hero-finder .finder-chips .chip');
   await page.waitForFunction(() => document.querySelectorAll('.hero-finder .finder-answer .finder-card').length > 0, { timeout: 20000 });

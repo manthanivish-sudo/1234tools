@@ -38,7 +38,8 @@
       'Darken the blurred background to 40–60% and the face and the title both gain contrast without any other change. Zoom 8–12% hides the blurred edge where the original frame ended.',
       'Put the title on the opposite side from the face and let the two overlap by a little, so the cut-out sits in front of the words. That overlap is what makes it look produced.',
       'The three variants change the accent colour, the background treatment and where the title sits, and nothing else — so when B wins you know why. Change the text and export three again for the next test.',
-      'Export JPEG for the upload; the tool lowers the quality until the file is under 2 MB. Keep the PNG as your master and for anywhere that allows it.'
+      'Export JPEG for the upload; the tool lowers the quality until the file is under 2 MB. Keep the PNG as your master and for anywhere that allows it.',
+      'The cut-out follows the layers the model finds, and on a tight portrait it can give a chin or a collar an odd label or leave it out. The label is cosmetic; if part of the face is missing, use a photo with a little room around the head so the model sees the whole person.'
     ],
     faq: [
       { q: 'Is my photo uploaded anywhere?',

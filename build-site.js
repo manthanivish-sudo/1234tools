@@ -176,7 +176,7 @@ const noIndexPages = () => classified().noindex;
  */
 const SECTIONS = ['finance', 'mathematics', 'engineering', 'health', 'design',
   'utilities', 'time', 'developer', 'business', 'education', 'india', 'image',
-  'text', 'conversions', 'pdf', 'qr', 'ai-image', 'ai'];
+  'text', 'conversions', 'pdf', 'qr', 'ai-image', 'ai-video', 'ai'];
 
 /**
  * The single pages that are not tools. Most change on the order of never, and
@@ -456,8 +456,9 @@ function searchIndexTools() {
 const REL_AFFINITY = {
   engineering: ['conversions/power', 'conversions/energy', 'conversions/pressure', 'mathematics'],
   design:      ['image', 'conversions/length'],
-  image:       ['design', 'ai-image'],
-  'ai-image':  ['image', 'design'],
+  image:       ['design', 'ai-image', 'ai-video'],
+  'ai-image':  ['image', 'design', 'ai-video'],
+  'ai-video':  ['ai-image', 'image'],
   finance:     ['business', 'india'],
   business:    ['finance', 'india'],
   india:       ['finance', 'business'],

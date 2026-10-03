@@ -48,7 +48,8 @@
       'Big areas look smeary. The network has to invent everything inside the selection, so a hole that is half the picture becomes a blur. Remove a large object in two or three smaller passes, letting each fill become the context for the next.',
       'Backgrounds with texture or repetition — grass, sand, sky, brick, a hedge, a tiled floor — fill almost invisibly. Straight lines that cross the hole, such as a kerb or a window frame, are harder; keep the brush tight so the line only has to bridge a short gap.',
       'Use the eraser mode of the brush to take back part of a selection before you press Remove, and Undo if a stroke went wrong.',
-      'After a removal, drag the divider on the preview across the filled area. If a patch looks off, brush over just that patch and remove again — a small second pass usually fixes it.'
+      'After a removal, drag the divider on the preview across the filled area. If a patch looks off, brush over just that patch and remove again — a small second pass usually fixes it.',
+      'The one-tap buttons only know what the segmentation model labelled, and it is not infallible: a cyclist is often read as a bicycle rather than a person, so "Remove all people" can leave the rider standing. Brush over anything a button missed — the brush does not need a label.'
     ],
     faq: [
       { q: 'Is my photo uploaded?',

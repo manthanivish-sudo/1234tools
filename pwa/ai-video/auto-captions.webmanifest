@@ -1,0 +1,42 @@
+{
+  "id": "/ai-video/auto-captions/",
+  "name": "Auto Captions (offline) — 1234Tools",
+  "short_name": "Auto Captions",
+  "description": "Add word-by-word animated captions to a video, free and offline. Whisper runs in your browser — nothing is uploaded. Edit the words, pick a style, export MP4 with sound, plus SRT and VTT.",
+  "start_url": "/ai-video/auto-captions/?src=pwa",
+  "scope": "/ai-video/auto-captions/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "video",
+    "photo"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-captions.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-captions-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-captions-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

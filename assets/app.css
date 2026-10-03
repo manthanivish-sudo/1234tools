@@ -3063,3 +3063,156 @@ h2.hub-verb::before {
 }
 .dir-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* ==== /B2-hubs-nav ==== */
+
+/* ==== C7-captions ==== */
+/* Auto Captions — the transcript editor, style swatches and caption links
+   under /ai-video/; the studio layout is .aiimg-* above */
+.aivid-video { position: absolute; left: 0; top: 0; width: 2px; height: 2px; opacity: .01; pointer-events: none; }
+.aivid-canvas { cursor: default; }
+.aivid .aiimg-tabs .chip.is-on:hover, .aivid .aiimg-tabs .chip.is-on:focus-visible { color: #1a1400; }
+.aivid-segs { display: grid; gap: 8px; margin: 10px 0 12px; max-height: 46vh; overflow: auto; padding-right: 2px; }
+.aivid-segs:empty { display: none; }
+.aivid-seg { display: grid; gap: 6px; padding: 8px 10px; background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.aivid-seg.is-live { border-color: var(--border-gold); box-shadow: 0 0 0 1px var(--border-gold) inset; }
+.aivid-seg-head { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.aivid-seg-time { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: .74rem; color: var(--text-2); white-space: nowrap; }
+.aivid-seg-head .btn-ghost { font-size: .7rem; padding: 3px 8px; line-height: 1.3; }
+.aivid-seg textarea.control { min-height: 42px; font-size: 14px; line-height: 1.35; padding: 7px 9px; }
+.aivid-splitrow { align-items: end; }
+.aivid-splitrow .field { margin: 0; min-width: 120px; }
+.aivid-links { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 0 0 12px; }
+.aivid-links[hidden] { display: none; }
+.aivid-links .btn-download { text-decoration: none; }
+.aiimg-result .aivid-links { margin: 8px 0 0; }
+.aivid-swatches { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.aivid-swatch { display: grid; gap: 6px; justify-items: center; padding: 8px 6px; cursor: pointer; font: inherit; font-size: .72rem; color: var(--text-2); background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.aivid-swatch:hover, .aivid-swatch:focus-visible { border-color: var(--border-gold); color: var(--text-1); }
+.aivid-swatch.is-on { border-color: var(--accent); color: var(--text-1); box-shadow: 0 0 0 1px var(--accent) inset; }
+.aivid-sample { display: block; width: 100%; padding: 7px 4px; border-radius: 6px; background: #1b2230; text-align: center; font-family: var(--font-head); font-weight: 800; font-size: .8rem; line-height: 1.2; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); white-space: nowrap; overflow: hidden; }
+.aivid-sample em { font-style: normal; }
+.aivid-sample.is-karaoke em { color: #f7c948; }
+.aivid-sample.is-pop em { color: #f7c948; font-size: 1.15em; }
+.aivid-sample.is-outline { -webkit-text-stroke: .6px #000; }
+.aivid-sample.is-minimal { font-weight: 600; background: #4a5568; }
+.aivid-sample.is-minimal::before { content: none; }
+.aivid-swatch-name { white-space: nowrap; }
+.aivid-exstatus:empty { display: none; }
+@media (max-width: 480px) {
+  .aivid-swatches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .aivid-segs { max-height: 40vh; }
+}
+/* ==== /C7-captions ==== */
+
+/* ==== B3-home: finder-first home ==== */
+/* The home page leads with the Tool Finder: a short heading, the box with
+   the caret already in it on a wide screen, the six jobs as chips, and the
+   site's numbers as one quiet line instead of four big ones. The art is
+   the section glyphs floating beside the heading, each in its section's
+   colour — no image file, and it follows the theme. Tokens only. */
+.hero-ask { position: relative; padding-top: 18px; }
+.hero-ask .eyebrow { margin-top: 0; }
+.hero-ask h1 { max-width: 24ch; font-size: clamp(1.8rem, 4.6vw, 2.7rem); margin-bottom: 12px; }
+.hero-ask .lede { font-size: 1.06rem; margin-bottom: 18px; max-width: 56ch; }
+.hero-ask .hero-finder, .hero-ask .hero-jobs { max-width: 880px; }
+.hero-finder-label {
+  display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: .74rem; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.hero-finder-label strong { color: var(--text-1); font-weight: 700; letter-spacing: .14em; white-space: nowrap; }
+.hero-finder-label .finder-orb { width: 16px; height: 16px; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent); }
+.hero-finder-label .finder-orb::after { inset: 4px; }
+.hero-ask .finder.finder-inline { box-shadow: 0 16px 48px rgba(0, 0, 0, .18), 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent); }
+.hero-ask .finder-inline .finder-composer { padding: 14px 16px; }
+.hero-ask .finder-input { min-height: 56px; font-size: 17px; padding: 15px 18px; }
+.hero-ask .finder-send { width: 56px; height: 56px; }
+.hero-trust { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 18px 0 0; padding: 0; font-size: .88rem; color: var(--text-2); }
+.hero-trust li { display: inline-flex; align-items: baseline; gap: 6px; }
+.hero-trust strong { font-family: var(--font-head); font-weight: 800; font-size: 1.05rem; color: var(--accent); }
+/* the art: nine glyph tiles beside the heading, hidden under 1100px where
+   the heading needs the width */
+.hero-art { display: none; }
+@media (min-width: 1100px) {
+  .hero-ask .eyebrow, .hero-ask .lede { max-width: calc(100% - 330px); }
+  .hero-ask h1 { max-width: min(24ch, calc(100% - 330px)); }
+  .hero-art { display: block; position: absolute; top: 6px; right: 0; width: 300px; height: 236px; pointer-events: none; }
+  .hero-tile {
+    position: absolute; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 16px;
+    background: color-mix(in srgb, var(--sec) 14%, var(--bg-1)); border: 1px solid color-mix(in srgb, var(--sec) 38%, transparent);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .18); color: var(--sec);
+    animation: hero-float 7s ease-in-out infinite; animation-delay: calc(var(--i, 0) * -.8s);
+  }
+  .hero-tile .ico { width: 28px; height: 28px; }
+  .hero-tile:nth-child(1) { left: 12px; top: 18px; }
+  .hero-tile:nth-child(2) { left: 92px; top: 0; }
+  .hero-tile:nth-child(3) { left: 176px; top: 28px; }
+  .hero-tile:nth-child(4) { left: 244px; top: 86px; width: 48px; height: 48px; }
+  .hero-tile:nth-child(5) { left: 40px; top: 96px; width: 48px; height: 48px; }
+  .hero-tile:nth-child(6) { left: 120px; top: 86px; width: 64px; height: 64px; border-radius: 18px; }
+  .hero-tile:nth-child(6) .ico { width: 32px; height: 32px; }
+  .hero-tile:nth-child(7) { left: 200px; top: 150px; }
+  .hero-tile:nth-child(8) { left: 0; top: 170px; width: 48px; height: 48px; }
+  .hero-tile:nth-child(9) { left: 90px; top: 172px; }
+  @keyframes hero-float { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-8px) rotate(2deg); } }
+}
+@media (prefers-reduced-motion: reduce) { .hero-tile { animation: none; } }
+@media (max-width: 640px) {
+  .hero-ask { padding-top: 4px; margin-bottom: 28px; }
+  .hero-ask h1 { font-size: 1.75rem; margin-bottom: 10px; }
+  .hero-ask .lede { font-size: .98rem; margin-bottom: 12px; }
+  .hero-finder-label { margin-bottom: 6px; }
+  .hero-finder-label span:not(.finder-orb) { display: none; }
+  .hero-ask .finder-inline .finder-composer { padding: 10px; }
+  .hero-ask .finder-input { min-height: 50px; font-size: 16px; padding: 13px 14px; }
+  .hero-ask .finder-send { width: 50px; height: 50px; }
+  /* the chips as one row that scrolls sideways, as a phone expects */
+  .hero-ask .finder-inline .finder-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 8px; mask-image: linear-gradient(90deg, #000 92%, transparent); }
+  .hero-ask .finder-inline .finder-chips::-webkit-scrollbar { display: none; }
+  .hero-ask .finder-inline .finder-chips .chip { flex: none; white-space: nowrap; }
+  .hero-trust { gap: 4px 14px; font-size: .8rem; margin-top: 14px; }
+  .hero-trust strong { font-size: .95rem; }
+}
+/* the category grid: icon tiles in the section's colour, so the eye finds
+   a kind of tool before it reads a name. Keyed on the link, not data-sec,
+   because the section builders match these cards by their exact opening tag. */
+[data-sec="ai-video"] { --sec-h: 290; }
+.home-cats .card { --sec-l: 64%; --sec: hsl(var(--sec-h, 45) 70% var(--sec-l)); }
+[data-theme="light"] .home-cats .card { --sec-l: 36%; }
+@media (prefers-color-scheme: light) { [data-theme="system"] .home-cats .card { --sec-l: 36%; } }
+.home-cats .card[href="/pdf/"] { --sec-h: 0; }
+.home-cats .card[href="/india/"] { --sec-h: 20; }
+.home-cats .card[href="/learn/"] { --sec-h: 30; }
+.home-cats .card[href="/education/"] { --sec-h: 40; }
+.home-cats .card[href="/finance/"] { --sec-h: 60; }
+.home-cats .card[href="/utilities/"] { --sec-h: 80; }
+.home-cats .card[href="/qr/"] { --sec-h: 100; }
+.home-cats .card[href="/health/"] { --sec-h: 120; }
+.home-cats .card[href="/mathematics/"] { --sec-h: 140; }
+.home-cats .card[href="/time/"] { --sec-h: 160; }
+.home-cats .card[href="/developer/"] { --sec-h: 180; }
+.home-cats .card[href="/conversions/"] { --sec-h: 200; }
+.home-cats .card[href="/business/"] { --sec-h: 220; }
+.home-cats .card[href="/text/"] { --sec-h: 240; }
+.home-cats .card[href="/ai/"] { --sec-h: 260; }
+.home-cats .card[href="/ai-image/"] { --sec-h: 280; }
+.home-cats .card[href="/ai-video/"] { --sec-h: 290; }
+.home-cats .card[href="/image/"] { --sec-h: 300; }
+.home-cats .card[href="/design/"] { --sec-h: 320; }
+.home-cats .card[href="/engineering/"] { --sec-h: 340; }
+/* denser than the feature grid: four tiles to a row on a desktop, two on a phone */
+.home-cats { grid-template-columns: repeat(auto-fill, minmax(186px, 1fr)); gap: 12px; }
+.home-cats .card-lg { padding: 18px 16px; }
+.home-cats .card-lg .card-icon { width: 52px; height: 52px; border-radius: 15px; margin-bottom: 10px; }
+.home-cats .card-lg .card-icon .ico { width: 28px; height: 28px; }
+.home-cats .card-lg strong { font-size: .98rem; }
+@media (max-width: 640px) {
+  .home-cats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .home-cats .card-lg { padding: 14px 12px; }
+  .home-cats .card-lg .card-icon { width: 44px; height: 44px; border-radius: 13px; margin-bottom: 8px; }
+  .home-cats .card-lg .card-icon .ico { width: 24px; height: 24px; }
+  .home-cats .card-lg strong { font-size: .92rem; }
+}
+.home-cats .card .card-icon { background: color-mix(in srgb, var(--sec) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--sec) 30%, transparent); }
+.home-cats .card .card-icon .ico { color: var(--sec); }
+.home-cats .card:hover { border-color: color-mix(in srgb, var(--sec) 45%, transparent); }
+.home-cats .card:hover .card-icon { background: color-mix(in srgb, var(--sec) 24%, var(--surface)); }
+/* ==== /B3-home ==== */

@@ -48,6 +48,10 @@ const SECTIONS = {
      free and sit beside the image tools, not with the cloud tools under
      /ai/. build-ai-image.js owns everything under /ai-image/. */
   '/ai-image/':    { name: 'AI Image Tools', head: 'AI Image', hub: 'AI Image Tools', noun: 'tool' },
+  /* The AI video tools likewise run on the device — a speech model is
+     downloaded once and the video never leaves the browser — and sit beside
+     the AI image tools. build-ai-video.js owns everything under /ai-video/. */
+  '/ai-video/':    { name: 'AI Video Tools', head: 'AI Video', hub: 'AI Video Tools', noun: 'tool' },
   '/india/':       { name: 'India' },
   /* `crumb` is the short form used as a step in a trail; `hub` is what the
      section's own page is called at the end of its trail. */
