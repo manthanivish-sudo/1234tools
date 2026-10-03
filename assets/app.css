@@ -450,6 +450,9 @@ select.control { font-family: var(--font-body); }
   transition: border-color .15s, color .15s, background .15s;
 }
 .chip:hover, .chip:focus-visible { border-color: var(--accent); color: var(--accent); }
+/* A selected chip keeps its dark label when it also has keyboard focus;
+   the rule above would otherwise paint gold text on the gold fill. */
+.chip.is-on:hover, .chip.is-on:focus-visible { color: #1a1400; }
 .chip-more { border-style: dashed; color: var(--text-2); }
 
 .collection-count {
@@ -2696,3 +2699,22 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
   .finder-card { grid-template-columns: auto minmax(0, 1fr); }
   .finder-card-go { grid-column: 2; }
 }
+
+/* ==== C0-core: share controls ==== */
+.aiimg-looks { margin-bottom: 14px; }
+.aiimg-presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+.aiimg-presets .chip { cursor: pointer; font: inherit; font-size: .8rem; padding: 6px 11px; display: inline-flex; align-items: center; }
+.aiimg-presets .chip[aria-pressed="true"] .aiimg-preset-swatch { box-shadow: 0 0 0 1px #1a1400; }
+.aiimg-preset-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; flex: none; box-shadow: 0 0 0 1px var(--border); }
+.aiimg-presets .btn-ghost { margin-left: auto; font-size: .8rem; }
+.aiimg-share { padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.aiimg-share .field-check { margin-bottom: 8px; }
+.aiimg-share .field-hint { margin: 0 0 10px; }
+.aiimg-share .aiimg-row { margin-bottom: 8px; }
+.aiimg-share .aiimg-progress { margin: 8px 0 8px; }
+.aiimg-share .aiimg-status { margin: 0; }
+.btn-ghost.is-copied { border-color: var(--border-gold); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+@media (max-width: 480px) {
+  .aiimg-presets .btn-ghost { margin-left: 0; }
+}
+/* ==== /C0-core ==== */

@@ -10,6 +10,7 @@
   window.AI_IMAGE_TOOLS = window.AI_IMAGE_TOOLS || {};
 
   window.AI_IMAGE_TOOLS['text-behind-image'] = {
+    order: 0,
     title: 'Text Behind Image',
     pageTitle: 'Text Behind Image — Free AI Text Behind Person & Object Editor | 1234Tools',
     description: 'Put text behind a person, car, building or sky in any photo. AI finds the layers in your browser — nothing is uploaded. Animate the text and export PNG, JPEG, GIF or MP4.',
@@ -17,7 +18,7 @@
       'ai text behind image free', 'animated text behind image', 'text behind image video maker', 'text behind image gif'],
     glyph: 'i-text-behind',
     glyphSvg: '<symbol id="i-text-behind" viewBox="0 0 24 24">\n  <path d="M3.5 5.5h10M8.5 5.5v6.2" class="thin"/>\n  <path d="M18 7.2v4.5M15.8 7.2h4.4" class="thin"/>\n  <circle cx="12.5" cy="11.3" r="2.9"/>\n  <path d="M6.6 21.2a5.9 5.9 0 0 1 11.8 0z"/>\n</symbol>',
-    scripts: ['/engine/aiimg-core.js', '/engine/aiimg-text-behind.js'],
+    scripts: ['/engine/aiimg-core.js', '/engine/aiimg-share.js', '/engine/aiimg-text-behind.js'],
     privacy: 'Your photo never leaves your device. The AI model (18 MB) and the runtime that executes it are served from this site and kept by your browser after the first visit; no third-party server is contacted at all. The picture itself is split into layers, drawn and encoded by your own browser. Nothing is uploaded, queued or logged, and there is no watermark.',
     how: [
       'Choose a photo. A clear subject — a person, a car, a building against the sky — gives the best result.',
@@ -59,7 +60,11 @@
       { q: 'Does it work on a phone?',
         a: 'Yes, in Safari on iOS and Chrome on Android. The first run downloads the 18 MB model and the 14 MB runtime; after that both are cached. Export clips at 720 px or under on a phone — encoding a long 1080p clip is work for a laptop.' },
       { q: 'Which motions are there, and will the loop be seamless?',
-        a: 'Scroll across in eight directions, wave, wave and scroll together, slide in and out, zoom in, typewriter, bounce, pulse, fade, float and spin. The cyclic ones complete a whole number of cycles per clip, so a GIF or a looping video joins up with itself.' }
+        a: 'Scroll across in eight directions, wave, wave and scroll together, slide in and out, zoom in, typewriter, bounce, pulse, fade, float and spin. The cyclic ones complete a whole number of cycles per clip, so a GIF or a looping video joins up with itself.' },
+      { q: 'Is there a watermark? What is the optional credit?',
+        a: 'There is no watermark. In the Export pane there is a box, off unless you tick it, that adds a small “1234tools.com” to the bottom corner of GIF and MP4 clips — a way to tell friends where you made it, if you want to. It is never added to a still image or a cut-out, and the choice is remembered on this device only.' },
+      { q: 'Can I share a link to a particular text style?',
+        a: 'Yes. Pick a look in the Text pane — Neon sunset, Bold white, Outline, Gold headline, Typewriter or Wave — and press “Copy link to this look”. The link opens this page with that look ready to apply to whatever photo the other person chooses. It carries only the name of the style: no photo and no words of yours.' }
     ],
     related: ['/image/background-remover/', '/image/meme-generator/', '/image/social-media-resizer/', '/image/photo-filters/', '/image/circle-crop/', '/image/image-compressor/']
   };

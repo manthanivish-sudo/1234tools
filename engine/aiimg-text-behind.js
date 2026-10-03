@@ -43,7 +43,26 @@
   const pct = (v) => Math.round(v) + '%';
   const on = (ctrl, fn) => { const t = ctrl.input || ctrl; t.addEventListener('input', fn); t.addEventListener('change', fn); return ctrl; };
 
+  /* The looks: six styles a chip or a ?preset= link applies to the selected
+     text. Each sets colour, outline, shadow, glow and — for two — motion. */
+  const LOOKS = [
+    { id: 'neon-sunset', label: 'Neon sunset', swatch: 'linear-gradient(90deg, #ff3cac, #ffb347)',
+      apply: (L) => { Object.assign(L, { fillMode: 'gradient', fill: '#ff3cac', fill2: '#ffb347', gradientAngle: 90, strokeWidth: 0, glow: 22, shadowBlur: 0, shadowX: 0, shadowY: 0, font: 'Sora', weight: 800, italic: false, blend: 'source-over', opacity: 1 }); } },
+    { id: 'bold-white', label: 'Bold white', swatch: '#ffffff',
+      apply: (L) => { Object.assign(L, { fillMode: 'solid', fill: '#ffffff', strokeWidth: 0, glow: 0, shadowBlur: 16, shadowX: 0, shadowY: 2, shadowColor: '#000000', shadowOpacity: 0.55, font: 'Sora', weight: 900, italic: false, blend: 'source-over', opacity: 1 }); } },
+    { id: 'outline-black', label: 'Outline', swatch: 'linear-gradient(135deg, #ffffff 50%, #000000 50%)',
+      apply: (L) => { Object.assign(L, { fillMode: 'solid', fill: '#ffffff', strokeWidth: 4, stroke: '#000000', glow: 0, shadowBlur: 0, shadowX: 0, shadowY: 0, font: 'Sora', weight: 800, italic: false, blend: 'source-over', opacity: 1 }); } },
+    { id: 'gold-headline', label: 'Gold headline', swatch: 'linear-gradient(180deg, #fff3c4, #f7c948)',
+      apply: (L) => { Object.assign(L, { fillMode: 'gradient', fill: '#fff3c4', fill2: '#f7c948', gradientAngle: 180, strokeWidth: 1, stroke: '#5a3d00', glow: 0, shadowBlur: 10, shadowX: 0, shadowY: 3, shadowColor: '#000000', shadowOpacity: 0.5, font: 'Sora', weight: 800, italic: false, letterSpacing: 0.06, blend: 'source-over', opacity: 1 }); } },
+    { id: 'typewriter', label: 'Typewriter', swatch: '#d9dde8',
+      apply: (L) => { Object.assign(L, { fillMode: 'solid', fill: '#ffffff', font: 'Courier New', weight: 700, italic: false, strokeWidth: 0, glow: 0, shadowBlur: 8, shadowX: 0, shadowY: 0, shadowOpacity: 0.6, uppercase: false, letterSpacing: 0.04, blend: 'source-over', opacity: 1 }); L.anim.type = 'typewriter'; } },
+    { id: 'wave', label: 'Wave', swatch: 'linear-gradient(90deg, #7cf7ff, #3b7bff)',
+      apply: (L) => { Object.assign(L, { fillMode: 'gradient', fill: '#7cf7ff', fill2: '#3b7bff', gradientAngle: 0, strokeWidth: 0, glow: 14, shadowBlur: 0, shadowX: 0, shadowY: 0, font: 'Sora', weight: 800, italic: false, blend: 'source-over', opacity: 1 }); Object.assign(L.anim, { type: 'wave', amplitude: 0.6, waves: 1.5, speed: 2 }); } }
+  ];
+
   function mount(root) {
+    const share = A.share || null;
+    let presets = null;
     const io = root.querySelector('.tool-io');
     io.innerHTML = '';
     const S = {
@@ -125,6 +144,11 @@
       if (S.frontCanvas) ctx.drawImage(S.frontCanvas, 0, 0, W, H);
       for (const L of S.texts) if (L.depth !== 'behind') A.drawText(ctx, L, t, W, H, S.duration);
       ctx.restore();
+    }
+    /** A frame of a clip: the frame, then the corner credit if the reader asked for it. */
+    function renderClip(ctx, W, H, t) {
+      renderFrame(ctx, W, H, t);
+      if (share) share.drawCredit(ctx, W, H);
     }
     function tintCanvas() {
       if (S.tint) return S.tint;
@@ -359,6 +383,9 @@
           if (p.stage === 'download') {
             status.textContent = 'Downloading the model once' + (p.total ? ' — ' + fmtBytes(p.loaded) + ' of ' + fmtBytes(p.total) : '') + '. Your browser keeps it for next time.';
             bar.style.width = Math.round(p.fraction * 60) + '%';
+          } else if (p.stage === 'compile') {
+            status.textContent = 'Preparing the model on your device…';
+            bar.style.width = '60%';
           } else if (p.stage === 'run') {
             status.textContent = 'Finding the layers on your device…';
             bar.style.width = Math.round(60 + p.fraction * 40) + '%';
@@ -402,6 +429,8 @@
         refreshTextUI();
         invalidate();
         showPane('layers');
+        /* a ?preset= link applies its look once the picture is here */
+        if (presets) presets.applyFromUrl();
         runSegmentation();
       } catch (e) {
         note('');
@@ -528,7 +557,24 @@
       field('Blend with the photo', blend)
     );
     const noText = el('p', 'aiimg-status', 'No text layers. Add one to begin.'); noText.hidden = true;
-    panes.text.append(textList, listRow, noText, textControls);
+
+    /* ---------------- looks ---------------- */
+    const looksBox = el('div', 'aiimg-looks');
+    function applyLook(p) {
+      const L = cur(); if (!L) return;
+      p.apply(L);
+      L.touched = true;
+      A.ensureFont(L).then(invalidate);
+      refreshTextUI();
+      if (L.anim.type !== 'none' && !S.playing) setPlaying(true);
+      invalidate();
+    }
+    if (share) {
+      looksBox.appendChild(h('Looks'));
+      presets = share.presets({ root: looksBox, list: LOOKS.map((p) => ({ id: p.id, label: p.label, swatch: p.swatch, apply: () => applyLook(p) })) });
+      looksBox.appendChild(el('p', 'field-hint', 'A look sets the colour, outline, shadow and motion of the selected text; everything below stays yours to change. “Copy link to this look” gives a link that opens this page with the look ready.'));
+    }
+    panes.text.append(textList, listRow, looksBox, noText, textControls);
 
     function renderTextList() {
       textList.innerHTML = '';
@@ -604,6 +650,29 @@
       fillSelect(clipFps, gif ? [['10', '10'], ['12', '12'], ['15', '15'], ['20', '20']] : [['24', '24'], ['30', '30'], ['60', '60']], gif ? '15' : '30');
     }
     syncClipOptions();
+
+    /* ---------------- share: credit, caption, making-of ---------------- */
+    const shareBox = el('div', 'aiimg-share');
+    const moBtn = button('Making-of clip (9:16)', 'btn-ghost', exportMakingOf);
+    const moCancel = button('Cancel', 'btn-ghost', () => { if (S.job) S.job.abort(); }); moCancel.hidden = true;
+    const moProgress = el('div', 'aiimg-progress'); const moBar = el('i'); moProgress.appendChild(moBar); moProgress.hidden = true;
+    const moStatus = el('p', 'aiimg-status', ''); moStatus.hidden = true;
+    const captionText = () => {
+      const words = ((S.texts[0] && S.texts[0].text) || '').replace(/\s+/g, ' ').trim();
+      return (words ? '“' + words + '” — ' : '') + 'text behind the subject, cut out by AI on my own device, nothing uploaded.\n#textbehindimage #photoedit #aiart #design #1234tools';
+    };
+    if (share) {
+      const shareRow = el('div', 'aiimg-row');
+      shareRow.append(share.captionButton(captionText), moBtn, moCancel);
+      shareBox.append(
+        share.creditControl(),
+        el('p', 'field-hint', 'The credit is a small “1234tools.com” in the bottom corner of GIF and MP4 clips, never of a still. Off unless you tick it.'),
+        shareRow,
+        el('p', 'field-hint', 'The caption is a line and five hashtags for the post. The making-of is a six-second 1080×1920 clip for Stories and Reels: your photo, the layers peeling apart, then the result.'),
+        moProgress, moStatus
+      );
+    }
+
     panes.export.append(
       h('Still image'),
       grid(field('Format', stillFmt), field('Size', stillSize)), qualityField,
@@ -613,8 +682,65 @@
       grid(field('Format', clipFmt), field('Long edge', clipSize)),
       field('Frames per second', clipFps),
       el('p', 'field-hint', 'Encoded on your device. MP4 needs a browser with on-device video encoding (Chrome, Edge, Safari 16.4+); elsewhere the clip is recorded as WebM. GIFs are large: keep them short and 640 px or under for sharing.'),
-      clipRow, clipProgress, clipStatus, results
+      clipRow, clipProgress, clipStatus
     );
+    if (share) panes.export.append(h('Share'), shareBox);
+    panes.export.append(results);
+
+    /** The three layers of the making-of, back to front, at up to 1080 px. */
+    function makingOfStages() {
+      const img = S.image;
+      const s = Math.min(1, 1080 / Math.max(img.width, img.height));
+      const w = Math.max(2, Math.round(img.width * s)), h = Math.max(2, Math.round(img.height * s));
+      const layer = () => { const c = el('canvas'); c.width = w; c.height = h; return c; };
+      const bg = layer(), bctx = bg.getContext('2d');
+      bctx.drawImage(img.canvas, 0, 0, w, h);
+      if (S.frontCanvas) { bctx.globalCompositeOperation = 'destination-out'; bctx.drawImage(S.frontCanvas, 0, 0, w, h); }
+      const tx = layer(), tctx = tx.getContext('2d');
+      for (const L of S.texts) A.drawText(tctx, Object.assign({}, L, { anim: { type: 'none' } }), 0, w, h, S.duration);
+      const stages = [{ canvas: bg, label: 'The photo' }, { canvas: tx, label: 'Your text' }];
+      if (S.frontCanvas) {
+        const fr = layer();
+        fr.getContext('2d').drawImage(S.frontCanvas, 0, 0, w, h);
+        const names = S.seg ? S.seg.layers.filter((l) => S.front.has(l.key)).map((l) => l.name) : [];
+        stages.push({ canvas: fr, label: names.length ? names.slice(0, 2).join(' and ') + ' in front' : 'In front' });
+      }
+      return stages;
+    }
+    async function exportMakingOf() {
+      if (!S.image || S.job || !share) return;
+      S.job = new AbortController();
+      S.exporting = true;
+      const wasPlaying = S.playing; setPlaying(false);
+      moBtn.disabled = true; clipBtn.disabled = true; moCancel.hidden = false; moProgress.hidden = false; moStatus.hidden = false; moBar.style.width = '0%';
+      moStatus.textContent = 'Rendering the making-of clip…';
+      const started = performance.now();
+      try {
+        const first = S.texts[0];
+        const words = ((first && first.text) || '').split('\n')[0].trim();
+        const r = await share.makingOf({
+          title: words ? (first.uppercase ? words.toUpperCase() : words) : 'Text behind image',
+          subtitle: 'Text behind image, made on my device',
+          width: 1080, height: 1920, seconds: 6, fps: 30,
+          original: S.image.canvas, stages: makingOfStages(), final: renderFrame,
+          onProgress: (f) => { moBar.style.width = Math.round(f * 100) + '%'; moStatus.textContent = 'Rendering the making-of clip — ' + Math.round(f * 100) + '%.'; },
+          signal: S.job.signal
+        });
+        const name = (S.image.name || 'image') + '-making-of.' + r.ext;
+        addResult(r.blob, name, (r.ext === 'mp4' ? 'MP4' : 'WebM') + ' · making-of · 6.0 s · 30 fps', '1080×1920');
+        A.download(r.blob, name);
+        moStatus.textContent = 'Done in ' + ((performance.now() - started) / 1000).toFixed(1) + ' s.';
+        if (r.note && /WebM/.test(r.note)) say(r.note, 'warn'); else say('');
+      } catch (e) {
+        if (e && e.name === 'AbortError') moStatus.textContent = 'Cancelled.';
+        else { moStatus.textContent = 'The making-of could not be rendered.'; say((e && e.message) || String(e), 'error'); }
+      } finally {
+        S.job = null; S.exporting = false;
+        moBtn.disabled = false; clipBtn.disabled = false; moCancel.hidden = true; moProgress.hidden = true;
+        if (wasPlaying) setPlaying(true);
+        invalidate();
+      }
+    }
 
     const outName = (ext) => (S.image ? S.image.name : 'image') + '-text-behind.' + ext;
     function sizeFor(longEdge) {
@@ -682,8 +808,8 @@
       try {
         const o = { width, height, fps, duration: S.duration, onProgress, signal: S.job.signal };
         let blob, ext, note;
-        if (gif) { blob = await A.encodeGIF(renderFrame, o); ext = 'gif'; }
-        else { const r = await A.encodeVideo(renderFrame, o); blob = r.blob; ext = r.ext; note = r.note; }
+        if (gif) { blob = await A.encodeGIF(renderClip, o); ext = 'gif'; }
+        else { const r = await A.encodeVideo(renderClip, o); blob = r.blob; ext = r.ext; note = r.note; }
         const name = outName(ext);
         addResult(blob, name, (gif ? 'GIF' : (ext === 'mp4' ? 'MP4' : 'WebM')) + ' · ' + S.duration.toFixed(1) + ' s · ' + fps + ' fps', width + '×' + height);
         A.download(blob, name);
@@ -703,7 +829,7 @@
     /* ---------------- go ---------------- */
     refreshTextUI();
     showPane('layers');
-    return { state: S, renderFrame, loadFiles, destroy: () => { mounted = false; } };
+    return { state: S, renderFrame, renderClip, loadFiles, presets, destroy: () => { mounted = false; } };
   }
 
   A.tools['text-behind-image'] = { mount };

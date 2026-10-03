@@ -51,10 +51,20 @@ function write(rel, content) {
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const icon = (id, cls) => '<svg class="' + (cls || 'ico') + '" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#' + id + '"></use></svg>';
 
+/* One spec file per tool: engine/ai-image-tools.js carries the first, and
+   every engine/ai-image-tools-<slug>.js adds one more. Separate files let
+   several people build tools at once without editing the same file; the
+   builder reads them all, so the page, the hub card and the directory row
+   still cannot disagree. `order` in a spec fixes its place on the hub (the
+   roadmap number); a spec without one sorts after those that have it. */
 function tools() {
   const w = {};
-  new Function('window', fs.readFileSync(path.join(ROOT, 'engine/ai-image-tools.js'), 'utf8'))(w);
-  return Object.entries(w.AI_IMAGE_TOOLS).map(([slug, spec]) => ({ slug, spec }));
+  const dir = path.join(ROOT, 'engine');
+  const files = ['ai-image-tools.js'].concat(fs.readdirSync(dir).filter((f) => /^ai-image-tools-[a-z0-9-]+\.js$/.test(f)).sort());
+  for (const f of files) new Function('window', fs.readFileSync(path.join(dir, f), 'utf8'))(w);
+  const list = Object.entries(w.AI_IMAGE_TOOLS).map(([slug, spec]) => ({ slug, spec }));
+  const ord = (t) => (typeof t.spec.order === 'number' ? t.spec.order : 999);
+  return list.sort((a, b) => ord(a) - ord(b) || a.slug.localeCompare(b.slug));
 }
 
 function shell() {
@@ -248,7 +258,7 @@ function patchSearchIndex(list) {
   const rel = 'assets/search-index.js';
   const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
   const add = list.filter((t) => src.indexOf('"' + SECTION + '/' + t.slug + '/"') < 0)
-    .map((t) => '["' + t.spec.title.replace(/"/g, '\\"') + '","' + SECTION + '/' + t.slug + '/","' + t.slug + '"]');
+    .map((t) => '["' + t.spec.title.replace(/"/g, '\\"') + '","' + SECTION + '/' + t.slug + '/","' + String(t.spec.glyph || ('i-' + t.slug)).replace(/^i-/, '') + '"]');
   if (!add.length) return 0;
   write(rel, src.replace(/\];\s*$/, ',' + add.join(',') + '];\n'));
   return add.length;

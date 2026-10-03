@@ -1,15 +1,45 @@
 /**
- * AI Image tools — the shared runtime.
+ * AI Image tools — the shared runtime (window.AIImg).
  *
  * Everything the tools under /ai-image/ have in common: decoding a photo,
- * running the segmentation model on the device, turning what it finds into
- * soft-edged layers, drawing styled and animated text, and encoding stills,
- * GIFs and MP4s without a server.
+ * running a model on the device, turning what it finds into soft-edged
+ * layers, drawing styled and animated text, and encoding stills, GIFs and
+ * MP4s without a server. Nothing is uploaded: the model and the runtime are
+ * served from this site, fetched on first use only and kept by the browser.
  *
- * Nothing is uploaded. The model weights come from the Hugging Face Hub and
- * the runtime from jsDelivr, once, on first use, and the browser caches
- * both. The picture itself never leaves the page. Both downloads happen
- * strictly on demand: a plain load of a tool page contacts nobody.
+ * For tool authors. A tool is one file, engine/aiimg-<slug>.js, that
+ * registers `AIImg.tools['<slug>'] = { mount(root) }`; the page calls
+ * `AIImg.mount(slug, root)` once the scripts in its spec have run (all are
+ * `defer`, so list aiimg-core.js first, aiimg-share.js second, the tool
+ * last). In mount, empty `root.querySelector('.tool-io')` and build the DOM
+ * with the control helpers (`el`, `field`, `select`, `range`, `colour`,
+ * `check`, `button`) in the shape the CSS already styles: `.aiimg` wraps
+ * everything; `.dropzone` plus a hidden `input[type=file]` take the photo;
+ * `.aiimg-studio` holds `.aiimg-stagecol` (the preview `canvas.aiimg-canvas`
+ * inside `.aiimg-stage`) and `.aiimg-side` (an `.aiimg-tabs` row of
+ * `.chip[data-pane]` buttons and one `.aiimg-pane[data-pane=…]` each);
+ * `.aiimg-status` is the one-line state that readers and tests watch; and
+ * exports go into `.aiimg-results` as `.aiimg-result` rows, each an
+ * `.aiimg-result-head` (name, size, a Download button) above an img or
+ * video. Order of calls for a picture: `loadImageFile(file)` →
+ * `{canvas, width, height, name}`; `segment(image, {detail, onProgress})` →
+ * `{mw, mh, classMap, layers}`; `guideOf(image, mw, mh)` once, then
+ * `refine(binaryMask, guide, {softness, shift})` → a soft alpha, and
+ * `cutOut(image, alpha, mw, mh)` → that layer as a canvas. Other models:
+ * `loadSession(url, {bytes, onProgress})` gives one cached ONNX Runtime
+ * session per URL (`runtime()` is the ort module; `fetchModel(url,
+ * onProgress, bytes)` the raw weights; a URL ending `.part0`, or an array
+ * of URLs, is fetched in pieces and joined). Drawing: write ONE
+ * `render(ctx, W, H, t)` that paints the whole frame at time t seconds on a
+ * W×H context and use it everywhere — the preview, `exportStill(render,
+ * {width, height, format, quality, t})`, `encodeGIF(render, {width, height,
+ * fps, duration, onProgress, signal})` and `encodeVideo(render, {…the same,
+ * audio?})` → `{blob, ext, note}` — so what is exported is what was seen.
+ * Frames that arrive on their own clock (a video being processed) go to
+ * `encodeVideoFrames(asyncIterable, {fps, audio?, onProgress, signal})`.
+ * Text: `drawText(ctx, layer, t, W, H, duration)`, `layout`, `motion`,
+ * `textBox`, `pointInBox`, `ensureFont`. Call `AIImg.share.drawCredit(ctx,
+ * W, H)` last in render for clip frames (see aiimg-share.js).
  */
 (function () {
   'use strict';
@@ -183,20 +213,48 @@
     return ortLib;
   }
 
-  /* Read the weights with progress, so the first run can say how far it is. */
-  async function fetchModel(onProgress) {
-    const res = await fetch(MODEL_URL);
-    if (!res.ok) throw new Error('The model could not be downloaded (HTTP ' + res.status + ').');
-    const total = Number(res.headers.get('content-length')) || MODEL_BYTES;
-    if (!res.body || !res.body.getReader) return new Uint8Array(await res.arrayBuffer());
-    const reader = res.body.getReader();
+  /**
+   * Read a model's weights with progress, so a first run can say how far it
+   * is. `url` is one file, an array of files, or a `…part0` whose siblings
+   * part1, part2… are fetched in turn until one is missing (GitHub Pages
+   * caps a file at 100 MB, so larger models ship in pieces). The pieces come
+   * back as one Uint8Array. `expectedBytes` sizes the progress bar before
+   * the server has said; without it the content-length headers are used.
+   * onProgress gets { stage: 'download', fraction, loaded, total }.
+   */
+  async function fetchModel(url, onProgress, expectedBytes) {
+    const report = onProgress || (() => {});
+    const urls = Array.isArray(url) ? url.map(String) : [String(url)];
+    const shard = urls.length === 1 ? /^(.*\.part)(0+)$/.exec(urls[0]) : null;
     const chunks = [];
-    let got = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value); got += value.length;
-      if (onProgress) onProgress({ stage: 'download', fraction: Math.min(1, got / Math.max(total, got)), loaded: got, total: Math.max(total, got) });
+    let got = 0, total = Number(expectedBytes) || 0;
+    const fail = (res) => new Error('The model could not be downloaded (HTTP ' + res.status + ').');
+    const tick = () => report({ stage: 'download', fraction: Math.min(1, got / Math.max(total, got, 1)), loaded: got, total: Math.max(total, got) });
+    const pull = async (res) => {
+      if (!res.body || !res.body.getReader) {
+        const b = new Uint8Array(await res.arrayBuffer());
+        chunks.push(b); got += b.length; tick();
+        return;
+      }
+      const reader = res.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value); got += value.length; tick();
+      }
+    };
+    if (shard) {
+      for (let i = 0; ; i++) {
+        const res = await fetch(shard[1] + String(i).padStart(shard[2].length, '0'));
+        if (!res.ok) { if (i > 0 && res.status === 404) break; throw fail(res); }
+        if (!expectedBytes) total += Number(res.headers.get('content-length')) || 0;
+        await pull(res);
+      }
+    } else {
+      const responses = await Promise.all(urls.map((u) => fetch(u)));
+      for (const res of responses) if (!res.ok) throw fail(res);
+      if (!expectedBytes) total = responses.reduce((s, r) => s + (Number(r.headers.get('content-length')) || 0), 0);
+      for (const res of responses) await pull(res);
     }
     const out = new Uint8Array(got);
     let o = 0;
@@ -204,17 +262,38 @@
     return out;
   }
 
-  let sessionPromise = null;
-  /** The loaded network, once per page. */
-  function segmenter(onProgress) {
-    if (sessionPromise) return sessionPromise;
-    sessionPromise = (async () => {
+  const sessions = new Map();
+  /**
+   * One ONNX Runtime session per model, created once per page and shared:
+   * a second caller while the first is still loading gets the same promise.
+   * `url` as for fetchModel. opts: { bytes: expected size for the progress
+   * bar, onProgress, sessionOptions } — the session runs on WebAssembly with
+   * every graph optimisation unless sessionOptions says otherwise. Resolves
+   * { ort, session, bytes, url }; a failure clears the slot so the next call
+   * tries again. onProgress sees stage 'download' then 'compile'.
+   */
+  function loadSession(url, opts) {
+    opts = opts || {};
+    const key = Array.isArray(url) ? url.join('|') : String(url);
+    if (sessions.has(key)) return sessions.get(key);
+    const report = opts.onProgress || (() => {});
+    const p = (async () => {
       const ort = await runtime();
-      const bytes = await fetchModel(onProgress);
-      const session = await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
-      return { ort, session, id2label: ADE20K, device: 'wasm' };
-    })().catch((e) => { sessionPromise = null; throw e; });
-    return sessionPromise;
+      const bytes = await fetchModel(url, report, opts.bytes);
+      report({ stage: 'compile', fraction: 0, loaded: bytes.length, total: bytes.length });
+      await sleep(0);
+      const session = await ort.InferenceSession.create(bytes, Object.assign({ executionProviders: ['wasm'], graphOptimizationLevel: 'all' }, opts.sessionOptions || {}));
+      report({ stage: 'compile', fraction: 1, loaded: bytes.length, total: bytes.length });
+      return { ort, session, bytes: bytes.length, url: key };
+    })().catch((e) => { sessions.delete(key); throw e; });
+    sessions.set(key, p);
+    return p;
+  }
+
+  /** The segmentation network, once per page. */
+  function segmenter(onProgress) {
+    return loadSession(MODEL_URL, { bytes: MODEL_BYTES, onProgress })
+      .then((s) => ({ ort: s.ort, session: s.session, id2label: ADE20K, device: 'wasm' }));
   }
 
   /* What tends to be the subject of a photograph, and so sits in front of
@@ -738,9 +817,8 @@
     return new Blob([gif.bytes()], { type: 'image/gif' });
   }
 
-  /* H.264 through WebCodecs, boxed by mp4-muxer. Levels in ascending
-     order: the first the browser accepts for this size is the most widely
-     playable one that fits. */
+  /* H.264 through WebCodecs. Levels in ascending order: the first the
+     browser accepts for this size is the most widely playable one that fits. */
   const AVC = ['avc1.42001f', 'avc1.4d001f', 'avc1.640028', 'avc1.64002a', 'avc1.640032', 'avc1.640033'];
   async function pickAvc(width, height, fps, bitrate) {
     if (typeof VideoEncoder === 'undefined' || !VideoEncoder.isConfigSupported) return null;
@@ -752,46 +830,215 @@
     return null;
   }
 
-  async function encodeMP4(render, o) {
-    const w = evenDown(o.width), h = evenDown(o.height);
-    const fps = clamp(Math.round(o.fps) || 30, 5, 60);
-    const total = Math.max(1, Math.round(o.duration * fps));
-    const report = o.onProgress || (() => {});
-    const bitrate = Math.round(clamp(w * h * fps * 0.12, 1.2e6, 24e6));
-    const config = await pickAvc(w, h, fps, bitrate);
-    if (!config) return null;
+  /* The MP4 boxer, behind one small adapter. Today it is mp4-muxer (MIT,
+     engine/vendor/mp4-muxer.mjs): H.264 video plus AAC or Opus audio, moov
+     before mdat. Its author's successor, Mediabunny, is MPL-2.0 and so not
+     vendored; should that change, this function is the only thing to swap.
+     spec: { video: { width, height, frameRate }, audio: { codec: 'aac'|'opus',
+     numberOfChannels, sampleRate } | null }. addVideo/addAudio may return a
+     promise; the callers await them in order. */
+  async function openMuxer(spec) {
     const M = await import('/engine/vendor/mp4-muxer.mjs');
     const target = new M.ArrayBufferTarget();
-    const muxer = new M.Muxer({ target, video: { codec: 'avc', width: w, height: h, frameRate: fps }, fastStart: 'in-memory', firstTimestampBehavior: 'offset' });
+    const o = { target, fastStart: 'in-memory', firstTimestampBehavior: 'offset',
+      video: { codec: 'avc', width: spec.video.width, height: spec.video.height, frameRate: spec.video.frameRate } };
+    if (spec.audio) o.audio = { codec: spec.audio.codec, numberOfChannels: spec.audio.numberOfChannels, sampleRate: spec.audio.sampleRate };
+    const muxer = new M.Muxer(o);
+    return {
+      addVideo: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+      addAudio: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+      finalize: () => { muxer.finalize(); return target.buffer; }
+    };
+  }
+
+  /* Which audio codec this browser can encode into an MP4: AAC where the
+     platform has an encoder (Chrome and Edge on Windows and macOS, Safari),
+     else Opus, which the boxer writes and Chrome, Firefox and Safari 17+
+     play. null when neither — the clip is then silent, and says so. */
+  async function planAudio(a) {
+    const buffer = a && a.buffer;
+    if (!buffer || typeof AudioEncoder === 'undefined' || !AudioEncoder.isConfigSupported) return null;
+    const channels = Math.min(2, Math.max(1, buffer.numberOfChannels || 1));
+    const native = buffer.sampleRate === 44100 || buffer.sampleRate === 48000 ? buffer.sampleRate : 48000;
+    const tries = [{ codec: 'mp4a.40.2', sampleRate: native, box: 'aac' }, { codec: 'opus', sampleRate: 48000, box: 'opus' }];
+    for (const t of tries) {
+      const config = { codec: t.codec, sampleRate: t.sampleRate, numberOfChannels: channels, bitrate: Number(a.bitrate) || (channels > 1 ? 128000 : 96000) };
+      try {
+        const r = await AudioEncoder.isConfigSupported(config);
+        if (r && r.supported) return { buffer, config: r.config || config, track: { codec: t.box, numberOfChannels: channels, sampleRate: t.sampleRate } };
+      } catch (e) { /* next */ }
+    }
+    return null;
+  }
+
+  /* Encode `seconds` of the plan's AudioBuffer and hand every chunk to
+     `add`. Resampling, down-mixing and trimming happen in an
+     OfflineAudioContext when the buffer does not already match. */
+  async function encodeAudio(plan, seconds, add, signal) {
+    const { buffer, config, track } = plan;
+    const rate = track.sampleRate, ch = track.numberOfChannels;
+    const n = Math.max(1, Math.round(Math.min(seconds, buffer.duration) * rate));
+    let src = buffer;
+    if (buffer.sampleRate !== rate || buffer.numberOfChannels !== ch || n < buffer.length - 1) {
+      const octx = new OfflineAudioContext(ch, n, rate);
+      const node = octx.createBufferSource();
+      node.buffer = buffer; node.connect(octx.destination); node.start(0);
+      src = await octx.startRendering();
+    }
     let failure = null;
-    const encoder = new VideoEncoder({
-      output: (chunk, meta) => { try { muxer.addVideoChunk(chunk, meta); } catch (e) { failure = e; } },
-      error: (e) => { failure = e; }
-    });
+    const encoder = new AudioEncoder({ output: (chunk, meta) => add(chunk, meta), error: (e) => { failure = failure || e; } });
     encoder.configure(config);
-    const c = document.createElement('canvas');
-    c.width = w; c.height = h;
-    const ctx = c.getContext('2d');
+    const planes = [];
+    for (let c = 0; c < ch; c++) planes.push(src.getChannelData(c));
+    const STEP = 4096;
+    const len = Math.min(src.length, n);
     try {
-      for (let i = 0; i < total; i++) {
-        if (o.signal && o.signal.aborted) throw abortError();
+      for (let i = 0; i < len; i += STEP) {
+        if (signal && signal.aborted) throw abortError();
         if (failure) throw failure;
-        ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
-        render(ctx, w, h, i / fps);
-        const frame = new VideoFrame(c, { timestamp: Math.round(i * 1e6 / fps), duration: Math.round(1e6 / fps) });
-        encoder.encode(frame, { keyFrame: i % (fps * 2) === 0 });
-        frame.close();
-        while (encoder.encodeQueueSize > 6) await sleep(4);
-        if ((i & 3) === 3) { report(i / total); await sleep(0); }
+        const k = Math.min(STEP, len - i);
+        const data = new Float32Array(k * ch);
+        for (let c = 0; c < ch; c++) data.set(planes[c].subarray(i, i + k), c * k);
+        const ad = new AudioData({ format: 'f32-planar', sampleRate: rate, numberOfFrames: k, numberOfChannels: ch, timestamp: Math.round(i * 1e6 / rate), data });
+        encoder.encode(ad);
+        ad.close();
+        if (encoder.encodeQueueSize > 8) await sleep(2);
       }
       await encoder.flush();
       if (failure) throw failure;
     } finally {
       try { if (encoder.state !== 'closed') encoder.close(); } catch (e) { /* done */ }
     }
-    muxer.finalize();
+  }
+
+  /**
+   * The engine behind encodeMP4 and encodeVideoFrames: frames in from an
+   * iterator (sync or async), an MP4 ArrayBuffer out. Each frame is
+   * { canvas | frame (VideoFrame) | image (any CanvasImageSource),
+   *   timestampUs?, durationUs?, progress? }; without timestamps the frames
+   * are spaced at o.fps. Timestamps are made zero-based and monotonic, a
+   * keyframe opens every two seconds, and a VideoFrame is closed after use
+   * unless the entry says keep: true. Resolves null when the browser has no
+   * H.264 encoder for this size, so the caller can fall back; otherwise
+   * { buffer, audio: 'aac'|'opus'|null, frames, width, height }.
+   */
+  async function muxFrames(frames, o) {
+    o = o || {};
+    const report = o.onProgress || (() => {});
+    const total = Number(o.total) || 0;
+    const fps = clamp(Math.round(o.fps) || 30, 1, 120);
+    let w = o.width ? evenDown(o.width) : 0, h = o.height ? evenDown(o.height) : 0;
+    let mux = null, encoder = null, failure = null, audio = null, scratch = null, sctx = null;
+    let pending = Promise.resolve();
+    const queue = (fn) => { pending = pending.then(fn).catch((e) => { failure = failure || e; }); };
+    const check = () => { if (o.signal && o.signal.aborted) throw abortError(); if (failure) throw failure; };
+    const it = frames[Symbol.asyncIterator] ? frames[Symbol.asyncIterator]() : frames[Symbol.iterator]();
+    let count = 0, t0 = -1, lastKey = -1, end = 0;
+    try {
+      for (;;) {
+        check();
+        const r = await it.next();
+        if (r.done) break;
+        const f = r.value || {};
+        const src = f.frame || f.videoFrame || f.canvas || f.image || f.bitmap || f;
+        const isVF = typeof VideoFrame !== 'undefined' && src instanceof VideoFrame;
+        const sw = isVF ? src.displayWidth : (src.width || src.videoWidth || src.naturalWidth || 0);
+        const sh = isVF ? src.displayHeight : (src.height || src.videoHeight || src.naturalHeight || 0);
+        if (!w || !h) { w = evenDown(sw); h = evenDown(sh); }
+        if (!encoder) {
+          const bitrate = Math.round(clamp(Number(o.bitrate) || w * h * fps * 0.12, 1.2e6, 24e6));
+          const config = await pickAvc(w, h, fps, bitrate);
+          if (!config) { if (isVF && f.keep !== true) src.close(); return null; }
+          audio = await planAudio(o.audio);
+          mux = await openMuxer({ video: { width: w, height: h, frameRate: fps }, audio: audio && audio.track });
+          encoder = new VideoEncoder({ output: (chunk, meta) => queue(() => mux.addVideo(chunk, meta)), error: (e) => { failure = failure || e; } });
+          encoder.configure(config);
+        }
+        const tsIn = Number.isFinite(f.timestampUs) ? f.timestampUs : Math.round(count * 1e6 / fps);
+        if (t0 < 0) t0 = tsIn;
+        const ts = Math.max(end, Math.round(tsIn - t0));
+        const dur = Math.max(1, Math.round(Number.isFinite(f.durationUs) ? f.durationUs : 1e6 / fps));
+        let frame;
+        if (sw === w && sh === h) frame = new VideoFrame(src, { timestamp: ts, duration: dur });
+        else {
+          if (!scratch) { scratch = document.createElement('canvas'); scratch.width = w; scratch.height = h; sctx = scratch.getContext('2d'); }
+          sctx.drawImage(src, 0, 0, w, h);
+          frame = new VideoFrame(scratch, { timestamp: ts, duration: dur });
+        }
+        if (isVF && f.keep !== true) src.close();
+        const key = Math.floor(ts / 2e6);
+        encoder.encode(frame, { keyFrame: key !== lastKey });
+        lastKey = key;
+        frame.close();
+        end = ts + dur; count++;
+        while (encoder.encodeQueueSize > 6) await sleep(4);
+        if ((count & 3) === 0) {
+          const p = Number.isFinite(f.progress) ? f.progress : total ? count / total : null;
+          if (p !== null) report(Math.min(0.98, p));
+          await sleep(0);
+        }
+      }
+      if (!encoder) throw new Error('No frames were given to encode.');
+      await encoder.flush();
+      check();
+      if (audio) await encodeAudio(audio, end / 1e6, (chunk, meta) => queue(() => mux.addAudio(chunk, meta)), o.signal);
+      await pending;
+      check();
+    } finally {
+      try { if (encoder && encoder.state !== 'closed') encoder.close(); } catch (e) { /* done */ }
+      if (it.return) { try { await it.return(); } catch (e) { /* done */ } }
+    }
+    const buffer = await mux.finalize();
     report(1);
-    return new Blob([target.buffer], { type: 'video/mp4' });
+    return { buffer, audio: audio ? audio.track.codec : null, frames: count, width: w, height: h };
+  }
+
+  /* render(ctx, W, H, t) → frames at o.fps for o.duration seconds. */
+  async function encodeMP4Full(render, o) {
+    const w = evenDown(o.width), h = evenDown(o.height);
+    const fps = clamp(Math.round(o.fps) || 30, 5, 60);
+    const total = Math.max(1, Math.round(o.duration * fps));
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    const frames = (function* () {
+      for (let i = 0; i < total; i++) {
+        ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+        render(ctx, w, h, i / fps);
+        yield { canvas: c, timestampUs: Math.round(i * 1e6 / fps), durationUs: Math.round(1e6 / fps) };
+      }
+    })();
+    const r = await muxFrames(frames, { width: w, height: h, fps, total, onProgress: o.onProgress, signal: o.signal, audio: o.audio, bitrate: o.bitrate });
+    return r ? { blob: new Blob([r.buffer], { type: 'video/mp4' }), audio: r.audio } : null;
+  }
+  /** An H.264 MP4 Blob of the rendered clip, or null where the browser cannot encode one. */
+  async function encodeMP4(render, o) {
+    const r = await encodeMP4Full(render, o);
+    return r ? r.blob : null;
+  }
+  const audioNote = (codec, wanted) => codec === 'aac' ? ' with AAC audio' : codec === 'opus' ? ' with Opus audio'
+    : wanted ? ' — the audio could not be encoded on this browser, so the clip is silent' : '';
+
+  /**
+   * MP4 from frames that arrive on their own clock — a video being
+   * processed frame by frame, captions timed to speech. `frames` is an
+   * async (or sync) iterable of { canvas | frame | image, timestampUs,
+   * durationUs }, see muxFrames. o: { fps, width?, height? (else the first
+   * frame's, made even), total? (expected frames, for progress), progress
+   * per frame otherwise, bitrate?, onProgress(0..1), signal (AbortSignal —
+   * checked between frames, so the producer should watch it too), audio:
+   * { buffer: AudioBuffer, bitrate? } muxed as AAC, else Opus, else left out
+   * with a note; it is trimmed to the picture's length }. Resolves { blob,
+   * ext: 'mp4', note, frames, width, height, audio }. Throws where there is
+   * no on-device H.264 encoder (there is no real-time fallback for frames
+   * that do not arrive in real time).
+   */
+  async function encodeVideoFrames(frames, o) {
+    o = o || {};
+    const r = await muxFrames(frames, o);
+    if (!r) throw new Error('This browser cannot encode H.264 video on the device. Chrome, Edge or Safari 16.4+ can.');
+    return { blob: new Blob([r.buffer], { type: 'video/mp4' }), ext: 'mp4', note: 'H.264 MP4' + audioNote(r.audio, !!(o.audio && o.audio.buffer)),
+      frames: r.frames, width: r.width, height: r.height, audio: r.audio };
   }
 
   /* Where WebCodecs is missing (Firefox), MediaRecorder captures the canvas
@@ -839,25 +1086,25 @@
 
   /** Video by the best route the browser offers. Returns { blob, ext, note }. */
   async function encodeVideo(render, o) {
-    let blob = null;
-    try { blob = await encodeMP4(render, o); }
-    catch (e) { if (e && e.name === 'AbortError') throw e; blob = null; }
-    if (blob) return { blob, ext: 'mp4', note: 'H.264 MP4' };
-    blob = await encodeRecorded(render, o);
+    let mp4 = null;
+    try { mp4 = await encodeMP4Full(render, o); }
+    catch (e) { if (e && e.name === 'AbortError') throw e; mp4 = null; }
+    if (mp4 && mp4.blob) return { blob: mp4.blob, ext: 'mp4', note: 'H.264 MP4' + audioNote(mp4.audio, !!(o.audio && o.audio.buffer)) };
+    let blob = await encodeRecorded(render, o);
     if (!blob) throw new Error('This browser cannot encode video on the device. Chrome, Edge or Safari 16.4+ can; or export a GIF instead.');
-    const mp4 = blob.type === 'video/mp4';
-    return { blob, ext: mp4 ? 'mp4' : 'webm', note: mp4 ? 'MP4 (recorded in real time)' : 'WebM — this browser has no on-device MP4 encoder, so the clip was recorded in real time as WebM. It plays everywhere a browser does; convert it if a site insists on MP4.' };
+    const isMp4 = blob.type === 'video/mp4';
+    return { blob, ext: isMp4 ? 'mp4' : 'webm', note: isMp4 ? 'MP4 (recorded in real time)' : 'WebM — this browser has no on-device MP4 encoder, so the clip was recorded in real time as WebM. It plays everywhere a browser does; convert it if a site insists on MP4.' };
   }
 
   /* ------------------------------------------------------------------ */
   Object.assign(AIImg, {
-    el, clamp, lerp, sleep, fmtBytes, download, scaled,
+    el, clamp, lerp, easeOut, easeIn, sleep, fmtBytes, download, scaled, abortError,
     field, select, range, colour, check, button,
-    loadImageFile, segment, segmenter, prettyName,
+    loadImageFile, runtime, fetchModel, loadSession, segment, segmenter, prettyName,
     guideOf, refine, maskCanvas, cutOut,
     fontString, ensureFont, layout, motion, drawText, textBox, pointInBox,
-    exportStill, encodeGIF, encodeVideo,
-    MAX_WORK
+    exportStill, encodeGIF, encodeMP4, encodeVideo, encodeVideoFrames,
+    MAX_WORK, MODEL_URL, ORT_DIR
   });
 
   /** Mount the tool a page asks for into its article. */
