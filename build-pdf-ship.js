@@ -299,15 +299,64 @@ function patchCounts(oldTotal, newTotal, oldPdf, newPdf) {
   return { totals, counts, skipped };
 }
 
-/** The PDF hub's own card grid and its "N free tools" line. */
-/* The hub groups its cards by what the tool does to a file. Both of these
-   take a PDF and write a new one, so both belong in the first grid. */
+const unesc = (s) => String(s)
+  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+  .replace(/&#39;|&apos;/g, "'").replace(/&amp;/g, '&');
+
+/** The cards on the hub, in document order across its grids. */
+function hubCards(html) {
+  const out = [];
+  for (const grid of html.matchAll(/<div class="grid(?: [^"]*)?">([\s\S]*?)<\/div>/g)) {
+    for (const card of grid[1].matchAll(/<a class="card" href="([^"]+)">([\s\S]*?)<\/a>/g)) {
+      const s = /<strong>([^<]*)<\/strong>/.exec(card[2]);
+      if (!s) throw new Error('a card on the PDF hub has no <strong> title: ' + card[1]);
+      out.push({ href: card[1], name: unesc(s[1]) });
+    }
+  }
+  return out;
+}
+
+/** "1…17,23" — a list of positions as a reader would write it. */
+function runs(nums) {
+  const n = nums.map(Number).sort(function (a, b) { return a - b; });
+  const out = [];
+  for (let i = 0; i < n.length;) {
+    let j = i;
+    while (j + 1 < n.length && n[j + 1] === n[j] + 1) j++;
+    out.push(j > i + 1 ? n[i] + '…' + n[j] : n.slice(i, j + 1).join(','));
+    i = j + 1;
+  }
+  return out.join(',') || 'none';
+}
+
+const slugOf = (u) => String(u).replace(/\/+$/, '').split('/').pop().replace(/\.html$/, '');
+
+/**
+ * The PDF hub: its card grids, the counts it quotes, and its structured data.
+ *
+ * The cards are the truth. Everything else on the page that counts or lists
+ * the tools — the lede, the "N free PDF tools" in the three descriptions, and
+ * the ItemList in the JSON-LD — is rebuilt from them on every run, so a card
+ * added by hand counts too, and a tool that moves takes its structured data
+ * with it. Before this ran the ItemList had drifted: 18 entries numbered 1…17
+ * and 23 (the drafts in between were deleted), two pointing at .html pages
+ * that had become redirect stubs, under a numberOfItems of 24 on a hub that
+ * showed 22 cards.
+ *
+ * CollectionPage and BreadcrumbList are left exactly as found, and the JSON is
+ * written back as compactly as build-crumbs.js writes it, so the two never
+ * rewrite each other.
+ */
 function patchHub(oldPdf, newPdf) {
   const rel = 'pdf/index.html';
   const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+  const report = { hrefs: [], urls: [], added: [], dropped: [] };
   let out = src.replace('<p class="lede">' + oldPdf + ' tools for ',
                         '<p class="lede">' + newPdf + ' tools for ');
 
+  /* The hub groups its cards by what the tool does to a file. Everything in
+     SHIPPING takes a PDF, or a few fields, and writes a new one, so a card that
+     is missing goes into the first grid. */
   const head = out.indexOf('<h2>Work with an existing PDF</h2>');
   if (head < 0) throw new Error('the PDF hub no longer has a "Work with an existing PDF" section');
   const close = out.indexOf('</a></div>', head);
@@ -320,9 +369,76 @@ function patchHub(oldPdf, newPdf) {
       return '<a class="card" href="/pdf/' + x[0] + '/"><span class="card-icon">' + icon(x[1]) + '</span>' +
         '<strong>' + esc(t.title) + '</strong><span class="card-desc">' + esc(t.description) + '</span></a>';
     }).join('');
-
   if (cards) out = out.slice(0, close + 4) + cards + out.slice(close + 4);
-  return write(rel, out);
+
+  /* A tool lives at /pdf/<slug>/; the flat .html address is a redirect stub.
+     A card that still says .html is pointed at the directory once it exists. */
+  out = out.replace(/(<a class="card" href=")\/pdf\/([a-z0-9-]+)\.html(")/g, function (m, a, slug, z) {
+    if (!fs.existsSync(path.join(ROOT, 'pdf', slug, 'index.html'))) return m;
+    report.hrefs.push('/pdf/' + slug + '.html → /pdf/' + slug + '/');
+    return a + '/pdf/' + slug + '/' + z;
+  });
+
+  const list = hubCards(out);
+  if (!list.length) throw new Error('the PDF hub has no cards');
+  const n = list.length;
+  report.cards = n;
+
+  /* the lede and the three descriptions count the cards */
+  out = out.replace(/(<p class="lede">)\d+( tools for )/, '$1' + n + '$2');
+  out = out.replace(/(<meta (?:name|property)="[^"]*description" content="[^"]*?)\d+( free PDF tools)/g,
+    function (m, a, z) { return a + n + z; });
+
+  /* the JSON-LD: a new ItemList, the same CollectionPage and BreadcrumbList */
+  const ld = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(out);
+  if (!ld) throw new Error('the PDF hub has no JSON-LD');
+  const data = JSON.parse(ld[1]);
+  const graph = Array.isArray(data['@graph']) ? data['@graph'] : null;
+  if (!graph) throw new Error('the PDF hub’s JSON-LD has no @graph');
+  const page = graph.find(function (x) { return x && x['@type'] === 'CollectionPage'; });
+  if (page && typeof page.description === 'string') {
+    page.description = page.description.replace(/\d+( free PDF tools)/, n + '$1');
+  }
+  const at = graph.findIndex(function (x) { return x && x['@type'] === 'ItemList'; });
+  const was = at >= 0 ? graph[at] : null;
+  const items = list.map(function (c, i) {
+    return { '@type': 'ListItem', position: i + 1, name: c.name, url: SITE + c.href };
+  });
+  const next = {
+    '@type': 'ItemList',
+    name: (was && was.name) || 'PDF Tools',
+    numberOfItems: n,
+    itemListElement: items
+  };
+  if (at >= 0) graph[at] = next; else graph.push(next);
+  out = out.slice(0, ld.index) +
+        '<script type="application/ld+json">' + JSON.stringify(data) + '</script>' +
+        out.slice(ld.index + ld[0].length);
+
+  /* what moved, for the summary */
+  const before = (was && Array.isArray(was.itemListElement)) ? was.itemListElement : [];
+  const bySlug = new Map(before.map(function (e) { return [slugOf(e.url), e]; }));
+  items.forEach(function (e) {
+    const old = bySlug.get(slugOf(e.url));
+    if (!old) report.added.push(e.name);
+    else if (old.url !== e.url) report.urls.push(old.url + ' → ' + e.url);
+  });
+  before.forEach(function (e) {
+    if (!items.some(function (x) { return slugOf(x.url) === slugOf(e.url); })) report.dropped.push(e.name);
+  });
+  report.list = {
+    was: before.length,
+    wasPositions: runs(before.map(function (e) { return e.position; })),
+    wasCount: was ? was.numberOfItems : null,
+    now: n
+  };
+  report.counts = (src.match(/\b\d+ free PDF tools\b/g) || [])
+    .filter(function (s) { return s !== n + ' free PDF tools'; }).length;
+  const lede = /<p class="lede">(\d+) tools for /.exec(src);
+  report.lede = lede && Number(lede[1]) !== n ? lede[1] + ' → ' + n : null;
+
+  report.changed = write(rel, out);
+  return report;
 }
 
 function patchSitemap() {
@@ -383,7 +499,20 @@ function main() {
   console.log('  site total          ' + oldTotal + ' → ' + newTotal);
   console.log('  pdf section         ' + oldPdf + ' → ' + newPdf);
   console.log('  counts patched      ' + nav.totals + ' total(s), ' + nav.counts + ' section count(s), ' + nav.skipped + ' skipped');
-  console.log('  pdf hub             ' + (hub ? 'updated' : 'unchanged'));
+  console.log('  pdf hub             ' + (hub.changed ? (CHECK ? 'would be updated' : 'updated') : 'unchanged') +
+              ', ' + hub.cards + ' cards');
+  if (hub.changed) {
+    const l = hub.list;
+    console.log('      ItemList          ' + l.was + ' entr' + (l.was === 1 ? 'y' : 'ies') + ' at ' + l.wasPositions +
+                ', numberOfItems ' + l.wasCount + '  →  ' + l.now + ' at ' + runs(Array.from({ length: l.now }, function (_, i) { return i + 1; })) +
+                ', numberOfItems ' + l.now);
+    if (hub.lede) console.log('      lede              ' + hub.lede + ' tools');
+    if (hub.counts) console.log('      "N free PDF tools" ' + hub.counts + ' place(s) → ' + hub.cards);
+    hub.urls.forEach(function (u) { console.log('      url               ' + u); });
+    hub.hrefs.forEach(function (h) { console.log('      card href         ' + h); });
+    if (hub.added.length) console.log('      listed now        ' + hub.added.join(', '));
+    if (hub.dropped.length) console.log('      no longer listed  ' + hub.dropped.join(', '));
+  }
   console.log('  sitemap             ' + (mapped ? mapped + ' added' : 'unchanged'));
   console.log('  service worker      ' + (sw ? 'bumped' : 'unchanged'));
   if (VERBOSE) changes.forEach(function (c) { console.log('    ' + c); });

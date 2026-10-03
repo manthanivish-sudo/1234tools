@@ -2,7 +2,7 @@
    Precaching 900 pages would be a rude thing to do to someone's data plan,
    so we precache only the shell and cache tool pages as they are visited. */
 
-var V = '1234tools-v116';
+var V = '1234tools-v117';
 var SHELL = [
   './', './index.html',
   './assets/app.css', './assets/app.js', './assets/icons.svg',
@@ -47,8 +47,14 @@ self.addEventListener('fetch', function (e) {
   // mjs/bcmap/pfb/ttf are the vendored pdf.js engine, its CMaps and its
   // standard fonts; without them the two rendering tools would refetch ~1.7 MB
   // on every use and would not work offline at all. wasm and onnx are the AI
-  // image runtime and its 18 MB model, which must never be fetched twice.
-  if (/\.(css|js|mjs|wasm|onnx|bcmap|pfb|ttf|woff2?|png|svg|webmanifest)$/.test(url.pathname)) {
+  // image runtime and its models, which must never be fetched twice. Under
+  // /engine/models/ everything is cache-first whatever its extension: a model
+  // sharded into .part0/.part1, a tokenizer's .json, a mel filterbank. That
+  // prefix rule is deliberately narrow — assets/rates.json is refreshed daily
+  // and must stay network-first. The sky and grain libraries are small images
+  // that behave like model assets, so they take the same rule.
+  if (/^\/engine\/(models|skies|grain)\//.test(url.pathname) ||
+      /\.(css|js|mjs|wasm|onnx|bcmap|pfb|ttf|woff2?|png|svg|webmanifest)$/.test(url.pathname)) {
     e.respondWith(
       caches.match(req).then(function (hit) {
         return hit || fetch(req).then(function (res) {

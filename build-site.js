@@ -19,6 +19,12 @@
  * that patches the pages makes "the page exists but Google was never told"
  * unrepresentable, and makes the format uniform by construction.
  *
+ * Every page in it is claimed by a named group — the search index, SECTIONS,
+ * META_PAGES, the conversion hubs, READING — and whatever is left over is
+ * still emitted but reported, so a new kind of page shows up as a warning
+ * rather than as a silent tail. Pages that say noindex are left out, by
+ * content rather than by name.
+ *
  * Every edit is marker-delimited and idempotent. Running it twice writes
  * nothing the second time, which is what makes it safe to re-run.
  */
@@ -122,45 +128,118 @@ const NOT_INDEXED = new Set(['404.html']);
 const isRedirect = (html) =>
   /name="robots" content="noindex,follow"/.test(html) && /http-equiv="refresh"/.test(html);
 
-const redirectPages = (function () {
+/**
+ * Any page that tells crawlers not to index it. A sitemap that lists a noindex
+ * page contradicts itself — Search Console reports each one as "submitted URL
+ * marked noindex" — so these are kept out by what they say, not by name, and
+ * a page that gains the meta tomorrow drops out on the next run.
+ *
+ * Today that is /practice/* (a product that is built but not deployed; the
+ * pages stay on disk and return the day the meta is removed), /account/ and
+ * /pricing/ (build-account.js keeps them dark until --live), the legal pages
+ * cookies/, privacy/ and terms/, which carry "noindex, follow" with a space,
+ * and the 404 shell. Every redirect stub is noindex too, so for the sitemap
+ * this subsumes isRedirect; the two are kept apart because patchPages() must
+ * still skip a stub and must still patch the shell of a noindex page.
+ */
+const isNoIndex = (html) =>
+  [...html.matchAll(/<meta\b[^>]*\bname=["']robots["'][^>]*>/gi)]
+    .some((m) => {
+      const c = /\bcontent=["']([^"']*)["']/i.exec(m[0]);
+      return !!c && /\bnoindex\b/i.test(c[1]);
+    });
+
+/** One pass over every page, each classified once and remembered. */
+const classified = (function () {
   let cache = null;
   return function () {
     if (cache) return cache;
-    cache = new Set();
+    cache = { redirect: new Set(), noindex: new Set() };
     for (const abs of pages()) {
-      if (isRedirect(fs.readFileSync(abs, 'utf8'))) {
-        cache.add(path.relative(ROOT, abs).replace(/\\/g, '/'));
-      }
+      const html = fs.readFileSync(abs, 'utf8');
+      const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
+      if (isRedirect(html)) cache.redirect.add(rel);
+      if (isNoIndex(html)) cache.noindex.add(rel);
     }
     return cache;
   };
 })();
+const redirectPages = () => classified().redirect;
+const noIndexPages = () => classified().noindex;
 
 /**
  * Section hubs, in the order the sitemap has always listed them. This is the
  * one list to extend when a section is added — and forgetting to is survivable,
  * because an unlisted page still ships in the tail below and gets reported.
+ * (education and ai did exactly that until 2026-10-03.) The order is cosmetic
+ * to a crawler; keeping it stable is what keeps the diff readable.
  */
 const SECTIONS = ['finance', 'mathematics', 'engineering', 'health', 'design',
-  'utilities', 'time', 'developer', 'business', 'india', 'image', 'text',
-  'conversions', 'pdf', 'qr', 'ai-image'];
+  'utilities', 'time', 'developer', 'business', 'education', 'india', 'image',
+  'text', 'conversions', 'pdf', 'qr', 'ai-image', 'ai'];
 
 /**
- * The pages that are not tools. They change on the order of never, and a
- * crawler's budget is better spent on the 1,200 pages people actually search
+ * The single pages that are not tools. Most change on the order of never, and
+ * a crawler's budget is better spent on the 1,200 pages people actually search
  * for, so they carry a lower priority and a yearly changefreq.
  */
 const META_PAGES = {
-  'about/index.html':   { freq: 'yearly', pri: '0.5' },
-  'contact/index.html': { freq: 'yearly', pri: '0.5' },
-  'privacy/index.html': { freq: 'yearly', pri: '0.3' },
-  'terms/index.html':   { freq: 'yearly', pri: '0.3' },
-  'cookies/index.html': { freq: 'yearly', pri: '0.3' }
+  'about/index.html':    { freq: 'yearly',  pri: '0.5' },
+  'contact/index.html':  { freq: 'yearly',  pri: '0.5' },
+  /* These three carry "noindex, follow" today, so they are filtered out before
+     this table is consulted. They stay listed so that lifting the meta puts
+     them back at these values rather than in the unclaimed tail. */
+  'privacy/index.html':  { freq: 'yearly',  pri: '0.3' },
+  'terms/index.html':    { freq: 'yearly',  pri: '0.3' },
+  'cookies/index.html':  { freq: 'yearly',  pri: '0.3' },
+  /* Written by build-account.js, which appends them at these values when they
+     are missing; the same values here keep the two writers in agreement. */
+  'settings/index.html': { freq: 'monthly', pri: '0.5' },
+  'trust/index.html':    { freq: 'monthly', pri: '0.5' },
+  /* The every-tool directory. build-tools.js appends it as weekly/0.9: it
+     changes whenever a tool ships, and it links to all of them. */
+  'tools/index.html':    { freq: 'weekly',  pri: '0.9' }
 };
+
+/**
+ * The reading sections: pages about the tools rather than tools. Keyed by
+ * prefix, so a new guide or collection is claimed the day it is built with no
+ * list to extend. Each section's own builder appends its pages at these same
+ * values when they are new (build-collections.js, build-guides.js,
+ * build-compare.js, build-learn.js), and this table is what keeps them there
+ * when the whole file is regenerated — change one and change the other.
+ *
+ *   for/      0.8  collections are landing pages written to be found — "tools
+ *                  for accountants" — and each sends a reader on to a dozen
+ *                  tools, so a crawl there pays for itself
+ *   guides/   0.8  a how-to that ends in one of our tools; same reasoning
+ *   compare/  0.7  landing pages too, but the queries are narrow and the pages
+ *                  compete with review sites, so no higher than a tool page
+ *   learn/    0.6  curated lists of links that lead off-site: useful, thin on
+ *                  content of their own; the hub is the page worth finding, 0.7
+ *
+ * All monthly: they are edited when the tools they point at change, which is
+ * about that often.
+ */
+const READING = {
+  'compare/': { freq: 'monthly', pri: '0.7' },
+  'guides/':  { freq: 'monthly', pri: '0.8' },
+  'for/':     { freq: 'monthly', pri: '0.8' },
+  'learn/':   { freq: 'monthly', pri: '0.6', hubPri: '0.7' }
+};
+
+const readingGroupOf = (rel) => Object.keys(READING).find((p) => rel.startsWith(p));
 
 function sitemapMeta(rel) {
   if (rel === 'index.html') return { freq: 'monthly', pri: '1.0' };
-  return META_PAGES[rel] || { freq: 'monthly', pri: '0.7' };
+  if (META_PAGES[rel]) return META_PAGES[rel];
+  const group = readingGroupOf(rel);
+  if (group) {
+    const g = READING[group];
+    const hub = rel === group + 'index.html';
+    return { freq: g.freq, pri: hub && g.hubPri ? g.hubPri : g.pri };
+  }
+  return { freq: 'monthly', pri: '0.7' };
 }
 
 /**
@@ -178,9 +257,13 @@ function searchIndexPaths() {
  * what makes a regenerated file reviewable at all.
  */
 function sitemapPages() {
+  /* Three reasons a page on disk is not an entry: it is the 404 shell, it is
+     a redirect stub, or it asks not to be indexed. */
   const onDisk = new Set(
     pages().map((abs) => path.relative(ROOT, abs).replace(/\\/g, '/'))
-           .filter((rel) => !NOT_INDEXED.has(rel) && !redirectPages().has(rel))
+           .filter((rel) => !NOT_INDEXED.has(rel) &&
+                            !redirectPages().has(rel) &&
+                            !noIndexPages().has(rel))
   );
 
   const out = [], seen = new Set();
@@ -196,6 +279,11 @@ function sitemapPages() {
   Object.keys(META_PAGES).forEach(take);
   [...onDisk].filter((r) => /^conversions\/[^/]+\/index\.html$/.test(r))
              .sort().forEach(take);
+  /* The reading sections: each hub, then its pages in name order. */
+  for (const prefix of Object.keys(READING)) {
+    take(prefix + 'index.html');
+    [...onDisk].filter((r) => r.startsWith(prefix)).sort().forEach(take);
+  }
 
   /* Whatever none of the lists above claimed. It is still emitted — a page
      missing from the sitemap is the exact bug this function exists to prevent —
@@ -203,11 +291,16 @@ function sitemapPages() {
   const unclaimed = [...onDisk].filter((r) => !seen.has(r)).sort();
   unclaimed.forEach(take);
 
-  return { out, unclaimed };
+  /* The deliberate absences, for the summary. Stubs are too many to list and
+     too obviously right; these are the pages someone chose to keep dark. */
+  const noindex = [...noIndexPages()]
+    .filter((r) => !redirectPages().has(r) && !NOT_INDEXED.has(r)).sort();
+
+  return { out, unclaimed, noindex };
 }
 
 function buildSitemap() {
-  const { out, unclaimed } = sitemapPages();
+  const { out, unclaimed, noindex } = sitemapPages();
   const body = out.map((rel) => {
     const { freq, pri } = sitemapMeta(rel);
     const loc = SITE + publicUrl(rel);
@@ -220,7 +313,7 @@ function buildSitemap() {
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
     body.join('\n') + '\n</urlset>\n');
 
-  return { count: out.length, changed, unclaimed };
+  return { count: out.length, changed, unclaimed, noindex };
 }
 
 /* ------------------------------------------------------------------ */
@@ -804,6 +897,10 @@ function main() {
   if (sw) console.log(`  service worker      ${sw}`);
   console.log(`  sitemap             ${map.count} URLs, ` +
               (map.changed ? (CHECK ? 'would be rewritten' : 'rewritten') : 'unchanged'));
+  if (map.noindex.length) {
+    console.log(`  noindex             ${map.noindex.length} page(s) left out on purpose: ` +
+                map.noindex.map(publicUrl).join(' '));
+  }
   console.log(`  popular block       ${pop}`);
   console.log(`  related tools       ${rel.touched} of ${rel.tools} page(s) ` +
               `${CHECK ? 'would be' : ''} updated, ${rel.created} list(s) created, ` +
@@ -819,7 +916,7 @@ function main() {
   }
   if (map.unclaimed.length) {
     console.log(`  ! ${map.unclaimed.length} page(s) matched no known group — ` +
-                `listed at the end of the sitemap, but SECTIONS or META_PAGES wants extending:`);
+                `listed at the end of the sitemap, but SECTIONS, META_PAGES or READING wants extending:`);
     map.unclaimed.slice(0, 5).forEach((s) => console.log('      ' + s));
     if (map.unclaimed.length > 5) console.log(`      … +${map.unclaimed.length - 5}`);
   }
