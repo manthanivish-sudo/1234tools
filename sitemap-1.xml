@@ -80,7 +80,6 @@
 <url><loc>https://www.1234tools.com/image/svg-optimizer/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/image/image-to-base64/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/image/passport-photo/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.1234tools.com/image/background-remover/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/time/age-calculator/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/time/date-add-subtract/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/time/week-number/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
@@ -1269,6 +1268,7 @@
 <url><loc>https://www.1234tools.com/ai/clinic-letter-writer/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/ai/patient-info-writer/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/ai-image/text-behind-image/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/utilities/tool-finder/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/finance/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/mathematics/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/engineering/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
@@ -1362,5 +1362,4 @@
 <url><loc>https://www.1234tools.com/settings/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/tools/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/trust/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-<url><loc>https://www.1234tools.com/utilities/tool-finder/</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>
