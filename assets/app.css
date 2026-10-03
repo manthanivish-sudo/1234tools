@@ -2749,3 +2749,42 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
 .aiimg-par-frames { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
 .aiimg-par-frames .chip { cursor: pointer; font: inherit; font-size: .82rem; padding: 6px 12px; }
 /* ==== /C3-depth ==== */
+
+/* ==== C4-eraser ==== */
+/* Object & People Remover: the one-tap row, the brush tools and the compare cursor on the shared studio layout. */
+.aiimg-era-taps { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.aiimg-era-taps:empty { display: none; }
+.aiimg-era-taps .chip { cursor: pointer; font: inherit; font-size: .82rem; padding: 6px 12px; }
+.aiimg-era-taps .chip:disabled, .aiimg-era-tools .chip:disabled { opacity: .5; cursor: default; }
+.aiimg-era-people { width: 100%; justify-content: center; }
+.aiimg-era-tools { display: flex; gap: 6px; margin-bottom: 10px; }
+.aiimg-era-tools .chip { cursor: pointer; font: inherit; font-size: .82rem; padding: 6px 14px; }
+.aiimg-era-legend { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: .82rem; color: var(--text-3); }
+.aiimg-era-legend i { flex: none; width: 14px; height: 14px; border-radius: 4px; background: rgba(255, 64, 64, .55); border: 1px solid rgba(255, 64, 64, .9); }
+.aiimg-era-stat { margin: -4px 0 10px; font-family: var(--font-mono); font-size: .74rem; color: var(--text-3); }
+.aiimg-era .aiimg-studio[hidden] { display: none; }
+.aiimg-era .aiimg-stagecol { user-select: none; -webkit-user-select: none; }
+.aiimg-era .aiimg-canvas.is-compare { cursor: crosshair; }
+.aiimg-era .aiimg-transport .field-check { margin: 0; flex: 1; min-width: 200px; }
+.aiimg-era .aiimg-row .btn-ghost:disabled, .aiimg-era .aiimg-row .btn-primary:disabled { opacity: .5; cursor: default; }
+/* ==== /C4-eraser ==== */
+
+/* ==== C1-bg-sticker ==== */
+/* Background Remover and Sticker Maker: a checkerboard behind transparent
+   previews and results, no grab cursor on a preview nothing drags on */
+.aiimg-bgr-canvas, .aiimg-stk-canvas { cursor: default; }
+.aiimg-bgr-canvas.is-checker, .aiimg-stk-canvas.is-checker, .aiimg-bgr .aiimg-result img, .aiimg-stk .aiimg-result img {
+  background-color: #262b3a;
+  background-image: linear-gradient(45deg, #363c4e 25%, transparent 25%, transparent 75%, #363c4e 75%),
+                    linear-gradient(45deg, #363c4e 25%, transparent 25%, transparent 75%, #363c4e 75%);
+  background-size: 20px 20px; background-position: 0 0, 10px 10px;
+}
+:root[data-theme="light"] .aiimg-bgr-canvas.is-checker, :root[data-theme="light"] .aiimg-stk-canvas.is-checker,
+:root[data-theme="light"] .aiimg-bgr .aiimg-result img, :root[data-theme="light"] .aiimg-stk .aiimg-result img {
+  background-color: #ffffff;
+  background-image: linear-gradient(45deg, #dde2ea 25%, transparent 25%, transparent 75%, #dde2ea 75%),
+                    linear-gradient(45deg, #dde2ea 25%, transparent 25%, transparent 75%, #dde2ea 75%);
+}
+.aiimg-stk .aiimg-result img.aiimg-stk-thumb { max-height: 240px; width: auto; }
+.aiimg-bgr .aiimg-result-head .btn-download, .aiimg-stk .aiimg-result-head .btn-download { text-decoration: none; }
+/* ==== /C1-bg-sticker ==== */
