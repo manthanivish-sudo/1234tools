@@ -2841,3 +2841,28 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
 /* Light theme: the accent is a dark bronze, so a selected chip needs a light label. */
 :root[data-theme="light"] .chip.is-on, :root[data-theme="light"] .chip.is-on:hover, :root[data-theme="light"] .chip.is-on:focus-visible { color: #fff; }
 @media (prefers-color-scheme: light) { :root[data-theme="system"] .chip.is-on, :root[data-theme="system"] .chip.is-on:hover, :root[data-theme="system"] .chip.is-on:focus-visible { color: #fff; } }
+
+/* ==== C5-face-blur ==== */
+.aiimg-face-video { display: none; }
+.aiimg-face-canvas { cursor: pointer; }
+.aiimg-face-alt { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 10px; }
+.aiimg-face-alt .btn-ghost { font-size: .85rem; }
+.aiimg-face-alt-hint { font-size: .8rem; color: var(--text-3); }
+.aiimg-face-list { display: grid; gap: 6px; margin: 0 0 12px; }
+.aiimg-face-row {
+  display: flex; align-items: center; gap: 8px; padding: 7px 10px; font-size: .85rem; color: var(--text-1);
+  background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.aiimg-face-row .aiimg-lname { font-size: .82rem; }
+.aiimg-face-swatch { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--accent); }
+.aiimg-face-row.is-kept .aiimg-face-swatch { background: #50dc78; }
+.aiimg-face-row.is-kept { border-color: rgba(80, 220, 120, .55); }
+.aiimg-face-tag { font-family: var(--font-mono); font-size: .72rem; color: var(--text-3); flex: none; }
+.aiimg-face-row.is-kept .aiimg-face-tag { color: #2f9e55; }
+.aiimg-face-toggle { font-size: .78rem; padding: 4px 9px; flex: none; }
+.aiimg-face-hint { margin-bottom: 10px; }
+.aiimg-face .aiimg-transport .btn-ghost[hidden], .aiimg-face .aiimg-transport .range[hidden], .aiimg-face .aiimg-transport .range-val[hidden] { display: none; }
+.aiimg-face .aiimg-pane > div[hidden] { display: none; }
+.aiimg-face .aiimg-result video { max-height: 60vh; background: #000; }
+:root[data-theme="light"] .aiimg-face-row.is-kept .aiimg-face-tag { color: #1c6b3f; }
+/* ==== /C5-face-blur ==== */
