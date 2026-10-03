@@ -95,21 +95,88 @@
   if (y) y.textContent = new Date().getFullYear();
 
   /* ---------- search ----------
-     Scores title matches: exact > prefix > word-prefix > substring.
-     Runs over ~1,000 entries well inside a frame, so no debounce needed. */
+     Scores title matches. One word: exact > prefix > word-prefix > substring,
+     as it always was. Several words are an AND: every typed word must start
+     a word of the title — "invoice extractor" finds "Invoice & Receipt Data
+     Extractor", "km miles" finds "Convert Kilometer to Mile" — ranked under
+     an exact or whole-prefix match and above a plain substring. Runs over
+     ~1,300 entries well inside a frame, so no debounce needed. */
   var q = document.getElementById('q');
   var box = document.getElementById('results');
   if (!q || !box) return;
+
+  /* What breaks a title into words. Punctuation is a separator, not a word:
+     "Invoice & Receipt" is two words, "Take-Home" is two, "Hash (SHA-256)"
+     is three. */
+  var SEP = /[\s&(),\/\-]+/;
+
+  /* The short forms people type for units, mapped to the word the conversion
+     titles use. Consulted only when the typed word itself starts no word of
+     the title, so nothing that matched before stops matching. */
+  var ALIAS = {
+    km: 'kilometer', kms: 'kilometer', kilometre: 'kilometer', kilometres: 'kilometer', mi: 'mile', metre: 'meter', metres: 'meter',
+    cm: 'centimeter', mm: 'millimeter', ft: 'foot', feet: 'foot', yd: 'yard', kg: 'kilogram', kgs: 'kilogram', kilo: 'kilogram', kilos: 'kilogram',
+    gm: 'gram', mg: 'milligram', lb: 'pound', lbs: 'pound', oz: 'ounce', st: 'stone', ml: 'milliliter', millilitre: 'milliliter',
+    litre: 'liter', litres: 'liter', ltr: 'liter', gal: 'gallon', tbsp: 'tablespoon', tsp: 'teaspoon', kph: 'kilometers', kmh: 'kilometers',
+    mph: 'miles', kpa: 'kilopascal', atm: 'atmosphere', kj: 'kilojoule', kcal: 'kilocalorie', kwh: 'kilowatt', kw: 'kilowatt', hp: 'horsepower',
+    kb: 'kilobyte', mb: 'megabyte', gb: 'gigabyte', tb: 'terabyte', sec: 'second', secs: 'second', min: 'minute', mins: 'minute',
+    hr: 'hour', hrs: 'hour', wk: 'week', yr: 'year', deg: 'degree', rad: 'radian', sqft: 'square', sqm: 'square'
+  };
+
+  /* Index of the first title word that starts with the typed word, or -1. */
+  function wordAt(words, w) {
+    for (var i = 0; i < words.length; i++) if (words[i].indexOf(w) === 0) return i;
+    return -1;
+  }
+  /* The same, forgiving a unit's short form and a plural: "miles" starts
+     no word of "Convert Kilometer to Mile", "mile" does. Returns where
+     the word matched and whether it matched a title word whole, which is
+     what separates "Mile" from "Millimeter" when both start with "mil". */
+  function matchWord(words, w) {
+    var forms = [w];
+    if (ALIAS[w]) forms.push(ALIAS[w]);
+    if (w.length > 3 && /s$/.test(w)) forms.push(w.slice(0, -1));                 /* miles -> mile */
+    if (w.length > 4 && /(ch|sh|ss|x|z)es$/.test(w)) forms.push(w.slice(0, -2));  /* inches -> inch */
+    for (var f = 0; f < forms.length; f++) {
+      var at = wordAt(words, forms[f]);
+      if (at >= 0) return { at: at, exact: words[at] === forms[f] };
+    }
+    return null;
+  }
 
   function score(title, term) {
     var t = title.toLowerCase();
     if (t === term) return 1000;
     if (t.indexOf(term) === 0) return 500;
-    var words = t.split(/[\s(),]+/);
-    for (var i = 0; i < words.length; i++) {
-      if (words[i].indexOf(term) === 0) return 300 - i;
+    var words = t.split(SEP);
+    var typed = term.split(SEP).filter(Boolean);
+    var i, at;
+    if (typed.length <= 1) {
+      for (i = 0; i < words.length; i++) {
+        if (words[i].indexOf(term) === 0) return 300 - i;
+      }
+      if (t.indexOf(term) > -1) return 100;
+      /* nothing matched the word as typed: try it as a unit's short form */
+      at = matchWord(words, term);
+      return at ? 300 - at.at : 0;
     }
-    return t.indexOf(term) > -1 ? 100 : 0;
+    /* every typed word starts a word of the title; earliest first word
+       wins, words in the typed order beat the same words reversed, a word
+       matched whole beats a prefix, and a shorter title beats a longer one
+       carrying the same words */
+    var first = -1, last = -1, ordered = true, exact = 0;
+    for (i = 0; i < typed.length; i++) {
+      at = matchWord(words, typed[i]);
+      if (!at) break;
+      if (at.exact) exact++;
+      if (first < 0 || at.at < first) first = at.at;
+      if (at.at < last) ordered = false;
+      last = at.at;
+    }
+    if (i === typed.length) return 300 - first + (ordered ? 10 : 0) + exact * 2 - (words.length - typed.length) * 0.01;
+    if (t.indexOf(term) > -1) return 100;
+    for (i = 0; i < typed.length; i++) if (t.indexOf(typed[i]) < 0) return 0;
+    return 60;   /* every word somewhere in the title, not at the start of one */
   }
 
   /* The index is ~9 KB gzipped. Most visitors arrive from a search
@@ -255,10 +322,14 @@
   }
 
   /* Tool pages only. Hubs, the homepage and the legal pages all have an h1 and
-     are not worth remembering, so the mount point is what distinguishes them. */
+     are not worth remembering, so the mount point is what distinguishes them —
+     and, since the home page and the section hubs now carry the Tool Finder's
+     own .tool-io, so does depth: a tool lives at section/slug/ or deeper, a hub
+     one level up. */
   var h1 = document.querySelector('main h1');
   var here = location.pathname.replace(/^\//, '');
-  if (h1 && here && !/(^|\/)index\.html$/.test(here) &&
+  var depth = here.split('/').filter(Boolean).length;
+  if (h1 && here && depth >= 2 && !/(^|\/)index\.html$/.test(here) &&
       document.querySelector('.tool, .tool-io')) {
     var list = read().filter(function (x) { return x && x.u !== here; });
     list.unshift({ u: here, t: h1.textContent.trim().slice(0, 80) });

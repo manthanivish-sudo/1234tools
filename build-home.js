@@ -11,18 +11,26 @@
  * stated anywhere above the footer.
  *
  * So three blocks, and only three. A hero that leads with the tools that
- * are not conversions and names the conversions as what they are; a band
- * of the few claims worth making, each one a visitor can check in a
- * minute; and four of the larger tools, described in their own words.
+ * are not conversions and names the conversions as what they are, with
+ * the Tool Finder in short form under the headline, because the question
+ * a visitor arrives with is a job and not a tool name; a band of the few
+ * claims worth making, each one a visitor can check in a minute; and six
+ * of the larger tools, described in their own words.
  *
  * Every number here is read out of assets/search-index.js, which is the
  * register of what exists. None of them is typed into this file, because
- * a count typed into a file is a count that goes stale quietly.
+ * a count typed into a file is a count that goes stale quietly. That goes
+ * for the <title> and the descriptions in the head as well, which carried
+ * a total from months ago until this script took them over.
  *
- * It owns nothing else on the page. The header, the sidebar, the search,
- * the collections row, "Popular tools", "Browse by category", the
- * conversion families and the footer all belong to other builders, and
- * this one patches strictly between its own markers.
+ * It owns its own marker blocks and the head's title and descriptions,
+ * and it decides the order of the blocks at the top of main: hero, then
+ * "Popular tools" (which build-site.js writes and which carries the
+ * visitor's own recent tools), then the why, the collections row and the
+ * picks. The header, the sidebar, the search, the collections row's
+ * contents, "Popular tools", "Browse by category", the conversion families
+ * and the footer all belong to other builders; this one moves their blocks
+ * whole and never looks inside them.
  *
  * Run it on a clean export, never on the working tree.
  */
@@ -31,6 +39,7 @@ const fs = require('fs');
 const path = require('path');
 const outbound = require('./build-outbound.js');
 const { PRICING } = require('./build/collections.js');
+const { indexTotal } = require('./build/totals.js');
 /* The same reader the collections use, so a tool is described in one
    place — its own page — and the home page cannot drift from it. */
 const { toolMeta } = require('./build-collections.js');
@@ -54,6 +63,23 @@ const PICKS = [
   '/business/bank-reconciliation/',
   '/ai/invoice-extractor/'
 ];
+
+/* The six jobs the hero's finder opens with. Not the popular tools — the
+   jobs people arrive with, in their own words, one for each kind of work
+   the site does: a PDF, a photo, payroll, tax, a QR code, a unit. */
+const HERO_JOBS = [
+  'Merge two PDFs',
+  'Remove the background from a photo',
+  'Payslip for one employee',
+  'GST on an invoice',
+  'QR code for my Wi-Fi',
+  'Km to miles'
+];
+
+/* The order of the blocks at the top of main. Everything after the last of
+   them — "Browse by category", the conversion families, the brand banner and
+   the request form — is left where it is. */
+const ORDER = ['HOME-HERO', 'POPULAR', 'HOME-WHY', 'COLLECTIONS', 'HOME-PICKS'];
 
 /* The callable's address, built from the same config the account pages
    use so there is one place a project id is written down. While it says
@@ -120,24 +146,79 @@ function checkedPages() {
   return n;
 }
 
+/* ---------- the head ---------- */
+
+/**
+ * The title and the descriptions, with the total from the register. The
+ * title leads with what people search for and keeps to 70 characters with
+ * the site name on the end; the description keeps to 160 and says the one
+ * thing worth saying about where the work happens, without overclaiming
+ * for the AI tools. Both limits are checked here rather than trusted.
+ */
+function headCopy(total) {
+  const title = 'Free Online Tools: ' + num(total) + ' Calculators, Converters, PDF, AI | 1234Tools';
+  if (title.length > 70) throw new Error('the home title is ' + title.length + ' characters; 70 is the limit');
+  const description = num(total) + ' free online tools: calculators, unit converters, PDF, image, business and AI tools. All but the AI tools run on your device and upload nothing.';
+  if (description.length > 160) throw new Error('the home description is ' + description.length + ' characters; 160 is the limit');
+  return { title, description };
+}
+
+/** Rewrite each head tag whole, so a stale value is replaced whatever it says. */
+function patchHead(html, copy) {
+  const set = (re, tag) => {
+    if (!re.test(html)) throw new Error('the home page has no ' + tag.slice(0, 30) + '… to rewrite');
+    html = html.replace(re, () => tag);
+  };
+  set(/<title>[^<]*<\/title>/, '<title>' + esc(copy.title) + '</title>');
+  set(/<meta name="description" content="[^"]*">/, '<meta name="description" content="' + esc(copy.description) + '">');
+  set(/<meta property="og:title" content="[^"]*">/, '<meta property="og:title" content="' + esc(copy.title) + '">');
+  set(/<meta property="og:description" content="[^"]*">/, '<meta property="og:description" content="' + esc(copy.description) + '">');
+  set(/<meta name="twitter:title" content="[^"]*">/, '<meta name="twitter:title" content="' + esc(copy.title) + '">');
+  set(/<meta name="twitter:description" content="[^"]*">/, '<meta name="twitter:description" content="' + esc(copy.description) + '">');
+  return html;
+}
+
 /* ---------- the blocks ---------- */
 
-function heroBlock(c) {
+function heroBlock(c, url) {
   const stat = (n, label) => '<div><div class="stat-num">' + esc(n) + '</div><div class="stat-lbl">' + esc(label) + '</div></div>';
-  return '<section class="hero">\n' +
+  /* The chips are real links before the engine mounts, and the way in for
+     anybody whose browser cannot run it; the mount hides them and draws
+     its own from the same list. */
+  const chip = (job) => '<a class="chip" href="/utilities/tool-finder/?q=' + encodeURIComponent(job) + '">' + esc(job) + '</a>';
+  return '<section class="hero hero-with-finder">\n' +
     '  <p class="eyebrow">Free, and it runs in your browser</p>\n' +
     /* One span inside the h1: the h1 is a flex row site-wide, so text put
        straight into it becomes a second column instead of wrapping. */
     '  <h1><span><span class="grad">' + num(c.rest) + ' tools</span> for everyday work</span></h1>\n' +
-    '  <p class="lede">Bookkeeping, VAT returns, payroll, invoices, PDFs, images and school timetables — and ' +
-      num(c.conversions) + ' unit converters as well. It all runs inside this browser tab: the file you open is read on your own device and never uploaded. The ' +
-      num(c.freemium) + ' AI tools are the exception, and every one of them says so before you send anything.</p>\n' +
+    '  <p class="lede">Bookkeeping, VAT returns, payroll, invoices, PDFs, images, school timetables and ' + num(c.conversions) +
+      ' unit converters, all running inside this browser tab: what you open stays on your device, and the ' + num(c.freemium) +
+      ' AI tools say so before anything is sent.</p>\n' +
+    '  <section class="hero-finder" aria-label="Tool Finder"><div class="tool-io" data-endpoint="' + esc(url || '') + '"></div></section>\n' +
+    '  <div class="hero-jobs chip-row" id="hero-jobs" aria-label="Jobs people come for">' + HERO_JOBS.map(chip).join('') + '</div>\n' +
     '  <div class="hero-stats">\n    ' +
     [stat(num(c.rest), 'Everyday tools'),
      stat(num(c.conversions), 'Unit converters'),
      stat(num(c.free), 'Free, no account'),
      stat(num(c.freemium), 'AI, account needed')].join('\n    ') +
-    '\n  </div>\n</section>';
+    '\n  </div>\n</section>\n' +
+    /* The engine, deferred, and the mount. Both travel inside this block so
+       they move with the hero and go when it goes. */
+    '<script src="/engine/finder.js" defer></script>\n' +
+    '<script>' + heroScript() + '</script>';
+}
+
+/* Mount the short form of the finder once the document is parsed; the
+   deferred engine has run by then if it is going to. If it is not there —
+   blocked, failed, or an old browser that could not parse it — the box
+   becomes a link to the full page, so the space is never blank. */
+function heroScript() {
+  return "document.addEventListener('DOMContentLoaded',function(){" +
+    "var r=document.querySelector('.hero-finder');if(!r)return;" +
+    "var jobs=document.getElementById('hero-jobs');" +
+    "if(window.ToolFinder){try{ToolFinder.mount(r,{inline:true,starters:" + JSON.stringify(HERO_JOBS) + "});if(jobs)jobs.hidden=true;return;}catch(e){}}" +
+    "var a=document.createElement('a');a.className='btn-ghost finder-fallback';a.href='/utilities/tool-finder/';a.textContent='Describe the job to the Tool Finder \\u2192';" +
+    "var io=r.querySelector('.tool-io');io.textContent='';io.appendChild(a);});";
 }
 
 function whyBlock(c, checked) {
@@ -191,13 +272,13 @@ function picksBlock(metas) {
 function askBlock(url) {
   return '<section class="panel home-ask" id="ask">\n' +
     '  <h2>The tool you need is not here</h2>\n' +
-    '  <p>Then say so. Most of what is on this site exists because somebody had a job to do that nothing else did properly \u2014 a statement in the wrong format, a return that had to be typed out twice, a timetable done by hand every July. If that is you, describe it. You do not need an account, and there is nothing to sign up to.</p>\n' +
+    '  <p>Then say so. Most of what is on this site exists because somebody had a job to do that nothing else did properly — a statement in the wrong format, a return that had to be typed out twice, a timetable done by hand every July. If that is you, describe it. You do not need an account, and there is nothing to sign up to.</p>\n' +
     '  <form class="ask-form" id="ask-form" novalidate>\n' +
     '    <div class="field"><label for="ask-what">What should the tool do?</label>' +
     '<textarea class="control" id="ask-what" rows="3" maxlength="2000" required placeholder="Turn the PDF statement my bank gives me into the CSV my accountant asks for, without uploading it anywhere."></textarea>' +
     '<span class="field-hint">One sentence is plenty. What the job is beats what the feature should be called.</span></div>\n' +
     '    <div class="field"><label for="ask-who">What do you do? <span class="ask-opt">(optional)</span></label>' +
-    '<input class="control" id="ask-who" type="text" maxlength="120" autocomplete="organization-title" placeholder="Bookkeeper, school office, letting agent, solicitor\u2026">' +
+    '<input class="control" id="ask-who" type="text" maxlength="120" autocomplete="organization-title" placeholder="Bookkeeper, school office, letting agent, solicitor…">' +
     '<span class="field-hint">It decides what gets built first: five people with the same job beats fifty with fifty.</span></div>\n' +
     '    <div class="field"><label for="ask-email">Email, if you want an answer <span class="ask-opt">(optional)</span></label>' +
     '<input class="control" id="ask-email" type="email" maxlength="200" autocomplete="email" placeholder="you@example.com">' +
@@ -207,7 +288,7 @@ function askBlock(url) {
     '    <div class="io-actions"><button type="submit" class="btn-primary" id="ask-send">Send the request</button></div>\n' +
     '    <div class="io-msg" id="ask-msg"></div>\n' +
     '  </form>\n' +
-    '  <p class="ask-privacy">What you type here is sent to our server and kept until the request is dealt with \u2014 it is the only part of this page that leaves your device, and it only goes when you press the button. Your email is used to reply and for nothing else. <a href="/trust/">What we hold</a> \u00b7 <a href="/contact/">Other ways to reach us</a></p>\n' +
+    '  <p class="ask-privacy">What you type here is sent to our server and kept until the request is dealt with — it is the only part of this page that leaves your device, and it only goes when you press the button. Your email is used to reply and for nothing else. <a href="/trust/">What we hold</a> · <a href="/contact/">Other ways to reach us</a></p>\n' +
     '</section>\n' +
     '<script>' + askScript(url) + '</script>\n';
 }
@@ -236,6 +317,8 @@ function askScript(url) {
 const open = (name) => '<!-- ' + name + ': generated by build-home.js, do not edit -->';
 const close = (name) => '<!-- /' + name + ' -->';
 const wrap = (name, body) => open(name) + '\n' + body + '\n' + close(name);
+/* Any block by its markers, whoever wrote it: "<!-- NAME -->" plain, or
+   "<!-- NAME: generated by …, do not edit -->", through to "<!-- /NAME -->". */
 const region = (name) => new RegExp('<!-- ' + name + '(?::[^>]*)? -->[\\s\\S]*?<!-- \\/' + name + ' -->');
 
 /**
@@ -250,13 +333,45 @@ function put(html, name, body, place) {
   return place(html, block);
 }
 
+const MAIN_OPEN = '<main id="main" class="content">';
+
+/**
+ * The top of main, in ORDER. Each block is lifted out whole by its markers,
+ * with the blank lines after it, and the five are laid back in after the
+ * opening tag, one per line; the rest of main follows untouched. Running it
+ * again finds the blocks already in order and lays them back identically,
+ * so it is safe on every build. Nothing is moved unless all five are on the
+ * page — a fresh page without the popular row keeps its order until
+ * build-site.js has written one.
+ */
+function reorder(html) {
+  const blocks = [];
+  for (const name of ORDER) {
+    const m = region(name).exec(html);
+    if (!m) return { html, moved: false, missing: name };
+    blocks.push(m[0]);
+  }
+  for (const b of blocks) {
+    const i = html.indexOf(b);
+    let j = i + b.length;
+    while (html[j] === '\n' || html[j] === '\r') j++;
+    html = html.slice(0, i) + html.slice(j);
+  }
+  const at = html.indexOf(MAIN_OPEN) + MAIN_OPEN.length;
+  const rest = html.slice(at).replace(/^\s+/, '');
+  return { html: html.slice(0, at) + '\n' + blocks.join('\n') + '\n' + rest, moved: true };
+}
+
 function patchHome() {
   const rel = 'index.html';
   let html = fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
   const c = counts();
+  const total = indexTotal();
+  if (total !== c.total) throw new Error('two readings of the register disagree: ' + total + ' and ' + c.total);
   const checked = checkedPages();
   const metas = PICKS.map(toolMeta);
+  const copy = headCopy(total);
 
   /* Two tools described twice would make the page look longer than the
      site is. The popular row is generated elsewhere, so ask it. */
@@ -266,15 +381,15 @@ function patchHome() {
     if (metas.filter(x => x.path === m.path).length > 1) throw new Error(m.path + ' is listed twice');
   }
 
-  const mainOpen = '<main id="main" class="content">';
-  if (html.indexOf(mainOpen) < 0) throw new Error('could not find the main element on the homepage');
+  if (html.indexOf(MAIN_OPEN) < 0) throw new Error('could not find the main element on the homepage');
 
   /* The hand-written hero, on its way out. Only ever touched on the first
      run: after that the markers are the hero. */
   if (!region('HOME-HERO').test(html)) html = html.replace(/\n?<section class="hero">[\s\S]*?<\/section>\n?/, '\n');
 
-  html = put(html, 'HOME-HERO', heroBlock(c), (h, block) => {
-    const at = h.indexOf(mainOpen) + mainOpen.length;
+  const url = endpoint();
+  html = put(html, 'HOME-HERO', heroBlock(c, url), (h, block) => {
+    const at = h.indexOf(MAIN_OPEN) + MAIN_OPEN.length;
     return h.slice(0, at) + '\n' + block + h.slice(at);
   });
   html = put(html, 'HOME-WHY', whyBlock(c, checked), (h, block) => {
@@ -289,7 +404,6 @@ function patchHome() {
 
   /* Last thing on the page on purpose: somebody who has read this far
      and not found what they came for is exactly who should be asked. */
-  const url = endpoint();
   if (url) {
     html = put(html, 'HOME-ASK', askBlock(url), (h, block) => {
       const at = h.indexOf('</main>');
@@ -298,8 +412,17 @@ function patchHome() {
     });
   }
 
+  html = patchHead(html, copy);
+  /* The collections row prints the total too. Its builder writes it from its
+     own count and build/totals.js repairs it on every total change; this is
+     the same repair, so the page is right after this script alone. */
+  html = html.replace(/[\d,]+ tools is a lot to browse/g, num(total) + ' tools is a lot to browse');
+
+  const order = reorder(html);
+  html = order.html;
+
   const changed = write(rel, outbound.rewrite(html, 'home').html);
-  return { changed, c, checked, metas, asking: !!url };
+  return { changed, c, checked, metas, asking: !!url, copy, order };
 }
 
 function bumpServiceWorker() {
@@ -309,19 +432,23 @@ function bumpServiceWorker() {
 }
 
 function main() {
-  const { changed, c, checked, metas, asking } = patchHome();
+  const { changed, c, checked, metas, asking, copy, order } = patchHome();
   const sw = changed ? bumpServiceWorker() : false;
 
   console.log('\nbuild-home.js' + (CHECK ? '  (--check: nothing will be written)' : ''));
   console.log('  counts              ' + c.rest + ' beyond conversions, ' + c.conversions + ' conversions, ' + c.total + ' in total');
   console.log('  pricing             ' + c.free + ' free with no account, ' + c.freemium + ' free to try');
   console.log('  checked pages       ' + checked + ' carry a sources panel');
+  console.log('  title               ' + copy.title + '  (' + copy.title.length + ' chars)');
+  console.log('  description         ' + copy.description.length + ' chars');
+  console.log('  hero finder         inline, ' + HERO_JOBS.length + ' starter jobs' + (asking ? ', requests post to the callable' : ', no request endpoint'));
   console.log('  picks               ' + metas.map(m => m.path).join(', '));
+  console.log('  block order         ' + (order.moved ? ORDER.join(' > ') + ', then the rest' : 'left alone: no ' + order.missing + ' block on the page yet'));
   console.log('  tool requests       ' + (asking ? 'form posts to the callable' : 'left out: firebase-config still says REPLACE_ME'));
-  console.log('  homepage            ' + (changed ? 'hero, why, picks and the request form written' : 'unchanged'));
+  console.log('  homepage            ' + (changed ? 'hero, head, why, picks, order and the request form written' : 'unchanged'));
   console.log('  service worker      ' + (sw ? 'bumped' : 'unchanged'));
   console.log('\n  ' + changes.length + ' file(s) ' + (CHECK ? 'would change' : 'changed') + '\n');
 }
 
 if (require.main === module) main();
-module.exports = { counts, checkedPages };
+module.exports = { counts, checkedPages, headCopy, HERO_JOBS, ORDER };

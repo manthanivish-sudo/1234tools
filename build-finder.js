@@ -14,10 +14,15 @@
  *
  * This script writes assets/finder-index.js — title, path, glyph, section,
  * description and keywords for every tool that is not a unit conversion
- * (conversions are matched from their slugs at run time) — then the page,
+ * (conversions are matched from their slugs at run time), plus a seventh
+ * column, what goes in and what comes out, when build/jobs.js is there to
+ * say — then the page,
  * cut from an existing utilities page so the shell is today's shell, its
  * row in the search index, its sitemap line, its glyph and its card on the
  * Utilities hub. Counts, crumbs and manifests are left to the pipeline.
+ *
+ * The same engine also runs in short form in the home page hero (written by
+ * build-home.js) and on the section hubs; this script owns only the full page.
  *
  * Run it on a clean export, never on the working tree.
  */
@@ -31,6 +36,10 @@ const { SECTIONS, trailFor } = require('./build/sections.js');
 const { indexTotal, patchTotal } = require('./build/totals.js');
 
 const ROOT = __dirname;
+/* What goes in and what comes out of each tool ("PDF → PDF"), shown on the
+   finder's cards. Another builder owns the module; without it the rows keep
+   their six columns and the cards simply carry no io line. */
+const JOBS = fs.existsSync(path.join(ROOT, 'build/jobs.js')) ? require('./build/jobs.js') : null;
 const CHECK = process.argv.includes('--check');
 const SITE = 'https://www.1234tools.com';
 const SECTION = 'utilities';
@@ -54,14 +63,16 @@ const SPEC = {
     'A quantity and a unit is enough for conversions: "5 miles in km", "psi to bar", "kcal to kJ".',
     'Name the file type when there is one — PDF, image, Excel, CSV — and the finder narrows to that family.',
     'Press / on any page to jump to the search box; the box offers the finder when a name does not match.',
-    'The eight chips under the composer are good starting points if you are not sure what the site has.'
+    'The chips under the composer are good starting points if you are not sure what the site has.',
+    'The box at the top of the home page is this finder in short form: ask there and the answer appears under it, with a link here for the longer conversation.'
   ],
   faq: [
     { q: 'Is this an AI chat? Where does my question go?', a: 'Nowhere. It is a conversation in shape, but the matching is done by your browser against a list of the site’s tools, their descriptions and a vocabulary of synonyms and unit names that ships with the page. There is no model on a server reading what you type, which is why it answers instantly and works offline once loaded.' },
     { q: 'What happens when I send a request?', a: 'Your description, the optional “what you do” line and the optional email go to our server and are kept until the request is dealt with. That is the only part of the page that leaves your device, and only when you press the button. The email is used to reply and for nothing else.' },
     { q: 'Why does it sometimes offer several tools?', a: 'Because several fit. "Convert a document" could be PDF to Word, image to PDF or CSV to JSON. It shows the closest few and a row of chips to narrow by family, and you can simply type the detail that settles it.' },
     { q: 'Can it find unit conversions?', a: 'Yes — all 1,048 of them. It understands the common names and short forms: km, mi, kg, lb, °C, °F, mph, psi, kWh, GB, and the rest. "km to miles" opens the exact page; "length" opens the family.' },
-    { q: 'It did not understand me. What helps?', a: 'Use the noun for the thing and the verb for the job: "resize photo", "merge PDF", "GST on invoice". Avoid brand names unless the tool is an alternative to one — those are on the Comparisons page. If it still draws a blank, that is useful information for us: send it as a request.' }
+    { q: 'It did not understand me. What helps?', a: 'Use the noun for the thing and the verb for the job: "resize photo", "merge PDF", "GST on invoice". Avoid brand names unless the tool is an alternative to one — those are on the Comparisons page. If it still draws a blank, that is useful information for us: send it as a request.' },
+    { q: 'What is the box on the section pages?', a: 'The same finder, kept to that section’s tools: ask the PDF page for "merge two files" and it answers from the PDF tools. When the section has nothing for the job it says so and shows what the rest of the site has, so you are never left at a dead end.' }
   ],
   related: ['/tools/', '/for/', '/guides/', '/compare/', '/contact/']
 };
@@ -144,9 +155,16 @@ function finderIndex() {
     const slug = p.replace(/\/+$/, '').split('/').pop();
     const kw = kws[slug] || kws[id] || [];
     if (kw.length) withKeywords++;
-    rows.push([String(title), p, g ? g[1] : ('i-' + id), section ? section.name : p.split('/')[0], d ? unesc(d[1]) : '', kw.join(' | ')]);
+    const row = [String(title), p, g ? g[1] : ('i-' + id), section ? section.name : p.split('/')[0], d ? unesc(d[1]) : '', kw.join(' | ')];
+    if (JOBS) row.push(ioOf(p));
+    rows.push(row);
   }
   return { rows, withKeywords };
+}
+/** The seventh column: '' when the module has nothing to say about a page. */
+function ioOf(p) {
+  if (!JOBS || typeof JOBS.jobOf !== 'function') return '';
+  try { const j = JOBS.jobOf('/' + p); return j && j.io ? String(j.io) : ''; } catch (e) { return ''; }
 }
 
 /* ------------------------------------------------------------------ */
@@ -224,12 +242,14 @@ function page(parts, total) {
   const trail = trailFor(pathOnly);
   const s = SPEC;
   const sec = SECTIONS['/' + SECTION + '/'];
+  /* the one number in the copy comes from the register, in the meta tags as well as on the page */
+  const described = s.description.replace(/1,268/, Number(total).toLocaleString('en-GB'));
   const body =
     crumbs.render(trail, s.title) + '\n' +
     '<article class="tool finder-tool" data-tool="' + SLUG + '">\n' +
     '  <p class="eyebrow">' + esc(sec.name) + '</p>\n' +
     '  <h1>' + icon(GLYPH, 'ico ico-title') + esc(s.title) + '</h1>\n' +
-    '  <p class="lede">' + esc(s.description.replace('1,268', Number(total).toLocaleString('en-GB'))) + '</p>\n' +
+    '  <p class="lede">' + esc(described) + '</p>\n' +
     '  <div class="tool-io" data-endpoint="' + esc(endpoint()) + '"></div>\n' +
     '  <section class="panel"><h2>Privacy</h2><p class="privacy-line">' + esc(s.privacy) + '</p></section>\n' +
     '  <section class="panel"><h2>How to ask</h2><ol class="tips">' + s.how.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ol></section>\n' +
@@ -250,13 +270,13 @@ function page(parts, total) {
   const ld = '<script type="application/ld+json">' + JSON.stringify({
     '@context': 'https://schema.org',
     '@graph': [
-      { '@type': 'WebApplication', name: s.title, description: s.description, url, applicationCategory: 'UtilitiesApplication', operatingSystem: 'Any', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }, keywords: s.keywords.join(', ') },
+      { '@type': 'WebApplication', name: s.title, description: described, url, applicationCategory: 'UtilitiesApplication', operatingSystem: 'Any', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }, keywords: s.keywords.join(', ') },
       crumbs.breadcrumbList(trail, s.title, pathOnly),
       { '@type': 'FAQPage', mainEntity: s.faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) }
     ]
   }) + '</script>\n';
   const rel = SECTION + '/' + SLUG + '/index.html';
-  const html = headFor(parts, pathOnly, s.pageTitle, s.description, ['/engine/finder.js']) + ld + parts.mid + '\n' + body + parts.tail;
+  const html = headFor(parts, pathOnly, s.pageTitle, described, ['/engine/finder.js']) + ld + parts.mid + '\n' + body + parts.tail;
   return outbound.rewrite(keepRelated(rel, keepPwa(rel, sidebar.apply(html, rel))), SECTION).html;
 }
 
@@ -310,7 +330,8 @@ function main() {
   const indexed = patchSearchIndex();
   const total = indexTotal() + (CHECK ? indexed : 0);
   const { rows, withKeywords } = finderIndex();
-  const fi = write('assets/finder-index.js', 'window.FINDER_INDEX=' + JSON.stringify({ v: 1, built: new Date().toISOString().slice(0, 10), tools: rows }) + ';\n');
+  /* v2 is the seven-column shape; the engine reads either */
+  const fi = write('assets/finder-index.js', 'window.FINDER_INDEX=' + JSON.stringify({ v: JOBS ? 2 : 1, built: new Date().toISOString().slice(0, 10), tools: rows }) + ';\n');
   const parts = shell();
   const rel = SECTION + '/' + SLUG + '/index.html';
   const fresh = !fs.existsSync(path.join(ROOT, rel));
@@ -322,6 +343,7 @@ function main() {
 
   console.log('\nbuild-finder.js' + (CHECK ? '  (--check: nothing will be written)' : ''));
   console.log('  finder index        ' + rows.length + ' tools with descriptions, ' + withKeywords + ' with keywords' + (fi ? ' (written)' : ' (unchanged)'));
+  console.log('  io column           ' + (JOBS ? 'from build/jobs.js (index v2)' : 'build/jobs.js absent: six columns (index v1)'));
   console.log('  page                ' + (built ? (fresh ? 'created' : 'updated') : 'unchanged'));
   console.log('  utilities hub card  ' + (hub ? 'added' : 'unchanged'));
   console.log('  search index        ' + (indexed ? 'row added' : 'unchanged'));

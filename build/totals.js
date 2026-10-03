@@ -6,9 +6,10 @@
  * register the sidebar and the hubs already count from — and the phrases
  * that print it are rewritten wherever they hold any other number. Anchoring
  * on the phrase rather than on the old digits is what repairs a page that
- * was reverted to an older total by hand. Used by build-ai-image.js and
- * build-finder.js; a generator that adds a tool calls patchTotal() after it
- * has added its row to the index.
+ * was reverted to an older total by hand. Used by build-ai-image.js,
+ * build-finder.js and build-home.js (which reads indexTotal() for the home
+ * page title and descriptions); a generator that adds a tool calls
+ * patchTotal() after it has added its row to the index.
  */
 'use strict';
 const fs = require('fs');
@@ -48,7 +49,10 @@ function patchTotal(total, changes, check) {
     [/<small>[\d,]+\+ free tools<\/small>/g, '<small>' + t + '+ free tools</small>'],
     [/Search [\d,]+ tools…/g, 'Search ' + t + ' tools…'],
     [/<span>All [\d,]+ tools<\/span>/g, '<span>All ' + t + ' tools</span>'],
-    [/[\d,]+\+ free calculators and converters/g, t + '+ free calculators and converters']
+    [/[\d,]+\+ free calculators and converters/g, t + '+ free calculators and converters'],
+    /* the collections row on the home page: build-collections.js writes it
+       from its own count, and this keeps it honest between its runs */
+    [/[\d,]+ tools is a lot to browse/g, t + ' tools is a lot to browse']
   ];
   let n = 0;
   for (const abs of pages()) {

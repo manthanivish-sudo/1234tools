@@ -9,6 +9,15 @@
  * for the 1,048 conversions, and one-edit typo forgiveness. Nothing typed
  * here leaves the page; the request form, which the reader opens on
  * purpose, is the only thing that posts anywhere.
+ *
+ * Two forms of the same thing. The full conversation lives at
+ * /utilities/tool-finder/ (mount(root)). The short form — a composer,
+ * starter chips and one answer that is replaced on each question — sits
+ * in the home page hero and, scoped to one section's tools, on the
+ * section hubs (mount(root, { inline: true, section: 'pdf' })). A scoped
+ * box that finds nothing says so and shows the site-wide answer under it.
+ * Analytics, if the visitor opted in, record the kind of answer and the
+ * mode, never the words.
  */
 (function () {
   'use strict';
@@ -186,13 +195,13 @@
   function build() {
     const fi = window.FINDER_INDEX.tools;
     DOCS = fi.map((r) => {
-      const [title, p, glyph, section, desc, kw] = r;
+      const [title, p, glyph, section, desc, kw, io] = r;
       const slug = p.replace(/\/+$/, '').split('/').pop().replace(/-/g, ' ');
       const fields = { title: tokens(title), slug: tokens(slug), kw: tokens(kw.replace(/\|/g, ' ')), desc: tokens(desc), section: tokens(section) };
       const tf = {};
       const add = (list, w) => { for (const t of list) tf[t] = Math.max(tf[t] || 0, w) + (tf[t] ? 0.15 : 0); };
       add(fields.desc, 1.2); add(fields.section, 1); add(fields.kw, 2.5); add(fields.slug, 3); add(fields.title, 4);
-      return { title, path: p, glyph, section, desc, tf, titleText: title.toLowerCase(), slugText: slug, kwText: kw.toLowerCase() };
+      return { title, path: p, glyph, section, desc, io: io ? String(io) : '', tf, titleText: title.toLowerCase(), slugText: slug, kwText: kw.toLowerCase() };
     });
     N = DOCS.length;
     DF = {}; VOCAB = new Set();
@@ -283,7 +292,7 @@
     return null;
   }
 
-  function rank(text) {
+  function rank(text, pool) {
     const qTokens = tokens(text);
     const plain = qTokens.filter((t) => t[0] !== '~');
     const fixes = [];
@@ -297,7 +306,7 @@
     const qPlain = q.filter((t) => t[0] !== '~');
     const phrase = text.toLowerCase().trim();
     const scored = [];
-    for (const d of DOCS) {
+    for (const d of (pool || DOCS)) {
       let s = 0, matched = 0;
       const why = [];
       for (const t of q) {
@@ -323,19 +332,49 @@
   const GREETING = /^(hi|hello|hey|hiya|yo|good (morning|afternoon|evening)|help|start|menu|\?)[!. ]*$/i;
   const THANKS = /^(thanks?|thank you|cheers|ta|great|perfect|nice|cool|ok|okay)[!. ]*$/i;
 
-  /** Everything the UI needs to answer one message. */
-  function understand(text, previous) {
-    const t = text.trim();
+  /**
+   * Everything the UI needs to answer one message.
+   *
+   * `opts.section` limits the answer to the tools under one section
+   * ('conversions' means the unit conversions only). When that section has
+   * nothing for the question, or only a weak match, `elsewhere` carries the
+   * site-wide answer as well, so a scoped box is never a dead end.
+   */
+  function understand(text, previous, opts) {
+    if (!DOCS) throw new Error('The tool list has not loaded yet.');
+    const section = opts && opts.section ? String(opts.section).toLowerCase().replace(/^\/+|\/+$/g, '') : null;
+    const t = String(text || '').trim();
     if (!t) return { kind: 'empty' };
     if (GREETING.test(t)) return { kind: 'greeting' };
     if (THANKS.test(t)) return { kind: 'thanks' };
-    const conv = conversionIntent(t);
-    if (conv && conv.hit) return { kind: 'convert', hit: conv.hit, from: conv.from, to: conv.to };
-    if (conv && conv.family) return { kind: 'family', family: conv.family, path: conv.path };
-    let r = rank(t), used = t;
+    const u = decide(t, previous, section);
+    if (section) {
+      u.section = section;
+      if (u.kind === 'none' || u.kind === 'weak') {
+        const all = decide(t, previous, null);
+        if (all.kind !== 'none' && all.kind !== 'weak') {
+          u.elsewhere = all;
+          /* an exact conversion elsewhere beats a weak match in here — the
+             weak one is usually a re-spelt word ("mile" read as "file") */
+          if (u.kind === 'weak' && (all.kind === 'convert' || all.kind === 'family')) { u.kind = 'none'; delete u.results; }
+        }
+      }
+    }
+    return u;
+  }
+  function decide(t, previous, section) {
+    if (!section || section === 'conversions') {
+      const conv = conversionIntent(t);
+      if (conv && conv.hit) return { kind: 'convert', hit: conv.hit, from: conv.from, to: conv.to };
+      if (conv && conv.family) return { kind: 'family', family: conv.family, path: conv.path };
+      /* the conversions are matched from their slugs; there is nothing to rank */
+      if (section) return { kind: 'none', text: t, fixes: [] };
+    }
+    const pool = section ? DOCS.filter((d) => d.path.indexOf(section + '/') === 0) : DOCS;
+    let r = rank(t, pool), used = t;
     /* a short follow-up narrows the last question rather than starting over */
     if (previous && previous.text && r.plain.length <= 2) {
-      const r2 = rank(previous.text + ' ' + t);
+      const r2 = rank(previous.text + ' ' + t, pool);
       const best = r.results[0] ? r.results[0].score : 0, best2 = r2.results[0] ? r2.results[0].score : 0;
       if (best2 > best * 1.05) { r = r2; used = previous.text + ' ' + t; }
     }
@@ -344,7 +383,7 @@
     const second = r.results[1];
     /* words the top match did not account for; two long ones means the
        reader asked for something this site may not have */
-    const unknown = r.plain.filter((t) => !DF[t] && t.length >= 5 && !r.fixes.some((f) => f[0] === t)).length;
+    const unknown = r.plain.filter((w) => !DF[w] && w.length >= 5 && !r.fixes.some((f) => f[0] === w)).length;
     const strong = top.coverage >= 0.75 && unknown === 0 && (!second || top.score > second.score * 1.35);
     const weak = top.coverage < 0.6 || top.score < 2.2;
     return { kind: weak ? 'weak' : strong ? 'one' : 'several', results: r.results.slice(0, weak ? 3 : strong ? 3 : 4), text: used, fixes: r.fixes };
@@ -355,48 +394,158 @@
   /* ------------------------------------------------------------------ */
   const STARTERS = ['Merge two PDFs', 'Km to miles', 'Remove the background from a photo', 'Payslip for one employee', 'QR code for my Wi-Fi', 'Put text behind a person in a photo', 'GST on an invoice', 'Days until my exam'];
   const SECTION_CHIPS = [['PDF', 'pdf'], ['Image', 'image'], ['Text', 'text'], ['Business', 'business'], ['India', 'india'], ['Developer', 'developer'], ['Education', 'education'], ['Health', 'health'], ['Units', 'convert units']];
+  /* What a section's own box opens with: the jobs people come to that
+     section for, in the words they use. A section missing here gets the
+     site-wide starters. */
+  const SECTION_STARTERS = {
+    pdf: ['Merge two PDFs', 'Split a PDF into pages', 'Add page numbers', 'Sign a PDF', 'Payslip as a PDF', 'Watermark a PDF'],
+    image: ['Remove the background from a photo', 'Shrink a JPEG so it emails', 'Passport photo', 'Crop to a circle', 'Blur a face', 'Image to PDF'],
+    'ai-image': ['Put text behind a person in a photo', 'Text behind a product shot', 'Remove the background from a photo'],
+    text: ['Count the words in my essay', 'Compare two versions of a text', 'Strong password', 'Number to words', 'Clean up pasted text', 'Readability of a letter'],
+    business: ['Payslip for one employee', 'VAT return from a spreadsheet', 'Reconcile a bank statement', 'Excel to Tally', 'Chase overdue invoices', 'Break-even point'],
+    finance: ['Monthly repayment on a loan', 'Compound interest on savings', 'VAT on a price'],
+    india: ['GST on an invoice', 'Income tax: new vs old regime', 'EMI on a home loan', 'SIP returns', 'HRA exemption', 'In-hand salary from CTC'],
+    developer: ['Format JSON', 'Decode a JWT', 'CSV to JSON', 'Test a regex', 'Hash a string', 'Favicon from a logo'],
+    education: ['School timetable', 'Exam seating plan', 'CGPA to percentage', 'Report cards for a class', 'Days until my exam', 'Attendance percentage'],
+    health: ['BMI', 'Calories I burn in a day', 'Pregnancy due date', 'Heart rate zones', 'Ideal weight', 'Water intake'],
+    mathematics: ['Percentage of a number', 'Solve a quadratic', 'Mean, median and mode', 'Simplify a fraction', 'LCM and GCD', 'Roman numerals'],
+    time: ['Days between two dates', 'My age in days', 'Add 90 days to a date', 'Week number', 'Working days this month', 'Time zone for a call'],
+    utilities: ['Fuel cost for a trip', 'Split a restaurant bill', 'Square footage of a room', 'Random number', 'Cups to grams', 'Shoe size in EU'],
+    qr: ['QR code for my Wi-Fi', 'Scan a QR code', 'QR codes for 200 products', 'UPI payment QR', 'vCard QR'],
+    engineering: ['Ohm’s law', 'Volts, amps and watts', 'Resistor for an LED'],
+    design: ['Aspect ratio for a video', '16:9 at 1080 wide', 'Resize keeping the ratio'],
+    ai: ['Read an invoice into a spreadsheet', 'Categorise a bank statement', 'Write a product listing', 'Summarise a contract', 'Minutes from meeting notes', 'Translate a business letter'],
+    conversions: ['Km to miles', '5 lbs in kg', 'Celsius to Fahrenheit', 'Litres to gallons', 'Square feet to square metres', 'kWh to joules']
+  };
 
-  function mount(root) {
+  /* Analytics, when the visitor has opted in: assets/analytics.js creates
+     window.gtag only after consent, so for everybody else this is a no-op.
+     The parameters describe the shape of an answer and never its content:
+     no question text, no typo fixes, no tool titles. */
+  function track(name, params) { if (typeof window.gtag === 'function') window.gtag('event', name, params); }
+
+  /* A description cut for a card at a word, never mid-word. */
+  function clip(s, n) {
+    s = String(s || '');
+    if (s.length <= n) return s;
+    const cut = s.slice(0, n - 1), sp = cut.lastIndexOf(' ');
+    return (sp > n / 2 ? cut.slice(0, sp) : cut).replace(/[\s,;:.—–-]+$/, '') + '…';
+  }
+  /* The display name of a section, read off its own tools' rows. */
+  function sectionName(slug) {
+    if (!slug) return '';
+    if (slug === 'conversions') return 'Conversions';
+    const d = DOCS && DOCS.find((x) => x.path.indexOf(slug + '/') === 0);
+    return d ? d.section : slug;
+  }
+
+  /**
+   * Render the finder into root.querySelector('.tool-io'), whose data-endpoint
+   * is where a request is posted (empty: the contact page is offered instead).
+   *
+   *   opts.inline       the short form: composer, chips and one answer that is
+   *                     replaced on each question; no greeting and no log.
+   *                     The index is fetched on first interaction, not on load
+   *   opts.section      only the tools under '<section>/'; 'conversions' means
+   *                     the unit conversions. The full page reads ?section=
+   *                     from the URL when this is not given
+   *   opts.starters     the chips under the composer (default: by section)
+   *   opts.placeholder  the composer's placeholder
+   *
+   * Returns { ask(text), understand(text), section, inline }.
+   */
+  function mount(root, opts) {
+    opts = opts || {};
+    const inline = !!opts.inline;
+    const params = new URLSearchParams(location.search);
+    let section = opts.section !== undefined ? opts.section : (inline ? null : params.get('section'));
+    section = section ? String(section).toLowerCase().replace(/^\/+|\/+$/g, '') : null;
+    if (section && !/^[a-z0-9-]{2,24}$/.test(section)) section = null;
+    const starters = (Array.isArray(opts.starters) && opts.starters.length ? opts.starters : (SECTION_STARTERS[section] || STARTERS)).slice(0, 8).map(String);
+    const mode = inline ? 'inline' : 'full';
     const io = root.querySelector('.tool-io');
     const endpoint = io.getAttribute('data-endpoint') || '';
     io.innerHTML = '';
-    const box = el('section', 'finder');
+    root.setAttribute('data-finder', mode);
+
+    const box = el('section', 'finder' + (inline ? ' finder-inline' : '') + (section ? ' finder-scoped' : ''));
     box.setAttribute('aria-label', 'Tool Finder');
-    const head = el('div', 'finder-head');
-    const orb = el('span', 'finder-orb'); orb.setAttribute('aria-hidden', 'true');
-    const headText = el('div', 'finder-head-text');
-    headText.append(el('strong', null, 'Tool Finder'), el('span', null, 'Runs on your device · nothing you type leaves this page'));
-    head.append(orb, headText);
+    if (section) box.setAttribute('data-section', section);
     const log = el('div', 'finder-log'); log.setAttribute('role', 'log'); log.setAttribute('aria-live', 'polite');
+    const answer = el('div', 'finder-answer'); answer.setAttribute('aria-live', 'polite'); answer.hidden = true;
     const chips = el('div', 'finder-chips');
     const form = el('form', 'finder-composer'); form.noValidate = true;
-    const input = el('textarea', 'finder-input'); input.rows = 1; input.placeholder = 'Describe the job… e.g. “merge two PDFs”, “km to miles”, “payslip for one employee”';
+    const input = el('textarea', 'finder-input'); input.rows = 1;
+    /* one example on a phone, three on a desktop: a placeholder that wraps is clipped */
+    const narrow = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+    input.placeholder = opts.placeholder || (section || narrow ? 'Describe the job… e.g. “' + starters[0] + '”' : 'Describe the job… e.g. “merge two PDFs”, “km to miles”, “payslip for one employee”');
     input.setAttribute('aria-label', 'Describe what you need'); input.maxLength = 300;
-    const send = el('button', 'finder-send'); send.type = 'submit'; send.setAttribute('aria-label', 'Send');
+    const send = el('button', 'finder-send'); send.type = 'submit'; send.setAttribute('aria-label', 'Find the tool');
     send.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>';
     form.append(input, send);
-    box.append(head, log, chips, form);
+    /* the long form of this conversation, carrying the question along */
+    const fullHref = (q, scoped) => {
+      const qs = [];
+      if (q) qs.push('q=' + encodeURIComponent(q));
+      if (scoped && section) qs.push('section=' + encodeURIComponent(section));
+      return base + 'utilities/tool-finder/' + (qs.length ? '?' + qs.join('&') : '');
+    };
+    let more = null, headTitle = null;
+    if (inline) {
+      const foot = el('div', 'finder-foot');
+      foot.appendChild(el('span', 'finder-foot-note', 'Runs on your device · nothing you type leaves this page'));
+      more = el('a', 'finder-open', 'Open the full Tool Finder →'); more.href = fullHref('', true);
+      foot.appendChild(more);
+      box.append(form, chips, answer, foot);
+    } else {
+      const head = el('div', 'finder-head');
+      const orb = el('span', 'finder-orb'); orb.setAttribute('aria-hidden', 'true');
+      const headText = el('div', 'finder-head-text');
+      headTitle = el('strong', null, 'Tool Finder');
+      headText.append(headTitle, el('span', null, 'Runs on your device · nothing you type leaves this page'));
+      head.append(orb, headText);
+      box.append(head, log, chips, form);
+    }
     io.appendChild(box);
 
-    const state = { ready: false, previous: null, busy: false, count: window.SEARCH_INDEX ? window.SEARCH_INDEX.length : 0 };
+    const state = { ready: false, previous: null, busy: false, count: window.SEARCH_INDEX ? window.SEARCH_INDEX.length : 0, loading: null };
     const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    function ensureReady() {
+      if (state.ready) return Promise.resolve();
+      if (!state.loading) {
+        state.loading = loadIndexes().then(() => {
+          if (!DOCS) build();
+          state.count = window.SEARCH_INDEX.length;
+          state.ready = true;
+        }).catch((e) => { state.loading = null; throw e; });
+      }
+      return state.loading;
+    }
+
     function scrollDown() { log.scrollTop = log.scrollHeight; }
+    function show(m) {
+      if (inline) { answer.innerHTML = ''; answer.appendChild(m); answer.hidden = false; }
+      else { log.appendChild(m); scrollDown(); }
+    }
     function bubble(kind, node) {
       const m = el('div', 'finder-msg is-' + kind);
       if (kind === 'bot') { const a = el('span', 'finder-avatar'); a.setAttribute('aria-hidden', 'true'); m.appendChild(a); }
       const b = el('div', 'finder-bubble');
       if (typeof node === 'string') b.textContent = node; else b.appendChild(node);
       m.appendChild(b);
-      log.appendChild(m);
-      scrollDown();
+      /* in the short form the question stays in the composer and the one
+         answer is replaced; nothing is echoed and nothing accumulates */
+      if (inline && kind === 'user') return b;
+      show(m);
       return b;
     }
     function typing() {
       const m = el('div', 'finder-msg is-bot is-typing');
       const a = el('span', 'finder-avatar'); a.setAttribute('aria-hidden', 'true');
       const b = el('div', 'finder-bubble finder-typing'); b.innerHTML = '<i></i><i></i><i></i>';
-      m.append(a, b); log.appendChild(m); scrollDown();
+      m.append(a, b);
+      show(m);
       return () => m.remove();
     }
     function setChips(list, onPick) {
@@ -408,28 +557,49 @@
         chips.appendChild(b);
       }
     }
-    function card(d, why) {
+    function card(d) {
       const a = el('a', 'finder-card');
-      a.href = base + d.path.replace(/^\//, '');
+      const p = String(d.path).replace(/^\//, '');
+      a.href = base + p;
+      a.setAttribute('data-sec', p.split('/')[0]);
       const ic = el('span', 'finder-card-icon');
       ic.innerHTML = '<svg class="ico" aria-hidden="true" focusable="false"><use href="' + base + 'assets/icons.svg#' + d.glyph + '"></use></svg>';
       const body = el('span', 'finder-card-body');
-      const t = el('strong', null, d.title);
-      const meta = el('span', 'finder-card-meta', d.section + (d.path.indexOf('ai/') === 0 ? ' · free to try' : ' · free, on your device'));
-      body.append(t, meta);
-      if (d.desc) body.appendChild(el('span', 'finder-card-desc', d.desc));
+      const tags = el('span', 'finder-card-tags');
+      const ai = p.indexOf('ai/') === 0;
+      if (d.io) tags.appendChild(el('span', 'finder-card-io', d.io));
+      for (const label of (ai ? ['Free to try', 'AI'] : ['Free', 'On your device'])) tags.appendChild(el('span', 'tag ' + (ai ? 'tag-freemium' : 'tag-free'), label));
+      body.append(el('strong', null, d.title), tags);
+      if (d.desc) body.appendChild(el('span', 'finder-card-desc', clip(d.desc, 110)));
       const go = el('span', 'finder-card-go', 'Open →');
       a.append(ic, body, go);
       return a;
     }
     function cards(results) {
       const wrap = el('div', 'finder-cards');
-      for (const r of results) wrap.appendChild(card(r.doc, r.why));
+      for (const r of results) wrap.appendChild(card(r.doc));
       return wrap;
     }
     function textAnd(text, node) { const w = el('div'); w.appendChild(el('p', 'finder-text', text)); if (node) w.appendChild(node); return w; }
+    const convDoc = (hit) => ({ title: hit.title, path: hit.path, glyph: 'i-' + hit.family, section: 'Conversions', desc: 'Type a value and it converts both ways, with the formula shown.' });
+    const familyDoc = (u) => ({ title: u.family[0].toUpperCase() + u.family.slice(1) + ' conversions', path: u.path, glyph: 'i-' + u.family, section: 'Conversions', desc: 'Every pair in the family on one page.' });
+    /* the site-wide answer, under a scoped one that found little or nothing */
+    function elsewhere(e) {
+      const w = el('div', 'finder-elsewhere');
+      w.appendChild(el('p', 'finder-text finder-elsewhere-label', 'Elsewhere on the site:'));
+      if (e.kind === 'convert') w.appendChild(cards([{ doc: convDoc(e.hit) }]));
+      else if (e.kind === 'family') w.appendChild(cards([{ doc: familyDoc(e) }]));
+      else w.appendChild(cards(e.results.slice(0, 3)));
+      return w;
+    }
     function narrowRow(text) {
       const row = el('div', 'finder-narrow');
+      if (section) {
+        /* a scoped box narrows nothing further; the way on is the whole site */
+        const a = el('a', 'chip', 'Search the whole site →'); a.href = fullHref(text, false);
+        row.append(el('span', 'finder-narrow-label', 'Not in ' + sectionName(section) + '?'), a);
+        return row;
+      }
       row.appendChild(el('span', 'finder-narrow-label', 'Narrow it:'));
       for (const [label, value] of SECTION_CHIPS) {
         const b = el('button', 'chip', label); b.type = 'button';
@@ -444,60 +614,71 @@
       b.addEventListener('click', () => requestForm(text));
       return b;
     }
-    const fixNote = (fixes) => fixes.length ? ' (reading “' + fixes[0][0] + '” as “' + fixes[0][1] + '”)' : '';
+    const fixNote = (fixes) => fixes && fixes.length ? ' (reading “' + fixes[0][0] + '” as “' + fixes[0][1] + '”)' : '';
+    const here = () => (section ? ' in ' + sectionName(section) : '');
 
     function intro() {
       const n = state.count ? state.count.toLocaleString('en-GB') : 'all the';
-      bubble('bot', textAnd('Tell me the job and I will find the tool — there are ' + n + ' here, from a VAT return to a passport photo. Plain words work best: what goes in, what should come out.'));
-      setChips(STARTERS, (v) => ask(v));
+      if (inline) bubble('bot', textAnd('Tell me the job — “merge two PDFs”, “km to miles”, “payslip for one employee” — and the tool appears here.'));
+      else if (section) bubble('bot', textAnd('Tell me the job and I will find the tool in ' + sectionName(section) + '. Plain words work best: what goes in, what should come out. If the section has nothing for it, I will say what the rest of the site has.'));
+      else bubble('bot', textAnd('Tell me the job and I will find the tool — there are ' + n + ' here, from a VAT return to a passport photo. Plain words work best: what goes in, what should come out.'));
+      setChips(starters, (v) => ask(v));
     }
 
     async function ask(text, shown) {
       const t = String(text || '').trim();
       if (!t || state.busy) return;
       state.busy = true;
-      bubble('user', shown || t);
-      input.value = ''; autosize();
+      const hadFocus = document.activeElement === input;
+      if (inline) { input.value = t; autosize(); if (more) more.href = fullHref(t, true); }
+      else { bubble('user', shown || t); input.value = ''; autosize(); }
       const stop = typing();
-      await sleep(reduced ? 60 : 320 + Math.min(500, t.length * 8));
       let u;
-      try { u = understand(t, state.previous); } catch (e) { u = { kind: 'error', message: e.message }; }
+      try {
+        await Promise.all([ensureReady(), sleep(reduced ? 60 : inline ? 180 : 320 + Math.min(500, t.length * 8))]);
+        u = understand(t, state.previous, { section });
+      } catch (e) { u = { kind: 'error', message: e && e.message || String(e) }; }
       stop();
-      answer(u, t);
+      try { reply(u, t); }
+      catch (e) { bubble('bot', 'Something went wrong on this page: ' + (e && e.message || e) + '. The full directory still lists everything.'); }
+      if (inline) answer.hidden = !answer.firstChild;
+      track('finder_answer', { kind: u.kind, mode, section: section || '(all)' });
       state.busy = false;
-      input.focus({ preventScroll: true });
+      if (!inline || hadFocus) input.focus({ preventScroll: true });
     }
 
-    function answer(u, raw) {
+    function reply(u, raw) {
       switch (u.kind) {
         case 'greeting': intro(); break;
         case 'thanks': bubble('bot', 'Any time. Ask for the next one whenever you need it.'); break;
         case 'empty': break;
-        case 'error': bubble('bot', 'Something went wrong on this page: ' + u.message + '. The full directory still lists everything.'); break;
+        case 'error': bubble('bot', 'Something went wrong on this page: ' + u.message + ' The full directory still lists everything.'); break;
         case 'convert': {
-          const d = { title: u.hit.title, path: u.hit.path, glyph: 'i-' + u.hit.family, section: 'Conversions', desc: 'Type a value and it converts both ways, with the formula shown.' };
-          bubble('bot', textAnd('There is a page for exactly that.', cards([{ doc: d }])));
-          setChips([['All ' + u.hit.family + ' conversions', 'convert ' + u.hit.family], ['Reverse it', u.to.replace(/-/g, ' ') + ' to ' + u.from.replace(/-/g, ' ')]].concat(STARTERS.slice(0, 3)), (v, l) => ask(v, l));
+          bubble('bot', textAnd('There is a page for exactly that.', cards([{ doc: convDoc(u.hit) }])));
+          setChips([['All ' + u.hit.family + ' conversions', 'convert ' + u.hit.family], ['Reverse it', u.to.replace(/-/g, ' ') + ' to ' + u.from.replace(/-/g, ' ')]].concat(starters.slice(0, 3)), (v, l) => ask(v, l));
           state.previous = { text: raw };
           break;
         }
         case 'family': {
-          const d = { title: u.family[0].toUpperCase() + u.family.slice(1) + ' conversions', path: u.path, glyph: 'i-' + u.family, section: 'Conversions', desc: 'Every pair in the family on one page.' };
-          bubble('bot', textAnd('The whole family is here; name two units and I will open the exact pair.', cards([{ doc: d }])));
+          bubble('bot', textAnd('The whole family is here; name two units and I will open the exact pair.', cards([{ doc: familyDoc(u) }])));
           state.previous = { text: raw };
           break;
         }
         case 'none': {
-          const w = textAnd('I could not match that to anything here' + fixNote(u.fixes) + '. Try the noun for the thing and the verb for the job — or if it should exist, send it and it goes on the build list.');
-          w.appendChild(narrowRow(u.text));
+          const w = textAnd(section
+            ? 'Nothing in ' + sectionName(section) + ' matches that' + fixNote(u.fixes) + '.' + (u.elsewhere ? '' : ' Try the noun for the thing and the verb for the job — or if it should exist, send it and it goes on the build list.')
+            : 'I could not match that to anything here' + fixNote(u.fixes) + '. Try the noun for the thing and the verb for the job — or if it should exist, send it and it goes on the build list.');
+          if (u.elsewhere) w.appendChild(elsewhere(u.elsewhere));
+          w.appendChild(narrowRow(u.text || raw));
           w.appendChild(requestButton(raw));
           bubble('bot', w);
-          setChips(STARTERS, (v) => ask(v));
+          setChips(starters, (v) => ask(v));
           state.previous = { text: raw };
           break;
         }
         case 'weak': {
-          const w = textAnd('Nothing matches that closely' + fixNote(u.fixes) + '. The nearest are below; if none of them is it, say so and I will take the request.', cards(u.results));
+          const w = textAnd('Nothing' + here() + ' matches that closely' + fixNote(u.fixes) + '. The nearest are below; if none of them is it, say so and I will take the request.', cards(u.results));
+          if (u.elsewhere) w.appendChild(elsewhere(u.elsewhere));
           w.appendChild(narrowRow(u.text));
           w.appendChild(requestButton(raw));
           bubble('bot', w);
@@ -508,13 +689,13 @@
           const top = u.results[0];
           const w = textAnd('That is the ' + top.doc.title + fixNote(u.fixes) + '.', cards([top]));
           if (u.results.length > 1) {
-            const more = el('details', 'finder-more');
-            more.appendChild(el('summary', null, 'Not quite? Two more that are close'));
-            more.appendChild(cards(u.results.slice(1)));
-            w.appendChild(more);
+            const moreBox = el('details', 'finder-more');
+            moreBox.appendChild(el('summary', null, 'Not quite? Two more that are close'));
+            moreBox.appendChild(cards(u.results.slice(1)));
+            w.appendChild(moreBox);
           }
           bubble('bot', w);
-          setChips([['Request a tool', '__request']].concat(STARTERS.slice(0, 4)), (v, l) => v === '__request' ? requestForm('') : ask(v, l));
+          setChips([['Request a tool', '__request']].concat(starters.slice(0, 4)), (v, l) => (v === '__request' ? requestForm('') : ask(v, l)));
           state.previous = { text: u.text };
           break;
         }
@@ -532,6 +713,10 @@
         bubble('bot', textAnd('Requests are taken on the contact page for now.', (() => { const a = el('a', 'btn-ghost', 'Open the contact page'); a.href = base + 'contact/'; return a; })()));
         return;
       }
+      /* in the short form the form joins the answer rather than replacing it */
+      const host = inline ? answer.querySelector('.finder-bubble') : null;
+      const open = host && host.querySelector('.finder-form textarea');
+      if (open) { open.focus({ preventScroll: true }); return; }
       const f = el('form', 'finder-form'); f.noValidate = true;
       const opened = Date.now();
       const what = el('textarea', 'control'); what.rows = 3; what.maxLength = 2000; what.required = true; what.value = prefill || ''; what.placeholder = 'What should the tool do? One sentence is plenty.'; what.setAttribute('aria-label', 'What should the tool do?');
@@ -542,7 +727,7 @@
       const msg = el('div', 'io-msg');
       const note = el('p', 'field-hint', 'This is the one thing on the page that leaves your device: it goes to our server, is kept until dealt with, and the email is used to reply and for nothing else.');
       f.append(el('p', 'finder-text', 'Tell me what it should do and it goes straight on the build list.'), what, who, email, trap, btn, msg, note);
-      bubble('bot', f);
+      if (host) host.appendChild(f); else bubble('bot', f);
       what.focus({ preventScroll: true });
       f.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -550,10 +735,15 @@
         const say = (t, k) => { msg.textContent = t || ''; msg.className = 'io-msg' + (k ? ' is-' + k : ''); };
         if (text.length < 10) { say('Tell us a little more about what the tool should do — one sentence is plenty.', 'error'); return; }
         btn.disabled = true; say('Sending…', 'note');
-        fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ data: { what: text, who: who.value, email: email.value, trap: trap.value, tookMs: Date.now() - opened, page: location.pathname, via: 'tool-finder' } }) })
+        fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ data: { what: text, who: who.value, email: email.value, trap: trap.value, tookMs: Date.now() - opened, page: location.pathname, via: 'tool-finder' + (inline ? '-inline' : '') } }) })
           .then((r) => r.json().then((b) => ({ ok: r.ok, b })))
           .then((x) => {
-            if (x.ok && x.b && x.b.result && x.b.result.ok) { f.querySelectorAll('textarea,input,button').forEach((n) => { n.disabled = true; }); say('Thank you — that is on the list. If you left an email you will hear back when it is built, or when it turns out it cannot be.', 'note'); return; }
+            if (x.ok && x.b && x.b.result && x.b.result.ok) {
+              f.querySelectorAll('textarea,input,button').forEach((n) => { n.disabled = true; });
+              say('Thank you — that is on the list. If you left an email you will hear back when it is built, or when it turns out it cannot be.', 'note');
+              track('finder_request_sent', { mode, section: section || '(all)' });
+              return;
+            }
             say((x.b && x.b.error && x.b.error.message) || 'That did not send. Try again in a moment, or use the contact page.', 'error'); btn.disabled = false;
           })
           .catch(() => { say('That did not send — the network refused it. Try again, or use the contact page.', 'error'); btn.disabled = false; });
@@ -565,23 +755,32 @@
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit ? form.requestSubmit() : ask(input.value); } });
     form.addEventListener('submit', (e) => { e.preventDefault(); ask(input.value); });
 
-    /* load, then greet; a ?q= from the search box is answered straight away */
-    const loading = bubble('bot', 'Loading the tool list…');
-    loadIndexes().then(() => {
-      build();
-      state.count = window.SEARCH_INDEX.length;
-      state.ready = true;
-      loading.parentNode.remove();
-      intro();
-      const q = new URLSearchParams(location.search).get('q');
-      if (q) ask(q);
-      else input.focus({ preventScroll: true });
-    }).catch((e) => {
-      loading.textContent = e.message + ' The full directory at /tools/ lists everything.';
-    });
+    if (inline) {
+      /* the two indexes (~190 KB) are fetched on the first sign of interest,
+         not on page load: most visitors to a page with a box on it never
+         use it, and the composer is usable before they arrive */
+      const warm = () => { ensureReady().catch(() => {}); };
+      box.addEventListener('pointerenter', warm, { once: true });
+      box.addEventListener('touchstart', warm, { once: true, passive: true });
+      input.addEventListener('focus', warm, { once: true });
+      setChips(starters, (v) => ask(v));
+    } else {
+      /* load, then greet; a ?q= from the search box is answered straight away */
+      const loading = bubble('bot', 'Loading the tool list…');
+      ensureReady().then(() => {
+        loading.parentNode.remove();
+        if (section && headTitle) headTitle.textContent = 'Tool Finder · ' + sectionName(section);
+        intro();
+        const q = params.get('q');
+        if (q) ask(q);
+        else input.focus({ preventScroll: true });
+      }).catch((e) => {
+        loading.textContent = e.message + ' The full directory at /tools/ lists everything.';
+      });
+    }
 
-    return { ask, understand };
+    return { ask, understand: (t) => understand(t, null, { section }), section, inline };
   }
 
-  window.ToolFinder = { mount, understand: (t) => understand(t, null), ready: () => !!DOCS };
+  window.ToolFinder = { mount, understand: (t, o) => understand(t, null, o || null), ready: () => !!DOCS };
 })();
