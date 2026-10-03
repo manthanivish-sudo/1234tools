@@ -2788,3 +2788,56 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
 .aiimg-stk .aiimg-result img.aiimg-stk-thumb { max-height: 240px; width: auto; }
 .aiimg-bgr .aiimg-result-head .btn-download, .aiimg-stk .aiimg-result-head .btn-download { text-decoration: none; }
 /* ==== /C1-bg-sticker ==== */
+
+/* ==== C2-pop-sky-thumb ==== */
+/* Colour Pop & Duotone, Sky Replacement and the YouTube Thumbnail Maker:
+   what the shared .aiimg-* studio does not already provide. */
+.aiimg-pop-presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.aiimg-pop-presets .chip { cursor: pointer; font: inherit; font-size: .8rem; padding: 6px 11px; }
+.aiimg-pop-swatches { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 0 0 12px; min-height: 30px; }
+.aiimg-pop-swatch {
+  width: 34px; height: 34px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 2px solid var(--border); box-shadow: inset 0 0 0 2px var(--bg-1);
+}
+.aiimg-pop-swatch:hover, .aiimg-pop-swatch:focus-visible { border-color: var(--accent); outline: none; }
+.aiimg-pop-swatch.is-on { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--bg-1), 0 0 0 2px var(--accent); }
+.aiimg-pop-huebar {
+  position: relative; height: 12px; margin: -4px 0 12px; border-radius: 999px; border: 1px solid var(--border);
+  background: linear-gradient(90deg, #f00 0, #ff0 16.7%, #0f0 33.3%, #0ff 50%, #00f 66.7%, #f0f 83.3%, #f00 100%);
+}
+.aiimg-pop-huebar > i {
+  position: absolute; top: -3px; bottom: -3px; width: 2%; margin-left: -1%;
+  border-radius: 4px; background: rgba(255,255,255,.35); border: 2px solid var(--text-1); box-sizing: border-box;
+}
+.aiimg-sky-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+.aiimg-sky-choice {
+  display: grid; gap: 5px; padding: 5px; cursor: pointer; font: inherit;
+  background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-2);
+}
+.aiimg-sky-choice:hover, .aiimg-sky-choice:focus-visible { border-color: var(--border-gold); color: var(--text-1); outline: none; }
+.aiimg-sky-choice.is-on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); color: var(--text-1); }
+.aiimg-sky-swatch { display: block; aspect-ratio: 16 / 9; border-radius: 7px; }
+.aiimg-sky-name { font-size: .72rem; line-height: 1.2; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aiimg-sky-shift { margin: 4px 0 0; font-family: var(--font-mono); font-size: .76rem; color: var(--text-3); line-height: 1.5; }
+.aiimg-thumb-size { font-size: .8rem; color: var(--text-3); }
+.aiimg-thumb-palette { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.aiimg-thumb-palette .aiimg-colour { width: 46px; flex: none; }
+.aiimg-thumb-chip { width: 28px; height: 28px; padding: 0; border-radius: 50%; cursor: pointer; border: 2px solid var(--border); }
+.aiimg-thumb-chip:hover, .aiimg-thumb-chip:focus-visible { border-color: var(--text-1); outline: none; }
+.aiimg-thumb-chip.is-on { border-color: var(--text-1); box-shadow: 0 0 0 2px var(--accent); }
+.aiimg-thumb .aiimg-canvas { aspect-ratio: 16 / 9; width: 100%; max-height: none; }
+.aiimg-thumb-variants .btn-primary { width: 100%; }
+@media (max-width: 480px) {
+  .aiimg-sky-grid { grid-template-columns: repeat(3, 1fr); }
+}
+.aiimg-pop .aiimg-grid2[hidden], .aiimg-sky .aiimg-grid2[hidden], .aiimg-thumb .aiimg-grid2[hidden] { display: none; }
+/* the site's .chip.is-on puts dark ink on the accent, which is bronze in light theme */
+[data-theme="light"] .aiimg-pop .chip.is-on, [data-theme="light"] .aiimg-sky .chip.is-on, [data-theme="light"] .aiimg-thumb .chip.is-on { color: #ffffff; }
+@media (prefers-color-scheme: light) {
+  [data-theme="system"] .aiimg-pop .chip.is-on, [data-theme="system"] .aiimg-sky .chip.is-on, [data-theme="system"] .aiimg-thumb .chip.is-on { color: #ffffff; }
+}
+/* ==== /C2-pop-sky-thumb ==== */
+
+/* Light theme: the accent is a dark bronze, so a selected chip needs a light label. */
+:root[data-theme="light"] .chip.is-on, :root[data-theme="light"] .chip.is-on:hover, :root[data-theme="light"] .chip.is-on:focus-visible { color: #fff; }
+@media (prefers-color-scheme: light) { :root[data-theme="system"] .chip.is-on, :root[data-theme="system"] .chip.is-on:hover, :root[data-theme="system"] .chip.is-on:focus-visible { color: #fff; } }
