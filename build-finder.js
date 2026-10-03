@@ -16,7 +16,8 @@
  * description and keywords for every tool that is not a unit conversion
  * (conversions are matched from their slugs at run time), plus a seventh
  * column, what goes in and what comes out, when build/jobs.js is there to
- * say — then the page,
+ * say, and an eighth on the calculators that declare which input a typed
+ * number fills ("bill|tip", see PREFILL in build/jobs.js) — then the page,
  * cut from an existing utilities page so the shell is today's shell, its
  * row in the search index, its sitemap line, its glyph and its card on the
  * Utilities hub. Counts, crumbs and manifests are left to the pipeline.
@@ -142,7 +143,7 @@ function keywordsBySlug() {
 function finderIndex() {
   const kws = keywordsBySlug();
   const rows = [];
-  let withKeywords = 0;
+  let withKeywords = 0, prefilled = 0;
   for (const [title, p, id] of searchIndex()) {
     /* conversions are matched from their slugs at run time; the finder does not list itself */
     if (p.indexOf('conversions/') === 0 || p === SECTION + '/' + SLUG + '/') continue;
@@ -156,10 +157,15 @@ function finderIndex() {
     const kw = kws[slug] || kws[id] || [];
     if (kw.length) withKeywords++;
     const row = [String(title), p, g ? g[1] : ('i-' + id), section ? section.name : p.split('/')[0], d ? unesc(d[1]) : '', kw.join(' | ')];
-    if (JOBS) row.push(ioOf(p));
+    if (JOBS) { row.push(ioOf(p)); const pf = prefillCol(p); if (pf) { row.push(pf); prefilled++; } }
     rows.push(row);
   }
-  return { rows, withKeywords };
+  return { rows, withKeywords, prefilled };
+}
+/** The eighth column, only on the rows that have one. */
+function prefillCol(p) {
+  if (!JOBS || typeof JOBS.prefillOf !== 'function') return '';
+  try { return String(JOBS.prefillOf('/' + p) || ''); } catch (e) { return ''; }
 }
 /** The seventh column: '' when the module has nothing to say about a page. */
 function ioOf(p) {
@@ -329,9 +335,10 @@ function main() {
   const glyphs = patchIcons();
   const indexed = patchSearchIndex();
   const total = indexTotal() + (CHECK ? indexed : 0);
-  const { rows, withKeywords } = finderIndex();
-  /* v2 is the seven-column shape; the engine reads either */
-  const fi = write('assets/finder-index.js', 'window.FINDER_INDEX=' + JSON.stringify({ v: JOBS ? 2 : 1, built: new Date().toISOString().slice(0, 10), tools: rows }) + ';\n');
+  const { rows, withKeywords, prefilled } = finderIndex();
+  /* v2 is the seven-column shape, v3 adds the eighth (prefill) where a
+     calculator declares one; the engine reads any of them */
+  const fi = write('assets/finder-index.js', 'window.FINDER_INDEX=' + JSON.stringify({ v: JOBS ? (typeof JOBS.prefillOf === 'function' ? 3 : 2) : 1, built: new Date().toISOString().slice(0, 10), tools: rows }) + ';\n');
   const parts = shell();
   const rel = SECTION + '/' + SLUG + '/index.html';
   const fresh = !fs.existsSync(path.join(ROOT, rel));
@@ -343,7 +350,8 @@ function main() {
 
   console.log('\nbuild-finder.js' + (CHECK ? '  (--check: nothing will be written)' : ''));
   console.log('  finder index        ' + rows.length + ' tools with descriptions, ' + withKeywords + ' with keywords' + (fi ? ' (written)' : ' (unchanged)'));
-  console.log('  io column           ' + (JOBS ? 'from build/jobs.js (index v2)' : 'build/jobs.js absent: six columns (index v1)'));
+  console.log('  io column           ' + (JOBS ? 'from build/jobs.js' : 'build/jobs.js absent: six columns (index v1)'));
+  console.log('  prefill column      ' + prefilled + ' calculators');
   console.log('  page                ' + (built ? (fresh ? 'created' : 'updated') : 'unchanged'));
   console.log('  utilities hub card  ' + (hub ? 'added' : 'unchanged'));
   console.log('  search index        ' + (indexed ? 'row added' : 'unchanged'));

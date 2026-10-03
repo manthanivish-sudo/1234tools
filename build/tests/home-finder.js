@@ -21,7 +21,10 @@
  *   h. a number typed with a conversion ("5 lbs in kg") rides along as ?v=,
  *      and the conversion page opens with it in the box; calculators open on
  *      the keys their spec declares (?amount=…), refusing values the field
- *      could not hold, and text tools on ?text=, none of it counted as use
+ *      could not hold, and text tools on ?text=, none of it counted as use;
+ *      a number typed with a calculator job ("tip on 84.50", "20% of 150")
+ *      rides along when the one answer declares its field (build/jobs.js
+ *      PREFILL), and nothing rides when the mapping is a guess
  *   e. the home <title> carries the register total and is 70 chars or fewer;
  *      the descriptions carry it and are 160 or fewer
  *   f. the order of the blocks at the top of main, in the DOM and in the file
@@ -165,6 +168,27 @@ const registerTotal = () => {
   });
   check(valued.a.kind === 'convert' && valued.a.value === 5 && valued.b.kind === 'convert' && valued.b.value === -40 && valued.c.value === 1.5 && valued.d.value === 1000, 'the number rides along: 5 lbs -> 5, -40 celsius -> -40, "1,5 km" -> 1.5, "1,000 metres" -> 1000', JSON.stringify(valued));
   check(valued.e.kind === 'convert' && valued.e.value === undefined && valued.f.kind === 'none' && valued.f.elsewhere === 5, 'no number typed, none carried; a scoped miss keeps it on the site-wide answer', JSON.stringify([valued.e, valued.f]));
+
+  /* h. a number typed with a calculator job, when the one answer declares its field */
+  const filled = await page.evaluate(() => {
+    const pick = (r) => ({ kind: r.kind, top: r.hit ? r.hit.path : (r.results && r.results[0] ? r.results[0].doc.path : null), value: r.value, fill: r.fill || null });
+    const q = ['20% of 150', 'tip on 84.50', '15% tip on 84.50', 'emi on 50 lakh', 'bmi 70 kg 175 cm', 'km to miles', 'tip on 84.50 for 4 people', 'loan for 30 years', 'percentage of 150', 'compound interest on 10000 at 7%'];
+    const out = {};
+    for (const t of q) out[t] = pick(window.ToolFinder.understand(t));
+    out.scoped = window.ToolFinder.understand('tip on 84.50', { section: 'finance' });
+    out.scoped = { kind: out.scoped.kind, else: out.scoped.elsewhere && pick(out.scoped.elsewhere) };
+    return out;
+  });
+  const f = (q) => JSON.stringify(filled[q]);
+  check(filled['20% of 150'].kind === 'one' && filled['20% of 150'].top === 'mathematics/percentage/' && f('20% of 150').indexOf('"fill":{"value":20,"total":150}') >= 0, '"20% of 150" -> the percentage tool with value=20, total=150: ' + f('20% of 150'));
+  check(filled['tip on 84.50'].kind === 'one' && filled['tip on 84.50'].top === 'utilities/tip-calculator/' && f('tip on 84.50').indexOf('"fill":{"bill":84.5}') >= 0, '"tip on 84.50" -> the tip calculator with bill=84.5: ' + f('tip on 84.50'));
+  check(f('15% tip on 84.50').indexOf('"fill":{"tip":15,"bill":84.5}') >= 0 && f('emi on 50 lakh').indexOf('"fill":{"amount":5000000}') >= 0 && f('compound interest on 10000 at 7%').indexOf('"fill":{"principal":10000,"rate":7}') >= 0, 'a % number fills the percent field, "50 lakh" is 5,000,000: ' + [f('15% tip on 84.50'), f('emi on 50 lakh')].join(' '));
+  check(filled['bmi 70 kg 175 cm'].fill === null && filled['bmi 70 kg 175 cm'].value === undefined, '"bmi 70 kg 175 cm" carries nothing (two numbers with units; BMI declares no field): ' + f('bmi 70 kg 175 cm'));
+  check(filled['km to miles'].kind === 'convert' && filled['km to miles'].top === 'conversions/length/kilometer-to-mile/' && filled['km to miles'].value === undefined && filled['km to miles'].fill === null, '"km to miles" unchanged: the conversion, nothing carried');
+  check(filled['tip on 84.50 for 4 people'].top === 'utilities/tip-calculator/' && filled['tip on 84.50 for 4 people'].fill === null && filled['loan for 30 years'].fill === null && filled['percentage of 150'].fill === null, 'guesses carry nothing: a second number ("4 people"), a unit ("30 years"), a lone number where either box fits ("percentage of 150")', [f('tip on 84.50 for 4 people'), f('loan for 30 years'), f('percentage of 150')].join(' '));
+  check(filled.scoped.kind === 'none' && filled.scoped.else && filled.scoped.else.top === 'utilities/tip-calculator/' && JSON.stringify(filled.scoped.else.fill) === '{"bill":84.5}', 'a scoped miss keeps the fill on the site-wide answer', JSON.stringify(filled.scoped));
+  const protoWords = await page.evaluate(() => ['constructor', 'constructor to miles', 'toString', '50 constructor'].map((q) => { try { return q + ':' + window.ToolFinder.understand(q).kind; } catch (e) { return q + ':THROWS ' + e.message; } }));
+  check(protoWords.every((s) => s.indexOf('THROWS') < 0), 'words that name Object\u2019s own properties ("constructor", "toString") are just words: ' + protoWords.join(', '));
 
   /* the scoped page itself, through the URL */
   await page.goto(BASE + '/utilities/tool-finder/?section=pdf&q=' + encodeURIComponent('merge two pdf files'), { waitUntil: 'networkidle0', timeout: 60000 });
@@ -328,10 +352,28 @@ const registerTotal = () => {
   check(valuedCard.href === '/conversions/mass/pound-to-kilogram/?v=5' && valuedCard.sec === 'conversions' && /opens with 5 already in the box/i.test(valuedCard.text) && /Opens with 5/.test(valuedCard.desc) && valuedCard.bots === 1, '"5 lbs in kg" links to the pair page with ?v=5 and says so: ' + valuedCard.href + ' / ' + valuedCard.text);
   check(valuedCard.chips[0] === 'All mass conversions' && valuedCard.chips[1] === 'Reverse it', 'a conversion answer offers the family and the reverse: ' + valuedCard.chips.slice(0, 2).join(' / '));
 
+  /* h. a calculator card carries the typed number the same way */
+  const heroCard = async (q, pathPart) => {
+    await page.$eval('.hero-finder .finder-input', (e) => { e.value = ''; });
+    await page.type('.hero-finder .finder-input', q);
+    await page.keyboard.press('Enter');
+    await page.waitForFunction((p) => { const a = document.querySelector('.hero-finder .finder-answer .finder-card'); return a && a.getAttribute('href').indexOf(p) >= 0; }, { timeout: 20000 }, pathPart);
+    return page.evaluate(() => ({
+      href: document.querySelector('.hero-finder .finder-answer .finder-card').getAttribute('href'),
+      text: document.querySelector('.hero-finder .finder-answer .finder-text').textContent,
+      desc: (document.querySelector('.hero-finder .finder-answer .finder-card-desc') || {}).textContent || '',
+      bots: document.querySelectorAll('.hero-finder .finder-answer .finder-msg.is-bot').length
+    }));
+  };
+  const tipCard = await heroCard('tip on 84.50', '/utilities/tip-calculator/');
+  check(tipCard.href === '/utilities/tip-calculator/?bill=84.5' && /opens with 84\.5 already filled in/i.test(tipCard.text) && /^Opens with 84\.5 already filled in\./.test(tipCard.desc) && tipCard.bots === 1, '"tip on 84.50" links to the tip calculator with ?bill=84.5 and says so: ' + tipCard.href + ' / ' + tipCard.text);
+  const pctCard = await heroCard('20% of 150', '/mathematics/percentage/');
+  check(pctCard.href === '/mathematics/percentage/?value=20&total=150' && /opens with 20% and 150 already filled in/i.test(pctCard.text), '"20% of 150" links to the percentage tool with ?value=20&total=150: ' + pctCard.href + ' / ' + pctCard.text);
+
   /* c. analytics: shape, never words */
   const calls = await page.evaluate(() => window.__gtagCalls);
   const answers = calls.filter((c) => c[0] === 'event' && c[1] === 'finder_answer');
-  const typed = ['merge two pdf files', 'count the words in my essay', 'knitting', 'scarf', 'merge', 'essay', '5 lbs', 'lbs in kg', chipText.toLowerCase()];
+  const typed = ['merge two pdf files', 'count the words in my essay', 'knitting', 'scarf', 'merge', 'essay', '5 lbs', 'lbs in kg', 'tip on', '84.5', '20% of', chipText.toLowerCase()];
   const leaked = calls.filter((c) => typed.some((w) => JSON.stringify(c).toLowerCase().indexOf(w) >= 0));
   check(answers.length >= 4 && answers.every((c) => c[2] && typeof c[2].kind === 'string' && c[2].mode === 'inline' && c[2].section === '(all)'), 'finder_answer fired ' + answers.length + 'x with kind/mode/section: ' + JSON.stringify(answers.map((c) => c[2].kind)));
   check(leaked.length === 0 && answers.every((c) => Object.keys(c[2]).sort().join() === 'kind,mode,section'), 'no analytics call carries the typed words; params are exactly kind, mode, section', JSON.stringify(leaked).slice(0, 200));
@@ -349,6 +391,16 @@ const registerTotal = () => {
   await page.waitForSelector('#u-value', { timeout: 15000 });
   const notANumber = await page.$eval('#u-value', (e) => e.value);
   check(notANumber === '1', 'a ?v= that is not a number keeps the worked example of 1 (got ' + notANumber + ')');
+
+  /* h. the cards' own hrefs open worked out */
+  await page.goto(BASE + tipCard.href, { waitUntil: 'networkidle0', timeout: 60000 });
+  await page.waitForSelector('.tool-results .result-primary', { timeout: 15000 });
+  const tipPage = await page.evaluate(() => ({ bill: document.querySelector('[name="bill"]').value, rows: Array.from(document.querySelectorAll('.tool-results .result')).map((r) => r.textContent) }));
+  check(tipPage.bill === '84.5' && tipPage.rows.some((r) => /^Tip amount.*10\.56/.test(r)) && tipPage.rows.some((r) => /^Total including tip.*95\.06/.test(r)), 'the tip card opens on a bill of 84.5: tip 10.56, total 95.06', JSON.stringify(tipPage));
+  await page.goto(BASE + pctCard.href, { waitUntil: 'networkidle0', timeout: 60000 });
+  await page.waitForSelector('.tool-results .result-primary', { timeout: 15000 });
+  const pctPage = await page.evaluate(() => ({ value: document.querySelector('[name="value"]').value, total: document.querySelector('[name="total"]').value, rows: Array.from(document.querySelectorAll('.tool-results .result')).map((r) => r.textContent), used: window.__toolUsed }));
+  check(pctPage.value === '20' && pctPage.total === '150' && pctPage.rows.some((r) => /^A% of B30\b/.test(r)) && pctPage.used === 0, 'the percentage card opens on 20 and 150: "A% of B" is 30, and it is not counted as use', JSON.stringify(pctPage));
 
   /* h. calculators open on the keys their spec declares; text tools on ?text= */
   const calcAt = async (url) => {

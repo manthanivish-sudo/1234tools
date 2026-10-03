@@ -28,7 +28,7 @@
   /* ------------------------------------------------------------------ */
   /* language                                                           */
   /* ------------------------------------------------------------------ */
-  const STOP = new Set(('a an the for of on at by with from and or my me i we you your it its is are be am was can could do does how what which want need would like please help find looking look tool tools online free make create get some any this that there here one thing something way best good quick easy simple use using').split(' '));
+  const STOP = new Set(('a an the for of on at by with from and or my me i we you your it its is are be am was can could do does how what whats which want need would like please help find looking look tool tools online free make create get some any this that there here one thing something way best good quick easy simple use using').split(' '));
   /* words that mean the same job; each group becomes one extra token */
   const GROUPS = [
     ['image', 'photo', 'picture', 'pic', 'img', 'photograph', 'jpeg', 'jpg', 'png', 'webp', 'selfie', 'snapshot'],
@@ -112,7 +112,9 @@
     ['shop', 'store', 'retail', 'seller', 'ecommerce', 'amazon', 'flipkart', 'listing'],
     ['ocr', 'scanned', 'scan', 'photo', 'read', 'reader', 'extract', 'extractor']
   ];
-  const groupOf = {};
+  /* Every word table is prototype-free: "constructor" typed into the box
+     must find nothing, not Object's own constructor (it threw here). */
+  const groupOf = Object.create(null);
   GROUPS.forEach((g, i) => g.forEach((w) => { (groupOf[w] = groupOf[w] || []).push(i); }));
 
   function stem(w) {
@@ -147,7 +149,7 @@
   /* units                                                              */
   /* ------------------------------------------------------------------ */
   /* alias -> candidate slugs, as the conversion pages spell them */
-  const UNITS = {
+  const UNITS = Object.assign(Object.create(null), {
     km: ['kilometer'], kms: ['kilometer'], kilometre: ['kilometer'], kilometres: ['kilometer'], kilometer: ['kilometer'], kilometers: ['kilometer'],
     mi: ['mile'], mile: ['mile'], miles: ['mile'], m: ['meter', 'minute'], metre: ['meter'], metres: ['meter'], meter: ['meter'], meters: ['meter'],
     cm: ['centimeter'], centimetre: ['centimeter'], centimetres: ['centimeter'], centimeter: ['centimeter'], centimeters: ['centimeter'],
@@ -174,8 +176,8 @@
     bit: ['bit'], bits: ['bit'], byte: ['byte'], bytes: ['byte'], b: ['byte'], kb: ['kilobyte-1000'], kilobyte: ['kilobyte-1000'], kilobytes: ['kilobyte-1000'], mb: ['megabyte-1000'], megabyte: ['megabyte-1000'], megabytes: ['megabyte-1000'],
     gb: ['gigabyte-1000'], gigabyte: ['gigabyte-1000'], gigabytes: ['gigabyte-1000'], tb: ['terabyte-1000'], terabyte: ['terabyte-1000'], terabytes: ['terabyte-1000'], kib: ['kibibyte-1024'], mib: ['mebibyte-1024'], gib: ['gibibyte-1024'], tib: ['tebibyte-1024'],
     rad: ['radian'], radian: ['radian'], radians: ['radian'], deg: ['degree'], degree: ['degree'], degrees: ['degree'], '°': ['degree'], grad: ['gradian'], gradian: ['gradian'], gradians: ['gradian'], turn: ['turn'], turns: ['turn'], rev: ['turn'], revolution: ['turn'], arcmin: ['arcminute'], arcsec: ['arcsecond']
-  };
-  const FAMILY_WORDS = { length: 'length', distance: 'length', mass: 'mass', weight: 'mass', temperature: 'temperature', temp: 'temperature', volume: 'volume', capacity: 'volume', area: 'area', time: 'time', duration: 'time', speed: 'speed', velocity: 'speed', pressure: 'pressure', energy: 'energy', power: 'power', data: 'data', storage: 'data', angle: 'angle' };
+  });
+  const FAMILY_WORDS = Object.assign(Object.create(null), { length: 'length', distance: 'length', mass: 'mass', weight: 'mass', temperature: 'temperature', temp: 'temperature', volume: 'volume', capacity: 'volume', area: 'area', time: 'time', duration: 'time', speed: 'speed', velocity: 'speed', pressure: 'pressure', energy: 'energy', power: 'power', data: 'data', storage: 'data', angle: 'angle' });
 
   /* ------------------------------------------------------------------ */
   /* the index                                                          */
@@ -192,19 +194,25 @@
   }
 
   let DOCS = null, DF = null, N = 0, VOCAB = null, CONV = null, FAMILY_HUBS = null;
+  /* The 8th index column, "bill|tip": the input a lone typed number fills,
+     then the input a number written with % fills. Either side may be empty;
+     a third part, "pair", says the tool takes a percentage of a number and
+     a plain number counts only beside a percentage. build/jobs.js declares
+     them and checks them against the tool's spec. */
+  const prefillOf = (pf) => { if (!pf) return null; const [n, pct, pair] = String(pf).split('|'); return n || pct ? { n: n || '', pct: pct || '', pair: pair === 'pair' } : null; };
   function build() {
     const fi = window.FINDER_INDEX.tools;
     DOCS = fi.map((r) => {
-      const [title, p, glyph, section, desc, kw, io] = r;
+      const [title, p, glyph, section, desc, kw, io, pf] = r;
       const slug = p.replace(/\/+$/, '').split('/').pop().replace(/-/g, ' ');
       const fields = { title: tokens(title), slug: tokens(slug), kw: tokens(kw.replace(/\|/g, ' ')), desc: tokens(desc), section: tokens(section) };
-      const tf = {};
+      const tf = Object.create(null);
       const add = (list, w) => { for (const t of list) tf[t] = Math.max(tf[t] || 0, w) + (tf[t] ? 0.15 : 0); };
       add(fields.desc, 1.2); add(fields.section, 1); add(fields.kw, 2.5); add(fields.slug, 3); add(fields.title, 4);
-      return { title, path: p, glyph, section, desc, io: io ? String(io) : '', tf, titleText: title.toLowerCase(), slugText: slug, kwText: kw.toLowerCase() };
+      return { title, path: p, glyph, section, desc, io: io ? String(io) : '', prefill: prefillOf(pf), tf, titleText: title.toLowerCase(), slugText: slug, kwText: kw.toLowerCase() };
     });
     N = DOCS.length;
-    DF = {}; VOCAB = new Set();
+    DF = Object.create(null); VOCAB = new Set();
     for (const d of DOCS) for (const t in d.tf) { DF[t] = (DF[t] || 0) + 1; if (t[0] !== '~') VOCAB.add(t); }
     CONV = {}; FAMILY_HUBS = {};
     for (const [title, p] of window.SEARCH_INDEX) {
@@ -281,6 +289,74 @@
     const v = Number(t);
     return Number.isFinite(v) ? v : undefined;
   }
+  /* a number, or a word that only scales one ("50 lakh") */
+  const isNum = (t) => /^(\d+%?|%)$/.test(t) || t in MAGNITUDE;
+  /* what people put after a number to scale it: "50 lakh", "2k", "1.5 crore" */
+  const MAGNITUDE = Object.assign(Object.create(null), { k: 1e3, thousand: 1e3, lakh: 1e5, lakhs: 1e5, lac: 1e5, lacs: 1e5, crore: 1e7, crores: 1e7, cr: 1e7, million: 1e6, millions: 1e6, mn: 1e6, bn: 1e9, billion: 1e9 });
+  /* money words name the number rather than another field: "vat on 100 pounds" is 100 */
+  const MONEY = new Set('pound pounds quid gbp rupee rupees rs inr dollar dollars usd euro euros eur dirham dirhams aed bucks'.split(' '));
+  /* a number followed by one of these, or by a unit, belongs to some other field */
+  const COUNTED = new Set('people persons person guests guest ways times x sided'.split(' '));
+  /**
+   * Every number in a question, as { v, pct } — pct when written "20%",
+   * "20 percent" or "20 per cent". { other } is a number with a unit or a
+   * count after it ("30 years", "70 kg", "4 people"), which belongs to a
+   * field nobody declared; { bad } is a token with digits that is not a
+   * plain number ("16:9", "2026-27", "10am", "mp3"). Currency signs and
+   * "lakh"/"crore"/"k" are read; "1,000" and "1,5" as typedNumber reads them.
+   * The array's .rest is the question without its numbers and the words
+   * that belong to them ("20 percent", "50 lakh").
+   */
+  function numbersIn(text) {
+    const w = String(text).toLowerCase().replace(/[£$€₹]/g, ' ').replace(/\brs\.?\s*(?=\d)/g, ' ')
+      .replace(/(\d)\s*%/g, '$1 % ').replace(/[?!;:()"]/g, ' ')
+      .split(/\s+/).map((x) => x.replace(/[.,]+$/, '')).filter(Boolean);
+    const out = [], rest = [];
+    for (let i = 0; i < w.length; i++) {
+      if (!/\d/.test(w[i])) { rest.push(w[i]); continue; }
+      const m = /^(-?\d[\d,]*(?:\.\d+)?)([a-z]*)$/.exec(w[i]);
+      let v = m ? typedNumber(m[1]) : undefined;
+      if (v === undefined) { out.push({ bad: true }); continue; }
+      let suffix = m[2], j = i;
+      const next = () => w[j + 1] || '';
+      if (!suffix && MAGNITUDE[next()]) { suffix = next(); j++; }
+      if (MAGNITUDE[suffix]) { v *= MAGNITUDE[suffix]; suffix = ''; }
+      if (suffix) {
+        out.push(UNITS[suffix] || COUNTED.has(suffix) ? { v, other: true } : MONEY.has(suffix) ? { v } : { bad: true });
+        i = j; continue;
+      }
+      let pct = false;
+      if (next() === '%' || next() === 'percent' || next() === 'pc') { pct = true; j++; }
+      else if (next() === 'per' && w[j + 2] === 'cent') { pct = true; j += 2; }
+      const tail = pct ? '' : next();
+      /* "in" is a preposition far more often than an inch */
+      const other = !!tail && tail !== 'in' && !MONEY.has(tail) && (!!UNITS[tail] || COUNTED.has(tail));
+      out.push(other ? { v, other } : { v, pct });
+      i = j;
+    }
+    out.rest = rest.join(' ');
+    return out;
+  }
+  /**
+   * The fields a question's numbers fill on a calculator that declares them
+   * (doc.prefill), or null. All or nothing: at most one plain number and one
+   * percentage, each with a declared field to go to, none negative, none
+   * with a unit after it. A wrong guess costs more than an empty box.
+   */
+  function fillFor(doc, nums) {
+    const pf = doc && doc.prefill;
+    if (!pf || !nums.length || nums.some((n) => n.bad || n.other || n.v < 0)) return null;
+    const plain = nums.filter((n) => !n.pct), pct = nums.filter((n) => n.pct);
+    if (plain.length > 1 || pct.length > 1) return null;
+    if ((plain.length && !pf.n) || (pct.length && !pf.pct)) return null;
+    if (pf.pair && plain.length && !pct.length) return null;
+    const fill = {}, said = [];
+    for (const n of nums) {
+      fill[n.pct ? pf.pct : pf.n] = n.v;
+      said.push(n.v.toLocaleString('en-GB', { maximumFractionDigits: 6 }) + (n.pct ? '%' : ''));
+    }
+    return { fill, filled: said.join(' and ') };
+  }
   /** "5 km to miles", "psi in bar", "convert kg into lbs", "celsius fahrenheit" */
   function conversionIntent(text) {
     let s = text.toLowerCase().replace(/→|->|=>/g, ' to ').replace(/\bconvert(ing|er|ed)?\b|\bconversion\b|\bplease\b|\bcalculator\b|\bhow (many|much)\b|\bis\b|\bwhat\b|\bare\b|\?/g, ' ').replace(/\s+/g, ' ').trim();
@@ -306,32 +382,40 @@
 
   function rank(text, pool) {
     const qTokens = tokens(text);
-    const plain = qTokens.filter((t) => t[0] !== '~');
+    /* a number is a value, not a word for the job: "tip on 84.50" is one
+       word long. Numbers never count against a match, and one the site has
+       no use for is dropped rather than "corrected" into another number */
+    const plain = qTokens.filter((t) => t[0] !== '~' && !isNum(t));
     const fixes = [];
     const expanded = [];
     for (const t of qTokens) {
       if (t[0] === '~' || DF[t]) { expanded.push(t); continue; }
+      if (isNum(t)) continue;
       const alt = nearest(t);
       if (alt) { expanded.push(alt); fixes.push([t, alt]); const gs = groupOf[alt]; if (gs) for (const g of gs) expanded.push('~' + g); }
     }
     const q = Array.from(new Set(expanded));
-    const qPlain = q.filter((t) => t[0] !== '~');
+    const qPlain = q.filter((t) => t[0] !== '~' && !isNum(t));
     const phrase = text.toLowerCase().trim();
     const scored = [];
     for (const d of (pool || DOCS)) {
-      let s = 0, matched = 0;
+      let s = 0, matched = 0, numbers = 0;
       const why = [];
       for (const t of q) {
         const w = d.tf[t];
         if (!w) continue;
         s += w * idf(t) * (t[0] === '~' ? 0.6 : 1);
-        if (t[0] !== '~') { matched++; why.push(t); }
+        if (t[0] === '~') continue;
+        if (isNum(t)) numbers++; else { matched++; why.push(t); }
       }
       if (!s) continue;
       /* against every word the reader typed, not only the ones the site
          knows: a word nothing here matches is the strongest sign the tool
-         is missing, and must count against the match, not vanish */
-      const coverage = plain.length ? matched / new Set(plain).size : 1;
+         is missing, and must count against the match, not vanish. A number
+         the tool's own text has ("16:9") counts for it; one it lacks is a
+         value, and never counts against it */
+      const asked = new Set(plain).size + numbers;
+      const coverage = asked ? (matched + numbers) / asked : 1;
       s *= 0.45 + 0.55 * coverage;
       if (phrase.length > 3 && d.titleText.indexOf(phrase) >= 0) s += 6;
       if (qPlain.length > 1 && qPlain.every((t) => d.tf[t] && d.tf[t] >= 3)) s += 3;
@@ -383,6 +467,19 @@
       if (section) return { kind: 'none', text: t, fixes: [] };
     }
     const pool = section ? DOCS.filter((d) => d.path.indexOf(section + '/') === 0) : DOCS;
+    /* "20% of 150" has no word for the job once its numbers are read as
+       values: the percentage is the job, and it goes to the calculator that
+       declares it takes a percentage of a number (prefill.pair) */
+    const nums = numbersIn(t);
+    if (nums.some((n) => n.pct) && !tokens(nums.rest).some((x) => x[0] !== '~' && !isNum(x))) {
+      const takers = pool.filter((d) => d.prefill && d.prefill.pair);
+      if (takers.length === 1) {
+        const out = { kind: 'one', results: [{ doc: takers[0], score: 1, coverage: 1, why: [] }], text: t, fixes: [] };
+        const f = fillFor(takers[0], nums);
+        if (f) { out.fill = f.fill; out.filled = f.filled; }
+        return out;
+      }
+    }
     let r = rank(t, pool), used = t;
     /* a short follow-up narrows the last question rather than starting over */
     if (previous && previous.text && r.plain.length <= 2) {
@@ -398,7 +495,11 @@
     const unknown = r.plain.filter((w) => !DF[w] && w.length >= 5 && !r.fixes.some((f) => f[0] === w)).length;
     const strong = top.coverage >= 0.75 && unknown === 0 && (!second || top.score > second.score * 1.35);
     const weak = top.coverage < 0.6 || top.score < 2.2;
-    return { kind: weak ? 'weak' : strong ? 'one' : 'several', results: r.results.slice(0, weak ? 3 : strong ? 3 : 4), text: used, fixes: r.fixes };
+    const out = { kind: weak ? 'weak' : strong ? 'one' : 'several', results: r.results.slice(0, weak ? 3 : strong ? 3 : 4), text: used, fixes: r.fixes };
+    /* the numbers typed with the job ride along only when there is one
+       answer and it declares where they go; "several" carries nothing */
+    if (out.kind === 'one') { const f = fillFor(top.doc, nums); if (f) { out.fill = f.fill; out.filled = f.filled; } }
+    return out;
   }
 
   /* ------------------------------------------------------------------ */
@@ -599,6 +700,13 @@
       path: hit.path + (value !== undefined ? '?v=' + encodeURIComponent(value) : ''),
       desc: value !== undefined ? 'Opens with ' + value + ' already in the box, converted both ways.' : 'Type a value and it converts both ways, with the formula shown.'
     });
+    /* the numbers a calculator declared ride along as ?key=value, and the
+       page opens worked out on them */
+    const filledDoc = (d, u) => Object.assign({}, d, {
+      path: d.path + '?' + Object.keys(u.fill).map((k) => encodeURIComponent(k) + '=' + encodeURIComponent(u.fill[k])).join('&'),
+      desc: 'Opens with ' + u.filled + ' already filled in. ' + d.desc
+    });
+    const firstFilled = (u, list) => list.map((r, i) => (i === 0 && u.fill ? { doc: filledDoc(r.doc, u) } : r));
     const familyDoc = (u) => ({ title: u.family[0].toUpperCase() + u.family.slice(1) + ' conversions', path: u.path, glyph: 'i-' + u.family, section: 'Conversions', desc: 'Every pair in the family on one page.' });
     /* the site-wide answer, under a scoped one that found little or nothing */
     function elsewhere(e) {
@@ -606,7 +714,7 @@
       w.appendChild(el('p', 'finder-text finder-elsewhere-label', 'Elsewhere on the site:'));
       if (e.kind === 'convert') w.appendChild(cards([{ doc: convDoc(e.hit, e.value) }]));
       else if (e.kind === 'family') w.appendChild(cards([{ doc: familyDoc(e) }]));
-      else w.appendChild(cards(e.results.slice(0, 3)));
+      else w.appendChild(cards(firstFilled(e, e.results.slice(0, 3))));
       return w;
     }
     function narrowRow(text) {
@@ -704,7 +812,7 @@
         }
         case 'one': {
           const top = u.results[0];
-          const w = textAnd('That is the ' + top.doc.title + fixNote(u.fixes) + '.', cards([top]));
+          const w = textAnd('That is the ' + top.doc.title + fixNote(u.fixes) + '.' + (u.fill ? ' It opens with ' + u.filled + ' already filled in.' : ''), cards(firstFilled(u, [top])));
           if (u.results.length > 1) {
             const moreBox = el('details', 'finder-more');
             moreBox.appendChild(el('summary', null, 'Not quite? Two more that are close'));

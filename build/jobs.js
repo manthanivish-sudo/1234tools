@@ -454,6 +454,66 @@ const START = {
 
 /* ------------------------------------------------------------------ */
 
+/* path → the calculator inputs a number typed into the Tool Finder fills,
+   for the tools where one number is unmistakably the main input. "n" takes a
+   lone plain number ("tip on 84.50"), "pct" one written with % ("15% tip");
+   "pair" means the plain number only counts beside a percentage ("20% of
+   150" fills both, "percentage of 150" fills nothing: alone it could be
+   either box). The finder carries nothing when a question holds more numbers
+   than that, a number with a unit after it ("30 years", "70 kg"), or when it
+   has several answers. The self-test checks every key against the spec.
+   Left out on purpose: two-number tools (BMI, ratio, fractions, CAGR); tools
+   whose lone number could be either of two fields (CGPA ↔ percentage, shoe
+   sizes, number bases, cooking units, FD vs RD); fields with a max the
+   finder cannot see (PPF); dates (age needs a whole date of birth, not a
+   year); and tools where "at age 30" would land in the money box (EPF, NPS,
+   heart-rate zones). GST's rate is a select, so only its amount is here. */
+const PREFILL = {
+  '/utilities/tip-calculator/':        { n: 'bill', pct: 'tip' },
+  '/mathematics/percentage/':          { n: 'total', pct: 'value', pair: true },
+  '/business/discount-calculator/':    { n: 'original', pct: 'd1' },
+  '/finance/vat-sales-tax/':           { n: 'amount', pct: 'rate' },
+  '/india/gst-calculator/':            { n: 'amount' },
+  '/finance/loan-payment/':            { n: 'amount', pct: 'rate' },
+  '/india/emi-calculator/':            { n: 'amount', pct: 'rate' },
+  '/business/amortization-schedule/':  { n: 'amount', pct: 'rate' },
+  '/finance/compound-interest/':       { n: 'principal', pct: 'rate' },
+  '/india/lumpsum-returns/':           { n: 'principal', pct: 'rate' },
+  '/india/sip-calculator/':            { n: 'monthly', pct: 'rate' },
+  '/india/india-income-tax/':          { n: 'gross' },
+  '/business/uk-take-home-pay/':       { n: 'gross' },
+  '/india/ctc-take-home/':             { n: 'ctc' },
+  '/business/employer-cost/':          { n: 'salary' },
+  '/india/gratuity-calculator/':       { n: 'salary' },
+  '/india/tds-calculator/':            { n: 'amount' },
+  '/business/commission-calculator/':  { n: 'sales' },
+  '/business/depreciation/':           { n: 'cost' },
+  '/mathematics/prime-factorisation/': { n: 'n' },
+  '/mathematics/roman-numerals/':      { n: 'value' }
+};
+
+/** The finder index's 8th column for a tool: "n|pct" or "n|pct|pair", '' when none. */
+function prefillOf(p) {
+  const f = PREFILL[normalise(p)];
+  if (!f) return '';
+  return (f.n || '') + (f.pct || f.pair ? '|' + (f.pct || '') : '') + (f.pair ? '|pair' : '');
+}
+
+/** The inputs of the calculator spec a page mounts, or null when it mounts none. */
+function specInputs(p) {
+  const abs = path.join(ROOT, normalise(p).replace(/^\/+/, ''), 'index.html');
+  if (!fs.existsSync(abs)) return null;
+  const html = fs.readFileSync(abs, 'utf8');
+  const id = /MVRTool\.mount\(window\.TOOLS\['([^']+)'\]/.exec(html);
+  if (!id) return null;
+  const box = { TOOLS: {} };
+  for (const m of html.matchAll(/<script src="\/(engine\/(?:calc|biz|edu)-[^"]+\.js)"/g)) {
+    try { new Function('window', 'document', fs.readFileSync(path.join(ROOT, m[1]), 'utf8'))(box, { addEventListener() {}, querySelector() { return null; } }); } catch (e) { /* not a spec file */ }
+  }
+  const spec = box.TOOLS[id[1]];
+  return spec && Array.isArray(spec.inputs) ? spec.inputs : null;
+}
+
 const unesc = (s) => String(s)
   .replace(/&(?:amp|#0*38);/g, '&').replace(/&(?:lt|#0*60);/g, '<').replace(/&(?:gt|#0*62);/g, '>')
   .replace(/&(?:quot|#0*34);/g, '"').replace(/&(?:#0*39|apos|#x27);/g, '\'').replace(/&nbsp;/g, ' ');
@@ -564,6 +624,18 @@ function selfTest() {
   for (const p of Object.keys(JOBS).concat(Object.keys(DESCS))) {
     if (!tools.some((t) => t.path === p)) problems.push(p + ': in the table but not in the register');
   }
+  for (const [p, f] of Object.entries(PREFILL)) {
+    if (!tools.some((t) => t.path === p)) { problems.push('PREFILL names a tool not in the register: ' + p); continue; }
+    const inputs = specInputs(p);
+    if (!inputs) { problems.push('PREFILL ' + p + ': the page mounts no calculator spec'); continue; }
+    for (const k of [f.n, f.pct].filter(Boolean)) {
+      const inp = inputs.find((i) => i.key === k);
+      if (!inp) problems.push('PREFILL ' + p + ': the spec has no input "' + k + '" (it has ' + inputs.map((i) => i.key).join(', ') + ')');
+      else if (inp.type !== 'number' && !(inp.type === 'text' && k === f.n)) problems.push('PREFILL ' + p + ': "' + k + '" is a ' + inp.type + ', not a number');
+      else if (inp.max !== undefined) problems.push('PREFILL ' + p + ': "' + k + '" has a max the finder cannot check');
+    }
+    if (f.pair && !(f.n && f.pct)) problems.push('PREFILL ' + p + ': pair needs both n and pct');
+  }
   for (const [url, list] of Object.entries(START)) {
     if (!SECTIONS[url]) problems.push('START names a section the registry does not: ' + url);
     for (const p of list) if (!tools.some((t) => t.path === p)) problems.push('START for ' + url + ' names a tool not in the register: ' + p);
@@ -573,6 +645,7 @@ function selfTest() {
   console.log('  by verb             ' + VERBS.map((v) => v + ' ' + (byVerb[v] || 0)).join(', '));
   console.log('  overrides           ' + Object.keys(JOBS).length + ' jobs, ' + Object.keys(DESCS).length + ' descriptions');
   console.log('  start-here lines    ' + Object.keys(START).length + ' sections');
+  console.log('  finder prefill      ' + Object.keys(PREFILL).length + ' calculators');
   if (defaulted.length) console.log('  ! on a section default (write an entry): ' + defaulted.join(', '));
   if (problems.length) {
     console.log('\n  ' + problems.length + ' problem(s):');
@@ -584,4 +657,4 @@ function selfTest() {
 
 if (require.main === module) selfTest();
 
-module.exports = { VERBS, jobOf, descOf, START, JOBS, DESCS, SECTION_DEFAULT, register, pageOf, cut, isConversion, normalise, IO_MAX, DESC_MAX };
+module.exports = { VERBS, jobOf, descOf, prefillOf, PREFILL, START, JOBS, DESCS, SECTION_DEFAULT, register, pageOf, cut, isConversion, normalise, IO_MAX, DESC_MAX };
