@@ -1,0 +1,42 @@
+{
+  "id": "/ai-image/film-grain/",
+  "name": "Film Grain & VHS Effect — 1234Tools",
+  "short_name": "Film Grain & VHS",
+  "description": "Give a photo film grain, light leaks, VHS tracking, a date stamp and faded colour. Seven presets, a random roll; PNG still or a looping GIF and MP4. No upload.",
+  "start_url": "/ai-image/film-grain/?src=pwa",
+  "scope": "/ai-image/film-grain/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "photo",
+    "graphics"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-ai-film-grain.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-ai-film-grain-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-ai-film-grain-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

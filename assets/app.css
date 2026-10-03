@@ -2866,3 +2866,43 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
 .aiimg-face .aiimg-result video { max-height: 60vh; background: #000; }
 :root[data-theme="light"] .aiimg-face-row.is-kept .aiimg-face-tag { color: #1c6b3f; }
 /* ==== /C5-face-blur ==== */
+
+/* ==== C6-upscale-grain ==== */
+/* AI Image Upscaler — the before/after compare view on the stage */
+.aiimg-up-stage { display: block; }
+.aiimg-up-compare { position: relative; overflow: auto; max-height: 78vh; -webkit-overflow-scrolling: touch; }
+.aiimg-up-frame { position: relative; margin: 0 auto; width: 100%; user-select: none; -webkit-user-select: none; }
+.aiimg-up-after { display: block; width: 100%; height: auto; }
+.aiimg-up-before { position: absolute; inset: 0; overflow: hidden; clip-path: inset(0 50% 0 0); }
+.aiimg-up-before[hidden], .aiimg-up-divider[hidden], .aiimg-up-tag[hidden] { display: none; }
+.aiimg-up-src { display: block; width: 100%; height: 100%; }
+.aiimg-up-tag { position: absolute; top: 10px; padding: 3px 9px; border-radius: 999px; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: rgba(6, 8, 15, .72); color: #fff; pointer-events: none; }
+.aiimg-up-tag.is-before { left: 10px; }
+.aiimg-up-tag.is-after { right: 10px; }
+.aiimg-up-divider { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, .35); pointer-events: none; }
+.aiimg-up-handle { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; padding: 0; border-radius: 50%; border: 2px solid #fff; background: var(--accent); color: #111; font: 700 11px/36px var(--font-body); letter-spacing: 1px; text-align: center; cursor: ew-resize; touch-action: none; pointer-events: auto; box-shadow: 0 2px 10px rgba(0, 0, 0, .4); }
+.aiimg-up-handle::before { content: "◀ ▶"; }
+.aiimg-up-handle:focus-visible { outline: 2px solid var(--border-gold); outline-offset: 2px; }
+.aiimg-up-dims { flex: 1; font-family: var(--font-mono); font-size: .78rem; color: var(--text-3); }
+.aiimg-up-plan { margin: 0 0 12px; font-size: .85rem; color: var(--text-2); line-height: 1.5; }
+.aiimg-up .aiimg-transport .chip { cursor: pointer; font: inherit; font-size: .82rem; padding: 6px 12px; }
+:root[data-theme="light"] .aiimg-up-tag { background: rgba(255, 255, 255, .82); color: #111; }
+@media (max-width: 480px) {
+  .aiimg-up-handle { width: 34px; height: 34px; margin: -17px 0 0 -17px; line-height: 30px; }
+}
+/* Film Grain & VHS — the preset chips and the date inputs */
+.aiimg-grain-presets { margin-bottom: 10px; }
+.aiimg-grain-presets .chip { cursor: pointer; font: inherit; font-size: .82rem; }
+.aiimg-grain-canvas { cursor: default; }
+.aiimg-grain .aiimg-pane input[type="date"].control, .aiimg-grain .aiimg-pane input[type="time"].control { font-family: var(--font-mono); font-size: 14px; color-scheme: dark; }
+:root[data-theme="light"] .aiimg-grain .aiimg-pane input[type="date"].control, :root[data-theme="light"] .aiimg-grain .aiimg-pane input[type="time"].control { color-scheme: light; }
+/* the compare box keeps the column's width whatever the canvas inside, so 1:1 scrolls */
+.aiimg-up-stage { min-width: 0; max-width: 100%; }
+.aiimg-up-compare { width: 100%; max-width: 100%; contain: inline-size; }
+/* an active chip stays readable under the pointer */
+.aiimg-up .aiimg-transport .chip.is-on:hover, .aiimg-up .aiimg-transport .chip.is-on:focus-visible,
+.aiimg-grain-presets .chip.is-on:hover, .aiimg-grain-presets .chip.is-on:focus-visible { color: #1a1400; }
+/* sliders in two columns shrink to fit beside their values */
+.aiimg-grain .aiimg-grid2 .range-row { min-width: 0; }
+.aiimg-grain .aiimg-grid2 .range-row .range { min-width: 0; width: 100%; }
+/* ==== /C6-upscale-grain ==== */
