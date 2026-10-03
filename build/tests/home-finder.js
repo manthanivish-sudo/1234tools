@@ -19,7 +19,9 @@
  *      mode and section, and never with the typed words
  *   d. header search: several typed words are an AND of word-prefixes
  *   h. a number typed with a conversion ("5 lbs in kg") rides along as ?v=,
- *      and the conversion page opens with it in the box
+ *      and the conversion page opens with it in the box; calculators open on
+ *      the keys their spec declares (?amount=…), refusing values the field
+ *      could not hold, and text tools on ?text=, none of it counted as use
  *   e. the home <title> carries the register total and is 70 chars or fewer;
  *      the descriptions carry it and are 160 or fewer
  *   f. the order of the blocks at the top of main, in the DOM and in the file
@@ -109,6 +111,8 @@ const registerTotal = () => {
   await page.evaluateOnNewDocument(() => {
     window.__gtagCalls = [];
     window.gtag = function () { window.__gtagCalls.push(Array.prototype.slice.call(arguments)); };
+    window.__toolUsed = 0;
+    document.addEventListener('mvr:tool-used', () => { window.__toolUsed++; });
     try { localStorage.setItem('1234tools-recent', JSON.stringify([{ u: 'pdf/merge-pdf/', t: 'Merge PDF Files' }, { u: 'text/word-counter/', t: 'Word & Character Counter' }])); } catch (e) {}
   });
   await page.setViewport({ width: 1400, height: 1000 });
@@ -345,6 +349,43 @@ const registerTotal = () => {
   await page.waitForSelector('#u-value', { timeout: 15000 });
   const notANumber = await page.$eval('#u-value', (e) => e.value);
   check(notANumber === '1', 'a ?v= that is not a number keeps the worked example of 1 (got ' + notANumber + ')');
+
+  /* h. calculators open on the keys their spec declares; text tools on ?text= */
+  const calcAt = async (url) => {
+    await page.goto(BASE + url, { waitUntil: 'networkidle0', timeout: 60000 });
+    await page.waitForSelector('.tool-results .result-primary', { timeout: 15000 });
+    return page.evaluate(() => {
+      const vals = {};
+      document.querySelectorAll('.tool-form [name]').forEach((e) => { vals[e.name] = e.value; });
+      return { vals, primary: (document.querySelector('.tool-results .result-primary .result-value') || {}).textContent || '', html: document.querySelector('.tool').innerHTML, used: window.__toolUsed, today: new Date().toISOString().slice(0, 10) };
+    });
+  };
+  const loanPlain = await calcAt('/finance/loan-payment/');
+  check(loanPlain.vals.amount === '250000' && /1,580\.17/.test(loanPlain.primary), 'no query string: the loan calculator shows its worked example (' + loanPlain.primary + ')', JSON.stringify(loanPlain.vals));
+  const loan = await calcAt('/finance/loan-payment/?amount=200000&rate=6.5&years=30');
+  check(loan.vals.amount === '200000' && loan.vals.rate === '6.5' && loan.vals.years === '30' && /1,264\.14/.test(loan.primary), '?amount=200000&rate=6.5&years=30 opens the loan calculator on them: ' + loan.primary, JSON.stringify(loan.vals));
+  await page.type('#in-amount', '1');
+  const typedUse = await page.evaluate(() => window.__toolUsed);
+  check(loan.used === 0 && typedUse > 0, 'values from the URL are not use: no mvr:tool-used on load (' + loan.used + '), one keystroke is (' + typedUse + ')');
+  const loanBad = await calcAt('/finance/loan-payment/?amount=lots&years=-5&rate=');
+  check(loanBad.vals.amount === '250000' && loanBad.vals.years === '30' && loanBad.vals.rate === '6.5' && loanBad.primary === loanPlain.primary, 'not a number, below min, or empty: each keeps its default', JSON.stringify(loanBad.vals));
+  const loanOdd = await calcAt('/finance/loan-payment/?foo=1&utm_source=x&v=9');
+  check(loanOdd.html === loanPlain.html, 'unknown keys change nothing: the tool markup is byte-for-byte the plain page');
+  const week = await calcAt('/time/week-number/?date=2026-12-25');
+  check(week.vals.date === '2026-12-25' && /\b52\b/.test(week.primary), '?date=2026-12-25 fills the date field: ' + week.primary, JSON.stringify(week.vals));
+  const weekBad = await calcAt('/time/week-number/?date=2026-02-30');
+  check(weekBad.vals.date === weekBad.today, 'a date that is not on the calendar (2026-02-30) keeps today', JSON.stringify(weekBad.vals));
+  const vatBad = await calcAt('/finance/vat-sales-tax/?mode=bogus&amount=50');
+  const vatOk = await calcAt('/finance/vat-sales-tax/?mode=gross');
+  check(vatBad.vals.mode === 'net' && vatBad.vals.amount === '50' && vatOk.vals.mode === 'gross', 'a select ignores a value outside its options (bogus -> net) and takes one of its own (gross); the other key still applies', JSON.stringify([vatBad.vals, vatOk.vals]));
+  await page.goto(BASE + '/text/word-counter/?text=one%20two%20three', { waitUntil: 'networkidle0', timeout: 60000 });
+  await page.waitForSelector('.stat-grid .stat-row', { timeout: 15000 });
+  const wc = await page.evaluate(() => ({ ta: document.querySelector('.code-area').value, words: (Array.from(document.querySelectorAll('.stat-row')).find((r) => r.querySelector('.stat-key').textContent === 'Words') || { textContent: '' }).querySelector('.stat-val').textContent }));
+  check(wc.ta === 'one two three' && wc.words === '3', '/text/word-counter/?text=one%20two%20three counts 3 words', JSON.stringify(wc));
+  await page.goto(BASE + '/text/word-counter/?text=' + 'a%20'.repeat(2500), { waitUntil: 'networkidle0', timeout: 60000 });
+  await page.waitForSelector('.stat-grid .stat-row', { timeout: 15000 });
+  const wcLong = await page.$eval('.code-area', (e) => e.value.length);
+  check(wcLong === 4000, '?text= is capped at 4,000 characters (got ' + wcLong + ')');
 
   /* ---------- d. header search ---------- */
   await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 60000 });

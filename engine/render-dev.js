@@ -206,6 +206,14 @@
       renderStats(stats, res.stats);
     }
 
+    /* A link can carry the text to work on: ?text=one%20two%20three opens
+       the word counter already counted. Up to 4,000 characters, read here in
+       the browser and sent nowhere; nothing else is taken from the URL. */
+    try {
+      const given = new URLSearchParams(location.search).get('text');
+      if (given !== null) ta.value = given.slice(0, 4000).replace(/[\uD800-\uDBFF]$/, '');
+    } catch (e) { /* no URL, no prefill */ }
+
     ta.addEventListener('input', run);
     optBar.addEventListener('input', run);
     optBar.addEventListener('change', run);

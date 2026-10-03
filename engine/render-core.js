@@ -104,6 +104,44 @@
     return wrap;
   }
 
+  /* A link can open a calculator on somebody's own figures: the Tool Finder
+     sends "20% of 150" here as ?value=20&total=150. Only keys the spec
+     declares are read, and only values the field could hold: a finite number
+     inside its min and max, a real YYYY-MM-DD date, one of a select's own
+     options, text up to 200 characters. Anything else keeps the worked
+     example. The query string is read here in the browser and goes nowhere. */
+  const DAY = /^\d{4}-\d{2}-\d{2}$/;
+  function fromQuery(input, raw) {
+    if (input.type === 'number') {
+      const n = raw.trim() === '' ? NaN : Number(raw);
+      if (!Number.isFinite(n)) return null;
+      if (input.min !== undefined && n < Number(input.min)) return null;
+      if (input.max !== undefined && n > Number(input.max)) return null;
+      return String(n);
+    }
+    if (input.type === 'date') {
+      if (!DAY.test(raw)) return null;
+      const d = new Date(raw + 'T00:00:00Z');
+      return !isNaN(d) && d.toISOString().slice(0, 10) === raw ? raw : null;
+    }
+    if (input.type === 'select') {
+      return (input.options || []).some(o => String(o.value) === raw) ? raw : null;
+    }
+    return raw.slice(0, 200);
+  }
+
+  function prefill(spec, form) {
+    let q;
+    try { if (!location.search) return; q = new URLSearchParams(location.search); } catch (e) { return; }
+    spec.inputs.forEach(inp => {
+      const raw = q.get(inp.key);
+      if (raw === null) return;
+      const el = form.querySelector('[name="' + inp.key + '"]');
+      const v = el ? fromQuery(inp, raw) : null;
+      if (v !== null) el.value = v;
+    });
+  }
+
   function readValues(spec, form) {
     const vals = {};
     spec.inputs.forEach(inp => {
@@ -185,6 +223,9 @@
       const out = root.querySelector('.tool-results');
 
       spec.inputs.forEach(inp => form.appendChild(buildInput(inp)));
+      /* Values from the URL are not a change the visitor made on this page,
+         so the first run below still does not count as use. */
+      prefill(spec, form);
 
       const run = () => {
         try {
