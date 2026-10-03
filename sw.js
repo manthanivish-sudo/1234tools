@@ -2,7 +2,7 @@
    Precaching 900 pages would be a rude thing to do to someone's data plan,
    so we precache only the shell and cache tool pages as they are visited. */
 
-var V = '1234tools-v98';
+var V = '1234tools-v107';
 var SHELL = [
   './', './index.html',
   './assets/app.css', './assets/app.js', './assets/icons.svg',
@@ -46,8 +46,9 @@ self.addEventListener('fetch', function (e) {
   // Assets and engine code: cache-first, they are versioned by cache name.
   // mjs/bcmap/pfb/ttf are the vendored pdf.js engine, its CMaps and its
   // standard fonts; without them the two rendering tools would refetch ~1.7 MB
-  // on every use and would not work offline at all.
-  if (/\.(css|js|mjs|bcmap|pfb|ttf|woff2?|png|svg|webmanifest)$/.test(url.pathname)) {
+  // on every use and would not work offline at all. wasm and onnx are the AI
+  // image runtime and its 18 MB model, which must never be fetched twice.
+  if (/\.(css|js|mjs|wasm|onnx|bcmap|pfb|ttf|woff2?|png|svg|webmanifest)$/.test(url.pathname)) {
     e.respondWith(
       caches.match(req).then(function (hit) {
         return hit || fetch(req).then(function (res) {

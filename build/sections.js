@@ -43,6 +43,11 @@ const SECTIONS = {
   '/finance/':     { name: 'Finance & Accounting' },
   '/health/':      { name: 'Health' },
   '/image/':       { name: 'Image & Photo Tools', head: 'Image & Photo', noun: 'tool' },
+  /* The AI image tools run on the device too — a segmentation model is
+     downloaded once and the picture never leaves the browser — so they are
+     free and sit beside the image tools, not with the cloud tools under
+     /ai/. build-ai-image.js owns everything under /ai-image/. */
+  '/ai-image/':    { name: 'AI Image Tools', head: 'AI Image', hub: 'AI Image Tools', noun: 'tool' },
   '/india/':       { name: 'India' },
   /* `crumb` is the short form used as a step in a trail; `hub` is what the
      section's own page is called at the end of its trail. */

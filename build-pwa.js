@@ -141,7 +141,7 @@ const CATEGORY = {
   conversions: ['utilities', 'education'], developer: ['developer', 'productivity'],
   qr: ['utilities', 'productivity'], image: ['photo', 'utilities'],
   pdf: ['productivity', 'utilities'], text: ['productivity'], time: ['utilities'],
-  utilities: ['utilities'], design: ['graphics']
+  utilities: ['utilities'], design: ['graphics'], 'ai-image': ['photo', 'graphics']
 };
 
 function manifestFor(tool, meta) {

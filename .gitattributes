@@ -19,3 +19,7 @@
 # rewrites the line endings in pdf.min.mjs and pdf.worker.min.mjs on checkout
 # and the files no longer match what was audited.
 engine/vendor/pdfjs/** -text
+
+# Vendored ONNX Runtime and the segmentation model, likewise stored as published.
+engine/vendor/ort/** -text
+engine/models/** -text

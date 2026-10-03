@@ -143,7 +143,7 @@ const redirectPages = (function () {
  */
 const SECTIONS = ['finance', 'mathematics', 'engineering', 'health', 'design',
   'utilities', 'time', 'developer', 'business', 'india', 'image', 'text',
-  'conversions', 'pdf', 'qr'];
+  'conversions', 'pdf', 'qr', 'ai-image'];
 
 /**
  * The pages that are not tools. They change on the order of never, and a
@@ -363,7 +363,8 @@ function searchIndexTools() {
 const REL_AFFINITY = {
   engineering: ['conversions/power', 'conversions/energy', 'conversions/pressure', 'mathematics'],
   design:      ['image', 'conversions/length'],
-  image:       ['design'],
+  image:       ['design', 'ai-image'],
+  'ai-image':  ['image', 'design'],
   finance:     ['business', 'india'],
   business:    ['finance', 'india'],
   india:       ['finance', 'business'],

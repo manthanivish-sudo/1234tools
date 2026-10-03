@@ -44,6 +44,7 @@ const ORDER = [
   ['/india/', 'i-india'],
   ['/developer/', 'i-developer'],
   ['/image/', 'i-image'],
+  ['/ai-image/', 'i-ai-image'],
   ['/text/', 'i-text'],
   ['/mathematics/', 'i-mathematics'],
   ['/finance/', 'i-finance'],
