@@ -21,6 +21,9 @@ const path = require('path');
 const hubs = require('./build-hubs.js');
 const crumbs = require('./build-crumbs.js');
 const outbound = require('./build-outbound.js');
+/* the share row and the per-page link-preview card: build-share.js owns
+   both, and a page written here must already carry what it would write */
+const share = require('./build-share.js');
 const { trailFor } = require('./build/sections.js');
 const { COLLECTIONS, PRICING, pricingFor, TILES, HI_HUB } = require('./build/collections.js');
 /* Approved showcase entries, when the showcase builder is present. */
@@ -143,6 +146,10 @@ function showcaseStrip(c, hi) {
     '</ul><p><a href="/showcase/">' + (hi ? esc(hi.madeAll) : 'See everything people have made') + '</a> · <a href="/showcase/#submit">' + (hi ? esc(hi.madeJoin) : 'Get featured') + '</a></p></section>\n';
 }
 
+/* The showcase is linked to only once its page has been built: its form
+   posts to a function that has to be deployed first. */
+const showcaseLive = () => fs.existsSync(path.join(ROOT, 'showcase', 'index.html'));
+
 const badge = (p) => '<span class="tag tag-' + p.key + '" title="' + esc(p.blurb) + '">' + esc(p.label) + '</span>';
 
 function toolCard(m) {
@@ -197,7 +204,7 @@ function collectionPage(c, parts) {
 
   const head = headFor(parts, pathOnly, c.title, c.lede);
   const html = sidebarFor((c.hi ? alternates(head, c.slug) : head) + ld + parts.mid + '\n' + body + parts.tail, SECTION + '/' + c.slug + '/index.html');
-  return outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html;
+  return share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/' + c.slug + '/index.html');
 }
 
 function hubPage(parts, counts) {
@@ -222,6 +229,7 @@ function hubPage(parts, counts) {
     '  <p class="collection-intro">The sidebar sorts tools by what they are, which is how a librarian would do it. Nobody arrives thinking “I need a Business tool”. These pages sort them the other way — by the person holding the problem, and by the job in front of them.</p>\n' +
     '  <section class="collection-group"><h2>By what you do</h2><p class="group-blurb">The page to bookmark.</p><div class="grid">' + roles + '</div></section>\n' +
     '  <section class="collection-group"><h2>By the job in hand</h2><p class="group-blurb">The page to send somebody.</p><div class="grid">' + tasks + '</div></section>\n' +
+    (showcaseLive() ? '  <section class="panel"><h2>Made with these tools</h2><p>People share what they make — a Reel with captions, a thumbnail, a class’s certificates, a shop’s product photos. The best are in the <a href="/showcase/">showcase</a>, with the maker’s name and a link to them. <a href="/showcase/#submit">Send yours</a>: it is checked by a person before anything is shown.</p></section>\n' : '') +
     '  <section class="panel"><h2>What “free” means here</h2><ul class="tips">' +
       '<li><strong>Free, no account.</strong> ' + esc(PRICING.free.blurb) + ' That is ' + counts.free.toLocaleString('en-GB') + ' of them, and it stays that way because they cost us nothing to run — the work happens in your browser, not on our server.</li>' +
       '<li><strong>Free to try, then paid.</strong> ' + esc(PRICING.freemium.blurb) + ' That is the ' + counts.freemium + ' AI tools, which cost us money every time somebody presses the button.</li>' +
@@ -238,7 +246,7 @@ function hubPage(parts, counts) {
     ]
   }) + '</script>\n';
   const html = sidebarFor(headFor(parts, pathOnly, title, description) + ld + parts.mid + '\n' + body + parts.tail, SECTION + '/index.html');
-  return outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html;
+  return share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/index.html');
 }
 
 /* ---------- Hindi twins ----------
@@ -305,7 +313,7 @@ function collectionPageHi(c, parts) {
   const head = alternates(headFor(parts, pathOnly, hi.title, hi.lede), c.slug)
     .replace(/<link rel="canonical" href="[^"]*">/, '<link rel="canonical" href="' + url + '">');
   const html = hiShell(sidebarFor(head + ld + parts.mid + '\n' + body + parts.tail, rel));
-  return outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html;
+  return share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, rel);
 }
 
 function hubPageHi(parts, list) {
@@ -334,7 +342,7 @@ function hubPageHi(parts, list) {
     ]
   }) + '</script>\n';
   const html = hiShell(sidebarFor(headFor(parts, pathOnly, h.title, h.lede) + ld + parts.mid + '\n' + body + parts.tail, 'hi/' + SECTION + '/index.html'));
-  return outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html;
+  return share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, 'hi/' + SECTION + '/index.html');
 }
 
 /* ---------- wiring ---------- */
@@ -407,7 +415,7 @@ function patchHome(counts) {
     const at = hero >= 0 ? hero + '<!-- /HOME-HERO -->'.length : out.indexOf(marker);
     out = out.slice(0, at) + '\n' + aud + '\n' + out.slice(at);
   }
-  return write(rel, outbound.rewrite(out, 'home').html);
+  return write(rel, share.apply(outbound.rewrite(out, 'home').html, rel));
 }
 
 /* One tile per audience: who, how many tools, and the three that sell the
@@ -429,6 +437,7 @@ function audienceBlock() {
     '  <h2 class="section-title" id="aud-head">I am a…</h2>\n' +
     '  <p class="section-lede">Pick what you do and get the short list made for it: the tools, why each is there, and what is coming next.</p>\n' +
     '  <div class="aud-grid">' + tiles + '</div>\n' + (hi ? '  ' + hi + '\n' : '') +
+    (showcaseLive() ? '  <p class="aud-made">Made something with one of these tools? <a href="/showcase/">See what people have made</a>, and <a href="/showcase/#submit">send yours to be featured</a>, with your name and a link to you.</p>\n' : '') +
     '</section>\n<!-- /AUDIENCES -->';
 }
 

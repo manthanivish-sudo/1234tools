@@ -259,7 +259,9 @@ function hubPage(parts) {
     '</section>\n' +
     '<div class="grid learn-grid">' + cards + '</div>\n' +
     '<section class="panel"><h2>Looking for something that does the work?</h2>' +
-      '<p>The ' + '1,187' + ' calculators and converters on the rest of this site all run in your browser, with nothing uploaded. ' +
+      /* counted from the register, browser tools only: the AI tools are the
+         ones that do not run in your browser, so "all" would be untrue */
+      '<p>' + require('./build/totals.js').freeTotal().toLocaleString('en-GB') + ' of the tools on the rest of this site run entirely in your browser, with nothing you put in them uploaded. ' +
       'Start from <a href="/">all tools</a>, or the <a href="/developer/">developer</a>, <a href="/india/">India</a> and ' +
       '<a href="/business/">business</a> sections.</p>' +
     '</section>\n';
@@ -453,4 +455,8 @@ function main() {
   console.log('\n  ' + changes.length + ' file(s) ' + (CHECK ? 'would change' : 'changed') + '\n');
 }
 
-main();
+/* Inert on require, like every other builder: a require() to check that
+   this file loads used to run the whole build, rewrite sixteen pages and
+   drop the AI for Business card from the home page (it lives inside the
+   LEARN block and is written there by build-ai.js). */
+if (require.main === module) main();

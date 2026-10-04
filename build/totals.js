@@ -23,6 +23,13 @@ function indexTotal() {
   return (box.SEARCH_INDEX || []).length;
 }
 
+/** The tools that run in the browser: every one but the cloud AI tools under ai/. */
+function freeTotal() {
+  const box = {};
+  new Function('window', fs.readFileSync(path.join(ROOT, 'assets/search-index.js'), 'utf8'))(box);
+  return (box.SEARCH_INDEX || []).filter((e) => String(e[1]).indexOf('ai/') !== 0).length;
+}
+
 const isStub = (html) => /name="robots" content="noindex,follow"/.test(html) && /http-equiv="refresh"/.test(html);
 
 function pages() {
@@ -52,7 +59,12 @@ function patchTotal(total, changes, check) {
     [/[\d,]+\+ free calculators and converters/g, t + '+ free calculators and converters'],
     /* the collections row on the home page: build-collections.js writes it
        from its own count, and this keeps it honest between its runs */
-    [/[\d,]+ tools is a lot to browse/g, t + ' tools is a lot to browse']
+    [/[\d,]+ tools is a lot to browse/g, t + ' tools is a lot to browse'],
+    /* hand-written pages that print the total and had drifted: the 404
+       page (1,185), About (1,185+) and the Learning hub (1,187) */
+    [/to search all [\d,]+ tools/g, 'to search all ' + t + ' tools'],
+    [/[\d,]+\+ calculators and converters covering/g, t + '+ calculators and converters covering'],
+    [/[\d,]+ calculators and converters on the rest of the site/g, t + ' calculators and converters on the rest of the site']
   ];
   let n = 0;
   for (const abs of pages()) {
@@ -69,4 +81,4 @@ function patchTotal(total, changes, check) {
   return n;
 }
 
-module.exports = { indexTotal, patchTotal, pages, isStub };
+module.exports = { indexTotal, freeTotal, patchTotal, pages, isStub };

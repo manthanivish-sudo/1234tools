@@ -432,4 +432,5 @@ function main() {
   console.log('\n  ' + changes.length + ' file(s) ' + (CHECK ? 'would change' : 'changed') + '\n');
 }
 
-main();
+/* Inert on require, like the other builders. */
+if (require.main === module) main();

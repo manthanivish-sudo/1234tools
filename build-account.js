@@ -31,6 +31,7 @@ const { trailFor } = require('./build/sections.js');
 /* outbound links are tagged the way build-outbound.js tags them, at write
    time, so the two never rewrite each other */
 const outbound = require('./build-outbound.js');
+const share = require('./build-share.js'); /* the share bar and og:image, as build-share.js writes them */
 
 const ROOT = __dirname;
 const CHECK = process.argv.includes('--check');
@@ -117,6 +118,10 @@ function packsBody(total) {
 function pricingBody() {
   const n = counts();
   const total = n.total.toLocaleString('en-GB');
+  /* The tools that are free with no account are the browser tools, not
+     all of them: the AI tools need an account. Printing the total here
+     said "all 1,268 tools stay free with no account", which was false. */
+  const free = n.free.toLocaleString('en-GB');
   const cards = PLANS.plans.map(p => {
     const price = (cur, period) => p.price[cur][period];
     return '<div class="plan' + (p.highlight ? ' is-highlight' : '') + '" data-plan="' + p.id + '">' +
@@ -140,7 +145,7 @@ function pricingBody() {
   return '<article class="pricing">\n' +
     '  <p class="eyebrow">Plans</p>\n' +
     '  <h1>Free for everything that runs on your device. Paid for what cannot.</h1>\n' +
-    '  <p class="lede">All ' + total + ' tools stay free with no account. What is paid for is the part that needs a server: AI calls, and settings that follow you between devices. Take those by the month, or buy credits once and use them whenever.</p>\n' +
+    '  <p class="lede">The ' + free + ' tools that run in your browser stay free with no account, and every AI tool can be tried free with one. What is paid for is the part that needs a server: AI calls, and settings that follow you between devices. Take those by the month, or buy credits once and use them whenever.</p>\n' +
     '  <div class="io-msg" id="pricing-msg"></div>\n' +
     '  <div class="plan-controls">\n' +
     '    <div class="biz-seg" role="tablist" aria-label="Billing period"><button type="button" class="biz-seg-btn is-on" data-period="monthly">Monthly</button><button type="button" class="biz-seg-btn" data-period="annual">Annual <small>2 months free</small></button></div>\n' +
@@ -148,7 +153,7 @@ function pricingBody() {
     '  </div>\n' +
     '  <div class="plan-grid">' + cards + '</div>\n' +
     '  <p class="plan-note" id="plan-note"></p>\n' +
-    packsBody(total) +
+    packsBody(free) +
     '  <section class="panel"><h2>Questions</h2>' + PLANS.faq.map(f => '<details><summary>' + esc(f.q) + '</summary><p>' + esc(f.a) + '</p></details>').join('') + '</section>\n' +
     '</article>\n' +
     '<script>\n' + pricingScript() + '</script>\n';
@@ -381,7 +386,9 @@ function settingsBody() {
 function trustBody() {
   /* Read, not remembered — and not lifted out of the plan's feature text,
      which now carries a placeholder for exactly this number. */
-  const total = counts().total.toLocaleString('en-GB');
+  /* "on your device" counts the browser tools only; the AI tools are the
+     other kind, described in the next paragraph */
+  const total = counts().free.toLocaleString('en-GB');
   const row = (k, v) => '<tr><th scope="row">' + k + '</th><td>' + v + '</td></tr>';
   return '<article class="trust">\n' +
     '  <p class="eyebrow">Trust</p>\n' +
@@ -447,7 +454,7 @@ function main() {
     let html = headFor(parts, p.slug, p.title, p.description) + parts.mid + '\n' + crumbs.render(trailFor(pathOnly), p.name) + '\n' + p.body + parts.tail;
     if (p.indexable) html = html.replace('<meta name="robots" content="noindex,nofollow">\n', '');
     if (p.noAccount) html = html.replace('<script src="/assets/firebase-config.js"></script>\n<script src="/assets/account.js" defer></script>\n', '');
-    html = sidebarFor(outbound.rewrite(html, p.slug).html, p.slug + '/index.html');
+    html = share.apply(sidebarFor(outbound.rewrite(html, p.slug).html, p.slug + '/index.html'), p.slug + '/index.html');
     if (write(p.slug + '/index.html', html)) built++;
   }
   /* indexable pages belong in the sitemap; the dark ones stay out of it */

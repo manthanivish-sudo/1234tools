@@ -32,6 +32,7 @@ const fs = require('fs');
 const path = require('path');
 const crumbs = require('./build-crumbs.js');
 const outbound = require('./build-outbound.js');
+const share = require('./build-share.js'); /* the share bar and og:image, as build-share.js writes them */
 const sidebar = require('./build-sidebar.js');
 const { SECTIONS, trailFor } = require('./build/sections.js');
 const { indexTotal, patchTotal } = require('./build/totals.js');
@@ -283,7 +284,7 @@ function page(parts, total) {
   }) + '</script>\n';
   const rel = SECTION + '/' + SLUG + '/index.html';
   const html = headFor(parts, pathOnly, s.pageTitle, described, ['/engine/finder.js']) + ld + parts.mid + '\n' + body + parts.tail;
-  return outbound.rewrite(keepRelated(rel, keepPwa(rel, sidebar.apply(html, rel))), SECTION).html;
+  return share.apply(outbound.rewrite(keepRelated(rel, keepPwa(rel, sidebar.apply(html, rel))), SECTION).html, rel);
 }
 
 /* ------------------------------------------------------------------ */

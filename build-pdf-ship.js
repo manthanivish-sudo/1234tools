@@ -51,6 +51,7 @@ const sources = require('./build/sources.js');
    would be undone by the next run of this one, and the two would rewrite
    each other for ever */
 const outbound = require('./build-outbound.js');
+const share = require('./build-share.js'); /* the share bar and og:image, as build-share.js writes them */
 const { trailFor } = require('./build/sections.js');
 
 /* slug -> icon glyph. Only what has been verified to work. A spec may carry
@@ -220,7 +221,7 @@ function toolPage(slug, glyph, parts) {
     }] : [])
   }) + '</script>\n';
 
-  return outbound.rewrite(markActive(head(parts, slug, title, t.description, url) + ld + parts.mid + '\n' + body + parts.tail), 'pdf').html;
+  return share.apply(outbound.rewrite(markActive(head(parts, slug, title, t.description, url) + ld + parts.mid + '\n' + body + parts.tail), 'pdf').html, 'pdf/' + slug + '/index.html');
 }
 
 /* ------------------------------------------------------------------ */
@@ -519,4 +520,5 @@ function main() {
   console.log('\n  ' + changes.length + ' file(s) ' + (CHECK ? 'would change' : 'changed') + '\n');
 }
 
-main();
+/* Run directly it ships the pages; required, it does nothing. */
+if (require.main === module) main();

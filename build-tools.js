@@ -25,6 +25,7 @@ const fs = require('fs');
 const path = require('path');
 const crumbs = require('./build-crumbs.js');
 const outbound = require('./build-outbound.js');
+const share = require('./build-share.js'); /* the share bar and og:image, as build-share.js writes them */
 const { trailFor, SECTIONS } = require('./build/sections.js');
 const { PRICING, pricingFor } = require('./build/collections.js');
 const { ORDER, FAMILIES, apply: sidebarFor } = require('./build-sidebar.js');
@@ -183,7 +184,7 @@ function page(parts, inv) {
   /* the shell is a section hub's, so its <body> carries that section's
      data-sec; hubs.apply takes it off, as build-hubs.js would */
   const html = hubs.apply(sidebarFor(head + ld + parts.mid + '\n' + body + parts.tail, 'tools/index.html'), 'tools/index.html');
-  return outbound.rewrite(html, 'tools').html;
+  return share.apply(outbound.rewrite(html, 'tools').html, 'tools/index.html');
 }
 
 function patchSitemap() {

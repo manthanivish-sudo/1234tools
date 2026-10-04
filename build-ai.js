@@ -26,6 +26,7 @@ const sources = require('./build/sources.js');
    would be undone by the next run of this one, and the two would rewrite
    each other for ever */
 const outbound = require('./build-outbound.js');
+const share = require('./build-share.js'); /* the share bar and og:image, as build-share.js writes them */
 const { SECTIONS, trailFor } = require('./build/sections.js');
 const PLANS = require('./build/plans.json');
 
@@ -140,7 +141,7 @@ function toolPage(t, parts, all) {
     ]
   }) + '</script>\n';
   const rel = SECTION + '/' + t.slug + '/index.html';
-  return outbound.rewrite(keepPwa(rel, hubs.apply(markActive(headFor(parts, pathOnly, s.title + ' — AI for Business | 1234Tools', s.description, s.scripts) + accountScripts + ld + parts.mid + '\n' + body + parts.tail), rel)), SECTION).html;
+  return share.apply(outbound.rewrite(keepPwa(rel, hubs.apply(markActive(headFor(parts, pathOnly, s.title + ' — AI for Business | 1234Tools', s.description, s.scripts) + accountScripts + ld + parts.mid + '\n' + body + parts.tail), rel)), SECTION).html, rel);
 }
 
 function hubPage(parts, all) {
@@ -175,7 +176,7 @@ function hubPage(parts, all) {
     ]
   }) + '</script>\n';
   const rel = SECTION + '/index.html';
-  return keepPwa(rel, hubs.apply(markActive(headFor(parts, '/' + SECTION + '/', title, description, []) + ld + parts.mid + '\n' + body + parts.tail), rel));
+  return share.apply(keepPwa(rel, hubs.apply(markActive(headFor(parts, '/' + SECTION + '/', title, description, []) + ld + parts.mid + '\n' + body + parts.tail), rel)), rel);
 }
 
 /* ---------- wiring ---------- */

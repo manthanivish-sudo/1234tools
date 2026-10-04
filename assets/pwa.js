@@ -21,6 +21,9 @@
 (function () {
   'use strict';
 
+  /* A tool embedded in somebody else's page is not ours to offer as an app. */
+  if (document.documentElement.classList.contains('is-embed')) return;
+
   var MONTH = 30 * 24 * 60 * 60 * 1000;
 
   var manifest = document.querySelector('link[rel="manifest"]');
@@ -208,7 +211,10 @@
       panel.appendChild(b);
     }
 
+    /* After the tool and its share row, which belong together. */
     var io = host.querySelector('.tool-io');
+    var row = io && host.querySelector('.tool-io ~ .share[data-share]');
+    if (row) io = row;
     if (io && io.nextSibling) host.insertBefore(panel, io.nextSibling);
     else host.appendChild(panel);
   }

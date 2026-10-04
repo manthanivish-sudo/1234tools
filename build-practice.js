@@ -29,6 +29,7 @@ const path = require('path');
 const crumbs = require('./build-crumbs.js');
 const { trailFor } = require('./build/sections.js');
 const outbound = require('./build-outbound.js');
+const share = require('./build-share.js'); /* the share bar and og:image, as build-share.js writes them */
 const prefs = require('./build-prefs.js');
 const { apply: sidebarFor } = require('./build-sidebar.js');
 
@@ -512,7 +513,7 @@ function main() {
   for (const p of pages) {
     let html = headFor(parts, p.url, p.title, p.description) + parts.mid + '\n' +
       crumbs.render(trailFor(p.url), p.name) + '\n' + p.body + parts.tail;
-    html = prefs.apply(sidebarFor(outbound.rewrite(html, 'practice').html, p.rel));
+    html = share.apply(prefs.apply(sidebarFor(outbound.rewrite(html, 'practice').html, p.rel)), p.rel);
     if (write(p.rel, html)) built++;
   }
 

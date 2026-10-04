@@ -38,6 +38,7 @@
 const fs = require('fs');
 const path = require('path');
 const outbound = require('./build-outbound.js');
+const share = require('./build-share.js'); /* the share bar and og:image, as build-share.js writes them */
 const { PRICING } = require('./build/collections.js');
 const { indexTotal } = require('./build/totals.js');
 /* The same reader the collections use, so a tool is described in one
@@ -443,7 +444,7 @@ function patchHome() {
   const order = reorder(html);
   html = order.html;
 
-  const changed = write(rel, outbound.rewrite(html, 'home').html);
+  const changed = write(rel, share.apply(outbound.rewrite(html, 'home').html, rel));
   return { changed, c, checked, metas, asking: !!url, copy, order };
 }
 

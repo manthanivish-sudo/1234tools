@@ -46,6 +46,7 @@ const path = require('path');
 const hubs = require('./build-hubs.js');
 const crumbs = require('./build-crumbs.js');
 const outbound = require('./build-outbound.js');
+const share = require('./build-share.js'); /* the share bar and og:image, as build-share.js writes them */
 const { trailFor, SECTIONS } = require('./build/sections.js');
 const { PRICING, pricingFor } = require('./build/collections.js');
 const { GUIDES, AUTHORITIES } = require('./build/guides.js');
@@ -328,7 +329,7 @@ function guidePage(g, parts) {
   }) + '</script>\n';
 
   const html = sidebarFor(headFor(parts, pathOnly, g.title, g.description) + ld + parts.mid + '\n' + withTime + parts.tail, SECTION + '/' + g.slug + '/index.html');
-  return outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html;
+  return share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/' + g.slug + '/index.html');
 }
 
 function hubPage(parts) {
@@ -379,7 +380,7 @@ function hubPage(parts) {
   }) + '</script>\n';
 
   const html = sidebarFor(headFor(parts, pathOnly, title, description) + ld + parts.mid + '\n' + body + parts.tail, SECTION + '/index.html');
-  return outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html;
+  return share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/index.html');
 }
 
 /* ---------- wiring ---------- */

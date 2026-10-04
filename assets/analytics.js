@@ -22,6 +22,10 @@
   var GA4 = (self && self.getAttribute('data-ga4')) || '';
   var CLARITY = (self && self.getAttribute('data-clarity')) || '';
   if (!GA4 && !CLARITY) return;
+  /* Inside somebody else's page (a tool embedded with ?embed=1) there is no
+     banner, no GA4 and no Clarity: a third-party frame is not a place to ask
+     for consent, and nothing should be measured there. */
+  if (/[?&]embed=1(?:&|$)/.test(location.search)) return;
 
   var KEY = '1234tools-consent';
   var PRIVACY = 'privacy/index.html';
@@ -109,8 +113,26 @@
 
     gtag('js', new Date());
     /* IP anonymisation is the default in GA4; this pins it explicitly so a
-       property misconfiguration cannot quietly turn it off. */
-    gtag('config', GA4, { anonymize_ip: true });
+       property misconfiguration cannot quietly turn it off.
+
+       page_location is the address with every query parameter dropped except
+       the utm_* tags and ?src=: a link from the Tool Finder can carry the
+       figures somebody typed (?amount=48000), and those are theirs, not a
+       page name. The fragment, where shared links keep their figures, is
+       never part of it. */
+    var loc = pageLocation();
+    gtag('set', { page_location: loc });
+    gtag('config', GA4, { anonymize_ip: true, page_location: loc });
+  }
+
+  function pageLocation() {
+    var keep = [];
+    try {
+      new URLSearchParams(location.search).forEach(function (v, k) {
+        if (/^utm_/.test(k) || k === 'src') keep.push(encodeURIComponent(k) + '=' + encodeURIComponent(v));
+      });
+    } catch (e) { /* an old browser sends the bare path */ }
+    return location.origin + location.pathname + (keep.length ? '?' + keep.join('&') : '');
   }
 
   function loadClarity() {

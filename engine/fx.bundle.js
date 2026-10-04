@@ -24,8 +24,13 @@
      so the path holds wherever the page sits in the tree. */
   var RATES_URL = (function () {
     var s = document.currentScript;
+    /* The pages load this as /engine/fx.bundle.js now, an absolute path with
+       no ../ in it, and the old prefix arithmetic then asked for
+       /business/currency-converter/assets/rates.json, which does not exist.
+       Resolving against the script's own address works for either form. */
+    try { if (s && s.src) return new URL('../assets/rates.json', s.src).href; } catch (e) { /* old browser */ }
     var up = ((s && s.getAttribute('src')) || '').match(/(\.\.\/)+/);
-    return (up ? up[0] : '') + 'assets/rates.json';
+    return (up ? up[0] : '/') + 'assets/rates.json';
   })();
 
   /* The old per-base cache can never be read again, so drop it rather than
@@ -138,6 +143,17 @@
     return n;
   }
 
+  /* The query string and the fragment of the link, the fragment winning. A
+     shared link carries its figures after the #, which never reaches a
+     server or analytics. */
+  var linkParams = function () { var q = new URLSearchParams(location.search); try { var h = new URLSearchParams(location.hash.replace(/^#/, '')); h.forEach(function (v, k) { q.set(k, v); }); } catch (e) {} return q; };
+
+  /* The share bar's hand-off: the same three lines in every engine. */
+  function announce(state) {
+    (window.MVRTool = window.MVRTool || {}).shareState = function () { return state; };
+    document.dispatchEvent(new CustomEvent('mvr:result', { detail: state }));
+  }
+
   window.MVRTool.mountCurrency = function (root) {
     var io = root.querySelector('.tool-io');
     var COMMON = window.MVRFx.COMMON;
@@ -203,15 +219,37 @@
       }
     }
 
+    /* A link can name the amount and the pair: ?amount=250&from=GBP&to=USD,
+       or the same after a # when it came from the share bar. Only listed
+       currencies are taken; anything else keeps the defaults. */
+    var touched = false, fromLink = false;
+    try {
+      var lp = linkParams();
+      var qa = lp.get('amount'), qf = lp.get('from'), qt = lp.get('to');
+      if (qa !== null && qa.trim() !== '' && isFinite(Number(qa))) { amount.value = String(Number(qa)); fromLink = true; }
+      if (qf !== null && Object.prototype.hasOwnProperty.call(COMMON, qf)) { from.sel.value = qf; fromLink = true; }
+      if (qt !== null && Object.prototype.hasOwnProperty.call(COMMON, qt)) { to.sel.value = qt; fromLink = true; }
+    } catch (e) { /* no URL, no prefill */ }
+
+    function tell(summary) {
+      announce({
+        kind: 'currency',
+        params: { amount: amount.value, from: from.sel.value, to: to.sel.value },
+        summary: summary,
+        changed: touched || fromLink
+      });
+    }
+
     function paint() {
       var f = from.sel.value, t = to.sel.value;
       var v = amount.value === '' ? null : Number(amount.value);
       results.innerHTML = '';
       table.innerHTML = '';
 
-      if (!state.rates) return;
+      if (!state.rates) { tell(null); return; }
       if (v === null || !isFinite(v)) {
         results.innerHTML = '<div class="result"><span class="result-label">Enter an amount above</span></div>';
+        tell(null);
         return;
       }
 
@@ -248,6 +286,10 @@
         grid.appendChild(cell);
       });
       table.appendChild(grid);
+
+      var summary = money(v, f) + ' = ' + money(out, t);
+      if (state.date && (summary + ' · rate ' + state.date).length <= 90) summary += ' · rate ' + state.date;
+      tell(summary);
     }
 
     function load() {
@@ -280,19 +322,21 @@
         status.className = 'io-msg is-error';
         status.textContent = e.message;
         results.innerHTML = '';
+        tell(null);
       });
     }
 
     /* Changing a currency is now a repaint, not a refetch: one file covers
        every pair. */
-    from.sel.addEventListener('change', paint);
-    to.sel.addEventListener('change', paint);
-    amount.addEventListener('input', paint);
+    var used = function () { touched = true; paint(); };
+    from.sel.addEventListener('change', used);
+    to.sel.addEventListener('change', used);
+    amount.addEventListener('input', used);
     swap.addEventListener('click', function () {
       var f = from.sel.value;
       from.sel.value = to.sel.value;
       to.sel.value = f;
-      paint();
+      used();
     });
 
     load();

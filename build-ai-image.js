@@ -26,6 +26,7 @@ const path = require('path');
 const hubs = require('./build-hubs.js');
 const crumbs = require('./build-crumbs.js');
 const outbound = require('./build-outbound.js');
+const share = require('./build-share.js'); /* the share bar and og:image, as build-share.js writes them */
 const sidebar = require('./build-sidebar.js');
 const { SECTIONS, trailFor } = require('./build/sections.js');
 
@@ -169,7 +170,7 @@ function toolPage(t, parts, all) {
   }) + '</script>\n';
   const rel = SECTION + '/' + t.slug + '/index.html';
   const html = headFor(parts, pathOnly, s.pageTitle || (s.title + ' — Free & Private | 1234Tools'), s.description, s.scripts) + ld + parts.mid + '\n' + body + parts.tail;
-  return outbound.rewrite(keepRelated(rel, keepPwa(rel, hubs.apply(sidebar.apply(html, rel), rel))), SECTION).html;
+  return share.apply(outbound.rewrite(keepRelated(rel, keepPwa(rel, hubs.apply(sidebar.apply(html, rel), rel))), SECTION).html, rel);
 }
 
 function hubPage(parts, all) {
@@ -207,7 +208,7 @@ function hubPage(parts, all) {
   }) + '</script>\n';
   const rel = SECTION + '/index.html';
   const html = headFor(parts, '/' + SECTION + '/', title, description, []) + ld + parts.mid + '\n' + body + parts.tail;
-  return outbound.rewrite(keepPwa(rel, hubs.apply(sidebar.apply(html, rel), rel)), SECTION).html;
+  return share.apply(outbound.rewrite(keepPwa(rel, hubs.apply(sidebar.apply(html, rel), rel)), SECTION).html, rel);
 }
 
 /* The redirect stub, in the shape the rest of the site uses, so every
