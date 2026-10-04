@@ -80,8 +80,11 @@ const COLLECTIONS = [
   },
   {
     slug: 'schools', kind: 'role', glyph: 'i-timetable',
-    name: 'Schools, teachers and tutors',
-    title: 'Free tools for schools and teachers',
+    /* Was "Schools, teachers and tutors". Teachers have a page of their own
+       now (build/collections-audiences.js), and this one is the office's:
+       the timetable, the seating plan, the report cards. */
+    name: 'Schools and school offices',
+    title: 'Free tools for schools and school offices',
     lede: 'The timetable, the seating plan, the report cards, the letters home — the August and December work, done in an afternoon.',
     intro: [
       'School administration is a small number of genuinely hard problems surrounded by a large amount of copying. Building a clash-free timetable is hard. Producing thirty-five report cards from a marks sheet is not hard, it is just long. These tools take both off the pile.',
@@ -260,6 +263,17 @@ const COLLECTIONS = [
    reviewed without touching the ones already shipped. */
 let EXTRA = [];
 try { EXTRA = require('./collections-extra.js').COLLECTIONS || []; } catch (e) { /* none yet */ }
-const ALL = COLLECTIONS.concat(EXTRA);
+/* The third batch — the audiences the site was invisible to — and the
+   home page's "I am a…" tiles. Not optional the way the second batch
+   once was: TILES names collections from every batch and is checked. */
+const AUD = require('./collections-audiences.js');
+/* Hindi twins, keyed by slug. A collection with no entry has no twin. */
+let HI = {};
+try { HI = require('./collections-hi.js').HI || {}; } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
+const ALL = COLLECTIONS.concat(EXTRA, AUD.COLLECTIONS);
+for (const c of ALL) if (HI[c.slug]) c.hi = HI[c.slug];
+for (const t of AUD.TILES) {
+  if (!ALL.some((c) => c.slug === t.slug)) throw new Error('TILES names a collection that does not exist: ' + t.slug);
+}
 
-module.exports = { COLLECTIONS: ALL, PRICING, pricingFor };
+module.exports = { COLLECTIONS: ALL, PRICING, pricingFor, TILES: AUD.TILES, HI_HUB: HI._hub || null };

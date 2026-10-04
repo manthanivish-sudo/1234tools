@@ -81,7 +81,9 @@ const HERO_JOBS = [
    explanation last. CATEGORIES is the hand-kept "Browse by category" grid,
    marked in index.html. Everything after the last block — the conversion
    families, the brand banner and the request form — is left where it is. */
-const ORDER = ['HOME-HERO', 'POPULAR', 'CATEGORIES', 'COLLECTIONS', 'HOME-PICKS', 'HOME-WHY'];
+/* AUDIENCES is the "I am a…" row written by build-collections.js: who you
+   are is the second question after what you came to do. */
+const ORDER = ['HOME-HERO', 'AUDIENCES', 'POPULAR', 'CATEGORIES', 'COLLECTIONS', 'HOME-PICKS', 'HOME-WHY'];
 
 /* The callable's address, built from the same config the account pages
    use so there is one place a project id is written down. While it says

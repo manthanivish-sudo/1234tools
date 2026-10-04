@@ -109,6 +109,29 @@ const row = (url, glyph, name, count, sub) =>
 
 const nameOf = (url) => (SECTIONS[url] && SECTIONS[url].name) || url;
 
+/* The collections, as a second level under the Collections row: people
+   first, in the order the home page's "I am a…" tiles meet them, then the
+   jobs. Read from the collections register so a new collection appears
+   here the day it is written. Each row counts the distinct tools in it. */
+function collectionRows() {
+  const { COLLECTIONS, TILES } = require('./build/collections.js');
+  const rank = (c) => { const i = (TILES || []).findIndex((t) => t.slug === c.slug); return i < 0 ? 99 : i; };
+  const people = COLLECTIONS.filter((c) => c.kind === 'role').sort((a, b) => rank(a) - rank(b));
+  const jobs = COLLECTIONS.filter((c) => c.kind === 'task');
+  const n = (c) => new Set(c.groups.flatMap((g) => g.tools)).size;
+  const label = (c) => { const t = (TILES || []).find((x) => x.slug === c.slug); return t ? t.label : c.name; };
+  /* The tiled audiences are always visible; the other trades and the jobs
+     fold, so the sidebar grows by twelve rows and not twenty-two. */
+  const shown = people.filter((c) => rank(c) < 99);
+  const rest = people.filter((c) => rank(c) === 99).concat(jobs);
+  return { all: COLLECTIONS, html:
+    shown.map((c) => row('/for/' + c.slug + '/', c.glyph, label(c), n(c), true)).join('') +
+    (rest.length ? '      <details class="side-fold side-fold-coll">\n' +
+      '        <summary>More collections</summary>\n' +
+      rest.map((c) => row('/for/' + c.slug + '/', c.glyph, c.name, n(c), true)).join('') +
+      '      </details>\n' : '') };
+}
+
 /* The phone button: the same link as the first row, outside the drawer. */
 const fab = () =>
   '<a class="side-find-fab" href="' + FINDER + '" aria-label="Find a tool">' + icon(FINDER_GLYPH) + '<span>Find</span></a>';
@@ -128,6 +151,7 @@ function sidebar(n) {
     row('/', 'i-home', 'Home', null) +
     row('/tools/', 'i-grid', 'All tools', num(n.total)) +
     row('/for/', 'i-collections', 'Collections', null) +
+    collectionRows().html +
     row('/settings/', 'i-settings', 'Settings', null) +
     '\n      <p class="side-group">Categories</p>\n';
   for (const [url, glyph] of large) out += row(url, glyph, nameOf(url), num(n[url]));
@@ -164,7 +188,8 @@ function sidebar(n) {
 function active(block, rel) {
   const p = '/' + rel.replace(/index\.html$/, '');
   let best = '';
-  for (const [url] of ORDER.concat(FAMILIES).concat([['/guides/'], ['/compare/'], ['/conversions/'], ['/learn/'], ['/tools/'], ['/for/'], ['/settings/'], [FINDER]])) {
+  const colls = collectionRows().all.map((c) => ['/for/' + c.slug + '/']);
+  for (const [url] of ORDER.concat(FAMILIES).concat(colls).concat([['/guides/'], ['/compare/'], ['/conversions/'], ['/learn/'], ['/tools/'], ['/for/'], ['/settings/'], [FINDER]])) {
     if (p.indexOf(url) === 0 && url.length > best.length) best = url;
   }
   if (!best) return block;

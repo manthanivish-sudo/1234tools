@@ -3216,3 +3216,57 @@ h2.hub-verb::before {
 .home-cats .card:hover { border-color: color-mix(in srgb, var(--sec) 45%, transparent); }
 .home-cats .card:hover .card-icon { background: color-mix(in srgb, var(--sec) 24%, var(--surface)); }
 /* ==== /B3-home ==== */
+
+/* ==== D3-audiences: "I am a…" tiles, collection extras ==== */
+/* The home page row written by build-collections.js. Each tile carries
+   its own hue as --aud-h; everything else is shared, so twelve tiles read
+   as one set. Colours are mixed against the theme's own surface, which is
+   what keeps them legible in light and dark alike. */
+.home-aud { margin: 0 0 40px; }
+.aud-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 12px; }
+.aud-tile {
+  --aud: hsl(var(--aud-h, 42) 85% 62%);
+  position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto 1fr;
+  column-gap: 12px; row-gap: 2px; align-items: start; padding: 16px 16px 14px;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--aud) 16%, var(--bg-1)) 0%, var(--bg-1) 70%);
+  border: 1px solid color-mix(in srgb, var(--aud) 32%, var(--border)); border-radius: var(--radius);
+  color: var(--text-2); text-decoration: none; overflow: hidden;
+  transition: transform .2s, border-color .2s, box-shadow .2s;
+}
+.aud-tile:hover, .aud-tile:focus-visible {
+  transform: translateY(-3px); text-decoration: none; outline: none;
+  border-color: color-mix(in srgb, var(--aud) 70%, transparent);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--aud) 22%, transparent);
+}
+.aud-ico {
+  grid-row: 1 / span 2; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px;
+  background: color-mix(in srgb, var(--aud) 22%, transparent); color: var(--aud);
+}
+.aud-ico .ico { width: 24px; height: 24px; }
+.aud-name { font-family: var(--font-head); font-weight: 700; font-size: 1rem; color: var(--text-1); line-height: 1.25; }
+.aud-n { font-size: .78rem; font-weight: 600; color: var(--aud); letter-spacing: .01em; }
+.aud-picks { grid-column: 1 / -1; margin-top: 10px; font-size: .8rem; line-height: 1.45; color: var(--text-3); }
+.aud-lang { margin: 12px 0 0; font-size: .92rem; }
+[data-theme="light"] .aud-tile { --aud: hsl(var(--aud-h, 42) 70% 38%); }
+@media (prefers-color-scheme: light) { [data-theme="system"] .aud-tile { --aud: hsl(var(--aud-h, 42) 70% 38%); } }
+@media (max-width: 560px) {
+  .aud-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .aud-tile { grid-template-columns: 1fr; padding: 12px; }
+  .aud-ico { grid-row: auto; width: 34px; height: 34px; margin-bottom: 6px; }
+  .aud-picks { display: none; }
+}
+/* Collection pages: what is coming next, who made what, the other language. */
+.collection-next ul { margin-bottom: 10px; }
+.collection-made ul.related { margin-bottom: 10px; }
+.collection-lang { margin: 24px 0 0; font-size: .95rem; }
+/* Devanagari joins its letters along a headline: letter-spacing breaks the
+   words apart, and the monospace count line has no Devanagari face at all. */
+[lang="hi"] .eyebrow { letter-spacing: 0; text-transform: none; font-size: .85rem; }
+[lang="hi"] .collection-count { font-family: var(--font-body); }
+[lang="hi"] .collection-intro, [lang="hi"] .lede { line-height: 1.8; }
+/* ==== /D3-audiences ==== */
+
+/* ==== D4-side-collections: the collections under the Collections row ==== */
+.side-nav > .side-link.side-sub, .side-fold-coll > .side-link.side-sub { padding-left: 30px; }
+.side-fold-coll > summary { padding-left: 30px; }
+/* ==== /D4-side-collections ==== */

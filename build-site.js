@@ -225,6 +225,10 @@ const READING = {
   'compare/': { freq: 'monthly', pri: '0.7' },
   'guides/':  { freq: 'monthly', pri: '0.8' },
   'for/':     { freq: 'monthly', pri: '0.8' },
+  /* the Hindi twins of the collections, written by build-collections.js */
+  'hi/for/':  { freq: 'monthly', pri: '0.7' },
+  /* people who made something with a tool, written by build-showcase.js */
+  'showcase/': { freq: 'weekly', pri: '0.6' },
   'learn/':   { freq: 'monthly', pri: '0.6', hubPri: '0.7' }
 };
 

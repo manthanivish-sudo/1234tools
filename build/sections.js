@@ -87,6 +87,10 @@ const SECTIONS = {
   '/compare/': { name: 'Comparisons', crumb: 'Comparisons', meta: true },
   '/guides/': { name: 'Guides', crumb: 'Guides', meta: true },
   '/practice/': { name: 'Practice', crumb: 'Practice', meta: true },
+  /* People who made something with a tool, with their permission. */
+  '/showcase/': { name: 'Showcase', meta: true },
+  /* The Hindi collections. Only the hub is a level; /hi/ itself is not a page. */
+  '/hi/for/': { name: 'हिन्दी में टूल', crumb: 'हिन्दी', meta: true },
   '/contact/': { name: 'Contact', meta: true },
   '/privacy/': { name: 'Privacy', meta: true },
   '/terms/':   { name: 'Terms', meta: true },
