@@ -1,0 +1,14 @@
+{
+  "_note": "SYNTHETIC: reddit.com/search.json answered 403 'blocked by network security' from the network these fixtures were captured on (see reddit-search.json.403.txt). This file follows Reddit's documented Listing shape so the JSON parser can be tested offline; the RSS fixture beside it is a real response.",
+  "kind": "Listing",
+  "data": {
+    "after": null,
+    "dist": 4,
+    "children": [
+      { "kind": "t3", "data": { "title": "How do I combine three PDFs into one without Adobe?", "permalink": "/r/smallbusiness/comments/aaaa01/how_do_i_combine_three_pdfs/", "created_utc": 1759500000, "score": 4, "num_comments": 3, "author": "example_user_1", "subreddit": "smallbusiness", "selftext": "Need to send one file to a client. Any free way that doesn't upload the contract?", "archived": false, "locked": false, "stickied": false } },
+      { "kind": "t3", "data": { "title": "Is there a free merge pdf tool that works offline?", "permalink": "/r/smallbusiness/comments/aaaa02/free_merge_pdf_offline/", "created_utc": 1759400000, "score": 1, "num_comments": 0, "author": "example_user_2", "subreddit": "smallbusiness", "selftext": "", "archived": false, "locked": true, "stickied": false } },
+      { "kind": "t3", "data": { "title": "Merging PDFs for invoices, what do you use?", "permalink": "/r/smallbusiness/comments/aaaa03/merging_pdfs_for_invoices/", "created_utc": 1759300000, "score": 7, "num_comments": 12, "author": "example_user_3", "subreddit": "smallbusiness", "selftext": "", "archived": true, "locked": false, "stickied": false } },
+      { "kind": "t3", "data": { "title": "I launched my bakery this week", "permalink": "/r/smallbusiness/comments/aaaa04/i_launched_my_bakery/", "created_utc": 1759450000, "score": 30, "num_comments": 8, "author": "example_user_4", "subreddit": "smallbusiness", "selftext": "Just sharing the news.", "archived": false, "locked": false, "stickied": false } }
+    ]
+  }
+}

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Promotion Desk · 1234Tools</title>
+<link rel="stylesheet" href="/ui.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 512 512" aria-hidden="true"><rect x="74" y="74" width="170" height="170" rx="38" fill="#ffe29a"/><rect x="268" y="74" width="170" height="170" rx="38" fill="#f7c948"/><rect x="74" y="268" width="170" height="170" rx="38" fill="#e8a020"/><rect x="268" y="268" width="170" height="170" rx="38" fill="#ff9d2e"/><circle cx="438" cy="74" r="17" fill="#2dd4ff"/><circle cx="74" cy="438" r="17" fill="#7c5cff"/></svg>
+    <div>
+      <h1>Promotion Desk</h1>
+      <p class="sub" id="today-line">A human publishes every post.</p>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="today" aria-selected="true">Today</button>
+    <button role="tab" data-tab="draft">Draft</button>
+    <button role="tab" data-tab="opps">Opportunities</button>
+    <button role="tab" data-tab="kits">Kits</button>
+    <button role="tab" data-tab="venues">Venues</button>
+    <button role="tab" data-tab="log">Log</button>
+    <button role="tab" data-tab="reels">Reels</button>
+  </nav>
+</header>
+
+<main>
+  <!-- TODAY -->
+  <section id="tab-today" class="tab" data-tab="today">
+    <div class="head-row"><h2 id="plan-title">Today</h2><button class="ghost" id="plan-refresh">Refresh</button></div>
+    <p class="muted" id="plan-work"></p>
+    <div id="plan-tasks" class="stack"></div>
+  </section>
+
+  <!-- DRAFT -->
+  <section id="tab-draft" class="tab" data-tab="draft" hidden>
+    <div class="grid2">
+      <div class="card">
+        <label class="lbl" for="d-tool">Tool</label>
+        <div class="picker" id="d-picker">
+          <input id="d-tool" type="search" autocomplete="off" placeholder="Search the 232 tools… e.g. merge pdf">
+          <ul class="picker-list" id="d-tool-list" hidden></ul>
+        </div>
+        <p class="chosen" id="d-tool-chosen"></p>
+
+        <label class="lbl" for="d-venue">Venue <span class="muted">(ranked by fit)</span></label>
+        <select id="d-venue"><option value="">Pick a tool first</option></select>
+
+        <div class="row">
+          <div class="grow">
+            <label class="lbl" for="d-template">Template</label>
+            <select id="d-template"></select>
+          </div>
+          <div>
+            <label class="lbl">Variant</label>
+            <div class="variant"><button class="ghost" id="d-vprev" aria-label="Previous variant">‹</button><span id="d-vnum">0</span><button class="ghost" id="d-vnext" aria-label="Next variant">›</button></div>
+          </div>
+        </div>
+
+        <details class="more" id="d-extra">
+          <summary>Answering a thread, or quoting a figure</summary>
+          <label class="lbl" for="d-question">Thread question</label>
+          <input id="d-question" type="text" placeholder="The question you are answering">
+          <label class="lbl" for="d-qurl">Thread URL</label>
+          <input id="d-qurl" type="url" placeholder="https://…">
+          <label class="lbl" for="d-result">Figure from the tool (never invented)</label>
+          <input id="d-result" type="text" placeholder="e.g. £3,160 a month take-home on £48,000 (2026/27)">
+          <button class="ghost" id="d-apply">Apply</button>
+        </details>
+
+        <div id="d-venue-info" class="venue-info"></div>
+      </div>
+
+      <div class="card">
+        <div id="d-status"></div>
+        <div id="d-parts" class="stack"></div>
+        <div id="d-lint"></div>
+        <div class="actions">
+          <a id="d-composer" class="btn gold" target="_blank" rel="noopener noreferrer" hidden>Open composer</a>
+          <a id="d-thread" class="btn" target="_blank" rel="noopener noreferrer" hidden>Open thread</a>
+          <button id="d-logpost" class="btn">Log as posted…</button>
+        </div>
+        <p class="muted small" id="d-composer-note"></p>
+        <label class="override" id="d-override-wrap" hidden><input type="checkbox" id="d-override"> I have read why it is blocked and still want to post (logged as an override)</label>
+        <details class="redlines" id="d-redlines"><summary>Red lines for this venue</summary><ul></ul></details>
+      </div>
+    </div>
+  </section>
+
+  <!-- OPPORTUNITIES -->
+  <section id="tab-opps" class="tab" data-tab="opps" hidden>
+    <div class="card">
+      <div class="row wrap">
+        <div class="grow">
+          <label class="lbl" for="o-tool">Questions a tool answers</label>
+          <div class="picker" id="o-picker">
+            <input id="o-tool" type="search" autocomplete="off" placeholder="Search tools…">
+            <ul class="picker-list" id="o-tool-list" hidden></ul>
+          </div>
+        </div>
+        <div>
+          <label class="lbl" for="o-aud">…or an audience</label>
+          <select id="o-aud"><option value="">(none)</option></select>
+        </div>
+        <div class="end"><button class="btn gold" id="o-go">Find questions</button></div>
+      </div>
+      <p class="muted small">Read-only public searches (Reddit, Hacker News, Stack Exchange), one request a second and slower for Reddit; results are cached for 30 minutes. Threads older than 30 days (48 hours on HN), locked or archived are left out.</p>
+    </div>
+    <div id="o-status" class="muted"></div>
+    <div id="o-results" class="stack"></div>
+  </section>
+
+  <!-- KITS -->
+  <section id="tab-kits" class="tab" data-tab="kits" hidden>
+    <div class="card">
+      <label class="lbl" for="k-tool">Launch kit for a tool</label>
+      <div class="row">
+        <div class="picker grow" id="k-picker">
+          <input id="k-tool" type="search" autocomplete="off" placeholder="Search tools…">
+          <ul class="picker-list" id="k-tool-list" hidden></ul>
+        </div>
+        <button class="btn gold" id="k-go">Generate kit</button>
+      </div>
+      <p class="muted small">Writes kit.md (every template, best-fit venues, UTM links) and four PNGs (1080², 1000×1500 pin, 1080×1920 story with QR, 1200×630) to <code id="k-dir"></code>.</p>
+    </div>
+    <div id="k-result"></div>
+    <h3>Existing kits</h3>
+    <div id="k-list" class="stack"></div>
+  </section>
+
+  <!-- VENUES -->
+  <section id="tab-venues" class="tab" data-tab="venues" hidden>
+    <div class="card filters">
+      <input id="v-q" type="search" placeholder="Filter by name or notes">
+      <select id="v-kind"><option value="">All kinds</option></select>
+      <select id="v-aud"><option value="">All audiences</option></select>
+      <select id="v-sec"><option value="">All sections</option></select>
+      <select id="v-risk"><option value="">Any risk</option><option>low</option><option>medium</option><option>high</option></select>
+      <label class="chk"><input type="checkbox" id="v-post" checked> Posting venues only</label>
+    </div>
+    <p class="muted small" id="v-count"></p>
+    <div class="tablewrap"><table class="tbl" id="v-table"><thead><tr><th>Venue</th><th>Kind</th><th>Risk</th><th>Self-promo</th><th>Links</th><th>Cadence</th><th>Template</th><th>Today</th></tr></thead><tbody></tbody></table></div>
+    <details class="card" id="v-excluded"><summary>Excluded venues and why</summary><ul></ul></details>
+    <details class="card" id="v-insights" open><summary>Insights</summary><div></div></details>
+  </section>
+
+  <!-- LOG -->
+  <section id="tab-log" class="tab" data-tab="log" hidden>
+    <div class="card">
+      <div class="row wrap">
+        <select id="l-venue"><option value="">All venues</option></select>
+        <input id="l-tool" type="search" placeholder="Tool path filter, e.g. /pdf/merge-pdf/">
+        <button class="ghost" id="l-refresh">Refresh</button>
+      </div>
+      <p class="muted small">Log file: <code id="l-file"></code></p>
+    </div>
+    <div class="tablewrap"><table class="tbl" id="l-table"><thead><tr><th>When</th><th>Kind</th><th>Venue</th><th>Tool</th><th>Template</th><th>Link</th><th>Note</th></tr></thead><tbody></tbody></table></div>
+    <details class="card">
+      <summary>Add an entry by hand (a help-only reply, a removal, a post made elsewhere)</summary>
+      <div class="row wrap">
+        <select id="la-venue"></select>
+        <input id="la-tool" type="text" placeholder="/pdf/merge-pdf/ (optional)">
+        <select id="la-kind"><option value="help">help (no link)</option><option value="post">post (linked)</option><option value="removed">removed by a moderator</option></select>
+        <input id="la-url" type="url" placeholder="Post URL (optional)">
+        <input id="la-note" type="text" placeholder="Note (optional)">
+        <button class="btn" id="la-add">Add</button>
+      </div>
+    </details>
+    <h3>Cadence by venue</h3>
+    <div class="tablewrap"><table class="tbl" id="l-status"><thead><tr><th>Venue</th><th>Last linked post</th><th>This week</th><th>Help since</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <!-- REELS -->
+  <section id="tab-reels" class="tab" data-tab="reels" hidden>
+    <div class="card notice"><strong>Available once deployed.</strong> <span id="r-note"></span></div>
+    <div id="r-sections" class="stack"></div>
+  </section>
+</main>
+
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<script src="/ui.js"></script>
+</body>
+</html>
