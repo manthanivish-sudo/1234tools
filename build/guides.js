@@ -1117,4 +1117,15 @@ const GUIDES = [
   }
 ];
 
+/* A second batch — the everyday how-tos — may live in
+   build/guides-everyday.js, exporting GUIDES in exactly this shape and the
+   AUTHORITIES its fact blocks cite beyond the list above (the WHO, the RBI,
+   CBSE…). Kept separate so it can be written and reviewed without touching
+   the guides already shipped; a missing file means no second batch. */
+try {
+  const EVERYDAY = require('./guides-everyday.js');
+  GUIDES.push(...(EVERYDAY.GUIDES || []));
+  for (const h of EVERYDAY.AUTHORITIES || []) if (!AUTHORITIES.includes(h)) AUTHORITIES.push(h);
+} catch (e) { if (e.code !== 'MODULE_NOT_FOUND' || !/guides-everyday/.test(e.message)) throw e; }
+
 module.exports = { GUIDES, AUTHORITIES, SRC, CHECKED };

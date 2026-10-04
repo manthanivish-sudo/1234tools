@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -135,21 +142,38 @@ window.TOOLS["date-difference"] = {
 "formula": "Calendar-aware difference accounting for varying month lengths and leap years",
 "inputs": [{"key":"start","label":"Start Date","type":"date","default":"2000-01-01"},{"key":"end","label":"End Date","type":"date","default":"TODAY"}],
 "compute": ({ start, end }) => {
-      const d1 = new Date(start), d2 = new Date(end);
+      /* Whole calendar days in UTC, so the browser's time zone and clock
+         changes cannot move either date. */
+      const dayOf = (s) => {
+        const m = /^(-?\d{1,6})-(\d{2})-(\d{2})$/.exec(String(s == null ? '' : s).trim());
+        if (m) { const t = new Date(0); t.setUTCFullYear(+m[1], +m[2] - 1, +m[3]); return t; }
+        const x = new Date(s);
+        return isNaN(x) ? x : new Date(Date.UTC(x.getFullYear(), x.getMonth(), x.getDate()));
+      };
+      const d1 = dayOf(start), d2 = dayOf(end);
       if (isNaN(d1) || isNaN(d2)) return {};
       const [a, b] = d1 <= d2 ? [d1, d2] : [d2, d1];
 
-      let years = b.getFullYear() - a.getFullYear();
-      let months = b.getMonth() - a.getMonth();
-      let days = b.getDate() - a.getDate();
-      if (days < 0) {
-        months--;
-        days += new Date(b.getFullYear(), b.getMonth(), 0).getDate();
-      }
-      if (months < 0) { years--; months += 12; }
-
+      /* Calendar difference: whole months first, then the days left over.
+         When the end day is earlier in its month than the start day, one
+         month is given back and the days are counted from the start date
+         moved on by the whole months (clamped to the end of a short month,
+         as the date add tool does) — so 31 January to 1 March is 1 month
+         and 1 day, never "1 month, −2 days", and adding the answer to the
+         start date always lands on the end date. */
+      const ay = a.getUTCFullYear(), am = a.getUTCMonth(), ad = a.getUTCDate();
+      let total = (b.getUTCFullYear() - ay) * 12 + (b.getUTCMonth() - am);
+      if (b.getUTCDate() < ad) total--;
+      const anchor = new Date(0);
+      anchor.setUTCFullYear(ay, am + total, 1);
+      const lastDay = new Date(0);
+      lastDay.setUTCFullYear(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 0);
+      anchor.setUTCDate(Math.min(ad, lastDay.getUTCDate()));
       const msPerDay = 86400000;
+      const years = Math.floor(total / 12), months = total % 12;
+      const days = Math.round((b - anchor) / msPerDay);
       const totalDays = Math.round((b - a) / msPerDay);
+      const local = (x) => new Date(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate());
 
       return {
         breakdown: `${years} years, ${months} months, ${days} days`,
@@ -158,7 +182,7 @@ window.TOOLS["date-difference"] = {
         totalMonths: years * 12 + months,
         totalHours: totalDays * 24,
         totalMinutes: totalDays * 1440,
-        weekdays: countWeekdays(a, b)
+        weekdays: countWeekdays(local(a), local(b))
       };
     },
 "outputs": [{"key":"breakdown","label":"Difference","format":"text","primary":true},{"key":"totalDays","label":"Total Days","format":"number"},{"key":"weekdays","label":"Weekdays (Mon–Fri)","format":"number"},{"key":"totalWeeks","label":"Total Weeks","format":"number"},{"key":"totalMonths","label":"Total Months","format":"number"},{"key":"totalHours","label":"Total Hours","format":"number"},{"key":"totalMinutes","label":"Total Minutes","format":"number"}],

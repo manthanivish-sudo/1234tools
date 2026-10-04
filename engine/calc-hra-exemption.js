@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -132,12 +139,23 @@ window.TOOLS["hra-exemption"] = {
 "currency": "INR",
 "title": "HRA Exemption Calculator",
 "category": "india",
-"description": "Work out the house rent allowance exemption under Section 10(13A) — the lowest of three tests.",
+"description": "Work out the house rent allowance exemption — the lowest of three tests. Tax year 2026-27 onwards: Income-tax Act, 2025, Schedule III (Table: Sl. No. 11) with rule 279 of the Income-tax Rules, 2026; earlier years: section 10(13A) of the 1961 Act.",
 "keywords": ["HRA calculator","HRA exemption","house rent allowance","section 10 13A","HRA tax exemption"],
 "formula": "exempt = least of (actual HRA, rent − 10% salary, 50%/40% of salary)",
-"inputs": [{"key":"basic","label":"Basic salary + DA (annual)","type":"number","unit":"₹","default":600000,"min":0},{"key":"hra","label":"HRA received (annual)","type":"number","unit":"₹","default":240000,"min":0},{"key":"rent","label":"Rent paid (annual)","type":"number","unit":"₹","default":300000,"min":0},{"key":"metro","label":"City","type":"select","options":[{"value":"metro","label":"Metro (Delhi, Mumbai, Kolkata, Chennai)"},{"value":"non","label":"Non-metro"}],"default":"metro"}],
-"compute": ({ basic, hra, rent, metro }) => {
-      const pct = metro === 'metro' ? 0.5 : 0.4;
+"inputs": [{"key":"basic","label":"Basic salary + DA (annual)","type":"number","unit":"₹","default":600000,"min":0},{"key":"hra","label":"HRA received (annual)","type":"number","unit":"₹","default":240000,"min":0},{"key":"rent","label":"Rent paid (annual)","type":"number","unit":"₹","default":300000,"min":0},{"key":"metro","label":"City","type":"select","options":[{"value":"metro","label":"Delhi, Mumbai, Kolkata or Chennai"},{"value":"metro8","label":"Bengaluru, Hyderabad, Pune or Ahmedabad"},{"value":"non","label":"Anywhere else"}],"default":"metro"},{"key":"year","label":"Tax year","type":"select","options":[{"value":"2026-27","label":"2026-27 (Income-tax Act, 2025)"},{"value":"2025-26","label":"FY 2025-26 (Income-tax Act, 1961)"}],"default":"2026-27"}],
+"compute": ({ basic, hra, rent, metro, year }) => {
+      /* The 50% test applies to these cities, 40% elsewhere.
+         Tax year 2026-27 on: rule 279 of the Income-tax Rules, 2026 (G.S.R.
+         198(E), 20 March 2026, in force 1 April 2026) — "Mumbai, Kolkata,
+         Delhi, Chennai, Hyderabad, Pune, Ahmedabad and Bengaluru. 50%";
+         read 2026-10-04 in the notified rules,
+         https://www.incometaxindia.gov.in/documents/d/guest/en-notified-it-rules-2026-20-03-2026-pdf
+         (Web Archive copy of 12 April 2026; the site itself refused automated
+         access). FY 2025-26 and earlier: rule 2A of the 1962 Rules — Bombay,
+         Calcutta, Delhi and Madras only. */
+      const fy2025 = year === '2025-26';
+      const fifty = metro === 'metro' || (metro === 'metro8' && !fy2025);
+      const pct = fifty ? 0.5 : 0.4;
       const t1 = Number(hra) || 0;
       const t2 = Math.max(0, (Number(rent) || 0) - 0.10 * (Number(basic) || 0));
       const t3 = (Number(basic) || 0) * pct;
@@ -147,20 +165,21 @@ window.TOOLS["hra-exemption"] = {
                   : `${pct * 100}% of salary`;
       return {
         exempt, taxable: t1 - exempt, t1, t2, t3, which,
+        note: metro === 'metro8' && fy2025 ? 'Bengaluru, Hyderabad, Pune and Ahmedabad qualify for 50% only from tax year 2026-27; for FY 2025-26 they are at 40%.' : '',
         _table: {
           head: ['Test', 'Amount'],
           rows: [
             ['1. Actual HRA received', fmtR(t1)],
             ['2. Rent paid − 10% of salary', fmtR(t2)],
-            [`3. ${pct * 100}% of salary (${metro === 'metro' ? 'metro' : 'non-metro'})`, fmtR(t3)],
+            [`3. ${pct * 100}% of salary (${fifty ? 'metro' : 'non-metro'})`, fmtR(t3)],
             ['Exempt (lowest of the three)', fmtR(exempt)],
             ['Taxable portion of HRA', fmtR(t1 - exempt)]
           ]
         }
       };
     },
-"outputs": [{"key":"exempt","label":"HRA exempt from tax","format":"currency","primary":true},{"key":"taxable","label":"Taxable HRA","format":"currency"},{"key":"which","label":"Limiting test","format":"text"},{"key":"t1","label":"Test 1 — actual HRA","format":"currency"},{"key":"t2","label":"Test 2 — rent − 10% salary","format":"currency"},{"key":"t3","label":"Test 3 — % of salary","format":"currency"}],
-"tips": ["HRA exemption is only available under the old regime. The new regime removes it entirely, which is often what decides between the two.","\"Salary\" here means basic pay plus dearness allowance that forms part of retirement benefits, not your full CTC.","If annual rent exceeds ₹1,00,000 you must report the landlord’s PAN to your employer.","Paying rent to a parent is allowed if the arrangement is genuine, the parent owns the property and declares the rental income. Keep receipts and bank transfers."],
+"outputs": [{"key":"exempt","label":"HRA exempt from tax","format":"currency","primary":true},{"key":"taxable","label":"Taxable HRA","format":"currency"},{"key":"which","label":"Limiting test","format":"text"},{"key":"t1","label":"Test 1 — actual HRA","format":"currency"},{"key":"t2","label":"Test 2 — rent − 10% salary","format":"currency"},{"key":"t3","label":"Test 3 — % of salary","format":"currency"},{"key":"note","label":"","format":"text"}],
+"tips": ["HRA exemption is only available under the old regime. The new regime removes it entirely, which is often what decides between the two.","From tax year 2026-27 the 50% test covers eight cities — Delhi, Mumbai, Kolkata, Chennai, Bengaluru, Hyderabad, Pune and Ahmedabad (rule 279 of the Income-tax Rules, 2026). Before that it was the first four only.","\"Salary\" here means basic pay plus dearness allowance that forms part of retirement benefits, not your full CTC.","If annual rent exceeds ₹1,00,000 you must report the landlord’s PAN to your employer.","Paying rent to a parent is allowed if the arrangement is genuine, the parent owns the property and declares the rental income. Keep receipts and bank transfers."],
 "faq": [{"q":"Can I claim HRA and a home loan together?","a":"Yes, if the circumstances are genuine — for example you own a property in one city and rent in another for work. Claiming both for the same city and property invites scrutiny."}]
 };
 })();

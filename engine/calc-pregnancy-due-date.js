@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -131,18 +138,29 @@ window.TOOLS["pregnancy-due-date"] = {
 "category": "health",
 "description": "Estimate a due date from the last menstrual period or conception date, with current gestational age.",
 "keywords": ["due date calculator","pregnancy calculator","EDD calculator","gestational age","how many weeks pregnant"],
-"formula": "Naegele's rule: LMP + 280 days, adjusted for cycle length",
+"formula": "Naegele's rule: LMP + 280 days + (cycle length − 28) days",
 "inputs": [{"key":"basis","label":"Calculate from","type":"select","options":[{"value":"lmp","label":"First day of last menstrual period"},{"value":"conception","label":"Conception or ovulation date"},{"value":"ivf","label":"IVF transfer date"}],"default":"lmp"},{"key":"date","label":"Date","type":"date","default":"TODAY"},{"key":"cycle","label":"Average cycle length","type":"number","unit":"days","default":28,"min":20,"max":45},{"key":"ivfDay","label":"IVF embryo age at transfer","type":"select","options":[{"value":"3","label":"Day 3"},{"value":"5","label":"Day 5"},{"value":"6","label":"Day 6"}],"default":"5"},{"key":"today","label":"Today’s date","type":"date","default":"TODAY"}],
 "compute": ({ basis, date, cycle, ivfDay, today }) => {
-      const d = new Date(date), now = new Date(today);
-      if (isNaN(d) || isNaN(now)) return { note: 'Enter valid dates.' };
+      /* Whole calendar days, held as UTC midnights: a YYYY-MM-DD field is
+         read as that calendar day wherever the browser is, and adding days
+         can never be shifted by a clock change. */
       const MS = 86400000;
-      const add = (base, days) => { const x = new Date(base); x.setDate(x.getDate() + days); return x; };
+      const dayOf = (s) => {
+        const m = /^(-?\d{1,6})-(\d{2})-(\d{2})$/.exec(String(s == null ? '' : s).trim());
+        if (m) { const t = new Date(0); t.setUTCFullYear(+m[1], +m[2] - 1, +m[3]); return t.getTime(); }
+        const x = new Date(s);
+        return isNaN(x) ? NaN : Date.UTC(x.getFullYear(), x.getMonth(), x.getDate());
+      };
+      const d = dayOf(date), now = dayOf(today);
+      if (isNaN(d) || isNaN(now)) return { note: 'Enter valid dates.' };
+      const add = (base, days) => base + days * MS;
 
       let lmp;
       if (basis === 'lmp') {
-        // Naegele's rule assumes a 28-day cycle; ovulation shifts with cycle length
-        lmp = add(d, 28 - Math.max(20, Math.min(45, Number(cycle) || 28)));
+        /* Naegele's rule assumes a 28-day cycle with ovulation on day 14.
+           A longer cycle ovulates later, so the due date moves later by
+           (cycle − 28) days; a shorter one moves it earlier. */
+        lmp = add(d, Math.max(20, Math.min(45, Number(cycle) || 28)) - 28);
       } else if (basis === 'conception') {
         lmp = add(d, -14);
       } else {
@@ -150,10 +168,9 @@ window.TOOLS["pregnancy-due-date"] = {
       }
 
       const due = add(lmp, 280);
-      const daysPreg = Math.floor((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) -
-                                   Date.UTC(lmp.getFullYear(), lmp.getMonth(), lmp.getDate())) / MS);
+      const daysPreg = Math.round((now - lmp) / MS);
       const weeks = Math.floor(daysPreg / 7), days = daysPreg % 7;
-      const fmt = (x) => x.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      const fmt = (x) => new Date(x).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
       let stage = '';
       if (daysPreg < 0) stage = 'That date is in the future.';

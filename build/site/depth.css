@@ -1,0 +1,99 @@
+/* ==== D7-depth ==== */
+/* Written by build-depth.js from build/content/*.js: the long-form part of a
+   calculator page — what the quantity is, how it is worked out, a second
+   worked example, uses, mistakes, more questions and related links. One
+   panel, read like an article: real headings, a ~70ch measure, the formula
+   in a highlighted box. Colours are theme tokens, or the site's own
+   "wrong" pair (#ff8a73 dark / #8c1d0c light) for the mistakes. */
+.depth { padding: 30px clamp(18px, 4vw, 40px) 26px; scroll-margin-top: 90px; }
+.depth-sec { max-width: 72ch; }
+.depth-sec + .depth-sec { margin-top: 30px; padding-top: 26px; border-top: 1px solid var(--border); }
+.panel.depth h2 {
+  margin: 0 0 12px; font: 700 clamp(1.08rem, 2.6vw, 1.28rem)/1.3 var(--font-head);
+  letter-spacing: -.01em; text-transform: none; color: var(--text-1);
+}
+.depth p { margin: 0 0 12px; font-size: 1rem; line-height: 1.72; color: var(--text-2); }
+.depth p:last-child { margin-bottom: 0; }
+.depth-what p:first-of-type { font-size: 1.04rem; color: var(--text-1); }
+
+/* the formula: a highlighted box, then what each symbol means */
+.depth-formula {
+  display: flex; flex-direction: column; gap: 8px; margin: 16px 0;
+  padding: 16px 18px; border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg-0));
+  border: 1px solid var(--border-gold); border-left: 4px solid var(--accent);
+  overflow-x: auto;
+}
+.depth-formula code {
+  display: block; white-space: pre-wrap; overflow-wrap: break-word;
+  padding-left: 1.5em; text-indent: -1.5em;   /* a wrapped line hangs under the first */
+  font: 500 clamp(.84rem, 2.3vw, 1rem)/1.55 var(--font-mono); color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+}
+.depth-vars { display: grid; grid-template-columns: minmax(3.5em, max-content) 1fr; gap: 0; margin: 0; max-width: 64ch; }
+.depth-vars > div { display: contents; }
+.depth-vars dt, .depth-vars dd { padding: 7px 0; border-bottom: 1px dashed var(--border); }
+.depth-vars > div:last-child dt, .depth-vars > div:last-child dd { border-bottom: 0; }
+.depth-vars dt { padding-right: 16px; }
+.depth-vars dt code { font: 700 .9rem/1.4 var(--font-mono); color: var(--accent); }
+.depth-vars dd { margin: 0; font-size: .94rem; line-height: 1.5; color: var(--text-2); }
+
+/* the second worked example */
+.depth-worked {
+  padding: 16px 18px; border-radius: var(--radius-sm);
+  background: var(--bg-0); border: 1px solid var(--border);
+}
+.depth-worked p { font-size: .98rem; }
+.depth-try { margin: 12px 0 0 !important; }
+.depth-try .btn-ghost { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+
+/* uses: a short title, then the sentence, as a ruled list */
+.depth-uses { list-style: none; margin: 0; padding: 0; }
+.depth-uses li {
+  padding: 10px 0 10px 16px; border-left: 3px solid var(--border-gold);
+  font-size: .97rem; line-height: 1.6; color: var(--text-2);
+}
+.depth-uses li + li { margin-top: 8px; }
+.depth-uses strong { display: block; margin-bottom: 2px; font: 700 .98rem/1.35 var(--font-head); color: var(--text-1); }
+
+/* mistakes: the wrong way, struck through by a mark, and the right way */
+.depth-mistakes { list-style: none; margin: 0; padding: 0; }
+.depth-mistakes li {
+  position: relative; padding: 2px 0 2px 32px; margin-bottom: 12px;
+  font-size: .97rem; line-height: 1.65; color: var(--text-2);
+}
+.depth-mistakes li:last-child { margin-bottom: 0; }
+.depth-mistakes li::before {
+  content: "!"; position: absolute; left: 0; top: 3px; display: grid; place-items: center;
+  width: 21px; height: 21px; border-radius: 50%;
+  font: 800 .78rem/1 var(--font-body); color: #ff8a73;
+  background: color-mix(in srgb, #ff8a73 13%, transparent); border: 1px solid color-mix(in srgb, #ff8a73 40%, transparent);
+}
+[data-theme="light"] .depth-mistakes li::before { color: #8c1d0c; background: color-mix(in srgb, #8c1d0c 7%, transparent); border-color: color-mix(in srgb, #8c1d0c 30%, transparent); }
+@media (prefers-color-scheme: light) {
+  [data-theme="system"] .depth-mistakes li::before { color: #8c1d0c; background: color-mix(in srgb, #8c1d0c 7%, transparent); border-color: color-mix(in srgb, #8c1d0c 30%, transparent); }
+}
+
+/* more questions: the site's own details/summary look */
+.depth-faq details p { font-size: .95rem; line-height: 1.65; max-width: 70ch; }
+
+/* related links, each marked with what it is */
+.depth-related { columns: 2; column-gap: 28px; }
+.depth-related li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.depth-kind {
+  font: 700 .62rem/1 var(--font-body); letter-spacing: .12em; text-transform: uppercase;
+  padding: 3px 6px; border-radius: 999px; color: var(--text-3); border: 1px solid var(--border);
+}
+
+@media (max-width: 640px) {
+  .depth { padding: 22px 16px 20px; }
+  .depth-sec + .depth-sec { margin-top: 24px; padding-top: 20px; }
+  .depth p { font-size: .97rem; line-height: 1.68; }
+  .depth-formula { padding: 13px 14px; }
+  .depth-vars { grid-template-columns: minmax(2.8em, max-content) 1fr; }
+  .depth-related { columns: 1; }
+}
+
+/* embed mode shows the tool alone */
+html.is-embed .tool > .depth { display: none !important; }
+/* ==== /D7-depth ==== */

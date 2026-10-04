@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -138,18 +145,32 @@ window.TOOLS["ratio-calculator"] = {
       if (!A || !B) return { note: 'A and B must both be non-zero.' };
 
       const gcd = (x, y) => { x = Math.abs(x); y = Math.abs(y); while (y) [x, y] = [y, x % y]; return x || 1; };
-      const g = gcd(Math.round(A), Math.round(B));
+      /* Decimals are scaled to whole numbers before simplifying — 1.5 : 2
+         becomes 15 : 20 and then 3 : 4. Rounding first gave 1 : 1. The
+         scale is the fewest decimal places (up to 9) that hold both terms. */
+      const placesOf = (x) => {
+        for (let k = 0; k <= 9; k++) {
+          const s = x * Math.pow(10, k);
+          if (Math.abs(s - Math.round(s)) <= 1e-9 * Math.max(1, Math.abs(s))) return k;
+        }
+        return 9;
+      };
+      const k = Math.max(placesOf(A), placesOf(B));
+      const IA = Math.round(A * Math.pow(10, k)), IB = Math.round(B * Math.pow(10, k));
+      const exact = Number.isSafeInteger(IA) && Number.isSafeInteger(IB);
+      const g = exact ? gcd(IA, IB) : 1;
+      const SA = exact ? IA / g : A, SB = exact ? IB / g : B;
       const sum = A + B;
 
       return {
-        simplified: `${Math.round(A / g)} : ${Math.round(B / g)}`,
+        simplified: `${SA} : ${SB}`,
         decimal: A / B,
         missingD: A ? (B * C) / A : NaN,
         shareA: total * (A / sum),
         shareB: total * (B / sum),
         percentA: (A / sum) * 100,
         percentB: (B / sum) * 100,
-        asFraction: `${Math.round(A / g)}/${Math.round(B / g)}`,
+        asFraction: `${SA}/${SB}`,
         note: ''
       };
     },

@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -132,23 +139,30 @@ window.TOOLS["square-footage"] = {
 "description": "Calculate floor area for rooms, including L-shaped spaces, plus material quantities and cost.",
 "keywords": ["square footage calculator","square feet calculator","room area calculator","flooring calculator","sq ft"],
 "formula": "area = length × width, summed across sections",
-"inputs": [{"key":"unit","label":"Measurements in","type":"select","options":[{"value":"ft","label":"Feet"},{"value":"m","label":"Metres"},{"value":"in","label":"Inches"}],"default":"ft"},{"key":"l1","label":"Section 1 length","type":"number","default":12,"min":0},{"key":"w1","label":"Section 1 width","type":"number","default":10,"min":0},{"key":"l2","label":"Section 2 length (L-shape)","type":"number","default":0,"min":0},{"key":"w2","label":"Section 2 width","type":"number","default":0,"min":0},{"key":"waste","label":"Waste allowance","type":"number","unit":"%","default":10,"min":0},{"key":"price","label":"Price per square unit","type":"number","unit":"£","default":0,"min":0}],
+"inputs": [{"key":"unit","label":"Measurements in","type":"select","options":[{"value":"ft","label":"Feet"},{"value":"m","label":"Metres"},{"value":"in","label":"Inches"}],"default":"ft"},{"key":"l1","label":"Section 1 length","type":"number","default":12,"min":0},{"key":"w1","label":"Section 1 width","type":"number","default":10,"min":0},{"key":"l2","label":"Section 2 length (L-shape)","type":"number","default":0,"min":0},{"key":"w2","label":"Section 2 width","type":"number","default":0,"min":0},{"key":"waste","label":"Waste allowance","type":"number","unit":"%","default":10,"min":0},{"key":"price","label":"Price per sq ft — or per m² when measuring in metres","type":"number","unit":"£","default":0,"min":0}],
 "compute": ({ unit, l1, w1, l2, w2, waste, price }) => {
       const f = unit === 'm' ? 3.280839895013123 : unit === 'in' ? 1 / 12 : 1;
       const areaFt = (Number(l1) || 0) * f * (Number(w1) || 0) * f
                    + (Number(l2) || 0) * f * (Number(w2) || 0) * f;
       const withWaste = areaFt * (1 + (Number(waste) || 0) / 100);
+      const withWasteM = withWaste / 10.763910416709722;
+      /* The price is per unit of the area being measured: per m² when the
+         room is measured in metres, per sq ft otherwise (inches included —
+         nobody prices flooring per square inch). */
+      const p = Number(price) || 0;
+      const metric = unit === 'm';
       return {
         sqft: areaFt,
         sqm: areaFt / 10.763910416709722,
         sqyd: areaFt / 9,
         withWaste,
-        withWasteM: withWaste / 10.763910416709722,
-        cost: withWaste * (Number(price) || 0),
+        withWasteM,
+        cost: (metric ? withWasteM : withWaste) * p,
+        priceBasis: p ? (metric ? 'Price per m² × m² to order' : 'Price per sq ft × sq ft to order') : '',
         boxes: Math.ceil(withWaste / 20)
       };
     },
-"outputs": [{"key":"sqft","label":"Area","format":"number","unit":"sq ft","primary":true},{"key":"sqm","label":"Area","format":"number","unit":"m²"},{"key":"sqyd","label":"Area","format":"number","unit":"sq yd"},{"key":"withWaste","label":"Order with waste allowance","format":"number","unit":"sq ft"},{"key":"withWasteM","label":"Order with waste allowance","format":"number","unit":"m²"},{"key":"cost","label":"Estimated material cost","format":"currency"},{"key":"boxes","label":"Boxes at 20 sq ft each","format":"number"}],
+"outputs": [{"key":"sqft","label":"Area","format":"number","unit":"sq ft","primary":true},{"key":"sqm","label":"Area","format":"number","unit":"m²"},{"key":"sqyd","label":"Area","format":"number","unit":"sq yd"},{"key":"withWaste","label":"Order with waste allowance","format":"number","unit":"sq ft"},{"key":"withWasteM","label":"Order with waste allowance","format":"number","unit":"m²"},{"key":"cost","label":"Estimated material cost","format":"currency"},{"key":"priceBasis","label":"Cost worked out as","format":"text"},{"key":"boxes","label":"Boxes at 20 sq ft each","format":"number"}],
 "currency": "GBP",
 "tips": ["A 10% waste allowance is typical for straight-laid flooring. Allow 15% for diagonal or herringbone patterns, and more for a room with many angles.","Break irregular rooms into rectangles and add them. Two sections cover most L-shaped spaces.","Measure at the widest points and check both ends — rooms are rarely perfectly square."],
 "faq": [{"q":"Should I subtract for kitchen units or a fireplace?","a":"Usually not. The offcuts rarely tile back together usefully, and having slightly too much is far cheaper than a second delivery in a different dye lot."}]

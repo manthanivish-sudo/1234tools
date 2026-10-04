@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -134,7 +141,18 @@ window.TOOLS["date-add-subtract"] = {
 "formula": "calendar-aware, clamping to the end of month rather than rolling over",
 "inputs": [{"key":"start","label":"Start date","type":"date","default":"TODAY"},{"key":"dir","label":"Direction","type":"select","options":[{"value":"add","label":"Add"},{"value":"sub","label":"Subtract"}],"default":"add"},{"key":"years","label":"Years","type":"number","default":0},{"key":"months","label":"Months","type":"number","default":1},{"key":"weeks","label":"Weeks","type":"number","default":0},{"key":"days","label":"Days","type":"number","default":0}],
 "compute": ({ start, dir, years, months, weeks, days }) => {
-      const d0 = new Date(start);
+      /* Whole calendar days, worked in UTC: a YYYY-MM-DD field is read as
+         that calendar day wherever the browser is, and no clock change can
+         move the answer a day (local midnight in British Summer Time is
+         23:00 the day before in UTC, which used to leak into the ISO date). */
+      const dayOf = (s) => {
+        const m = /^(-?\d{1,6})-(\d{2})-(\d{2})$/.exec(String(s == null ? '' : s).trim());
+        if (m) { const t = new Date(0); t.setUTCFullYear(+m[1], +m[2] - 1, +m[3]); return t; }
+        const x = new Date(s);
+        return isNaN(x) ? x : new Date(Date.UTC(x.getFullYear(), x.getMonth(), x.getDate()));
+      };
+      const utcDate = (y, mo, da) => { const t = new Date(0); t.setUTCFullYear(y, mo, da); return t; };
+      const d0 = dayOf(start);
       if (isNaN(d0)) return { note: 'Enter a valid start date.' };
       const sign = dir === 'sub' ? -1 : 1;
 
@@ -149,25 +167,24 @@ window.TOOLS["date-add-subtract"] = {
       /* Add years and months first, clamping the day of month. JavaScript's
          Date rolls 31 Jan + 1 month over to 3 March; almost nobody means
          that, so it is clamped to 28/29 February instead. */
-      const targetY = d0.getFullYear() + y;
-      const targetM = d0.getMonth() + m;
-      const lastDay = new Date(targetY, targetM + 1, 0).getDate();
-      const result = new Date(targetY, targetM, Math.min(d0.getDate(), lastDay));
-      result.setDate(result.getDate() + dd);
+      const targetY = d0.getUTCFullYear() + y;
+      const targetM = d0.getUTCMonth() + m;
+      const lastDay = utcDate(targetY, targetM + 1, 0).getUTCDate();
+      const result = utcDate(targetY, targetM, Math.min(d0.getUTCDate(), lastDay));
+      result.setUTCDate(result.getUTCDate() + dd);
       if (isNaN(result.getTime())) {
         return { note: 'That offset lands outside the range of dates a browser can represent (roughly the years −271821 to 275760).' };
       }
 
       const MS = 86400000;
-      const diff = Math.round((Date.UTC(result.getFullYear(), result.getMonth(), result.getDate()) -
-                               Date.UTC(d0.getFullYear(), d0.getMonth(), d0.getDate())) / MS);
+      const diff = Math.round((result - d0) / MS);
       const DAYNAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-      const clamped = d0.getDate() > lastDay;
+      const clamped = d0.getUTCDate() > lastDay;
 
       return {
-        result: result.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+        result: result.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }),
         iso: result.toISOString().slice(0, 10),
-        dayOfWeek: DAYNAMES[result.getDay()],
+        dayOfWeek: DAYNAMES[result.getUTCDay()],
         totalDays: Math.abs(diff),
         direction: diff >= 0 ? 'later' : 'earlier',
         note: clamped ? `The start day does not exist in the target month, so it was clamped to the ${lastDay}th rather than rolling into the next month.` : ''
