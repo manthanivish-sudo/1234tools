@@ -344,7 +344,7 @@ function hubPage(parts) {
   const pathOnly = '/' + SECTION + '/';
   const trail = trailFor(pathOnly);
   const title = 'Guides: how to actually finish the job';
-  const description = 'How-to guides for the jobs this site has tools for — reconciling GSTR-2B, a VAT return, a bank reconciliation, an Indian payroll run, getting a spreadsheet into Tally — and the everyday ones: a percentage, GST, an EMI, BMI, an exact age, CGPA to percentage, formatting JSON, and compressing, merging and converting images and PDFs.';
+  const description = 'How-to guides for the jobs this site has tools for — reconciling GSTR-2B, a VAT return, a bank reconciliation, an Indian payroll run, getting a spreadsheet into Tally — and the everyday ones: a percentage, GST, an EMI, SIP returns, CAGR, ROI, margin and markup, BMI, an exact age, business days, attendance, CGPA, inches to centimetres, kg to pounds, CSV to JSON, formatting JSON, and compressing, merging, splitting and converting images and PDFs.';
 
   const card = (g) => '<a class="card" href="/' + SECTION + '/' + g.slug + '/"><span class="card-icon">' + icon(g.glyph) + '</span>' +
     '<strong>' + esc(g.name) + '</strong><span class="card-desc">' + esc(g.description) + '</span></a>';

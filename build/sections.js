@@ -86,6 +86,7 @@ const SECTIONS = {
   '/for/':     { name: 'Collections', crumb: 'Collections', meta: true },
   '/compare/': { name: 'Comparisons', crumb: 'Comparisons', meta: true },
   '/guides/': { name: 'Guides', crumb: 'Guides', meta: true },
+  '/embed/': { name: 'Embed', meta: true },
   '/practice/': { name: 'Practice', crumb: 'Practice', meta: true },
   /* People who made something with a tool, with their permission. */
   '/showcase/': { name: 'Showcase', meta: true },

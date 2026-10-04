@@ -3360,6 +3360,7 @@ h2.hub-verb::before {
 /* embed mode: the tool alone, in an iframe */
 html.is-embed .site-header, html.is-embed .sidebar, html.is-embed .sidebar-open, html.is-embed .side-find-fab,
 html.is-embed .crumbs, html.is-embed .site-footer, html.is-embed .scrim, html.is-embed .cc,
+html.is-embed .all-units,
 html.is-embed .tool > .eyebrow, html.is-embed .tool > .lede, html.is-embed .tool > .panel,
 html.is-embed .tool > .ai-privacy-line, html.is-embed .tool > .share, html.is-embed .skip { display: none !important; }
 html.is-embed body { min-height: 0; }
@@ -4153,3 +4154,29 @@ html.is-embed .tool > .depth { display: none !important; }
   .conv-all details { break-inside: avoid; }
 }
 /* ==== /D6-conversions ==== */
+
+/* ==== embed-page: /embed/, written by build-embed.js ==== */
+/* Two live frames, the picker (assets/embed.js) and a dozen cards. The code
+   box reuses .share-embed-result so it looks like the share bar's own. */
+.embed-live { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); align-items: start; }
+.embed-live-item { margin: 0; min-width: 0; }
+.embed-live-item iframe, .embed-preview iframe { display: block; width: 100%; border: 0; border-radius: 12px; background: var(--bg-0); }
+.embed-live-item figcaption { margin-top: 8px; font-size: .84rem; color: var(--text-3); }
+.embed-picker .dir-search { margin-top: 4px; }
+.embed-hint { margin: 0 0 10px; font-size: .84rem; color: var(--text-3); }
+.embed-results { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.embed-results:empty { display: none; }
+.embed-out[hidden], .embed-preview[hidden] { display: none; }
+.embed-picked { margin: 0 0 8px; font-size: .9rem; color: var(--text-2); overflow-wrap: anywhere; }
+.embed-picked strong { color: var(--text-1); }
+.embed-out .io-actions { margin-top: 10px; }
+.embed-preview { margin-top: 14px; max-width: 720px; }
+.embed-status { min-height: 1.2em; margin: 8px 0 0; font-size: .82rem; color: var(--accent); }
+.embed-sample { min-height: 0; max-height: none; margin: 0 0 14px; border-radius: var(--radius-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
+.grid.embed-picks { grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); }
+.embed-card { gap: 8px; min-width: 0; }
+.embed-card-link { color: inherit; text-decoration: none; }
+.embed-card-link:hover strong, .embed-card-link:focus-visible strong { color: var(--accent); }
+.embed-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: auto; font-size: .84rem; }
+.share-pop .io-actions a.share-embed-more { margin-left: auto; }
+/* ==== /embed-page ==== */

@@ -153,7 +153,7 @@ function page(parts, inv) {
       '<li><strong>Free to try.</strong> ' + esc(PRICING.freemium.blurb) + ' These call a model on a server, which costs money every time.</li>' +
       '<li><strong>Nothing is hidden behind a plan.</strong> Paying raises the monthly allowance on the AI tools. It does not unlock a tool you could not otherwise reach.</li>' +
       '</ul></section>\n' +
-    '  <section class="panel"><h2>Another way in</h2><p>If you would rather not read a list, the <a href="/for/">collections</a> gather these by trade — accountants, small businesses, schools, HR, freelancers, developers — and by the job in front of you.</p></section>\n' +
+    '  <section class="panel"><h2>Another way in</h2><p>If you would rather not read a list, the <a href="/for/">collections</a> gather these by trade — accountants, small businesses, schools, HR, freelancers, developers — and by the job in front of you. Every calculator and converter can also go on your own website: <a href="/embed/">embed our calculators</a>.</p></section>\n' +
     '</article>\n';
 
   const ld = '<script type="application/ld+json">' + JSON.stringify({

@@ -170,8 +170,13 @@
 
   /* ---------- banner ---------- */
   function prefix() {
-    /* This script's own src tells us how deep the page is. */
+    /* This script's own src tells us how deep the page is. Every page now
+       loads it from the root (/assets/analytics.js), and a relative link
+       then pointed at /guides/<slug>/privacy/index.html — a 404 behind the
+       one link the consent bar offers. A root-absolute src means a
+       root-absolute link. */
     var src = (self && self.getAttribute('src')) || '';
+    if (src.charAt(0) === '/') return '/';
     var up = src.match(/(\.\.\/)+/);
     return up ? up[0] : '';
   }

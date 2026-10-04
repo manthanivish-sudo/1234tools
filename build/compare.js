@@ -581,4 +581,15 @@ const COMPARISONS = [
   }
 ];
 
-module.exports = { COMPARISONS, REF, COMPETITORS };
+/* A second batch may live in build/compare-extra.js, exporting the same
+   three names. Kept separate so it can be written and reviewed without
+   touching the pages already shipped; every rule above applies to it, and
+   a reference key or a policed name it adds joins this file's own. */
+let EXTRA = {};
+try { EXTRA = require('./compare-extra.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND' || !/compare-extra/.test(e.message)) throw e; }
+
+module.exports = {
+  COMPARISONS: COMPARISONS.concat(EXTRA.COMPARISONS || []),
+  REF: Object.assign({}, REF, EXTRA.REF || {}),
+  COMPETITORS: COMPETITORS.concat(EXTRA.COMPETITORS || [])
+};

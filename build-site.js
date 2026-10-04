@@ -229,6 +229,9 @@ const READING = {
   'hi/for/':  { freq: 'monthly', pri: '0.7' },
   /* people who made something with a tool, written by build-showcase.js */
   'showcase/': { freq: 'weekly', pri: '0.6' },
+  /* "Embed our calculators", written by build-embed.js: one page for the
+     people who would put a tool on their own site */
+  'embed/':   { freq: 'monthly', pri: '0.6' },
   'learn/':   { freq: 'monthly', pri: '0.6', hubPri: '0.7' }
 };
 

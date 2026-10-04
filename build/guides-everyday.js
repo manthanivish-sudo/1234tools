@@ -35,7 +35,12 @@ const AUTHORITIES = [
   'cbse.gov.in', 'www.cbse.gov.in',
   'jpeg.org', 'www.jpeg.org',
   'iso.org', 'www.iso.org',
-  'rfc-editor.org', 'www.rfc-editor.org'
+  'rfc-editor.org', 'www.rfc-editor.org',
+  /* the third batch: units, investing, attendance */
+  'nist.gov', 'www.nist.gov',
+  'bipm.org', 'www.bipm.org',
+  'sebi.gov.in', 'www.sebi.gov.in',
+  'pib.gov.in', 'www.pib.gov.in'
 ];
 
 /* Each source was opened and read on the checked date. */
@@ -51,7 +56,17 @@ const SRC = {
   jpeg: ['The JPEG committee — JPEG 1 (ISO/IEC 10918)', 'https://jpeg.org/jpeg/'],
   iso216: ['ISO 216:2007 — the A and B series of paper sizes', 'https://www.iso.org/standard/36631.html'],
   rfc8259: ['IETF RFC 8259 — The JavaScript Object Notation (JSON) Data Interchange Format', 'https://www.rfc-editor.org/rfc/rfc8259'],
-  cbseCgpa: ['CBSE Circular No. 24 of 28 May 2010 — grading at secondary level, and the indicative percentage', 'https://www.cbse.gov.in/circulars/cir24-2010.pdf']
+  cbseCgpa: ['CBSE Circular No. 24 of 28 May 2010 — grading at secondary level, and the indicative percentage', 'https://www.cbse.gov.in/circulars/cir24-2010.pdf'],
+  sebiMfFaq: ['SEBI — FAQs for Mutual Fund Investors (updated as on 31 August 2024)', 'https://www.sebi.gov.in/sebi_data/faqfiles/sep-2024/1727242783639.pdf'],
+  cbdtCapitalGains: ['Press Information Bureau — FAQs issued by CBDT on the new capital gains tax regime (24 July 2024)', 'https://www.pib.gov.in/PressReleaseIframePage.aspx?PRID=2036604&reg=3&lang=2'],
+  itrApplicable: ['Income Tax Department e-filing — which return applies to a salaried individual', 'https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1'],
+  cbseAttendance: ['CBSE — Strict compliance with attendance requirements for Board examination eligibility (circular of 4 August 2025)', 'https://www.cbse.gov.in/cbsenew/documents/Strict_Compliance_attendance_Eligibility_05082025.pdf'],
+  ukBankHolidays: ['gov.uk — UK bank holidays', 'https://www.gov.uk/bank-holidays'],
+  nistHb44: ['NIST Handbook 44 (2026), Appendix B — Units and Systems of Measurement', 'https://www.nist.gov/system/files/documents/2025/12/30/appb-26-HB44-20251210.pdf'],
+  nistSp811: ['NIST Guide to the SI (SP 811), Appendix B.8 — conversion factors listed alphabetically', 'https://www.nist.gov/pml/special-publication-811/nist-guide-si-appendix-b-conversion-factors/nist-guide-si-appendix-b8'],
+  ukWma1985: ['legislation.gov.uk — Weights and Measures Act 1985, Schedule 1', 'https://www.legislation.gov.uk/ukpga/1985/72/schedule/1'],
+  bipmKg: ['BIPM — SI base unit: the kilogram', 'https://www.bipm.org/en/si-base-units/kilogram'],
+  rfc4180: ['IETF RFC 4180 — Common Format and MIME Type for Comma-Separated Values (CSV) Files', 'https://www.rfc-editor.org/rfc/rfc4180']
 };
 const src = (key, note) => { const s = SRC[key]; return note ? [s[0], s[1], note] : [s[0], s[1]]; };
 
@@ -64,6 +79,10 @@ const NL = String.fromCharCode(10);
 const JSON_BROKEN = ['{', '  "invoice": "INV-0042",', '  "total": 29500,', '  "paid": false,', '}'].join(NL);
 const JSON_MINIFIED = '{"invoice":"INV-0042","total":29500,"paid":false,"lines":[{"item":"Desk","qty":2},{"item":"Chair","qty":4}]}';
 const textFill = (s) => 'text=' + encodeURIComponent(s);
+
+/* The CSV guide's example, built the same way: one string per line. */
+const CSV_LINES = ['invoice,customer,city,total', 'INV-0101,Asha Traders,Pune,29500', 'INV-0102,"Khan, Patel & Co",Leeds,1180.50', 'INV-0103,Riverside Café,Bristol,'];
+const CSV_INVOICES = CSV_LINES.join(NL);
 
 const GUIDES = [
 
@@ -939,6 +958,898 @@ const GUIDES = [
     tools: ['/education/cgpa-to-percentage/', '/education/sgpa-to-cgpa/', '/education/marks-percentage/', '/utilities/gpa-calculator/'],
     collections: ['students', 'job-seekers'],
     related: ['calculate-a-percentage', 'calculate-age']
+  },
+
+  /* ================================================================== */
+  {
+    slug: 'calculate-sip-returns',
+    glyph: 'i-sip-calculator',
+    name: 'How to calculate SIP returns',
+    title: 'How to calculate SIP returns — the formula, a worked example, step-up SIPs and what a projection leaves out',
+    description: 'Project what a monthly SIP could grow to with the future-value formula, see what a yearly step-up, a longer horizon and a lower return do to it, and measure what a real SIP has actually earned.',
+    answer: 'To project a SIP, use FV = P × ((1 + i)ⁿ − 1) ÷ i × (1 + i), with P the monthly instalment, i the expected yearly return divided by 1,200, and n the count of months. ₹10,000 a month for 15 years at an assumed 12% a year comes to about ₹50,45,760 — ₹18,00,000 paid in and ₹32,45,760 of growth — but the 12% is an assumption, and real fund returns arrive unevenly.',
+    minutes: { first: 'ten minutes', again: 'a minute' },
+    howLong: 'A minute in the calculator. Spend the rest on the assumed return: run the same SIP at 8%, 10% and 12%, because the gap between those answers is the honest range of outcomes.',
+    before: [
+      'The monthly amount you could keep paying through bad years as well as good ones.',
+      'How many years until you need the money. Over short periods a projection says much less, because a fall near the end has no time to recover.',
+      'An assumed annual return — your guess, not a figure the fund gives you.',
+      'For a SIP you already hold, every instalment’s date and amount and today’s value, from the account statement.'
+    ],
+    steps: [
+      {
+        name: 'Turn the yearly figures into monthly ones',
+        body: [
+          { p: 'Instalments are monthly, so the formula works in months. Divide the expected annual return by 12 and then by 100: 12% a year becomes 0.01 a month. Multiply the years by 12: 15 years is 180 instalments. (Compounded monthly, 1% a month is about 12.68% a year — the convention SIP calculators use.)' }
+        ]
+      },
+      {
+        name: 'Put the numbers into the future-value formula',
+        body: [
+          { formula: 'FV = P × ((1 + i)ⁿ − 1) ÷ i × (1 + i)' },
+          { p: 'With P = 10,000, i = 0.01 and n = 180: 1.01 to the power 180 is about 5.9958, so ((1.01)¹⁸⁰ − 1) ÷ 0.01 is about 499.58. Multiply by 10,000 and then by 1.01, and the projected value is ₹50,45,760. You paid in 180 × ₹10,000 = ₹18,00,000, so ₹32,45,760 of the total is assumed growth: the money ends up 2.8 times what went in.' },
+          { p: 'The final × (1 + i) assumes each instalment goes in at the start of its month. Leave it out — instalments at the end of each month — and the same SIP projects to about ₹49,95,802. In a spreadsheet: =FV(12%/12, 180, -10000, 0, 1), where the last 1 means start-of-month payments.' },
+          { tool: '/india/sip-calculator/', why: 'projects a monthly SIP with an optional yearly step-up and shows the value, the amount invested and the gain for every year', fill: 'monthly=10000&rate=12&years=15&stepup=0', fillLabel: 'Do it in the SIP calculator with ₹10,000 a month at 12% for 15 years — it shows ₹50,45,760' }
+        ]
+      },
+      {
+        name: 'Read the year-by-year table, not just the last line',
+        body: [
+          { example: {
+            caption: 'An illustrative SIP of ₹10,000 a month at an assumed 12% a year, invented for this guide. Every figure is what the SIP Calculator’s own engine returns.',
+            head: ['After', 'Paid in', 'Projected value', 'Growth'],
+            rows: [
+              ['1 year', '₹1,20,000', '₹1,28,093', '₹8,093'],
+              ['5 years', '₹6,00,000', '₹8,24,864', '₹2,24,864'],
+              ['10 years', '₹12,00,000', '₹23,23,391', '₹11,23,391'],
+              ['15 years', '₹18,00,000', '₹50,45,760', '₹32,45,760']
+            ]
+          } },
+          { p: 'Most of the growth arrives late. Between year 10 and year 15 the projected value rises by ₹27,22,369, of which only ₹6,00,000 is new money — which is why stopping a SIP a few years early costs far more than the skipped instalments.' }
+        ]
+      },
+      {
+        name: 'Compare a step-up, a longer horizon and a lower return',
+        body: [
+          { example: {
+            caption: 'Illustrative SIPs of ₹10,000 a month to start with, invented for this guide. Every figure is what the SIP Calculator’s own engine returns.',
+            head: ['SIP', 'Paid in', 'Projected value'],
+            rows: [
+              ['12% for 15 years', '₹18,00,000', '₹50,45,760'],
+              ['12% for 15 years, 10% step-up each year', '₹38,12,698', '₹86,83,849'],
+              ['12% for 20 years', '₹24,00,000', '₹99,91,479'],
+              ['10% for 15 years', '₹18,00,000', '₹41,79,243'],
+              ['8% for 15 years', '₹18,00,000', '₹34,83,451']
+            ]
+          } },
+          { p: 'Five more years almost doubles the projection. A 10% yearly step-up takes the last year’s instalment to ₹37,975 a month and the projection to ₹86,83,849. And on the same ₹18,00,000, assuming 12% instead of 8% adds ₹15,62,309 — the assumption matters more than the arithmetic.' },
+          { tool: '/india/sip-calculator/', why: 'the “Annual step-up” field raises the instalment by that percentage after every twelve months', fill: 'monthly=10000&rate=12&years=15&stepup=10', fillLabel: 'Open it with a 10% yearly step-up — it shows ₹86,83,849' },
+          { fact: {
+            text: 'SEBI’s FAQ for mutual fund investors describes a SIP as investing periodically, which averages the cost of the units bought, and states that mutual fund investments are subject to market risks: the scheme’s NAV, the price of a unit, is worked out and published every day and moves with the market. On selling units of an equity-oriented fund, a gain on units held for 12 months or less is taxed at 20%, and a gain on units held for longer at 12.5% on the part above ₹1.25 lakh in a year. Those rates have applied to transfers since 23 July 2024, and the Income-tax Act, 2025, in force from 1 April 2026, keeps them. Other kinds of fund are taxed under different rules.',
+            checked: CHECKED,
+            sources: [src('sebiMfFaq', 'what a SIP is, how NAV is set, and market risk'), src('cbdtCapitalGains', 'the 20% and 12.5% rates, the ₹1.25 lakh exemption and the 12-month holding period for listed units'), src('itrApplicable', 'long-term gains under section 112A up to ₹1,25,000 in the return forms')]
+          } }
+        ]
+      },
+      {
+        name: 'Measure what a SIP you already hold has earned',
+        body: [
+          { p: 'The formula projects a SIP; it cannot measure one, because a real SIP buys at a different NAV every month. For the return actually earned, use XIRR: list each instalment date with its amount as a negative number, add today’s date with the current value as a positive number, and use =XIRR(amounts, dates). The answer is the yearly return achieved, to set beside the rate you assumed.' },
+          { p: 'Dividing the gain by the amount paid in gives the absolute return — 180% on the worked example — which is not a yearly figure: the first instalment was invested for 15 years and the last for one month.' }
+        ]
+      }
+    ],
+    wrong: [
+      { name: 'Treating the assumed return as a forecast', text: 'A calculator multiplies whatever rate it is given. No fund promises 12%, and a run of poor years close to the end can leave the real result well below any projection. Run 8% and 10% beside it.' },
+      { name: 'Using the yearly rate as the monthly one', text: 'Putting 12, or 0.12, into the formula as i instead of 0.01 produces a figure in the hundreds of crores. An absurd projection means the rate was not divided by 1,200.' },
+      { name: 'Comparing calculators that time the payments differently', text: 'Start-of-month and end-of-month calculators differ by one month’s growth: ₹50,45,760 against ₹49,95,802 here. Neither is wrong; check which convention each uses before comparing them.' },
+      { name: 'Quoting the absolute return as a yearly rate', text: '180% growth after 15 years is not 12% a year because 180 divided by 15 is 12. That shortcut ignores when each rupee went in. Use XIRR.' },
+      { name: 'Forgetting tax and the newest instalments', text: 'Projections are before tax. Every instalment buys its own units, so redeeming a whole SIP includes units bought in the last 12 months, whose gains are short-term. Check the newest units’ holding period before you sell.' }
+    ],
+    faq: [
+      { q: 'How is a SIP return calculated?', a: 'A projection uses the future-value formula with a monthly rate, FV = P × ((1 + i)ⁿ − 1) ÷ i × (1 + i). The return a real SIP has earned is measured with XIRR, on the dated instalments and today’s value.' },
+      { q: 'What will ₹5,000 a month become in 15 years?', a: 'At an assumed 12% a year, about ₹25,22,880 from ₹9,00,000 paid in; at 10%, about ₹20,89,621. The projection scales with the instalment, so it is exactly half the ₹10,000 example.' },
+      { q: 'Are SIP returns guaranteed?', a: 'No. Units are bought and sold at a NAV that changes every day with the market, and mutual fund investments are subject to market risks. The calculator’s figure is arithmetic on an assumption, not an offer.' },
+      { q: 'What is a step-up SIP?', a: 'One where the instalment rises every year by a set percentage or amount. A 10% step-up on ₹10,000 a month means ₹11,000 a month in the second year and ₹37,975 a month by the fifteenth.' },
+      { q: 'Should I use XIRR or CAGR to judge my SIP?', a: 'XIRR. CAGR suits a single sum invested once; a SIP is many payments on many dates, which is the problem XIRR solves. For one lump sum the two give practically the same answer.' }
+    ],
+    tools: ['/india/sip-calculator/', '/india/lumpsum-returns/', '/finance/compound-interest/', '/business/cagr/'],
+    related: ['calculate-cagr', 'calculate-emi', 'calculate-a-percentage']
+  },
+
+  /* ================================================================== */
+  {
+    slug: 'calculate-cagr',
+    glyph: 'i-cagr',
+    name: 'How to calculate CAGR',
+    title: 'How to calculate CAGR — compound annual growth rate, worked through, and why averaging the yearly growth is wrong',
+    description: 'Work out the compound annual growth rate from a start value, an end value and the years between them, check it with a projection and the rule of 72, and avoid the counting, averaging and start-year traps.',
+    answer: 'CAGR = (end value ÷ start value)^(1 ÷ years) − 1. An investment that grew from £10,000 to £18,000 in five years has a CAGR of 1.8^(1 ÷ 5) − 1 = 12.47% a year — the steady yearly rate that would have produced the same result, whatever actually happened in between.',
+    minutes: { first: 'five minutes', again: 'seconds' },
+    howLong: 'Seconds once you have the two values and the right number of years. Counting the years is where most wrong answers come from, so spend the minute there.',
+    before: [
+      'The value at the start and the value at the end, measured the same way — both revenue for a full year, or both the market value of the same holding.',
+      'The exact time between the two measurements, in years. Six months is 0.5 of a year.',
+      'Whether money was added or taken out along the way. If it was, CAGR is the wrong tool and XIRR is the right one.'
+    ],
+    steps: [
+      {
+        name: 'Count the years between the two values',
+        body: [
+          { p: 'The number of years is the gap between the two measurements, not the number of years named. Revenue of £250,000 in 2021 and £400,000 in 2025 spans four years of growth — 2021 to 2022, 2022 to 2023, 2023 to 2024 and 2024 to 2025 — even though five years appear in the range.' },
+          { p: 'For anything measured on dates rather than in whole years, convert the gap to a decimal: seven years and six months is 7.5.' }
+        ]
+      },
+      {
+        name: 'Divide, take the root, subtract one',
+        body: [
+          { formula: 'CAGR = (end ÷ start)^(1 ÷ years) − 1' },
+          { p: 'Divide the end value by the start value: 18,000 ÷ 10,000 = 1.8. Raise that to the power of one over the number of years — 1.8 to the power 0.2 is about 1.1247. Subtract 1 and turn it into a percentage: 12.47% a year.' },
+          { p: 'In a spreadsheet, =(18000/10000)^(1/5)-1 gives the same answer, and so does =RRI(5, 10000, 18000).' },
+          { tool: '/business/cagr/', why: 'works out the compound annual growth rate, the total growth, the growth multiple and the years to double, and projects the value forward at the same rate', fill: 'begin=10000&end=18000&years=5&project=3', fillLabel: 'Do it in the CAGR calculator with £10,000 to £18,000 over five years — it shows 12.475%' }
+        ]
+      },
+      {
+        name: 'Check it by running it forwards',
+        body: [
+          { p: 'Multiply the start value by (1 + CAGR) once for every year: 10,000 × 1.1247 × 1.1247 × 1.1247 × 1.1247 × 1.1247 comes back to £18,000. If it does not, the number of years is wrong.' },
+          { p: 'The rule of 72 is a quick sense check: 72 ÷ 12.47 suggests the money doubles in about 5.8 years; the exact figure, which the calculator gives, is 5.9 years. Going forwards, the same rate would take £18,000 to £20,245.43 a year later and £25,611.56 after three — if, and only if, the rate held.' }
+        ]
+      },
+      {
+        name: 'Why the average of yearly growth rates is the wrong answer',
+        body: [
+          { p: 'Something that rises 50% in one year and falls 50% the next has an average yearly growth of zero. But 100 became 150 and then 75, so a quarter of the money has gone. CAGR says so: (75 ÷ 100)^(1 ÷ 2) − 1 = −13.40% a year. Averaging percentages that compound always flatters the result, and the swings decide by how much.' },
+          { example: {
+            caption: 'Illustrative figures, invented for this guide. Each result is what the CAGR Calculator’s own engine returns for them.',
+            head: ['Start', 'End', 'Years', 'Total growth', 'CAGR'],
+            rows: [
+              ['£10,000', '£18,000', '5', '80%', '12.47%'],
+              ['£250,000', '£400,000', '4', '60%', '12.47%'],
+              ['£50,000', '£120,000', '7.5', '140%', '12.38%'],
+              ['£100 (up 50%, then down 50%)', '£75', '2', '−25%', '−13.40%']
+            ]
+          } },
+          { p: 'The first two rows are worth a second look: 80% over five years and 60% over four are the same growth rate. Total growth cannot be compared across different spans of time; CAGR can.' },
+          { tool: '/business/cagr/', why: 'a falling value gives a negative rate, and the calculator shows it rather than hiding it', fill: 'begin=100&end=75&years=2&project=0', fillLabel: 'Open it with the up-50%, down-50% example — it shows −13.398%' }
+        ]
+      },
+      {
+        name: 'Know what CAGR leaves out',
+        body: [
+          { ul: [
+            'The path. A steady 12% a year and a lurching ride that ends in the same place have the same CAGR, and very different risks.',
+            'The choice of dates. Starting the count in a bad year, or ending it in a good one, can change the answer more than anything that happened in between.',
+            'Money in and out. A balance that grew partly because more was paid in has not grown at its CAGR. For regular contributions, use XIRR.'
+          ] }
+        ]
+      }
+    ],
+    wrong: [
+      { name: 'Counting the years in the range instead of the gaps', text: 'Revenue from 2021 to 2025 is four years of growth. Dividing by five turns £250,000 to £400,000 into 9.86% a year instead of 12.47%, and the error grows the shorter the period is.' },
+      { name: 'Averaging the yearly growth rates', text: 'An arithmetic average of +50% and −50% is zero; the money actually fell by a quarter. Use the start and end values, not the average of the steps between them.' },
+      { name: 'Choosing a flattering start year', text: 'Measuring from the bottom of a slump makes any recovery look like fast growth. When you quote a CAGR, give the dates, and when you read one, check whether a different start year would tell a different story.' },
+      { name: 'Using CAGR when money was added along the way', text: 'A portfolio that went from £10,000 to £18,000 partly because £5,000 was paid in has not grown at 12.47% a year. CAGR assumes one sum at the start and nothing else; XIRR handles deposits and withdrawals on their dates.' },
+      { name: 'Reading the projection as a forecast', text: 'The projected values assume the same rate carries on. They show what the rate means in money, not what will happen next year.' }
+    ],
+    faq: [
+      { q: 'What is the CAGR formula?', a: 'CAGR = (end value ÷ start value)^(1 ÷ number of years) − 1, multiplied by 100 for a percentage. It is the geometric mean growth rate: the single yearly rate that turns the start value into the end value.' },
+      { q: 'How do I calculate CAGR in Excel?', a: 'Use =(end/start)^(1/years)-1 and format the cell as a percentage, or =RRI(years, start, end). For £10,000 to £18,000 over five years, both give 12.47%.' },
+      { q: 'Can CAGR be negative?', a: 'Yes. If the end value is lower than the start value the rate is negative: £100 to £75 over two years is −13.40% a year.' },
+      { q: 'What is the difference between CAGR and total growth?', a: 'Total growth is the whole change over the period: £10,000 to £18,000 is 80%. CAGR spreads it into a yearly rate, 12.47%, so that periods of different lengths can be compared.' },
+      { q: 'What counts as a good CAGR?', a: 'It depends entirely on what is being measured and the alternative. Compare it with something real over the same dates — inflation, a savings rate, or an index — rather than with a number in isolation.' }
+    ],
+    tools: ['/business/cagr/', '/business/roi/', '/finance/compound-interest/', '/mathematics/percentage/'],
+    collections: ['small-business'],
+    related: ['calculate-roi', 'calculate-sip-returns', 'calculate-a-percentage']
+  },
+
+  /* ================================================================== */
+  {
+    slug: 'calculate-roi',
+    glyph: 'i-roi',
+    name: 'How to calculate ROI',
+    title: 'How to calculate ROI — return on investment, the annualised return and the payback period, worked through',
+    description: 'Return on investment as a percentage, turned into a yearly rate so that different time spans compare fairly, with the payback period and the costs and returns people forget to count.',
+    answer: 'ROI = (total return − cost) ÷ cost × 100. A £12,000 machine that brings in £18,600 over two years has an ROI of 6,600 ÷ 12,000 × 100 = 55%; spread over the two years that is an annualised return of 24.5% a year, and at £9,300 a year it pays for itself in about 1.3 years.',
+    minutes: { first: 'fifteen minutes', again: 'a minute' },
+    howLong: 'A minute once the figures are agreed. Allow longer the first time for the honest part — listing every cost and deciding how much of the return the investment really caused — because that, not the division, is what decides whether the answer means anything.',
+    before: [
+      'Every cost of the investment: the price, delivery and installation, training, the staff time to set it up, and any financing charges.',
+      'The return it produced or will produce — the extra profit, not the extra sales — over a stated period.',
+      'The length of that period in years, and the yearly cash it brings in if you want the payback period.'
+    ],
+    steps: [
+      {
+        name: 'Add up the full cost',
+        body: [
+          { p: 'The cost is everything spent to make the investment work, not just the invoice. In the worked example the machine costs £10,500, installation £900 and training £600: £12,000 in all. Leaving out the last two would make the same result look better than it is.' }
+        ]
+      },
+      {
+        name: 'Add up the return over the same period',
+        body: [
+          { p: 'The return is what the investment brings back: extra profit, money saved, or the sale price if the asset is sold. Here the machine adds £9,300 a year to profit for two years, so the total return is £18,600. If its output sells for £30,000 and costs £11,400 in materials and labour to make, the return is the £18,600 that is left, not the £30,000 of sales.' }
+        ]
+      },
+      {
+        name: 'Work out the ROI',
+        body: [
+          { formula: 'ROI = (total return − cost) ÷ cost × 100' },
+          { p: 'The net gain is 18,600 − 12,000 = £6,600. Divided by the cost and multiplied by 100: 6,600 ÷ 12,000 × 100 = 55%. Another way to say it is a return multiple of 1.55: every pound put in came back with 55p on top.' },
+          { tool: '/business/roi/', why: 'works out the ROI, the net gain, the annualised return and the payback period from the cost, the return, the years and the yearly cash inflow', fill: 'cost=12000&gain=18600&years=2&annualCash=9300', fillLabel: 'Do it in the ROI calculator with this example already in — it shows 55% and the payback' }
+        ]
+      },
+      {
+        name: 'Annualise it before you compare',
+        body: [
+          { formula: 'annualised return = (total return ÷ cost)^(1 ÷ years) − 1' },
+          { p: 'A headline ROI says nothing about how long the money was tied up. 55% in two years is (1.55)^(1 ÷ 2) − 1 = 24.5% a year; the same 55% over three years is only 15.73% a year. This is the figure to compare between projects, or with what the money would earn elsewhere.' },
+          { example: {
+            caption: 'Illustrative investments, invented for this guide. Every figure is what the ROI Calculator’s own engine returns for them.',
+            head: ['Investment', 'ROI', 'Per year', 'Payback'],
+            rows: [
+              ['£12,000 in, £18,600 back over 2 years (£9,300 a year)', '55%', '24.5%', '1.29 years'],
+              ['£12,000 in, £18,600 back over 3 years (£6,200 a year)', '55%', '15.73%', '1.94 years'],
+              ['£5,000 in, £8,000 back over 5 years', '60%', '9.86%', '—'],
+              ['£5,000 in, £6,500 back over 1 year', '30%', '30%', '—']
+            ]
+          } },
+          { p: 'The third row has the biggest headline ROI and the worst return per year. The fourth has half the ROI and three times the yearly rate.' },
+          { tool: '/business/roi/', why: 'change the holding period and the annualised figure moves while the headline ROI stays put', fill: 'cost=12000&gain=18600&years=3&annualCash=6200', fillLabel: 'Open the three-year version — the same 55%, but 15.73% a year' }
+        ]
+      },
+      {
+        name: 'Work out how long it takes to pay for itself',
+        body: [
+          { formula: 'payback period = cost ÷ yearly cash inflow' },
+          { p: '12,000 ÷ 9,300 = 1.29 years, or about fifteen and a half months. Payback is a useful test of risk — the sooner the money is back, the less can go wrong — but it ignores everything after that date, so a short project can beat a far more valuable long one on payback alone.' },
+          { p: 'For anything that runs for several years, money arriving later is worth less than money today. Net present value and IRR allow for that; ROI and payback do not.' },
+          { tool: '/business/npv-irr/', why: 'discounts each year’s cash flow, for investments where the timing of the money matters' }
+        ]
+      }
+    ],
+    wrong: [
+      { name: 'Counting sales as the return', text: 'Extra revenue is not extra profit. If the machine’s output sells for £30,000 but costs £11,400 to make, counting the £30,000 turns a 55% ROI into 150%. Use the profit that would not have happened without the investment.' },
+      { name: 'Leaving costs out', text: 'Installation, training, staff time, software subscriptions and interest on the loan that paid for it are all part of the cost. An ROI built on the invoice price alone is the most common reason an internal business case looks better than the result.' },
+      { name: 'Comparing ROIs over different periods', text: '60% over five years and 30% in one year are not “twice as good” and “half as good”. Per year, they are 9.86% and 30%. Annualise first.' },
+      { name: 'Crediting the investment with everything that improved', text: 'If sales would have grown anyway — a busy season, a price rise, a competitor closing — that growth is not the investment’s return. Compare with what would have happened without it, however roughly.' },
+      { name: 'Ignoring when the money arrives', text: 'Simple ROI treats £18,600 received over two years as if it arrived today. For short projects the difference is small; for long ones, use NPV or IRR.' }
+    ],
+    faq: [
+      { q: 'What is the ROI formula?', a: '(Total return − cost) ÷ cost × 100. A £12,000 investment returning £18,600 has an ROI of 55%.' },
+      { q: 'How do I calculate ROI in Excel?', a: 'With the cost in A2 and the total return in B2, =(B2-A2)/A2 formatted as a percentage. For the yearly figure, with the years in C2, use =(B2/A2)^(1/C2)-1.' },
+      { q: 'What is a good ROI?', a: 'One whose yearly rate comfortably beats the cost of the money and the next best use of it. A 15% a year return funded by a loan at 12% leaves little room for anything to go wrong.' },
+      { q: 'Can ROI be negative?', a: 'Yes. If less comes back than went in, the ROI is negative: £5,000 in and £4,000 back is −20%.' },
+      { q: 'Is annualised ROI the same as CAGR?', a: 'For one sum invested at the start and one amount received at the end, yes — it is the same calculation. With cash coming in each year, it is an approximation, and IRR is the exact answer.' }
+    ],
+    tools: ['/business/roi/', '/business/npv-irr/', '/business/cagr/', '/business/break-even/'],
+    collections: ['small-business'],
+    related: ['calculate-cagr', 'calculate-profit-margin-and-markup', 'calculate-a-percentage']
+  },
+
+  /* ================================================================== */
+  {
+    slug: 'calculate-profit-margin-and-markup',
+    glyph: 'i-profit-margin',
+    name: 'How to calculate profit margin and markup',
+    title: 'How to calculate profit margin and markup — the two formulas, converting between them, and pricing for a target margin',
+    description: 'Margin is profit as a share of the price and markup is profit as a share of the cost. Work out both, set a price from a target margin, find the cost you can afford, and stop the two being confused.',
+    answer: 'Profit margin is profit divided by the selling price; markup is profit divided by the cost. An item that costs £60 and sells for £100 makes £40 of profit: a 40% margin (40 ÷ 100) but a 66.67% markup (40 ÷ 60) — the same sale described two ways, and confusing them is how prices end up too low.',
+    minutes: { first: 'ten minutes', again: 'seconds' },
+    howLong: 'Seconds per item once you know the full cost. The part that takes time is the cost itself: delivery in, packaging, payment fees and returns all belong in it, and a margin worked out on the purchase price alone is a margin you will not actually make.',
+    before: [
+      'The full cost of one item: what you pay for it plus delivery in, packaging and anything else spent on each unit.',
+      'The selling price before VAT or GST, or the margin you are aiming for.',
+      'Which figure the person you are talking to means. Retailers and accountants usually talk about margin; trade suppliers often quote markup.'
+    ],
+    steps: [
+      {
+        name: 'Work out the profit on one item',
+        body: [
+          { formula: 'profit = selling price − cost' },
+          { p: 'An item that costs £60 to buy and get ready for sale, sold for £100 before tax, makes £40. Everything else follows from those three numbers; the only question is what you divide the £40 by.' }
+        ]
+      },
+      {
+        name: 'Divide by the price for margin, by the cost for markup',
+        body: [
+          { formula: 'margin = profit ÷ selling price × 100' },
+          { formula: 'markup = profit ÷ cost × 100' },
+          { p: 'The margin is 40 ÷ 100 × 100 = 40%: forty pence of every pound taken is profit. The markup is 40 ÷ 60 × 100 = 66.67%: the cost was raised by two thirds to reach the price. Margin can never reach 100%, because that would mean the goods cost nothing; markup has no ceiling.' },
+          { tool: '/business/profit-margin/', why: 'works out margin, markup, cost or selling price from any two of them, with profit per unit and totals for a number of units', fill: 'solve=margin&cost=60&price=100', fillLabel: 'Do it in the calculator with a £60 cost and a £100 price — it shows 40% and 66.667%' }
+        ]
+      },
+      {
+        name: 'Set a price from a target margin',
+        body: [
+          { formula: 'price = cost ÷ (1 − margin ÷ 100)' },
+          { p: 'For a 30% margin on an item costing £42, divide by 0.70: the price is £60, with £18 of profit. It is not £42 × 1.30 = £54.60. That adds 30% of the cost — a 30% markup — and leaves a margin of only 23.08%. On 500 units the right price brings in £9,000 of profit; the wrong one, £6,300.' },
+          { tool: '/business/profit-margin/', why: 'set “Solve for” to selling price and it divides by one minus the margin rather than adding a percentage on', fill: 'solve=price&cost=42&margin=30&units=500', fillLabel: 'Open it with a £42 cost and a 30% target margin — it shows a £60 price' }
+        ]
+      },
+      {
+        name: 'Convert between margin and markup',
+        body: [
+          { formula: 'markup = margin ÷ (1 − margin)' },
+          { formula: 'margin = markup ÷ (1 + markup)' },
+          { p: 'Work in fractions: a 30% margin is 0.30 ÷ 0.70 = 0.4286, a 42.86% markup. A 50% markup is 0.5 ÷ 1.5 = 0.3333, a 33.33% margin. The gap between the two widens as the numbers grow.' },
+          { example: {
+            caption: 'Illustrative prices, invented for this guide. Every figure is what the Profit Margin & Markup Calculator’s own engine returns for them.',
+            head: ['Cost and price', 'Profit', 'Margin', 'Markup'],
+            rows: [
+              ['Cost £40, price £60', '£20', '33.33%', '50%'],
+              ['Cost £42, price £54.60', '£12.60', '23.08%', '30%'],
+              ['Cost £42, price £60', '£18', '30%', '42.86%'],
+              ['Cost £60, price £100', '£40', '40%', '66.67%'],
+              ['Cost £50, price £100', '£50', '50%', '100%']
+            ]
+          } }
+        ]
+      },
+      {
+        name: 'Work back to the most you can pay',
+        body: [
+          { formula: 'cost = price × (1 − margin ÷ 100)' },
+          { p: 'When the market sets the price, the question turns round: what can you afford to pay? If similar items sell for £80 and you need a 35% margin, the most you can pay, all costs included, is £80 × 0.65 = £52. Any supplier quote above that either moves your price or eats your margin.' },
+          { tool: '/business/profit-margin/', why: 'set “Solve for” to cost and it gives the highest cost that still leaves the margin you need', fill: 'solve=cost&price=80&margin=35', fillLabel: 'Open it with an £80 price and a 35% margin — it shows a £52 cost' }
+        ]
+      }
+    ],
+    wrong: [
+      { name: 'Adding the margin percentage to the cost', text: 'Multiplying a £42 cost by 1.30 for a “30% margin” gives £54.60 and a 23.08% margin. To reach a margin, divide the cost by one minus the margin. The error is small on one item and large across a price list.' },
+      { name: 'Two people meaning different things by “percentage”', text: 'A supplier who offers “50% on cost” is offering a 50% markup, which is a 33.33% margin. If you plan on a 50% margin from that, every sale falls short. Ask which one is meant whenever the word “margin” is not said out loud.' },
+      { name: 'Working the margin on a price that includes tax', text: 'At 20% VAT a £120 shelf price is £100 to the business. Working the margin on £120 against a £60 cost gives 50%; the real margin is 40%. Take the tax out first, then calculate.' },
+      { name: 'Leaving costs out of the cost', text: 'Inbound delivery, packaging, card or marketplace fees, and an allowance for returns all come out of the profit. A margin worked out on the supplier’s price alone overstates what you keep, sometimes by more than the margin itself.' },
+      { name: 'Aiming for a margin of 100% or more', text: 'Margin is a share of the price, so 100% would mean the goods cost nothing. A target of 100% almost always means a 100% markup, which is a 50% margin.' }
+    ],
+    faq: [
+      { q: 'What is the difference between margin and markup?', a: 'Both use the same profit. Margin divides it by the selling price; markup divides it by the cost. A £60 item sold for £100 has a 40% margin and a 66.67% markup.' },
+      { q: 'How do I price for a 30% margin?', a: 'Divide the cost by 0.70. A £42 item needs a price of £60. Multiplying by 1.30 instead gives a 30% markup and only a 23.08% margin.' },
+      { q: 'What markup gives a 50% margin?', a: 'A 100% markup: double the cost. An item costing £50 sold for £100 has £50 of profit, half the price.' },
+      { q: 'Is this gross margin or net margin?', a: 'Gross: price less the cost of the item. Net margin also takes off rent, wages and every other overhead, and is worked out across the whole business rather than per item.' },
+      { q: 'How do I calculate margin in Excel?', a: 'With the cost in A2 and the price in B2, =(B2-A2)/B2 for margin and =(B2-A2)/A2 for markup, both formatted as percentages.' }
+    ],
+    tools: ['/business/profit-margin/', '/business/discount-calculator/', '/business/break-even/', '/mathematics/percentage/'],
+    collections: ['shopkeepers', 'online-sellers', 'small-business'],
+    related: ['calculate-roi', 'calculate-gst', 'calculate-a-percentage']
+  },
+
+  /* ================================================================== */
+  {
+    slug: 'calculate-attendance-percentage',
+    glyph: 'i-attendance',
+    name: 'How to calculate attendance percentage',
+    title: 'How to calculate attendance percentage — and how many classes you can miss, or must attend, to stay at 75%',
+    description: 'Attendance as a percentage of classes held, how many classes in a row it takes to climb back to a minimum, how many you can still miss, and the counting rules that make two figures disagree.',
+    answer: 'Attendance percentage = classes attended ÷ classes held × 100, so 42 out of 60 is 70%. To find how many classes in a row you must attend to reach 75%, solve (42 + x) ÷ (60 + x) = 0.75, which gives x = 12 — 54 out of 72.',
+    minutes: { first: 'five minutes', again: 'seconds' },
+    howLong: 'Seconds once you have the two counts. Getting the counts right — per subject, the way the register keeps them — is the part that decides whether the answer matches the one the office will use.',
+    before: [
+      'The number of classes held so far and the number you attended, from the official register or portal rather than your own memory.',
+      'The minimum you must reach, and whether it applies to each subject or to the whole timetable.',
+      'How many classes are still to come this term, if you want to know whether a shortfall can still be made up.'
+    ],
+    steps: [
+      {
+        name: 'Count the classes the way your institution does',
+        body: [
+          { p: 'Before any arithmetic, find out what is being counted. Some schools and colleges apply the minimum to each subject, some count a two-hour practical as two classes, and approved leave is handled in different ways. A figure worked out across the whole timetable can be comfortably above the line while one subject sits below it.' }
+        ]
+      },
+      {
+        name: 'Divide attended by held',
+        body: [
+          { formula: 'attendance % = classes attended ÷ classes held × 100' },
+          { p: 'For 42 classes attended out of 60 held: 42 ÷ 60 = 0.7, so attendance is 70%. Do it for each subject that has its own requirement.' },
+          { tool: '/education/attendance-calculator/', why: 'gives the attendance percentage, the classes you can still miss or must attend in a row, and whether the minimum is still reachable this term', fill: 'attended=42&held=60&required=75&remaining=30', fillLabel: 'Do it in the attendance calculator with 42 of 60 already in — it shows 70% and the 12 classes needed' }
+        ]
+      },
+      {
+        name: 'Work out how many classes you must attend to recover',
+        body: [
+          { formula: 'classes needed = (required × held − 100 × attended) ÷ (100 − required), rounded up' },
+          { p: 'With 42 of 60 and a 75% minimum: (75 × 60 − 100 × 42) ÷ 25 = (4,500 − 4,200) ÷ 25 = 12. Attend the next 12 classes without a miss and you reach 54 of 72, exactly 75%. Every attended class adds one to both the top and the bottom of the fraction, which is why recovery is slow.' },
+          { p: 'Then check it can still be done. With 30 classes left this term, it can, and attending all 30 would reach 80%. With only 10 left, it cannot: even a perfect run ends at 74.29%.' }
+        ]
+      },
+      {
+        name: 'Work out how many you can still miss',
+        body: [
+          { formula: 'classes you can miss = attended × 100 ÷ required − held, rounded down' },
+          { p: 'With 52 of 64, attendance is 81.25%. Then 52 × 100 ÷ 75 = 69.33, and 69.33 − 64 = 5.33, rounded down to 5. Miss five more and you are at 52 of 69, 75.36%; miss a sixth and you are at 74.29%, below the line.' },
+          { example: {
+            caption: 'Illustrative attendance records, invented for this guide, against a 75% minimum. Every figure is what the Attendance Calculator’s own engine returns.',
+            head: ['Record so far', 'Attendance', 'Against 75%', 'Best possible by the end'],
+            rows: [
+              ['42 of 60, 30 still to come', '70%', 'Short: attend 12 in a row', '80%'],
+              ['42 of 60, 10 still to come', '70%', 'Not reachable: 12 needed, 10 left', '74.29%'],
+              ['52 of 64, 26 still to come', '81.25%', 'Can miss 5', '86.67%'],
+              ['36 of 48', '75%', 'Exactly on the line: can miss none', '—'],
+              ['20 of 30, 50 still to come', '66.67%', 'Short: attend 10 in a row', '87.5%']
+            ]
+          } },
+          { tool: '/education/attendance-calculator/', why: 'when you are above the minimum it shows how many classes you can still miss', fill: 'attended=52&held=64&required=75&remaining=26', fillLabel: 'Open it with 52 of 64 — it shows 81.25% and 5 classes to spare' }
+        ]
+      },
+      {
+        name: 'Check the rule that applies to you',
+        body: [
+          { p: 'The minimum and the way it is counted come from your board, university or college, and they differ. Find the rule in writing — the prospectus, the examination regulations or a circular — and keep a copy of any leave application you make.' },
+          { fact: {
+            text: 'For CBSE Class X and XII, Rules 13 and 14 of the CBSE Examination Bye-Laws require a minimum of 75% attendance for a student to be eligible to sit the Board examinations. The Board’s circular of 4 August 2025 repeats this for the 2025–26 session, says a relaxation of 25% is offered only in exigencies such as medical emergencies or taking part in national or international sports events, supported by documents, and says leave taken without a written application is treated as unauthorised absence. Colleges and universities set their own minimums in their own regulations.',
+            checked: CHECKED,
+            sources: [src('cbseAttendance', 'the 75% minimum, the 25% relaxation and written leave applications')]
+          } }
+        ]
+      }
+    ],
+    wrong: [
+      { name: 'Averaging the subjects’ percentages', text: '45 of 50 in one subject is 90% and 20 of 30 in another is 66.67%. Their average is 78.33%, and the combined figure, 65 of 80, is 81.25% — but if the rule is per subject, the second one is short whatever the overall figure says.' },
+      { name: 'Planning to miss the exact number allowed', text: 'If the calculator says you can miss 5, missing 5 leaves no room for an illness, a late bus or a register error. Treat the figure as the edge, not the budget.' },
+      { name: 'Assuming every missed class costs the same', text: 'Early in a term a single absence moves the percentage a lot — from 20 of 20 to 20 of 21 is a drop of nearly five points. Late in the term it moves it less, but there is also less term left to recover in.' },
+      { name: 'Working from your own count', text: 'Your notes and the official register disagree more often than seems likely: a class marked absent by mistake, a lab counted twice, a cancelled lecture still recorded as held. Check the official figure early, while a mistake can still be corrected.' },
+      { name: 'Assuming leave counts as attendance', text: 'Some institutions take approved leave out of the total, some count it as absence and grant a relaxation later, and some do neither. Ask which applies before relying on it, and apply for leave in writing at the time.' }
+    ],
+    faq: [
+      { q: 'How do I calculate my attendance percentage?', a: 'Divide the classes you attended by the classes held and multiply by 100. 42 out of 60 is 70%.' },
+      { q: 'How many classes can I miss and still have 75%?', a: 'Multiply the classes attended by 100, divide by 75, subtract the classes held, and round down. With 52 of 64 the answer is 5. It changes every time a class is held, so work it out again as the term goes on.' },
+      { q: 'How many classes do I need to attend to get from 70% to 75%?', a: 'It depends on the counts, not the percentages. From 42 of 60 it is 12 in a row. From 36 of 60, which is 60%, it is 36 in a row.' },
+      { q: 'Does medical leave count towards attendance?', a: 'That depends on the institution. CBSE offers a relaxation for documented medical emergencies; colleges set their own rules. Apply for leave in writing, with the documents, at the time.' },
+      { q: 'Is the calculator’s figure the official one?', a: 'No. It does the arithmetic on the numbers you enter. The official figure is the one in your institution’s register, worked out by its own rules.' }
+    ],
+    tools: ['/education/attendance-calculator/', '/mathematics/percentage/', '/education/marks-percentage/', '/education/exam-countdown/'],
+    collections: ['students', 'schools'],
+    related: ['calculate-a-percentage', 'convert-cgpa-to-percentage', 'count-business-days']
+  },
+
+  /* ================================================================== */
+  {
+    slug: 'count-business-days',
+    glyph: 'i-business-days',
+    name: 'How to count business days between two dates',
+    title: 'How to count business days between two dates — weekends, bank holidays, and whether the first day counts',
+    description: 'Count the working days between two dates, add working days to a date to find a deadline, take out the right public holidays, and settle whether the first and last days count.',
+    answer: 'Count the calendar days between the two dates, take out the Saturdays and Sundays, then take out any public holidays that fall on a weekday. From Tuesday 1 December 2026 up to Monday 4 January 2027 there are 34 days, 24 of them weekdays, and 21 working days once England and Wales’s Christmas Day, Boxing Day substitute on 28 December and New Year’s Day are removed.',
+    minutes: { first: 'ten minutes', again: 'under a minute' },
+    howLong: 'Under a minute once you have the holiday list. Deciding whether the first and last days count, and finding the holidays that apply to the people doing the work, are the two things worth getting right before you count anything.',
+    before: [
+      'The start date and the end date — or, for a deadline, the start date and the number of working days allowed.',
+      'The public holidays that apply where the work is done, for every year the period touches.',
+      'The wording you are counting against, if there is one: “within 10 business days of receipt” and “10 clear working days” are not the same instruction.'
+    ],
+    steps: [
+      {
+        name: 'Decide whether the first and last days count',
+        body: [
+          { p: 'There is no single convention, which is why disputes about deadlines are so common. The Business Days Calculator counts the start date and stops before the end date, the way “from 5 October until 30 October” is usually meant. Spreadsheet functions such as NETWORKDAYS count both ends. From Monday 5 October to Friday 30 October 2026 the calculator gives 19 business days; counting both ends gives 20.' },
+          { p: 'If you need the end date included, move it on by one day: 5 October to 31 October gives 20.' },
+          { tool: '/time/business-days/', why: 'counts business days between two dates or adds them to a date, leaving out weekends and any holidays you list', fill: 'start=2026-10-05&mode=between&end=2026-10-31', fillLabel: 'Open it with 5 to 31 October 2026 — it shows 20 business days' }
+        ]
+      },
+      {
+        name: 'Count the weekdays',
+        body: [
+          { p: 'Whole weeks are easy: every seven days hold five weekdays. Count the whole weeks, then walk the days left over. From 1 December 2026 there are 34 days to count before 4 January: four whole weeks, which hold 20 weekdays, and six days left over — Tuesday 29 December to Sunday 3 January — of which four are weekdays. That makes 24.' },
+          { tool: '/time/business-days/', why: 'with the holiday box left empty it takes out weekends only', fill: 'start=2026-12-01&mode=between&end=2027-01-04', fillLabel: 'Do it in the calculator with these dates — it shows 24 weekdays before holidays' }
+        ]
+      },
+      {
+        name: 'Take out the public holidays',
+        body: [
+          { p: 'Only holidays that fall on a weekday change the count; one that falls on a Saturday or Sunday has already been removed with the weekend — unless a substitute day moves it onto a weekday. Holiday lists differ from country to country and often from region to region, so use the list for the place the work is done, not where the person counting sits.' },
+          { fact: {
+            text: 'In England and Wales the bank holidays left in 2026 are Christmas Day on Friday 25 December and Boxing Day, observed on Monday 28 December because 26 December falls on a Saturday. New Year’s Day 2027 is on Friday 1 January. When a bank holiday falls at a weekend, a substitute weekday, normally the following Monday, becomes the bank holiday. Scotland and Northern Ireland have bank holidays of their own, published on the same page.',
+            checked: CHECKED,
+            sources: [src('ukBankHolidays', 'the 2026 and 2027 dates for England and Wales, and the substitute-day rule')]
+          } },
+          { p: 'Type the holidays into the calculator as dates, separated by commas: 2026-12-25, 2026-12-28, 2027-01-01. All three fall on weekdays inside the period, so 24 weekdays become 21 working days.' },
+          { tool: '/time/business-days/', why: 'holidays typed as YYYY-MM-DD and separated by commas are taken out of the count when they fall on a weekday', fill: 'start=2026-12-01&mode=between&end=2027-01-04&holidays=2026-12-25,2026-12-28,2027-01-01', fillLabel: 'Open it with the three holidays added — it shows 21 business days' }
+        ]
+      },
+      {
+        name: 'Add working days to a date to find a deadline',
+        body: [
+          { p: 'For “within 10 working days”, count forwards instead. The start date itself is not counted: day one is the next working day. From Friday 18 December 2026, ten weekdays later is Friday 1 January 2027. Take out England and Wales’s three holidays and the tenth working day becomes Wednesday 6 January 2027 — five days later than a count that ignored them.' },
+          { example: {
+            caption: 'Illustrative date ranges, invented for this guide. Every answer is what the Business Days Calculator’s own engine returns for them.',
+            head: ['Question', 'Calendar days', 'Answer'],
+            rows: [
+              ['5 Oct 2026 up to 30 Oct 2026', '25', '19 business days'],
+              ['1 Dec 2026 up to 4 Jan 2027, weekends only', '34', '24 business days'],
+              ['The same, England and Wales bank holidays out', '34', '21 business days'],
+              ['10 working days after Fri 18 Dec 2026, weekends only', '14', 'Friday 1 January 2027'],
+              ['The same, England and Wales bank holidays out', '19', 'Wednesday 6 January 2027']
+            ]
+          } },
+          { tool: '/time/business-days/', why: 'set the mode to adding business days and it returns the date, skipping weekends and the holidays you list', fill: 'start=2026-12-18&mode=add&add=10&holidays=2026-12-25,2026-12-28,2027-01-01', fillLabel: 'Open it with 10 working days from 18 December — it shows Wednesday 6 January 2027' }
+        ]
+      },
+      {
+        name: 'Check the answer against the wording',
+        body: [
+          { p: 'Read the clause once more with the date in hand. “Within 10 business days of receipt” usually starts the count the day after receipt; “by the end of the tenth business day” sets a time as well as a date; some rules count “clear days”, which leaves out both the first and the last. Where money or a legal right depends on it, follow the wording, and if it is ambiguous, ask in writing before the deadline rather than after it.' }
+        ]
+      }
+    ],
+    wrong: [
+      { name: 'Counting both ends without noticing', text: 'NETWORKDAYS in a spreadsheet counts the start and the end; this calculator counts the start and not the end. From 1 December 2026 to 4 January 2027 that is 25 against 24. Neither is wrong, but mixing the two in one schedule moves every deadline by a day.' },
+      { name: 'Using another region’s holiday list', text: 'Scotland and Northern Ireland have bank holidays that England and Wales do not, and in India holidays vary from state to state. A deadline worked out with the wrong list can be a day or two out in either direction.' },
+      { name: 'Missing a substitute day', text: 'Boxing Day 2026 is a Saturday, so the bank holiday moves to Monday 28 December. A list that says “26 December” takes nothing out, because that day was already a weekend, and the real day off is counted as a working day.' },
+      { name: 'Assuming everyone works Monday to Friday', text: 'Shops, hospitals and offices that work Saturdays have a different working week. The calculator treats Saturday and Sunday as the weekend; for any other pattern, count by hand or adjust the result.' },
+      { name: 'Counting the day of receipt as day one', text: 'When adding business days, the start date is usually day zero. Counting it as day one makes every deadline a day early — the safe direction, but a day of your own time lost each time.' }
+    ],
+    faq: [
+      { q: 'How many working days are there between two dates?', a: 'Count the days, take out the weekends, then take out weekday public holidays. From 1 December 2026 up to 4 January 2027 there are 24 weekdays, and 21 working days in England and Wales.' },
+      { q: 'How do I count business days in Excel?', a: '=NETWORKDAYS(start, end, holidays) counts working days including both ends; NETWORKDAYS.INTL lets you choose which days are the weekend. =WORKDAY(start, days, holidays) adds working days to a date: WORKDAY on 18 December 2026 with 10 days and the three holidays returns 6 January 2027.' },
+      { q: 'Does the start date count as a business day?', a: 'When counting between two dates, this calculator includes it. When adding business days to a date, it does not: day one is the next working day. Contracts vary, so check the wording.' },
+      { q: 'Are bank holidays business days?', a: 'Normally not. Banks and most offices are closed, which is why payment and notice deadlines usually step over them. Check whether your contract defines a business day for itself.' },
+      { q: 'Is Saturday a business day?', a: 'Not in this calculator, or in most contracts that use the phrase. Where Saturday is a working day, the contract usually says so.' }
+    ],
+    tools: ['/time/business-days/', '/time/date-difference/', '/time/date-add-subtract/', '/business/invoice-payment-terms/'],
+    collections: ['hr-payroll', 'get-paid'],
+    related: ['calculate-age', 'calculate-attendance-percentage', 'chase-unpaid-invoices']
+  },
+
+  /* ================================================================== */
+  {
+    slug: 'convert-inches-to-centimetres',
+    glyph: 'i-length',
+    name: 'How to convert inches to centimetres',
+    title: 'How to convert inches to centimetres — multiply by 2.54, with feet and inches, fractions and screen sizes',
+    description: 'Inches to centimetres with the exact factor, heights in feet and inches, fractions from a tape measure, screen sizes that are measured corner to corner, and centimetres back to inches.',
+    answer: 'To convert inches to centimetres, multiply by 2.54: 12 inches is 12 × 2.54 = 30.48 cm. The factor is exact rather than rounded — an inch has been defined as exactly 2.54 centimetres since 1959 — so the only rounding is whatever you choose for the answer.',
+    minutes: { first: 'two minutes', again: 'seconds' },
+    howLong: 'Seconds. The only thing that takes thought is the input: turning feet and inches, or a fraction off a tape measure, into a single number of inches before you multiply.',
+    before: [
+      'The measurement in inches — or in feet and inches, or with a fraction such as 3/8.',
+      'An idea of how precise the answer needs to be: a height, a parcel and a machined part need different rounding.'
+    ],
+    steps: [
+      {
+        name: 'Multiply by 2.54',
+        body: [
+          { formula: 'centimetres = inches × 2.54' },
+          { p: '12 inches is 30.48 cm. A 55-inch television is 55 × 2.54 = 139.7 cm. A 15.6-inch laptop screen is 39.624 cm, which most people would call 39.6 cm. Because centimetres are the smaller unit, the number always gets bigger — about two and a half times bigger.' },
+          { tool: '/conversions/length/inch-to-centimeter/', why: 'converts inches to centimetres with the exact factor, and shows the same length in every other unit underneath', fill: 'v=12', fillLabel: 'Do it in the converter with 12 inches — it shows 30.48 cm' },
+          { fact: {
+            text: 'The inch is exactly 2.54 centimetres (25.4 millimetres). The figure follows from the 1959 change to the yard, which the US has since defined as exactly 0.9144 metre; NIST notes that after 1959 the US and British inches were defined identically. UK law defines the yard as 0.9144 metre and the inch as 1/36 of a yard, which is the same 2.54 cm, and NIST lists the inch-to-centimetre factor of 2.54 as exact rather than rounded.',
+            checked: CHECKED,
+            sources: [src('nistHb44', 'the 1959 definition of the yard, and identical US and British inches after it'), src('nistSp811', 'inch to centimetre, 2.54, marked as exact'), src('ukWma1985', 'the yard as 0.9144 metre and the inch as 1/36 yard')]
+          } }
+        ]
+      },
+      {
+        name: 'Convert feet and inches together',
+        body: [
+          { formula: 'total inches = feet × 12 + inches' },
+          { p: 'Turn the whole measurement into inches first, then multiply. A height of 5 ft 9 in is 5 × 12 + 9 = 69 inches, and 69 × 2.54 = 175.26 cm. Six feet is 72 inches, or 182.88 cm. Converting the feet and the inches separately and adding the two works too, as long as neither part is left out.' },
+          { tool: '/conversions/length/inch-to-centimeter/', why: 'enter the total in inches and read the centimetres', fill: 'v=69', fillLabel: 'Open it with 69 inches (5 ft 9 in) — it shows 175.26 cm' }
+        ]
+      },
+      {
+        name: 'Turn fractions of an inch into decimals first',
+        body: [
+          { p: 'Tape measures and drill bits work in halves, quarters, eighths and sixteenths. Divide the top by the bottom to get a decimal, then multiply: 3/8 inch is 0.375 inch, and 0.375 × 2.54 = 0.9525 cm, or 9.525 mm. For a measurement such as 4 3/8 inches, add the whole number back on: 4.375 × 2.54 = 11.1125 cm.' },
+          { p: 'At this scale millimetres are usually the more useful answer. Multiply inches by 25.4 to get them directly.' }
+        ]
+      },
+      {
+        name: 'Round to suit the job',
+        body: [
+          { example: {
+            caption: 'Illustrative measurements, invented for this guide. Each centimetre figure is what the converter’s own engine returns.',
+            head: ['Inches', 'Centimetres'],
+            rows: [
+              ['1 in', '2.54 cm'],
+              ['6.5 in (a phone screen)', '16.51 cm'],
+              ['8.5 × 11 in (a US Letter page)', '21.59 × 27.94 cm'],
+              ['12 in (one foot)', '30.48 cm'],
+              ['15.6 in (a laptop screen)', '39.624 cm'],
+              ['24 in', '60.96 cm'],
+              ['55 in (a television)', '139.7 cm'],
+              ['69 in (5 ft 9 in)', '175.26 cm']
+            ]
+          } },
+          { p: 'Round at the end, and only as far as the job needs: a height to the nearest centimetre, a parcel to the nearest half centimetre, a part for a machine to a tenth of a millimetre. Screen sizes are measured diagonally, from one corner to the opposite one, so 139.7 cm is not the width of a 55-inch television; on a 16:9 screen the width is about 121.8 cm.' }
+        ]
+      },
+      {
+        name: 'Going the other way: centimetres to inches',
+        body: [
+          { formula: 'inches = centimetres ÷ 2.54' },
+          { p: 'Divide by 2.54: 30 cm is 11.811 inches, a little under a foot. A height of 175 cm is 68.9 inches; take away 60 inches for five feet and it is 5 ft 8.9 in. One centimetre is about 0.3937 inch.' },
+          { tool: '/conversions/length/centimeter-to-inch/', why: 'converts centimetres back to inches with the same exact factor' }
+        ]
+      }
+    ],
+    wrong: [
+      { name: 'Dividing when you should multiply', text: '12 ÷ 2.54 is 4.72, which is the number of inches in 12 centimetres, not the other way round. Going from inches to centimetres, the number must get bigger.' },
+      { name: 'Reading 5 ft 9 in as 5.9 feet', text: '5 ft 9 in is 5.75 feet, not 5.9. Treating it as 5.9 gives 70.8 inches and 179.83 cm, more than four centimetres too tall. Convert the feet to inches and add the inches.' },
+      { name: 'Rounding the factor to 2.5', text: 'It is fine for a rough idea and poor for anything else: 55 inches comes out at 137.5 cm instead of 139.7, 2.2 cm short. The exact factor is no harder to type.' },
+      { name: 'Treating a screen size as a width', text: 'Televisions, monitors and phones are sold by their diagonal. A 55-inch television will not fit a 140 cm gap only because its diagonal is 139.7 cm; its width, stand and bezel are what matter.' },
+      { name: 'Rounding the inches before converting', text: 'Calling a 15.6-inch screen “16 inches” before multiplying adds just over a centimetre to the answer. Convert the measurement you have, then round the result.' }
+    ],
+    faq: [
+      { q: 'How many centimetres are in an inch?', a: 'Exactly 2.54. The figure is a definition, not a measurement, so it does not change and has no further decimal places.' },
+      { q: 'How do I convert inches to cm in my head?', a: 'Multiply by 2.5, then add a little over 1.5%. For 55 inches: 55 × 2.5 = 137.5, and 1.6% of that is 2.2, giving 139.7.' },
+      { q: 'How many cm is 5 feet 9 inches?', a: '175.26 cm. Five feet nine is 69 inches, and 69 × 2.54 = 175.26.' },
+      { q: 'Is an inch the same in the UK and the US?', a: 'Yes. Since 1959 both have used the same inch, exactly 2.54 cm.' },
+      { q: 'How do I convert inches to millimetres?', a: 'Multiply by 25.4. 12 inches is 304.8 mm.' }
+    ],
+    tools: ['/conversions/length/inch-to-centimeter/', '/conversions/length/centimeter-to-inch/', '/conversions/length/inch-to-millimeter/', '/conversions/length/foot-to-centimeter/'],
+    related: ['convert-kg-to-pounds', 'calculate-bmi', 'calculate-a-percentage']
+  },
+
+  /* ================================================================== */
+  {
+    slug: 'convert-kg-to-pounds',
+    glyph: 'i-mass',
+    name: 'How to convert kg to pounds',
+    title: 'How to convert kg to pounds — the exact factor, stones and pounds, and a quick way to do it in your head',
+    description: 'Kilograms to pounds with the exact definition behind the factor, a mental shortcut that is close enough for most things, stones and pounds for UK body weight, and pounds back to kilograms.',
+    answer: 'To convert kilograms to pounds, multiply by 2.20462, or divide by 0.45359237 — the exact number of kilograms in a pound: 70 kg is 154.32 lb. For a quick estimate, double the kilograms and add 10%: 70 × 2 = 140, plus 14, is 154.',
+    minutes: { first: 'two minutes', again: 'seconds' },
+    howLong: 'Seconds. The only judgement is how precise the answer needs to be — a suitcase, a recipe and a dose are different jobs.',
+    before: [
+      'The weight in kilograms, or in grams divided by 1,000.',
+      'For UK body weight, whether the answer is wanted in pounds or in stones and pounds.'
+    ],
+    steps: [
+      {
+        name: 'Multiply by 2.20462',
+        body: [
+          { formula: 'pounds = kilograms × 2.20462' },
+          { formula: 'pounds = kilograms ÷ 0.45359237 (exact)' },
+          { p: 'The pound is defined in kilograms, so the exact way is to divide by 0.45359237. Multiplying by 2.20462 gives the same answer to five decimal places, which is far more than any bathroom scale can show. 70 kg is 154.3236 lb, which for most purposes is 154.3 lb.' },
+          { tool: '/conversions/mass/kilogram-to-pound/', why: 'converts kilograms to pounds with the exact definition, and lists the same weight in stones, ounces and every other mass unit', fill: 'v=70', fillLabel: 'Do it in the converter with 70 kg — it shows 154.3236 lb' },
+          { fact: {
+            text: 'The international avoirdupois pound — the pound used for body weight, food and luggage — is exactly 0.453 592 37 kilogram. NIST notes that after the 1959 agreement the US and British pounds were the same, and gives that definition; UK law states the same figure and defines the stone as 14 pounds and the ounce as 1/16 pound. The kilogram itself has been defined since the 2018 revision of the SI by fixing the numerical value of the Planck constant, so the pound is tied to a constant of nature through it.',
+            checked: CHECKED,
+            sources: [src('ukWma1985', 'the pound as 0.453 592 37 kilogram, the stone and the ounce'), src('nistHb44', 'the avoirdupois pound defined in terms of the kilogram, and the 1959 agreement'), src('bipmKg', 'the kilogram defined by the Planck constant')]
+          } }
+        ]
+      },
+      {
+        name: 'Use the quick method when an estimate will do',
+        body: [
+          { p: 'Double the kilograms, then add a tenth of that. For a 23 kg suitcase: 23 × 2 = 46, plus 4.6, is 50.6 lb. The exact answer is 50.71 lb, so the shortcut is about 0.2% low — close enough for a suitcase, a parcel or a conversation.' },
+          { p: 'It works because 2 × 1.1 = 2.2, which is just under the real factor of 2.20462.' }
+        ]
+      },
+      {
+        name: 'Turn pounds into stones and pounds',
+        body: [
+          { p: 'In the UK, body weight is often given in stones and pounds. A stone is 14 pounds. Convert to pounds, divide by 14 for the whole stones, and the remainder is the pounds. 82 kg is 180.78 lb; 14 goes into 180 twelve times, which is 168 lb, leaving 12.78 lb. So 82 kg is 12 st 12.8 lb.' },
+          { p: '70 kg is 154.32 lb, which is 11 stone exactly (154 lb) and 0.32 lb more: 11 st 0.3 lb.' },
+          { tool: '/conversions/mass/kilogram-to-pound/', why: 'the list under the answer includes stones, as a decimal', fill: 'v=82', fillLabel: 'Open it with 82 kg — it shows 180.7791 lb and 12.9128 st' }
+        ]
+      },
+      {
+        name: 'Round to suit what you are weighing',
+        body: [
+          { example: {
+            caption: 'Illustrative weights, invented for this guide. Each pound figure is what the converter’s own engine returns, rounded to two decimal places.',
+            head: ['Kilograms', 'Pounds'],
+            rows: [
+              ['0.5 kg', '1.10 lb'],
+              ['3.5 kg', '7.72 lb'],
+              ['7 kg (a cabin bag)', '15.43 lb'],
+              ['20 kg', '44.09 lb'],
+              ['23 kg (a checked bag)', '50.71 lb'],
+              ['70 kg', '154.32 lb'],
+              ['100 kg', '220.46 lb']
+            ]
+          } },
+          { p: 'When a limit is set in one unit, convert the limit and compare in that unit. A 23 kg bag weighs 50.71 lb, so it is over a 50 lb limit; 50 lb is 22.68 kg. The two figures are often printed side by side as if they were the same, and they are not quite.' }
+        ]
+      },
+      {
+        name: 'Going the other way: pounds to kilograms',
+        body: [
+          { formula: 'kilograms = pounds × 0.45359237' },
+          { p: 'Multiply by the exact definition: 154 lb is 69.85 kg, and 50 lb is 22.68 kg. The rough version is to halve the pounds and take off a tenth: 154 ÷ 2 = 77, less 7.7, is 69.3 — less than 1% out.' },
+          { tool: '/conversions/mass/pound-to-kilogram/', why: 'converts pounds to kilograms with the same exact definition' }
+        ]
+      }
+    ],
+    wrong: [
+      { name: 'Dividing by 2.2 when you meant to multiply', text: '70 ÷ 2.2 is 31.8, which is 70 pounds in kilograms. A pound is lighter than a kilogram, so going from kilograms to pounds the number must get bigger.' },
+      { name: 'Reading 11.5 stone as 11 stone 5 pounds', text: 'A stone has 14 pounds, not 10, so 11.5 stone is 11 st 7 lb. The decimal part has to be multiplied by 14 before it means pounds.' },
+      { name: 'Treating 23 kg and 50 lb as the same limit', text: '23 kg is 50.71 lb. A bag weighed at exactly 23 kg is over a 50 lb limit, and one at 22.7 kg is under it. Convert the limit, not the bag, and compare in the limit’s own unit.' },
+      { name: 'Rounding the factor to 2', text: 'Doubling alone undershoots by about 9%: 100 kg becomes 200 lb instead of 220.46. Add the extra tenth, or use the exact factor.' },
+      { name: 'Using the wrong kind of pound or ounce', text: 'Gold and silver are priced by the troy ounce, which is heavier than the ordinary ounce; the UK abolished the troy pound in 1879. The converter’s pound and ounce are the avoirdupois units used for everything else.' }
+    ],
+    faq: [
+      { q: 'How many pounds are in a kilogram?', a: 'About 2.20462. More precisely 2.2046226218, the result of dividing 1 by 0.45359237.' },
+      { q: 'How many kilograms are in a pound?', a: 'Exactly 0.45359237. It is the definition of the pound, so it has no further decimal places.' },
+      { q: 'What is 70 kg in stones and pounds?', a: '11 st 0.3 lb. 70 kg is 154.32 lb, and 11 stone is 154 lb.' },
+      { q: 'Is a pound the same in the UK and the US?', a: 'Yes. Both use the international avoirdupois pound of exactly 0.45359237 kg.' },
+      { q: 'Why do converters give 154.3 or 154.32 for 70 kg?', a: 'Only because of rounding. The exact value is 154.32358…; how many decimals are shown is a choice, not a different answer.' }
+    ],
+    tools: ['/conversions/mass/kilogram-to-pound/', '/conversions/mass/pound-to-kilogram/', '/conversions/mass/kilogram-to-stone/', '/health/bmi/'],
+    collections: ['online-sellers'],
+    related: ['convert-inches-to-centimetres', 'calculate-bmi']
+  },
+
+  /* ================================================================== */
+  {
+    slug: 'convert-csv-to-json',
+    glyph: 'i-csv-to-json',
+    name: 'How to convert CSV to JSON',
+    title: 'How to convert CSV to JSON — headers as keys, quoted commas, delimiters, and the types CSV does not carry',
+    description: 'Turn a CSV file into a JSON array of objects, keep quoted fields with commas in them intact, pick the right delimiter, and deal with the fact that every value comes out as a string.',
+    answer: 'To convert CSV to JSON, use the first row as the keys and turn every following row into an object, giving an array of objects: under the header invoice,customer,city,total the row INV-0101,Asha Traders,Pune,29500 becomes {"invoice": "INV-0101", "customer": "Asha Traders", "city": "Pune", "total": "29500"}. The CSV to JSON Converter does this in your browser, including quoted fields that contain commas.',
+    minutes: { first: 'five minutes', again: 'seconds' },
+    howLong: 'Seconds for a clean file. A file that came out of a spreadsheet in another country, or was typed by hand, can take longer — almost always because of the delimiter or an unquoted comma, both of which are quick to spot once you know to look.',
+    before: [
+      'The CSV, opened in a plain text editor rather than a spreadsheet, so you can see the real delimiters and quote marks.',
+      'A header row. If the file has none, add one: the converter uses the first row as the keys.',
+      'An idea of which columns should end up as numbers, dates or true and false — the converter will not decide that for you.'
+    ],
+    steps: [
+      {
+        name: 'Check the header row and the delimiter',
+        body: [
+          { p: 'Look at the first two lines. The first should name the columns; the character between the names is the delimiter. Most files use commas, but spreadsheets set up for countries that write decimals with a comma usually export with semicolons, and some systems use tabs or a vertical bar.' },
+          { fact: {
+            text: 'CSV is described by RFC 4180, an informational RFC that acknowledges implementations differ. Its rules are the common ground: each record on its own line; an optional header line in the same format as the records; fields containing a comma, a double quote or a line break enclosed in double quotes; a double quote inside such a field written as two double quotes; and spaces counted as part of the field. JSON is defined separately, by RFC 8259.',
+            checked: CHECKED,
+            sources: [src('rfc4180', 'the header line, quoting, doubled quotes and spaces in fields'), src('rfc8259', 'the JSON the conversion produces')]
+          } }
+        ]
+      },
+      {
+        name: 'Paste it in and convert',
+        body: [
+          { p: 'This invented invoice list has a header, a customer name with a comma in it — quoted, as it should be — and an empty cell at the end of the last row:' },
+          { formula: CSV_LINES[0] },
+          { formula: CSV_LINES[1] },
+          { formula: CSV_LINES[2] },
+          { formula: CSV_LINES[3] },
+          { p: 'With the direction set to CSV to JSON and the delimiter to comma, the converter reports 4 columns and 3 data rows, and the JSON comes to 246 bytes before it is indented for reading.' },
+          { tool: '/developer/csv-to-json/', why: 'converts CSV or TSV to JSON and back in the browser, handling quoted fields, embedded commas and four delimiters', fill: textFill(CSV_INVOICES), fillLabel: 'Open the converter with this CSV already pasted in' }
+        ]
+      },
+      {
+        name: 'See what happened to each row',
+        body: [
+          { example: {
+            caption: 'An invented invoice list, made up for this guide. The right-hand column is what the converter’s own engine produces from each row.',
+            head: ['CSV row', 'JSON object'],
+            rows: [
+              [CSV_LINES[1], '{"invoice": "INV-0101", "customer": "Asha Traders", "city": "Pune", "total": "29500"}'],
+              [CSV_LINES[2], '{"invoice": "INV-0102", "customer": "Khan, Patel & Co", "city": "Leeds", "total": "1180.50"}'],
+              [CSV_LINES[3], '{"invoice": "INV-0103", "customer": "Riverside Café", "city": "Bristol", "total": ""}']
+            ]
+          } },
+          { p: 'The quoted name kept its comma and lost its quote marks, which were only there to protect the comma. The empty cell became an empty string. And every value is in quotes — including 29500 and 1180.50.' }
+        ]
+      },
+      {
+        name: 'Turn the strings into the types you need',
+        body: [
+          { p: 'CSV has no types: it cannot say whether 29500 is a number or a code that happens to be made of digits. So the converter keeps every value as a string, which is the safe choice — a PIN code of 007 or a phone number starting with 0 survives intact. Where a column really is a number, convert it in the program that reads the JSON, and decide there what an empty string should become: zero, null, or an error.' },
+          { p: 'Keep the trailing zero in mind. "1180.50" as a string still has it; the number 1180.5 does not. For money, that is a formatting question rather than a change of value, but it matters if the figure is later compared as text.' }
+        ]
+      },
+      {
+        name: 'If the columns come out wrong, check the delimiter and the quotes',
+        body: [
+          { p: 'A semicolon file read with the delimiter set to comma comes out as a single key holding the whole header line. Switch the delimiter to semicolon and convert again. An unquoted comma inside a value is harder to spot: the row splits into one field too many, the values shift one column to the right, and the last one is dropped. The fix is in the source — put quotes round the value — not in the JSON.' },
+          { p: 'The same tool runs the other way. Set the direction to JSON to CSV and an array of objects becomes a CSV, with a column for every key that appears in any of the objects.' }
+        ]
+      }
+    ],
+    wrong: [
+      { name: 'A semicolon file read as commas', text: 'Each line becomes one long value under one long key. Worse, a decimal comma such as 29500,00 is split at the comma, and the 00 is dropped without an error. Set the delimiter to match the file before converting.' },
+      { name: 'An unquoted comma inside a name', text: 'INV-0102,Khan, Patel & Co,Leeds,1180.50 has five fields under a four-column header. The converter gives customer “Khan”, city “ Patel & Co” and total “Leeds”, and the 1180.50 disappears. Quote any value that contains the delimiter.' },
+      { name: 'Expecting numbers and true or false', text: 'Every value arrives as a string, because CSV carries no types. Code that adds up the “total” field will join strings together instead of adding numbers unless it converts them first.' },
+      { name: 'Two columns with the same name', text: 'An object cannot hold the same key twice, so when a header has two columns called “name”, only the second survives in the JSON. Rename one before converting.' },
+      { name: 'Opening and saving the file in a spreadsheet first', text: 'Spreadsheets can strip leading zeros, turn long numbers into scientific notation and rewrite dates in their own format. If the CSV came from a system, paste it as it is rather than round-tripping it through a spreadsheet.' }
+    ],
+    faq: [
+      { q: 'Does the CSV need a header row?', a: 'Yes. The first row becomes the keys. If a header cell is empty, the converter names that column column1, column2 and so on by its position.' },
+      { q: 'Can I convert JSON back to CSV?', a: 'Yes. Set the direction to JSON to CSV. The JSON must be an array of objects; every key that appears in any object becomes a column, so rows with missing fields still line up.' },
+      { q: 'Why are my numbers in quotes?', a: 'Because CSV does not say which values are numbers. Keeping them as strings protects codes with leading zeros; convert the real numbers in the program that reads the JSON.' },
+      { q: 'Is my data uploaded?', a: 'No. The conversion runs inside the page on your own device, and the text never leaves it — which matters for customer lists and exports with personal details in them.' },
+      { q: 'What does TSV mean?', a: 'Tab-separated values: the same idea as CSV with a tab between fields. Choose Tab as the delimiter.' }
+    ],
+    tools: ['/developer/csv-to-json/', '/developer/json-formatter/', '/developer/xml-formatter/'],
+    collections: ['developers'],
+    related: ['format-json']
+  },
+
+  /* ================================================================== */
+  {
+    slug: 'split-a-pdf',
+    glyph: 'i-split-pdf',
+    name: 'How to split a PDF',
+    title: 'How to split a PDF — one file per page, every few pages, in half or by your own ranges',
+    description: 'Divide one PDF into several files: choosing between one file per page, every N pages, halves and explicit ranges, writing ranges the splitter understands, and knowing what does and does not travel with the pages.',
+    answer: 'To split a PDF, open it in a splitter, choose how to divide it — one file per page, every N pages, in half, or by page ranges such as “1-2 | 3-7 | 8-” — and download the pieces. In the Split PDF tool the file is read and divided in your browser, nothing is uploaded, and several output files come as one ZIP.',
+    minutes: { first: 'five minutes', again: 'a minute' },
+    howLong: 'A minute for most files. The time worth spending is before you split — working out which pages belong together — and after, opening each piece to check it starts and ends where you meant.',
+    before: [
+      'The PDF to split, saved on the device you are using.',
+      'A plan of which pages go into which file. For a scanned batch this may be “one page each”; for a report, the page where each section starts.',
+      'The page positions in the file, not the numbers printed on the pages. They often differ.'
+    ],
+    steps: [
+      {
+        name: 'Find the page positions before you start',
+        body: [
+          { p: 'Open the PDF and note where each piece should begin and end. The splitter counts pages by their position in the file — the first page is 1 — and ignores the numbers printed on them. A report with an unnumbered cover and contents page has its printed page 1 at position 3, and splitting at “1” would take the cover.' }
+        ]
+      },
+      {
+        name: 'Choose how to split',
+        body: [
+          { ul: [
+            'One file per page — for a scanned pile where every page is a separate document.',
+            'Every N pages — for a batch of forms that are each the same length, such as two-page timesheets.',
+            'In half — two files; if the page count is odd, the first half takes the extra page.',
+            'By explicit ranges — for anything else: you say which pages go into each file.'
+          ] },
+          { example: {
+            caption: 'An invented 10-page file called statement.pdf, made up for this guide. The file names and page counts are what the Split PDF engine produces for it.',
+            head: ['Split', 'Setting', 'Files produced'],
+            rows: [
+              ['One file per page', '—', '10 files: statement-p1.pdf to statement-p10.pdf'],
+              ['Every N pages', '3 pages per file', '4 files: p1-3, p4-6, p7-9 and p10, which has one page'],
+              ['In half', '—', '2 files: p1-5 and p6-10'],
+              ['By explicit ranges', '1-2 | 3-7 | 8-', '3 files: p1-2, p3-7 and p8-10']
+            ]
+          } },
+          { tool: '/pdf/split-pdf/', why: 'splits one PDF by page, by count, in half or by ranges in your browser, and offers several files as one ZIP; nothing is uploaded' }
+        ]
+      },
+      {
+        name: 'Write ranges the way the splitter reads them',
+        body: [
+          { ul: [
+            'A vertical bar starts a new file: “1-2 | 3-7 | 8-” makes three files.',
+            'A comma joins pages into the same file: “1-2, 4” makes one file of three pages.',
+            '“8-” runs from page 8 to the end, and “-3” takes the first three pages.',
+            'A page can go into more than one file: “1-2 | 2-4” puts page 2 in both.',
+            'Pages go into a file in the order you type them, so “5, 1” puts page 5 first.'
+          ] },
+          { p: 'A range that runs past the end is trimmed to the last page, so “9-14” on a 10-page file takes pages 9 and 10. A group with no page of the document in it halts the split with a message saying so, and a typing slip such as a word instead of a number is named in the error, so nothing is produced half-right.' }
+        ]
+      },
+      {
+        name: 'Download the pieces and check them',
+        body: [
+          { p: 'A split that produces one file downloads it directly; several files come as a single ZIP. The summary shows the pages in the source, the number of files produced and their total size. The real example on the tool page, captured from the live tool, split a 3-page report.pdf of 6.3 KB into 3 files totalling 6.9 KB.' },
+          { p: 'That small increase is normal. Each piece has to carry its own copy of the fonts and images its pages use, so the pieces together are usually a little larger than the original. The pages themselves are copied as they are, not re-encoded, so nothing is lost in quality. Open each file and check its first and last page before sending it anywhere.' }
+        ]
+      },
+      {
+        name: 'Know what does not travel with the pages',
+        body: [
+          { p: 'Splitting builds each new file from the pages alone. The original’s bookmarks do not come across, and nor does its document information — the title and author fields — which is usually what you want for a piece that is going to someone else. Complete and save any form before splitting, because form fields may not keep working once the pages are separated.' },
+          { p: 'If you only need a few pages as one file, a single range such as “3-5” does it, and so does Extract PDF Pages. To put pieces back together, or to combine pages from several files, use Merge PDF.' },
+          { tool: '/pdf/extract-pdf-pages/', why: 'takes the pages you name out into one new file, when one file is all you need' }
+        ]
+      }
+    ],
+    wrong: [
+      { name: 'Using the printed page numbers', text: 'The splitter counts positions in the file. If the printed numbering starts on the third page, every range typed from the printed numbers is two pages out. Check the first page of each piece.' },
+      { name: 'Commas where you meant bars', text: '“1-2, 3-7” is one file of seven pages, not two files. A comma joins pages into the same file; only the vertical bar starts a new one.' },
+      { name: 'Trusting the file name to list the pages', text: 'The name shows the first and last page of each piece. A file made from “1, 3, 5” is called statement-p1-5.pdf but holds three pages, not five. Open it before assuming what is inside.' },
+      { name: 'One file per page on a very long document', text: 'A 300-page file split page by page gives 300 files in a ZIP, which is rarely what anyone wants to receive. Above 500 files the tool refuses and asks you to narrow the split. Every N pages, or explicit ranges, usually fits the job better.' },
+      { name: 'Expecting bookmarks and the title to follow', text: 'Each piece is a new document built from its pages. Bookmarks and the original title and author are not carried over, so a piece sent on its own will not open with the original’s navigation.' }
+    ],
+    faq: [
+      { q: 'Is my PDF uploaded?', a: 'No. The file is read and divided by your own browser, and the pieces are written there. Nothing is sent anywhere, which matters for statements, contracts and identity documents.' },
+      { q: 'Does splitting reduce quality?', a: 'No. Page content and images are copied as they are, without being re-encoded or recompressed.' },
+      { q: 'How do I take out just a few pages as one file?', a: 'Use explicit ranges with a single group, such as “3-5”, or the Extract PDF Pages tool. Either gives one file holding only those pages.' },
+      { q: 'Why are the pieces bigger in total than the original?', a: 'Fonts and images shared between pages have to be included in every piece that uses them. The original held them once; the pieces hold them once each.' },
+      { q: 'How do I put the pieces back together?', a: 'Use Merge PDF: add the files in order and download one combined file.' }
+    ],
+    tools: ['/pdf/split-pdf/', '/pdf/extract-pdf-pages/', '/pdf/delete-pdf-pages/', '/pdf/merge-pdf/', '/pdf/rotate-pdf/'],
+    collections: ['going-paperless'],
+    related: ['merge-pdf-files', 'convert-jpg-to-pdf', 'compress-an-image']
   }
 ];
 
