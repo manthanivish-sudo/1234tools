@@ -194,6 +194,9 @@ const CRON_NAMES = {
   dow: ['sun','mon','tue','wed','thu','fri','sat']
 };
 
+/* Day of week runs 0-7, both ends Sunday, as in Vixie cron: so 1-7 is Monday
+   to Sunday and 5-7 Friday to Sunday. The caller folds 7 into 0. The name
+   sun at the end of a range means that 7, so mon-sun is the whole week. */
 function parseCronField(field, min, max, names) {
   const out = new Set();
   for (let part of String(field).split(',')) {
@@ -212,17 +215,20 @@ function parseCronField(field, min, max, names) {
     if (part === '*') { lo = min; hi = max; }
     else {
       const range = part.split('-');
-      const toNum = (v) => {
+      const toNum = (v, isEnd) => {
         if (names) {
           const i = names.indexOf(v.slice(0, 3));
-          if (i >= 0) return i + (names === CRON_NAMES.month ? 1 : 0);
+          if (i >= 0) {
+            if (names === CRON_NAMES.dow && isEnd && i === 0) return 7;
+            return i + (names === CRON_NAMES.month ? 1 : 0);
+          }
         }
         const n = parseInt(v, 10);
         if (!isFinite(n)) throw new Error(`"${v}" is not a valid value`);
         return n;
       };
       if (range.length === 1) { lo = toNum(range[0]); hi = step > 1 ? max : lo; }
-      else if (range.length === 2) { lo = toNum(range[0]); hi = toNum(range[1]); }
+      else if (range.length === 2) { lo = toNum(range[0]); hi = toNum(range[1], true); }
       else throw new Error('more than one - in a field element');
     }
     if (lo < min || hi > max || lo > hi) throw new Error(`${lo}-${hi} is outside the allowed range ${min}-${max}`);
@@ -250,7 +256,9 @@ function describeCron(expr) {
   const hours = parseCronField(hourF, 0, 23);
   const doms  = parseCronField(domF, 1, 31);
   const mons  = parseCronField(monF, 1, 12, CRON_NAMES.month);
-  const dows  = parseCronField(dowF.replace(/7/g, '0'), 0, 6, CRON_NAMES.dow);
+  /* 0-7 with 7 folded into 0. Rewriting every 7 to 0 in the text first, as
+     this once did, turned 1-7 into 1-0 and refused it. */
+  const dows  = [...new Set(parseCronField(dowF, 0, 7, CRON_NAMES.dow).map(d => d % 7))].sort((a, b) => a - b);
 
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -273,10 +281,12 @@ function describeCron(expr) {
 
   let onDays = '';
   const allDom = doms.length === 31, allDow = dows.length === 7;
+  // days are named Monday first, so 5-7 reads Friday, Saturday and Sunday
+  const weekOrder = dows.slice().sort((a, b) => (a + 6) % 7 - (b + 6) % 7);
   if (allDom && allDow) onDays = 'every day';
   else if (!allDom && allDow) onDays = `on day ${list(doms, d => String(d))} of the month`;
-  else if (allDom && !allDow) onDays = `on ${list(dows, d => DAYS[d])}`;
-  else onDays = `on day ${list(doms, d => String(d))} of the month, and on ${list(dows, d => DAYS[d])}`;
+  else if (allDom && !allDow) onDays = `on ${list(weekOrder, d => DAYS[d])}`;
+  else onDays = `on day ${list(doms, d => String(d))} of the month, and on ${list(weekOrder, d => DAYS[d])}`;
 
   const inMonths = mons.length === 12 ? '' : `, in ${list(mons, m => MONTHS[m - 1])}`;
 
@@ -319,10 +329,40 @@ function nextCronRuns(parsed, from, count) {
    Markdown -> HTML
    ============================================================ */
 
+/**
+ * The address a link or picture may carry, or null when it may not.
+ *
+ * Allowed: http, https, mailto and tel (http and https only for a picture),
+ * and relative addresses: /path, ../x, page.html, #part, ?q=1. Anything else
+ * with a scheme (javascript:, vbscript:, data:, file: …) is refused, and the
+ * link or picture is written as its plain text instead. Browsers skip tabs,
+ * line breaks and control characters when they read a scheme, so the test
+ * strips them first: "java\tscript:" is still javascript:.
+ */
+function mdSafeUrl(url, forImage) {
+  const raw = String(url);
+  const probe = raw.replace(/[\u0000- \u007f-\u009f]/g, '').toLowerCase();
+  const m = /^([a-z][a-z0-9+.\-]*):/.exec(probe);
+  if (m) {
+    const ok = forImage ? ['http', 'https'] : ['http', 'https', 'mailto', 'tel'];
+    return ok.indexOf(m[1]) >= 0 ? raw : null;
+  }
+  // a colon before the first / ? or # would be read as some other scheme
+  if (/^[^\/?#]*:/.test(probe)) return null;
+  return raw;
+}
+
 function markdownToHtml(md) {
   const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const unesc = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  /* An attribute value is quoted with ", so " and ' are escaped as well as
+     & < and >: a quote in an address can no longer close the attribute and
+     open a new one, as [x](a"onmouseover="…) once did. */
+  const attr = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const blocks = [];
-  let src = String(md);
+  // \u0000 to \u0003 mark the pieces lifted out below, so none may come in
+  let src = String(md).replace(/[\u0000-\u0003]/g, '');
 
   // pull fenced code out first so nothing else touches it
   src = src.replace(/```(\w*)\n([\s\S]*?)```/g, (m, lang, code) => {
@@ -330,15 +370,34 @@ function markdownToHtml(md) {
     return `\u0000BLOCK${blocks.length - 1}\u0000`;
   });
 
-  const inline = (s) => esc(s)
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/!\[([^\]]*)\]\(([^)\s]+)[^)]*\)/g, '<img src="$2" alt="$1">')
-    .replace(/\[([^\]]+)\]\(([^)\s]+)[^)]*\)/g, '<a href="$2" rel="noopener noreferrer">$1</a>')
-    .replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
-    .replace(/~~([^~]+)~~/g, '<del>$1</del>')
-    .replace(/(^|\s)__([^_]+)__/g, '$1<strong>$2</strong>');
+  /* Code spans, pictures and the tags of links are lifted out as \u0001n\u0002
+     once written, so the emphasis rules that follow cannot reach into an
+     address or a code span. An address may hold one level of brackets, as
+     in https://en.wikipedia.org/wiki/Cron_(software); a title after it, as
+     in [x](url "title"), is accepted and dropped. */
+  const LINK_URL = '\\(\\s*((?:[^()\\s]|\\([^()\\s]*\\))+)(?:\\s+[^)]*)?\\)';
+  const IMG_RE = new RegExp('!\\[([^\\]]*)\\]' + LINK_URL, 'g');
+  const LINK_RE = new RegExp('\\[([^\\]]+)\\]' + LINK_URL, 'g');
+  const inline = (s) => {
+    const kept = [];
+    const keep = (html) => '\u0001' + (kept.push(html) - 1) + '\u0002';
+    const t = esc(s)
+      .replace(/`([^`]+)`/g, (m, code) => keep('<code>' + code + '</code>'))
+      .replace(IMG_RE, (m, alt, url) => {
+        const u = mdSafeUrl(unesc(url), true);
+        return u === null ? alt : keep('<img src="' + attr(u) + '" alt="' + attr(unesc(alt)) + '">');
+      })
+      .replace(LINK_RE, (m, text, url) => {
+        const u = mdSafeUrl(unesc(url), false);
+        return u === null ? text : keep('<a href="' + attr(u) + '" rel="noopener noreferrer">') + text + keep('</a>');
+      })
+      .replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
+      .replace(/~~([^~]+)~~/g, '<del>$1</del>')
+      .replace(/(^|\s)__([^_]+)__/g, '$1<strong>$2</strong>');
+    return t.replace(/\u0001(\d+)\u0002/g, (m, i) => kept[Number(i)]);
+  };
 
   const lines = src.split('\n');
   const out = [];
@@ -402,6 +461,7 @@ window.DEV_TOOLS["markdown-preview"] = {
 "keywords": ["markdown to html","markdown converter","markdown preview","md to html","markdown editor"],
 "inputLabel": "Markdown",
 "outputLabel": "HTML",
+"livePreview": true,
 "placeholder": "# Heading\n\nSome **bold** text and a [link](https://example.com).",
 "sample": "# MVR Tools\n\nOver a thousand **free** tools that run entirely in your *browser*.\n\n## Features\n\n- No sign-up\n- Works offline\n- Nothing uploaded\n\n> Everything happens on your device.\n\n```js\nconst total = 1161;\n```\n\n1. First\n2. Second\n\n---\n\nSee the [documentation](https://www.mvritservices.com/tools/).",
 "options": [{"key":"wrap","label":"Output","type":"select","default":"fragment","options":[{"value":"fragment","label":"HTML fragment"},{"value":"document","label":"Full HTML document"}]}],
@@ -412,6 +472,8 @@ window.DEV_TOOLS["markdown-preview"] = {
       let html;
       try { html = markdownToHtml(md); }
       catch (e) { return { error: 'Could not convert that Markdown: ' + e.message }; }
+      // the Preview pane shows the body alone, through the page's sanitiser
+      const fragment = html;
 
       if (o.wrap === 'document') {
         html = `<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n` +
@@ -422,7 +484,7 @@ window.DEV_TOOLS["markdown-preview"] = {
       const count = (re) => (html.match(re) || []).length;
       return {
         output: html,
-        preview: html,
+        preview: fragment,
         stats: [
           ['Markdown in', `${md.length.toLocaleString('en-GB')} characters`],
           ['HTML out', `${html.length.toLocaleString('en-GB')} characters`],
@@ -434,7 +496,7 @@ window.DEV_TOOLS["markdown-preview"] = {
         ]
       };
     },
-"tips": ["Supported: headings, bold, italic, strikethrough, inline code, fenced code blocks, links, images, blockquotes, ordered and unordered lists, and horizontal rules.","HTML characters in your Markdown are escaped rather than passed through. That is deliberate — it means pasting untrusted Markdown cannot inject markup.","Fenced code blocks are extracted before anything else runs, so asterisks and underscores inside them stay literal.","This is CommonMark-ish rather than a full implementation. Tables, footnotes and reference links are not supported."],
+"tips": ["Supported: headings, bold, italic, strikethrough, inline code, fenced code blocks, links, images, blockquotes, ordered and unordered lists, and horizontal rules.","HTML characters in your Markdown are escaped rather than passed through. That is deliberate — it means pasting untrusted Markdown cannot inject markup.","Links keep only http, https, mailto and tel addresses or relative ones, and images only http and https. Anything else, such as a javascript: address, is written as plain text.","The Preview renders the HTML through a sanitiser that keeps only the tags this converter writes. Images are shown as a labelled box rather than fetched, so nothing leaves your device.","Fenced code blocks are extracted before anything else runs, so asterisks and underscores inside them stay literal.","This is CommonMark-ish rather than a full implementation. Tables, footnotes and reference links are not supported."],
 "faq": [{"q":"Why is my raw HTML escaped instead of rendered?","a":"Because passing HTML through unchanged is how Markdown converters become an injection vector. Everything is escaped, which is the safe default for a tool that people paste other people’s text into."}]
 };
 })();

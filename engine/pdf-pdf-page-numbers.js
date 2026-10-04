@@ -54,9 +54,11 @@ window.PDF_TOOLS["pdf-page-numbers"] = {
           'dash': `\u2013 ${num} \u2013`
         }[opts.format] || String(num);
 
-        const box = (await doc.resolve(pages[i].dict.MediaBox || pages[i].inherited.MediaBox)) || [0, 0, 595.28, 841.89];
-        const W = Math.abs(Number(box[2]) - Number(box[0]));
-        const H = Math.abs(Number(box[3]) - Number(box[1]));
+        /* The page as a reader sees it: cropped, and turned by its /Rotate.
+           The overlay is drawn in that frame (upright below), so a number
+           lands the right way up and inside the visible edge. */
+        const frame = await core.pageFrame(doc, i);
+        const W = frame.width, H = frame.height;
         const tw = core.textWidth(label, 'Helvetica', size);
 
         const top = /^t/.test(opts.position);
@@ -73,7 +75,7 @@ window.PDF_TOOLS["pdf-page-numbers"] = {
         }
 
         items.push({ doc, pageIndex: i, overlay: {
-          content: ops, fontKey: 'MVRpn', fontName: 'Helvetica', needsGS: false, opacity: 1
+          content: ops, fontKey: 'MVRpn', fontName: 'Helvetica', needsGS: false, opacity: 1, upright: true
         }});
       }
 
@@ -90,7 +92,7 @@ window.PDF_TOOLS["pdf-page-numbers"] = {
         ]
       };
     },
-"tips": ["Skip the first page when the document has a cover, and start numbering at 1 on the page after it.","Numbers are placed 32 points — about 11 mm — from the page edge, inside the printable area of virtually every printer.","If the document already has printed page numbers, these will sit alongside them. Check a page before committing to a long document.","Mixed page sizes are handled: the position is computed per page from that page’s own dimensions."],
+"tips": ["Skip the first page when the document has a cover, and start numbering at 1 on the page after it.","Numbers are placed 32 points — about 11 mm — from the page edge, inside the printable area of virtually every printer.","If the document already has printed page numbers, these will sit alongside them. Check a page before committing to a long document.","Mixed page sizes are handled: the position is computed per page from the part of that page a reader sees, turned the way it is shown, so a landscape page stored sideways or a cropped scan is numbered upright and inside its visible edge."],
 "faq": [{"q":"Can I use Roman numerals for a preface?","a":"Not in one pass. Split the document, number the preface separately with a different format, then merge — which is exactly what the split and merge tools are for."}]
 };
 })();

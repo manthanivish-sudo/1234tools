@@ -110,6 +110,8 @@
       sw.type = 'color'; sw.value = c.default;
       const hex = el('input', 'control colour-hex');
       hex.type = 'text'; hex.value = c.default; hex.spellcheck = false;
+      hex.id = id; hex.name = c.key;                  // the label's for= points here
+      sw.setAttribute('aria-label', c.label + ' (picker)');
       sw.addEventListener('input', () => {
         hex.value = sw.value;
         row.dispatchEvent(new Event('input', { bubbles: true }));
@@ -290,10 +292,56 @@
       'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp'
     })[mime] || 'png';
 
+    /* JPEG has no alpha channel, and canvas.toBlob turns transparent pixels
+       black. Anything saved as JPEG is laid on white first, so a rounded
+       border's corners or a transparent PNG come out white, not black. */
+    function flattenFor(canvas, fmt) {
+      if (fmt !== 'image/jpeg') return canvas;
+      const c = el('canvas');
+      c.width = canvas.width; c.height = canvas.height;
+      const x = c.getContext('2d');
+      x.fillStyle = '#ffffff'; x.fillRect(0, 0, c.width, c.height);
+      x.drawImage(canvas, 0, 0);
+      return c;
+    }
+    const qualityOf = (o, dflt) => Math.max(0.1, Math.min(1, (Number(o.quality) || dflt) / 100));
+    const keys = new Set((spec.controls || []).map(c => c.key));
+
+    /* Said when a result is bigger than its source, naming only controls
+       this tool really has. */
+    function largerNote(fmt) {
+      const canFormat = keys.has('format') && !spec.outputFormat;
+      if (canFormat && fmt === 'image/png') return 'The result is larger than the original: PNG keeps every pixel exactly. For a smaller file, choose JPEG or WebP under “' + labelOf('format') + '”.';
+      if (keys.has('quality') && fmt !== 'image/png') return 'The result is larger than the original. Lower the quality' + (canFormat ? ', or choose another format under “' + labelOf('format') + '”.' : '.');
+      return 'The result is larger than the original: it is saved as ' + (fmt === 'image/png' ? 'PNG, which keeps every pixel exactly' : fmt.replace('image/', '').toUpperCase()) + '.';
+    }
+    const labelOf = (k) => ((spec.controls || []).find(c => c.key === k) || {}).label || k;
+
     const baseName = (s) => (s.file.name.replace(/\.[^.]+$/, '') || 'image');
 
-    /* ---- the run loop, one branch per kind ---- */
-    async function run() {
+    /* ---- the run loop, one branch per kind ----
+       Runs never overlap. A <select> fires both input and change, and a
+       slider fires input many times; two runs interleaving at their awaits
+       would each clear the stage and then both append, duplicating every
+       result. A change that arrives mid-run queues one more run, which is
+       skipped when the files and settings are what the last run used. */
+    let running = null, rerun = false, doneKey = null;
+    const runKey = () => JSON.stringify(readOpts()) + '|' + sources.map(s => s.url).join('|');
+    function run() {
+      if (running) { rerun = true; return running; }
+      running = (async () => {
+        do {
+          rerun = false;
+          const key = runKey();
+          if (key === doneKey) continue;
+          const ok = await runOnce();
+          doneKey = ok === false ? null : key;          // a failed run is tried again next time
+        } while (rerun);
+      })().finally(() => { running = null; });
+      return running;
+    }
+
+    async function runOnce() {
       if (!sources.length) return;
       const o = readOpts();
       stage.innerHTML = '';
@@ -309,23 +357,25 @@
         return await runCanvas(o);
       } catch (e) {
         say('Something went wrong processing that image. ' + (e && e.message ? e.message : ''), 'error');
+        return false;
       }
     }
 
     /* one in, one out */
     async function runCanvas(o) {
       const total = { before: 0, after: 0 };
+      let fmtUsed = 'image/png';
       for (const s of sources) {
         const canvas = el('canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: spec.kind === 'segment' });
         const h = makeHelpers(canvas, ctx);
 
-        if (spec.kind === 'segment') await applyBackgroundRemoval(canvas, ctx, s.img, o, h);
+        if (spec.kind === 'segment') applyBackgroundRemoval(canvas, ctx, s.img, o, h);
         else spec.paint(ctx, s.img, o, h);
 
         const fmt = spec.outputFormat || (o.format === 'same' ? s.file.type : o.format) || 'image/png';
-        const blob = await new Promise(r => canvas.toBlob(r, fmt,
-          Math.max(0.1, Math.min(1, (Number(o.quality) || 92) / 100))));
+        fmtUsed = fmt;
+        const blob = await new Promise(r => flattenFor(canvas, fmt).toBlob(r, fmt, qualityOf(o, 92)));
         if (!blob) { say('This browser could not encode that format. Try PNG or JPEG.', 'error'); return; }
 
         const name = `${baseName(s)}-${spec.id || 'out'}.${extFor(fmt)}`;
@@ -359,25 +409,47 @@
         ['Change', (delta >= 0 ? '−' : '+') + fmtBytes(Math.abs(delta)) +
           (total.before ? ` (${delta >= 0 ? '−' : '+'}${Math.abs(Math.round(delta / total.before * 100))}%)` : '')]
       ];
+      let leftover = false;
       if (spec.showsMetadataDiff && CORE) {
         const segs = CORE.metadataSegments(sources[0].bytes);
         rows.push(['Metadata found in original', segs.length ? segs.map(s => s.name).join(', ') : 'none']);
-        rows.push(['Metadata in result', 'none — all segments removed']);
         const ex = CORE.readExif(sources[0].bytes);
         if (ex.gps && ex.gps.latitude !== undefined) {
           rows.push(['GPS removed', `${ex.gps.latitude.toFixed(5)}, ${ex.gps.longitude.toFixed(5)}`]);
         }
+        /* What the result holds is read from the result's own bytes, every
+           file of a batch, rather than assumed. */
+        const rep = { personal: [], technical: [] };
+        for (const out of outputs) {
+          const r = CORE.metadataReport(new Uint8Array(await out.blob.arrayBuffer()));
+          ['personal', 'technical'].forEach(k => r[k].forEach(n => { if (rep[k].indexOf(n) < 0) rep[k].push(n); }));
+        }
+        leftover = rep.personal.length > 0;
+        rows.push(['Metadata in result', CORE.metadataSummary(rep)]);
       }
       renderStats(rows);
-      if (delta < 0) say('The result is larger than the original. Lower the quality or keep the original format.', 'warn');
+      if (leftover) say('Some metadata is still in the result — see the list below. Try another format.', 'error');
+      else if (delta < 0) say(largerNote(fmtUsed), 'warn');
     }
 
     /* one in, many out */
     async function runMulti(o) {
       const src = sources[0];
       let jobs;
+      let passport = null;
+      say('');
       if (spec.id === 'social-media-resizer') jobs = socialJobs(src.img, o);
-      else if (spec.id === 'passport-photo') jobs = passportJobs(src.img, o);
+      else if (spec.id === 'passport-photo') {
+        let subject = src.img;
+        if (o.bgmode === 'replace') {
+          const token = ++cutToken;
+          subject = await subjectOnColour(src, o.bg || '#ffffff');
+          if (token !== cutToken) return false;        // a newer run took over while the model worked
+          if (!subject) return false;                    // the reason is already on screen; try again next time
+        }
+        passport = CORE.PHOTO_PRESETS[Number(o.preset) || 0];
+        jobs = passportJobs(subject, o);
+      }
       else jobs = spec.produce(src.img, o, makeHelpers(el('canvas'), el('canvas').getContext('2d')));
 
       if (spec.multiple && spec.id === 'bulk-image-resizer') {
@@ -398,9 +470,11 @@
         job.paint(ctx, makeHelpers(canvas, ctx));
 
         const fmt = spec.outputFormat || o.format || 'image/png';
-        const blob = await new Promise(r => canvas.toBlob(r, fmt,
-          Math.max(0.1, Math.min(1, (Number(o.quality) || 90) / 100))));
+        let blob = await new Promise(r => flattenFor(canvas, fmt).toBlob(r, fmt, qualityOf(o, 90)));
         if (!blob) continue;
+        /* a print file says how big to print it: 300 DPI in the JPEG's JFIF
+           header or the PNG's pHYs chunk, so 413 px comes out at 35 mm */
+        if (passport) blob = new Blob([CORE.setDPI(new Uint8Array(await blob.arrayBuffer()), passport.dpi)], { type: fmt });
 
         const base = job.src ? baseName(job.src) : baseName(sources[0]);
         const name = `${base}-${job.suffix}.${extFor(fmt)}`;
@@ -424,12 +498,24 @@
       }
 
       addBatchActions();
-      renderStats([
+      const rows = [
         ['Files produced', String(outputs.length)],
         ['Total size', fmtBytes(totalOut)],
         ['Source', `${sources[0].img.naturalWidth}×${sources[0].img.naturalHeight}`]
-      ]);
-      if (!outputs.length) say('Nothing to produce — check the settings above.', 'note');
+      ];
+      if (passport) {
+        const pw = CORE.mmToPx(passport.w, passport.dpi), ph = CORE.mmToPx(passport.h, passport.dpi);
+        const mm = (px) => CORE.pxToMm(px, passport.dpi).toFixed(2);
+        rows.push(['Print size', `${pw}×${ph} px at ${passport.dpi} DPI = ${mm(pw)} × ${mm(ph)} mm`]);
+        rows.push(['Rounding', `${passport.w}×${passport.h} mm is ${(passport.w / 25.4 * passport.dpi).toFixed(2)} × ${(passport.h / 25.4 * passport.dpi).toFixed(2)} px; pixels are whole, so each side is rounded to the nearest one`]);
+        rows.push(['Resolution in the file', `${passport.dpi} DPI`]);
+        rows.push(['Background', o.bgmode === 'replace' ? 'replaced with ' + String(o.bg || '#ffffff').toUpperCase() + ' — cut out on this device' : 'as photographed']);
+      }
+      renderStats(rows);
+      const kept = jobs.filter(j => j.kept).length;
+      if (kept) {
+        say(`${kept} of ${jobs.length} image${jobs.length > 1 ? 's were' : ' was'} smaller than that and ${kept > 1 ? 'were' : 'was'} left at ${kept > 1 ? 'their' : 'its'} own size: enlarging only adds blur. Set “Allow enlarging” to Yes to scale ${kept > 1 ? 'them' : 'it'} up anyway.`, 'note');
+      } else if (!outputs.length) say('Nothing to produce — check the settings above.', 'note');
     }
 
     function socialJobs(img, o) {
@@ -453,16 +539,17 @@
       }).filter(Boolean);
     }
 
+    /* The photo, or (when the background is to be replaced) a canvas of the
+       person cut out and laid on the chosen colour. */
     function passportJobs(img, o) {
       const p = CORE.PHOTO_PRESETS[Number(o.preset) || 0];
       const pw = CORE.mmToPx(p.w, p.dpi), ph = CORE.mmToPx(p.h, p.dpi);
       const jobs = [];
+      const nw = img.naturalWidth || img.width, nh = img.naturalHeight || img.height;
 
       const drawOne = (ctx, w, h, dx, dy) => {
-        ctx.fillStyle = o.bg || '#ffffff';
-        ctx.fillRect(dx, dy, w, h);
-        const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
-        const iw = img.naturalWidth * scale, ih = img.naturalHeight * scale;
+        const scale = Math.max(w / nw, h / nh);
+        const iw = nw * scale, ih = nh * scale;
         ctx.save();
         ctx.beginPath(); ctx.rect(dx, dy, w, h); ctx.clip();
         ctx.drawImage(img, dx + (w - iw) / 2, dy + (h - ih) / 2, iw, ih);
@@ -594,8 +681,7 @@
         const h = makeHelpers(canvas, ctx);
         spec.paintSelection(ctx, src.img, selection, oo, h);
         const fmt = spec.outputFormat || oo.format || 'image/png';
-        const blob = await new Promise(r => canvas.toBlob(r, fmt,
-          Math.max(0.1, Math.min(1, (Number(oo.quality) || 92) / 100))));
+        const blob = await new Promise(r => flattenFor(canvas, fmt).toBlob(r, fmt, qualityOf(oo, 92)));
         if (!blob) return;
         outputs = [{ name: `${baseName(src)}-${spec.id}.${extFor(fmt)}`, blob }];
 
@@ -688,15 +774,27 @@
         const data = cx.getImageData(0, 0, c.width, c.height).data;
 
         const pal = CORE.medianCut(data, n);
+        const WHITE = { r: 255, g: 255, b: 255 }, BLACK = { r: 0, g: 0, b: 0 };
+        /* HSL and the WCAG contrast ratio against white and black text, with
+           the same maths as the Colour Converter & Contrast Checker */
+        const facts = (col) => {
+          const [hh, ss, ll] = CORE.rgbToHsl(col.r, col.g, col.b);
+          const onW = CORE.contrastRatio(col, WHITE), onB = CORE.contrastRatio(col, BLACK);
+          return { hsl: `hsl(${hh}, ${ss}%, ${ll}%)`, onW, onB };
+        };
+        const ratio = (r) => r.toFixed(2) + ':1 ' + CORE.wcagGrade(r);
         const grid = el('div', 'palette-grid');
         pal.forEach(col => {
           const hex = CORE.toHex(col);
-          const lum = CORE.relLuminance(col);
+          const f = facts(col);
           const sw = el('div', 'palette-swatch');
           sw.style.background = hex;
-          sw.style.color = lum > 0.4 ? '#06080f' : '#f4f6fb';
+          /* the label colour is whichever of the two reads better */
+          sw.style.color = f.onB >= f.onW ? '#06080f' : '#f4f6fb';
           sw.appendChild(el('span', 'palette-hex', hex.toUpperCase()));
           sw.appendChild(el('span', 'palette-share', Math.round(col.share * 100) + '%'));
+          sw.appendChild(el('span', 'palette-share palette-hsl', f.hsl));
+          sw.appendChild(el('span', 'palette-share palette-contrast', 'on white ' + f.onW.toFixed(2) + ':1 · on black ' + f.onB.toFixed(2) + ':1'));
           sw.title = 'Click to copy ' + hex;
           sw.addEventListener('click', () => {
             navigator.clipboard?.writeText(hex);
@@ -709,7 +807,7 @@
         stage.appendChild(grid);
 
         const css = ':root {\n' + pal.map((c2, i) =>
-          `  --colour-${i + 1}: ${CORE.toHex(c2)};`).join('\n') + '\n}';
+          `  --colour-${i + 1}: ${CORE.toHex(c2)}; /* ${facts(c2).hsl} */`).join('\n') + '\n}';
         const pane = el('div', 'io-pane');
         const head = el('div', 'io-head');
         head.appendChild(el('span', 'io-label', 'CSS custom properties'));
@@ -728,8 +826,10 @@
 
         renderStats(pal.map((c2, i) => {
           const hex = CORE.toHex(c2);
+          const f = facts(c2);
           return [`Colour ${i + 1}  ${hex.toUpperCase()}`,
-                  `rgb(${c2.r}, ${c2.g}, ${c2.b}) · ${Math.round(c2.share * 100)}% of image`];
+                  `rgb(${c2.r}, ${c2.g}, ${c2.b}) · ${f.hsl} · ${Math.round(c2.share * 100)}% of image · ` +
+                  `contrast with white text ${ratio(f.onW)}, with black text ${ratio(f.onB)}`];
         }));
         return;
       }
@@ -783,26 +883,48 @@
     }
 
     /* PDF */
+    /* A JPEG goes into the PDF as it is: its own compressed bytes become the
+       page image (DCTDecode), so nothing is decoded and compressed again.
+       Only the segments that can identify a person or a camera are left out
+       (EXIF, GPS, XMP, comments); the image data is byte for byte the file's.
+       Everything else — PNG, WebP, GIF, a JPEG turned by its EXIF orientation
+       tag, CMYK or 12-bit JPEGs, or any JPEG when "Re-encode" is chosen — is
+       drawn on white and encoded as JPEG at the quality slider's setting. */
     async function runBinary(o) {
       say('Building PDF…', 'note');
       const pages = [];
+      let asIs = 0, again = 0, metaOut = 0;
+      const reasons = [];
       for (const s of sources) {
-        const c = el('canvas');
-        c.width = s.img.naturalWidth; c.height = s.img.naturalHeight;
-        const cx = c.getContext('2d');
-        cx.fillStyle = '#ffffff';
-        cx.fillRect(0, 0, c.width, c.height);
-        cx.drawImage(s.img, 0, 0);
-        const blob = await new Promise(r => c.toBlob(r, 'image/jpeg',
-          Math.max(0.4, Math.min(1, (Number(o.quality) || 88) / 100))));
-        const bytes = new Uint8Array(await blob.arrayBuffer());
-        pages.push({ bytes, width: c.width, height: c.height });
+        const info = CORE.jpegInfo(s.bytes);
+        let page = null;
+        if (info && info.passthrough && o.jpeg !== 'reencode') {
+          const bytes = CORE.stripJpegMetadata(s.bytes);
+          if (bytes !== s.bytes) metaOut++;
+          page = { bytes, width: info.width, height: info.height,
+                   colorSpace: info.components === 1 ? 'DeviceGray' : 'DeviceRGB', icc: CORE.jpegICC(s.bytes) };
+          asIs++;
+        } else {
+          if (info && !info.passthrough && o.jpeg !== 'reencode') reasons.push(s.file.name + ': ' + info.why);
+          const c = el('canvas');
+          c.width = s.img.naturalWidth; c.height = s.img.naturalHeight;
+          const cx = c.getContext('2d');
+          cx.fillStyle = '#ffffff';
+          cx.fillRect(0, 0, c.width, c.height);
+          cx.drawImage(s.img, 0, 0);
+          const blob = await new Promise(r => c.toBlob(r, 'image/jpeg',
+            Math.max(0.4, Math.min(1, (Number(o.quality) || 88) / 100))));
+          page = { bytes: new Uint8Array(await blob.arrayBuffer()), width: c.width, height: c.height };
+          again++;
+        }
+        pages.push(page);
 
         const card = el('div', 'image-card');
         const prev = el('img', 'image-preview');
         prev.src = s.url; prev.alt = s.file.name;
         card.appendChild(prev);
-        card.appendChild(el('div', 'image-cap', `Page ${pages.length}`));
+        card.appendChild(el('div', 'image-cap', `Page ${pages.length} · ` +
+          (page.colorSpace ? 'JPEG as it is' : 're-encoded at quality ' + (Number(o.quality) || 88))));
         stage.appendChild(card);
       }
 
@@ -817,12 +939,17 @@
       dl.addEventListener('click', () => downloadBlob(blob, 'images.pdf'));
       actions.appendChild(dl);
 
-      say('');
+      say(reasons.length ? 'Re-encoded instead of embedded as they are — ' + reasons.join('; ') + '.' : '', reasons.length ? 'note' : undefined);
+      const q = Number(o.quality) || 88;
+      const how = [];
+      if (asIs) how.push(`${asIs} JPEG${asIs > 1 ? 's' : ''} embedded as ${asIs > 1 ? 'they are' : 'it is'}, not re-encoded` +
+        (metaOut ? ` (EXIF, GPS and other metadata left out of ${metaOut})` : ''));
+      if (again) how.push(`${again} image${again > 1 ? 's' : ''} re-encoded as JPEG at quality ${q}`);
       renderStats([
         ['Pages', String(pages.length)],
         ['PDF size', fmtBytes(blob.size)],
         ['Page size', (o.pageSize || 'a4').toUpperCase()],
-        ['Embedding', 'JPEG, DCTDecode — no re-compression by the PDF layer']
+        ['Embedding', how.join('; ')]
       ]);
     }
 
@@ -859,18 +986,14 @@
       });
     }
 
-    /* ---- background removal ---- */
-    async function applyBackgroundRemoval(canvas, ctx, img, o, h) {
+    /* ---- background removal ----
+       Colour keying with a flood fill from the edges, all in this file: no
+       model and no other server. Hair, people and busy scenes are the AI
+       Background Remover's job (/ai-image/background-remover/), which runs a
+       model served from this site on the device. */
+    function applyBackgroundRemoval(canvas, ctx, img, o, h) {
       const nw = img.naturalWidth, nh = img.naturalHeight;
       h.size(nw, nh);
-
-      if (o.mode === 'ai') {
-        const ok = await ensureAIModel();
-        if (ok) {
-          try { await window.MVRBgAI(canvas, ctx, img); return; }
-          catch (e) { say('The AI model could not process this image; falling back to the automatic method.', 'warn'); }
-        }
-      }
 
       ctx.drawImage(img, 0, 0);
       const data = ctx.getImageData(0, 0, nw, nh);
@@ -889,7 +1012,10 @@
       }
       if (!refs.length) refs.push([255, 255, 255]);
 
-      const tol = Math.max(1, Number(o.tolerance) || 32);
+      /* 0 is a real setting (only the exact colour goes), so the default
+         applies only when no value was given at all */
+      const tv = o.tolerance === undefined || o.tolerance === null || o.tolerance === '' ? NaN : Number(o.tolerance);
+      const tol = Number.isFinite(tv) ? Math.max(0, tv) : 32;
       const tol2 = tol * tol * 3;
       const near = (i) => refs.some(r => {
         const dr = px[i] - r[0], dg = px[i + 1] - r[1], db = px[i + 2] - r[2];
@@ -955,37 +1081,74 @@
       else if (pct > 92) say('Almost the whole image was removed. Lower the tolerance.', 'warn');
     }
 
-    /* Measured: selecting this mode pulls ~90 MB from staticimgly.com plus the
-       ESM entry point and its transitive deps from cdn.jsdelivr.net. Those are
-       the only two third parties the image tools ever touch, which is why this
-       is fetched strictly on demand — a plain load of this page contacts
-       nobody. Do not move this import to the top level. */
-    let aiState = 'idle';
-    async function ensureAIModel() {
-      if (aiState === 'ready') return true;
-      if (aiState === 'failed') return false;
-      aiState = 'loading';
-      say('Downloading the background-removal model (about 90 MB). This happens once, then it is cached.', 'note');
-      try {
-        const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm');
-        window.MVRBgAI = async (canvas, ctx, img) => {
-          const src = document.createElement('canvas');
-          src.width = img.naturalWidth; src.height = img.naturalHeight;
-          src.getContext('2d').drawImage(img, 0, 0);
-          const blob = await new Promise(r => src.toBlob(r, 'image/png'));
-          const cut = await mod.removeBackground(blob);
-          const out = await createImageBitmap(cut);
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(out, 0, 0, canvas.width, canvas.height);
-        };
-        aiState = 'ready';
-        say('');
-        return true;
-      } catch (e) {
-        aiState = 'failed';
-        say('The AI model could not be downloaded — you may be offline, or the CDN may be blocked. The automatic method below still works entirely on your device.', 'warn');
-        return false;
+    /* ---- passport photo: a new background ----
+       The person is cut out with MODNet, the portrait-matting model the AI
+       Background Remover uses (Apache-2.0, 25 MB), run on this device by the
+       shared AI image runtime. Model, runtime and scripts are all served from
+       this site and only fetched when "Replace" is chosen; the browser keeps
+       them. The matte is worked out once per photo; changing the colour only
+       re-composites. */
+    let cutToken = 0;
+    const matteCache = new WeakMap();                  // source → { alpha, w, h }
+    function loadScriptOnce(src) {
+      if (document.querySelector('script[data-src="' + src + '"][data-loaded]')) return Promise.resolve();
+      return new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = src; s.dataset.src = src;
+        s.onload = () => { s.dataset.loaded = '1'; res(); };
+        s.onerror = () => { s.remove(); rej(new Error('could not load ' + src)); };
+        document.head.appendChild(s);
+      });
+    }
+    function matteOf(src) {
+      let p = matteCache.get(src);
+      if (p) return p;
+      const nw = src.img.naturalWidth, nh = src.img.naturalHeight;
+      p = (async () => {
+        say('Loading the on-device cut-out model (25 MB, from this site, once)…', 'note');
+        if (!window.AIImg || !window.AIImg.loadSession) await loadScriptOnce('/engine/aiimg-core.js');
+        if (!window.AIImg.matte) await loadScriptOnce('/engine/aiimg-matte.js');
+        const work = el('canvas');
+        work.width = nw; work.height = nh;
+        work.getContext('2d').drawImage(src.img, 0, 0);
+        const r = await window.AIImg.matte.run({ canvas: work, width: nw, height: nh }, {
+          onProgress: (q) => {
+            if (q.stage === 'download') say(`Downloading the cut-out model: ${Math.round((q.fraction || 0) * 100)}% (25 MB, from this site, once)`, 'note');
+            else if (q.stage === 'compile') say('Preparing the model…', 'note');
+            else if (q.stage === 'run') say('Cutting you out of the background, on this device…', 'note');
+          }
+        });
+        return { alpha: r.alpha, w: nw, h: nh };
+      })();
+      matteCache.set(src, p);
+      p.catch(() => matteCache.delete(src));          // a failure is tried again next time
+      return p;
+    }
+    async function subjectOnColour(src, colour) {
+      const nw = src.img.naturalWidth, nh = src.img.naturalHeight;
+      let m;
+      try { m = await matteOf(src); }
+      catch (e) {
+        say('The cut-out model could not be loaded' + (e && e.message ? ' (' + e.message + ')' : '') + '. Choose “Keep the photo’s background”, or try again when you are online.', 'error');
+        return null;
       }
+      const rgb = (/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(colour) || [0, 'ff', 'ff', 'ff']).slice(1).map(v => parseInt(v, 16));
+      const c = el('canvas');
+      c.width = nw; c.height = nh;
+      const x = c.getContext('2d', { willReadFrequently: true });
+      x.drawImage(src.img, 0, 0);
+      const d = x.getImageData(0, 0, nw, nh);
+      const px = d.data, a = m.alpha;
+      for (let i = 0, j = 0; i < a.length; i++, j += 4) {
+        const k = a[i];
+        px[j] = px[j] * k + rgb[0] * (1 - k);
+        px[j + 1] = px[j + 1] * k + rgb[1] * (1 - k);
+        px[j + 2] = px[j + 2] * k + rgb[2] * (1 - k);
+        px[j + 3] = 255;
+      }
+      x.putImageData(d, 0, 0);
+      say('');
+      return c;
     }
 
     /* ---- wiring ---- */

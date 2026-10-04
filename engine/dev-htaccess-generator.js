@@ -237,13 +237,19 @@ window.DEV_TOOLS["htaccess-generator"] = {
       const B = [];
       if (f.https === 'yes' || f.www !== 'none') {
         B.push('# Redirects', 'RewriteEngine On');
+        /* The www rule keeps the scheme the visitor came on unless Force HTTPS
+           is on; it used to send everyone to https regardless. With HTTPS
+           forced, the www rule goes first and redirects straight to https, so
+           http://example.com/ needs one redirect, not two; the HTTPS rule
+           after it catches a request already on the right host. */
+        const scheme = f.https === 'yes' ? 'https' : '%{REQUEST_SCHEME}';
+        if (f.www === 'www') {
+          B.push(`RewriteCond %{HTTP_HOST} !^www\\. [NC]`, `RewriteRule ^(.*)$ ${scheme}://www.${d}/$1 [R=301,L]`);
+        } else if (f.www === 'root') {
+          B.push(`RewriteCond %{HTTP_HOST} ^www\\.(.*)$ [NC]`, `RewriteRule ^(.*)$ ${scheme}://%1/$1 [R=301,L]`);
+        }
         if (f.https === 'yes') {
           B.push('RewriteCond %{HTTPS} off', `RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]`);
-        }
-        if (f.www === 'www') {
-          B.push(`RewriteCond %{HTTP_HOST} !^www\\. [NC]`, `RewriteRule ^(.*)$ https://www.${d}/$1 [R=301,L]`);
-        } else if (f.www === 'root') {
-          B.push(`RewriteCond %{HTTP_HOST} ^www\\.(.*)$ [NC]`, `RewriteRule ^(.*)$ https://%1/$1 [R=301,L]`);
         }
         B.push('');
       }
@@ -267,9 +273,10 @@ window.DEV_TOOLS["htaccess-generator"] = {
                '  Header always set X-Content-Type-Options "nosniff"',
                '  Header always set X-Frame-Options "SAMEORIGIN"',
                '  Header always set Referrer-Policy "strict-origin-when-cross-origin"',
-               '  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"',
-               '  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"',
-               '</IfModule>', '');
+               '  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"');
+        // HSTS tells browsers to refuse plain http for a year, so it belongs only with Force HTTPS
+        if (f.https === 'yes') B.push('  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"');
+        B.push('</IfModule>', '');
       }
       const output = B.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
       return {

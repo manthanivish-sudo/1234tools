@@ -41,7 +41,9 @@ window.PDF_TOOLS["pdf-metadata"] = {
         : {};
 
       const items = Array.from({ length: total }, (_, i) => ({ doc, pageIndex: i }));
-      const bytes = await core.assemble(items, { info });
+      /* The XMP stream repeats the same properties (and edited ones would
+         contradict it), so it goes in both modes. */
+      const bytes = await core.assemble(items, { info, xmp: false });
       const base = docs[0].name.replace(/\.pdf$/i, '');
 
       const found = Object.entries(before).filter(([, v]) => v);

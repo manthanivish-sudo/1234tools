@@ -21,7 +21,7 @@ window.IMAGE_TOOLS["exif-remover"] = {
       ctx.drawImage(img, 0, 0);
     },
 "showsMetadataDiff": true,
-"tips": ["Metadata is removed by redrawing the pixels onto a fresh canvas and re-encoding. Nothing from the original file header survives, which is why this is thorough rather than selective.","The trade-off is that the image is re-compressed. At quality 92 the visual difference is negligible, but it is not byte-identical to the original.","Keep your original file. Once metadata is gone it cannot be recovered from the cleaned copy.","The tool shows which metadata segments were present before stripping, so you can see what was actually removed."],
+"tips": ["Metadata is removed by redrawing the pixels onto a fresh canvas and re-encoding. Nothing from the original file’s metadata survives, which is why this is thorough rather than selective. The browser’s JPEG encoder writes its own standard JFIF header and sRGB colour profile into the new file; neither says anything about you or your camera.","The trade-off is that the image is re-compressed. At quality 92 the visual difference is negligible, but it is not byte-identical to the original.","Keep your original file. Once metadata is gone it cannot be recovered from the cleaned copy.","The tool lists the metadata segments the original had, then reads the cleaned file back and reports what it really contains, rather than assuming."],
 "faq": [{"q":"Does this remove the copyright information too?","a":"Yes. Everything goes, including any authorship and copyright fields you may want to keep. If attribution matters, re-add it after stripping, or edit the specific fields with dedicated software instead."}]
 };
 })();

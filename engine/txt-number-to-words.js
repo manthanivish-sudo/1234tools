@@ -67,16 +67,51 @@ window.TEXT_TOOLS["number-to-words"] = {
       const CUR = { gbp: ['pound','pounds','penny','pence'], usd: ['dollar','dollars','cent','cents'],
                     inr: ['rupee','rupees','paisa','paise'] };
 
-      const out = lines.map(line => {
-        const n = Number(line.replace(/[,\s£$₹]/g, ''));
-        if (!isFinite(n)) return `${line} → not a number`;
-        if (Math.abs(n) > 999999999999) return `${line} → too large (limit is under a trillion)`;
+      /* The number as decimal digits, read from what was typed rather than
+         from a binary float: 0.285 is held in binary as 0.28499999…, which
+         rounded to 28 pence. Exponent forms such as 1.5e3 are shifted here
+         too. Returns { neg, int, frac } as digit strings, or null. */
+      const decimalOf = (s) => {
+        const m = /^([+-]?)(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?$/i.exec(s);
+        if (!m || (!m[2] && !m[3])) return null;
+        const exp = m[4] ? parseInt(m[4], 10) : 0;
+        if (Math.abs(exp) > 40) return null;
+        const digits = (m[2] || '') + (m[3] || '');
+        const point = (m[2] || '').length + exp;
+        let int, frac;
+        if (point <= 0) { int = '0'; frac = '0'.repeat(-point) + digits; }
+        else if (point >= digits.length) { int = digits + '0'.repeat(point - digits.length); frac = ''; }
+        else { int = digits.slice(0, point); frac = digits.slice(point); }
+        int = int.replace(/^0+(?=\d)/, '') || '0';
+        return { neg: m[1] === '-', int, frac };
+      };
 
-        const neg = n < 0;
-        const abs = Math.abs(n);
-        const whole = Math.floor(abs);
-        const frac = Math.round((abs - whole) * 100);
+      const out = lines.map(line => {
+        const cleaned = line.replace(/[,\s£$₹]/g, '');
+        const n = Number(cleaned);
+        if (!isFinite(n)) return `${line} → not a number`;
+        let d = decimalOf(cleaned);
+        if (!d) d = decimalOf(String(n));          // hex and the like: Number read it, so use its value
+        if (!d) return `${line} → not a number`;
+
         const useIndian = o.style === 'inr';
+        let whole, frac = 0, fracDigits = '';
+        if (CUR[o.style]) {
+          /* Currency is rounded to the minor unit, half up, on the decimal
+             digits: 0.285 is 29 pence, 0.005 is one penny, and 2.999 carries
+             into the pounds as three pounds. */
+          let minor = BigInt(d.int) * 100n + BigInt((d.frac + '00').slice(0, 2));
+          if ((d.frac[2] || '0') >= '5') minor += 1n;
+          whole = Number(minor / 100n);
+          frac = Number(minor % 100n);
+        } else {
+          whole = Number(d.int);
+          // plain style reads the decimals as typed: 1.5 is one point five, 1.50 one point five zero
+          fracDigits = o.style === 'ordinal' ? '' : d.frac;
+        }
+        if (whole > 999999999999) return `${line} → too large (limit is under a trillion)`;
+        // a value that rounds to nothing carries no sign: -0.004 pounds is zero pounds
+        const neg = d.neg && (whole > 0 || frac > 0 || /[1-9]/.test(fracDigits));
         const w = useIndian ? indian(whole) : western(whole);
 
         let s;
@@ -88,7 +123,7 @@ window.TEXT_TOOLS["number-to-words"] = {
           s += ' only';
         } else {
           s = w;
-          if (frac) s += ' point ' + String(frac).padStart(2, '0').split('').map(d => ONES[Number(d)]).join(' ');
+          if (fracDigits) s += ' point ' + fracDigits.split('').map(c => ONES[Number(c)]).join(' ');
         }
         return cap((neg ? 'minus ' : '') + s);
       });

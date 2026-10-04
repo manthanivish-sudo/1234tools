@@ -234,7 +234,7 @@ window.DEV_TOOLS["meta-tag-generator"] = {
 "fields": [{"key":"title","label":"Page title","type":"text","default":"Free Online Tools — MVR IT Services"},{"key":"desc","label":"Meta description","type":"textarea","default":"Over a thousand free calculators and converters that run entirely in your browser. No sign-up, works offline."},{"key":"url","label":"Canonical URL","type":"text","default":"https://www.mvritservices.com/tools/"},{"key":"image","label":"Share image URL","type":"text","default":"https://www.mvritservices.com/assets/img/og-image.png"},{"key":"site","label":"Site name","type":"text","default":"MVR IT Services"},{"key":"locale","label":"Locale","type":"select","default":"en_GB","options":[{"value":"en_GB","label":"en_GB"},{"value":"en_US","label":"en_US"},{"value":"en_IN","label":"en_IN"}]}],
 "generate": (f) => {
       const e = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-      const out = [
+      const lines = [
         `<title>${e(f.title)}</title>`,
         `<meta name="description" content="${e(f.desc)}">`,
         `<link rel="canonical" href="${e(f.url)}">`,
@@ -253,13 +253,16 @@ window.DEV_TOOLS["meta-tag-generator"] = {
         `<meta name="twitter:title" content="${e(f.title)}">`,
         `<meta name="twitter:description" content="${e(f.desc)}">`,
         `<meta name="twitter:image" content="${e(f.image)}">`
-      ].join('\n');
+      ];
+      const out = lines.join('\n');
+      // the tags actually written: every line that opens an element, not the comments or blanks
+      const tagCount = lines.filter(l => /^<[a-z]/i.test(l)).length;
 
       const tl = (f.title || '').length, dl = (f.desc || '').length;
       const stats = [
         ['Title length', `${tl} — ${tl === 0 ? 'empty' : tl > 60 ? 'may be truncated' : tl < 30 ? 'quite short' : 'good'}`],
         ['Description length', `${dl} — ${dl === 0 ? 'empty' : dl > 160 ? 'may be truncated' : dl < 70 ? 'quite short' : 'good'}`],
-        ['Tags generated', '16']
+        ['Tags generated', String(tagCount)]
       ];
       return { output: out, stats };
     },

@@ -152,12 +152,12 @@ module.exports = {
       text: 'Each line is converted separately. Commas, spaces and the £, $ and ₹ signs are removed first, so “£1,050.07” is read as 1050.07.',
       points: [
         'The whole part is divided by a billion, a million and a thousand (by crore, lakh and thousand in rupee style), and each group is spelt from tables of the words up to nineteen and the tens.',
-        'The fraction is multiplied by 100 and rounded, so two decimal places count: plain style reads them as digits after “point”, currency styles as pence, cents or paise.',
+        'Currency styles round the digits as typed to the penny, cent or paisa, half up, carrying into the whole part: 0.285 is twenty-nine pence and 2.999 is three pounds. Plain style reads every decimal digit after “point”.',
         'Ordinals change only the last word, from a short list of irregular forms and a rule that turns twenty into twentieth.'
       ]
     },
     worked: {
-      text: 'Take 1,250,000.50. As pounds and pence it reads “One million two hundred and fifty thousand pounds and fifty pence only”. Typed the Indian way, ₹12,50,000.50 in rupee style becomes “Twelve lakh fifty thousand rupees and fifty paise only”: the same digits grouped differently, with the commas stripped before reading. Plain style reads the half as “point five zero”, because it always speaks two decimal places.'
+      text: 'Take 1,250,000.50. As pounds and pence it reads “One million two hundred and fifty thousand pounds and fifty pence only”. Typed the Indian way, ₹12,50,000.50 in rupee style becomes “Twelve lakh fifty thousand rupees and fifty paise only”: the same digits grouped differently, with the commas stripped before reading. Plain style reads the half as “point five zero”, one word for each digit as typed.'
     },
     uses: [
       ['Cheques', 'Fill in the words line and check where the “and” goes before you sign.'],
@@ -165,7 +165,7 @@ module.exports = {
       ['Indian banking forms', 'Write amounts in lakh and crore for demand drafts and agreements.']
     ],
     mistakes: [
-      'Typing three decimal places. Amounts are rounded to two, and 2.999 does not carry into the pounds: it comes out as “Two pounds and one hundred pence only”. Round the figure yourself first.',
+      'Pasting a figure with three decimal places onto a cheque. Currency styles round to the penny, so 2.999 comes out as “Three pounds only”; check the rounded amount is what you mean to pay.',
       'Leaving a euro sign on. Only £, $ and ₹ are stripped, so €40 is reported as not a number.'
     ],
     faq: [
@@ -180,8 +180,9 @@ module.exports = {
       { input: '₹12,50,000.50', options: { style: 'inr' }, check: [['output', 'Twelve lakh fifty thousand rupees and fifty paise only']] },
       /* plain style */
       { input: '1250000.50', options: { style: 'plain' }, check: [['output', 'point five zero']] },
-      /* the mistakes: three decimals do not carry; the euro sign is not stripped */
-      { input: '2.999', options: { style: 'gbp' }, check: [['output', 'Two pounds and one hundred pence only']] },
+      /* three decimals round half up and carry; 0.285 is 29 pence; the euro sign is not stripped */
+      { input: '2.999', options: { style: 'gbp' }, check: [['output', 'Three pounds only']] },
+      { input: '0.285', options: { style: 'gbp' }, check: [['output', 'twenty-nine pence']] },
       { input: '€40', options: {}, check: [['output', 'not a number']] },
       /* the FAQ answers */
       { input: '1,50,000', options: { style: 'inr' }, check: [['output', 'One lakh fifty thousand rupees only']] },
@@ -246,12 +247,12 @@ module.exports = {
       points: [
         'Rejection sampling keeps it unbiased: a 32-bit draw in the top slice not divisible by the pool size is redrawn.',
         'The default pool is 80 characters: 25 lower-case letters (no l), 24 capitals (no I or O), 8 digits (no 0 or 1) and 23 symbols.',
-        'Passphrases come from a built-in list of 510 four-letter words joined by hyphens, plus a number from 0 to 99 when digits are on.',
+        'Passphrases come from a built-in list of 510 four-letter words joined by hyphens, plus a number from 0 to 99 when digits are on. With capitals on, one more draw picks the capitalised word.',
         'The cracking time is 2 to the power of the entropy divided by a trillion guesses a second. No character type is forced in, so the entropy figure stays honest.'
       ]
     },
     worked: {
-      text: 'A six-word passphrase with a number on the end scores 61 bits, from a pool of 510 words, with an offline cracking time of 1,759,629 seconds, about three weeks. Without the number it drops to 54 bits and 17,596 seconds, under the 60 bits the tool warns about. A 16-character password of letters and digits reaches 93 bits from a pool of 57 characters. At about nine bits a word, this list needs more words than people expect.'
+      text: 'A six-word passphrase with a number on the end scores 61 bits, from a pool of 510 words, with an offline cracking time of 1,759,629 seconds, about three weeks. Without the number it drops to 54 bits and 17,596 seconds, under the 60 bits the tool warns about. A 16-character password of letters and digits reaches 93 bits from a pool of 57 characters.'
     },
     uses: [
       ['New accounts', 'Make a different password for every site and paste it into a password manager.'],
@@ -346,7 +347,7 @@ module.exports = {
       ['Essay drafts', 'See in word mode which sentences an editor rewrote.']
     ],
     mistakes: [
-      'Comparing text that contains a line of three dashes. Markdown rules and YAML front matter use ---; the tool cuts at the first one and ignores everything after a second.',
+      'Pasting a text with --- lines first. YAML front matter and Markdown rules use them; put that version second, and a note confirms the later lines were compared as part of the second text.',
       'Pasting from a word processor on one side only. Curly quotes and non-breaking spaces differ from plain ones, so identical-looking lines are flagged.'
     ],
     faq: [
@@ -358,7 +359,9 @@ module.exports = {
       /* the delivery rule, line mode (defaults: trim, case-sensitive) */
       { input: 'Deliveries arrive between 7am and 9am on weekdays. Drivers must sign in at the gatehouse and wear a high-visibility vest.\n---\nDeliveries arrive between 6am and 9am on weekdays and Saturdays. Drivers must sign in at the gatehouse and wear a hard hat.', options: { mode: 'line' }, check: [['stat:Result', '1 added, 1 removed'], ['stat:Similarity', '0.0%']] },
       /* the same pair, word mode */
-      { input: 'Deliveries arrive between 7am and 9am on weekdays. Drivers must sign in at the gatehouse and wear a high-visibility vest.\n---\nDeliveries arrive between 6am and 9am on weekdays and Saturdays. Drivers must sign in at the gatehouse and wear a hard hat.', options: { mode: 'word' }, check: [['stat:Unchanged words', '16'], ['stat:Added words', '6'], ['stat:Removed words', '4'], ['stat:Similarity', '76.2%']] }
+      { input: 'Deliveries arrive between 7am and 9am on weekdays. Drivers must sign in at the gatehouse and wear a high-visibility vest.\n---\nDeliveries arrive between 6am and 9am on weekdays and Saturdays. Drivers must sign in at the gatehouse and wear a hard hat.', options: { mode: 'word' }, check: [['stat:Unchanged words', '16'], ['stat:Added words', '6'], ['stat:Removed words', '4'], ['stat:Similarity', '76.2%']] },
+      /* the mistake: front matter in the second text */
+      { input: 'title: Notes\nbody\n---\n---\ntitle: Notes\n---\nbody', check: [['note', 'compared as part of the second text']] }
     ]
   },
 
@@ -373,12 +376,12 @@ module.exports = {
       points: [
         'Characters is the JavaScript string length in UTF-16 code units, so an emoji counts as 2.',
         'A sentence ends at . ! ? or … followed by a space or the end of the text; a blank line separates paragraphs.',
-        'For keyword density, words are lower-cased and cut down to a–z, 0–9, apostrophes and hyphens, and 48 common words are left out unless the filter is off.',
+        'For keyword density, words are lower-cased and cut down to letters and digits in any script, with their accents and vowel signs, plus straight apostrophes and hyphens; 48 common words are left out unless the filter is off.',
         'Unique words counts that same list, so it follows the filter. Average word length divides characters without spaces by words.'
       ]
     },
     worked: {
-      text: 'A 17-word shop notice, “Grand reopening of Café Lumière on Saturday Free coffee for the first 50 customers. See you there!”, measures 98 characters. Put a party-popper emoji after Saturday and the counts become 18 words and 101 characters: the emoji is a word of its own and adds two characters, plus the space before it. The density list loses the accents, showing café as caf and Lumière as lumire, because only a–z survive the clean-up. Unique words reads 11 with common words filtered and 17 with the filter off.'
+      text: 'A 17-word shop notice, “Grand reopening of Café Lumière on Saturday Free coffee for the first 50 customers. See you there!”, measures 98 characters. Put a party-popper emoji after Saturday and the counts become 18 words and 101 characters: the emoji is a word of its own and adds two characters, plus the space before it. The density list keeps the accents, listing café and lumière as written, only lower-cased. Unique words reads 11 with common words filtered and 17 with the filter off.'
     },
     uses: [
       ['University essays', 'Keep coursework inside its limit; your department may exclude references.'],
@@ -386,7 +389,7 @@ module.exports = {
       ['Translation quotes', 'Count a source document’s words, since translators usually price per word.']
     ],
     mistakes: [
-      'Trusting the density list for accented or non-Latin text. Letters outside a–z are removed from it, so French words are mangled and Hindi words vanish; the word and character counts are unaffected.',
+      'Mixing straight and curly apostrophes. The density list keeps a straight one and drops a curly one, so don\'t and don’t are listed apart, as don\'t and dont.',
       'Reading Characters as bytes. Databases often limit bytes, and an accented letter takes 2 bytes in UTF-8 while counting as one character here.'
     ],
     faq: [
@@ -398,7 +401,9 @@ module.exports = {
       /* the notice without the emoji, default options (top 10, common words ignored) */
       { input: 'Grand reopening of Café Lumière on Saturday Free coffee for the first 50 customers. See you there!', options: {}, check: [['stat:Words', '17'], ['stat:Characters', '98']] },
       /* with a party-popper emoji (U+1F389) and a space after Saturday */
-      { input: 'Grand reopening of Café Lumière on Saturday 🎉 Free coffee for the first 50 customers. See you there!', options: {}, check: [['stat:Words', '18'], ['stat:Characters', '101'], ['stat:Unique words', '11'], ['output', 'caf '], ['output', 'lumire']] },
+      { input: 'Grand reopening of Café Lumière on Saturday 🎉 Free coffee for the first 50 customers. See you there!', options: {}, check: [['stat:Words', '18'], ['stat:Characters', '101'], ['stat:Unique words', '11'], ['output', 'café'], ['output', 'lumière']] },
+      /* the mistake: straight and curly apostrophes */
+      { input: 'don\'t don’t', options: { ignoreCommon: 'no' }, check: [['output', 'don\'t'], ['output', 'dont']] },
       /* the same, common words not ignored */
       { input: 'Grand reopening of Café Lumière on Saturday 🎉 Free coffee for the first 50 customers. See you there!', options: { ignoreCommon: 'no' }, check: [['stat:Unique words', '17']] },
       /* the FAQ's numbers */

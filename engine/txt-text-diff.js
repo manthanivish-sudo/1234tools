@@ -13,8 +13,15 @@ window.TEXT_TOOLS["text-diff"] = {
 "transform": (text, o) => {
       const raw = String(text || '');
       if (!raw.trim()) return { output: '', note: 'Paste two texts separated by a line containing only ---' };
-      const parts = raw.split(/^\s*---\s*$/m);
-      if (parts.length < 2) return { error: 'Separate the two texts with a line containing only three dashes: ---' };
+      /* The texts are cut at the first line holding only ---, once. Splitting
+         on every such line, as this did, dropped everything after a second
+         one: a Markdown rule or YAML front matter in the second text was
+         silently cut off. Later --- lines now belong to the second text. */
+      const SEP = /^[ \t]*---[ \t\r]*$/m;
+      const cut = SEP.exec(raw);
+      if (!cut) return { error: 'Separate the two texts with a line containing only three dashes: ---' };
+      const parts = [raw.slice(0, cut.index), raw.slice(cut.index + cut[0].length)];
+      const extra = (parts[1].match(/^[ \t]*---[ \t\r]*$/gm) || []).length;
 
       const prep = (s) => {
         // Strip the newlines that sit either side of the --- separator,
@@ -62,7 +69,10 @@ window.TEXT_TOOLS["text-diff"] = {
           [`Added ${unit}`, String(added)],
           [`Removed ${unit}`, String(removed)],
           ['Similarity', m + n ? ((2 * same / (m + n)) * 100).toFixed(1) + '%' : '—']
-        ]
+        ],
+        note: extra
+          ? `The texts were split at the first --- line. ${extra === 1 ? 'The other --- line was' : `The other ${extra} --- lines were`} compared as part of the second text.`
+          : ''
       };
     },
 "tips": ["Lines starting with + were added, lines starting with − were removed, and lines with two spaces are unchanged.","Word mode is better for prose where sentences were reworded; line mode is better for code and lists.","Ignoring case and whitespace is useful when comparing text that has passed through different editors.","The algorithm finds the longest common subsequence, which is the same approach Git uses, so the output should look familiar."],

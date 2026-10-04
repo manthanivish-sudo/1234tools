@@ -187,10 +187,16 @@ function metadataSegments(bytes) {
 
 /**
  * Build a PDF from JPEG byte arrays, one image per page.
- * JPEGs are embedded with /DCTDecode, so there is no quality loss and no
- * compressor to ship.
+ * JPEGs are embedded with /DCTDecode: the bytes given go into the file as
+ * they are, so the PDF adds no compression of its own and needs no
+ * compressor to ship. Whether those bytes are the original file or a fresh
+ * encode is the caller's choice (render-image.js passes an original JPEG
+ * through whenever it can).
  *
- * @param {Array<{bytes:Uint8Array,width:number,height:number}>} images
+ * @param {Array<{bytes:Uint8Array,width:number,height:number,
+ *   colorSpace?:'DeviceRGB'|'DeviceGray', icc?:Uint8Array}>} images
+ *   icc, when given, is the JPEG's own ICC profile, embedded as an
+ *   /ICCBased colour space so a Display P3 phone photo keeps its colours.
  * @param {{pageSize?:string, margin?:number, orientation?:string}} opts
  * @returns {Uint8Array}
  */
@@ -220,15 +226,21 @@ function buildPDF(images, opts = {}) {
   const startObj = (n) => { offsets[n] = length; push(`${n} 0 obj\n`); };
   const endObj = () => push('endobj\n');
 
-  push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+  /* an ICC v4 profile wants PDF 1.6 or later; v2 is fine in 1.4 */
+  const v4 = images.some((im) => im.icc && im.icc.length > 8 && im.icc[8] >= 4);
+  push((v4 ? '%PDF-1.6' : '%PDF-1.4') + '\n%\xE2\xE3\xCF\xD3\n');
 
   const n = images.length;
-  // 1 catalog, 2 pages, then per image: page, content, xobject
-  const pageIds = [], contentIds = [], imgIds = [];
+  // 1 catalog, 2 pages, then per image: page, content, xobject, and its ICC profile if it has one
+  const pageIds = [], contentIds = [], imgIds = [], iccIds = [];
+  let nextId = 3;
   for (let i = 0; i < n; i++) {
-    pageIds.push(3 + i * 3);
-    contentIds.push(4 + i * 3);
-    imgIds.push(5 + i * 3);
+    pageIds.push(nextId++);
+    contentIds.push(nextId++);
+    imgIds.push(nextId++);
+    const comps = images[i].colorSpace === 'DeviceGray' ? 1 : 3;
+    const icc = images[i].icc;
+    iccIds.push(icc && icc.length > 128 && iccChannels(icc) === comps ? nextId++ : 0);
   }
 
   startObj(1);
@@ -267,16 +279,26 @@ function buildPDF(images, opts = {}) {
     push(`<< /Length ${stream.length} >>\nstream\n${stream}endstream\n`);
     endObj();
 
+    const device = img.colorSpace === 'DeviceGray' ? 'DeviceGray' : 'DeviceRGB';
+    const cs = iccIds[i] ? `[/ICCBased ${iccIds[i]} 0 R]` : '/' + device;
     startObj(imgIds[i]);
     push(`<< /Type /XObject /Subtype /Image /Width ${img.width} /Height ${img.height} ` +
-         `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${img.bytes.length} >>\nstream\n`);
+         `/ColorSpace ${cs} /BitsPerComponent 8 /Filter /DCTDecode /Length ${img.bytes.length} >>\nstream\n`);
     push(img.bytes);
     push('\nendstream\n');
     endObj();
+
+    if (iccIds[i]) {
+      startObj(iccIds[i]);
+      push(`<< /N ${device === 'DeviceGray' ? 1 : 3} /Alternate /${device} /Length ${img.icc.length} >>\nstream\n`);
+      push(img.icc);
+      push('\nendstream\n');
+      endObj();
+    }
   });
 
   const xrefStart = length;
-  const total = 2 + n * 3;
+  const total = nextId - 1;
   push(`xref\n0 ${total + 1}\n`);
   push('0000000000 65535 f \n');
   for (let i = 1; i <= total; i++) {
@@ -302,6 +324,316 @@ function jpegSize(bytes) {
     }
     if (m === 0xd8 || (m >= 0xd0 && m <= 0xd9)) { i += 2; continue; }
     i += 2 + ((bytes[i + 2] << 8) | bytes[i + 3]);
+  }
+  return null;
+}
+
+/* ============================================================
+   JPEG passthrough — what a PDF can carry as it is
+   ============================================================ */
+
+const ascii = (bytes, at, n) => {
+  let s = '';
+  for (let k = 0; k < n && at + k < bytes.length; k++) s += String.fromCharCode(bytes[at + k]);
+  return s;
+};
+
+/** Walk a JPEG's marker segments up to the first start-of-scan. */
+function jpegSegments(bytes) {
+  const segs = [];
+  if (!bytes || bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
+  let i = 2;
+  while (i < bytes.length - 3) {
+    if (bytes[i] !== 0xff) return null;                // not a marker where one must be: corrupt
+    const m = bytes[i + 1];
+    if (m === 0xff) { i++; continue; }                 // fill byte
+    if (m === 0x01 || (m >= 0xd0 && m <= 0xd7)) { i += 2; continue; }
+    const len = (bytes[i + 2] << 8) | bytes[i + 3];
+    segs.push({ marker: m, at: i, len, end: i + 2 + len });
+    if (m === 0xda) break;
+    i += 2 + len;
+  }
+  return segs;
+}
+
+/**
+ * What a JPEG is made of, as far as embedding it in a PDF untouched is
+ * concerned: size, coding process, sample precision, channel count, the
+ * EXIF orientation, and whether it can go in as it is.
+ */
+function jpegInfo(bytes) {
+  const segs = jpegSegments(bytes);
+  if (!segs) return null;
+  const info = { width: 0, height: 0, components: 0, precision: 0, sof: 0, orientation: 1, adobe: null, passthrough: false, why: '' };
+  for (const s of segs) {
+    const m = s.marker;
+    if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc && !info.sof) {
+      info.sof = m;
+      info.precision = bytes[s.at + 4];
+      info.height = (bytes[s.at + 5] << 8) | bytes[s.at + 6];
+      info.width = (bytes[s.at + 7] << 8) | bytes[s.at + 8];
+      info.components = bytes[s.at + 9];
+    }
+    if (m === 0xee && ascii(bytes, s.at + 4, 5) === 'Adobe') info.adobe = { transform: bytes[s.at + 15] };
+  }
+  const ex = readExif(bytes);
+  if (ex.tags && ex.tags.Orientation) info.orientation = ex.tags.Orientation;
+  const seen = segs.some((s) => s.marker === 0xda);
+  if (!info.sof || !seen) info.why = 'no image data found';
+  else if ([0xc0, 0xc1, 0xc2].indexOf(info.sof) < 0) info.why = 'arithmetic or lossless coding, which PDF readers do not all decode';
+  else if (info.precision !== 8) info.why = info.precision + '-bit samples';
+  else if (info.components !== 3 && info.components !== 1) info.why = info.components === 4 ? 'CMYK colour' : info.components + ' colour channels';
+  else if (info.orientation !== 1) info.why = 'turned by its EXIF orientation tag';
+  else info.passthrough = true;
+  return info;
+}
+
+/** The ICC profile a JPEG carries in its APP2 "ICC_PROFILE" segments, joined in order, or null. */
+function jpegICC(bytes) {
+  const segs = jpegSegments(bytes);
+  if (!segs) return null;
+  const parts = [];
+  for (const s of segs) {
+    if (s.marker !== 0xe2 || ascii(bytes, s.at + 4, 12) !== 'ICC_PROFILE\0') continue;
+    parts.push({ seq: bytes[s.at + 16], data: bytes.subarray(s.at + 18, s.end) });
+  }
+  if (!parts.length) return null;
+  parts.sort((a, b) => a.seq - b.seq);
+  const n = parts.reduce((t, p) => t + p.data.length, 0);
+  const out = new Uint8Array(n);
+  let o = 0;
+  for (const p of parts) { out.set(p.data, o); o += p.data.length; }
+  return out;
+}
+
+/** Channels an ICC profile describes: 3 for RGB, 1 for grey, 4 for CMYK, 0 if unknown. */
+function iccChannels(icc) {
+  const cs = ascii(icc, 16, 4);
+  return cs === 'RGB ' ? 3 : cs === 'GRAY' ? 1 : cs === 'CMYK' ? 4 : 0;
+}
+
+/** True when an ICC profile names itself sRGB (its description, in ASCII or UTF-16). */
+function iccIsSRGB(icc) {
+  if (!icc) return false;
+  const s = ascii(icc, 0, Math.min(icc.length, 4096));
+  return /sRGB/.test(s) || /s\0R\0G\0B/.test(s);
+}
+
+/**
+ * A copy of a JPEG with the segments that can identify a person or a
+ * device taken out — EXIF and XMP (APP1), IPTC (APP13), comments, maker
+ * blocks in APP3–APP12 and APP15, and anything after the end-of-image
+ * marker (phones append preview and depth images there) — and the image
+ * data itself byte for byte as it was. JFIF (APP0), the ICC profile (APP2)
+ * and Adobe's colour-transform marker (APP14) stay: a decoder needs them.
+ * Returns the very same array when there was nothing to take out.
+ */
+function stripJpegMetadata(bytes) {
+  const segs = jpegSegments(bytes);
+  if (!segs) return bytes;
+  const keepSeg = (s) => {
+    const m = s.marker;
+    if (m === 0xe0 || m === 0xee) return true;
+    if (m === 0xe2) return ascii(bytes, s.at + 4, 12) === 'ICC_PROFILE\0';
+    if (m === 0xfe || (m >= 0xe1 && m <= 0xef)) return false;
+    return true;
+  };
+  const sos = segs[segs.length - 1];
+  if (!sos || sos.marker !== 0xda) return bytes;
+  /* the first FF D9 after the scan header ends the image: inside entropy-coded
+     data every FF is followed by 00 or a restart marker */
+  let eoi = bytes.length;
+  for (let k = sos.end; k < bytes.length - 1; k++) {
+    if (bytes[k] === 0xff && bytes[k + 1] === 0xd9) { eoi = k + 2; break; }
+  }
+  const dropped = segs.filter((s) => !keepSeg(s));
+  if (!dropped.length && eoi === bytes.length) return bytes;
+  const out = new Uint8Array(bytes.length);
+  out[0] = 0xff; out[1] = 0xd8;
+  let o = 2;
+  for (const s of segs) {
+    if (!keepSeg(s)) continue;
+    const end = s === sos ? eoi : s.end;
+    out.set(bytes.subarray(s.at, end), o); o += end - s.at;
+  }
+  return out.slice(0, o);
+}
+
+/* ============================================================
+   What metadata a file carries — read from its bytes
+   ============================================================ */
+
+/**
+ * Every metadata block in a JPEG, PNG or WebP, sorted into what can say
+ * something about a person or a device (`personal`) and what only tells a
+ * decoder how to show the pixels (`technical`). Used to report what a
+ * cleaned file really contains, rather than to assume it.
+ * @returns {{format:string, personal:string[], technical:string[]}}
+ */
+function metadataReport(bytes) {
+  const rep = { format: 'unknown', personal: [], technical: [] };
+  const add = (list, name) => { if (rep[list].indexOf(name) < 0) rep[list].push(name); };
+  if (!bytes || bytes.length < 12) return rep;
+
+  if (bytes[0] === 0xff && bytes[1] === 0xd8) {
+    rep.format = 'JPEG';
+    const segs = jpegSegments(bytes) || [];
+    for (const s of segs) {
+      const m = s.marker;
+      if (m === 0xe0) add('technical', ascii(bytes, s.at + 4, 4) === 'JFIF' ? 'standard JFIF header' : 'APP0 header');
+      else if (m === 0xe1) {
+        if (ascii(bytes, s.at + 4, 4) === 'Exif') {
+          add('personal', 'EXIF');
+          const ex = readExif(bytes);
+          if (ex.gps) add('personal', 'GPS');
+        } else add('personal', 'XMP');
+      } else if (m === 0xe2) {
+        if (ascii(bytes, s.at + 4, 12) === 'ICC_PROFILE\0') add('technical', iccIsSRGB(jpegICC(bytes)) ? 'sRGB colour profile' : 'colour profile');
+        else add('personal', 'APP2 block');
+      } else if (m === 0xed) add('personal', 'IPTC / Photoshop');
+      else if (m === 0xee) add('technical', 'Adobe colour marker');
+      else if (m === 0xfe) add('personal', 'comment');
+      else if (m >= 0xe3 && m <= 0xef) add('personal', 'APP' + (m - 0xe0) + ' block');
+    }
+    return rep;
+  }
+
+  if (bytes[0] === 0x89 && ascii(bytes, 1, 3) === 'PNG') {
+    rep.format = 'PNG';
+    let i = 8;
+    while (i + 8 <= bytes.length) {
+      const len = ((bytes[i] << 24) | (bytes[i + 1] << 16) | (bytes[i + 2] << 8) | bytes[i + 3]) >>> 0;
+      const type = ascii(bytes, i + 4, 4);
+      if (type === 'tEXt' || type === 'zTXt' || type === 'iTXt') add('personal', 'text chunks');
+      else if (type === 'eXIf') add('personal', 'EXIF');
+      else if (type === 'tIME') add('personal', 'time stamp');
+      else if (type === 'iCCP') add('technical', 'colour profile');
+      else if (type === 'sRGB') add('technical', 'sRGB colour tag');
+      else if (type === 'gAMA' || type === 'cHRM') add('technical', 'gamma and colour values');
+      else if (type === 'pHYs') add('technical', 'print resolution');
+      if (type === 'IEND') break;
+      i += 12 + len;
+    }
+    return rep;
+  }
+
+  if (ascii(bytes, 0, 4) === 'RIFF' && ascii(bytes, 8, 4) === 'WEBP') {
+    rep.format = 'WebP';
+    let i = 12;
+    while (i + 8 <= bytes.length) {
+      const type = ascii(bytes, i, 4);
+      const len = (bytes[i + 4] | (bytes[i + 5] << 8) | (bytes[i + 6] << 16) | (bytes[i + 7] << 24)) >>> 0;
+      if (type === 'EXIF') add('personal', 'EXIF');
+      else if (type === 'XMP ') add('personal', 'XMP');
+      else if (type === 'ICCP') add('technical', 'colour profile');
+      i += 8 + len + (len & 1);
+    }
+  }
+  return rep;
+}
+
+/** One line for a person: what is (and is not) left in a cleaned file. */
+function metadataSummary(rep) {
+  const join = (l) => l.length > 1 ? l.slice(0, -1).join(', ') + ' and ' + l[l.length - 1] : l[0];
+  if (rep.personal.length) return 'Still present: ' + join(rep.personal);
+  return 'No EXIF, GPS or camera data; ' + (rep.technical.length ? join(rep.technical) + ' kept' : 'no other metadata either');
+}
+
+/* ============================================================
+   Print resolution — so a file prints at the size it was made for
+   ============================================================ */
+
+let CRC_TABLE = null;
+function crc32(bytes, from, to) {
+  if (!CRC_TABLE) {
+    CRC_TABLE = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      CRC_TABLE[n] = c >>> 0;
+    }
+  }
+  let c = 0xffffffff;
+  for (let i = from; i < to; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+/**
+ * Write a print resolution into an encoded JPEG (the JFIF APP0 density, in
+ * dots per inch) or PNG (a pHYs chunk, in pixels per metre: 300 DPI is
+ * round(300 / 0.0254) = 11,811). The pixels are not touched. Other formats
+ * come back unchanged.
+ */
+function setDPI(bytes, dpi) {
+  dpi = Math.max(1, Math.min(65535, Math.round(dpi)));
+  if (bytes[0] === 0xff && bytes[1] === 0xd8) {
+    if (bytes[2] === 0xff && bytes[3] === 0xe0 && ascii(bytes, 6, 5) === 'JFIF\0') {
+      const out = bytes.slice();
+      out[13] = 1;                                         // units: dots per inch
+      out[14] = dpi >> 8; out[15] = dpi & 0xff;
+      out[16] = dpi >> 8; out[17] = dpi & 0xff;
+      return out;
+    }
+    const app0 = [0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x01, dpi >> 8, dpi & 0xff, dpi >> 8, dpi & 0xff, 0x00, 0x00];
+    const out = new Uint8Array(bytes.length + app0.length);
+    out.set(bytes.subarray(0, 2), 0); out.set(app0, 2); out.set(bytes.subarray(2), 2 + app0.length);
+    return out;
+  }
+  if (bytes[0] === 0x89 && ascii(bytes, 1, 3) === 'PNG') {
+    const ppm = Math.round(dpi / 0.0254);
+    const parts = [bytes.subarray(0, 8)];
+    let i = 8, placed = false;
+    while (i + 8 <= bytes.length) {
+      const len = ((bytes[i] << 24) | (bytes[i + 1] << 16) | (bytes[i + 2] << 8) | bytes[i + 3]) >>> 0;
+      const type = ascii(bytes, i + 4, 4);
+      const end = i + 12 + len;
+      if (type !== 'pHYs') parts.push(bytes.subarray(i, end));
+      if (type === 'IHDR' && !placed) {
+        const c = new Uint8Array(21);
+        c[3] = 9;
+        c.set([0x70, 0x48, 0x59, 0x73], 4);              // "pHYs"
+        for (const at of [8, 12]) { c[at] = ppm >>> 24; c[at + 1] = (ppm >>> 16) & 0xff; c[at + 2] = (ppm >>> 8) & 0xff; c[at + 3] = ppm & 0xff; }
+        c[16] = 1;                                         // unit: metre
+        const crc = crc32(c, 4, 17);
+        c[17] = crc >>> 24; c[18] = (crc >>> 16) & 0xff; c[19] = (crc >>> 8) & 0xff; c[20] = crc & 0xff;
+        parts.push(c);
+        placed = true;
+      }
+      if (type === 'IEND') break;
+      i = end;
+    }
+    const n = parts.reduce((t, p) => t + p.length, 0);
+    const out = new Uint8Array(n);
+    let o = 0;
+    for (const p of parts) { out.set(p, o); o += p.length; }
+    return out;
+  }
+  return bytes;
+}
+
+/** The print resolution a JPEG or PNG declares, in DPI (rounded to 0.01), or null. */
+function readDPI(bytes) {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8) {
+    const segs = jpegSegments(bytes) || [];
+    const s = segs.find((x) => x.marker === 0xe0 && ascii(bytes, x.at + 4, 5) === 'JFIF\0');
+    if (!s) return null;
+    const unit = bytes[s.at + 11], x = (bytes[s.at + 12] << 8) | bytes[s.at + 13], y = (bytes[s.at + 14] << 8) | bytes[s.at + 15];
+    if (unit === 1) return { x, y };
+    if (unit === 2) return { x: Math.round(x * 254) / 100, y: Math.round(y * 254) / 100 };
+    return null;
+  }
+  if (bytes[0] === 0x89 && ascii(bytes, 1, 3) === 'PNG') {
+    let i = 8;
+    while (i + 8 <= bytes.length) {
+      const len = ((bytes[i] << 24) | (bytes[i + 1] << 16) | (bytes[i + 2] << 8) | bytes[i + 3]) >>> 0;
+      const type = ascii(bytes, i + 4, 4);
+      if (type === 'pHYs' && bytes[i + 16] === 1) {
+        const u32 = (o) => ((bytes[o] << 24) | (bytes[o + 1] << 16) | (bytes[o + 2] << 8) | bytes[o + 3]) >>> 0;
+        return { x: Math.round(u32(i + 8) * 0.0254 * 100) / 100, y: Math.round(u32(i + 12) * 0.0254 * 100) / 100 };
+      }
+      if (type === 'IEND' || type === 'IDAT') break;
+      i += 12 + len;
+    }
   }
   return null;
 }
@@ -379,15 +711,76 @@ function relLuminance({ r, g, b }) {
   return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
 }
 
+/* The same maths as the site's Colour Converter & Contrast Checker
+   (engine/dev-color-converter.js): HSL rounded to whole degrees and
+   percentages, and the WCAG 2 contrast ratio (L1 + 0.05) / (L2 + 0.05). */
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if (d) {
+    if (mx === r) h = ((g - b) / d) % 6;
+    else if (mx === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60; if (h < 0) h += 360;
+  }
+  const l = (mx + mn) / 2;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  return [Math.round(h), Math.round(s * 100), Math.round(l * 100)];
+}
+
+function contrastRatio(a, b) {
+  const l1 = relLuminance(a), l2 = relLuminance(b);
+  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+}
+
+/** WCAG 2 grade for normal text: AAA at 7:1, AA at 4.5:1, "AA large" (large text only) at 3:1. */
+const wcagGrade = (ratio) => ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA large' : 'fail';
+
 /* ============================================================
    SVG optimiser — text transforms, no parser dependency
    ============================================================ */
 
 /**
+ * The ids an SVG refers to from inside itself, which must survive any
+ * clean-up: url(#id) in attributes and styles (gradients, clip paths, masks,
+ * filters, markers), href / xlink:href="#id" (<use>, <textPath>, animation
+ * targets), aria-labelledby / aria-describedby (often a <title>'s id),
+ * SMIL begin/end timing such as "fade.end", and any #id selector in a
+ * <style> block.
+ */
+function referencedIds(svg) {
+  const keep = new Set();
+  const add = (v) => { if (v) keep.add(v); };
+  let m;
+  const url = /url\(\s*['"]?#([^'")\s]+)['"]?\s*\)/g;
+  while ((m = url.exec(svg))) add(m[1]);
+  const href = /\s(?:xlink:)?href\s*=\s*["']#([^"']+)["']/g;
+  while ((m = href.exec(svg))) add(m[1]);
+  const aria = /\saria-(?:labelledby|describedby)\s*=\s*["']([^"']+)["']/g;
+  while ((m = aria.exec(svg))) m[1].split(/\s+/).forEach(add);
+  const timing = /\s(?:begin|end)\s*=\s*["']([^"']+)["']/g;
+  while ((m = timing.exec(svg))) {
+    const t = /([A-Za-z_][\w.-]*?)\.(?:begin|end|repeat|click|mouse\w*|focus\w*)/g;
+    let k;
+    while ((k = t.exec(m[1]))) add(k[1]);
+  }
+  const style = /<style[^>]*>([\s\S]*?)<\/style>/g;
+  while ((m = style.exec(svg))) {
+    const sel = /#([A-Za-z_][\w-]*)/g;
+    let k;
+    while ((k = sel.exec(m[1]))) add(k[1]);
+  }
+  return keep;
+}
+
+/**
  * Strip editor cruft and shrink an SVG.
  * Conservative by design: it never touches path geometry beyond rounding
  * coordinates, because aggressive path rewriting is where SVG optimisers
- * silently break artwork.
+ * silently break artwork. It keeps every id something in the file points
+ * at, and keeps <title>, which is what a screen reader announces; <desc> is
+ * kept too unless it is an editor's "Created with …" line.
  */
 function optimiseSVG(src, opts = {}) {
   const precision = opts.precision === undefined ? 2 : Math.max(0, Math.min(8, Number(opts.precision)));
@@ -404,12 +797,22 @@ function optimiseSVG(src, opts = {}) {
   drop(/<\?xml[^>]*\?>\s*/g, 'XML declaration');
   drop(/<!DOCTYPE[^>]*>\s*/g, 'DOCTYPE');
   drop(/<metadata>[\s\S]*?<\/metadata>/g, 'metadata');
-  drop(/<title>[\s\S]*?<\/title>/g, 'title elements');
-  drop(/<desc>[\s\S]*?<\/desc>/g, 'desc elements');
+  drop(/<desc>\s*(?:Created with|Generator:)[^<]*<\/desc>/gi, 'editor desc');
   drop(/<(sodipodi|inkscape)[^>]*>[\s\S]*?<\/\1[^>]*>/g, 'editor elements');
   drop(/\s(inkscape|sodipodi|sketch|illustrator|adobe|serif|krita):[\w-]+="[^"]*"/g, 'editor attributes');
   drop(/\sxmlns:(inkscape|sodipodi|sketch|serif|krita|dc|cc|rdf)="[^"]*"/g, 'unused namespaces');
-  drop(/\s(data-name|id)="[^"]*"/g, 'ids and data-name');
+  drop(/\sdata-name="[^"]*"/g, 'data-name');
+  /* An id goes only when nothing in the file refers to it: deleting the id of
+     a gradient, clip path, mask or <use> target while url(#…) or href="#…"
+     still points at it makes that part of the drawing vanish. */
+  const keep = referencedIds(out);
+  let unused = 0;
+  out = out.replace(/\sid="([^"]*)"/g, (all, id) => {
+    if (keep.has(id)) return all;
+    unused++;
+    return '';
+  });
+  if (unused) removed.push(`unreferenced ids (${unused})`);
   drop(/<defs\s*\/>|<g\s*\/>|<defs>\s*<\/defs>/g, 'empty elements');
 
   if (opts.roundCoords !== false) {
@@ -419,9 +822,11 @@ function optimiseSVG(src, opts = {}) {
       const r = Number(n.toFixed(precision));
       return String(r);
     };
-    out = out.replace(/(?<=[\s",=(])-?\d+\.\d+/g, round);
-    out = out.replace(/(\sd=")([^"]+)(")/g, (all, a, d, c) =>
-      a + d.replace(/-?\d+\.\d+/g, round) + c);
+    /* numbers are rounded inside tags (attribute values) only, so the text
+       of a <title>, <desc>, <text> or <style> is never changed */
+    out = out.replace(/<[A-Za-z][^>]*>/g, (tag) => tag
+      .replace(/(\sd=")([^"]+)(")/g, (all, a, d, c) => a + d.replace(/-?\d+\.\d+/g, round) + c)
+      .replace(/(?<=[\s",=(])-?\d+\.\d+/g, round));
   }
 
   out = out
@@ -437,7 +842,8 @@ function optimiseSVG(src, opts = {}) {
     after: out.length,
     saved: before - out.length,
     savedPct: before ? ((before - out.length) / before) * 100 : 0,
-    removed
+    removed,
+    keptIds: [...keep].filter((id) => out.indexOf('id="' + id + '"') >= 0)
   };
 }
 
@@ -473,8 +879,13 @@ const PHOTO_PRESETS = [
   { name: 'Stamp size',            w: 20, h: 25, unit: 'mm', dpi: 300 }
 ];
 
+/* Pixels are whole, so a size in millimetres is rounded to the nearest
+   pixel: 51 mm at 300 DPI is 602.36 px and becomes 602, which prints at
+   50.97 mm; 35 mm is 413.39 → 413 (34.97 mm), 45 mm 531.50 → 531 (44.96 mm).
+   No side is ever off by more than half a pixel, 0.04 mm at 300 DPI. */
 const mmToPx = (mm, dpi) => Math.round((mm / 25.4) * dpi);
+const pxToMm = (px, dpi) => px / dpi * 25.4;
 
 
-window.MVRImage={readExif:readExif,metadataSegments:metadataSegments,buildPDF:buildPDF,jpegSize:jpegSize,medianCut:medianCut,toHex:toHex,relLuminance:relLuminance,optimiseSVG:optimiseSVG,SOCIAL_PRESETS:SOCIAL_PRESETS,PHOTO_PRESETS:PHOTO_PRESETS,mmToPx:mmToPx};
+window.MVRImage={readExif:readExif,metadataSegments:metadataSegments,buildPDF:buildPDF,jpegSize:jpegSize,jpegInfo:jpegInfo,jpegICC:jpegICC,iccChannels:iccChannels,iccIsSRGB:iccIsSRGB,stripJpegMetadata:stripJpegMetadata,metadataReport:metadataReport,metadataSummary:metadataSummary,setDPI:setDPI,readDPI:readDPI,crc32:crc32,medianCut:medianCut,toHex:toHex,relLuminance:relLuminance,rgbToHsl:rgbToHsl,contrastRatio:contrastRatio,wcagGrade:wcagGrade,optimiseSVG:optimiseSVG,referencedIds:referencedIds,SOCIAL_PRESETS:SOCIAL_PRESETS,PHOTO_PRESETS:PHOTO_PRESETS,mmToPx:mmToPx,pxToMm:pxToMm};
 })();

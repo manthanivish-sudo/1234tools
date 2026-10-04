@@ -69,7 +69,7 @@ module.exports = {
         'Encoding reads three bytes at a time and looks up each 6-bit slice in the table; a short last group gets one or two = signs.',
         'URL-safe output swaps + for - and / for _, then drops the = signs.',
         'Decoding accepts either alphabet, restores missing padding and ignores spaces and line breaks. Any other stray character is an error.',
-        'Input and Output are byte sizes; Growth compares the output with the number of characters you typed.'
+        'Input, Output and Growth count UTF-8 bytes: Café Zoë — ₹1,499 paid ✓ is 32 B in, 44 B out, +38%.'
       ]
     },
     worked: {
@@ -95,7 +95,9 @@ module.exports = {
       /* the same text, Variant: URL-safe */
       { input: 'x >= y?', options: { safe: 'url' }, check: [['output', 'eCA-PSB5Pw'], ['stat:Output', '10 B']] },
       /* the URL-safe result pasted back, Direction: Decode */
-      { input: 'eCA-PSB5Pw', options: { dir: 'dec' }, check: [['output', 'x >= y?']] }
+      { input: 'eCA-PSB5Pw', options: { dir: 'dec' }, check: [['output', 'x >= y?']] },
+      /* accented text: the byte sizes and Growth on bytes */
+      { input: 'Café Zoë — ₹1,499 paid ✓', check: [['stat:Input', '32 B'], ['stat:Output', '44 B'], ['stat:Growth', '+38%']] }
     ]
   },
 
@@ -199,6 +201,7 @@ module.exports = {
       text: 'Each line is parsed into five sets of allowed values, put into English, then tested against your clock.',
       points: [
         'Names such as mon or jan become numbers, and ranges and steps are expanded: */20 in the minute field is 0, 20 and 40.',
+        'Weekday 7 is Sunday, like 0: 1-7 reads every day, 5-7 on Friday, Saturday and Sunday.',
         '@yearly, @monthly, @weekly, @daily, @hourly and their aliases are swapped for five fields first; @reboot is refused.',
         'Next runs come from stepping forward a minute at a time in your time zone for up to 527,040 minutes (366 days), with the OR rule when both day fields are set.'
       ]
@@ -207,9 +210,9 @@ module.exports = {
       text: 'Someone wants a report at 9 am on the first Monday of each month and writes 0 9 1-7 * 1. The parser reads it back as "At 09:00, on day 1, 2, 3, 4, 5, 6 and 7 of the month, and on Monday." That is ten or eleven runs a month, not one. Five-field cron cannot say "first Monday": schedule 0 9 1-7 * * and let the script exit unless it is Monday. A second line, 0 0 31 2 *, counts as valid but reports "no runs found within the next year".'
     },
     uses: [
-      ['Reviewing a crontab', 'Paste all of crontab -l at once and see which jobs pile up on the same minute.'],
+      ['Reviewing a crontab', 'Paste all of crontab -l and see which jobs share a minute.'],
       ['Writing a CI schedule', 'Check a GitHub Actions schedule before committing; it takes five-field cron and runs it in UTC.'],
-      ['Explaining a schedule', 'Paste the English line into a ticket for colleagues who do not read cron.']
+      ['Explaining a schedule', 'Paste the English line into a ticket.']
     ],
     mistakes: [
       'Using */45 for every 45 minutes. Steps restart each hour, so the parser says "At minute 0 and minute 45 of every hour": gaps of 45 minutes, then 15.',
@@ -226,7 +229,9 @@ module.exports = {
       /* the mistakes */
       { input: '*/45 * * * *\n* 9 * * *', check: [['output', 'At minute 0 and minute 45 of every hour'], ['output', 'Every minute during 09:00']] },
       /* the FAQ answers */
-      { input: '*/5 * * * *\n0 0 * * 0', check: [['output', 'minute 55'], ['output', 'At 00:00, on Sunday.']] }
+      { input: '*/5 * * * *\n0 0 * * 0', check: [['output', 'minute 55'], ['output', 'At 00:00, on Sunday.']] },
+      /* weekday 7 */
+      { input: '0 9 * * 1-7\n0 9 * * 5-7', check: [['output', 'every day'], ['output', 'on Friday, Saturday and Sunday'], ['stat:Valid', '2']] }
     ]
   },
 
@@ -327,6 +332,7 @@ module.exports = {
         'Eight PNGs are made: 16, 32, 48 and 96 pixel favicons, a 180 pixel apple-touch-icon, 192 and 512 pixel app icons and a 512 pixel maskable icon with a 10% margin.',
         'The source is scaled to fit the square and centred, never cropped, so a wide logo gets bars above and below.',
         'Every canvas is filled with the background colour first, white by default, so transparent areas come out solid.',
+        'Download all as ZIP saves all eight as favicons.zip.',
         'The HTML snippet also links favicon.ico and site.webmanifest, which this tool does not make.'
       ]
     },
@@ -334,9 +340,9 @@ module.exports = {
       text: 'A 300×200 transparent PNG of 840 B, an orange disc on nothing, produced 8 icons totalling 44.0 KB, from 397 B for the smallest to 18.4 KB for the 512 pixel one. The tool warned that the source is smaller than 512px, so the large icons are enlarged. Every corner pixel came out opaque white, not transparent, because the background is always painted. Setting it to #1d3557 gave navy corners and a total of 43.5 KB.'
     },
     uses: [
-      ['Launching a small site', 'Make the whole icon set from one logo before the site goes live.'],
+      ['Launching a small site', 'Make the whole icon set from one logo.'],
       ['Making a web app installable', 'Get the 192 and 512 pixel icons a manifest needs for Add to Home Screen.'],
-      ['Rebranding', 'Regenerate every size from the new mark so tabs and home screens match.']
+      ['Rebranding', 'Regenerate every size from the new mark.']
     ],
     mistakes: [
       'Expecting transparent icons from a transparent logo. Pick a background colour that works in both light and dark browser tabs, since every icon will be a solid square.',
@@ -410,14 +416,14 @@ module.exports = {
     howItWorks: {
       text: 'The rules are assembled line by line from your choices in plain JavaScript. Nothing about your server is checked.',
       points: [
-        'Force HTTPS adds `RewriteCond %{HTTPS} off` and a 301 to the same host and path over https.',
-        'Force www redirects to https://www. plus your domain, cleaned of any http:// or www.; Force non-www captures the host after www. and redirects to that.',
-        'Both www rules send visitors to https, even when Force HTTPS is set to No.',
-        'Caching gives CSS, JavaScript, SVG, WebP and WOFF2 a year and HTML zero seconds; security adds five headers, HSTS among them.'
+        'Force www redirects to www. plus your domain, cleaned of any http:// or www.; Force non-www captures the host after www. and redirects to that.',
+        'The www rule runs first, straight to https when HTTPS is forced, otherwise keeping the visitor’s scheme through `%{REQUEST_SCHEME}` (Apache 2.4 on).',
+        'Force HTTPS then adds `RewriteCond %{HTTPS} off` and a 301 to the same host and path over https.',
+        'Caching gives CSS, JavaScript, SVG, WebP and WOFF2 a year and HTML zero seconds; security adds four headers, and HSTS as a fifth only when HTTPS is forced.'
       ]
     },
     worked: {
-      text: 'For a site that should live at https://ashworth-joinery.co.uk without www, choose Force HTTPS and Force non-www and switch the other blocks off: 5 directives, 192 B. Mind the order. A request for http://www.ashworth-joinery.co.uk/ meets the HTTPS rule first and goes to https://www., then the www rule redirects it again, so that visitor takes two permanent redirects and an extra round trip. The domain field is not used in this combination at all.'
+      text: 'For a site that should live at https://ashworth-joinery.co.uk without www, choose Force HTTPS and Force non-www and switch the other blocks off: 5 directives, 192 B. A request for http://www.ashworth-joinery.co.uk/ meets the www rule first and goes straight to https://ashworth-joinery.co.uk/ in one permanent redirect; the HTTPS rule after it catches plain http on the bare domain. The domain field is not used in this combination at all.'
     },
     uses: [
       ['Moving a site to HTTPS', 'Redirect every plain http request once a certificate is installed.'],
@@ -435,7 +441,9 @@ module.exports = {
     ],
     runs: [
       /* Force HTTPS: Yes, Domain form: Force non-www, Domain https://www.ashworth-joinery.co.uk/, caching, compression and security headers: No */
-      { fields: { https: 'yes', www: 'root', domain: 'https://www.ashworth-joinery.co.uk/', cache: 'no', gzip: 'no', security: 'no' }, check: [['stat:Directives', '5'], ['stat:Size', '192 B'], ['output', 'R=301']] }
+      { fields: { https: 'yes', www: 'root', domain: 'https://www.ashworth-joinery.co.uk/', cache: 'no', gzip: 'no', security: 'no' }, check: [['stat:Directives', '5'], ['stat:Size', '192 B'], ['output', 'R=301']] },
+      /* Force HTTPS: No, Force www: the scheme is kept */
+      { fields: { https: 'no', www: 'www', domain: 'ashworth-joinery.co.uk', cache: 'no', gzip: 'no', security: 'no' }, check: [['output', '%{REQUEST_SCHEME}']] }
     ]
   },
 
@@ -568,7 +576,7 @@ module.exports = {
   '/developer/markdown-preview/': {
     term: 'Markdown',
     whatIs: [
-      'Markdown is a plain-text way of writing formatted documents: # for headings, asterisks for emphasis, a hyphen for each list item. John Gruber published it in 2004, and because his description left many cases open, converters disagreed at the edges.',
+      'Markdown is a plain-text way of writing formatted documents: # for headings, asterisks for emphasis, a hyphen for each list item. John Gruber published it in 2004, and his loose description left converters disagreeing at the edges.',
       'CommonMark, begun in 2014, is the strict specification that followed, and GitHub Flavored Markdown extends it with tables, strikethrough and task lists. This converter is a compact line-by-line one covering the common syntax, not a CommonMark implementation.'
     ],
     howItWorks: {
@@ -577,7 +585,8 @@ module.exports = {
         'Fenced code blocks are lifted out first and escaped, so nothing inside them changes.',
         'Each other line is classified by how it starts: #, >, a bullet, a number or a rule. Any other line joins the paragraph above until a blank line.',
         'Inline, &, < and > are escaped, then code spans, images, links, bold, italic and ~~strikethrough~~ are converted.',
-        'The result is shown as HTML source, not rendered; Full HTML document wraps it in a doctype, head and body.'
+        'Addresses must be http, https, mailto, tel or relative, quotes escaped; [x](javascript:void) becomes plain <p>x</p>.',
+        'Preview renders the source through a sanitiser that keeps known tags and never fetches images; Full HTML document adds a doctype, head and body.'
       ]
     },
     worked: {
@@ -586,23 +595,23 @@ module.exports = {
     uses: [
       ['Newsletter copy', 'Draft in Markdown, then paste the HTML into an editor that only takes HTML.'],
       ['Docs pages', 'Turn a project’s install steps into HTML for a website.'],
-      ['HTML email', 'Write bullets and links in plain text and get markup for an email template.']
+      ['HTML email', 'Write bullets and links in plain text for an email template.']
     ],
     mistakes: [
       'Expecting a line break where you pressed Enter. Lines are joined into one paragraph, and two trailing spaces do not force a <br> here; leave a blank line instead.',
       'Indenting code by four spaces. Only fenced blocks become code; indented lines are treated as paragraph text.',
-      'Publishing links from someone else’s text unchecked. Addresses are copied as written, so a javascript: address stays a live link.'
+      'Typing HTML into the Markdown. A <br> or <div> is escaped and shows as text; add such tags after converting.'
     ],
     faq: [
       { q: 'How do I make a link open in a new tab?', a: 'Markdown has no syntax for it. Add target="_blank" to the <a> tags afterwards; the links written here already carry rel="noopener noreferrer".' },
       { q: 'Can I use underscores for italics?', a: 'Not here: _a_ stays as typed. Single asterisks make italics, and __double underscores__ make bold after a space or at the start of a line.' },
-      { q: 'How do I convert Markdown on the command line?', a: 'Pandoc does it with pandoc notes.md -o notes.html, and cmark gives the CommonMark reference output.' }
+      { q: 'How do I convert Markdown on the command line?', a: 'Pandoc does it with pandoc notes.md -o notes.html.' }
     ],
     runs: [
       /* GitHub-style notes: setext heading, nested list, pipe table; default Output: HTML fragment */
       { input: 'Release notes\n=============\n\n- Faster export\n  - PDF\n  - CSV\n\n| Plan | Price |\n|------|-------|\n| Pro | £9 |', check: [['stat:Headings', '0'], ['stat:Paragraphs', '2'], ['stat:Lists', '1']] },
       /* the mistakes: a two-space line break, indented code, a javascript: link */
-      { input: 'Line one  \nLine two\n\n    indented code\n\n[x](javascript:void)', check: [['stat:Code blocks', '0'], ['output', 'javascript:']] },
+      { input: 'Line one  \nLine two\n\n    indented code\n\n[x](javascript:void)', check: [['stat:Code blocks', '0'], ['output', '<p>x</p>']] },
       /* the FAQ: underscores and asterisks */
       { input: '_a_ and __b__ and *c*', check: [['output', '_a_']] }
     ]
@@ -618,7 +627,7 @@ module.exports = {
       text: 'The tags are built from the form in plain JavaScript on every keystroke.',
       points: [
         'Each value has &, <, > and " replaced by entities before it goes into a tag, so a quote in a title cannot end the attribute.',
-        'You get the title, description and canonical link, seven og: properties with og:type fixed at website, and four twitter: tags using the summary_large_image card.',
+        'You get the title, description and canonical link, seven og: properties with og:type fixed at website, and four twitter: tags using the summary_large_image card: Tags generated reads 14.',
         'Lengths count the characters you typed, before escaping: over 60 or 160 may be truncated, under 30 or 70 is quite short.',
         'URLs are copied exactly; nothing checks that they are absolute or that the image exists.'
       ]
@@ -643,7 +652,7 @@ module.exports = {
     runs: [
       /* title, description, canonical https://ashworthjoinery.example/, share image /img/share.jpg, site Ashworth Joinery, locale en_GB */
       { fields: { title: 'Ashworth Joinery | Bespoke Oak Staircases, Kitchens & Doors in York', desc: 'Handmade oak staircases, kitchens and doors from our York workshop since 1998.', url: 'https://ashworthjoinery.example/', image: '/img/share.jpg', site: 'Ashworth Joinery' },
-        check: [['stat:Title length', '67 — may be truncated'], ['stat:Description length', '78 — good'], ['output', 'Kitchens &amp; Doors'], ['output', 'content="/img/share.jpg"']] }
+        check: [['stat:Title length', '67 — may be truncated'], ['stat:Description length', '78 — good'], ['output', 'Kitchens &amp; Doors'], ['output', 'content="/img/share.jpg"'], ['stat:Tags generated', '14']] }
     ]
   },
 

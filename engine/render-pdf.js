@@ -87,6 +87,81 @@
       wrap.appendChild(row);
       primary = hex;
       read = () => hex.value;
+    } else if (c.type === 'draw') {
+      /* A drawing pad. Strokes are kept as points in the pad's own 360 x 120
+         units (y down) whatever size it is shown at, and handed to the spec
+         as { w, h, strokes }, which turns them into vector paths. Pointer
+         events cover mouse, pen and touch alike; touch-action none keeps a
+         finger from scrolling the page instead of drawing. */
+      const PW = 360, PH = 120;
+      const box = el('div', 'draw-pad');
+      const cv = el('canvas', 'draw-canvas');
+      cv.id = id;
+      cv.width = PW * 2; cv.height = PH * 2;
+      cv.style.touchAction = 'none';
+      cv.setAttribute('role', 'img');
+      cv.setAttribute('aria-label', c.label + ': draw with a mouse, a pen or a finger. The typed signature box is the keyboard alternative.');
+      const clear = el('button', 'btn-ghost draw-clear', 'Clear');
+      clear.type = 'button';
+      clear.title = 'Clear the drawing';
+      box.appendChild(cv);
+      box.appendChild(clear);
+      wrap.appendChild(box);
+      const strokes = [];
+      let cur = null;
+      const ctx = cv.getContext('2d');
+      const paint = () => {
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        ctx.strokeStyle = '#d0d4dc';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(20, PH * 2 - 30); ctx.lineTo(PW * 2 - 20, PH * 2 - 30); ctx.stroke();
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        strokes.forEach(s => {
+          ctx.beginPath();
+          ctx.moveTo(s[0][0] * 2, s[0][1] * 2);
+          (s.length === 1 ? s : s.slice(1)).forEach(p => ctx.lineTo(p[0] * 2 + (s.length === 1 ? 0.01 : 0), p[1] * 2));
+          ctx.stroke();
+        });
+      };
+      const at = (ev) => {
+        const r = cv.getBoundingClientRect();
+        const x = (ev.clientX - r.left) * PW / (r.width || PW);
+        const y = (ev.clientY - r.top) * PH / (r.height || PH);
+        return [Math.round(Math.max(0, Math.min(PW, x)) * 10) / 10, Math.round(Math.max(0, Math.min(PH, y)) * 10) / 10];
+      };
+      const changed = () => cv.dispatchEvent(new Event('input', { bubbles: true }));
+      cv.addEventListener('pointerdown', (ev) => {
+        if (ev.button !== undefined && ev.button > 0) return;
+        ev.preventDefault();
+        try { cv.setPointerCapture(ev.pointerId); } catch (e) { /* synthetic events */ }
+        cur = [at(ev)];
+        strokes.push(cur);
+        paint();
+      });
+      cv.addEventListener('pointermove', (ev) => {
+        if (!cur) return;
+        const p = at(ev), last = cur[cur.length - 1];
+        if (Math.abs(p[0] - last[0]) + Math.abs(p[1] - last[1]) < 1) return;
+        cur.push(p);
+        paint();
+      });
+      const end = () => { if (!cur) return; cur = null; changed(); };
+      cv.addEventListener('pointerup', end);
+      cv.addEventListener('pointercancel', end);
+      clear.addEventListener('click', () => { strokes.length = 0; cur = null; paint(); changed(); });
+      paint();
+      primary = cv;
+      read = () => strokes.length ? { w: PW, h: PH, strokes: strokes.map(s => s.map(p => p.slice())) } : null;
+      if (c.hint) wrap.appendChild(el('span', 'field-hint', c.hint));
+      return {
+        wrap, read, key: c.key, input: cv,
+        set: (v) => {
+          strokes.length = 0;
+          if (v && Array.isArray(v.strokes)) v.strokes.forEach(s => strokes.push(s.map(p => p.slice())));
+          paint(); changed();
+        }
+      };
     } else if (c.type === 'date') {
       const i = el('input', 'control');
       i.type = 'date'; i.id = id; i.name = c.key;
@@ -645,7 +720,7 @@
       });
 
       /* Any control that feeds the marker redraws it. */
-      [cfg.x, cfg.y, cfg.text, cfg.size, cfg.colour, cfg.width].forEach(k => {
+      [cfg.x, cfg.y, cfg.text, cfg.size, cfg.colour, cfg.width, cfg.drawing, cfg.drawingWidth].forEach(k => {
         const r = typeof k === 'string' && reader(k);
         if (r && r.input) r.input.addEventListener('input', drawPlace);
       });
@@ -714,6 +789,32 @@
 
       saved.forEach(it => { if (onThisPage(it)) drawItem(it, false); });
       if (text.trim()) drawItem(cur, true);
+
+      /* A drawn signature, placed by the spec's own function — the one its
+         run uses — so the preview cannot disagree with the file. */
+      const pad = cfg.drawing && reader(cfg.drawing);
+      const drawn = pad && pad.read();
+      const ink = drawn && typeof spec.inkPlacement === 'function' ? spec.inkPlacement(drawn, readOpts()) : null;
+      if (ink) {
+        const X = (p) => (ink.x0 + (p[0] - ink.minX) * ink.s) * scale;
+        const Y = (p) => (hPt - (ink.y0 + (ink.maxY - p[1]) * ink.s)) * scale;
+        ctx.save();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = Math.max(1, 1.4 * scale);
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        drawn.strokes.forEach(s => {
+          if (!s.length) return;
+          ctx.beginPath();
+          ctx.moveTo(X(s[0]), Y(s[0]));
+          (s.length === 1 ? s : s.slice(1)).forEach(p => ctx.lineTo(X(p) + (s.length === 1 ? 0.01 : 0), Y(p)));
+          ctx.stroke();
+        });
+        ctx.setLineDash([4, 3]);
+        ctx.strokeStyle = '#f7c948';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(ink.x0 * scale - 2, (hPt - ink.y0 - ink.h) * scale - 2, ink.w * scale + 4, ink.h * scale + 4);
+        ctx.restore();
+      }
 
       /* The anchor, always, even with no text yet. */
       ctx.strokeStyle = '#f7c948';
@@ -831,30 +932,48 @@
         return;
       }
 
-      /* pdf-organise: thumbnails with per-page rotate and delete */
+      /* pdf-organise: thumbnails with per-page rotate and delete, reordered
+         by dragging a card or with its arrow buttons (the keyboard way) */
       const state = [];
       const grid = el('div', 'page-grid');
-      for (let i = 0; i < pdf.numPages; i++) state.push({ index: i, rotate: 0, keep: true });
+      for (let i = 0; i < pdf.numPages; i++) state.push({ index: i, rotate: 0, keep: true, thumbs: {} });
 
-      const paint = async () => {
+      /* Every thumbnail is drawn when the file opens, and once per rotation:
+         moving a page reuses the drawing rather than re-rendering. */
+      const thumb = async (s) => {
+        if (s.thumbs[s.rotate]) return s.thumbs[s.rotate];
+        const page = await pdf.getPage(s.index + 1);
+        const vp = page.getViewport({ scale: 0.28, rotation: s.rotate });
+        const canvas = el('canvas');
+        canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        s.thumbs[s.rotate] = canvas;
+        return canvas;
+      };
+
+      const paint = async (refocus) => {
         grid.innerHTML = '';
         for (const s of state) {
           const card = el('div', 'page-card' + (s.keep ? '' : ' is-dropped'));
-          const page = await pdf.getPage(s.index + 1);
-          const vp = page.getViewport({ scale: 0.28, rotation: s.rotate });
-          const canvas = el('canvas');
-          canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
-          const ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-          await page.render({ canvasContext: ctx, viewport: vp }).promise;
-          card.appendChild(canvas);
+          card.dataset.pos = String(state.indexOf(s));
+          card.appendChild(await thumb(s));
           card.appendChild(el('span', 'page-num', String(s.index + 1)));
+          const grip = el('span', 'page-grip', '⠿');
+          grip.title = 'Drag to move this page';
+          grip.setAttribute('aria-hidden', 'true');
+          card.appendChild(grip);
 
           const bar = el('div', 'page-tools');
           const mk = (label, title, fn) => {
             const b = el('button', 'btn-ghost', label);
             b.type = 'button'; b.title = title;
-            b.addEventListener('click', async () => { fn(); await paint(); });
+            b.setAttribute('aria-label', title + ', page ' + (s.index + 1));
+            const at = bar.children.length;
+            /* the button keeps the focus after the grid is redrawn, so the
+               arrows can be pressed again and again from the keyboard */
+            b.addEventListener('click', async () => { fn(); await paint({ s, at }); });
             bar.appendChild(b);
           };
           mk('←', 'Move earlier', () => {
@@ -869,6 +988,7 @@
           });
           card.appendChild(bar);
           grid.appendChild(card);
+          if (refocus && refocus.s === s && bar.children[refocus.at]) bar.children[refocus.at].focus();
         }
         const kept = state.filter(s => s.keep).length;
         renderStats([
@@ -878,6 +998,54 @@
           ['Rotated', String(state.filter(s => s.rotate).length)]
         ]);
       };
+
+      /* Drag to reorder, with pointer events so a mouse, a pen and a finger
+         all work. A finger drags by the grip; anywhere else it scrolls. The
+         card under the pointer shows a bar on the side the page will land. */
+      let drag = null;
+      const unmark = () => grid.querySelectorAll('.is-drop-before, .is-drop-after')
+        .forEach(c => c.classList.remove('is-drop-before', 'is-drop-after'));
+      grid.addEventListener('pointerdown', (ev) => {
+        const card = ev.target.closest && ev.target.closest('.page-card');
+        if (!card || ev.target.closest('button') || (ev.button !== undefined && ev.button > 0)) return;
+        if (ev.pointerType === 'touch' && !ev.target.closest('.page-grip')) return;
+        ev.preventDefault();
+        drag = { id: ev.pointerId, card, from: Number(card.dataset.pos), x: ev.clientX, y: ev.clientY, moved: false, to: null };
+        try { card.setPointerCapture(ev.pointerId); } catch (e) { /* synthetic events */ }
+      });
+      grid.addEventListener('pointermove', (ev) => {
+        if (!drag || ev.pointerId !== drag.id) return;
+        if (!drag.moved && Math.abs(ev.clientX - drag.x) + Math.abs(ev.clientY - drag.y) < 6) return;
+        drag.moved = true;
+        drag.card.classList.add('is-dragging');
+        unmark();
+        const hit = document.elementFromPoint(ev.clientX, ev.clientY);
+        const over = hit && hit.closest ? hit.closest('.page-card') : null;
+        if (!over || !grid.contains(over) || over === drag.card) { drag.to = null; return; }
+        /* the grid can be one card wide or several: the top quarter of a
+           card means before it, the bottom quarter after it, and in between
+           the left or right half decides */
+        const r = over.getBoundingClientRect();
+        const after = ev.clientY > r.bottom - r.height / 4 ||
+          (ev.clientY >= r.top + r.height / 4 && ev.clientX > r.left + r.width / 2);
+        over.classList.add(after ? 'is-drop-after' : 'is-drop-before');
+        let to = Number(over.dataset.pos) + (after ? 1 : 0);
+        if (drag.from < to) to--;
+        drag.to = to;
+      });
+      const drop = async (ev, cancelled) => {
+        if (!drag || ev.pointerId !== drag.id) return;
+        const d = drag;
+        drag = null;
+        unmark();
+        d.card.classList.remove('is-dragging');
+        if (cancelled || !d.moved || d.to === null || d.to === d.from) return;
+        const [s] = state.splice(d.from, 1);
+        state.splice(d.to, 0, s);
+        await paint();
+      };
+      grid.addEventListener('pointerup', (ev) => drop(ev, false));
+      grid.addEventListener('pointercancel', (ev) => drop(ev, true));
 
       results.appendChild(grid);
       await paint();

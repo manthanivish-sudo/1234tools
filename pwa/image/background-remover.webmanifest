@@ -2,7 +2,7 @@
   "id": "/image/background-remover.html",
   "name": "Background Remover — 1234Tools",
   "short_name": "Background Remover",
-  "description": "Remove a plain background from product photos and logos instantly, with an optional AI mode for complex subjects.",
+  "description": "Remove a plain background from product photos and logos instantly, by colour, in your browser.",
   "start_url": "/image/background-remover/?src=pwa",
   "scope": "/image/background-remover/",
   "display": "standalone",

@@ -32,7 +32,7 @@ window.PDF_TOOLS["pdf-organise"] = {
 "keywords": ["organise pdf","reorder pdf pages","rearrange pdf","pdf page organizer","move pdf pages"],
 "needsRenderer": true,
 "controls": [],
-"tips": ["Thumbnails need a rendering engine, downloaded once on first use and cached afterwards.","Drag thumbnails to reorder, use the rotate button on each, and the cross to mark a page for removal.","Nothing is changed until you save. The original file on your device is never modified.","If you already know the page numbers you want, the extract, delete and rotate tools do the same job without any download."],
-"faq": [{"q":"Is there a page limit?","a":"Thumbnails are rendered on demand as you scroll, so long documents work — but a document of several hundred pages will use noticeable memory. For very large files, the numeric tools are lighter."}]
+"tips": ["Thumbnails need a rendering engine, downloaded once on first use and cached afterwards.","Drag thumbnails to reorder, use the rotate button on each, and the cross to mark a page for removal. On a touch screen, drag by the grip in a card’s corner; from the keyboard, the ← and → buttons move a page one place and keep the focus, so you can press them again.","Nothing is changed until you save. The original file on your device is never modified.","If you already know the page numbers you want, the extract, delete and rotate tools do the same job without any download."],
+"faq": [{"q":"Is there a page limit?","a":"No fixed limit, but every page’s thumbnail is drawn when the file opens, so a document of several hundred pages takes a while to appear and uses noticeable memory. For very large files, the numeric tools are lighter."}]
 };
 })();

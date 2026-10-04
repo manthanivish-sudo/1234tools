@@ -512,7 +512,7 @@ const GUIDES = [
       }
     ],
     wrong: [
-      { name: 'Expecting bookmarks, forms and comments to survive', text: 'Merging rebuilds the document from its pages. Page content, images and page sizes come across; bookmarks, fillable form fields and annotations from the source files do not. Fill in and save any forms, and flatten or print to PDF anything with comments you need kept, before merging.' },
+      { name: 'Leaving out a page that links point at', text: 'Links, comments, fillable fields and each file’s bookmarks come across with their pages, but a link or a bookmark whose page you left out of the range is removed rather than pointed at the wrong page. If a contents page links to an appendix, take the appendix too, or those links go.' },
       { name: 'A late file at the bottom of the list', text: 'Files merge in the order listed, and a file added after the others goes to the end. The cover letter that arrived last ends up on page 30. Check the list order every time, not just the first time.' },
       { name: 'A page range that does not match the file order', text: 'Per-file ranges apply to the files in their current order. Reorder the files after typing “all | 1-3” and the range now applies to a different document — and because a range that overruns a file is trimmed rather than refused, the result can look plausible with the wrong pages in it. Set the order first, then the ranges, then count the pages.' },
       { name: 'Sending what the source files say about you', text: 'An author name, a company name, a template title or an internal file path can sit in a PDF’s metadata. The tool strips it by default; if you switched to keeping the first file’s metadata, look at what that is before sending.' },
@@ -522,7 +522,7 @@ const GUIDES = [
       { q: 'Are my PDFs uploaded?', a: 'No. The files are read, combined and rewritten by your own browser. Nothing is sent anywhere, which is why it is reasonable to use for contracts, statements and identity documents.' },
       { q: 'Can I merge just some pages from each PDF?', a: 'Yes. Give one range per file, separated by a vertical bar, in the same order as the file list — for example “1-2 | all | 3,5”. A file with no range goes in whole.' },
       { q: 'Is there a limit on the number of files?', a: 'No upload limit, because nothing is uploaded. Very large merges are limited by the memory of the device doing the work, so a phone will reach its limit sooner than a laptop.' },
-      { q: 'Why are my bookmarks missing?', a: 'Merging rebuilds the page tree from scratch, which is what makes the result reliably valid. Bookmarks from several documents with different structures are where mergers tend to produce broken files, so this one deliberately leaves them out.' },
+      { q: 'Do bookmarks, links and form fields survive?', a: 'Yes, with their pages. Each file’s bookmarks go under one entry named after the file; a link between two pages of one file lands on the same page in the merged document; fillable fields stay fillable, and a field whose name an earlier file already used is renamed with _2 so the two do not fill each other. Anything that pointed at a page you left out is removed.' },
       { q: 'How do I take pages out again afterwards?', a: 'Use Split PDF or Extract PDF Pages on the merged file, or go back to the source files and merge again with different ranges — which is usually quicker.' }
     ],
     tools: ['/pdf/merge-pdf/', '/pdf/split-pdf/', '/pdf/extract-pdf-pages/', '/pdf/rotate-pdf/', '/image/image-to-pdf/'],
@@ -578,14 +578,14 @@ const GUIDES = [
         name: 'Set the margin and image quality',
         body: [
           { p: 'The margin is in points; the default of 28 points is just under 10 millimetres, a white border that keeps the picture clear of where a printer cannot reach. Set it to 0 for edge-to-edge pages.' },
-          { p: 'The quality slider, 88 by default, decides how the pictures are compressed as they go in. Images are embedded as JPEG, which PDF can hold as it is, so there is no second layer of compression on top. Lowering quality makes the PDF smaller; bring it down gradually and check that the small print on a photographed document is still readable.' },
+          { p: 'JPEG photos go into the PDF as they are — PDF can hold JPEG data unchanged — so they lose nothing, and only their EXIF and GPS details are left out. PNGs and other images are encoded as JPEG at the quality slider’s setting, 88 by default. To make a PDF of large photos smaller, choose “Re-encode” for the JPEGs and lower the slider gradually, checking that the small print on a photographed document is still readable.' },
           { tool: '/image/image-to-pdf/', why: 'puts JPEG and PNG images into one PDF, one per page, with the page size, orientation, margin and quality you choose; nothing is uploaded' }
         ]
       },
       {
         name: 'Make it, then check the size and every page',
         body: [
-          { p: 'The tool page’s own example, made with the live tool, is a single photo of a receipt on A4: a one-page PDF of 427.1 KB. Phone photos are large, so ten of them can easily make a PDF of several megabytes. If a portal has a size limit, make the photos smaller before converting — resizing them to 1,600 pixels on the long side is usually still sharp on an A4 page — rather than squeezing the quality slider to the bottom.' },
+          { p: 'The tool page’s own example, made with the live tool, is a single photo of a receipt on A4: a 444.5 KB JPEG made a one-page PDF of 445.7 KB, the photo’s own bytes plus a little structure. Phone photos are large, so ten of them can easily make a PDF of several megabytes. If a portal has a size limit, make the photos smaller before converting — resizing them to 1,600 pixels on the long side is usually still sharp on an A4 page — rather than squeezing the quality slider to the bottom.' },
           { tool: '/image/image-compressor/', why: 'resizes and recompresses the photos before they go into the PDF, which is the reliable way to meet a size limit' },
           { p: 'Then open the PDF and look at every page at full size: is each one the right way up, readable, and in the right place? If several PDFs have to become one, merge them as a last step.' },
           { example: {
@@ -1825,9 +1825,9 @@ const GUIDES = [
         ]
       },
       {
-        name: 'Know what does not travel with the pages',
+        name: 'Know what travels with the pages',
         body: [
-          { p: 'Splitting builds each new file from the pages alone. The original’s bookmarks do not come across, and nor does its document information — the title and author fields — which is usually what you want for a piece that is going to someone else. Complete and save any form before splitting, because form fields may not keep working once the pages are separated.' },
+          { p: 'Each piece carries what belongs to its own pages: the bookmarks and links that point inside it, and the form fields whose boxes sit on its pages, still fillable. It also keeps the original’s document information — the title and author fields. Nothing from the other pages comes along, not even hidden in the file, so a piece can go to someone who must not see the rest.' },
           { p: 'If you only need a few pages as one file, a single range such as “3-5” does it, and so does Extract PDF Pages. To put pieces back together, or to combine pages from several files, use Merge PDF.' },
           { tool: '/pdf/extract-pdf-pages/', why: 'takes the pages you name out into one new file, when one file is all you need' }
         ]
@@ -1838,7 +1838,7 @@ const GUIDES = [
       { name: 'Commas where you meant bars', text: '“1-2, 3-7” is one file of seven pages, not two files. A comma joins pages into the same file; only the vertical bar starts a new one.' },
       { name: 'Trusting the file name to list the pages', text: 'The name shows the first and last page of each piece. A file made from “1, 3, 5” is called statement-p1-5.pdf but holds three pages, not five. Open it before assuming what is inside.' },
       { name: 'One file per page on a very long document', text: 'A 300-page file split page by page gives 300 files in a ZIP, which is rarely what anyone wants to receive. Above 500 files the tool refuses and asks you to narrow the split. Every N pages, or explicit ranges, usually fits the job better.' },
-      { name: 'Expecting bookmarks and the title to follow', text: 'Each piece is a new document built from its pages. Bookmarks and the original title and author are not carried over, so a piece sent on its own will not open with the original’s navigation.' }
+      { name: 'Sending a piece under the whole document’s title', text: 'Each piece keeps the original’s title and author, so a single chapter still calls itself the full report in a reader’s title bar. Retitle or strip it with the PDF Metadata Editor before it goes out.' }
     ],
     faq: [
       { q: 'Is my PDF uploaded?', a: 'No. The file is read and divided by your own browser, and the pieces are written there. Nothing is sent anywhere, which matters for statements, contracts and identity documents.' },

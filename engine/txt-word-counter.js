@@ -32,9 +32,15 @@ window.TEXT_TOOLS["word-counter"] = {
       const STOP = new Set(['the','a','an','and','or','but','of','to','in','on','at','for','with','is','are',
         'was','were','be','been','it','its','this','that','these','those','as','by','from','has','have','had',
         'i','you','he','she','they','we','my','your','not','no','so','if','then','than','there','their','will']);
+      /* A word for the density list keeps its letters, combining marks and
+         digits in any script, plus apostrophes and hyphens. Cutting to a–z
+         once turned café into caf and deleted Hindi words outright: a
+         Devanagari vowel sign is a combining mark (\p{M}), not a letter, so
+         it has to be kept too. NFC first, so a decomposed é matches é. */
+      const NOT_WORD = /[^\p{L}\p{M}\p{N}'-]/gu;
       const freq = {};
       words.forEach(w => {
-        const k = w.toLowerCase().replace(/[^a-z0-9'-]/g, '');
+        const k = w.normalize('NFC').toLowerCase().replace(NOT_WORD, '');
         if (!k) return;
         if (o.ignoreCommon === 'yes' && STOP.has(k)) return;
         freq[k] = (freq[k] || 0) + 1;
@@ -51,7 +57,10 @@ window.TEXT_TOOLS["word-counter"] = {
         output = `WORD${' '.repeat(Math.max(0, width - 4))}  COUNT   DENSITY\n${'─'.repeat(width + 18)}\n${output}`;
       }
 
-      const longest = words.reduce((a, b) => b.replace(/[^\w'-]/g, '').length > a.length ? b.replace(/[^\w'-]/g, '') : a, '');
+      const longest = words.reduce((a, b) => {
+        const c = b.normalize('NFC').replace(/[^\p{L}\p{M}\p{N}_'-]/gu, '');
+        return [...c].length > [...a].length ? c : a;
+      }, '');
 
       return {
         output,

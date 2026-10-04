@@ -56,20 +56,20 @@ module.exports = {
     whatTitle: 'What merging PDFs actually does',
     whatIs: [
       'A PDF is a catalogue of numbered objects. One is the page tree, the pages in order; others belong to the whole file: the outline (bookmarks), the form dictionary that makes boxes fillable, named destinations, page labels and XMP metadata.',
-      'Merging writes a new catalogue and decides which of those follow. Annotations (links, comments, the visible boxes of form fields) are stored on each page and can travel with it. Bookmarks and forms belong to a whole file, and two forms may both have a field called “name”, so they do not simply add up.'
+      'Merging writes a new catalogue and decides which of those follow. Annotations (links, comments, form-field boxes) live on each page and travel with it; bookmarks and forms belong to a whole file, and two forms may both have a field called “name”.'
     ],
     howItWorks: {
       text: 'The site’s own PDF engine, pdfcore, reads each file and writes the result; pdf.js only draws the preview.',
       points: [
         'Each chosen page is rebuilt from its contents, resources, page boxes, rotation and `Annots`; values it inherited from the old tree are resolved first.',
         'Streams are copied byte for byte, so images and fonts are never re-encoded.',
-        'The new catalogue holds only the page tree: no `/Outlines`, no `/AcroForm`, no named destinations, page labels or XMP.',
-        'A web link keeps working. A link to another page of the same file points at a copy of its old page, outside the new tree.',
-        'No Info dictionary is written unless you keep the first file’s Title, Author, Subject, Keywords, Creator, Producer and dates.'
+        'Each file’s `/Outlines` goes under a bookmark named after it, minus entries whose page was left out; fields with a box on a kept page join one `/AcroForm`, a taken name getting `_2`.',
+        'A link within one file is pointed at its page’s new place; a link to a page left out is removed.',
+        'No Info dictionary or XMP is written unless you keep the first file’s metadata.'
       ]
     },
     worked: {
-      text: 'A club’s two-page membership form (bookmarks, a fillable name field, a web link and a “back to the form” link; 2.4 KB) was merged with a one-page invoice from the site’s generator (3.1 KB), keeping the first file’s metadata. merged.pdf had 3 pages and 5.1 KB. The PDF Inspector counted 3 annotations, and the Title “Membership application” now covered an invoice too. pdf.js found no bookmarks and no form fields: the box was drawn, but nothing declared it a field. With the files swapped, the back link on page 3 jumped to page 1, the invoice.'
+      text: 'A club’s two-page membership form (bookmarks, a fillable name field, a web link and a “back to the form” link; 2.4 KB) was merged with a one-page invoice from the site’s generator (3.1 KB), keeping the first file’s metadata. merged.pdf had 3 pages and 5.4 KB. The PDF Inspector counted 3 annotations, and the Title “Membership application” now covered an invoice too. pdf.js found the field “fullname” still fillable and a bookmark per file, with “Application” and “Payment details” under the form’s. Swapped, the back link, now on page 3, jumped to page 2, the form’s first page.'
     },
     uses: [
       ['Board packs', 'Agenda, minutes and reports as one file.'],
@@ -77,32 +77,34 @@ module.exports = {
       ['Expense claims', 'Separate receipt PDFs joined behind the claim form.']
     ],
     mistakes: [
-      'Merging a form that still needs filling in. The output no longer declares its fields as a form, so fill and save them in a PDF reader first.',
-      'Trusting a contents page’s internal links after merging. Click through them before sending.'
+      'Merging two copies of one form. The second copy’s fields are renamed with _2, so software that reads answers by field name misses them.',
+      'Leaving out pages a contents page links to. Those links go with them, and the entries stop jumping anywhere.'
     ],
     faq: [
       { q: 'Does merging PDFs reduce quality?', a: 'No. Content, images and fonts are copied without being decoded again, so a scan looks exactly the same.' },
       { q: 'Can I merge password-protected PDFs?', a: 'No. An encrypted file is refused on opening; remove the password in the program that made it.' },
-      { q: 'Do hyperlinks still work after merging?', a: 'Web links do; links between pages of one document can land on the wrong page.' }
+      { q: 'Do hyperlinks still work after merging?', a: 'Yes. Web links are copied as they are; a link within one document lands on the same page of the merged file.' }
     ],
     related: { guides: ['/guides/merge-pdf-files/'] },
     runs: [
       /* Merge PDF Files, files added in this order, "Keep metadata from the first file", ranges "all".
          The output was then opened in /pdf/pdf-inspector/ and with the site's pdf.js
-         (getOutline, getFieldObjects, getAnnotations, getMetadata). */
+         (getOutline, getFieldObjects, getAnnotations, getMetadata). Re-measured on 2026-10-04 after the
+         writer stopped dropping bookmarks and forms and stopped copying pages through links. */
       {
         browser: {
           tool: '/pdf/merge-pdf/', files: [FORM, CLUB_INVOICE], controls: { keepMeta: 'first', ranges: 'all' }, pressed: 'Merge PDFs',
-          inspector: 'Pages 3, Annotations 3, Metadata: Title Membership application, Author Riverside Club',
-          pdfjs: 'getOutline() null, getFieldObjects() null, IsAcroFormPresent false; annotations: Link (URI) and Widget "fullname" on page 1, Link to page 1 on page 2'
+          result: 'merged.pdf, 3 pages, 5.4 KB (5,523 bytes)',
+          inspector: 'Pages 3, Objects 22, Annotations 3, Metadata: Title Membership application, Author Riverside Club',
+          pdfjs: 'getOutline(): "membership-form" { "Application", "Payment details" }, "membership-invoice"; getFieldObjects(): fullname; annotations: Link (URI) and Widget "fullname" on page 1, Link to page 1 on page 2'
         },
-        shown: ['2.4 KB', '3.1 KB', '3 pages', '5.1 KB', '3 annotations', 'Membership application']
+        shown: ['2.4 KB', '3.1 KB', '3 pages', '5.4 KB', '3 annotations', 'Membership application', 'fullname', 'Application', 'Payment details']
       },
       /* the same two files in the opposite order (invoice first), metadata stripped: pdf.js
-         resolves the form's internal link, now on page 3, to page 1 */
+         resolves the form's internal link, now on page 3, to page 2, the form's first page */
       {
-        browser: { tool: '/pdf/merge-pdf/', files: ['membership-invoice.pdf (as above)', 'membership-form.pdf (as above)'], controls: { keepMeta: 'strip' }, result: '3 pages, 5.0 KB', pdfjs: 'Link on page 3: destPage 1' },
-        shown: ['page 3', 'page 1']
+        browser: { tool: '/pdf/merge-pdf/', files: ['membership-invoice.pdf (as above)', 'membership-form.pdf (as above)'], controls: { keepMeta: 'strip' }, result: '3 pages, 5.3 KB', pdfjs: 'Link on page 3: destPage 2' },
+        shown: ['page 3', 'page 2']
       }
     ]
   },
@@ -111,18 +113,19 @@ module.exports = {
     whatTitle: 'What deleting a PDF page really removes',
     whatIs: [
       'Deleting pages means writing a new PDF whose page tree leaves them out; your original file is not touched.',
-      'A viewer shows only the pages listed in that tree, not every object stored. Whatever a kept page still points at, such as a shared font or an annotation that refers back to the old page tree, can carry other objects across with it.'
+      'A viewer shows only the pages listed in that tree, not every object stored. A kept page’s links and form fields can point back at other pages; a writer that follows them stores a deleted page unseen.'
     ],
     howItWorks: {
       text: 'Your list is inverted into the pages to keep and passed to the page assembler that merge and extract also use, in the site’s own PDF engine.',
       points: [
         'Spaces are ignored, “10-” runs to the end, “-3” means the first three, and numbers past the last page are skipped.',
         'A list that covers every page is refused, because a PDF must keep at least one.',
-        'Kept pages are rebuilt with their contents, resources, page boxes, rotation and annotations. Bookmarks, the form dictionary and the Info metadata are not written.'
+        'Kept pages are rebuilt with their contents, page boxes, rotation, annotations, and only the fonts and images their own drawing names.',
+        'A reference to another page is never followed: a link to a deleted page is dropped, one to a kept page repointed. Bookmarks and fields stay with their page.'
       ]
     },
     worked: {
-      text: 'A two-page membership form (2.4 KB) had page 2, the payment details, deleted. The output was 1 page and 2.0 KB, and the inspector showed Metadata: none, with the kept page’s 2 annotations intact. Yet searching the file’s bytes found the removed page’s account number, 55779911. The kept page’s annotations name their page, that page names its old parent, and the parent lists both pages, so the writer copied the removed one as an unlisted object. No viewer shows it; anyone reading the raw file can.'
+      text: 'A two-page membership form (2.4 KB) had page 2, the payment details, deleted. The output was 1 page and 1.7 KB; the inspector showed 12 objects, the kept page’s 2 annotations and the Title “Membership application”. A search of the file’s bytes for the removed page’s account number, 55779911, found nothing, and just 1 object in it is a page. pdf.js still lists the fillable name field and the “Application” bookmark; the “Payment details” bookmark went with its page.'
     },
     uses: [
       ['Blank backs from a duplex scan', 'List the even pages of a one-sided letter scanned double-sided.'],
@@ -130,20 +133,22 @@ module.exports = {
       ['Fax header sheets', 'Remove the transmission page from a fax received by email.']
     ],
     mistakes: [
-      'Using deletion to hide something confidential. As the example shows, a removed page can stay in the file when a kept page has links or form fields; export only the wanted pages from the source program instead.',
-      'Trimming a form you still have to submit. The output no longer declares the fields as a form, so send the form first.'
+      'Deleting a page to hide words on another one. Only whole pages go; text on a kept page stays in the file even under a black box drawn over it.',
+      'Forgetting the document’s Title. It is kept, so a trimmed copy still announces the full report’s name in a reader’s title bar; change it with the PDF Metadata tool.'
     ],
     faq: [
-      { q: 'Does deleting pages make a PDF smaller?', a: 'Usually, by about the share those pages held. Fonts and images shared with kept pages stay, and so can a page that a kept one links to.' },
+      { q: 'Does deleting pages make a PDF smaller?', a: 'Usually, by about the share those pages held. Fonts and images that kept pages still draw with stay; whatever only the deleted pages used goes.' },
       { q: 'How do I delete every other page?', a: 'List them, as “2, 4, 6, 8” for an eight-page scan; there is no step syntax.' },
       { q: 'Will the page numbers printed on the remaining pages change?', a: 'No. Printed numbers are part of each page’s drawing, so they keep their gaps; Add Page Numbers can stamp a fresh sequence.' }
     ],
     runs: [
       /* Delete PDF Pages on membership-form.pdf, pages "2", Delete pages; the output opened in
-         /pdf/pdf-inspector/; then its bytes searched (latin1) for "55779911" */
+         /pdf/pdf-inspector/ and with pdf.js; then its bytes searched (latin1) for "55779911".
+         Re-measured on 2026-10-04 after the writer stopped copying pages through links: the
+         run before that found the number in the bytes, and 3 page objects for 1 listed page. */
       {
-        browser: { tool: '/pdf/delete-pdf-pages/', file: FORM, controls: { pages: '2' }, pressed: 'Delete pages', result: 'form-trimmed.pdf, 1 page, 2.0 KB', inspector: 'Pages 1, Objects 13, Annotations 2, Metadata none', search: 'the bytes contain "55779911"; 3 objects of /Type /Page against 1 listed page' },
-        shown: ['2.4 KB', '1 page', '2.0 KB', 'Metadata: none', '2 annotations', '55779911']
+        browser: { tool: '/pdf/delete-pdf-pages/', file: FORM, controls: { pages: '2' }, pressed: 'Delete pages', result: 'membership-form-trimmed.pdf, 1 page, 1.7 KB (1,719 bytes)', inspector: 'Pages 1, Objects 12, Annotations 2, Metadata: Title Membership application, Author Riverside Club', search: 'the bytes do not contain "55779911"; 1 object of /Type /Page', pdfjs: 'getFieldObjects(): fullname; getOutline(): Application' },
+        shown: ['2.4 KB', '1 page', '1.7 KB', '12 objects', '2 annotations', 'Membership application', '55779911', '1 object', 'Application']
       }
     ]
   },
@@ -152,18 +157,18 @@ module.exports = {
     whatTitle: 'What extracting PDF pages means',
     whatIs: [
       'Extracting pages makes a new PDF from a selection of another one’s pages, in the order you choose: the opposite of deleting, and a split with a single output.',
-      'A page is drawing instructions plus the fonts and images it calls on, so it looks exactly as before. Anything defined for the whole document stays behind: bookmarks, the fillable form, page labels such as “iv”, and the title and author.'
+      'A page is drawing instructions plus the fonts and images it calls on, so it looks exactly as before. Of what belongs to the whole document, the title and author come along, as do bookmarks and form fields on the chosen pages; page labels such as “iv” stay behind.'
     ],
     howItWorks: {
       text: 'The selection becomes a list of page numbers, as typed unless you choose sorted or reversed, and the site’s own PDF engine writes a file from it.',
       points: [
         'A page may be listed more than once; the copies share one content stream, so repeats cost very little.',
         'Contents, fonts and images are copied without decoding, so text stays selectable and scans keep their sharpness.',
-        'Rotation, page boxes and annotations come across. The outline, the form dictionary and the Info metadata do not.'
+        'Rotation, page boxes and annotations come across, except a link to a page you did not take, which is dropped; nothing of an unchosen page is copied, even out of sight.'
       ]
     },
     worked: {
-      text: 'A three-page merged file, a two-page form followed by an invoice, was cut with “3, 1” left as listed: the invoice came first and the form’s opening page second, 2 pages and 4.8 KB. Sorted, the same selection came out as “1, 3”. Separately, a one-page invoice of 3.1 KB extracted as “1, 1, 1” gave three identical pages in 3.4 KB, since all three page entries share one content stream.'
+      text: 'A three-page merged file, a two-page form followed by an invoice, was cut with “3, 1” left as listed: the invoice came first and the form’s opening page second, 2 pages and 4.7 KB. Sorted, the same selection came out as “1, 3”. Separately, a one-page invoice of 3.1 KB extracted as “1, 1, 1” gave three identical pages in 3.5 KB, since all three page entries share one content stream.'
     },
     uses: [
       ['A chapter for a study group', 'Pages 45-62 of a course reader, not the whole volume.'],
@@ -180,12 +185,13 @@ module.exports = {
       { q: 'Why does my page selection give an error?', a: 'Each part must be a page or a range such as 3-5, 8- or -2, and a selection that matches no page, like “12-15” in a ten-page file, is refused.' }
     ],
     runs: [
-      /* Extract PDF Pages on the 3-page merged.pdf from the merge run (form pages 1-2, invoice page 3), pages "3, 1", order As listed */
-      { browser: { tool: '/pdf/extract-pdf-pages/', file: 'merged.pdf (3 pages, 5.1 KB, from the /pdf/merge-pdf/ run recorded on that page)', controls: { pages: '3, 1', order: 'asis' }, pressed: 'Extract pages' }, shown: ['2 pages', '4.8 KB'] },
-      /* the same, order Sorted by page number: Page order "1, 3", 4.8 KB */
+      /* Extract PDF Pages on the 3-page merged.pdf from the merge run (form pages 1-2, invoice page 3), pages "3, 1", order As listed.
+         Re-measured on 2026-10-04 with the fixed writer (before: 4.8 KB, and 3.4 KB for the invoice below). */
+      { browser: { tool: '/pdf/extract-pdf-pages/', file: 'merged.pdf (3 pages, 5.4 KB, from the /pdf/merge-pdf/ run recorded on that page)', controls: { pages: '3, 1', order: 'asis' }, pressed: 'Extract pages' }, shown: ['2 pages', '4.7 KB'] },
+      /* the same, order Sorted by page number: Page order "1, 3", 4.7 KB */
       { browser: { tool: '/pdf/extract-pdf-pages/', file: 'merged.pdf', controls: { pages: '3, 1', order: 'sorted' } }, shown: ['1, 3'] },
-      /* Extract PDF Pages on membership-invoice.pdf, pages "1, 1, 1", As listed: 3 pages, 3.4 KB */
-      { browser: { tool: '/pdf/extract-pdf-pages/', file: CLUB_INVOICE, controls: { pages: '1, 1, 1', order: 'asis' } }, shown: ['3.1 KB', '3.4 KB'] }
+      /* Extract PDF Pages on membership-invoice.pdf, pages "1, 1, 1", As listed: 3 pages, 3.5 KB */
+      { browser: { tool: '/pdf/extract-pdf-pages/', file: CLUB_INVOICE, controls: { pages: '1, 1, 1', order: 'asis' } }, shown: ['3.1 KB', '3.5 KB'] }
     ]
   },
 
@@ -246,11 +252,11 @@ module.exports = {
         'A wrap width breaks lines using Helvetica’s real character widths, and each line steps down 1.25 times the font size.',
         'Each chosen page gets a new content stream and a font entry, `MVRedit`, for Helvetica: one of the standard 14 fonts readers supply, so nothing is embedded.',
         'Text is mapped to WinAnsi, which covers Western European letters, curly quotes, dashes and €; most characters outside it become question marks.',
-        'The file is rebuilt by the assembler merge uses, which drops the bookmarks, the form dictionary, the title and the author.'
+        'The file is rebuilt by the assembler merge uses, which keeps the bookmarks, the form fields, the title and the author.'
       ]
     },
     worked: {
-      text: 'A two-page membership form with a real fillable name field (2.4 KB) got two items: “Sam Whitlock” at X 156, Y 698 on page 1, inside the field’s box, and “Paid by card on 1 October 2026” at X 72, Y 600 on page 2. The run showed 2 pages written to, 2 items placed and 2 lines written, and the file grew to 2.7 KB. pdf.js found both phrases as selectable text, but no form fields and no title: the name was drawn on the page, not entered into the field.'
+      text: 'A two-page membership form with a real fillable name field (2.4 KB) got two items: “Sam Whitlock” at X 156, Y 698 on page 1, inside the field’s box, and “Paid by card on 1 October 2026” at X 72, Y 600 on page 2. The run showed 2 pages written to, 2 items placed and 2 lines written, and the file grew to 3.0 KB. pdf.js found both phrases as selectable text, the Title and the field “fullname”, which stayed empty: the name was drawn over the box, not entered into it.'
     },
     uses: [
       ['Reference numbers', 'Stamp a purchase-order number on every page before filing.'],
@@ -258,22 +264,24 @@ module.exports = {
       ['Exhibit labels', 'Write “Exhibit B” at the top of each page for a court bundle.']
     ],
     mistakes: [
-      'Typing over a real form field. Fill a fillable PDF in a PDF reader: text added here sits on the page, and the output no longer declares a form.',
+      'Typing over a real form field. Fill a fillable PDF in a PDF reader: text added here sits on the page, over a field that stays empty.',
       'Expecting to delete the note later. It becomes part of the page drawing, so keep the original.'
     ],
     faq: [
       { q: 'Will the text I add be searchable?', a: 'Yes: it is real text, so it can be selected, searched and copied.' },
-      { q: 'Why did my PDF’s title disappear after adding text?', a: 'The edited file is written fresh and the Info dictionary is not copied. Set the title again with the PDF Metadata tool.' },
-      { q: 'Does adding text break a digital signature?', a: 'Yes. The file is rewritten from scratch, which invalidates a signature, and the rewrite drops the form dictionary that signature fields belong to.' }
+      { q: 'Will my PDF keep its title and bookmarks?', a: 'Yes. The edited file is written fresh, but its Title, Author, bookmarks and form fields are carried into it.' },
+      { q: 'Does adding text break a digital signature?', a: 'Yes. The file is rewritten from scratch, so the signed bytes no longer match and any signature in it stops validating.' }
     ],
     runs: [
       /* Add Text to a PDF on membership-form.pdf: item 1 typed (text "Sam Whitlock", size 12, X 156,
          Y 698, Pages 1, wrap 0) and banked with "Add as another item"; item 2 typed (text "Paid by
          card on 1 October 2026", size 12, X 72, Y 600, Pages 2); Add text pressed. The output was
-         read with pdf.js: getTextContent, getFieldObjects (null), getMetadata (no Title). */
+         read with pdf.js: getTextContent, getFieldObjects (fullname, value empty), getMetadata (Title
+         Membership application). Re-measured on 2026-10-04 with the fixed writer (before: 2.7 KB,
+         no fields, no Title). */
       {
-        browser: { tool: '/pdf/pdf-editor/', file: FORM, items: [{ text: 'Sam Whitlock', size: 12, x: 156, y: 698, pages: '1' }, { text: 'Paid by card on 1 October 2026', size: 12, x: 72, y: 600, pages: '2' }], pressed: ['Add as another item', 'Add text'], result: 'form-edited.pdf, 2 pages, 2.7 KB' },
-        shown: ['2.4 KB', '2 pages written to', '2 items placed', '2 lines written', '2.7 KB']
+        browser: { tool: '/pdf/pdf-editor/', file: FORM, items: [{ text: 'Sam Whitlock', size: 12, x: 156, y: 698, pages: '1' }, { text: 'Paid by card on 1 October 2026', size: 12, x: 72, y: 600, pages: '2' }], pressed: ['Add as another item', 'Add text'], result: 'form-edited.pdf, 2 pages, 3.0 KB (3,078 bytes)' },
+        shown: ['2.4 KB', '2 pages written to', '2 items placed', '2 lines written', '3.0 KB', 'fullname']
       }
     ]
   },
@@ -552,7 +560,7 @@ module.exports = {
       text: 'The site’s own parser, `pdfcore`, reads the fields; then a new file is built rather than the old one being edited.',
       points: [
         'The trailer’s `/Info` dictionary is decoded, UTF-16 strings included, and whichever of its eight standard fields are present appear in the stats.',
-        'Every page is copied into a fresh document with a new catalogue, so the XMP stream and whatever else hung off the old one is left behind.',
+        'Every page is copied into a fresh document with a new catalogue; bookmarks and form fields are rebuilt in it, while the XMP stream is left out in both modes.',
         'Remove writes no `/Info` at all. Set writes only Title, Author, Subject and Keywords; a box left empty is dropped, not kept.'
       ]
     },
@@ -571,7 +579,7 @@ module.exports = {
     faq: [
       { q: 'How can I see who created a PDF?', a: 'Press the button with either action: the stats list every field the original holds, Author, Creator and Producer included.' },
       { q: 'Can removed metadata be recovered from the new file?', a: 'No. The fields are not blanked, they are never written. The original on your disk, and copies already sent, still have them.' },
-      { q: 'Does stripping metadata also remove bookmarks?', a: 'Yes, as a side effect. The new catalogue has no outline and no form structure, so keep the original if you need either.' }
+      { q: 'Does stripping metadata also remove bookmarks?', a: 'No. Bookmarks and form fields are not metadata and are rebuilt in the new file; only the Info dictionary and the XMP stream are left out.' }
     ],
     runs: [
       /* Make the quotation (see the top of this file), open /pdf/pdf-metadata/, choose it, leave Action on "Remove all metadata", press "Apply to metadata"; save the download and note its byte size. */
@@ -593,12 +601,12 @@ module.exports = {
       text: 'This tool must draw your pages before you change anything, so the first press loads pdf.js, Mozilla’s open-source renderer, from this site’s own copy.',
       points: [
         'pdf.js renders every page onto a small canvas at 28% of its size; each card has buttons to move it earlier or later, turn it 90° clockwise or mark it for removal.',
-        'There is no dragging: a page moves one place per press, and each press redraws the whole grid.',
+        'A card can also be dragged, anywhere on it with a mouse or pen, by its grip with a finger. Each thumbnail is drawn once per turn, so moving pages does not redraw them.',
         'Build hands the kept pages, in grid order, to the site’s own writer, `pdfcore`. A turn is added to any `/Rotate` the page already had; nothing is re-rendered.'
       ]
     },
     worked: {
-      text: 'A 5-page, 18.7 KB test file (200 numbered lines from Text to PDF) had page 2 marked for removal, page 4 turned once and page 5 moved one place earlier. The grid read 1, 2, 3, 5, 4 and the stats 4 kept, 1 removed, 1 rotated. The built file had 4 pages in 14.4 KB, its last page the old page 4 on its side. Its extracted text still begins “Line 142”, because the turn is a flag, not a picture.'
+      text: 'A 5-page, 18.7 KB test file (200 numbered lines from Text to PDF) had page 2 marked for removal, page 4 turned once and page 5 moved one place earlier. The grid read 1, 2, 3, 5, 4 and the stats 4 kept, 1 removed, 1 rotated. The built file had 4 pages in 14.5 KB, its last page the old page 4 on its side. Its extracted text still begins “Line 142”, because the turn is a flag, not a picture.'
     },
     uses: [
       ['Fixing a merged pack', 'Put a covering letter back in front of its attachments.'],
@@ -606,18 +614,18 @@ module.exports = {
       ['Mixed scans', 'Turn the odd landscape page upright without touching the others.']
     ],
     mistakes: [
-      'Trying to drag a thumbnail. Moving page 30 to the front takes 29 presses of its arrow; for long moves, split the file and merge the parts in the new order.',
-      'Opening a document of several hundred pages. Every thumbnail is drawn on opening and again after each click, which costs memory and time.'
+      'Dragging a thumbnail with a finger on a phone. Touching the picture scrolls the page, as it should; drag by the grip in the card’s corner instead.',
+      'Opening a document of several hundred pages. Every thumbnail is drawn on opening, which costs memory and time.'
     ],
     faq: [
       { q: 'Does reordering PDF pages reduce quality?', a: 'No. The thumbnails are only for choosing; the saved file reuses each page’s content stream and images byte for byte.' },
       { q: 'Can I undo a page I marked for removal?', a: 'Yes. It stays in the grid, shown as dropped, with a restore button, until you build the file.' },
-      { q: 'Do bookmarks survive reorganising?', a: 'No. The rebuilt file has a new catalogue, so the outline and any form structure are not carried over.' }
+      { q: 'Do bookmarks survive reorganising?', a: 'Yes, where their page is kept: each points at its page’s new position, and one whose page you removed is dropped. Form fields follow their pages the same way.' }
     ],
     related: { guides: ['/guides/merge-pdf-files/'] },
     runs: [
-      /* Open /pdf/pdf-organise/, choose numbered-test-document.pdf (top of this file), press "Show the pages"; on card 2 press "Remove this page", on card 4 "Rotate 90°", on card 5 "Move earlier"; read the order and stats, press "Build reorganised PDF", save the download and read its text with pdf.js. */
-      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, 200 numbered lines', pressed: ['Show the pages', 'card 2: Remove this page', 'card 4: Rotate 90°', 'card 5: Move earlier', 'Build reorganised PDF'] }, shown: ['1, 2, 3, 5, 4', '4 kept, 1 removed, 1 rotated', '4 pages in 14.4 KB', 'Line 142'] }
+      /* Open /pdf/pdf-organise/, choose numbered-test-document.pdf (top of this file), press "Show the pages"; on card 2 press "Remove this page", on card 4 "Rotate 90°", on card 5 "Move earlier"; read the order and stats, press "Build reorganised PDF", save the download and read its text with pdf.js. Re-measured on 2026-10-04 with the fixed writer, which keeps the Title (before: 14.4 KB). */
+      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, 200 numbered lines', pressed: ['Show the pages', 'card 2: Remove this page', 'card 4: Rotate 90°', 'card 5: Move earlier', 'Build reorganised PDF'], result: '4 pages · 14.5 KB (14,822 bytes)' }, shown: ['1, 2, 3, 5, 4', '4 kept, 1 removed, 1 rotated', '4 pages in 14.5 KB', 'Line 142'] }
     ]
   },
 
@@ -632,12 +640,12 @@ module.exports = {
       points: [
         'The label is built from the format, start and skip; in the “of” formats the total counts only the pages that get a number.',
         'Helvetica’s published character widths measure it, so a centred number sits in the middle.',
-        'The spot is worked out on the page’s unrotated `MediaBox`; `/Rotate` and any crop box are ignored.',
+        'The spot is worked out on the part of the page a reader sees, its crop box, turned as its `/Rotate` turns it, so the number reads upright.',
         'Nothing is flattened: the label is real text in a font resource named `MVRpn`, and the original text stays searchable.'
       ]
     },
     worked: {
-      text: 'A 5-page report whose first page is a cover (the test file from Text to PDF, its own numbering off) was numbered in the “Page 1 of 10” style, skipping 1 page and starting at 1. Pages numbered: 4. The output’s text reads “Page 1 of 4” on the second sheet and “Page 4 of 4” on the last, each 32 points above the bottom edge, centred: the total counts numbered pages only. The file grew from 18.7 KB to 19.8 KB.'
+      text: 'A 5-page report whose first page is a cover (the test file from Text to PDF, its own numbering off) was numbered in the “Page 1 of 10” style, skipping 1 page and starting at 1. Pages numbered: 4. The output’s text reads “Page 1 of 4” on the second sheet and “Page 4 of 4” on the last, each 32 points above the bottom edge, centred: the total counts numbered pages only. The file grew from 18.7 KB to 19.9 KB.'
     },
     uses: [
       ['Dissertations', 'Number the body of a thesis exported without page numbers, leaving the title page bare.'],
@@ -645,7 +653,7 @@ module.exports = {
       ['Scanned agreements', 'Number a scanned contract so cross-references can point at a page.']
     ],
     mistakes: [
-      'Numbering pages that carry a /Rotate value. On a page turned 90°, a bottom-centre number lands halfway up the left edge, reading sideways; check such pages in the preview.',
+      'Picking a corner the document already prints in. A letterhead footer or a running reference there will sit under the number; check one page of the result, then choose a clear spot.',
       'Using a long header at a large size. It is centred but never wrapped, so a line wider than the page runs off both sides.'
     ],
     faq: [
@@ -654,8 +662,8 @@ module.exports = {
       { q: 'Will my viewer’s page counter match the printed numbers?', a: 'Not when you skip pages. No page labels are written, so the viewer still calls the cover page 1.' }
     ],
     runs: [
-      /* Open /pdf/pdf-page-numbers/, set Format "Page 1 of 10", Position "Bottom centre", Start numbering at 1, Skip first N pages 1, choose numbered-test-document.pdf (top of this file), press "Add page numbers"; read the output's text and positions with pdf.js (label baseline at y = 32 pt). */
-      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, Text to PDF with numbers off', format: 'page-n-of-t (label "Page 1 of 10")', position: 'bc', start: 1, skip: 1, size: 10, pressed: 'Add page numbers' }, shown: ['Pages numbered: 4', 'Page 1 of 4', 'Page 4 of 4', '32 points', '19.8 KB'] }
+      /* Open /pdf/pdf-page-numbers/, set Format "Page 1 of 10", Position "Bottom centre", Start numbering at 1, Skip first N pages 1, choose numbered-test-document.pdf (top of this file), press "Add page numbers"; read the output's text and positions with pdf.js (label baseline at y = 32 pt). Re-measured on 2026-10-04 with the fixed writer, which keeps the Title (before: 19.8 KB). */
+      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, Text to PDF with numbers off', format: 'page-n-of-t (label "Page 1 of 10")', position: 'bc', start: 1, skip: 1, size: 10, pressed: 'Add page numbers', result: '5 pages · 19.9 KB (20,427 bytes)' }, shown: ['Pages numbered: 4', 'Page 1 of 4', 'Page 4 of 4', '32 points', '19.9 KB'] }
     ]
   },
 
@@ -663,18 +671,18 @@ module.exports = {
     whatTitle: 'What “signing” a PDF here actually does',
     whatIs: [
       'Two different things are called signing a PDF. A visible signature is marks on the page, such as a typed name or a scanned autograph. A cryptographic digital signature is a field stored in the file, with a /ByteRange entry and a certificate-based signature over those bytes, so any later change can be detected.',
-      'This tool makes the first kind only, as typed Helvetica text with an optional date; there is no drawing pad and no image. Whether that is acceptable depends on the law that applies and what the other party accepts.'
+      'This tool makes the first kind only, drawn on a pad or typed, with an optional date. Whether that is acceptable depends on the law and on the other party.'
     ],
     howItWorks: {
       text: 'The signature is drawn into the page by the site’s own PDF writer; no keys or certificates are involved.',
       points: [
-        'pdf.js, from this site’s own copy, draws the page so a click sets X and Y, in points from the bottom left.',
-        'Each selected page gets an extra content stream drawing your text in 11-point black Helvetica, plus “Date:” and your device’s date 14 points lower if the date is on.',
+        'pdf.js, from this site’s own copy, draws the page as a viewer shows it, so a click sets X and Y in points from its bottom left.',
+        'Each selected page gets an extra content stream: a drawing as black vector strokes, your text in 11-point Helvetica, and “Date:” with your device’s date 14 points lower if the date is on.',
         'No `/Sig` field, `/ByteRange` or certificate is written, so the file holds nothing a signature validator could check.'
       ]
     },
     worked: {
-      text: 'The 2-page quotation from this site’s Quotation tool was signed “For Acme Interiors: R. Shah”, date on, X 330, Y 150, Pages “last”. The stats read 2 pages, 1 signed, and the file went from 11,463 to 11,620 bytes. Page 2’s extracted text holds the name as an ordinary line and “Date: 4 October 2026” 14 points below it, so any editor can select or delete it. A byte search of the output finds no /ByteRange and no /Sig entry.'
+      text: 'The 2-page quotation from this site’s Quotation tool was signed “For Acme Interiors: R. Shah”, date on, X 330, Y 150, Pages “last”. The stats read 2 pages, 1 signed, and the file went from 11,463 to 11,884 bytes. Page 2’s extracted text holds the name as an ordinary line and “Date: 4 October 2026” 14 points below it, so any editor can select or delete it. A byte search of the output finds no /ByteRange and no /Sig entry.'
     },
     uses: [
       ['Internal approvals', 'Mark an expense claim approved by a named manager.'],
@@ -682,7 +690,7 @@ module.exports = {
       ['Delivery notes', 'Add “Received by” and a name before filing.']
     ],
     mistakes: [
-      'Setting X to 0 for the very left edge. A zero is read as empty and the text lands at the default 400 points; use 1 or more.',
+      'Drawing a tiny scribble in a corner of the pad. It is enlarged to the width you set and comes out coarse; draw across the pad.',
       'Signing with letters the standard font lacks. Ł, ś or Devanagari print as “?”, so check the preview first.'
     ],
     faq: [
@@ -692,7 +700,8 @@ module.exports = {
     ],
     runs: [
       /* Open /pdf/pdf-signature/, set Signature text "For Acme Interiors: R. Shah", Include date Yes, X 330, Y 150, Pages "last", choose quotation-qt-0001.pdf (top of this file), press "Add signature" on 4 October 2026; save the download, read page 2's text with pdf.js and search its bytes for /ByteRange and /Sig. */
-      { browser: { input: 'quotation-qt-0001.pdf, 2 pages, 11,463 bytes', signatureText: 'For Acme Interiors: R. Shah', date: 'yes', x: 330, y: 150, pages: 'last', pressed: 'Add signature', runDate: '2026-10-04' }, shown: ['2 pages, 1 signed', '11,620 bytes', 'Date: 4 October 2026', '14 points below'] }
+      /* Re-measured on 2026-10-04 with the fixed writer, which keeps the Title and isolates the page's own drawing state in q … Q (before: 11,620 bytes). */
+      { browser: { input: 'quotation-qt-0001.pdf, 2 pages, 11,463 bytes', signatureText: 'For Acme Interiors: R. Shah', date: 'yes', x: 330, y: 150, pages: 'last', pressed: 'Add signature', runDate: '2026-10-04' }, shown: ['2 pages, 1 signed', '11,884 bytes', 'Date: 4 October 2026', '14 points below'] }
     ]
   },
 
@@ -742,12 +751,12 @@ module.exports = {
     term: 'a purchase order',
     whatIs: [
       'A purchase order, or PO, is the buyer’s written order to a supplier: what is wanted, how many, at what price, where and by when, and on what terms. Its number lets invoices and delivery papers be matched back to it.',
-      'This tool adds the supplier’s quotation reference, freight lines, GST or UK VAT, an Incoterms 2020 term and an inspection clause. It lays out and adds up what you enter; whether the terms suit your contract is your call.'
+      'This tool adds the supplier’s quotation reference, freight lines, GST or UK VAT, an Incoterms 2020 term and an inspection clause. It lays out and adds up what you enter; the terms are your call.'
     ],
     howItWorks: {
       text: 'The order is calculated and typeset by the page’s script, then written by `createPDF` in the site’s PDF engine.',
       points: [
-        'Item lines are read from the right: rate, an optional unit word, quantity, then a 4–8 digit HSN/SAC code; the rest is the description.',
+        'Item lines are read from the right: rate, an optional unit word, quantity, then a 4–8 digit HSN/SAC code; the rest is the description. A comma between digits, with no space, groups thousands.',
         'Charges join the discounted goods total as the taxable value, and one VAT or GST rate is applied to it, split into CGST and SGST for an intra-state order.',
         'Amounts stay unrounded; only the committed value follows the Round the total setting.'
       ]
@@ -756,17 +765,17 @@ module.exports = {
       text: 'A UK print studio orders paper: 40 reams at £38.50 and 25 at £29.90 less 5%, a £65.00 pallet delivery, VAT 20%, no rounding, DAP Harlow CM20 2BN. The tool shows goods of £2,287.50, a discount of -£37.38, taxable value £2,315.13, VAT £463.02 and a committed value of £2,778.15 on 2 pages. Note the penny: the printed lines add up to £2,315.12, but the discount is really £37.375 and the tool keeps the half-penny. With the named place emptied, the term prints as “DAP — Delivered At Place” and a warning says the Incoterm is incomplete.'
     },
     uses: [
-      ['Site and project orders', 'Put the price, address and date agreed by phone in writing.'],
+      ['Site and project orders', 'Put a price agreed by phone in writing.'],
       ['Small firms', 'Number every order so invoices can be matched to it.'],
       ['Imports', 'State an Incoterm with its place so carriage and risk are settled.']
     ],
     mistakes: [
-      'Typing thousands separators inside an item line. The line is split at commas, so “Chequered plate, 38, Sqm, 2,650” is silently read as 2 at 650; write 2650.',
+      'Typing an item line with no spaces. In “Plate,2,2,650” no comma shows which groups thousands, so the tool names both readings, 2 at 650 and 2 at 2650, and stops.',
       'Expecting the GST rate box to change VAT. The UK VAT choices use fixed rates of 20%, 5% and 0%.'
     ],
     faq: [
       { q: 'What does DAP mean on a purchase order?', a: 'Delivered At Place, an Incoterms 2020 rule: the supplier brings the goods to the named place, ready for unloading, while import clearance and duties stay with the buyer.' },
-      { q: 'Is a PO number the same as an invoice number?', a: 'No. The PO number is the buyer’s; the supplier’s invoice has its own number and should quote the PO number.' },
+      { q: 'Is a PO number the same as an invoice number?', a: 'No. The PO number is the buyer’s; the supplier’s invoice has its own number and should quote the PO’s.' },
       { q: 'Can I make a purchase order in pounds or euros?', a: 'Yes. The £ and € signs print, and the value in words uses pounds and pence or euros and cents.' }
     ],
     related: { guides: ['/guides/calculate-gst/'] },
@@ -774,7 +783,9 @@ module.exports = {
       /* Open /pdf/purchase-order-pdf/, set the fields below (all others left at their defaults), press "Create PDF". The note is a hand check of the printed lines, not a tool figure. */
       { browser: { fields: { buyerName: 'Harlow Print Studio Ltd', buyerAddress: 'Unit 4, Edinburgh Way\nHarlow CM20 2BN', buyerTax: '', buyerContact: '01279 000000  ·  orders@harlowprint.example', supplierName: 'Fenwick Paper Supplies Ltd', supplierAddress: '22 Mill Lane\nChelmsford CM1 1AA', supplierTax: '', number: 'HPS-PO-118', date: '2026-10-04', quoteRef: 'FPS-Q-2291', requiredBy: '2026-10-16', sameAddress: 'same', items: 'SRA3 silk paper 170 gsm, 40, Ream, 38.50\nSRA3 uncoated 120 gsm, 25, Ream, 29.90, 5%', charges: 'Pallet delivery, 65', currency: 'GBP', taxMode: 'vat20', rounding: 'none', incoterm: 'DAP', incotermPlace: 'Harlow CM20 2BN' }, pressed: 'Create PDF', note: 'printed lines: 2,287.50 - 37.38 + 65.00 = 2,315.12; unrounded discount 747.50 x 5% = 37.375' }, shown: ['£2,287.50', '-£37.38', '£65.00', '£2,315.13', '£463.02', '£2,778.15', '2 pages'] },
       /* The same with "Named place or port" emptied. */
-      { browser: { fields: 'as above, incotermPlace: ""', pressed: 'Create PDF' }, shown: ['DAP — Delivered At Place', 'Incoterm is incomplete'] }
+      { browser: { fields: 'as above, incotermPlace: ""', pressed: 'Create PDF' }, shown: ['DAP — Delivered At Place', 'Incoterm is incomplete'] },
+      /* The mistakes: fields as in the first run, items "Plate,2,2,650"; the message names both readings and no PDF is made. With "Plate, 2, 2,650" instead: Goods and services £5,300.00. */
+      { browser: { fields: 'as above, items: "Plate,2,2,650"', pressed: 'Create PDF', message: '“Plate,2,2,650” can be read 2 ways: 2 at 650 for “Plate, 2”, or 2 at 2650 for “Plate”.' }, shown: ['both readings', '2 at 650', '2 at 2650'] }
     ]
   },
 
@@ -788,7 +799,8 @@ module.exports = {
       text: 'The arithmetic and layout come from the page’s script, and the file is written by `createPDF` from the site’s own engine.',
       points: [
         'One tax rate covers the document: intra-state GST prints CGST and SGST at half each, inter-state prints IGST, and UK VAT uses 20%, 5% or 0%.',
-        'If the two GSTINs begin with different two-digit state codes while intra-state is chosen, the tool warns but prints your choice.'
+        'If the two GSTINs begin with different two-digit state codes while intra-state is chosen, the tool warns but prints your choice.',
+        'Rates may keep their commas if a space follows each separating comma: typed as 4,85,000, 2,650 and 64,500, the order below still totals Rs 7,63,671.00.'
       ]
     },
     worked: {
@@ -797,10 +809,10 @@ module.exports = {
     uses: [
       ['Contractors', 'Quote materials and labour with HSN and SAC codes.'],
       ['Advance payment', 'Send a proforma so a new buyer can pay before supply.'],
-      ['UK trades', 'Price a kitchen fit in pounds with VAT at 20% on its own line.']
+      ['UK trades', 'Price a kitchen fit in pounds with VAT at 20%.']
     ],
     mistakes: [
-      'Writing a rate as 4,85,000 inside an item line. Commas separate the fields, so the number is taken apart and the line mispriced without any error; type 485000.',
+      'Writing a decimal with a comma, as 2,65. It fits neither 2,650 nor 4,85,000 grouping, so the tool stops and asks; use a point.',
       'Choosing a valid-until date before the quotation date. The tool warns that the offer has expired, yet still produces it.'
     ],
     faq: [
@@ -813,7 +825,11 @@ module.exports = {
       /* Open /pdf/quotation-pdf/, set the fields below (all others at their defaults), press "Create PDF": the GSTIN warning appears. Then taxMode gst-inter, Create PDF; then also rounding none. */
       { browser: { fields: { docType: 'Proforma Invoice', fromName: 'Kaveri Steel Fabricators', fromAddress: 'Plot 9, KIADB Industrial Area\nHubballi 580030, Karnataka', fromTax: '29ABCDE1234F1Z5', fromPhone: '', fromEmail: '', fromWeb: '', bank: '', toName: 'Deccan Warehousing Pvt Ltd', toAddress: 'Gat 112, Chakan MIDC\nPune 410501, Maharashtra', toTax: '27AAACD5678K1Z2', number: 'PI-0042', date: '2026-10-04', validUntil: '2026-10-19', items: 'Mezzanine floor steel structure, 7308, 1, Lot, 485000\nChequered plate 6 mm, 7208, 38, Sqm, 2650, 3%\nInstallation, 995468, 1, Lot, 64500', taxMode: 'gst-intra', taxRate: 18, rounding: 'near' }, pressed: 'Create PDF' }, shown: ['usually mean IGST'] },
       { browser: { fields: 'as above, taxMode: gst-inter', pressed: 'Create PDF' }, shown: ['Rs 6,47,179.00', 'IGST 18%', 'Rs 1,16,492.22', 'Rs 7,63,671.00', '2 pages', '15 days', 'not a tax invoice'] },
-      { browser: { fields: 'as above, taxMode: gst-inter, rounding: none', pressed: 'Create PDF' }, shown: ['Rs 7,63,671.22'] }
+      { browser: { fields: 'as above, taxMode: gst-inter, rounding: none', pressed: 'Create PDF' }, shown: ['Rs 7,63,671.22'] },
+      /* 2026-10-04, after the line reader learned thousands separators: gst-inter, rounding near, the three rates typed "4,85,000", "2,650" and "64,500" */
+      { browser: { fields: 'as above, taxMode: gst-inter, items with the rates written 4,85,000, 2,650 and 64,500', pressed: 'Create PDF' }, shown: ['4,85,000', '2,650', '64,500', 'Rs 7,63,671.00'] },
+      /* items "Chequered plate 6 mm, 7208, 38, Sqm, 2,65": the run stops with a message and no PDF */
+      { browser: { fields: 'as above, items: "Chequered plate 6 mm, 7208, 38, Sqm, 2,65"', pressed: 'Create PDF', message: 'In “Chequered plate 6 mm, 7208, 38, Sqm, 2,65”, “2,65” is not a number with thousands separators (2,650 or 1,25,000), so it is not clear what it means.' }, shown: ['2,65', 'stops and asks'] }
     ]
   },
 
@@ -832,7 +848,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'The 5-page, 18.7 KB test document (200 numbered lines from Text to PDF) had pages 2-3 turned 90° clockwise. The stats show 2 pages rotated; the output, 19,114 bytes against 19,177 in, contains exactly two “/Rotate 90” entries, and all five content streams match the original byte for byte. Running it again with page 2 at 270 brought that page back upright: 90 + 270 is 360, so the entry disappears, while page 3 still reports 90 and opens as an 841.89 × 595.28 landscape view.'
+      text: 'The 5-page, 18.7 KB test document (200 numbered lines from Text to PDF) had pages 2-3 turned 90° clockwise. The stats show 2 pages rotated; the output, 19,199 bytes against 19,177 in, contains exactly two “/Rotate 90” entries, and all five content streams match the original byte for byte. Running it again with page 2 at 270 brought that page back upright: 90 + 270 is 360, so the entry disappears, while page 3 still reports 90 and opens as an 841.89 × 595.28 landscape view.'
     },
     uses: [
       ['Sideways phone scans', 'Turn receipts a scanning app saved on their side before uploading them.'],
@@ -841,17 +857,17 @@ module.exports = {
     ],
     mistakes: [
       'Typing the pages as “2 to 3” or “p2”. Use digits with hyphens and commas, such as 2-3, 7; anything else stops with an error naming the part it could not read.',
-      'Expecting the document properties to survive. The rotated copy is a rebuilt file without the original’s Title or Author; set them again with the metadata tool.',
+      'Leaving Pages on “all” when only some pages are sideways. Every page turns, the upright ones included; list just the sideways pages.',
       'Picking 90° when the page leans the other way. A page whose top points to the right needs 270, the anticlockwise option.'
     ],
     faq: [
       { q: 'How do I rotate just one page of a PDF?', a: 'Type that page’s number in Pages, choose the angle and press Rotate pages; every other page is copied unchanged.' },
       { q: 'Can I rotate a PDF page by 45 degrees?', a: 'No. The rotation entry accepts only multiples of 90.' },
-      { q: 'Does rotating make the PDF bigger?', a: 'Barely. Each turned page gains one short entry; in the run above the output was even slightly smaller, because the document’s Title was not carried over.' }
+      { q: 'Does rotating make the PDF bigger?', a: 'Barely. Each turned page gains one short entry; in the run above the file grew by 22 bytes, its Title carried over unchanged.' }
     ],
     runs: [
-      /* Open /pdf/rotate-pdf/, Rotate by "90° clockwise", Pages "2-3", choose numbered-test-document.pdf (top of this file), press "Rotate pages"; count "/Rotate 90" in the download and compare its stream bodies with the input's. */
-      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, 19,177 bytes, 200 numbered lines', angle: '90', pages: '2-3', pressed: 'Rotate pages' }, shown: ['2 pages rotated', '19,114 bytes', 'two “/Rotate 90” entries'] },
+      /* Open /pdf/rotate-pdf/, Rotate by "90° clockwise", Pages "2-3", choose numbered-test-document.pdf (top of this file), press "Rotate pages"; count "/Rotate 90" in the download and compare its stream bodies with the input's. Re-measured on 2026-10-04 with the fixed writer, which keeps the Title (before: 19,114 bytes). */
+      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, 19,177 bytes, 200 numbered lines', angle: '90', pages: '2-3', pressed: 'Rotate pages' }, shown: ['2 pages rotated', '19,199 bytes', 'two “/Rotate 90” entries', '22 bytes'] },
       /* Load that download, Rotate by "90° anticlockwise" (270), Pages "2"; read each page's rotation and view size with pdf.js. */
       { browser: { input: 'the rotated download above', angle: '270', pages: '2', note: '90 + 270 = 360' }, shown: ['still reports 90', '841.89 × 595.28'] }
     ]
@@ -867,13 +883,13 @@ module.exports = {
       text: 'The grouping is decided first; then each group goes through the site’s own PDF writer as a separate document.',
       points: [
         'In half gives the extra page of an odd count to the first file. Explicit ranges are separated by |, so a page may appear in two outputs.',
-        'For each group, `pdfcore` copies every page with the objects it refers to (content, fonts, images, annotations), renumbered into a fresh file.',
-        'Title, Author and other document information, bookmarks and form structure stay behind; parts are named after the source with their page span, such as `-p3-4`.',
-        'Up to 500 files can be made at once, and two or more can be saved together as a ZIP built in the page.'
+        'For each group, `pdfcore` copies every page with the objects it refers to (content, fonts, images, annotations) into a fresh file, but never another page: a link out of the group is dropped.',
+        'Each part keeps the Title and Author, and the bookmarks and form fields of its own pages; parts are named after the source with their page span, such as `-p3-4`.',
+        'Up to 500 files can be made at once, and saved together as one ZIP.'
       ]
     },
     worked: {
-      text: 'The 5-page test document from Text to PDF (18.7 KB, titled “Numbered test document”) split Every 2 pages gave 3 files: pages 1-2 and 3-4 at 9,072 bytes each, and page 5, holding only lines 189 to 200, at 1,633 bytes, 19.3 KB in total. Split in half it gave pages 1-3 and 4-5, 19.0 KB together. Loading the first part into the metadata tool found none: the title stayed behind in the original.'
+      text: 'The 5-page test document from Text to PDF (18.7 KB, titled “Numbered test document”) split Every 2 pages gave 3 files: pages 1-2 and 3-4 at 9,155 bytes each, and page 5, holding only lines 189 to 200, at 1,716 bytes, 19.6 KB in total. Split in half it gave pages 1-3 and 4-5, 19.1 KB together. Loading the first part into the metadata tool found 1 field, the Title “Numbered test document”, which every part carries.'
     },
     uses: [
       ['Separating a scanned batch', 'Turn one long scan of two-page forms into one file per form.'],
@@ -882,19 +898,19 @@ module.exports = {
     ],
     mistakes: [
       'Putting commas between ranges. A comma joins pages into the same group, so “1-3, 4-6” makes a single six-page file; separate groups with |.',
-      'Splitting a fillable form and expecting the fields to work. The form structure is not carried over, so fill and save the form first.'
+      'Sending a part under the original’s title. A reader shows the whole report’s name for one chapter; retitle it in the metadata tool.'
     ],
     faq: [
       { q: 'How do I split a PDF into single pages?', a: 'Choose One file per page. A 30-page file gives 30 PDFs named from -p1 to -p30, downloadable together as a ZIP.' },
-      { q: 'Can I split a PDF by file size?', a: 'Not directly. Split by page count, look at the size listed for each part and adjust N; pages with photographs weigh far more than text.' },
+      { q: 'Can I split a PDF by file size?', a: 'Not directly. Split by page count, check each part’s size and adjust N; photographs weigh far more than text.' },
       { q: 'Can one page go into two of the split files?', a: 'Yes, with explicit ranges: “1-3 | 3-5” puts page 3 in both files.' }
     ],
     related: { guides: ['/guides/merge-pdf-files/'] },
     runs: [
-      /* Open /pdf/split-pdf/, Split "Every N pages", Pages per file 2, choose numbered-test-document.pdf (top of this file), press "Split PDF"; note each file's byte size. Then Split "In half". Then load the p1-2 part into /pdf/pdf-metadata/ and press its button. */
-      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, title "Numbered test document", page 5 holds lines 189-200', mode: 'every', n: 2, pressed: 'Split PDF' }, shown: ['9,072 bytes', '1,633 bytes', '19.3 KB'] },
-      { browser: { input: 'numbered-test-document.pdf', mode: 'half' }, shown: ['19.0 KB'] },
-      { browser: { input: 'numbered-test-document-p1-2.pdf from the first run, opened in /pdf/pdf-metadata/', action: 'strip' }, shown: ['found none'] }
+      /* Open /pdf/split-pdf/, Split "Every N pages", Pages per file 2, choose numbered-test-document.pdf (top of this file), press "Split PDF"; note each file's byte size. Then Split "In half". Then load the p1-2 part into /pdf/pdf-metadata/ and press its button. Re-measured on 2026-10-04 with the fixed writer, which keeps the Title in every part (before: 9,072 and 1,633 bytes, 19.3 KB and 19.0 KB, and no metadata in the part). */
+      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, title "Numbered test document", page 5 holds lines 189-200', mode: 'every', n: 2, pressed: 'Split PDF' }, shown: ['9,155 bytes', '1,716 bytes', '19.6 KB'] },
+      { browser: { input: 'numbered-test-document.pdf', mode: 'half' }, shown: ['19.1 KB'] },
+      { browser: { input: 'numbered-test-document-p1-2.pdf from the first run, opened in /pdf/pdf-metadata/', action: 'strip' }, shown: ['1 field', 'Numbered test document'] }
     ]
   },
 
@@ -957,7 +973,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'The 5-page test document (18.7 KB, 200 numbered lines from Text to PDF) was stamped DRAFT at 60 pt, 45°, 15% opacity. Centred, it gained 5 copies, one a page, and grew to 20.7 KB. Tiled, the output was 58.1 KB, about three times the size, because the file holds 385 separate “(DRAFT) Tj” commands, 77 a page, most of them starting off the visible sheet. Every page’s extracted text includes “DRAFT”, so search and copy pick it up too.'
+      text: 'The 5-page test document (18.7 KB, 200 numbered lines from Text to PDF) was stamped DRAFT at 60 pt, 45°, 15% opacity. Centred, it gained 5 copies, one a page, and grew to 20.9 KB. Tiled, the output was 58.3 KB, about three times the size, because the file holds 385 separate “(DRAFT) Tj” commands, 77 a page, most of them starting off the visible sheet. Every page’s extracted text includes “DRAFT”, so search and copy pick it up too.'
     },
     uses: [
       ['Drafts for comment', 'Stamp DRAFT so nobody mistakes a proposal for the agreed version.'],
@@ -965,7 +981,7 @@ module.exports = {
       ['File copies', 'Add PAID, VOID or COPY to an invoice kept for the records.']
     ],
     mistakes: [
-      'Stamping a page that carries a /Rotate value. The angle and centre are worked out on the unrotated page, so on a page turned 90° a horizontal watermark shows as vertical.',
+      'Choosing Bottom of the page for a document with a printed footer. The text sits just above the bottom edge, on top of the footer; use Centre or Tiled there.',
       'Using a long phrase at a large size with Centre. The text is neither wrapped nor shrunk, so “CONFIDENTIAL – NOT FOR DISTRIBUTION” at 60 pt runs off both edges.'
     ],
     faq: [
@@ -975,8 +991,9 @@ module.exports = {
     ],
     runs: [
       /* Open /pdf/watermark-pdf/, Watermark text DRAFT, Font size 60, Angle 45° diagonal, Opacity 15, Position Centre, Pages all, choose numbered-test-document.pdf (top of this file), press "Add watermark"; count "(DRAFT) Tj" in the download. Then Position "Tiled across the page"; read the page text back with pdf.js. */
-      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, 200 numbered lines', text: 'DRAFT', size: 60, angle: '45', opacity: 15, position: 'center', pages: 'all', pressed: 'Add watermark' }, shown: ['5 copies', '20.7 KB'] },
-      { browser: { input: 'numbered-test-document.pdf', text: 'DRAFT', size: 60, angle: '45', opacity: 15, position: 'tile', pages: 'all' }, shown: ['58.1 KB', '385', '77 a page'] }
+      /* Re-measured on 2026-10-04 with the fixed writer, which keeps the Title (before: 20.7 KB and 58.1 KB). */
+      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, 200 numbered lines', text: 'DRAFT', size: 60, angle: '45', opacity: 15, position: 'center', pages: 'all', pressed: 'Add watermark' }, shown: ['5 copies', '20.9 KB'] },
+      { browser: { input: 'numbered-test-document.pdf', text: 'DRAFT', size: 60, angle: '45', opacity: 15, position: 'tile', pages: 'all' }, shown: ['58.3 KB', '385', '77 a page'] }
     ]
   }
 };
