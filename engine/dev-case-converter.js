@@ -263,7 +263,7 @@ window.DEV_TOOLS["case-converter"] = {
       const lines = text.split('\n').map(conv);
       return { output: lines.join('\n'), stats: [['Lines converted', String(lines.filter(Boolean).length)]] };
     },
-"tips": ["Acronyms are split sensibly: HTTPResponse becomes HTTP Response, not H T T P Response.","Conventions by language: camelCase for JavaScript and Java, snake_case for Python and SQL, kebab-case for CSS and URLs, PascalCase for types and components.","Title Case here keeps short joining words lowercase unless they start the line, matching most style guides."],
+"tips": ["Acronyms are split sensibly: HTTPResponse becomes http_response in snake_case and HttpResponse in PascalCase, not h_t_t_p_response.","Conventions by language: camelCase for JavaScript and Java, snake_case for Python and SQL, kebab-case for CSS and URLs, PascalCase for types and components.","Title Case here keeps short joining words lowercase unless they start the line, matching most style guides."],
 "faq": [{"q":"Why does converting twice not always return the original?","a":"Case conversion is lossy. Turning \"user_ID\" into camelCase gives \"userId\", and the original capitalisation of ID cannot be recovered from that."}]
 };
 })();

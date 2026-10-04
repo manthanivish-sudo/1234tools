@@ -1391,6 +1391,7 @@
 <url><loc>https://www.1234tools.com/hi/for/small-business/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/hi/for/students/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/hi/for/teachers/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/showcase/</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
 <url><loc>https://www.1234tools.com/embed/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
 <url><loc>https://www.1234tools.com/learn/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/learn/ai-trading/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>

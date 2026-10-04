@@ -16,11 +16,14 @@
  *     rebuilt by a sanitiser, so hostile HTML handed to it runs nothing,
  *     fetches nothing and keeps no attribute but a checked href (browser)
  *  2  Favicon generator: "Download all as ZIP" writes a ZIP that the system
- *     unzip lists and that holds all eight PNGs at their sizes, CRCs right;
+ *     unzip lists and that holds all eight PNGs at their sizes, CRCs right,
+ *     plus a favicon.ico of the 16/32/48 PNGs and a site.webmanifest;
  *     the page without its zip.js tag still works (lazy load), and the old
  *     renderer on that page reproduces the failure (browser)
  *  3  Cron: 1-7, 5-7, 0-7, 7, mon-sun and @weekly
- *  4  Meta tags: "Tags generated" is the number of tags in the output
+ *  4  Meta tags: "Tags generated" is the number of tags in the output, and
+ *     a blank field writes no tag (robots.txt and Lorem ipsum follow it:
+ *     Block all is two lines; the English list is 54 distinct words)
  *  5  .htaccess: the four https x www combinations, run through a small
  *     mod_rewrite model: every start URL ends where it should in one hop,
  *     and https stays off when Force HTTPS is No
@@ -113,7 +116,9 @@ function auditHtml(html) {
     const attrs = m[3];
     if (m[1]) { if (attrs.trim()) problems.push('closing tag with attributes: ' + m[0]); continue; }
     const rest = attrs.replace(/\s+([a-zA-Z-]+)="([^"<>]*)"/g, (all, name, value) => {
-      if (!ALLOWED_ATTR.has(name.toLowerCase())) problems.push('attribute ' + name + ' in ' + m[0]);
+      // a table column's alignment, and only these three exact values
+      const align = name === 'style' && /^t[hd]$/i.test(m[2]) && /^text-align:(left|center|right)$/.test(value);
+      if (!ALLOWED_ATTR.has(name.toLowerCase()) && !align) problems.push('attribute ' + name + ' in ' + m[0]);
       if (name === 'href' || name === 'src') {
         const v = decodeAttr(value).replace(/[\u0000-\u0020\u007f-\u009f]/g, '').toLowerCase();
         const sch = /^([a-z][a-z0-9+.\-]*):/.exec(v);
@@ -147,7 +152,12 @@ function testMarkdown() {
     ['raw img onerror', '<img src=x onerror=alert(1)>'],
     ['raw HTML inside a heading', '# <b onclick="alert(1)">hi</b>'],
     ['link inside a list', '- [x](javascript:alert(1))'],
-    ['full document wrap', '[x](javascript:alert(1)) and [y](x"onmouseover="alert(1))']
+    ['full document wrap', '[x](javascript:alert(1)) and [y](x"onmouseover="alert(1))'],
+    ['script and img onerror in table cells', '| <script>alert(1)</script> | <img src=x onerror=alert(1)> |\n|---|---|\n| a | b |'],
+    ['javascript: link and image in a table cell', '| a | b |\n|---|---|\n| [x](javascript:alert(1)) | ![y](javascript:alert(1)) |'],
+    ['quotes breaking out of a link in a table cell', '| a | b |\n|:-:|--:|\n| [x](x"onmouseover="alert(1)) | ![z" onerror="alert(1)](https://example.com/a.png) |'],
+    ['attribute text in a divider row', '| a |\n|---" onmouseover="alert(1)|\n| b |'],
+    ['escaped pipes around hostile text', '| a \\| <b onclick="alert(1)"> | c |\n|---|---|\n| d\\|" onclick="x | e |']
   ];
   for (const [name, text] of PAYLOADS) {
     for (const wrap of ['fragment', 'document']) {
@@ -186,6 +196,29 @@ function testMarkdown() {
     const out = md(input).output;
     check(out.indexOf(want) >= 0, 'still converted: ' + input, out);
   }
+  // pipe tables, GitHub style
+  const TABLES = [
+    ['| a | b |\n|---|---|\n| 1 | 2 |', '<table>\n<thead>\n<tr><th>a</th><th>b</th></tr>\n</thead>\n<tbody>\n<tr><td>1</td><td>2</td></tr>\n</tbody>\n</table>'],
+    ['a | b\n--- | ---\n1 | 2', '<table>\n<thead>\n<tr><th>a</th><th>b</th></tr>\n</thead>\n<tbody>\n<tr><td>1</td><td>2</td></tr>\n</tbody>\n</table>'],
+    ['| L | C | R | N |\n|:--|:-:|--:|---|\n| 1 | 2 | 3 | 4 |', '<tr><td style="text-align:left">1</td><td style="text-align:center">2</td><td style="text-align:right">3</td><td>4</td></tr>'],
+    ['| a | b |\n|---|---|\n| only |\n| 1 | 2 | 3 |', '<tr><td>only</td><td></td></tr>\n<tr><td>1</td><td>2</td></tr>'],
+    ['| a \\| b | c |\n|---|---|\n| `x \\| y` | **z** |', '<tr><th>a | b</th><th>c</th></tr>\n</thead>\n<tbody>\n<tr><td><code>x | y</code></td><td><strong>z</strong></td></tr>'],
+    ['| a |\n|---|', '<table>\n<thead>\n<tr><th>a</th></tr>\n</thead>\n</table>'],
+    ['p\n| a |\n|---|\n| 1 |\nrow\n\nq', '<p>p</p>\n<table>\n<thead>\n<tr><th>a</th></tr>\n</thead>\n<tbody>\n<tr><td>1</td></tr>\n<tr><td>row</td></tr>\n</tbody>\n</table>\n<p>q</p>'],
+    ['| a |\n|---|\n| 1 |\n> quote', '</table>\n<blockquote>'],
+    ['| a | b |\n|---|\n| 1 | 2 |', '<p>| a | b | |---| | 1 | 2 |</p>'],
+    ['```\n| a | b |\n|---|---|\n```', '<pre><code>| a | b |\n|---|---|</code></pre>']
+  ];
+  for (const [input, want] of TABLES) {
+    const out = md(input).output;
+    check(out.indexOf(want) >= 0, 'table: ' + JSON.stringify(input), out);
+  }
+  const hostile = md('| <script>alert(1)</script> | x |\n|:-:|---|\n| [a](javascript:alert(1)) | [b](x"onclick="alert(1)) |').output;
+  check(/<th style="text-align:center">&lt;script&gt;alert\(1\)&lt;\/script&gt;<\/th>/.test(hostile) && /<td style="text-align:center">a<\/td>/.test(hostile) &&
+    /<a href="x&quot;onclick=&quot;alert\(1\)" rel="noopener noreferrer">b<\/a>/.test(hostile), 'hostile cells: escaped as text, javascript: dropped, quotes escaped', hostile);
+  const divider = md('| a |\n|:---" onmouseover="x|\n| b |').output;
+  check(!/<table/.test(divider) && !/style=/.test(divider), 'a divider row carrying anything but :---: is not a table, so no alignment is copied from it', divider);
+  check(stat(md('| a |\n|---|\n\n| b |\n|---|'), 'Tables') === '2', 'the Tables stat counts tables');
   // the sample and the published example are unchanged by the fix
   const ex = examples()['/developer/markdown-preview/'];
   if (ex) {
@@ -264,6 +297,64 @@ function testMeta() {
   if (old) {
     const o = generate(old.DEV_TOOLS['meta-tag-generator'], {});
     check(stat(o, 'Tags generated') === '16', 'BEFORE: reproduced — it said 16 for 14 tags', stat(o, 'Tags generated'));
+  }
+  // blank fields write no tags, and the count follows
+  const BLANK = { title: '', desc: '   ', url: '', image: '', site: '' };
+  const noImg = generate(spec, { image: '' });
+  const nTags = (o) => (o.match(/<(title|meta|link)\b/g) || []).length;
+  check(nTags(noImg.output) === 12 && stat(noImg, 'Tags generated') === '12' && !/og:image|twitter:image/.test(noImg.output),
+    'no share image: the two image tags are left out and "Tags generated" says 12', stat(noImg, 'Tags generated'));
+  check(/twitter:card" content="summary"/.test(noImg.output), 'no share image: the Twitter card is summary, not summary_large_image');
+  const blank = generate(spec, BLANK);
+  check(!/content=""|href=""|<title><\/title>|content="\s+"/.test(blank.output) && stat(blank, 'Tags generated') === String(nTags(blank.output)),
+    'every text field blank: no empty tag, and the count (' + stat(blank, 'Tags generated') + ') is the tags written', blank.output);
+  check(/Page title, Canonical URL, Share image URL/.test(blank.warn || ''), 'every text field blank: the warning names the fields Open Graph needs', blank.warn);
+  check(stat(generate(spec, { title: '  Spaced  ' }), 'Title length') === '6 — quite short' && /<title>Spaced<\/title>/.test(generate(spec, { title: '  Spaced  ' }).output),
+    'surrounding spaces are trimmed from what is written and from the length');
+  if (old) {
+    const o = generate(old.DEV_TOOLS['meta-tag-generator'], BLANK);
+    check(/<title><\/title>/.test(o.output) && /og:image" content=""/.test(o.output), 'BEFORE: reproduced — blank fields wrote <title></title> and content=""');
+  }
+}
+
+/* ======================================================================
+   robots.txt: Block all is two lines
+   ====================================================================== */
+
+function testRobots() {
+  section('robots.txt: Block all crawlers is two lines and nothing more');
+  const spec = current('engine/dev-robots-txt-generator.js').DEV_TOOLS['robots-txt-generator'];
+  const F = { policy: 'block', aibots: 'block', sitemap: 'https://shop.example/sitemap.xml', disallow: '/admin/' };
+  const r = generate(spec, F);
+  check(r.output === 'User-agent: *\nDisallow: /\n', 'block, with a sitemap, exclusions and AI blocking set: exactly User-agent: * / Disallow: /', JSON.stringify(r.output));
+  check(/sitemap/i.test(r.warn || ''), 'the warning says the sitemap and AI settings are left out', r.warn);
+  const c = generate(spec, { policy: 'custom', aibots: 'block', sitemap: 'https://shop.example/sitemap.xml' });
+  check(/\nSitemap: https:\/\/shop\.example\/sitemap\.xml\n$/.test(c.output) && /User-agent: GPTBot/.test(c.output), 'the other policies still write the sitemap and the AI groups');
+  check(!/Sitemap/.test(generate(spec, { policy: 'allow', sitemap: '   ' }).output), 'a sitemap field of spaces writes no Sitemap line');
+  const old = before('engine/dev-robots-txt-generator.js');
+  if (old) {
+    const o = generate(old.DEV_TOOLS['robots-txt-generator'], F).output;
+    check(/Sitemap:/.test(o) && /GPTBot/.test(o), 'BEFORE: reproduced — Block all also wrote a Sitemap line and seven AI groups');
+  }
+}
+
+/* ======================================================================
+   Lorem ipsum: 54 distinct English words, none twice
+   ====================================================================== */
+
+function testLorem() {
+  section('Lorem ipsum: the English list is 54 distinct words');
+  const spec = current('engine/dev-lorem-ipsum.js').DEV_TOOLS['lorem-ipsum'];
+  const seen = new Set(), counts = {};
+  for (let i = 0; i < 200; i++) generate(spec, { unit: 'words', count: 100, flavour: 'english' }).output.split(' ').forEach((w) => { seen.add(w); counts[w] = (counts[w] || 0) + 1; });
+  check(seen.size === 54, '20,000 English words use 54 distinct words', seen.size);
+  // with no word listed twice, "the" is drawn about as often as any other word (expected 370 each)
+  check(counts.the < 520 && counts.parts < 520, '"the" and "parts" are not drawn twice as often as the rest', 'the ' + counts.the + ', parts ' + counts.parts);
+  const old = before('engine/dev-lorem-ipsum.js');
+  if (old) {
+    const s2 = new Set();
+    for (let i = 0; i < 200; i++) generate(old.DEV_TOOLS['lorem-ipsum'], { unit: 'words', count: 100, flavour: 'english' }).output.split(' ').forEach((w) => s2.add(w));
+    check(s2.size === 54, 'BEFORE: reproduced — the old list also gave 54 distinct words, not the 59 the page said', s2.size);
   }
 }
 
@@ -785,6 +876,8 @@ async function testPreview(browser, watch) {
     const bad = [];
     box.querySelectorAll('*').forEach((n) => {
       for (const a of n.attributes) {
+        // th and td may carry one of three alignments, and nothing else in style
+        if (a.name === 'style' && /^t[hd]$/.test(n.localName) && /^text-align: (left|center|right);$/.test(a.value)) continue;
         if (['href', 'target', 'rel', 'class', 'title', 'referrerpolicy'].indexOf(a.name) < 0) bad.push(n.localName + '[' + a.name + ']');
       }
       if (/^(script|iframe|svg|img|style|object|embed|form|details|math)$/.test(n.localName)) bad.push('<' + n.localName + '>');
@@ -793,7 +886,9 @@ async function testPreview(browser, watch) {
     return { bad, html: box.innerHTML, links: box.querySelectorAll('a[href]').length, text: box.textContent };
   });
   const PAYLOADS = ['[x](javascript:alert(1))', '[x](" onmouseover="alert(1))', '[x](x"onmouseover="alert(1))', '![x](javascript:alert(1))',
-    '![x" onerror="alert(1)](https://example.com/a.png)', '<script>alert(1)</script>', '<img src=x onerror=alert(1)>', '[x](data:text/html,<script>alert(1)</script>)'];
+    '![x" onerror="alert(1)](https://example.com/a.png)', '<script>alert(1)</script>', '<img src=x onerror=alert(1)>', '[x](data:text/html,<script>alert(1)</script>)',
+    '| <script>alert(1)</script> | <img src=x onerror=alert(1)> |\n|:-:|--:|\n| [x](javascript:alert(1)) | [y](x"onmouseover="alert(1)) |\n| ![z" onerror="alert(1)](https://example.com/a.png) | <svg onload=alert(1)> |',
+    '| a |\n|---" onmouseover="alert(1)|\n| b |'];
   for (const p of PAYLOADS) {
     await type(p);
     const a = await audit();
@@ -813,6 +908,31 @@ async function testPreview(browser, watch) {
   check(link.href === 'https://example.com/x' && link.target === '_blank' && /noopener/.test(link.rel) && /noreferrer/.test(link.rel), 'a preview link opens in a new tab with no opener or referrer', JSON.stringify(link));
   check(/Image: logo \(not loaded in the preview\)/.test(good.text) && !requests.some((u) => /logo\.png/.test(u)), 'a picture is a labelled box and is never fetched', good.text);
 
+  // a pipe table renders, aligned, with borders that show in both themes
+  await type('| Plan | Price | Note |\n|:-----|------:|:----:|\n| Pro | £9 | **best** |\n| Free | £0 |');
+  const tbl = await audit();
+  const look = await page.evaluate(() => {
+    const res = {};
+    for (const theme of ['dark', 'light']) {
+      document.documentElement.setAttribute('data-theme', theme);
+      const td = document.querySelector('.md-preview td'), box = document.querySelector('.md-preview');
+      const cs = getComputedStyle(td);
+      res[theme] = { width: cs.borderTopWidth, style: cs.borderTopStyle, color: cs.borderTopColor, bg: getComputedStyle(box).backgroundColor };
+    }
+    const cells = Array.prototype.map.call(document.querySelectorAll('.md-preview tr'), (tr) => Array.prototype.map.call(tr.children, (c) => c.localName + ':' + getComputedStyle(c).textAlign + ':' + c.textContent).join(' '));
+    return { res, cells };
+  });
+  check(tbl.bad.length === 0 && /<table>\s*<thead>\s*<tr><th style="text-align: left;">Plan<\/th>/.test(tbl.html) && /<strong>best<\/strong>/.test(tbl.html),
+    'a pipe table renders in the preview with its alignment and inline formatting', tbl.bad.join(' ') + ' | ' + tbl.html);
+  check(look.cells.join(' / ') === 'th:left:Plan th:right:Price th:center:Note / td:left:Pro td:right:£9 td:center:best / td:left:Free td:right:£0 td:center:',
+    'columns align left, right and centre; a short row is padded', look.cells.join(' / '));
+  const lum = (c) => { const v = (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number).map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  for (const theme of ['dark', 'light']) {
+    const r = look.res[theme];
+    check(r.width === '1px' && r.style === 'solid' && ratio(r.color, r.bg) >= 3, 'table borders are solid and at least 3:1 against the preview in the ' + theme + ' theme', JSON.stringify(r) + ' ratio ' + ratio(r.color, r.bg).toFixed(2));
+  }
+
   // the sanitiser itself, handed hostile HTML directly
   const marker = BASE_URL + '/__dev-fixes-pixel.png';
   await page.evaluate((px) => {
@@ -825,6 +945,8 @@ async function testPreview(browser, watch) {
         '<svg onload="alert(5)"><circle r="1"/></svg><iframe src="javascript:alert(6)"></iframe>' +
         '<p style="color:red" onmouseover="alert(7)" id="p7">para</p>' +
         '<details open ontoggle="alert(8)"><summary>s</summary>d</details>' +
+        '<table><tr><td style="background:url(' + px + ')" onclick="alert(15)">c</td><td style="text-align:center;color:red">d</td>' +
+        '<th style="text-align:left" onmouseover="alert(16)">e</th></tr></table>' +
         '<a href="  java&#x09;script:alert(9)">tab</a><a href="https://example.com/ok">ok</a>' +
         '<math><mtext><table><mglyph><style><img src=x onerror=alert(10)>' +
         '<form action="javascript:alert(11)"><button>b</button></form><object data="javascript:alert(12)"></object>' +
@@ -848,7 +970,7 @@ async function testPreview(browser, watch) {
 
 /* ---------- 2  the favicon ZIP ---------- */
 
-async function makeIcon(page) {
+async function makeIcon(page, cards) {
   await page.evaluate(async () => {
     const c = document.createElement('canvas');
     c.width = 300; c.height = 200;
@@ -863,7 +985,8 @@ async function makeIcon(page) {
     input.files = dt.files;
     input.dispatchEvent(new Event('change', { bubbles: true }));
   });
-  await page.waitForFunction(() => document.querySelectorAll('.file-card').length === 8, { timeout: 15000 });
+  /* eight PNG cards, then favicon.ico and site.webmanifest */
+  await page.waitForFunction((n) => document.querySelectorAll('.file-card').length === n, { timeout: 15000 }, cards || 10);
 }
 
 async function zipDownload(page, dir) {
@@ -887,6 +1010,7 @@ async function testFavicon(browser, watch) {
   section('2  Favicon generator: Download all as ZIP');
   const SIZES = { 'favicon-16x16.png': 16, 'favicon-32x32.png': 32, 'favicon-48x48.png': 48, 'favicon-96x96.png': 96,
     'apple-touch-icon.png': 180, 'icon-192.png': 192, 'icon-512.png': 512, 'icon-maskable-512.png': 512 };
+  const ALL = Object.keys(SIZES).concat(['favicon.ico', 'site.webmanifest']).sort();
   const html = fs.readFileSync(path.join(ROOT, 'developer/favicon-generator/index.html'), 'utf8');
   check(/<script src="\/engine\/zip\.js" defer><\/script>/.test(html), 'the favicon page loads engine/zip.js');
 
@@ -895,10 +1019,26 @@ async function testFavicon(browser, watch) {
     let entries;
     try { entries = readZip(buf); } catch (e) { check(false, label + ': the ZIP parses', e.message); return; }
     const names = entries.map((e) => e.name).sort();
-    check(JSON.stringify(names) === JSON.stringify(Object.keys(SIZES).sort()), label + ': the ZIP holds all eight icons', names.join(', '));
+    check(JSON.stringify(names) === JSON.stringify(ALL), label + ': the ZIP holds the eight icons, favicon.ico and site.webmanifest', names.join(', '));
     let allOk = true;
     const bad = [];
-    entries.forEach((e) => {
+    const ico = entries.find((e) => e.name === 'favicon.ico');
+    const man = entries.find((e) => e.name === 'site.webmanifest');
+    if (ico) {
+      const d = ico.data, n = d.readUInt16LE(4), got = [];
+      for (let i = 0; i < n; i++) {
+        const at = 6 + 16 * i, len = d.readUInt32LE(at + 8), off = d.readUInt32LE(at + 12), png = d.slice(off, off + len);
+        got.push(d[at] + 'x' + d[at + 1] + (png.slice(0, 8).toString('hex') === '89504e470d0a1a0a' && png.readUInt32BE(16) === d[at] ? '' : ' (not a matching PNG)'));
+      }
+      check(ico.crcOk && d.readUInt16LE(0) === 0 && d.readUInt16LE(2) === 1 && got.join(',') === '16x16,32x32,48x48', label + ': favicon.ico is an icon file holding 16, 32 and 48 px PNGs', got.join(','));
+    }
+    if (man) {
+      let m = null;
+      try { m = JSON.parse(man.data.toString('utf8')); } catch (e) { /* null */ }
+      check(m && m.icons.map((i) => i.src + ' ' + i.sizes + (i.purpose ? ' ' + i.purpose : '')).join(', ') === '/icon-192.png 192x192, /icon-512.png 512x512, /icon-maskable-512.png 512x512 maskable',
+        label + ': site.webmanifest lists the 192, 512 and maskable icons', man.data.toString('utf8').slice(0, 300));
+    }
+    entries.filter((e) => SIZES[e.name]).forEach((e) => {
       const png = e.data.slice(0, 8).toString('hex') === '89504e470d0a1a0a';
       const w = e.data.readUInt32BE(16), hgt = e.data.readUInt32BE(20);
       if (!e.crcOk || !png || w !== SIZES[e.name] || hgt !== SIZES[e.name]) { allOk = false; bad.push(e.name + ' ' + w + 'x' + hgt + ' crc ' + e.crcOk); }
@@ -911,7 +1051,7 @@ async function testFavicon(browser, watch) {
     if (tarExe) {
       const r = spawnSync(tarExe, ['-tf', zipPath], { encoding: 'utf8' });
       const listed = (r.stdout || '').trim().split(/\r?\n/).sort();
-      check(r.status === 0 && JSON.stringify(listed) === JSON.stringify(Object.keys(SIZES).sort()), label + ': Windows tar (libarchive) lists the same eight files', r.stderr || listed.join(', '));
+      check(r.status === 0 && JSON.stringify(listed) === JSON.stringify(ALL), label + ': Windows tar (libarchive) lists the same ten files', r.stderr || listed.join(', '));
     } else {
       const r = spawnSync('unzip', ['-l', zipPath], { encoding: 'utf8' });
       if (r.status === null) skip(label + ': no system unzip to cross-check with');
@@ -952,7 +1092,7 @@ async function testFavicon(browser, watch) {
       rewrite: (u) => strip(u) || (/\/engine\/render-dev\.js$/.test(u) ? { status: 200, contentType: 'application/javascript; charset=utf-8', body: oldRender } : null)
     });
     await page.goto(BASE_URL + '/developer/favicon-generator/', { waitUntil: 'load' });
-    await makeIcon(page);
+    await makeIcon(page, 8);
     const buf = await zipDownload(page, path.join(OUT, 'zip-before'));
     check(buf === null && errors.some((e) => /zip\.js not loaded/.test(e)), 'BEFORE: reproduced — the old page gave no ZIP and "zip.js not loaded"', errors.join(' | '));
     await page.close();
@@ -1052,6 +1192,8 @@ async function testQrBrowser(browser, watch) {
   testMarkdown();
   testCron();
   testMeta();
+  testRobots();
+  testLorem();
   testHtaccess();
   testPasswords();
   testWords();

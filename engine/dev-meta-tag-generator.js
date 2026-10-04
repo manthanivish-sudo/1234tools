@@ -234,37 +234,45 @@ window.DEV_TOOLS["meta-tag-generator"] = {
 "fields": [{"key":"title","label":"Page title","type":"text","default":"Free Online Tools — MVR IT Services"},{"key":"desc","label":"Meta description","type":"textarea","default":"Over a thousand free calculators and converters that run entirely in your browser. No sign-up, works offline."},{"key":"url","label":"Canonical URL","type":"text","default":"https://www.mvritservices.com/tools/"},{"key":"image","label":"Share image URL","type":"text","default":"https://www.mvritservices.com/assets/img/og-image.png"},{"key":"site","label":"Site name","type":"text","default":"MVR IT Services"},{"key":"locale","label":"Locale","type":"select","default":"en_GB","options":[{"value":"en_GB","label":"en_GB"},{"value":"en_US","label":"en_US"},{"value":"en_IN","label":"en_IN"}]}],
 "generate": (f) => {
       const e = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      /* a blank field (or only spaces) writes no tag at all, never content="" */
+      const has = k => String(f[k] || '').trim() !== '';
+      const v = k => e(String(f[k]).trim());
+      const img = has('image');
       const lines = [
-        `<title>${e(f.title)}</title>`,
-        `<meta name="description" content="${e(f.desc)}">`,
-        `<link rel="canonical" href="${e(f.url)}">`,
+        has('title') && `<title>${v('title')}</title>`,
+        has('desc') && `<meta name="description" content="${v('desc')}">`,
+        has('url') && `<link rel="canonical" href="${v('url')}">`,
         ``,
         `<!-- Open Graph -->`,
         `<meta property="og:type" content="website">`,
-        `<meta property="og:site_name" content="${e(f.site)}">`,
-        `<meta property="og:locale" content="${e(f.locale)}">`,
-        `<meta property="og:title" content="${e(f.title)}">`,
-        `<meta property="og:description" content="${e(f.desc)}">`,
-        `<meta property="og:url" content="${e(f.url)}">`,
-        `<meta property="og:image" content="${e(f.image)}">`,
+        has('site') && `<meta property="og:site_name" content="${v('site')}">`,
+        has('locale') && `<meta property="og:locale" content="${v('locale')}">`,
+        has('title') && `<meta property="og:title" content="${v('title')}">`,
+        has('desc') && `<meta property="og:description" content="${v('desc')}">`,
+        has('url') && `<meta property="og:url" content="${v('url')}">`,
+        img && `<meta property="og:image" content="${v('image')}">`,
         ``,
         `<!-- Twitter -->`,
-        `<meta name="twitter:card" content="summary_large_image">`,
-        `<meta name="twitter:title" content="${e(f.title)}">`,
-        `<meta name="twitter:description" content="${e(f.desc)}">`,
-        `<meta name="twitter:image" content="${e(f.image)}">`
-      ];
+        /* without an image the large-image card has nothing to show */
+        `<meta name="twitter:card" content="${img ? 'summary_large_image' : 'summary'}">`,
+        has('title') && `<meta name="twitter:title" content="${v('title')}">`,
+        has('desc') && `<meta name="twitter:description" content="${v('desc')}">`,
+        img && `<meta name="twitter:image" content="${v('image')}">`
+      ].filter(l => l !== false);
+      if (lines[0] === '') lines.shift();
       const out = lines.join('\n');
       // the tags actually written: every line that opens an element, not the comments or blanks
       const tagCount = lines.filter(l => /^<[a-z]/i.test(l)).length;
 
-      const tl = (f.title || '').length, dl = (f.desc || '').length;
+      const tl = String(f.title || '').trim().length, dl = String(f.desc || '').trim().length;
       const stats = [
         ['Title length', `${tl} — ${tl === 0 ? 'empty' : tl > 60 ? 'may be truncated' : tl < 30 ? 'quite short' : 'good'}`],
         ['Description length', `${dl} — ${dl === 0 ? 'empty' : dl > 160 ? 'may be truncated' : dl < 70 ? 'quite short' : 'good'}`],
         ['Tags generated', String(tagCount)]
       ];
-      return { output: out, stats };
+      const missing = [['title', 'Page title'], ['url', 'Canonical URL'], ['image', 'Share image URL']].filter(m => !has(m[0])).map(m => m[1]);
+      const warn = missing.length ? 'Blank fields write no tags. Open Graph needs og:title, og:url and og:image, so fill in: ' + missing.join(', ') + '.' : '';
+      return { output: out, stats, warn };
     },
 "tips": ["Google typically shows around 60 characters of a title and 155–160 of a description. Longer is not penalised, it is just cut off.","Share images want 1200×630 pixels. Anything much smaller renders as a small square thumbnail instead of a banner.","og:url should be the canonical, absolute address — including https:// and the www you actually serve."],
 "faq": [{"q":"Do meta keywords still matter?","a":"No. Google publicly stopped using the keywords meta tag for ranking in 2009. It is omitted here deliberately."}]

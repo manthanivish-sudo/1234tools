@@ -28,6 +28,9 @@
 const fs = require('fs');
 const path = require('path');
 const { CATEGORIES, allLinks } = require('./build/learn-data.js');
+/* The shell's footer carries qr/index.html's tool-request note; build-site.js
+   words the footer for each page, and these pages must already match it. */
+const { footerApply } = require('./build-site.js');
 
 const ROOT = __dirname;
 const CHECK = process.argv.includes('--check');
@@ -435,9 +438,10 @@ function patchSitemap() {
 function main() {
   const parts = shell();
   let pages = 0;
-  if (write('learn/index.html', hubPage(parts))) pages++;
+  if (write('learn/index.html', footerApply(hubPage(parts), 'learn/index.html'))) pages++;
   for (const cat of CATEGORIES) {
-    if (write('learn/' + cat.slug + '/index.html', categoryPage(cat, parts))) pages++;
+    const rel = 'learn/' + cat.slug + '/index.html';
+    if (write(rel, footerApply(categoryPage(cat, parts), rel))) pages++;
   }
   const home = patchHome();
   const added = patchSitemap();

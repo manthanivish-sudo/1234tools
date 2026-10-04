@@ -234,7 +234,11 @@ window.DEV_TOOLS["robots-txt-generator"] = {
 "fields": [{"key":"policy","label":"Default policy","type":"select","default":"allow","options":[{"value":"allow","label":"Allow all crawlers"},{"value":"block","label":"Block all crawlers"},{"value":"custom","label":"Allow, with exclusions below"}]},{"key":"disallow","label":"Paths to exclude (one per line)","type":"textarea","default":"/admin/\n/cart/\n/checkout/\n/*.json$"},{"key":"sitemap","label":"Sitemap URL","type":"text","default":"https://www.mvritservices.com/sitemap.xml"},{"key":"aibots","label":"AI training crawlers","type":"select","default":"allow","options":[{"value":"allow","label":"Allow"},{"value":"block","label":"Block GPTBot, CCBot and similar"}]}],
 "generate": (f) => {
       const L = [];
-      if (f.policy === 'block') {
+      const blockAll = f.policy === 'block';
+      if (blockAll) {
+        /* Block all means exactly these two lines: every crawler is already
+           shut out, so AI groups would repeat it and a Sitemap line would
+           point crawlers at pages they may not fetch. */
         L.push('User-agent: *', 'Disallow: /');
       } else {
         L.push('User-agent: *');
@@ -244,21 +248,21 @@ window.DEV_TOOLS["robots-txt-generator"] = {
         }
         L.push('Allow: /');
       }
-      if (f.aibots === 'block') {
+      if (f.aibots === 'block' && !blockAll) {
         L.push('');
         L.push('# Opt out of AI training crawlers');
         ['GPTBot', 'CCBot', 'Google-Extended', 'anthropic-ai', 'ClaudeBot', 'PerplexityBot', 'Bytespider']
           .forEach(b => L.push(`User-agent: ${b}`, 'Disallow: /', ''));
         if (L[L.length - 1] === '') L.pop();
       }
-      if (f.sitemap) { L.push('', 'Sitemap: ' + String(f.sitemap).trim()); }
+      if (f.sitemap && String(f.sitemap).trim() && !blockAll) { L.push('', 'Sitemap: ' + String(f.sitemap).trim()); }
       const output = L.join('\n') + '\n';
       return {
         output,
         stats: [['Rules', String(L.filter(l => /^(Allow|Disallow):/.test(l)).length)],
                 ['Named agents', String(L.filter(l => /^User-agent:/.test(l)).length)],
                 ['Size', bytes(output)]],
-        warn: f.policy === 'block' ? 'This blocks every crawler from the whole site. Correct for a staging server, ruinous on a live one.' : ''
+        warn: blockAll ? 'This blocks every crawler from the whole site. Correct for a staging server, ruinous on a live one. The exclusions, sitemap and AI-crawler settings are left out, since nothing may be crawled.' : ''
       };
     },
 "tips": ["robots.txt controls crawling, not indexing. To keep a page out of results, use a noindex meta tag — a blocked page can still be listed if others link to it.","It must sit at the domain root: example.com/robots.txt. In a subfolder it is ignored.","Well-behaved crawlers honour it; malicious scrapers do not. It is not a security control."],

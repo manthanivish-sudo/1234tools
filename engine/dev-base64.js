@@ -246,7 +246,13 @@ window.DEV_TOOLS["base64"] = {
           const inBytes = new TextEncoder().encode(text).length;
           return { output: out, stats: [['Input', bytes(text)], ['Output', bytes(out)], ['Growth', `+${Math.round((out.length / Math.max(1, inBytes) - 1) * 100)}%`]] };
         }
-        let src = text.trim().replace(/-/g, '+').replace(/_/g, '/');
+        /* Whitespace goes first, every space, tab and line break, then the
+           padding is counted. Padding the raw text counted the line breaks of
+           wrapped input (MIME at 76, PEM at 64) as characters, so "Pj4+\nPw=="
+           became Pj4+Pw==== and was refused. A length of 4n+1 cannot be
+           Base64 at all. */
+        let src = text.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+        if (src.length % 4 === 1) throw new Error('bad length');
         while (src.length % 4) src += '=';
         const out = b64decode(src);
         return { output: out, stats: [['Input', bytes(text)], ['Output', bytes(out)]] };

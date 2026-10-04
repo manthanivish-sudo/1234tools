@@ -21,6 +21,108 @@ function nf(v) {
   return Number.isInteger(v) ? String(v) : String(Number(Number(v).toFixed(4)));
 }
 
+/* ---------- line items ---------- */
+
+/* A number as people type one: 2650 or 2650.50, or grouped with commas the
+   western way (2,650 · 1,234,567) or the Indian way (1,25,000 · 12,34,567).
+   "2,65" is neither, so it is not read as a number at all. */
+const PLAIN_NUM = /^-?\d+(?:\.\d+)?$/;
+const GROUPED_NUM = /^-?(?:\d{1,3}(?:,\d{3})+|\d{1,2}(?:,\d{2})*,\d{3})(?:\.\d+)?$/;
+const isNumTok = (s) => { const t = String(s).trim(); return PLAIN_NUM.test(t) || GROUPED_NUM.test(t); };
+const toNum = (s) => Number(String(s).trim().replace(/,/g, ''));
+const CUR_PREFIX = /^(?:rs\.?\s*|inr\s*|[£$€]\s*)/i;
+const SHORTHAND = /^(.+?)\s+[x×]\s*(\d+(?:\.\d+)?)\s*@\s*(?:rs\.?\s*|inr\s*|[£$€]\s*)?(-?\d[\d,]*(?:\.\d+)?)$/i;
+
+/** "description, quantity, unit price", already split; null if it does not fit. */
+function readItemFields(tokens) {
+  const parts = tokens.map(s => s.trim());
+  while (parts.length && parts[parts.length - 1] === '') parts.pop();
+  if (parts.length < 3) return null;
+  const p = parts[parts.length - 1].replace(CUR_PREFIX, ''), q = parts[parts.length - 2];
+  if (!isNumTok(p) || !isNumTok(q)) return null;
+  const desc = parts.slice(0, -2).join(', ').trim();
+  if (!desc) return null;
+  const qty = toNum(q), price = toNum(p);
+  return { desc, qty, price, total: qty * price };
+}
+
+const notGrouped = (line, tok) => 'In “' + line + '”, “' + tok + '” is not a number with thousands separators (2,650 or 1,25,000), so it is not clear what it means. ' +
+  'If it is a decimal, write it with a point (2.65); if the comma separates two fields, put a space after it.';
+
+/*
+ * One line item, read from the right. A comma also groups thousands —
+ * "Consulting, 1, 1,200" is 1 at 1,200 — so the commas that separate fields
+ * and the ones inside a number are told apart, as the Quotation tool does:
+ *
+ *   - a line with a space after (or before) any comma uses spaced commas as
+ *     separators, and a comma with no space between digits is a thousands
+ *     separator: the digits it joins must make 2,650 or 1,25,000, or the
+ *     line is reported rather than guessed at;
+ *   - a line with no spaces at all ("Item,2,2,650") is read every way its
+ *     digit commas allow; one sensible reading is used, more than one is
+ *     reported, with the readings, instead of picking one;
+ *   - "Item x2 @ 2,650" (quantity after x, price after @) is read as written.
+ *
+ * Returns { row } or { message } (ambiguous) or {} (unreadable).
+ */
+function readItemLine(line) {
+  const sh = SHORTHAND.exec(line);
+  if (sh) {
+    if (!isNumTok(sh[3])) return { message: notGrouped(line, sh[3]) };
+    const qty = toNum(sh[2]), price = toNum(sh[3]);
+    return { row: { desc: sh[1].trim(), qty, price, total: qty * price } };
+  }
+
+  /* split on every comma, and note which commas could be inside a number:
+     no space on either side, digits before, digits after */
+  const raw = line.split(',');
+  const joints = [];
+  let spaced = false;
+  for (let i = 0; i < raw.length - 1; i++) {
+    const tight = !/\s$/.test(raw[i]) && !/^\s/.test(raw[i + 1]);
+    if (!tight) { spaced = true; continue; }
+    if (/^-?\d+$/.test(raw[i].trim()) && /^\d+(?:\.\d+)?$/.test(raw[i + 1].trim())) joints.push(i);
+  }
+  const join = (merge) => {
+    const out = [];
+    let cur = raw[0];
+    for (let i = 0; i < raw.length - 1; i++) {
+      if (merge.has(i)) cur += ',' + raw[i + 1];
+      else { out.push(cur); cur = raw[i + 1]; }
+    }
+    out.push(cur);
+    return out;
+  };
+  const oddNumber = (tokens) => tokens.find(t => t.indexOf(',') >= 0 && !GROUPED_NUM.test(t.trim().replace(CUR_PREFIX, '')));
+
+  if (spaced) {
+    const tokens = join(new Set(joints));
+    const odd = oddNumber(tokens);
+    if (odd) return { message: notGrouped(line, odd.trim()) };
+    const row = readItemFields(tokens);
+    return row ? { row } : {};
+  }
+
+  if (joints.length > 10) return {};
+  const readings = new Map();
+  for (let mask = 0; mask < (1 << joints.length); mask++) {
+    const tokens = join(new Set(joints.filter((j, k) => mask & (1 << k))));
+    if (oddNumber(tokens)) continue;
+    const row = readItemFields(tokens);
+    if (!row) continue;
+    const key = [row.desc, row.qty, row.price].join('\u0000');
+    if (!readings.has(key)) readings.set(key, row);
+  }
+  const all = Array.from(readings.values());
+  if (all.length === 1) return { row: all[0] };
+  if (!all.length) return {};
+  return {
+    message: '“' + line + '” can be read ' + all.length + ' ways: ' +
+      all.slice(0, 3).map(r => r.qty + ' at ' + r.price + ' for “' + r.desc + '”').join(', or ') +
+      '. Put a space after each comma that separates the fields (“Item, 2, 2,650”), or write the number without its comma (2650).'
+  };
+}
+
 
 window.PDF_TOOLS = window.PDF_TOOLS || {};
 window.PDF_TOOLS["invoice-pdf"] = {
@@ -36,13 +138,13 @@ window.PDF_TOOLS["invoice-pdf"] = {
       const rows = [];
       for (const line of String(opts.items || '').split('\n')) {
         if (!line.trim()) continue;
-        const parts = line.split(',').map(s => s.trim());
-        const price = parseFloat(parts[parts.length - 1]);
-        const qty = parseFloat(parts[parts.length - 2]);
-        if (!isFinite(price) || !isFinite(qty) || parts.length < 3) {
+        const r = readItemLine(line.trim());
+        /* a line that could mean two prices is shown, not guessed at */
+        if (r.message) return { error: r.message };
+        if (!r.row) {
           return { error: `Could not read "${line.slice(0, 40)}". Use: description, quantity, unit price` };
         }
-        rows.push({ desc: parts.slice(0, -2).join(', '), qty, price, total: qty * price });
+        rows.push(r.row);
       }
       if (!rows.length) return { error: 'Add at least one line item.' };
 
@@ -134,7 +236,7 @@ window.PDF_TOOLS["invoice-pdf"] = {
         ]
       };
     },
-"tips": ["Line items take the form \"description, quantity, unit price\". The description may contain commas — only the last two values are read as numbers.","A UK VAT invoice must show your VAT number, the tax point date and the rate applied. Add your VAT number to the business details block.","Invoice numbers should be sequential with no gaps. Tax authorities in most jurisdictions expect to see an unbroken series.","Everything is generated on your device, so client names and amounts never leave it."],
+"tips": ["Line items take the form \"description, quantity, unit price\". The description may contain commas — only the last two values are read as numbers.","Prices may keep their thousands commas, western or Indian: \"Consulting, 1, 1,200\" is 1 at 1,200 and \"Fit-out, 1, 1,25,000\" is 1 at 1,25,000, because a comma followed by a space separates fields and one between digits does not. \"Consulting x2 @ 1,200\" works too. When a line could mean two different prices, the tool says so and asks, rather than picking one.","A UK VAT invoice must show your VAT number, the tax point date and the rate applied. Add your VAT number to the business details block.","Invoice numbers should be sequential with no gaps. Tax authorities in most jurisdictions expect to see an unbroken series.","Everything is generated on your device, so client names and amounts never leave it."],
 "faq": [{"q":"Is this a legally compliant invoice?","a":"It produces the layout. Whether it is compliant depends on your jurisdiction and what you include — VAT registration number, tax point, reverse charge wording where relevant. Check the requirements for your country, or ask your accountant, before issuing."}]
 };
 })();

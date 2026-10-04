@@ -19,9 +19,9 @@ module.exports = {
       'Valid has a precise meaning. RFC 8259, the standard, allows no comments, no trailing commas, no single quotes and no unquoted keys. JavaScript accepts some of those; a strict parser rejects every one.'
     ],
     howItWorks: {
-      text: 'Your text goes to the browser’s own parser, the `JSON.parse` that web apps call, so the verdict is the one your code would get. Nothing leaves the tab.',
+      text: 'Your text goes to the browser’s own parser, `JSON.parse`, so the verdict is the one your code would get. Nothing leaves the tab.',
       points: [
-        'When parsing fails, the character position in the error becomes a line and a column, and the offending line is printed beneath.',
+        'When parsing fails, the tool’s own checker finds the first character the grammar refuses and prints its line, column and the reason, whatever the browser’s message says.',
         'A valid document is written back with `JSON.stringify`: indented by 2 or 4 spaces or a tab, or on one line when minified.',
         'With keys sorted, every object at every depth is rebuilt in alphabetical key order; arrays keep their own order.',
         'The figures count every key and array item at all levels, the deepest nesting, and both sizes in UTF-8 bytes.'
@@ -332,8 +332,8 @@ module.exports = {
         'Eight PNGs are made: 16, 32, 48 and 96 pixel favicons, a 180 pixel apple-touch-icon, 192 and 512 pixel app icons and a 512 pixel maskable icon with a 10% margin.',
         'The source is scaled to fit the square and centred, never cropped, so a wide logo gets bars above and below.',
         'Every canvas is filled with the background colour first, white by default, so transparent areas come out solid.',
-        'Download all as ZIP saves all eight as favicons.zip.',
-        'The HTML snippet also links favicon.ico and site.webmanifest, which this tool does not make.'
+        'favicon.ico, holding the 16, 32 and 48 pixel PNGs, and site.webmanifest make ten files in favicons.zip, and the snippet links only those.',
+        'Icons bigger than your image are scaled up from it, and the tool names each one.'
       ]
     },
     worked: {
@@ -346,7 +346,7 @@ module.exports = {
     ],
     mistakes: [
       'Expecting transparent icons from a transparent logo. Pick a background colour that works in both light and dark browser tabs, since every icon will be a solid square.',
-      'Pasting the HTML without the files it names. Delete the favicon.ico line or make an .ico separately, and write a site.webmanifest that lists the 192, 512 and maskable icons.',
+      'Leaving the site name blank: site.webmanifest then has no name, which browsers need before offering to install.',
     ],
     faq: [
       { q: 'What size should a favicon be?', a: '32 and 16 pixels square for browser tabs, 180 for Apple devices, 192 and 512 for Android. One square master of 512 pixels or more covers them all.' },
@@ -542,7 +542,7 @@ module.exports = {
     howItWorks: {
       text: 'Every run draws fresh words from a fixed list using `Math.random`, so no two results are the same.',
       points: [
-        'The Latin list holds 63 distinct words from the classic passage and the English list 59; words are picked independently, so the famous opening appears only by chance.',
+        'The Latin list holds 63 distinct words from the classic passage and the English list 54; words are picked independently, so the famous opening appears only by chance.',
         'A sentence is 8 to 19 words, capitalised and closed with a full stop, with no commas; a paragraph is 3 to 5 sentences.',
         'Choosing Words returns that many bare words, with no capitals or full stops.',
         'The count is capped at 100, and <p> or <li> tags wrap each paragraph, or the single block that Words and Sentences produce.'
@@ -583,14 +583,14 @@ module.exports = {
       text: 'The conversion is a short chain of regular expressions in the page, with no Markdown library behind it.',
       points: [
         'Fenced code blocks are lifted out first and escaped, so nothing inside them changes.',
-        'Each other line is classified by how it starts: #, >, a bullet, a number or a rule. Any other line joins the paragraph above until a blank line.',
+        'Each other line is classified by how it starts: #, >, a bullet, a number, a rule or a table; others join the paragraph above until a blank line.',
         'Inline, &, < and > are escaped, then code spans, images, links, bold, italic and ~~strikethrough~~ are converted.',
         'Addresses must be http, https, mailto, tel or relative, quotes escaped; [x](javascript:void) becomes plain <p>x</p>.',
         'Preview renders the source through a sanitiser that keeps known tags and never fetches images; Full HTML document adds a doctype, head and body.'
       ]
     },
     worked: {
-      text: 'Notes written for GitHub do not all survive. A heading underlined with ===, a bullet with two indented sub-items and a two-row table come out as Headings 0, Paragraphs 2 and Lists 1. The underline heading becomes ordinary text, the sub-items are lifted to the level of their parent, and the table is joined into one paragraph of pipes. Rewrite the heading with #, flatten the list and keep the table in HTML.'
+      text: 'Notes written for GitHub do not all survive. A heading underlined with ===, a bullet with two indented sub-items and a two-row table come out as Headings 0, Paragraphs 1, Lists 1 and Tables 1. The table converts, but the underline heading becomes ordinary text and the sub-items are lifted to the level of their parent. Rewrite the heading with # and flatten the list.'
     },
     uses: [
       ['Newsletter copy', 'Draft in Markdown, then paste the HTML into an editor that only takes HTML.'],
@@ -609,7 +609,7 @@ module.exports = {
     ],
     runs: [
       /* GitHub-style notes: setext heading, nested list, pipe table; default Output: HTML fragment */
-      { input: 'Release notes\n=============\n\n- Faster export\n  - PDF\n  - CSV\n\n| Plan | Price |\n|------|-------|\n| Pro | £9 |', check: [['stat:Headings', '0'], ['stat:Paragraphs', '2'], ['stat:Lists', '1']] },
+      { input: 'Release notes\n=============\n\n- Faster export\n  - PDF\n  - CSV\n\n| Plan | Price |\n|------|-------|\n| Pro | £9 |', check: [['stat:Headings', '0'], ['stat:Paragraphs', '1'], ['stat:Lists', '1'], ['stat:Tables', '1']] },
       /* the mistakes: a two-space line break, indented code, a javascript: link */
       { input: 'Line one  \nLine two\n\n    indented code\n\n[x](javascript:void)', check: [['stat:Code blocks', '0'], ['output', '<p>x</p>']] },
       /* the FAQ: underscores and asterisks */
@@ -628,6 +628,7 @@ module.exports = {
       points: [
         'Each value has &, <, > and " replaced by entities before it goes into a tag, so a quote in a title cannot end the attribute.',
         'You get the title, description and canonical link, seven og: properties with og:type fixed at website, and four twitter: tags using the summary_large_image card: Tags generated reads 14.',
+        'Blank fields write no tags: with no share image, Tags generated reads 12.',
         'Lengths count the characters you typed, before escaping: over 60 or 160 may be truncated, under 30 or 70 is quite short.',
         'URLs are copied exactly; nothing checks that they are absolute or that the image exists.'
       ]
@@ -636,7 +637,7 @@ module.exports = {
       text: 'For a joinery workshop, the title Ashworth Joinery | Bespoke Oak Staircases, Kitchens & Doors in York measures 67 — may be truncated, and in the tags its ampersand becomes Kitchens &amp; Doors. The description is labelled 78 — good. The share image was entered as /img/share.jpg and copied into both image tags as content="/img/share.jpg". That relative path is the real problem: Open Graph needs an absolute URL, so most previews will show no picture.'
     },
     uses: [
-      ['Launching a landing page', 'Write the title, description and share card before a campaign link goes out.'],
+      ['Launching a landing page', 'Write the title, description and share card before a campaign.'],
       ['Fixing a link preview', 'Replace a missing or wrong image in the card a chat app shows.'],
       ['Hand-written sites', 'Add a complete head block to static pages with no CMS or SEO plugin.']
     ],
@@ -652,7 +653,9 @@ module.exports = {
     runs: [
       /* title, description, canonical https://ashworthjoinery.example/, share image /img/share.jpg, site Ashworth Joinery, locale en_GB */
       { fields: { title: 'Ashworth Joinery | Bespoke Oak Staircases, Kitchens & Doors in York', desc: 'Handmade oak staircases, kitchens and doors from our York workshop since 1998.', url: 'https://ashworthjoinery.example/', image: '/img/share.jpg', site: 'Ashworth Joinery' },
-        check: [['stat:Title length', '67 — may be truncated'], ['stat:Description length', '78 — good'], ['output', 'Kitchens &amp; Doors'], ['output', 'content="/img/share.jpg"'], ['stat:Tags generated', '14']] }
+        check: [['stat:Title length', '67 — may be truncated'], ['stat:Description length', '78 — good'], ['output', 'Kitchens &amp; Doors'], ['output', 'content="/img/share.jpg"'], ['stat:Tags generated', '14']] },
+      /* the "How it works" point: the default form with Share image URL cleared */
+      { fields: { image: '' }, check: [['stat:Tags generated', '12']] }
     ]
   },
 
@@ -731,14 +734,16 @@ module.exports = {
     ],
     faq: [
       { q: 'How do I check that my robots.txt works?', a: 'Open it in a browser, then read the robots.txt report in Google Search Console for the version Google fetched.' },
-      { q: 'What happens if a site has no robots.txt?', a: 'A missing file (a 404) means everything may be crawled. A server error is different: RFC 9309 tells crawlers to assume a full disallow until it can be fetched.' },
-      { q: 'Is there a size limit for robots.txt?', a: 'Crawlers must read at least the first 500 kibibytes under RFC 9309, and Google ignores anything beyond that.' }
+      { q: 'What happens if a site has no robots.txt?', a: 'A missing file (a 404) means everything may be crawled. A server error is different: RFC 9309 has crawlers assume a full disallow, but after a long outage, say 30 days, they may treat it as missing.' },
+      { q: 'Is there a size limit for robots.txt?', a: 'RFC 9309 says a crawler that sets a parsing limit must make it at least 500 kibibytes. Google ignores anything past 500 KiB.' }
     ],
     runs: [
       /* Default policy: Allow all crawlers, exclusions /basket/, search?, /*?sort=, default sitemap, AI crawlers allowed */
       { fields: { policy: 'allow', disallow: '/basket/\nsearch?\n/*?sort=' }, check: [['stat:Rules', '1']] },
       /* Default policy: Allow, with exclusions below; AI training crawlers: Block; Sitemap https://shop.example/sitemap.xml */
-      { fields: { policy: 'custom', disallow: '/basket/\nsearch?\n/*?sort=', aibots: 'block', sitemap: 'https://shop.example/sitemap.xml' }, check: [['stat:Rules', '11'], ['stat:Named agents', '8'], ['stat:Size', '409 B'], ['output', 'Disallow: /search?']] }
+      { fields: { policy: 'custom', disallow: '/basket/\nsearch?\n/*?sort=', aibots: 'block', sitemap: 'https://shop.example/sitemap.xml' }, check: [['stat:Rules', '11'], ['stat:Named agents', '8'], ['stat:Size', '409 B'], ['output', 'Disallow: /search?']] },
+      /* the "How it works" point: Block all crawlers with the default sitemap and AI crawlers blocked */
+      { fields: { policy: 'block', aibots: 'block' }, check: [['stat:Rules', '1'], ['stat:Named agents', '1']] }
     ]
   },
 

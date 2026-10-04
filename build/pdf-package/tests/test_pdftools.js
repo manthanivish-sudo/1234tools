@@ -1,16 +1,28 @@
 #!/usr/bin/env node
 /**
- * Tool suite — pdftools.js.
+ * Tool suite — the PDF tools as they ship.
  *
- * Exercises all 16 specs: their declared shape (which the page generator
- * consumes) and, for the 14 that have one, their run() against real fixtures.
- * Output PDFs are parsed back with our own engine and written to tests/output/
- * so they can be checked independently with PyMuPDF or opened in Acrobat.
+ * Loads what the site serves, the way a browser does: engine/pdfcore.bundle.js
+ * for the core, and engine/pdf-<id>.js for every tool page under /pdf/ — the
+ * same new Function('window', src) load build-pdf-ship.js uses. So these
+ * tests cannot drift from production: change an engine and this is what runs.
  *
- * The two 'render' tools have no run() — rasterising needs a browser — so they
+ * Exercises every shipped spec: its declared shape (which render-pdf.js and
+ * the page builder consume), a run() with its defaults, and for the tools
+ * that have them, detailed runs against real fixtures. Output PDFs are parsed
+ * back with the shipped core and written to tests/output/ so they can be
+ * checked independently with PyMuPDF or opened in Acrobat.
+ *
+ * The 'render' tools have no run() — rasterising needs a browser — so they
  * are covered up to the point where the renderer takes over.
  *
- * Fixtures come from make-fixtures.py; set MVR_PDF_FIXTURES to relocate them.
+ * build/pdf-package/engine/pdftools.js is not what ships. It keeps a copy of
+ * most shipped specs (for the disabled build-pdf.js) and the drafts that never
+ * shipped; the last group fails if a copy has drifted from its engine.
+ *
+ * The site root is three levels up (run it from the repo or from an export);
+ * set MVR_SITE_ROOT to point elsewhere. Fixtures come from make-fixtures.py;
+ * set MVR_PDF_FIXTURES to relocate them.
  */
 'use strict';
 const fs = require('fs');
@@ -28,12 +40,78 @@ function findFile(rels, what) {
   process.exit(2);
 }
 
-const core = require(findFile(
-  ['../engine/pdfcore.js', './pdfcore.js', '../pdfcore.js', './engine/pdfcore.js'],
-  'pdfcore.js'));
-const { PDF_TOOLS, fmtBytes, slug, rgbTriplet } = require(findFile(
-  ['../engine/pdftools.js', './pdftools.js', '../pdftools.js', './engine/pdftools.js'],
-  'pdftools.js'));
+const SITE = process.env.MVR_SITE_ROOT
+  ? path.resolve(process.env.MVR_SITE_ROOT)
+  : path.resolve(__dirname, '..', '..', '..');
+const siteFile = (rel) => path.join(SITE, rel);
+if (!fs.existsSync(siteFile('engine/pdfcore.bundle.js')) || !fs.existsSync(siteFile('pdf/index.html'))) {
+  console.error(`No site at ${SITE} (looked for engine/pdfcore.bundle.js and pdf/index.html). Set MVR_SITE_ROOT.`);
+  process.exit(2);
+}
+
+/** Run a shipped script against a fake window, as the browser would. */
+function loadScript(rel) {
+  const w = {};
+  new Function('window', fs.readFileSync(siteFile(rel), 'utf8'))(w);
+  return w;
+}
+
+const core = loadScript('engine/pdfcore.bundle.js').MVRPdfCore;
+if (!core || !core.PDFDocument) {
+  console.error('engine/pdfcore.bundle.js did not define window.MVRPdfCore.');
+  process.exit(2);
+}
+
+/* The shipped set: every tool page under /pdf/ and the engine it loads. A
+   page that loads no engine of its own shows up as a failure below rather
+   than being silently left out. */
+const HUB = fs.readFileSync(siteFile('pdf/index.html'), 'utf8');
+const TOOL_PAGES = fs.readdirSync(siteFile('pdf'))
+  .filter(d => fs.existsSync(siteFile(`pdf/${d}/index.html`)))
+  .sort();
+const PAGE_ENGINE = new Map(TOOL_PAGES.map(d => [d,
+  fs.readFileSync(siteFile(`pdf/${d}/index.html`), 'utf8').includes(`/engine/pdf-${d}.js"`)]));
+const SHIPPED = TOOL_PAGES.filter(d => PAGE_ENGINE.get(d) && fs.existsSync(siteFile(`engine/pdf-${d}.js`)));
+
+const PDF_TOOLS = Object.create(null);
+const ENGINE_DEFINES = new Map();   /* id -> the ids its engine put on window.PDF_TOOLS */
+const HELPERS = new Map();          /* helper name -> Map(source -> { fn, engines }) */
+const HELPER_NAMES = ['fmtBytes', 'slug', 'rgbTriplet'];
+for (const id of SHIPPED) {
+  const rel = `engine/pdf-${id}.js`;
+  const w = loadScript(rel);
+  ENGINE_DEFINES.set(id, Object.keys(w.PDF_TOOLS || {}));
+  if (w.PDF_TOOLS && w.PDF_TOOLS[id]) PDF_TOOLS[id] = w.PDF_TOOLS[id];
+
+  /* Each engine carries its own copy of the shared helpers inside its IIFE.
+     Reopen it with a return on the end to reach them, so the helper tests
+     run on every distinct copy that ships rather than on a package one. */
+  const src = fs.readFileSync(siteFile(rel), 'utf8');
+  const close = /\n\}\)\(\);?\s*$/;
+  if (!/^\(function\s*\(\)\s*\{/.test(src) || !close.test(src)) continue;
+  const grab = '\nreturn {' + HELPER_NAMES.map(n => `${n}: typeof ${n} === 'function' ? ${n} : null`).join(', ') + '};\n})();';
+  const got = new Function('window', 'return ' + src.replace(close, grab))({});
+  for (const n of HELPER_NAMES) {
+    if (!got[n]) continue;
+    if (!HELPERS.has(n)) HELPERS.set(n, new Map());
+    const key = got[n].toString().replace(/\s+/g, ' ');
+    const m = HELPERS.get(n);
+    if (!m.has(key)) m.set(key, { fn: got[n], engines: [] });
+    m.get(key).engines.push(id);
+  }
+}
+
+/* The package copy, for the drift check only. */
+const PKG_TOOLS_FILE = path.join(__dirname, '..', 'engine', 'pdftools.js');
+const PKG_TOOLS = fs.existsSync(PKG_TOOLS_FILE) ? require(PKG_TOOLS_FILE).PDF_TOOLS : null;
+
+/* The control types render-pdf.js knows how to draw: its explicit branches,
+   plus the plain text box it falls back to. */
+const RENDERER = fs.readFileSync(siteFile('engine/render-pdf.js'), 'utf8');
+const buildControl = RENDERER.slice(RENDERER.indexOf('function buildControl'),
+                                    RENDERER.indexOf('window.MVRTool.mountPDF'));
+const CTRL_TYPES = new Set(['text',
+  ...[...buildControl.matchAll(/c\.type === '([a-z]+)'/g)].map(m => m[1])]);
 
 const FIXTURES = process.env.MVR_PDF_FIXTURES
   ? path.resolve(process.env.MVR_PDF_FIXTURES)
@@ -108,25 +186,51 @@ const statMap = (res) => new Map((res.stats || []).map(([k, v]) => [k, v]));
   /* =====================================================================
      Declared shape — this is exactly what the page generator reads
      ===================================================================== */
-  G('Catalogue');
+  G('Catalogue (what ships)');
 
   const ids = Object.keys(PDF_TOOLS);
-  eq(ids.length, 16, 'sixteen tools are exported');
-  eq(new Set(ids).size, 16, 'every tool id is unique');
-  ok(ids.every(id => /^[a-z0-9-]+$/.test(id)), 'every id is URL-safe lower-case kebab');
-  eq(new Set(ids.map(id => PDF_TOOLS[id].title)).size, 16, 'every title is distinct');
-  eq(ids.filter(id => PDF_TOOLS[id].kind === 'transform').length, 8, 'eight transform tools');
-  eq(ids.filter(id => PDF_TOOLS[id].kind === 'create').length, 5, 'five create tools');
-  eq(ids.filter(id => PDF_TOOLS[id].kind === 'inspect').length, 1, 'one inspect tool');
-  eq(ids.filter(id => PDF_TOOLS[id].kind === 'render').length, 2, 'two render tools');
-  eq(typeof fmtBytes, 'function', 'fmtBytes is exported');
-  eq(typeof slug, 'function', 'slug is exported');
-  eq(typeof rgbTriplet, 'function', 'rgbTriplet is exported');
+  const byKind = (k) => ids.filter(id => PDF_TOOLS[id].kind === k);
+  console.log(`  ${ids.length} shipped tools: ` + ['transform', 'create', 'inspect', 'render']
+    .map(k => `${byKind(k).length} ${k}`).join(', '));
 
-  G('Spec integrity (all 16)');
+  /* every count here is checked against an independent source on the site:
+     the tool pages, the hub's cards, its lede and its sidebar count */
+  ok(TOOL_PAGES.every(d => PAGE_ENGINE.get(d)), 'every tool page under /pdf/ loads its own engine',
+    TOOL_PAGES.filter(d => !PAGE_ENGINE.get(d)).join(', '));
+  eq(ids.length, TOOL_PAGES.length, 'one shipped engine per tool page');
+  ok(SHIPPED.every(id => ENGINE_DEFINES.get(id).length === 1 && ENGINE_DEFINES.get(id)[0] === id),
+    'every engine defines its own tool and nothing else',
+    SHIPPED.filter(id => String(ENGINE_DEFINES.get(id)) !== id).map(id => `${id}: ${ENGINE_DEFINES.get(id)}`).join('; '));
+  ok(ids.every(id => /^[a-z0-9-]+$/.test(id)), 'every id is URL-safe lower-case kebab');
+  eq(new Set(ids.map(id => PDF_TOOLS[id].title)).size, ids.length, 'every title is distinct');
+
+  const hubSections = [...HUB.matchAll(/<h2>([^<]+)<\/h2>\s*<p class="lede">[^<]*<\/p>\s*<div class="grid[^"]*">([\s\S]*?)<\/div>\n/g)]
+    .map(m => ({ heading: m[1], ids: [...m[2].matchAll(/<a class="card" href="\/pdf\/([a-z0-9-]+)\/"/g)].map(x => x[1]) }));
+  const hubIds = hubSections.flatMap(s => s.ids);
+  const section = (h) => (hubSections.find(s => s.heading === h) || { ids: [] }).ids;
+  eq(hubIds.length, ids.length, 'the hub has one card per shipped tool');
+  ok(hubIds.every(id => PDF_TOOLS[id]) && ids.every(id => hubIds.includes(id)),
+    'the hub cards and the shipped engines are the same set',
+    [...hubIds.filter(id => !PDF_TOOLS[id]).map(id => 'card without engine: ' + id),
+     ...ids.filter(id => !hubIds.includes(id)).map(id => 'engine without card: ' + id)].join('; '));
+  const lede = /<p class="lede">(\d+) tools for /.exec(HUB);
+  eq(lede && Number(lede[1]), ids.length, 'the hub lede counts the shipped tools');
+  const side = /<span class="side-name">PDF Tools<\/span><span class="side-count">(\d+)<\/span>/.exec(HUB);
+  eq(side && Number(side[1]), ids.length, 'the sidebar count matches the shipped tools');
+  eq(byKind('transform').length + byKind('create').length + byKind('inspect').length + byKind('render').length,
+    ids.length, 'every tool is one of the four kinds');
+  eq(byKind('render').length, section('Needs a rendering engine').length,
+    'the render tools are the hub’s “needs a rendering engine” cards');
+  eq(byKind('inspect').length, section('Look inside a PDF').length,
+    'the inspect tools are the hub’s “look inside a PDF” cards');
+  eq(byKind('transform').length + byKind('create').length,
+    section('Work with an existing PDF').length + section('Create a PDF from scratch').length,
+    'the transform and create tools are the hub’s other two sections');
+
+  G('Spec integrity (every shipped tool)');
 
   const KINDS = new Set(['transform', 'create', 'inspect', 'render']);
-  const CTRL_TYPES = new Set(['text', 'textarea', 'number', 'select', 'color', 'date']);
+  ok(CTRL_TYPES.size > 3, `the renderer's control types were read: ${[...CTRL_TYPES].join(', ')}`);
 
   for (const id of ids) {
     const s = PDF_TOOLS[id];
@@ -182,22 +286,35 @@ const statMap = (res) => new Map((res.stats || []).map(([k, v]) => [k, v]));
   /* =====================================================================
      Helpers
      ===================================================================== */
-  G('Shared helpers');
+  G('Shared helpers (every distinct copy in the shipped engines)');
 
-  eq(fmtBytes(0), '0 B', 'fmtBytes formats zero');
-  eq(fmtBytes(999), '999 B', 'fmtBytes formats bytes');
-  eq(fmtBytes(1024), '1.0 KB', 'fmtBytes switches to KB at 1024');
-  eq(fmtBytes(1536), '1.5 KB', 'fmtBytes formats fractional KB');
-  eq(fmtBytes(1048576), '1.00 MB', 'fmtBytes switches to MB at a megabyte');
-  eq(slug('Hello World'), 'hello-world', 'slug lower-cases and hyphenates');
-  eq(slug('INV-0001'), 'inv-0001', 'slug keeps digits');
-  eq(slug('  spaced  out  '), 'spaced-out', 'slug trims leading and trailing hyphens');
-  eq(slug('Priya Sharma!'), 'priya-sharma', 'slug drops punctuation');
-  eq(slug('***'), 'document', 'slug falls back to "document" when nothing survives');
-  eq(rgbTriplet('#ffffff'), '1 1 1', 'rgbTriplet converts white');
-  eq(rgbTriplet('#000000'), '0 0 0', 'rgbTriplet converts black');
-  eq(rgbTriplet('nonsense'), '0 0 0', 'rgbTriplet falls back to black');
-  ok(/^1 0 0$/.test(rgbTriplet('#ff0000')), 'rgbTriplet converts pure red');
+  ok(HELPERS.has('fmtBytes') && HELPERS.has('slug'), 'the engines\' helpers were reached');
+  /* engines that carry their own copy of a helper, by name */
+  const carriers = (n) => [...(HELPERS.get(n) || new Map()).values()];
+  const who = (c) => `${c.engines.length} engine${c.engines.length === 1 ? '' : 's'}`;
+  for (const c of carriers('fmtBytes')) {
+    const fmtBytes = c.fn, at = ` [${who(c)}]`;
+    eq(fmtBytes(0), '0 B', 'fmtBytes formats zero' + at);
+    eq(fmtBytes(999), '999 B', 'fmtBytes formats bytes' + at);
+    eq(fmtBytes(1024), '1.0 KB', 'fmtBytes switches to KB at 1024' + at);
+    eq(fmtBytes(1536), '1.5 KB', 'fmtBytes formats fractional KB' + at);
+    eq(fmtBytes(1048576), '1.00 MB', 'fmtBytes switches to MB at a megabyte' + at);
+  }
+  for (const c of carriers('slug')) {
+    const slug = c.fn, at = ` [${who(c)}]`;
+    eq(slug('Hello World'), 'hello-world', 'slug lower-cases and hyphenates' + at);
+    eq(slug('INV-0001'), 'inv-0001', 'slug keeps digits' + at);
+    eq(slug('  spaced  out  '), 'spaced-out', 'slug trims leading and trailing hyphens' + at);
+    eq(slug('Priya Sharma!'), 'priya-sharma', 'slug drops punctuation' + at);
+    eq(slug('***'), 'document', 'slug falls back to "document" when nothing survives' + at);
+  }
+  for (const c of carriers('rgbTriplet')) {
+    const rgbTriplet = c.fn, at = ` [${who(c)}]`;
+    eq(rgbTriplet('#ffffff'), '1 1 1', 'rgbTriplet converts white' + at);
+    eq(rgbTriplet('#000000'), '0 0 0', 'rgbTriplet converts black' + at);
+    eq(rgbTriplet('nonsense'), '0 0 0', 'rgbTriplet falls back to black' + at);
+    ok(/^1 0 0$/.test(rgbTriplet('#ff0000')), 'rgbTriplet converts pure red' + at);
+  }
 
   /* =====================================================================
      merge-pdf
@@ -663,6 +780,16 @@ const statMap = (res) => new Map((res.stats || []).map(([k, v]) => [k, v]));
   eq(statMap(r).get('Subtotal'), '£20.00', 'a single line item multiplies out');
   r = await run('invoice-pdf', { opts: { items: 'Thing, with, commas, 1, 100' } });
   eq(statMap(r).get('Subtotal'), '£100.00', 'only the last two fields are read as numbers');
+  r = await run('invoice-pdf', { opts: { items: 'Website, 1, 4,500', tax: 0 } });
+  eq(statMap(r).get('Subtotal'), '£4,500.00', 'a western thousands comma stays inside the price');
+  r = await run('invoice-pdf', { opts: { items: 'Fit-out, 1, 1,25,000', tax: 0 } });
+  eq(statMap(r).get('Subtotal'), '£125,000.00', 'an Indian-grouped price is read whole');
+  r = await run('invoice-pdf', { opts: { items: 'Consulting x2 @ 1,200', tax: 0 } });
+  eq(statMap(r).get('Subtotal'), '£2,400.00', '"x2 @ 1,200" is read as written');
+  r = await run('invoice-pdf', { opts: { items: 'Item,2,2,650' } });
+  ok(!!r.error && /can be read 2 ways/.test(r.error), 'a line with two readings is reported, not guessed', r.error);
+  r = await run('invoice-pdf', { opts: { items: 'Item, 2, 2,65' } });
+  ok(!!r.error && /not a number with thousands separators/.test(r.error), 'a malformed grouped number is reported', r.error);
   r = await run('invoice-pdf', { opts: { items: 'A, 1, 100', tax: 0 } });
   eq(statMap(r).get('Total due'), '£100.00', 'zero tax leaves the total at the subtotal');
   r = await run('invoice-pdf', { opts: { items: 'A, 1, 100', tax: 5.5 } });
@@ -826,7 +953,7 @@ const statMap = (res) => new Map((res.stats || []).map(([k, v]) => [k, v]));
      ===================================================================== */
   G('Render tools (no run() by design)');
 
-  for (const id of ['pdf-to-images', 'pdf-organise']) {
+  for (const id of byKind('render')) {
     const s = PDF_TOOLS[id];
     ok(s.needsRenderer === true, `${id}: needs the rendering engine`);
     ok(typeof s.run === 'undefined', `${id}: has no run(), the browser drives it`);
@@ -879,6 +1006,58 @@ const statMap = (res) => new Map((res.stats || []).map(([k, v]) => [k, v]));
   eq((await run('pdf-inspector', { docs: [{ doc: finalDoc, name: 'final.pdf',
     size: finalBytes.length }] })).stats.find(([k]) => k === 'Pages')[1], '8',
     'the inspector agrees the pipeline output has eight pages');
+
+  /* =====================================================================
+     Every shipped run(), with the defaults a visitor first sees
+     ===================================================================== */
+  G('Every shipped run() with its defaults');
+
+  for (const id of ids) {
+    const s = PDF_TOOLS[id];
+    if (typeof s.run !== 'function') continue;
+    const docs = s.kind === 'create' ? [] : s.multiple ? [c5, o4] : [c5];
+    let res, threw = null;
+    try { res = await run(id, { docs, text: s.inputLabel ? 'Hello world.' : '' }); }
+    catch (e) { threw = e; }
+    ok(!threw, `${id}: run() does not throw`, threw && (threw.message || String(threw)));
+    if (threw) continue;
+    const files = (res && res.files) || [];
+    if (s.kind === 'create') {
+      ok(!res.error && files.length >= 1, `${id}: the defaults produce a document`, res.error);
+    } else if (s.kind === 'inspect') {
+      ok(!res.error && typeof res.report === 'string' && res.report.length > 0, `${id}: the defaults produce a report`, res.error);
+    } else {
+      ok(files.length >= 1 || (typeof res.error === 'string' && res.error.trim().length > 0),
+        `${id}: the defaults produce a file or say what is missing`);
+    }
+    let parsed = true, why = '';
+    for (const f of files) {
+      try { if (await pagesOf(f.bytes) < 1) { parsed = false; why = f.name + ' has no pages'; } }
+      catch (e) { parsed = false; why = `${f.name}: ${e.message}`; }
+    }
+    if (files.length) ok(parsed, `${id}: every file it writes parses back with at least one page`, why);
+  }
+
+  /* =====================================================================
+     The package copy must not drift from what ships
+     ===================================================================== */
+  G('pdftools.js mirrors the shipped engines');
+
+  if (!PKG_TOOLS) {
+    ok(true, 'no package copy present, nothing to compare');
+  } else {
+    const same = (a, b) => typeof a === 'function' || typeof b === 'function'
+      ? typeof a === typeof b && String(a).replace(/\s+/g, ' ') === String(b).replace(/\s+/g, ' ')
+      : JSON.stringify(a) === JSON.stringify(b);
+    const copied = ids.filter(id => PKG_TOOLS[id]);
+    console.log(`  ${copied.length} of ${ids.length} shipped tools have a copy in pdftools.js; ` +
+      `${Object.keys(PKG_TOOLS).filter(id => !PDF_TOOLS[id]).length} specs there do not ship`);
+    for (const id of copied) {
+      const keys = [...new Set([...Object.keys(PKG_TOOLS[id]), ...Object.keys(PDF_TOOLS[id])])];
+      const off = keys.filter(k => !same(PKG_TOOLS[id][k], PDF_TOOLS[id][k]));
+      ok(!off.length, `${id}: the pdftools.js copy matches engine/pdf-${id}.js`, off.length ? 'differs in ' + off.join(', ') : '');
+    }
+  }
 
   /* ---------------------------------------------------------------- */
   console.log(`\n${'-'.repeat(60)}`);

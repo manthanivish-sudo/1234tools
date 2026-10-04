@@ -9,34 +9,218 @@ function bytes(s) {
   return (len / 1048576).toFixed(2) + ' MB';
 }
 
-function describeJsonError(e, text) {
-  const msg = String(e.message || e);
-  const m = msg.match(/position (\d+)/);
-  if (!m) return 'Invalid JSON: ' + msg;
-  const pos = Number(m[1]);
+/* Where is the first fault? The browser's own error message cannot be relied
+   on for that: V8 has changed its wording between versions, some messages
+   carry no position at all ("Unexpected end of JSON input"), and others quote
+   the whole input instead. So the text is scanned here by a small RFC 8259
+   checker that stops at the first character the grammar cannot accept, the
+   same place JSON.parse gives up, and says why. It runs only after JSON.parse
+   has refused the text, so the verdict stays the browser's. It keeps its own
+   stack rather than recursing, so deep nesting cannot overflow it. */
+function findJsonError(text) {
+  const n = text.length;
+  let i = 0;
+  const stack = [];
+  const isWs = (c) => c === 32 || c === 9 || c === 10 || c === 13;
+  const isDigit = (ch) => ch >= '0' && ch <= '9';
+  const skip = () => { while (i < n && isWs(text.charCodeAt(i))) i++; };
+  const fail = (msg, at) => ({ pos: at === undefined ? i : at, msg });
+  const show = (at) => {
+    const cp = text.codePointAt(at);
+    if (cp === 0xfeff) return 'a byte-order mark (U+FEFF)';
+    if (cp < 32 || cp === 127 || (cp >= 0x80 && cp < 0xa0)) return 'the control character U+' + cp.toString(16).toUpperCase().padStart(4, '0');
+    if (cp === 0xa0 || cp === 0x2028 || cp === 0x2029 || cp === 0x3000 || (cp >= 0x2000 && cp <= 0x200b)) return 'a non-ASCII space (U+' + cp.toString(16).toUpperCase().padStart(4, '0') + ', not whitespace to JSON)';
+    return '"' + String.fromCodePoint(cp) + '"';
+  };
+  /* the input ran out: point just past the last character that is not
+     whitespace, so the line shown is the one that stops short */
+  const ended = (what) => { let e = n; while (e > 0 && isWs(text.charCodeAt(e - 1))) e--; return fail('The input ends ' + what + '.', e); };
+  const closeWhat = () => stack.length ? (stack[stack.length - 1] === '{' ? 'before the object is closed with }' : 'before the array is closed with ]') : 'where a value was expected';
+  const string = () => {
+    const start = i; i++;
+    while (i < n) {
+      const c = text.charCodeAt(i);
+      if (c === 34) { i++; return null; }
+      if (c === 92) {
+        const e = text[i + 1];
+        if (e === undefined) break;
+        if ('"\\/bfnrt'.indexOf(e) >= 0) { i += 2; continue; }
+        if (e === 'u') {
+          let k = 0; while (k < 4 && /[0-9a-fA-F]/.test(text[i + 2 + k] || '')) k++;
+          if (k === 4) { i += 6; continue; }
+          if (i + 2 + k >= n) break;
+          return fail('Bad escape: \\u must be followed by four hex digits.');
+        }
+        return fail('Bad escape \\' + (e.charCodeAt(0) < 32 ? '' : e) + ' in a string: JSON allows only \\" \\\\ \\/ \\b \\f \\n \\r \\t and \\u followed by four hex digits.');
+      }
+      if (c < 32) return fail('A string contains ' + show(i) + ' (a raw line break or tab, often a missing closing "); write it as \\n or \\t.');
+      i++;
+    }
+    return ended('inside a string that was never closed (it opens at line ' + lineCol(text, start).line + ', column ' + lineCol(text, start).col + ')');
+  };
+  const number = () => {
+    if (text[i] === '-') i++;
+    if (i >= n) return ended('after a minus sign');
+    if (text[i] === '0') {
+      i++;
+      if (isDigit(text[i] || '')) return fail('A number cannot start with 0 unless it is 0 itself.');
+    } else if (isDigit(text[i])) {
+      while (isDigit(text[i] || '')) i++;
+    } else return fail('Expected a digit after the minus sign, found ' + show(i) + '.');
+    if (text[i] === '.') {
+      i++;
+      if (i >= n) return ended('after a decimal point');
+      if (!isDigit(text[i])) return fail('Expected a digit after the decimal point, found ' + show(i) + '.');
+      while (isDigit(text[i] || '')) i++;
+    }
+    if (text[i] === 'e' || text[i] === 'E') {
+      i++;
+      if (text[i] === '+' || text[i] === '-') i++;
+      if (i >= n) return ended('inside an exponent');
+      if (!isDigit(text[i])) return fail('Expected a digit in the exponent, found ' + show(i) + '.');
+      while (isDigit(text[i] || '')) i++;
+    }
+    return null;
+  };
+  const badValue = () => {
+    const ch = text[i];
+    if (ch === "'") return fail('Single quotes are not allowed: JSON strings use double quotes.');
+    if (ch === '/' && (text[i + 1] === '/' || text[i + 1] === '*')) return fail('Comments are not allowed in JSON.');
+    if (ch === ',') return fail('Unexpected ",": a value is missing' + (stack.length ? ', or there is an extra comma' : '') + '.');
+    if (ch === '}' || ch === ']') return fail('Unexpected "' + ch + '" where a value was expected.');
+    const w = /^[A-Za-z_$][\w$]*/.exec(text.slice(i, i + 40));
+    if (w) {
+      const word = w[0];
+      if (/^(NaN|Infinity|undefined)$/.test(word)) return fail(word + ' is not a JSON value; use null or a number.');
+      if (/^(True|False|Null|TRUE|FALSE|NULL|None)$/.test(word)) return fail('Unexpected word ' + word + ': JSON literals are lowercase true, false and null.');
+      return fail('Unexpected word ' + word + ': text values need double quotes.');
+    }
+    if (i === 0 && text.charCodeAt(0) === 0xfeff) return fail('The text starts with a byte-order mark (U+FEFF), which JSON.parse refuses; save the file as UTF-8 without a BOM.');
+    return fail('Found ' + show(i) + ' where a value was expected.');
+  };
+
+  let state = 'value';
+  for (;;) {
+    if (state === 'value') {
+      skip();
+      if (i >= n) return ended(closeWhat());
+      const ch = text[i];
+      if (ch === '{' || ch === '[') {
+        const close = ch === '{' ? '}' : ']';
+        i++; skip();
+        if (text[i] === close) { i++; state = 'after'; continue; }
+        stack.push(ch);
+        state = ch === '{' ? 'key' : 'value';
+        continue;
+      }
+      if (ch === '"') { const e = string(); if (e) return e; state = 'after'; continue; }
+      if (ch === '-' || isDigit(ch)) { const e = number(); if (e) return e; state = 'after'; continue; }
+      const lit = ch === 't' ? 'true' : ch === 'f' ? 'false' : ch === 'n' ? 'null' : '';
+      if (lit) {
+        let k = 0; while (k < lit.length && text[i + k] === lit[k]) k++;
+        if (k === lit.length && !/[\w$]/.test(text[i + k] || '')) { i += k; state = 'after'; continue; }
+        if (i + k >= n) return ended('in the middle of ' + lit);
+        if (k === lit.length || /^[A-Za-z_$]/.test(text[i + k])) return badValue();
+        return fail('Expected ' + lit + ', found ' + show(i + k) + '.', i + k);
+      }
+      return badValue();
+    }
+    if (state === 'key') {
+      skip();
+      if (i >= n) return ended('where a property name was expected');
+      const ch = text[i];
+      if (ch === '"') {
+        const e = string(); if (e) return e;
+        skip();
+        if (i >= n) return ended('after a property name, before its colon');
+        if (text[i] !== ':') return fail('Expected ":" after the property name, found ' + show(i) + '.');
+        i++; state = 'value'; continue;
+      }
+      if (ch === "'") return fail('Single quotes are not allowed: property names use double quotes.');
+      if (ch === '/' && (text[i + 1] === '/' || text[i + 1] === '*')) return fail('Comments are not allowed in JSON.');
+      if (/[A-Za-z_$0-9]/.test(ch)) return fail('Property names need double quotes.');
+      return fail('Expected a property name in double quotes, found ' + show(i) + '.');
+    }
+    /* state 'after': a value has just ended */
+    skip();
+    if (!stack.length) {
+      if (i >= n) return null;
+      if (text[i] === '/' && (text[i + 1] === '/' || text[i + 1] === '*')) return fail('Comments are not allowed in JSON.');
+      return fail('Found ' + show(i) + ' after the end of the JSON value: one document holds one value; wrap several in an array.');
+    }
+    if (i >= n) return ended(closeWhat());
+    const top = stack[stack.length - 1], close = top === '{' ? '}' : ']', ch = text[i];
+    if (ch === ',') {
+      i++; skip();
+      if (text[i] === close) return fail('Trailing comma: remove the comma before this ' + close + '.');
+      state = top === '{' ? 'key' : 'value';
+      continue;
+    }
+    if (ch === close) { stack.pop(); i++; continue; }
+    if (ch === '}' || ch === ']') return fail('Mismatched bracket: "' + ch + '" closes ' + (top === '{' ? 'an object opened with {' : 'an array opened with [') + '; expected "' + close + '".');
+    if (top === '{' && ch === ':') return fail('Unexpected ":": a property value is followed by a colon.');
+    if (ch === '/' && (text[i + 1] === '/' || text[i + 1] === '*')) return fail('Comments are not allowed in JSON.');
+    return fail('Expected "," or "' + close + '", found ' + show(i) + ': a comma is probably missing.');
+  }
+}
+
+function lineCol(text, pos) {
   const before = text.slice(0, pos);
-  const line = before.split('\n').length;
-  const col = pos - before.lastIndexOf('\n');
-  const snippet = (text.split('\n')[line - 1] || '').trim().slice(0, 60);
-  return `Invalid JSON at line ${line}, column ${col}.\n${snippet ? '  ' + snippet + '\n' : ''}${msg.replace(/ in JSON.*/, '')}`;
+  const nl = before.lastIndexOf('\n');
+  return { line: before.split('\n').length, col: pos - nl };
 }
 
+function describeJsonError(e, text) {
+  let found = findJsonError(text);
+  if (!found) {
+    /* the checker found nothing: fall back to the parser's own position, if
+       its message has one */
+    const msg = String((e && e.message) || e);
+    const m = msg.match(/position (\d+)/);
+    if (!m) return 'Invalid JSON: ' + msg;
+    found = { pos: Number(m[1]), msg: msg.replace(/ in JSON.*/, '') };
+  }
+  const { line, col } = lineCol(text, found.pos);
+  /* the offending line, cut to about 60 characters around the column so the
+     fault is visible even on one 4,000-character line */
+  const raw = (text.split('\n')[line - 1] || '').replace(/\r$/, '').replace(/\t/g, ' ');
+  let from = 0, to = raw.length;
+  if (raw.length > 60) { from = Math.max(0, Math.min(col - 30, raw.length - 60)); to = from + 60; }
+  let snippet = raw.slice(from, to);
+  if (from === 0) snippet = snippet.replace(/^\s+/, ''); else snippet = '…' + snippet;
+  snippet = snippet.replace(/\s+$/, '');
+  if (to < raw.length) snippet += '…';
+  return `Invalid JSON at line ${line}, column ${col}.\n${snippet ? '  ' + snippet + '\n' : ''}${found.msg}`;
+}
+
+/* Both walk with their own stack: the recursive versions overflowed on
+   valid input nested a few thousand levels deep. */
 function countNodes(v) {
-  if (Array.isArray(v)) return v.length + v.reduce((n, x) => n + countNodes(x), 0);
-  if (v && typeof v === 'object') {
-    const k = Object.keys(v);
-    return k.length + k.reduce((n, key) => n + countNodes(v[key]), 0);
+  let n = 0;
+  const todo = [v];
+  while (todo.length) {
+    const x = todo.pop();
+    if (x && typeof x === 'object') {
+      const kids = Array.isArray(x) ? x : Object.keys(x).map((k) => x[k]);
+      n += kids.length;
+      for (const c of kids) todo.push(c);
+    }
   }
-  return 0;
+  return n;
 }
 
-function depthOf(v, d = 1) {
-  if (Array.isArray(v)) return v.length ? Math.max(...v.map(x => depthOf(x, d + 1))) : d;
-  if (v && typeof v === 'object') {
-    const k = Object.keys(v);
-    return k.length ? Math.max(...k.map(key => depthOf(v[key], d + 1))) : d;
+function depthOf(v) {
+  let max = 1;
+  const todo = [[v, 1]];
+  while (todo.length) {
+    const [x, d] = todo.pop();
+    if (d > max) max = d;
+    if (x && typeof x === 'object') {
+      const kids = Array.isArray(x) ? x : Object.keys(x).map((k) => x[k]);
+      for (const c of kids) todo.push([c, d + 1]);
+    }
   }
-  return d;
+  return max;
 }
 
 function checkXmlBalance(xml) {
@@ -250,8 +434,15 @@ window.DEV_TOOLS["json-formatter"] = {
         }
         return v;
       };
-      const value = mode === 'sorted' ? sortDeep(data) : data;
-      const output = mode === 'minify' ? JSON.stringify(value) : JSON.stringify(value, null, pad);
+      let output;
+      try {
+        const value = mode === 'sorted' ? sortDeep(data) : data;
+        output = mode === 'minify' ? JSON.stringify(value) : JSON.stringify(value, null, pad);
+      } catch (e) {
+        /* JSON.parse reads any depth; JSON.stringify (and the sort) recurse,
+           and run out of stack a few thousand levels down */
+        return { error: `This JSON is valid, but it is nested ${depthOf(data).toLocaleString('en-GB')} levels deep, too deep for the browser to write back out.` };
+      }
       return {
         output,
         stats: [

@@ -19,13 +19,13 @@ const need = (rel, why) => {
 
 console.log('\nFiles\n');
 need('engine/pdfcore.js',      'parser, writer, page operations');
-need('engine/pdftools.js',     '16 tool specs');
+need('engine/pdftools.js',     'tool specs: copies of shipped engines, and drafts');
 need('engine/render-pdf.js',   'browser UI');
 need('engine/zip.js',          'multi-file downloads (window.MVRZip)');
 need('assets/pdf-icons.svg',   '18 icon symbols to merge');
 need('assets/pdf-styles.css',  'CSS to append to app.css');
-need('tests/test_pdfcore.js',  'engine suite, 304 assertions');
-need('tests/test_pdftools.js', 'tool suite, 664 assertions');
+need('tests/test_pdfcore.js',  'engine suite');
+need('tests/test_pdftools.js', 'tool suite, run against the shipped engine/pdf-*.js');
 need('tests/make-fixtures.py', 'generates the test fixtures');
 need('INTEGRATION.md',         'drop-in guide');
 
@@ -43,10 +43,17 @@ const check = (label, fn) => {
   }
 };
 
-check('16 tool specs exported', () => {
-  const n = Object.keys(PDF_TOOLS).length;
-  if (n !== 16) throw new Error(`found ${n}`);
-  return `${n} tools`;
+/* A spec ships when the site has an engine for it (engine/pdf-<id>.js, two
+   levels up); the rest are drafts kept here, which build-pdf-ship.js explains.
+   Counted, not compared with a fixed number, so adding a tool cannot make
+   this fail. */
+const SITE_ENGINE = (id) => path.join(ROOT, '..', '..', 'engine', `pdf-${id}.js`);
+const SHIPS = (id) => fs.existsSync(SITE_ENGINE(id));
+check('tool specs exported', () => {
+  const ids = Object.keys(PDF_TOOLS);
+  if (!ids.length) throw new Error('none');
+  const shipped = ids.filter(SHIPS).length;
+  return `${ids.length} specs: ${shipped} with a shipped engine, ${ids.length - shipped} draft(s)`;
 });
 
 check('every spec has a run() or needs the renderer', () => {
@@ -56,8 +63,11 @@ check('every spec has a run() or needs the renderer', () => {
   }
 });
 
-check('every core.* the specs call is exported', () => {
-  const src = fs.readFileSync(path.join(ROOT, 'engine/pdftools.js'), 'utf8');
+/* Only the specs that ship: pdf-compare, a draft, calls a text extractor the
+   core has never had, which is one of the reasons it does not ship. */
+check('every core.* the shipped specs call is exported', () => {
+  const src = Object.entries(PDF_TOOLS).filter(([id]) => SHIPS(id))
+    .map(([, s]) => Object.values(s).filter(v => typeof v === 'function').map(String).join('\n')).join('\n');
   const used = [...new Set([...src.matchAll(/core\.([A-Za-z_]+)/g)].map(m => m[1]))];
   const missing = used.filter(k => core[k] === undefined);
   if (missing.length) throw new Error('not exported: ' + missing.join(', '));

@@ -774,13 +774,106 @@ function referencedIds(svg) {
   return keep;
 }
 
+/* Markup tokens for the SVG optimiser's tag scanner: comments, CDATA,
+   processing instructions, DOCTYPE, end tags (group 1: name) and start tags
+   (group 2: name, group 3: attributes, group 4: "/" when self-closed). It
+   walks the tags in order with a stack of open element names; it does not
+   build a tree. */
+const SVG_TOKEN = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<!DOCTYPE[^\[>]*(?:\[[\s\S]*?\]\s*)?>|<\/([A-Za-z_][\w.:-]*)\s*>|<([A-Za-z_][\w.:-]*)((?:\s+[^\s=\/>]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/?)>/g;
+const SVG_START_TAG = /<([A-Za-z_][\w.:-]*)((?:\s+[^\s=\/>]+\s*=\s*(?:"[^"]*"|'[^']*'))*)(\s*\/?>)/g;
+
+/* Namespaces only editors read: Inkscape, Sodipodi, Sketch, Illustrator,
+   Serif (Affinity), Krita, and the RDF / Dublin Core / Creative Commons
+   vocabularies of a <metadata> block. Matched by URI, so whatever prefix a
+   file binds them to is caught, and by the usual prefix names as well. */
+const SVG_EDITOR_NS = [
+  'http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd', 'http://www.inkscape.org/namespaces/inkscape',
+  'http://www.bohemiancoding.com/sketch/ns', 'http://www.serif.com/', 'http://krita.org/namespaces/svg/krita',
+  'http://ns.adobe.com/AdobeIllustrator/10.0/', 'http://ns.adobe.com/Graphs/1.0/', 'http://ns.adobe.com/Variables/1.0/',
+  'http://ns.adobe.com/SaveForWeb/1.0/', 'http://ns.adobe.com/Extensibility/1.0/', 'http://ns.adobe.com/AdobeSVGViewerExtensions/3.0/',
+  'http://ns.adobe.com/ImageReplacement/1.0/', 'http://ns.adobe.com/GenericCustomNamespace/1.0/', 'http://ns.adobe.com/XPath/1.0/',
+  'adobe:ns:meta/', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', 'http://purl.org/dc/elements/1.1/', 'http://creativecommons.org/ns#',
+  'http://web.resource.org/cc/'
+];
+const SVG_EDITOR_PREFIXES = ['inkscape', 'sodipodi', 'sketch', 'illustrator', 'adobe', 'serif', 'krita', 'dc', 'cc', 'rdf'];
+
+/* Remove whole elements, children and all, whether self-closed or not.
+   test(name, attrs) picks them; returns [markup, how many went]. */
+function svgRemoveElements(s, test) {
+  let out = '', last = 0, count = 0, m;
+  const skip = [];
+  SVG_TOKEN.lastIndex = 0;
+  while ((m = SVG_TOKEN.exec(s))) {
+    if (!skip.length) out += s.slice(last, m.index);
+    last = SVG_TOKEN.lastIndex;
+    if (skip.length) {
+      if (m[2] && !m[4]) skip.push(m[2]);
+      else if (m[1]) {
+        /* an end tag that does not close the open element means broken
+           markup: change nothing rather than drop the wrong part */
+        if (m[1] !== skip[skip.length - 1]) return [s, 0];
+        skip.pop();
+      }
+      continue;
+    }
+    if (m[2] && test(m[2], m[3] || '')) { count++; if (!m[4]) skip.push(m[2]); continue; }
+    out += m[0];
+  }
+  if (skip.length) return [s, 0];
+  out += s.slice(last);
+  return [out, count];
+}
+
+/* Remove empty <g> and <defs>: nothing inside but whitespace, and no id that
+   something in the file points at. Their other attributes (transform, fill,
+   class) have nothing to act on. An empty group inside <switch> stays,
+   because <switch> would pick it and draw nothing instead of the next
+   child. Groups that only held empty groups go too. */
+function svgRemoveEmpty(s, keep) {
+  const pieces = [], stack = [];
+  let last = 0, count = 0, m;
+  const top = () => stack[stack.length - 1];
+  const filled = () => { const t = top(); if (t) t.empty = false; };
+  const removable = (name, attrs) => {
+    if (name !== 'g' && name !== 'defs') return false;
+    const t = top(); if (t && t.name === 'switch') return false;
+    const id = /\sid\s*=\s*(?:"([^"]*)"|'([^']*)')/.exec(attrs);
+    return !(id && keep.has(id[1] !== undefined ? id[1] : id[2]));
+  };
+  SVG_TOKEN.lastIndex = 0;
+  while ((m = SVG_TOKEN.exec(s))) {
+    const text = s.slice(last, m.index);
+    if (text) { if (/\S/.test(text)) filled(); pieces.push(text); }
+    last = SVG_TOKEN.lastIndex;
+    if (m[2]) {
+      if (m[4] && removable(m[2], m[3] || '')) { count++; continue; }
+      const t = top(), was = t ? t.empty : true;
+      filled();
+      pieces.push(m[0]);
+      if (!m[4]) stack.push({ name: m[2], attrs: m[3] || '', at: pieces.length - 1, empty: true, parentWas: was });
+    } else if (m[1]) {
+      const f = stack.pop();
+      if (f && f.empty && removable(f.name, f.attrs)) {
+        pieces.length = f.at; count++;
+        const t = top(); if (t) t.empty = f.parentWas;
+        continue;
+      }
+      pieces.push(m[0]);
+    } else { filled(); pieces.push(m[0]); }
+  }
+  pieces.push(s.slice(last));
+  return [pieces.join(''), count];
+}
+
 /**
  * Strip editor cruft and shrink an SVG.
  * Conservative by design: it never touches path geometry beyond rounding
  * coordinates, because aggressive path rewriting is where SVG optimisers
  * silently break artwork. It keeps every id something in the file points
  * at, and keeps <title>, which is what a screen reader announces; <desc> is
- * kept too unless it is an editor's "Created with …" line.
+ * kept too unless it is an editor's "Created with …" line. The output stays
+ * well-formed: an editor element goes whole (self-closed or not), and a
+ * namespace declaration goes only when no element or attribute uses it.
  */
 function optimiseSVG(src, opts = {}) {
   const precision = opts.precision === undefined ? 2 : Math.max(0, Math.min(8, Number(opts.precision)));
@@ -792,15 +885,72 @@ function optimiseSVG(src, opts = {}) {
     const hits = out.match(re);
     if (hits && hits.length) { removed.push(`${label} (${hits.length})`); out = out.replace(re, ''); }
   };
+  const note = (n, label) => { if (n) removed.push(`${label} (${n})`); };
 
   drop(/<!--[\s\S]*?-->/g, 'comments');
-  drop(/<\?xml[^>]*\?>\s*/g, 'XML declaration');
-  drop(/<!DOCTYPE[^>]*>\s*/g, 'DOCTYPE');
-  drop(/<metadata>[\s\S]*?<\/metadata>/g, 'metadata');
+  /* the XML declaration only: <?xml-stylesheet …?> links styling and stays */
+  drop(/<\?xml\s[^>]*\?>\s*/g, 'XML declaration');
+  /* A DOCTYPE can declare entities that the file then uses, as Illustrator
+     does with xmlns="&ns_svg;". Those are written out in full first; if one
+     cannot be (its text holds markup), the DOCTYPE stays. */
+  {
+    const dt = /<!DOCTYPE[^\[>]*(?:\[([\s\S]*?)\]\s*)?>\s*/.exec(out);
+    if (dt) {
+      const ents = {};
+      let safe = true, e;
+      const decl = /<!ENTITY\s+([A-Za-z_][\w.-]*)\s+(?:"([^"]*)"|'([^']*)')\s*>/g;
+      while ((e = decl.exec(dt[1] || ''))) {
+        const v = e[2] !== undefined ? e[2] : e[3];
+        if (/[<&]/.test(v)) safe = false; else ents[e[1]] = v;
+      }
+      const rest = out.slice(dt.index + dt[0].length);
+      if (safe) {
+        const body = rest.replace(/&([A-Za-z_][\w.-]*);/g, (all, n) => Object.prototype.hasOwnProperty.call(ents, n) ? ents[n].replace(/"/g, '&quot;').replace(/'/g, '&apos;') : all);
+        out = out.slice(0, dt.index) + body;
+        removed.push('DOCTYPE (1)');
+      }
+    }
+  }
+
+  const junk = new Set(SVG_EDITOR_PREFIXES);
+  {
+    const ns = /\sxmlns:([A-Za-z_][\w.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+    let n;
+    while ((n = ns.exec(out))) if (SVG_EDITOR_NS.indexOf(n[2] !== undefined ? n[2] : n[3]) >= 0) junk.add(n[1]);
+  }
+  const prefixOf = (name) => { const i = name.indexOf(':'); return i > 0 ? name.slice(0, i) : ''; };
+  let r;
+  r = svgRemoveElements(out, (name) => name === 'metadata' || name.endsWith(':metadata') && junk.has(prefixOf(name)));
+  out = r[0]; note(r[1], 'metadata');
   drop(/<desc>\s*(?:Created with|Generator:)[^<]*<\/desc>/gi, 'editor desc');
-  drop(/<(sodipodi|inkscape)[^>]*>[\s\S]*?<\/\1[^>]*>/g, 'editor elements');
-  drop(/\s(inkscape|sodipodi|sketch|illustrator|adobe|serif|krita):[\w-]+="[^"]*"/g, 'editor attributes');
-  drop(/\sxmlns:(inkscape|sodipodi|sketch|serif|krita|dc|cc|rdf)="[^"]*"/g, 'unused namespaces');
+  r = svgRemoveElements(out, (name) => junk.has(prefixOf(name)));
+  out = r[0]; note(r[1], 'editor elements');
+  {
+    let n = 0;
+    out = out.replace(SVG_START_TAG, (tag, name, attrs, end) => '<' + name + attrs.replace(/\s+([A-Za-z_][\w.-]*):[\w.-]+\s*=\s*(?:"[^"]*"|'[^']*')/g, (a, p) => {
+      if (p === 'xmlns' || !junk.has(p)) return a;
+      n++; return '';
+    }) + end);
+    note(n, 'editor attributes');
+  }
+  {
+    /* every prefix still used by an element or attribute name */
+    const used = new Set();
+    let t;
+    SVG_START_TAG.lastIndex = 0;
+    while ((t = SVG_START_TAG.exec(out))) {
+      if (prefixOf(t[1])) used.add(prefixOf(t[1]));
+      const a = /\s([A-Za-z_][\w.-]*):[\w.-]+\s*=/g;
+      let k;
+      while ((k = a.exec(t[2]))) if (k[1] !== 'xmlns') used.add(k[1]);
+    }
+    let n = 0;
+    out = out.replace(SVG_START_TAG, (tag, name, attrs, end) => '<' + name + attrs.replace(/\s+xmlns:([A-Za-z_][\w.-]*)\s*=\s*(?:"[^"]*"|'[^']*')/g, (a, p) => {
+      if (!junk.has(p) || used.has(p)) return a;
+      n++; return '';
+    }) + end);
+    note(n, 'unused namespaces');
+  }
   drop(/\sdata-name="[^"]*"/g, 'data-name');
   /* An id goes only when nothing in the file refers to it: deleting the id of
      a gradient, clip path, mask or <use> target while url(#…) or href="#…"
@@ -813,7 +963,8 @@ function optimiseSVG(src, opts = {}) {
     return '';
   });
   if (unused) removed.push(`unreferenced ids (${unused})`);
-  drop(/<defs\s*\/>|<g\s*\/>|<defs>\s*<\/defs>/g, 'empty elements');
+  r = svgRemoveEmpty(out, keep);
+  out = r[0]; note(r[1], 'empty elements');
 
   if (opts.roundCoords !== false) {
     const round = (m) => {
@@ -829,12 +980,21 @@ function optimiseSVG(src, opts = {}) {
       .replace(/(?<=[\s",=(])-?\d+\.\d+/g, round));
   }
 
+  /* Whitespace between tags goes, except inside <text> (a space between two
+     <tspan>s is drawn; only the spacing inside its tags is tidied), <script>
+     and CDATA, which are left exactly as they are. */
+  const kept = [];
+  out = out.replace(/<(text|script)(?:\s[^>]*?)?(?<!\/)>[\s\S]*?<\/\1\s*>|<!\[CDATA\[[\s\S]*?\]\]>/g, (b, el) => {
+    if (el === 'text') b = b.replace(/<[A-Za-z][^>]*>/g, (tag) => tag.replace(/\s+/g, ' ').replace(/\s+(\/?>)$/, '$1'));
+    kept.push(b); return '<\u0000' + (kept.length - 1) + '\u0000>';
+  });
   out = out
     .replace(/>\s+</g, '><')
     .replace(/\s{2,}/g, ' ')
     .replace(/\s+(\/?>)/g, '$1')
     .replace(/;\s*"/g, '"')
-    .trim();
+    .trim()
+    .replace(/<\u0000(\d+)\u0000>/g, (all, i) => kept[Number(i)]);
 
   return {
     output: out,

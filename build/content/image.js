@@ -277,7 +277,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'In a 1600 × 1200 street photo, a 321.4 KB JPEG, a drag over the people on a zebra crossing selected 352×179 pixels. Pixelated at the default strength of 16, each figure became a column of flat squares: a red top and a blue jacket still showed as colour, but no faces. Saved as PNG the result weighed 3.02 MB; for sharing, JPEG at 85 under Save as gave 357.1 KB, squares intact.'
+      text: 'In a 1600 × 1200 street photo, a 321.4 KB JPEG, a drag over the people on a zebra crossing selected 352×179 pixels. Pixelated at the default strength of 16, each figure became a column of flat squares: a red top and a blue jacket still showed as colour, but no faces. Saved as PNG the result weighed 2.79 MB; JPEG at quality 85 gave 355.3 KB, squares intact.'
     },
     uses: [
       ['Bug reports', 'Block a customer’s name and email in a screenshot before it goes into a ticket.'],
@@ -286,20 +286,25 @@ module.exports = {
     ],
     mistakes: [
       'Drawing the box tight to the text. Descenders and the tops of capitals often sit a pixel or two beyond the visible edge; leave a margin.',
-      'Hiding one copy and missing the rest: the same number on a second line, in a reflection, or in a tab title at the top of a screenshot.'
+      'Hiding one copy and missing the rest: the same number on a second line, in a reflection, or in a tab title.'
     ],
     faq: [
       { q: 'Can a blurred image be unblurred?', a: 'Partly. A blur is a known mathematical operation, so deblurring software can sometimes bring back shapes and even text at low strengths. A solid block leaves nothing to work from.' },
       { q: 'Does the saved image keep the original under the blur?', a: 'No. Only the changed pixels are in the new file, and none of the source photo’s metadata is copied.' },
-      { q: 'Why is the redacted image bigger than the original?', a: 'PNG is the default: the street photo went from a 321.4 KB JPEG to 3.02 MB. Pick JPEG or WebP if size matters.' }
+      { q: 'Why is the redacted image bigger than the original?', a: 'PNG, the default, is lossless: the 321.4 KB street photo above became 2.79 MB. Undragged (the middle 70%) it gave 1.47 MB pixelated, 2.23 MB blurred, 1.46 MB blocked. JPEG or WebP is far smaller.' }
     ],
     runs: [
       /* input: build/promo/samples/street.jpg at full size (1600×1200, 321.4 KB). Method and Strength set,
          uploaded, then a mouse drag on the selection canvas from 38%,48% to 60%,63% of its width and height. */
-      { browser: { input: 'street.jpg, 1600x1200, 321.4 KB', method: 'pixelate', strength: 16, drag: { x0: 0.38, y0: 0.48, x1: 0.6, y1: 0.63 } }, shown: ['352×179', '3.02 MB'] },
-      /* re-run 2026-10-04 with the Save as control: the same drag, #ic-format JPEG, #ic-quality 85 (the figure the
-         compressor gave for the PNG before the tool had a format choice) */
-      { browser: { input: 'street.jpg', method: 'pixelate', strength: 16, drag: { x0: 0.38, y0: 0.48, x1: 0.6, y1: 0.63 }, format: 'image/jpeg', quality: 85 }, shown: ['357.1 KB'] }
+      /* re-measured 2026-10-04 in headless Chrome 154.0.8037.94 (the earlier 3.02 MB / 357.1 KB no longer reproduced):
+         the drag gave "352 × 179 px at 606, 576", PNG 2.79 MB */
+      { browser: { input: 'street.jpg, 1600x1200, 321.4 KB', method: 'pixelate', strength: 16, drag: { x0: 0.38, y0: 0.48, x1: 0.6, y1: 0.63 } }, shown: ['352×179', '2.79 MB'] },
+      /* the same drag, #ic-format JPEG, #ic-quality 85 */
+      { browser: { input: 'street.jpg', method: 'pixelate', strength: 16, drag: { x0: 0.38, y0: 0.48, x1: 0.6, y1: 0.63 }, format: 'image/jpeg', quality: 85 }, shown: ['355.3 KB'] },
+      /* no drag: the starting selection, 1120×840 at 240, 180; PNG, strength 16, block colour black, each method */
+      { browser: { input: 'street.jpg', method: 'pixelate' }, shown: ['1.47 MB'] },
+      { browser: { input: 'street.jpg', method: 'blur' }, shown: ['2.23 MB'] },
+      { browser: { input: 'street.jpg', method: 'block' }, shown: ['1.46 MB'] }
     ]
   },
 
@@ -490,14 +495,14 @@ module.exports = {
     howItWorks: {
       text: 'The preview canvas is at most 720 pixels wide, but your drag is converted back into the original’s pixel coordinates, so the crop comes from the full-resolution file.',
       points: [
-        'With a ratio locked, the drag is trimmed on its longer side to match, clamped to the picture’s edges and rounded to whole pixels.',
+        'With a ratio locked, the drag is first held inside the picture’s edges, then trimmed on its longer side to match and rounded to whole pixels, so the shape holds even when you drag past an edge.',
         'On release, `drawImage` copies exactly that rectangle onto a new canvas, pixel for pixel.',
         '`canvas.toBlob` encodes it as PNG (the default), JPEG or WebP. Quality applies to the last two, and a JPEG gets a white backing so transparency does not turn black.',
         'Because the file is newly encoded, the camera’s EXIF tags, GPS included, are not carried over.'
       ]
     },
     worked: {
-      text: 'A 1600×1200 street photo, a 321.4 KB JPEG, cropped with 16:9 locked by dragging across the middle gave a 1279×720 selection: rounding to whole pixels left it a pixel short of a true 16:9. Downloaded as PNG, the default, the crop weighed 1.63 MB, about five times the whole original. The same selection saved as JPEG at quality 85 was 217.2 KB. For photographs, change the format before downloading.'
+      text: 'A 1600×1200 street photo, a 321.4 KB JPEG, cropped with 16:9 locked by dragging across the middle gave a 1280×720 selection, a true 16:9. Downloaded as PNG, the default, the crop weighed 1.51 MB, almost five times the whole original. The same selection saved as JPEG at quality 85 was 217.2 KB. For photographs, change the format before downloading.'
     },
     uses: [
       ['Profile pictures', 'Lock 1:1 and centre the face for a round avatar.'],
@@ -519,7 +524,9 @@ module.exports = {
          #ic-format to PNG, upload, then drag on the preview canvas (722×542 on screen, viewport 1280×1000) with the mouse from
          10%,20% to 90%,80% of its box. Read the Selection and Output size rows. */
       { browser: { tool: '/image/image-cropper/', file: 'build/promo/samples/street.jpg, full size 1600×1200, 321.4 KB', ratio: '16:9', format: 'image/png', drag: 'from 0.1,0.2 to 0.9,0.8 of the preview canvas' },
-        shown: ['1279×720', '1.63 MB'] },
+        shown: ['1280×720', '1.51 MB'] },
+      /* re-measured 2026-10-04 in headless Chrome 154.0.8037.94 after the ratio fix in engine/render-image.js (the pointer
+         is held inside the picture before the ratio trims the box): the old engine's 1279×720 / 1.63 MB no longer apply */
       /* the same, with #ic-format JPEG and #ic-quality 85 */
       { browser: { tool: '/image/image-cropper/', file: 'build/promo/samples/street.jpg, full size', ratio: '16:9', format: 'image/jpeg', quality: 85, drag: 'from 0.1,0.2 to 0.9,0.8 of the preview canvas' },
         shown: ['217.2 KB'] }
@@ -542,7 +549,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'Straightening a 1600×1063 landscape, a 215.5 KB JPEG, by −4° produced a 1670×1172 canvas: the picture plus four white wedges in the corners, which a crop then has to remove. As a PNG it weighed 2.66 MB; saved as JPEG at 92, 288.3 KB. A plain horizontal mirror kept the size at 1600×1063 and weighed 2.45 MB as PNG, 254.7 KB as JPEG, while a 90° turn simply swapped the sides to 1063×1600.'
+      text: 'Straightening a 1600×1063 landscape, a 215.5 KB JPEG, by −4° produced a 1670×1172 canvas: the picture plus four white wedges in the corners, which a crop then has to remove. As a PNG it weighed 2.49 MB; saved as JPEG at 92, 288.2 KB. A plain horizontal mirror kept the size at 1600×1063 and weighed 2.31 MB as PNG, 254.6 KB as JPEG, while a 90° turn simply swapped the sides to 1063×1600.'
     },
     uses: [
       ['Straightening a horizon', 'Turn a tilted sea or skyline by a degree or two, then crop the corners off.'],
@@ -554,7 +561,7 @@ module.exports = {
       'Correcting a tilt in several small steps. Every odd angle resamples the pixels again; find the right angle and apply it once to the original.'
     ],
     faq: [
-      { q: 'Why is the rotated file so much bigger than my photo?', a: 'PNG, the default, has no lossy compression: a 215.5 KB JPEG mirrored here became 2.45 MB. Pick JPEG under Save as and it was 254.7 KB.' },
+      { q: 'Why is the rotated file so much bigger than my photo?', a: 'PNG, the default, has no lossy compression: the 215.5 KB landscape JPEG above, mirrored, became 2.31 MB. Pick JPEG under Save as, quality 92, and it was 254.6 KB.' },
       { q: 'What is the difference between flipping and rotating 180 degrees?', a: 'A 180° turn leaves text readable once turned back; a vertical flip mirrors it. Mirroring both ways at once equals a 180° turn.' },
       { q: 'Can I rotate several photos at once?', a: 'Yes. Drop them in together and each gets the same angle and mirror.' }
     ],
@@ -562,16 +569,18 @@ module.exports = {
     runs: [
       /* landscape.jpg from build/promo/samples at full size (1600×1063, 215.5 KB). Set #ic-angle to -4, mirrors No, fill white,
          upload, read the result card's caption and the Original total / Result total rows. */
+      /* every figure below re-measured 2026-10-04 in headless Chrome 154.0.8037.94; the earlier 2.66 MB, 2.45 MB,
+         288.3 KB and 254.7 KB no longer reproduced */
       { browser: { tool: '/image/image-rotate-flip/', file: 'build/promo/samples/landscape.jpg, full size 1600×1063', angle: -4, flipH: 'no', flipV: 'no', bg: '#ffffff' },
-        shown: ['1600×1063', '215.5 KB', '1670×1172', '2.66 MB'] },
+        shown: ['1600×1063', '215.5 KB', '1670×1172', '2.49 MB'] },
       /* the same photo, angle 0, #ic-flipH Yes */
       { browser: { tool: '/image/image-rotate-flip/', file: 'build/promo/samples/landscape.jpg, full size', angle: 0, flipH: 'yes' },
-        shown: ['2.45 MB'] },
-      /* added 2026-10-04 with the Save as control: #ic-format JPEG, #ic-quality 92 (its default), angle −4, then the mirror */
+        shown: ['2.31 MB'] },
+      /* #ic-format JPEG, #ic-quality 92 (its default), angle −4, then the mirror */
       { browser: { tool: '/image/image-rotate-flip/', file: 'build/promo/samples/landscape.jpg, full size', angle: -4, format: 'image/jpeg', quality: 92 },
-        shown: ['288.3 KB'] },
+        shown: ['288.2 KB'] },
       { browser: { tool: '/image/image-rotate-flip/', file: 'build/promo/samples/landscape.jpg, full size', angle: 0, flipH: 'yes', format: 'image/jpeg', quality: 92 },
-        shown: ['254.7 KB'] },
+        shown: ['254.6 KB'] },
       /* the same photo, angle 90 */
       { browser: { tool: '/image/image-rotate-flip/', file: 'build/promo/samples/landscape.jpg, full size', angle: 90 },
         shown: ['1063×1600'] }
@@ -890,7 +899,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'A 1600×1067 portrait photo went to three slots. Fit whole image kept every pixel, but the 1080×1920 story is mostly bars around a band of photo; the three files came to 430.1 KB. Fill and crop filled every frame, 583.2 KB in all, yet the 1584×396 LinkedIn cover kept only a strip just over a third of the photo’s height, and the story an upright slice enlarged to almost double. The 1280×720 thumbnail, closest in shape, lost about a sixth of the height.'
+      text: 'A 1600×1067 portrait photo went to three slots. Fit whole image kept every pixel, but the 1080×1920 story is mostly bars around a band of photo; the three files came to 429.7 KB. Fill and crop filled every frame, 580.9 KB in all, yet the 1584×396 LinkedIn cover kept only a strip just over a third of the photo’s height, and the story an upright slice enlarged to almost double. The 1280×720 thumbnail, closest in shape, lost about a sixth of the height.'
     },
     uses: [
       ['Promoting an event', 'Turn one poster photo into a story, a feed post and a cover banner for the same week.'],
@@ -903,7 +912,7 @@ module.exports = {
     ],
     faq: [
       { q: 'What size is an Instagram story?', a: '1080×1920 pixels, a 9:16 frame, so a landscape photo loses most of its width there or sits between bars.' },
-      { q: 'What is the best size for a YouTube thumbnail?', a: '1280×720 pixels, the 16:9 preset here. As JPEG it stays small: the photo above made a 186.3 KB thumbnail.' },
+      { q: 'What is the best size for a YouTube thumbnail?', a: '1280×720 pixels, the 16:9 preset here. As JPEG it stays small: the 1600×1067 portrait photo from the example above, on Fill and crop, made a 185.8 KB thumbnail.' },
       { q: 'Should I upload JPEG or PNG to social media?', a: 'JPEG for photographs, since platforms recompress uploads anyway. PNG suits graphics with text and flat colour, where JPEG artefacts show.' }
     ],
     runs: [
@@ -911,10 +920,12 @@ module.exports = {
          LinkedIn · Cover and YouTube · Thumbnail (preset indexes 2, 8, 9), #ic-mode "Fit whole image", bar colour and format
          (JPEG) at their defaults. Read Total size and each card's caption. */
       { browser: { tool: '/image/social-media-resizer/', file: 'build/promo/samples/portrait.jpg, full size 1600×1067', presets: ['Instagram Story / Reel', 'LinkedIn Cover', 'YouTube Thumbnail'], mode: 'contain', format: 'image/jpeg' },
-        shown: ['1080×1920', '1584×396', '1280×720', '430.1 KB'] },
-      /* the same three, #ic-mode "Fill and crop" */
+        shown: ['1080×1920', '1584×396', '1280×720', '429.7 KB'] },
+      /* the same three, #ic-mode "Fill and crop"; the YouTube Thumbnail card read 1280×720 · 185.8 KB.
+         Re-measured 2026-10-04 in headless Chrome 154.0.8037.94 (the earlier 430.1, 583.2 and 186.3 KB no longer reproduced):
+         contain 185.1 + 72.0 + 172.6 KB, cover 282.1 + 113.0 + 185.8 KB */
       { browser: { tool: '/image/social-media-resizer/', file: 'build/promo/samples/portrait.jpg, full size', presets: ['Instagram Story / Reel', 'LinkedIn Cover', 'YouTube Thumbnail'], mode: 'cover' },
-        shown: ['583.2 KB', '186.3 KB'] }
+        shown: ['580.9 KB', '185.8 KB'] }
     ]
   },
 
@@ -922,15 +933,15 @@ module.exports = {
     term: 'SVG',
     whatIs: [
       'SVG (Scalable Vector Graphics) is an XML text format that describes a picture as shapes and paths instead of pixels, so it stays sharp at any size. Anything in the file that does not draw is dead weight.',
-      'Design apps add plenty: comments, metadata blocks, namespaced editor attributes, layer IDs, six-decimal coordinates. Removing them changes nothing on screen, unless something else in the file refers to what was removed.'
+      'Design apps add plenty: comments, metadata blocks, namespaced editor attributes, layer IDs, six-decimal coordinates. Removing them changes nothing on screen unless something in the file refers to them.'
     ],
     howItWorks: {
-      text: 'The optimiser in the site’s `imagecore` edits the markup as text with regular expressions; it never parses the SVG into a tree or rewrites path commands.',
+      text: 'The site’s `imagecore` edits the markup as text, scanning tags with regular expressions; it never builds a tree or rewrites path commands.',
       points: [
-        'It deletes comments, the XML declaration, DOCTYPE, `<metadata>`, a “Created with” `<desc>`, editor elements, attributes and namespaces, empty `<defs>` and `<g>`, and `data-name`.',
+        'It deletes comments, the XML declaration, DOCTYPE, `<metadata>`, a “Created with” `<desc>`, editor elements (self-closed or not) and attributes, empty `<defs>` and `<g>` that nothing points at, and `data-name`. Editor namespaces go once unused, so the XML stays well-formed.',
         'An `id` goes only when nothing in the file points at it: `url(#…)`, `href="#…"`, `aria-labelledby`, animation timing and `<style>` rules keep theirs. The `<title>` always stays.',
         'With rounding on, decimal numbers inside tags are rounded to the chosen precision, 2 by default.',
-        'Open or drop a .svg file, or paste; Download saves an .svg file of type image/svg+xml.'
+        'Open, drop or paste an SVG; Download saves a .svg file (image/svg+xml).'
       ]
     },
     worked: {
@@ -943,7 +954,7 @@ module.exports = {
     ],
     mistakes: [
       'Expecting a page’s own script to find its ids. An id referenced only from outside the file goes; keep the original if code targets one.',
-      'Rounding to 0 on detailed artwork. Small curves and thin strokes can visibly shift; stay at 2 unless the drawing is a few large shapes.'
+      'Rounding to 0 on detailed artwork. Small curves and thin strokes can shift; keep 2 unless the shapes are few and large.'
     ],
     faq: [
       { q: 'How much smaller can an SVG get?', a: 'It depends on the clutter: the page’s own example lost 58.1%, mostly editor metadata. Paths are rounded, never simplified, so dense artwork shrinks less.' },

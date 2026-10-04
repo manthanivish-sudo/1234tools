@@ -295,7 +295,7 @@ module.exports = {
     howItWorks: {
       text: 'One A4 page is drawn by the site’s own PDF writer in Helvetica, a font readers supply themselves, so nothing is embedded.',
       points: [
-        'Item lines are split at commas and read from the right: unit price last, quantity before it, description the rest.',
+        'Item lines are read from the right: price last, quantity before it, description the rest; a comma between digits, as in 1,25,000, groups thousands.',
         'Tax is the rate applied once to the subtotal, not line by line, and every sum shows two decimals.',
         'The due date is the invoice date plus the payment terms in calendar days.',
         'Text uses the WinAnsi character set: £, € and $ print but the rupee sign cannot, so INR shows as “Rs”.',
@@ -311,7 +311,7 @@ module.exports = {
       ['Overseas clients', 'Bill in euros or dollars; the currency sign changes, the sums do not.']
     ],
     mistakes: [
-      'Typing a thousands separator in a price. “Consulting, 1, 1,200” is read as quantity 1 at 200, because commas separate the fields; type 1200.',
+      'Dropping the spaces in a line with a thousands comma: “Consulting,2,1,200” could be 2 at 1,200 or 1 at 200, so the tool asks.',
       'Pasting characters outside Western European text, such as ₹ or Polish ł, into an address or note. They print as question marks.'
     ],
     faq: [
@@ -379,7 +379,7 @@ module.exports = {
     term: 'a delivery challan',
     whatIs: [
       'A delivery challan travels with goods that move without a tax invoice, or before one exists, and the receiver’s signature on it proves arrival.',
-      'In India, Rule 55 of the CGST Rules, 2017 sets its contents: number and date; names, addresses and GSTINs of the consignor and (if registered) the consignee; HSN code, description and quantity; taxable value; and a signature. A supply to the consignee also needs the tax rate and amount, and an inter-state movement the place of supply.'
+      'In India, Rule 55 of the CGST Rules, 2017 sets its contents: number and date; names, addresses and GSTINs of the consignor and consignee, each if registered; HSN code, description and quantity; taxable value; and a signature. A supply to the consignee also needs the tax rate and amount, and an inter-state movement the place of supply. A supply needs three copies, marked ORIGINAL FOR CONSIGNEE, DUPLICATE FOR TRANSPORTER and TRIPLICATE FOR CONSIGNER.'
     ],
     howItWorks: {
       text: 'The site’s own PDF writer draws a full copy of the document per copy you choose, each on new pages.',
@@ -445,7 +445,7 @@ module.exports = {
       'Assuming a sheet matches because the count does. Compare the label size in the layout list with your sheet’s packaging before printing a batch.'
     ],
     faq: [
-      { q: 'Which Avery sheets do these layouts match?', a: 'By size and count, 3 × 7 matches Avery L7160, 2 × 8 matches L7162 and 2 × 7 matches L7163. Margins vary a little, so print a test sheet first.' },
+      { q: 'Which Avery sheets do these layouts match?', a: 'By label size and count as Avery lists them, 3 × 7 matches L7160, 2 × 8 matches L7162, 2 × 7 matches L7163 and 4 × 10 matches L7654. Margins may differ slightly, so print a test sheet on plain paper first.' },
       { q: 'Can I start on a part-used sheet?', a: 'Not directly. The first label always goes top left and empty labels are skipped, so cut away the used rows or start a fresh sheet.' },
       { q: 'Can I print these on US Letter label sheets?', a: 'No. Every layout here is an A4 format on an A4 page, and Letter stock places its labels differently.' }
     ],

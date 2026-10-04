@@ -1,0 +1,180 @@
+#!/usr/bin/env node
+/**
+ * The footer note against what each page does.
+ *
+ *   node build/tests/footer.js [--root <site>] [--backend <1234tools-backend>] [--port <n>] [--out <dir>]
+ *
+ * Every page's footer says "Every calculation runs inside your browser — no
+ * figures are sent to a server, and nothing you type is stored or logged."
+ * That is false on a page that sends what is typed into it, so build-site.js
+ * words those pages differently (see footerApply there). This checks the
+ * built site from the page side, without asking build-site.js what it meant:
+ *
+ *   - a page that mounts an AI tool (/engine/render-ai.js) says the text, or
+ *     on a picture tool the photo or scan, goes to Anthropic's API, that it
+ *     needs an account, and the free allowance the page itself enforces
+ *     (window.AI_LIMITS);
+ *   - a page with a tool request form (a submitToolRequest endpoint) names
+ *     the form; a FormSubmit form names FormSubmit.co; /account/, /settings/,
+ *     /pricing/ and the practice pages say what they store;
+ *   - every other page carries the default sentence, unchanged, with no block;
+ *   - /showcase/, if built, carries no block of ours and not the default
+ *     sentence (its builder words its own);
+ *   - the line under the logo ("… running entirely in your browser") is
+ *     qualified, in an <!--about:ai|ai-hub--> block, on the AI pages and
+ *     carries no such block anywhere else;
+ *   - footerApply() leaves every page as it is (the site is a fixed point).
+ *
+ * With the backend checked out beside the site (or --backend), the claim
+ * "we keep a count of your calls, not what you sent or what came back" and
+ * the free allowance are checked against functions/index.js as well.
+ * --port and --out are accepted for the same command line as the other
+ * suites; nothing is served. Exit code 2 on a failed check.
+ */
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+
+const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : d; };
+const ROOT = path.resolve(arg('root', path.join(__dirname, '..', '..')));
+const BACKEND = path.resolve(arg('backend', path.join(ROOT, '..', '1234tools-backend')));
+const DEFAULT = 'Every calculation runs inside your browser — no figures are sent to a server, and nothing you type is stored or logged.';
+
+let pass = 0, fail = 0;
+const fails = [];
+const ok = (cond, msg) => { if (cond) pass++; else { fail++; fails.push(msg); } };
+
+function pages(dir = ROOT, out = []) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (e.name === 'build' || e.name === 'node_modules' || e.name.startsWith('.')) continue;
+    const abs = path.join(dir, e.name);
+    if (e.isDirectory()) pages(abs, out);
+    else if (e.name.endsWith('.html')) out.push(abs);
+  }
+  return out;
+}
+
+/* which AI tools send a picture, from the specs the pages run */
+const box = { window: {} }; box.window.window = box.window;
+for (const f of fs.readdirSync(path.join(ROOT, 'engine')).filter((n) => /^ai-tools.*\.js$/.test(n)).sort()) {
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'engine', f), 'utf8'), box, { filename: f });
+}
+const AI = box.window.AI_TOOLS || {};
+const freeOf = (html) => {
+  const m = /window\.AI_LIMITS=(\{[^}]*\})/.exec(html);
+  return m ? JSON.parse(m[1]).free : Number(/free:\s*(\d+)/.exec(fs.readFileSync(path.join(ROOT, 'engine', 'render-ai.js'), 'utf8'))[1]);
+};
+
+const site = require(path.join(ROOT, 'build-site.js'));
+const counts = {};   /* variant -> section -> n */
+const bump = (v, rel) => { const s = rel.includes('/') ? rel.split('/')[0] : '(root)'; (counts[v] = counts[v] || {})[s] = (counts[v][s] || 0) + 1; };
+const frees = new Set();
+
+for (const abs of pages()) {
+  const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
+  const html = fs.readFileSync(abs, 'utf8');
+  if (/http-equiv="refresh"/.test(html) && /noindex/.test(html)) continue;
+  const n = /<div class="footer-note">([\s\S]*?)<\/div>/.exec(html);
+  if (!n) continue;
+  const note = n[1];
+  const block = /<!--foot:([a-z-]+)-->([\s\S]*?)<!--\/foot-->/.exec(note);
+  const kind = block ? block[1] : (note.includes(DEFAULT) ? 'default' : 'other');
+  const words = block ? block[2] : '';
+  bump(kind, rel);
+
+  ok(site.footerApply(html, rel) === html, rel + ': footerApply would change it (not a fixed point)');
+  ok((note.match(/<!--foot:/g) || []).length <= 1, rel + ': more than one footer block');
+
+  const sendsAi = /^ai\/[^/]+\/index\.html$/.test(rel) && html.includes('/engine/render-ai.js');
+
+  /* the line under the logo: "… running entirely in your browser" is
+     qualified on the AI pages, and only there */
+  const aboutM = /<div class="footer-about">([\s\S]*?)<\/div>/.exec(html);
+  if (aboutM) {
+    const about = aboutM[1];
+    const aboutKind = (/<!--about:([a-z-]+)-->/.exec(about) || [])[1] || null;
+    const aiKind = rel === 'ai/index.html' ? 'ai-hub' : (sendsAi ? 'ai' : null);
+    if (aiKind) {
+      ok(aboutKind === aiKind && /Anthropic’s API/.test(about) && !/running entirely in your browser/.test(about) && (about.match(/<!--about:/g) || []).length === 1,
+        rel + ': footer-about line not qualified for the AI tool (' + aiKind + '), found ' + aboutKind);
+      bump('about-' + aiKind, rel);
+    } else {
+      ok(!aboutKind, rel + ': footer-about carries an about block (' + aboutKind + ') off the AI pages');
+    }
+  }
+  const request = /data-endpoint="[^"]*\/submitToolRequest"/.test(html);
+  const formsubmit = /<form\b[^>]*\baction="https:\/\/formsubmit\.co\//.test(html);
+  const practice = html.includes('src="/assets/practice.js"');
+
+  if (rel.startsWith('showcase/')) {
+    ok(!block, rel + ': carries a footer block of ours; build-showcase.js words this page');
+    ok(!note.includes(DEFAULT), rel + ': has the default sentence, but its form sends what is typed');
+    continue;
+  }
+  if (rel === 'ai/index.html') {
+    ok(kind === 'ai-hub', rel + ': expected the ai-hub wording, found ' + kind);
+    ok(/Anthropic’s API/.test(words) && /tool request form/.test(words) && words.includes(freeOf(html) + ' AI calls a month'), rel + ': ai-hub wording misses the model, the request form or the allowance');
+    ok(!note.includes(DEFAULT), rel + ': still carries the default sentence');
+    continue;
+  }
+  if (sendsAi) {
+    const slug = (/data-tool="([^"]+)"/.exec(html) || [])[1];
+    const spec = AI[slug];
+    ok(!!spec, rel + ': mounts ' + slug + ', which engine/ai-tools*.js does not define');
+    const picture = !!spec && (spec.inputs || []).some((i) => i.type === 'image');
+    const free = freeOf(html); frees.add(free);
+    ok(kind === 'ai', rel + ': expected the ai wording, found ' + kind);
+    ok(!note.includes(DEFAULT), rel + ': still carries the default sentence');
+    ok(/Anthropic’s API/.test(words) && /free account/.test(words) && words.includes(free + ' AI calls a month') && /not what you sent or what came back/.test(words),
+      rel + ': ai wording misses the model, the account, the allowance or what is kept');
+    ok(picture === /photo or scan/.test(words), rel + ': ' + (picture ? 'a picture tool not saying the photo goes' : 'a text tool talking about a photo'));
+    continue;
+  }
+  if (formsubmit) {
+    ok(kind === 'contact' && /FormSubmit\.co/.test(words) && !note.includes(DEFAULT), rel + ': a FormSubmit form without the contact wording');
+    continue;
+  }
+  const own = { 'account/index.html': 'account', 'settings/index.html': 'settings', 'pricing/index.html': 'pricing' }[rel];
+  if (own) {
+    ok(kind === own && !note.includes(DEFAULT), rel + ': expected the ' + own + ' wording, found ' + kind);
+    continue;
+  }
+  if (practice) {
+    ok(kind === 'practice' && /London/.test(words) && !note.includes(DEFAULT), rel + ': practice page without the practice wording');
+    continue;
+  }
+  if (request) {
+    ok(kind === 'request' && note.includes(DEFAULT + '<!--foot:request--> ') && /tool request form/.test(words), rel + ': a tool request form without the request wording');
+    continue;
+  }
+  ok(kind === 'default', rel + ': expected the default sentence alone, found ' + kind);
+}
+
+/* the backend: what aiComplete keeps, and the free allowance */
+const fnFile = path.join(BACKEND, 'functions', 'index.js');
+if (fs.existsSync(fnFile)) {
+  const src = fs.readFileSync(fnFile, 'utf8');
+  const start = src.indexOf('exports.aiComplete');
+  const body = src.slice(start, src.indexOf('\nexports.', start + 10));
+  const writes = [...body.matchAll(/\.(?:set|add|update)\(\s*(\w+)\s*,\s*(\{[^;]*?\})\s*(?:,\s*\{[^}]*\})?\)/g)].map((m) => m[2]);
+  ok(start > 0 && writes.length > 0, 'backend: aiComplete and its writes were found');
+  ok(writes.every((w) => !/\b(input|words|text|system|images|pics|content|data)\b\s*[:,}]/.test(w)), 'backend: an aiComplete write stores the input or the answer: ' + writes.join(' | '));
+  ok(!/console\.(log|info|warn|error)\([^)]*\b(input|words|text)\b/.test(body), 'backend: aiComplete logs the input or the answer');
+  const fc = /FREE_CREDITS\s*=\s*Number\(process\.env\.FREE_CREDITS\s*\|\|\s*(\d+)\)/.exec(src);
+  ok(!!fc && [...frees].every((f) => f === Number(fc[1])), 'backend: FREE_CREDITS default ' + (fc && fc[1]) + ' vs the pages\' ' + [...frees].join(','));
+  ok(/api\.anthropic\.com/.test(body), 'backend: aiComplete calls Anthropic’s API, as the footer says');
+} else {
+  console.log('  (backend not found at ' + BACKEND + ': its checks skipped)');
+}
+
+console.log('\nfooter variants by section:');
+for (const v of Object.keys(counts).sort()) {
+  const s = counts[v];
+  const total = Object.values(s).reduce((a, b) => a + b, 0);
+  console.log('  ' + v.padEnd(9) + String(total).padStart(5) + '   ' + Object.keys(s).sort().map((k) => k + ' ' + s[k]).join(', '));
+}
+fails.slice(0, 40).forEach((m) => console.log('  FAIL ' + m));
+if (fails.length > 40) console.log('  … +' + (fails.length - 40) + ' more');
+console.log('\nfooter: ' + pass + ' passed, ' + fail + ' failed');
+process.exit(fail ? 2 : 0);

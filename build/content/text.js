@@ -101,7 +101,7 @@ module.exports = {
   '/text/morse-code/': {
     term: 'Morse code',
     whatIs: [
-      'Morse code writes each character as a short run of dots and dashes. Samuel Morse and Alfred Vail devised it for the electric telegraph in the late 1830s; the international form agreed in Paris in 1865 is now kept by the ITU as Recommendation M.1677.',
+      'Morse code writes each character as a short run of dots and dashes. Samuel Morse and Alfred Vail devised it for the electric telegraph in the late 1830s; the international form agreed in Paris in 1865 is now set out by the ITU in Recommendation ITU-R M.1677-1 (October 2009).',
       'The commonest letters got the shortest codes, E a single dot and T a single dash, while every digit takes five signals.'
     ],
     howItWorks: {
@@ -146,7 +146,7 @@ module.exports = {
     whatTitle: 'How numbers are written in words',
     whatIs: [
       'English names numbers in groups of three digits, each said as a number under a thousand followed by its scale word, so 4,050,017 is four million, fifty thousand and seventeen. Indian grouping pairs the digits after the first three, putting one lakh at 1,00,000 and one crore at 1,00,00,000.',
-      'Cheques carry amounts in words because words are harder to alter. Under the UK’s Bills of Exchange Act 1882, and India’s Negotiable Instruments Act 1881, the words win when they disagree with the figures.'
+      'Cheques add words because words are harder to alter. Section 9(2) of the UK’s Bills of Exchange Act 1882 and section 18 of India’s Negotiable Instruments Act 1881 make the amount in words the one payable if the figures differ.'
     ],
     howItWorks: {
       text: 'Each line is converted separately. Commas, spaces and the £, $ and ₹ signs are removed first, so “£1,050.07” is read as 1050.07.',
@@ -157,7 +157,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'Take 1,250,000.50. As pounds and pence it reads “One million two hundred and fifty thousand pounds and fifty pence only”. Typed the Indian way, ₹12,50,000.50 in rupee style becomes “Twelve lakh fifty thousand rupees and fifty paise only”: the same digits grouped differently, with the commas stripped before reading. Plain style reads the half as “point five zero”, one word for each digit as typed.'
+      text: 'Take 1,250,000.50. As pounds and pence it reads “One million two hundred and fifty thousand pounds and fifty pence only”. Typed the Indian way, ₹12,50,000.50 in rupee style becomes “Twelve lakh fifty thousand rupees and fifty paise only”: the same digits grouped differently. Plain style reads the half as “point five zero”, one word for each digit as typed.'
     },
     uses: [
       ['Cheques', 'Fill in the words line and check where the “and” goes before you sign.'],

@@ -202,6 +202,10 @@
         } else if (tag === 'code') {
           const cls = n.getAttribute('class') || '';
           if (/^language-[\w+-]+$/.test(cls)) out.className = cls;
+        } else if (tag === 'th' || tag === 'td') {
+          // a table column's alignment, from three fixed values only
+          const al = /^text-align:(left|center|right)$/.exec(n.getAttribute('style') || '');
+          if (al) out.style.textAlign = al[1];
         }
         copy(n, out);
         to.appendChild(out);
@@ -3549,6 +3553,9 @@
       const b = buildField({ key: 'bg', label: 'Background (for transparent images)', type: 'color', default: '#ffffff' });
       opts.appendChild(b.wrap);
       readers.push(b);
+      const n = buildField({ key: 'appname', label: 'Site name (for site.webmanifest)', type: 'text', default: '' });
+      opts.appendChild(n.wrap);
+      readers.push(n);
     }
 
     const msg = el('div', 'io-msg');
@@ -3652,15 +3659,52 @@
           results.appendChild(card);
         }
 
+        /* favicon.ico and site.webmanifest are made here too, so the snippet
+           below names exactly the files in the ZIP and nothing else. */
+        const ico = await makeIco(files.filter(function (f) { return f.size <= 48; }));
+        const appName = String(readers[1].read() || '').trim();
+        const manifest = { };
+        if (appName) { manifest.name = appName; manifest.short_name = appName; }
+        manifest.icons = [
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+        ];
+        if (/^#[0-9a-f]{6}$/i.test(bg)) { manifest.theme_color = bg; manifest.background_color = bg; }
+        manifest.start_url = '/';
+        manifest.display = 'standalone';
+        const webmanifest = new Blob([JSON.stringify(manifest, null, 2) + '\n'], { type: 'application/manifest+json' });
+        const extras = [
+          { name: 'favicon.ico', blob: ico, tag: 'ICO', use: '16, 32 and 48 px inside' },
+          { name: 'site.webmanifest', blob: webmanifest, tag: 'JSON', use: appName ? 'Lists the app icons' : 'Lists the app icons; no site name yet' }
+        ];
+        extras.forEach(function (x) {
+          const card = el('div', 'file-card');
+          const thumb = el('div', 'file-thumb');
+          thumb.appendChild(el('span', 'file-type', x.tag));
+          card.appendChild(thumb);
+          card.appendChild(el('strong', null, x.name));
+          card.appendChild(el('span', 'file-use', x.use));
+          card.appendChild(el('span', 'file-size', fmtBytes(x.blob.size)));
+          const d = downloadButton('Save', x.name, function () { return x.blob; });
+          d.className = 'btn-ghost';
+          card.appendChild(d);
+          results.appendChild(card);
+        });
+        const zipFiles = files.map(function (f) { return { name: f.name, blob: f.blob }; })
+          .concat(extras.map(function (x) { return { name: x.name, blob: x.blob }; }));
+
         acts.appendChild(downloadButton('Download all as ZIP', 'favicons.zip', function () {
-          return zipStore(files.map(function (f) { return { name: f.name, blob: f.blob }; }));
+          return zipStore(zipFiles);
         }));
 
         const html = [
           '<link rel="icon" href="/favicon.ico" sizes="any">',
+          '<link rel="icon" href="/favicon-96x96.png" type="image/png" sizes="96x96">',
+          '<link rel="icon" href="/favicon-48x48.png" type="image/png" sizes="48x48">',
           '<link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32">',
           '<link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16">',
-          '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
+          '<link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">',
           '<link rel="manifest" href="/site.webmanifest">'
         ].join('\n');
         const pane = el('div', 'io-pane');
@@ -3676,12 +3720,28 @@
 
         renderStats(stats, [
           ['Icons generated', String(files.length)],
+          ['Files in the ZIP', String(zipFiles.length)],
           ['Source', sourceImg.naturalWidth + '×' + sourceImg.naturalHeight],
-          ['Total size', fmtBytes(files.reduce(function (n, f) { return n + f.blob.size; }, 0))]
+          ['Icons total size', fmtBytes(files.reduce(function (n, f) { return n + f.blob.size; }, 0))]
         ]);
-        if (Math.min(sourceImg.naturalWidth, sourceImg.naturalHeight) < 512) {
-          msg.textContent = 'Your source is smaller than 512px, so the largest icons are upscaled and will look soft. A 512×512 or larger square image gives the best result.';
-          msg.className = 'io-msg is-warn';
+        /* An icon is enlarged when the box the source is fitted into is bigger
+           than the source's longer side; name those sizes rather than hint. */
+        const longSide = Math.max(sourceImg.naturalWidth, sourceImg.naturalHeight);
+        const enlarged = [];
+        FAVICON_SIZES.forEach(function (s) {
+          const box = s[1].indexOf('maskable') > -1 ? s[0] * 0.8 : s[0];
+          const label = (s[1].indexOf('maskable') > -1 ? 'maskable ' : '') + s[0] + ' px';
+          if (box > longSide) enlarged.push(label);
+        });
+        const notes = [];
+        if (enlarged.length) {
+          const list = enlarged.length > 1 ? enlarged.slice(0, -1).join(', ') + ' and ' + enlarged[enlarged.length - 1] : enlarged[0];
+          notes.push('Your source is smaller than 512px, so it is scaled up to make the ' + list + ' icons, and those will look soft. A square image of 512×512 or larger keeps every size sharp.');
+        }
+        if (!appName) notes.push('Type a site name above to add it to site.webmanifest; browsers want a name before they offer to install a site as an app.');
+        if (notes.length) {
+          msg.textContent = notes.join(' ');
+          msg.className = enlarged.length ? 'io-msg is-warn' : 'io-msg';
         }
         return;
       }
@@ -3737,6 +3797,32 @@
         msg.className = 'io-msg is-warn';
       }
     }
+  }
+
+  /* A Windows icon file whose images are stored as PNG: a 6-byte header, a
+     16-byte entry per image with its size, byte length and offset, then the
+     PNGs unchanged. */
+  async function makeIco(pngs) {
+    const bufs = await Promise.all(pngs.map(function (p) { return p.blob.arrayBuffer(); }));
+    const head = new ArrayBuffer(6 + 16 * bufs.length);
+    const v = new DataView(head);
+    v.setUint16(0, 0, true);
+    v.setUint16(2, 1, true);
+    v.setUint16(4, bufs.length, true);
+    let offset = head.byteLength;
+    bufs.forEach(function (b, i) {
+      const at = 6 + 16 * i, px = pngs[i].size >= 256 ? 0 : pngs[i].size;
+      v.setUint8(at, px);
+      v.setUint8(at + 1, px);
+      v.setUint8(at + 2, 0);
+      v.setUint8(at + 3, 0);
+      v.setUint16(at + 4, 1, true);
+      v.setUint16(at + 6, 32, true);
+      v.setUint32(at + 8, b.byteLength, true);
+      v.setUint32(at + 12, offset, true);
+      offset += b.byteLength;
+    });
+    return new Blob([head].concat(bufs), { type: 'image/x-icon' });
   }
 
   function fmtBytes(n) {

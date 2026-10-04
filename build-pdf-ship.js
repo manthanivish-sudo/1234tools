@@ -356,22 +356,27 @@ function patchHub(oldPdf, newPdf) {
   let out = src.replace('<p class="lede">' + oldPdf + ' tools for ',
                         '<p class="lede">' + newPdf + ' tools for ');
 
-  /* The hub groups its cards by what the tool does to a file. Everything in
-     SHIPPING takes a PDF, or a few fields, and writes a new one, so a card that
-     is missing goes into the first grid. */
-  const head = out.indexOf('<h2>Work with an existing PDF</h2>');
-  if (head < 0) throw new Error('the PDF hub no longer has a "Work with an existing PDF" section');
-  const close = out.indexOf('</a></div>', head);
-  if (close < 0) throw new Error('could not find the end of that section’s card grid');
-
-  const cards = SHIPPING
-    .filter(function (x) { return out.indexOf('href="/pdf/' + x[0] + '/"') < 0; })
-    .map(function (x) {
-      const t = spec(x[0]);
-      return '<a class="card" href="/pdf/' + x[0] + '/"><span class="card-icon">' + icon(x[1]) + '</span>' +
-        '<strong>' + esc(t.title) + '</strong><span class="card-desc">' + esc(t.description) + '</span></a>';
-    }).join('');
-  if (cards) out = out.slice(0, close + 4) + cards + out.slice(close + 4);
+  /* The hub groups its cards by what the tool does to a file. A missing card
+     goes into the grid for its kind: a tool that makes a PDF from a few fields
+     (kind "create") under "Create a PDF from scratch", anything that takes a
+     PDF under "Work with an existing PDF". */
+  const GRIDS = { create: '<h2>Create a PDF from scratch</h2>', other: '<h2>Work with an existing PDF</h2>' };
+  const missing = SHIPPING.filter(function (x) { return out.indexOf('href="/pdf/' + x[0] + '/"') < 0; });
+  ['create', 'other'].forEach(function (g) {
+    const cards = missing
+      .filter(function (x) { return (spec(x[0]).kind === 'create') === (g === 'create'); })
+      .map(function (x) {
+        const t = spec(x[0]);
+        return '<a class="card" href="/pdf/' + x[0] + '/"><span class="card-icon">' + icon(x[1]) + '</span>' +
+          '<strong>' + esc(t.title) + '</strong><span class="card-desc">' + esc(t.description) + '</span></a>';
+      }).join('');
+    if (!cards) return;
+    const head = out.indexOf(GRIDS[g]);
+    if (head < 0) throw new Error('the PDF hub no longer has a "' + GRIDS[g].replace(/<\/?h2>/g, '') + '" section');
+    const close = out.indexOf('</a></div>', head);
+    if (close < 0) throw new Error('could not find the end of that section’s card grid');
+    out = out.slice(0, close + 4) + cards + out.slice(close + 4);
+  });
 
   /* A tool lives at /pdf/<slug>/; the flat .html address is a redirect stub.
      A card that still says .html is pointed at the directory once it exists. */

@@ -116,7 +116,9 @@ const TABLE = {
   ] },
   'quotation-pdf': { checked: '2026-09-20', sources: [src('ukVatRates'), src('inGstRates')] },
   'purchase-order-pdf': { checked: '2026-09-20', sources: [src('ukVatRates'), src('inGstRates')] },
-  'delivery-challan-pdf': { checked: '2026-09-20', sources: [src('inGstPortal', 'the purposes of movement, and the e-way bill, which is generated on the portal and not here')] },
+  'delivery-challan-pdf': { checked: '2026-10-04', sources: [
+    ['CBIC — CGST Rules, 2017, rule 55: transportation of goods without issue of invoice', 'https://taxinformation.cbic.gov.in/content/html/tax_repository/gst/rules/cgst_rules/active/chapter6/rule55_v1.00.html', 'what a challan must contain, and the three copy markings printed word for word, TRIPLICATE FOR CONSIGNER included'],
+    src('inGstPortal', 'the purposes of movement, and the e-way bill, which is generated on the portal and not here')] },
   'invoice-pdf': { checked: '2026-09-20', sources: [src('ukVatRates'), src('inGstRates')] },
 
   /* ---- AI tools that state rules ---- */

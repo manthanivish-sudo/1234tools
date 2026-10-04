@@ -40,7 +40,8 @@ const AUTHORITIES = [
   'nist.gov', 'www.nist.gov',
   'bipm.org', 'www.bipm.org',
   'sebi.gov.in', 'www.sebi.gov.in',
-  'pib.gov.in', 'www.pib.gov.in'
+  'pib.gov.in', 'www.pib.gov.in',
+  'egazette.gov.in', 'www.egazette.gov.in'
 ];
 
 /* Each source was opened and read on the checked date. */
@@ -59,6 +60,7 @@ const SRC = {
   cbseCgpa: ['CBSE Circular No. 24 of 28 May 2010 — grading at secondary level, and the indicative percentage', 'https://www.cbse.gov.in/circulars/cir24-2010.pdf'],
   sebiMfFaq: ['SEBI — FAQs for Mutual Fund Investors (updated as on 31 August 2024)', 'https://www.sebi.gov.in/sebi_data/faqfiles/sep-2024/1727242783639.pdf'],
   cbdtCapitalGains: ['Press Information Bureau — FAQs issued by CBDT on the new capital gains tax regime (24 July 2024)', 'https://www.pib.gov.in/PressReleaseIframePage.aspx?PRID=2036604&reg=3&lang=2'],
+  itAct2025: ['Gazette of India — The Income-tax Act, 2025 (No. 30 of 2025, published 21 August 2025)', 'https://egazette.gov.in/WriteReadData/2025/265620.pdf'],
   itrApplicable: ['Income Tax Department e-filing — which return applies to a salaried individual', 'https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1'],
   cbseAttendance: ['CBSE — Strict compliance with attendance requirements for Board examination eligibility (circular of 4 August 2025)', 'https://www.cbse.gov.in/cbsenew/documents/Strict_Compliance_attendance_Eligibility_05082025.pdf'],
   ukBankHolidays: ['gov.uk — UK bank holidays', 'https://www.gov.uk/bank-holidays'],
@@ -1025,9 +1027,9 @@ const GUIDES = [
           { p: 'Five more years almost doubles the projection. A 10% yearly step-up takes the last year’s instalment to ₹37,975 a month and the projection to ₹86,83,849. And on the same ₹18,00,000, assuming 12% instead of 8% adds ₹15,62,309 — the assumption matters more than the arithmetic.' },
           { tool: '/india/sip-calculator/', why: 'the “Annual step-up” field raises the instalment by that percentage after every twelve months', fill: 'monthly=10000&rate=12&years=15&stepup=10', fillLabel: 'Open it with a 10% yearly step-up — it shows ₹86,83,849' },
           { fact: {
-            text: 'SEBI’s FAQ for mutual fund investors describes a SIP as investing periodically, which averages the cost of the units bought, and states that mutual fund investments are subject to market risks: the scheme’s NAV, the price of a unit, is worked out and published every day and moves with the market. On selling units of an equity-oriented fund, a gain on units held for 12 months or less is taxed at 20%, and a gain on units held for longer at 12.5% on the part above ₹1.25 lakh in a year. Those rates have applied to transfers since 23 July 2024, and the Income-tax Act, 2025, in force from 1 April 2026, keeps them. Other kinds of fund are taxed under different rules.',
+            text: 'SEBI’s FAQ for mutual fund investors describes a SIP as investing periodically, which averages the cost of the units bought, and states that mutual fund investments are subject to market risks: the scheme’s NAV, the price of a unit, is worked out and published every day and moves with the market. On selling units of an equity-oriented fund, a gain on units held for 12 months or less is taxed at 20%, and a gain on units held for longer at 12.5%, on the part of the year’s long-term gains from listed shares and such funds that is above ₹1.25 lakh. Those rates have applied to transfers since 23 July 2024, and the Income-tax Act, 2025, in force from 1 April 2026, keeps them in sections 196 and 198. Other kinds of fund are taxed under different rules.',
             checked: CHECKED,
-            sources: [src('sebiMfFaq', 'what a SIP is, how NAV is set, and market risk'), src('cbdtCapitalGains', 'the 20% and 12.5% rates, the ₹1.25 lakh exemption and the 12-month holding period for listed units'), src('itrApplicable', 'long-term gains under section 112A up to ₹1,25,000 in the return forms')]
+            sources: [src('sebiMfFaq', 'what a SIP is, how NAV is set, and market risk'), src('cbdtCapitalGains', 'the 20% and 12.5% rates, the ₹1.25 lakh exemption and the 12-month holding period for listed units, for transfers on or after 23 July 2024'), src('itAct2025', 'section 196 (20% on short-term gains), section 198 (12.5% on long-term gains above ₹1,25,000), the 12-month period for listed securities and equity-oriented fund units in section 2(101), and commencement on 1 April 2026 in section 1(3)'), src('itrApplicable', 'long-term gains under section 112A up to ₹1,25,000 in the return forms')]
           } }
         ]
       },

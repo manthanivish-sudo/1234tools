@@ -9,6 +9,15 @@
  *         'create'     no input file, PDF out
  *         'inspect'    reads a PDF, reports rather than producing one
  *         'render'     needs pdf.js to rasterise pages (lazy-loaded)
+ *
+ * What ships is engine/pdf-<id>.js, which is edited directly; this file is
+ * no longer its source. Every spec here that has a shipped engine mirrors
+ * that engine's spec, and tests/test_pdftools.js fails when one drifts — so
+ * a change to a shipped tool goes into its engine first and is copied here.
+ * The drafts that never shipped (form filler, PDF to Excel, redaction, OCR,
+ * compare, portfolio — see build-pdf-ship.js for why) live only here, and
+ * are not tested. The four business documents (payslip, quotation, purchase
+ * order, delivery challan) were written as engines and have no copy here.
  */
 
 const PDF_TOOLS = {
@@ -17,7 +26,7 @@ const PDF_TOOLS = {
 
   'merge-pdf': {
     title: 'Merge PDF Files',
-    kind: 'transform', multiple: true,
+    kind: 'transform', action: 'Merge PDFs', multiple: true,
     description: 'Combine several PDFs into one, in any order, without uploading anything.',
     keywords: ['merge pdf', 'combine pdf', 'join pdf files', 'pdf merger', 'concatenate pdf'],
     controls: [
@@ -50,7 +59,15 @@ const PDF_TOOLS = {
       if (opts.keepMeta === 'first') Object.assign(info, await docs[0].doc.getInfo());
       if (opts.title) info.Title = opts.title;
 
-      const bytes = await core.assemble(items, { info });
+      /* Each file's bookmarks go under an entry named after it. The first
+         file's XMP travels only with its metadata, and not under a new
+         title, which it would contradict. */
+      const bytes = await core.assemble(items, {
+        info,
+        outline: 'per-file',
+        names: new Map(docs.map(d => [d.doc, d.name])),
+        xmp: opts.keepMeta === 'first' && !opts.title ? docs[0].doc : false
+      });
       return {
         files: [{ name: 'merged.pdf', bytes }],
         stats: [
@@ -65,17 +82,17 @@ const PDF_TOOLS = {
       'Files merge in the order listed. Use the arrows in the file list to reorder before merging.',
       'Give one page range to apply to every file, or separate them with | to set each file individually — for example "1-3 | all | 2,5".',
       'Metadata is stripped by default, since a merged document inheriting one source file\u2019s author and title is usually wrong.',
-      'Bookmarks, form fields and annotations from the source files are not carried across. Page content, images and page geometry are.'
+      'Links, comments and form fields travel with their page. A link to another page of the same file lands on that page in the merged document; a link to a page you left out is removed rather than pointed somewhere wrong.'
     ],
     faq: [
       { q: 'Are my files uploaded?', a: 'No. The PDFs are parsed and rewritten by your own browser. Nothing is transmitted, which is why this works offline and why it is safe for contracts and financial documents.' },
-      { q: 'Why are my bookmarks missing?', a: 'Merging rebuilds the page tree from scratch, which is what makes the output reliably valid. Carrying outlines across from several documents with conflicting structures is where most mergers produce broken files, so this deliberately drops them.' }
+      { q: 'What happens to bookmarks and form fields?', a: 'When any of the files has bookmarks, the merged file gets one top-level bookmark per file, named after it and opening at its first page, with that file’s own bookmarks underneath; a bookmark whose page you left out is dropped. Form fields stay fillable. Two files can both have a field called “name”, and a reader treats fields with one name as one field, so the later file’s copy is renamed name_2 rather than filling in both at once.' }
     ]
   },
 
   'split-pdf': {
     title: 'Split PDF',
-    kind: 'transform', multiple: false,
+    kind: 'transform', action: 'Split PDF', multiple: false,
     description: 'Split one PDF into several files — by page count, by ranges, or one file per page.',
     keywords: ['split pdf', 'separate pdf pages', 'divide pdf', 'pdf splitter', 'break up pdf'],
     controls: [
@@ -146,7 +163,7 @@ const PDF_TOOLS = {
 
   'extract-pdf-pages': {
     title: 'Extract PDF Pages',
-    kind: 'transform', multiple: false,
+    kind: 'transform', action: 'Extract pages', multiple: false,
     description: 'Pull specific pages out of a PDF into a new document, keeping the order you specify.',
     keywords: ['extract pdf pages', 'select pdf pages', 'pdf page extractor', 'get pages from pdf', 'copy pdf pages'],
     controls: [
@@ -193,7 +210,7 @@ const PDF_TOOLS = {
 
   'delete-pdf-pages': {
     title: 'Delete PDF Pages',
-    kind: 'transform', multiple: false,
+    kind: 'transform', action: 'Delete pages', multiple: false,
     description: 'Remove unwanted pages from a PDF — blank scans, cover sheets, or anything else.',
     keywords: ['delete pdf pages', 'remove pages from pdf', 'pdf page remover', 'erase pdf page'],
     controls: [
@@ -234,7 +251,7 @@ const PDF_TOOLS = {
 
   'rotate-pdf': {
     title: 'Rotate PDF Pages',
-    kind: 'transform', multiple: false,
+    kind: 'transform', action: 'Rotate pages', multiple: false,
     description: 'Rotate every page or selected pages by 90, 180 or 270 degrees, permanently.',
     keywords: ['rotate pdf', 'turn pdf pages', 'pdf orientation', 'fix sideways pdf', 'rotate pdf permanently'],
     controls: [
@@ -281,7 +298,7 @@ const PDF_TOOLS = {
 
   'pdf-metadata': {
     title: 'PDF Metadata Editor & Remover',
-    kind: 'transform', multiple: false,
+    kind: 'transform', action: 'Apply to metadata', multiple: false,
     description: 'View, change or completely strip the hidden metadata in a PDF — author, title, software.',
     keywords: ['pdf metadata', 'remove pdf metadata', 'edit pdf properties', 'pdf author remove', 'anonymise pdf'],
     controls: [
@@ -305,6 +322,8 @@ const PDF_TOOLS = {
         : {};
 
       const items = Array.from({ length: total }, (_, i) => ({ doc, pageIndex: i }));
+      /* The XMP stream repeats the same properties (and edited ones would
+         contradict it), so it goes in both modes. */
       const bytes = await core.assemble(items, { info, xmp: false });
       const base = docs[0].name.replace(/\.pdf$/i, '');
 
@@ -411,7 +430,7 @@ const PDF_TOOLS = {
 
   'watermark-pdf': {
     title: 'Add Watermark to PDF',
-    kind: 'transform', multiple: false,
+    kind: 'transform', action: 'Add watermark', multiple: false,
     description: 'Stamp text across every page — DRAFT, CONFIDENTIAL, a name or a date — at any angle and opacity.',
     keywords: ['watermark pdf', 'add text to pdf', 'stamp pdf', 'draft watermark', 'confidential pdf'],
     controls: [
@@ -448,9 +467,11 @@ const PDF_TOOLS = {
       const items = [];
       for (let i = 0; i < total; i++) {
         if (!sel.has(i)) { items.push({ doc, pageIndex: i }); continue; }
-        const box = (await doc.resolve(pages[i].dict.MediaBox || pages[i].inherited.MediaBox)) || [0, 0, 595.28, 841.89];
-        const W = Math.abs(Number(box[2]) - Number(box[0]));
-        const H = Math.abs(Number(box[3]) - Number(box[1]));
+        /* The page as a reader sees it: cropped, and turned by its /Rotate.
+           The overlay is drawn in that frame (upright below), so the text
+           reads the right way up and centres on what is visible. */
+        const frame = await core.pageFrame(doc, i);
+        const W = frame.width, H = frame.height;
         const tw = core.textWidth(text, 'Helvetica-Bold', size);
 
         let ops = '';
@@ -471,7 +492,7 @@ const PDF_TOOLS = {
         }
 
         items.push({ doc, pageIndex: i, overlay: {
-          content: ops, fontKey: 'MVRwm', fontName: 'Helvetica-Bold', needsGS: true, opacity
+          content: ops, fontKey: 'MVRwm', fontName: 'Helvetica-Bold', needsGS: true, opacity, upright: true
         }});
       }
 
@@ -502,7 +523,7 @@ const PDF_TOOLS = {
 
   'pdf-page-numbers': {
     title: 'Add Page Numbers to PDF',
-    kind: 'transform', multiple: false,
+    kind: 'transform', action: 'Add page numbers', multiple: false,
     description: 'Stamp page numbers, headers or footers onto an existing PDF.',
     keywords: ['add page numbers to pdf', 'pdf page numbering', 'pdf header footer', 'number pdf pages'],
     controls: [
@@ -549,9 +570,11 @@ const PDF_TOOLS = {
           'dash': `\u2013 ${num} \u2013`
         }[opts.format] || String(num);
 
-        const box = (await doc.resolve(pages[i].dict.MediaBox || pages[i].inherited.MediaBox)) || [0, 0, 595.28, 841.89];
-        const W = Math.abs(Number(box[2]) - Number(box[0]));
-        const H = Math.abs(Number(box[3]) - Number(box[1]));
+        /* The page as a reader sees it: cropped, and turned by its /Rotate.
+           The overlay is drawn in that frame (upright below), so a number
+           lands the right way up and inside the visible edge. */
+        const frame = await core.pageFrame(doc, i);
+        const W = frame.width, H = frame.height;
         const tw = core.textWidth(label, 'Helvetica', size);
 
         const top = /^t/.test(opts.position);
@@ -568,7 +591,7 @@ const PDF_TOOLS = {
         }
 
         items.push({ doc, pageIndex: i, overlay: {
-          content: ops, fontKey: 'MVRpn', fontName: 'Helvetica', needsGS: false, opacity: 1
+          content: ops, fontKey: 'MVRpn', fontName: 'Helvetica', needsGS: false, opacity: 1, upright: true
         }});
       }
 
@@ -589,7 +612,7 @@ const PDF_TOOLS = {
       'Skip the first page when the document has a cover, and start numbering at 1 on the page after it.',
       'Numbers are placed 32 points — about 11 mm — from the page edge, inside the printable area of virtually every printer.',
       'If the document already has printed page numbers, these will sit alongside them. Check a page before committing to a long document.',
-      'Mixed page sizes are handled: the position is computed per page from that page\u2019s own dimensions.'
+      'Mixed page sizes are handled: the position is computed per page from the part of that page a reader sees, turned the way it is shown, so a landscape page stored sideways or a cropped scan is numbered upright and inside its visible edge.'
     ],
     faq: [
       { q: 'Can I use Roman numerals for a preface?', a: 'Not in one pass. Split the document, number the preface separately with a different format, then merge — which is exactly what the split and merge tools are for.' }
@@ -703,13 +726,13 @@ const PDF_TOOLS = {
       const rows = [];
       for (const line of String(opts.items || '').split('\n')) {
         if (!line.trim()) continue;
-        const parts = line.split(',').map(s => s.trim());
-        const price = parseFloat(parts[parts.length - 1]);
-        const qty = parseFloat(parts[parts.length - 2]);
-        if (!isFinite(price) || !isFinite(qty) || parts.length < 3) {
+        const r = readItemLine(line.trim());
+        /* a line that could mean two prices is shown, not guessed at */
+        if (r.message) return { error: r.message };
+        if (!r.row) {
           return { error: `Could not read "${line.slice(0, 40)}". Use: description, quantity, unit price` };
         }
-        rows.push({ desc: parts.slice(0, -2).join(', '), qty, price, total: qty * price });
+        rows.push(r.row);
       }
       if (!rows.length) return { error: 'Add at least one line item.' };
 
@@ -803,6 +826,7 @@ const PDF_TOOLS = {
     },
     tips: [
       'Line items take the form "description, quantity, unit price". The description may contain commas — only the last two values are read as numbers.',
+      'Prices may keep their thousands commas, western or Indian: "Consulting, 1, 1,200" is 1 at 1,200 and "Fit-out, 1, 1,25,000" is 1 at 1,25,000, because a comma followed by a space separates fields and one between digits does not. "Consulting x2 @ 1,200" works too. When a line could mean two different prices, the tool says so and asks, rather than picking one.',
       'A UK VAT invoice must show your VAT number, the tax point date and the rate applied. Add your VAT number to the business details block.',
       'Invoice numbers should be sequential with no gaps. Tax authorities in most jurisdictions expect to see an unbroken series.',
       'Everything is generated on your device, so client names and amounts never leave it.'
@@ -1127,7 +1151,7 @@ const PDF_TOOLS = {
 
   'pdf-to-images': {
     title: 'PDF to Images',
-    kind: 'render', multiple: false,
+    kind: 'render', action: 'Convert to images', multiple: false,
     description: 'Convert PDF pages to PNG or JPEG images at any resolution, entirely in your browser.',
     keywords: ['pdf to image', 'pdf to png', 'pdf to jpg', 'convert pdf to picture', 'extract pdf pages as images'],
     needsRenderer: true,
@@ -1154,90 +1178,105 @@ const PDF_TOOLS = {
 
   'pdf-organise': {
     title: 'Organise PDF Pages',
-    kind: 'render', multiple: false,
+    kind: 'render', action: 'Show the pages', multiple: false,
     description: 'See page thumbnails and reorder, rotate or delete pages visually before saving.',
     keywords: ['organise pdf', 'reorder pdf pages', 'rearrange pdf', 'pdf page organizer', 'move pdf pages'],
     needsRenderer: true,
     controls: [],
     tips: [
       'Thumbnails need a rendering engine, downloaded once on first use and cached afterwards.',
-      'Drag thumbnails to reorder, use the rotate button on each, and the cross to mark a page for removal.',
+      'Drag thumbnails to reorder, use the rotate button on each, and the cross to mark a page for removal. On a touch screen, drag by the grip in a card’s corner; from the keyboard, the ← and → buttons move a page one place and keep the focus, so you can press them again.',
       'Nothing is changed until you save. The original file on your device is never modified.',
       'If you already know the page numbers you want, the extract, delete and rotate tools do the same job without any download.'
     ],
     faq: [
-      { q: 'Is there a page limit?', a: 'Thumbnails are rendered on demand as you scroll, so long documents work — but a document of several hundred pages will use noticeable memory. For very large files, the numeric tools are lighter.' }
+      { q: 'Is there a page limit?', a: 'No fixed limit, but every page’s thumbnail is drawn when the file opens, so a document of several hundred pages takes a while to appear and uses noticeable memory. For very large files, the numeric tools are lighter.' }
     ]
   },
 
-  /* ===================== NEW TOOLS - RAPID PROTOTYPING ===================== */
+  /* ===================== NEW TOOLS - RAPID PROTOTYPING =====================
+     pdf-editor and pdf-signature ship; the other six here are drafts that
+     do not (build-pdf-ship.js says why). */
 
+  /* pdf-editor ships: this block is engine/pdf-pdf-editor.js's spec, copied verbatim
+     (that file is edited directly). test_pdftools.js fails if the two differ. */
   'pdf-editor': {
-    title: 'PDF Editor',
-    kind: 'transform', multiple: false,
-    description: 'Add text to PDFs with visual preview. Click on your PDF to set exactly where you want the text to appear!',
-    keywords: ['pdf editor', 'edit pdf', 'add text to pdf', 'modify pdf', 'pdf annotation', 'easy pdf editor'],
-    controls: [
-      { key: 'text', label: 'Your text', type: 'textarea', default: 'Hello World!' },
-      { key: 'size', label: 'Text size', type: 'number', default: 16, min: 8, max: 72 },
-      { key: 'colour', label: 'Text color', type: 'color', default: '#000000' },
-      { key: 'x', label: 'X position (set by clicking preview)', type: 'number', default: 297, min: 0, max: 1000 },
-      { key: 'y', label: 'Y position (set by clicking preview)', type: 'number', default: 421, min: 0, max: 1200 },
-      { key: 'pages', label: 'Pages to add text to', type: 'text', default: '1', hint: 'Use "all" for every page' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Add Text to a PDF",
+"kind": "transform",
+"action": "Add text",
+"multiple": false,
+"description": "Put text anywhere on a PDF \u2014 as many pieces as you like, on any pages, wrapped to a width. Click the page to place each one and see it land before you commit.",
+"keywords": ["add text to pdf","write on pdf","type on pdf","insert text in pdf","annotate pdf free","pdf text overlay"],
+"controls": [{"key":"text","label":"Text to add","type":"textarea","default":""},{"key":"size","label":"Font size","type":"number","default":16,"min":8,"max":72},{"key":"colour","label":"Colour","type":"color","default":"#000000"},{"key":"x","label":"X","type":"number","default":297,"min":0,"max":2000,"hint":"Points from the left edge"},{"key":"y","label":"Y","type":"number","default":421,"min":0,"max":2000,"hint":"Points up from the bottom edge"},{"key":"pages","label":"Pages","type":"text","default":"1","hint":"1, 2-5, or all"},{"key":"width","label":"Wrap width","type":"number","default":0,"min":0,"max":2000,"hint":"Points. 0 keeps each line as typed"}],
+"placePreview": { "x": "x", "y": "y", "page": "pages", "text": "text", "size": "size", "colour": "colour", "width": "width", "items": "items" },
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
-      let sel;
-      try { sel = new Set(core.parsePageRange(opts.pages, total)); }
-      catch (e) { return { error: e.message }; }
+      /* Every banked item plus whatever is in the controls now. */
+      const items = (opts.items || []).map(it => Object.assign({}, it));
+      const cur = String(opts.text || '');
+      if (cur.trim()) {
+        items.push({
+          text: cur, size: Number(opts.size) || 16, colour: opts.colour, x: Number(opts.x) || 0,
+          y: Number(opts.y) || 0, width: Number(opts.width) || 0, pages: String(opts.pages || '1')
+        });
+      }
+      if (!items.length) return { error: 'Type the text you want to add first.' };
 
-      const text = String(opts.text || '').trim();
-      if (!text) return { error: 'Please enter some text to add to your PDF.' };
+      /* Resolve each item's pages once; a bad range names the item. */
+      const placed = [];
+      for (const it of items) {
+        const v = String(it.pages || '1').trim();
+        let sel;
+        try { sel = new Set(/^last$/i.test(v) ? [total - 1] : core.parsePageRange(v, total)); }
+        catch (e) { return { error: `"${it.text.split('\n')[0].slice(0, 30)}": ${e.message}` }; }
+        const size = Math.max(6, Math.min(72, Number(it.size) || 16));
+        const lines = it.width > 0
+          ? core.wrapText(it.text, 'Helvetica', size, it.width)
+          : String(it.text).split('\n');
+        placed.push({
+          sel, size, lines, x: Math.max(0, Number(it.x) || 0), y: Math.max(0, Number(it.y) || 0),
+          col: rgbTriplet(it.colour), lead: size * 1.25
+        });
+      }
 
-      const size = Math.max(6, Math.min(72, Number(opts.size) || 16));
-      const x = Math.max(0, Number(opts.x) || 297);
-      const y = Math.max(0, Number(opts.y) || 421);
-      const col = rgbTriplet(opts.colour);
-      const esc = core.contentEscape(text);
-      const pages = await doc.getPages();
-
-      const items = [];
+      const assembled = [];
+      let pagesTouched = 0, linesWritten = 0;
       for (let i = 0; i < total; i++) {
-        if (!sel.has(i)) { items.push({ doc, pageIndex: i }); continue; }
-        
-        const ops = `q\n${col} rg\nBT\n/MVRedit ${size} Tf\n1 0 0 1 ${nf(x)} ${nf(y)} Tm\n(${esc}) Tj\nET\nQ\n`;
-        
-        items.push({ doc, pageIndex: i, overlay: {
-          content: ops, fontKey: 'MVRedit', fontName: 'Helvetica', needsGS: false, opacity: 1
+        const here = placed.filter(p => p.sel.has(i));
+        if (!here.length) { assembled.push({ doc, pageIndex: i }); continue; }
+        pagesTouched++;
+        let ops = 'q\n';
+        for (const p of here) {
+          ops += `${p.col} rg\nBT\n/MVRedit ${p.size} Tf\n`;
+          p.lines.forEach((line, k) => {
+            if (!line) return;
+            ops += `1 0 0 1 ${nf(p.x)} ${nf(p.y - k * p.lead)} Tm\n(${core.contentEscape(line)}) Tj\n`;
+            linesWritten++;
+          });
+          ops += 'ET\n';
+        }
+        ops += 'Q\n';
+        assembled.push({ doc, pageIndex: i, overlay: {
+          content: ops, fontKey: 'MVRedit', fontName: 'Helvetica', needsGS: false, opacity: 1, upright: true
         }});
       }
 
-      const bytes = await core.assemble(items, {});
+      const bytes = await core.assemble(assembled, {});
       const base = docs[0].name.replace(/\.pdf$/i, '');
       return {
         files: [{ name: `${base}-edited.pdf`, bytes }],
         stats: [
           ['Pages', String(total)],
-          ['Pages modified', String(sel.size)],
-          ['Text added', text.slice(0, 50) + (text.length > 50 ? '...' : '')],
-          ['Position', `X: ${x}, Y: ${y}`],
-          ['Text size', size + 'px'],
+          ['Pages written to', String(pagesTouched)],
+          ['Items placed', String(items.length)],
+          ['Lines written', String(linesWritten)],
           ['Output size', fmtBytes(bytes.length)]
         ]
       };
     },
-    tips: [
-      'Click anywhere on the PDF preview to set the text position automatically.',
-      'The text preview shows exactly where your text will appear.',
-      'Use "all" for pages to add the same text to every page in your document.',
-      'Different colors help you organize information - use red for important notes, blue for regular text.'
-    ],
-    faq: [
-      { q: 'How do I position the text?', a: 'Simply click anywhere on the PDF preview - the coordinates will be set automatically and you\'ll see a preview of where the text will appear.' },
-      { q: 'Can I add multiple text items?', a: 'Yes! Process the PDF once with your first text, then process the resulting PDF again to add more text in different positions.' },
-      { q: 'Is this suitable for children?', a: 'Yes! Just click where you want the text to go - no coordinates to understand. Perfect for kids adding their names to documents.' }
-    ]
+"tips": ["Click the page preview to place the text. The dashed box shows where it will sit, at the size and colour it will be; if it wraps, every line is shown.","Several pieces of text: place the first, press \u201cAdd as another item\u201d, and the controls clear for the next one. Banked items stay drawn on the preview in grey and can be edited or removed from the list.","Wrap width is in points, measured with the real font metrics \u2014 A4 is 595 wide, so 450 leaves comfortable margins. 0 means each line stays exactly as typed, and a blank line in the box is a blank line on the page.","Use the arrows beside \u201cPage 1 of N\u201d to look through the document. The Pages box on each item decides where it goes: 1, 2-5, all, or last.","With the preview focused, the arrow keys nudge by 2 points and shift-arrow by 20, and Page Up and Page Down turn the page.","X and Y are PDF points from the bottom-left corner of the page as it is shown, 72 to the inch \u2014 a rotated or cropped page is measured the way you see it. A4 is 595 \u00d7 842, US Letter 612 \u00d7 792.","The text is drawn in Helvetica. Characters outside Latin-1 \u2014 Greek, Cyrillic, CJK, most emoji \u2014 will not render, because that font has no glyphs for them."],
+"faq": [{"q":"Can I change the text that is already in my PDF?","a":"No. This draws new text on top of the page; it does not touch what is already there. Editing existing words means re-flowing the original text, which needs the fonts and the layout the PDF was made from, and most PDFs do not carry enough of either. If you need to change existing wording, edit the source document and export it again."},{"q":"How do I add more than one piece of text?","a":"Type the first, click where it goes, then press \u201cAdd as another item\u201d. It moves into the list below and stays drawn on the preview; the controls clear for the next one. Each item keeps its own page, position, size, colour and wrap width. Edit puts an item back in the controls; the cross removes it. Whatever is in the controls when you press Add text is included too."},{"q":"Why does my text run off the page in one line?","a":"Set a wrap width. With it at 0 the tool draws each line exactly as you typed it, which is right for a label or a reference number and wrong for a paragraph. A width of 450 points on an A4 page wraps like a normal document; the preview shows the wrapped lines before you commit."},{"q":"How do I see a page other than the first one?","a":"Use the arrows beside the page number above the preview, or Page Up and Page Down with the preview focused. Paging through changes nothing on its own: each item\u2019s Pages box decides where it is written, and the preview greys out items that are not on the page in view."},{"q":"Can I add a picture or a logo?","a":"Not here. This tool writes text into the page\u2019s content stream with the standard Helvetica font, which is why the output stays tiny and needs nothing embedded. Placing an image means embedding it as a PDF image object, which is a different piece of work; if it is something you need, say so."},{"q":"Are my files uploaded?","a":"No. The PDF is parsed and rewritten by your own browser. Nothing is transmitted, which is why this works offline and why it is safe for contracts and financial documents."}]
   },
 
   'pdf-form-filler': {
@@ -1526,23 +1565,22 @@ const PDF_TOOLS = {
     ]
   },
 
+  /* pdf-signature ships: this block is engine/pdf-pdf-signature.js's spec, copied verbatim
+     (that file is edited directly). test_pdftools.js fails if the two differ. */
   'pdf-signature': {
-    title: 'Digital Signature Tool',
-    kind: 'transform', multiple: false,
-    description: 'Add signature placeholders and visual signature elements to PDFs.',
-    keywords: ['pdf signature', 'sign pdf', 'digital signature pdf', 'add signature to pdf', 'pdf signing'],
-    controls: [
-      { key: 'signatureText', label: 'Signature text', type: 'text', default: 'Signed by: ' },
-      { key: 'date', label: 'Include date', type: 'select', default: 'yes',
-        options: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }] },
-      { key: 'x', label: 'X position', type: 'number', default: 400, min: 0 },
-      { key: 'y', label: 'Y position', type: 'number', default: 100, min: 0 },
-      { key: 'pages', label: 'Pages to sign', type: 'text', default: 'last' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Add a Signature to a PDF",
+"kind": "transform",
+"action": "Add signature",
+"multiple": false,
+"description": "Draw or type a signature onto a PDF and place it where you want. A visible signature, not a cryptographic one — the difference is explained below.",
+"keywords": ["sign pdf","add signature to pdf","pdf signature image","signature on pdf","place signature pdf","pdf sign online free"],
+"controls": [{"key":"drawn","label":"Draw your signature (optional)","type":"draw","hint":"Mouse, pen or finger. It sits just above the typed line."},{"key":"drawWidth","label":"Drawn signature width","type":"number","default":150,"min":40,"max":400,"hint":"Points; the height follows the drawing"},{"key":"signatureText","label":"Signature text","type":"text","default":"Signed by: ","hint":"Your name, or whatever should appear on the line"},{"key":"date","label":"Include date","type":"select","default":"yes","options":[{"value":"yes","label":"Yes"},{"value":"no","label":"No"}]},{"key":"x","label":"X","type":"number","default":400,"min":0,"hint":"Points from the left edge"},{"key":"y","label":"Y","type":"number","default":100,"min":0,"hint":"Points up from the bottom edge"},{"key":"pages","label":"Pages","type":"text","default":"last","hint":"last, 1, 2-5, or all"}],
+"placePreview": { "x": "x", "y": "y", "page": "pages", "text": "signatureText", "size": 11, "colour": "#000000", "drawing": "drawn", "drawingWidth": "drawWidth" },
+"inkPlacement": inkPlacement,
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
-      
+
       let sel;
       if (opts.pages === 'last') {
         sel = new Set([total - 1]);
@@ -1551,27 +1589,47 @@ const PDF_TOOLS = {
         catch (e) { return { error: e.message }; }
       }
 
-      const sigText = String(opts.signatureText || 'Signed by: ');
-      const x = Math.max(0, Number(opts.x) || 400);
-      const y = Math.max(0, Number(opts.y) || 100);
+      const sigText = String(opts.signatureText == null ? '' : opts.signatureText);
+      const ink = inkPlacement(opts.drawn, opts);
+      if (!sigText.trim() && !ink) return { error: 'Type a signature or draw one first.' };
+      const x = Math.max(0, numOr(opts.x, 400));
+      const y = Math.max(0, numOr(opts.y, 100));
       const col = rgbTriplet('#000000');
-      const pages = await doc.getPages();
+
+      /* The drawing as vector strokes: as sharp as the text beside it at any
+         zoom, and a few hundred bytes rather than an embedded picture. */
+      let inkOps = '';
+      if (ink) {
+        const X = (p) => nf(ink.x0 + (p[0] - ink.minX) * ink.s);
+        const Y = (p) => nf(ink.y0 + (ink.maxY - p[1]) * ink.s);
+        inkOps = `q\n${col} RG\n1.4 w\n1 J\n1 j\n`;
+        for (const s of opts.drawn.strokes) {
+          if (!s.length) continue;
+          inkOps += `${X(s[0])} ${Y(s[0])} m\n`;
+          (s.length === 1 ? [s[0]] : s.slice(1)).forEach(p => { inkOps += `${X(p)} ${Y(p)} l\n`; });
+          inkOps += 'S\n';
+        }
+        inkOps += 'Q\n';
+      }
 
       const items = [];
       for (let i = 0; i < total; i++) {
         if (!sel.has(i)) { items.push({ doc, pageIndex: i }); continue; }
 
-        let ops = `q\n${col} rg\nBT\n/MVRsig 11 Tf\n1 0 0 1 ${nf(x)} ${nf(y)} Tm\n(${core.contentEscape(sigText)}) Tj\n`;
-        
+        let ops = inkOps + `q\n${col} rg\nBT\n/MVRsig 11 Tf\n`;
+        if (sigText.trim()) ops += `1 0 0 1 ${nf(x)} ${nf(y)} Tm\n(${core.contentEscape(sigText)}) Tj\n`;
+
         if (opts.date === 'yes') {
           const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
           ops += `\n1 0 0 1 ${nf(x)} ${nf(y - 14)} Tm\n(${core.contentEscape('Date: ' + dateStr)}) Tj`;
         }
-        
+
         ops += '\nET\nQ\n';
 
+        /* X and Y are measured on the page as it is shown — cropped and
+           turned by its /Rotate — which is also what the preview shows. */
         items.push({ doc, pageIndex: i, overlay: {
-          content: ops, fontKey: 'MVRsig', fontName: 'Helvetica', needsGS: false, opacity: 1
+          content: ops, fontKey: 'MVRsig', fontName: 'Helvetica', needsGS: false, opacity: 1, upright: true
         }});
       }
 
@@ -1582,22 +1640,17 @@ const PDF_TOOLS = {
         stats: [
           ['Pages', String(total)],
           ['Pages signed', String(sel.size)],
-          ['Signature text', sigText],
+          ['Signature', ink ? (sigText.trim() ? 'Drawn, with typed text' : 'Drawn') : 'Typed'],
+          ...(sigText.trim() ? [['Signature text', sigText]] : []),
+          ...(ink ? [['Drawn size', Math.round(ink.w) + ' × ' + Math.round(ink.h) + ' points']] : []),
           ['Date included', opts.date],
           ['Output size', fmtBytes(bytes.length)]
         ],
         warn: 'This adds visual signature elements. For legally binding digital signatures, you need certificate-based cryptographic signing.'
       };
     },
-    tips: [
-      'This adds visual signature placeholders. For legal signatures, you need certificate-based signing.',
-      'Position the signature area where it fits your document layout.',
-      'Use "last" to sign only the final page, common for contracts.',
-      'Visual signatures can be removed. Cryptographic signatures cannot.'
-    ],
-    faq: [
-      { q: 'Is this legally binding?', a: 'No. This adds visual elements only. Legally binding digital signatures require PKI certificates and cryptographic signing, which needs additional libraries.' }
-    ]
+"tips": ["Draw in the box with a mouse, a pen or a finger, or leave it empty and type. A drawing is placed just above the typed line, at the width you choose, as vector strokes rather than a picture, so it stays sharp when zoomed and adds only a few hundred bytes.","Click the page preview to place the signature. The dashed box is where the line will sit on the finished file, and a drawing is shown above it where it will land.","The arrows beside the page number page through the document. That changes only what you are looking at; the Pages box decides which pages are signed.","Leave the pages box on \"last\" to sign only the final page, which is where most contracts want it.","The date, if you include it, is drawn on a second line just under the signature.","X and Y are PDF points from the bottom-left corner of the page as it is shown, 72 to the inch — a rotated or cropped page is measured the way you see it. A4 is 595 × 842, US Letter 612 × 792. 0 is a real position: the very edge.","This is a visible signature and can be removed by anyone with an editor. A cryptographic signature cannot — see the question below."],
+"faq": [{"q":"Is this a legally binding digital signature?","a":"No, and the distinction matters. This adds visual elements only: your typed or drawn signature is drawn onto the page, the same as signing a printout and scanning it. A digital signature in the legal sense is a cryptographic operation that binds a certificate to the document so any later change is detectable, and it needs a certificate from a certifying authority or trust service provider. This tool writes no signature field, certificate or /ByteRange, so a signature validator finds nothing to check. If a contract, a court or a regulator asks for a digital signature, this is not it — use a certificate-based signing service. For a form, an invoice or an internal approval that only has to look signed, a visible signature is what is wanted."}]
   },
 
   'pdf-portfolio': {
@@ -1685,6 +1738,143 @@ function rgbTriplet(hex) {
 function nf(v) {
   return Number.isInteger(v) ? String(v) : String(Number(Number(v).toFixed(4)));
 }
+
+/* ---------- signature placement (as in engine/pdf-pdf-signature.js) ---------- */
+
+/* A number from a control, or the default when the box is empty or not a
+   number. 0 is a number: "X 0" is the left edge, not "use the default". */
+function numOr(v, d) {
+  if (v === '' || v === null || v === undefined) return d;
+  const x = Number(v);
+  return isFinite(x) ? x : d;
+}
+
+/**
+ * Where a drawn signature goes, shared by the run and the page preview so
+ * the two cannot disagree. The pad hands over { w, h, strokes: [[[x, y], …], …] }
+ * in its own pixels, y down; the ink is cropped to its bounds and scaled to
+ * the chosen width (no taller than a third of it), with its bottom-left at
+ * X, Y — lifted 12 points when there is typed text, so the drawing sits on
+ * the line above it.
+ */
+function inkPlacement(d, opts) {
+  if (!d || !Array.isArray(d.strokes) || !d.strokes.length) return null;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  d.strokes.forEach(s => s.forEach(p => {
+    minX = Math.min(minX, p[0]); maxX = Math.max(maxX, p[0]);
+    minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]);
+  }));
+  if (!isFinite(minX)) return null;
+  const inkW = Math.max(1, maxX - minX), inkH = Math.max(1, maxY - minY);
+  const width = Math.max(40, Math.min(400, numOr(opts.drawWidth, 150)));
+  const s = Math.min(width / inkW, (width / 3) / inkH);
+  const x = Math.max(0, numOr(opts.x, 400)), y = Math.max(0, numOr(opts.y, 100));
+  const lift = String(opts.signatureText == null ? '' : opts.signatureText).trim() ? 12 : 0;
+  return { s, minX, maxY, x0: x, y0: y + lift, w: inkW * s, h: inkH * s };
+}
+
+/* ---------- line items ---------- */
+
+/* A number as people type one: 2650 or 2650.50, or grouped with commas the
+   western way (2,650 · 1,234,567) or the Indian way (1,25,000 · 12,34,567).
+   "2,65" is neither, so it is not read as a number at all. */
+const PLAIN_NUM = /^-?\d+(?:\.\d+)?$/;
+const GROUPED_NUM = /^-?(?:\d{1,3}(?:,\d{3})+|\d{1,2}(?:,\d{2})*,\d{3})(?:\.\d+)?$/;
+const isNumTok = (s) => { const t = String(s).trim(); return PLAIN_NUM.test(t) || GROUPED_NUM.test(t); };
+const toNum = (s) => Number(String(s).trim().replace(/,/g, ''));
+const CUR_PREFIX = /^(?:rs\.?\s*|inr\s*|[£$€]\s*)/i;
+const SHORTHAND = /^(.+?)\s+[x×]\s*(\d+(?:\.\d+)?)\s*@\s*(?:rs\.?\s*|inr\s*|[£$€]\s*)?(-?\d[\d,]*(?:\.\d+)?)$/i;
+
+/** "description, quantity, unit price", already split; null if it does not fit. */
+function readItemFields(tokens) {
+  const parts = tokens.map(s => s.trim());
+  while (parts.length && parts[parts.length - 1] === '') parts.pop();
+  if (parts.length < 3) return null;
+  const p = parts[parts.length - 1].replace(CUR_PREFIX, ''), q = parts[parts.length - 2];
+  if (!isNumTok(p) || !isNumTok(q)) return null;
+  const desc = parts.slice(0, -2).join(', ').trim();
+  if (!desc) return null;
+  const qty = toNum(q), price = toNum(p);
+  return { desc, qty, price, total: qty * price };
+}
+
+const notGrouped = (line, tok) => 'In “' + line + '”, “' + tok + '” is not a number with thousands separators (2,650 or 1,25,000), so it is not clear what it means. ' +
+  'If it is a decimal, write it with a point (2.65); if the comma separates two fields, put a space after it.';
+
+/*
+ * One line item, read from the right. A comma also groups thousands —
+ * "Consulting, 1, 1,200" is 1 at 1,200 — so the commas that separate fields
+ * and the ones inside a number are told apart, as the Quotation tool does:
+ *
+ *   - a line with a space after (or before) any comma uses spaced commas as
+ *     separators, and a comma with no space between digits is a thousands
+ *     separator: the digits it joins must make 2,650 or 1,25,000, or the
+ *     line is reported rather than guessed at;
+ *   - a line with no spaces at all ("Item,2,2,650") is read every way its
+ *     digit commas allow; one sensible reading is used, more than one is
+ *     reported, with the readings, instead of picking one;
+ *   - "Item x2 @ 2,650" (quantity after x, price after @) is read as written.
+ *
+ * Returns { row } or { message } (ambiguous) or {} (unreadable).
+ */
+function readItemLine(line) {
+  const sh = SHORTHAND.exec(line);
+  if (sh) {
+    if (!isNumTok(sh[3])) return { message: notGrouped(line, sh[3]) };
+    const qty = toNum(sh[2]), price = toNum(sh[3]);
+    return { row: { desc: sh[1].trim(), qty, price, total: qty * price } };
+  }
+
+  /* split on every comma, and note which commas could be inside a number:
+     no space on either side, digits before, digits after */
+  const raw = line.split(',');
+  const joints = [];
+  let spaced = false;
+  for (let i = 0; i < raw.length - 1; i++) {
+    const tight = !/\s$/.test(raw[i]) && !/^\s/.test(raw[i + 1]);
+    if (!tight) { spaced = true; continue; }
+    if (/^-?\d+$/.test(raw[i].trim()) && /^\d+(?:\.\d+)?$/.test(raw[i + 1].trim())) joints.push(i);
+  }
+  const join = (merge) => {
+    const out = [];
+    let cur = raw[0];
+    for (let i = 0; i < raw.length - 1; i++) {
+      if (merge.has(i)) cur += ',' + raw[i + 1];
+      else { out.push(cur); cur = raw[i + 1]; }
+    }
+    out.push(cur);
+    return out;
+  };
+  const oddNumber = (tokens) => tokens.find(t => t.indexOf(',') >= 0 && !GROUPED_NUM.test(t.trim().replace(CUR_PREFIX, '')));
+
+  if (spaced) {
+    const tokens = join(new Set(joints));
+    const odd = oddNumber(tokens);
+    if (odd) return { message: notGrouped(line, odd.trim()) };
+    const row = readItemFields(tokens);
+    return row ? { row } : {};
+  }
+
+  if (joints.length > 10) return {};
+  const readings = new Map();
+  for (let mask = 0; mask < (1 << joints.length); mask++) {
+    const tokens = join(new Set(joints.filter((j, k) => mask & (1 << k))));
+    if (oddNumber(tokens)) continue;
+    const row = readItemFields(tokens);
+    if (!row) continue;
+    const key = [row.desc, row.qty, row.price].join('\u0000');
+    if (!readings.has(key)) readings.set(key, row);
+  }
+  const all = Array.from(readings.values());
+  if (all.length === 1) return { row: all[0] };
+  if (!all.length) return {};
+  return {
+    message: '“' + line + '” can be read ' + all.length + ' ways: ' +
+      all.slice(0, 3).map(r => r.qty + ' at ' + r.price + ' for “' + r.desc + '”').join(', or ') +
+      '. Put a space after each comma that separates the fields (“Item, 2, 2,650”), or write the number without its comma (2650).'
+  };
+}
+
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { PDF_TOOLS, fmtBytes, slug, rgbTriplet };

@@ -32,6 +32,7 @@ const { PRICING, pricingFor } = require('./build/collections.js');
 const { ORDER, FAMILIES, apply: sidebarFor } = require('./build-sidebar.js');
 const jobs = require('./build/jobs.js');
 const hubs = require('./build-hubs.js');
+const { footerApply } = require('./build-site.js'); /* the footer note, as build-site.js words it */
 
 const ROOT = __dirname;
 const CHECK = process.argv.includes('--check');
@@ -185,7 +186,7 @@ function page(parts, inv) {
   /* the shell is a section hub's, so its <body> carries that section's
      data-sec; hubs.apply takes it off, as build-hubs.js would */
   const html = hubs.apply(sidebarFor(head + ld + parts.mid + '\n' + body + parts.tail, 'tools/index.html'), 'tools/index.html');
-  return proof.apply(share.apply(outbound.rewrite(html, 'tools').html, 'tools/index.html'), 'tools/index.html');
+  return footerApply(proof.apply(share.apply(outbound.rewrite(html, 'tools').html, 'tools/index.html'), 'tools/index.html'), 'tools/index.html');
 }
 
 function patchSitemap() {

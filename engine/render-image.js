@@ -644,15 +644,29 @@
         if (!dragging) return;
         e.preventDefault();
         const p = pos(e);
-        let x = Math.min(startX, p.x), y = Math.min(startY, p.y);
-        let w = Math.abs(p.x - startX), h = Math.abs(p.y - startY);
+        /* The box is anchored where the drag began and grows towards the
+           pointer. The pointer is held inside the picture FIRST, and the room
+           left between the anchor and the edge it heads for caps each side;
+           only then is a locked ratio applied, by trimming the longer side.
+           Trimming only shrinks, so the box stays inside the picture and keeps
+           its shape when the drag runs past any edge. */
+        const sx = Math.min(nw, Math.max(0, Math.round(startX)));
+        const sy = Math.min(nh, Math.max(0, Math.round(startY)));
+        const px = Math.min(nw, Math.max(0, p.x)), py = Math.min(nh, Math.max(0, p.y));
+        const left = px < sx, up = py < sy;
+        let w = Math.min(Math.abs(px - sx), left ? sx : nw - sx);
+        let h = Math.min(Math.abs(py - sy), up ? sy : nh - sy);
         const ar = ratio();
-        if (ar) { if (w / h > ar) w = h * ar; else h = w / ar; }
-        selection = {
-          x: Math.max(0, Math.round(x)), y: Math.max(0, Math.round(y)),
-          w: Math.max(1, Math.round(Math.min(w, nw - x))),
-          h: Math.max(1, Math.round(Math.min(h, nh - y)))
-        };
+        if (ar) {
+          if (w / h > ar) w = h * ar; else h = w / ar;
+          /* whole pixels: the longer side rounds down (so it still fits), the
+             other follows from it, at most half a pixel off the exact ratio */
+          if (ar >= 1) { w = Math.max(1, Math.floor(w + 1e-9)); h = Math.max(1, Math.round(w / ar)); }
+          else { h = Math.max(1, Math.floor(h + 1e-9)); w = Math.max(1, Math.round(h * ar)); }
+        } else { w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h)); }
+        let x = left ? sx - w : sx, y = up ? sy - h : sy;
+        x = Math.max(0, Math.min(x, nw - w)); y = Math.max(0, Math.min(y, nh - h));
+        selection = { x, y, w, h };
         paintView();
       };
       const onUp = () => { if (dragging) { dragging = false; render(); } };

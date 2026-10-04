@@ -229,7 +229,7 @@ window.DEV_TOOLS["favicon-generator"] = {
 "kind": "favicon",
 "description": "Generate every favicon and app icon size from one image, with the HTML to install them.",
 "keywords": ["favicon generator","favicon maker","app icon generator","apple touch icon","website icon","pwa icons"],
-"tips": ["Start from a square image of at least 512×512. Favicons are scaled down, never up, so anything smaller will look soft.","Detailed logos turn to mush at 16×16. Many brands use a simplified mark — a single letter or symbol — at the smallest sizes.","Maskable icons get cropped to a circle or squircle by Android. Keep important detail inside the middle 80%.","Browsers cache favicons aggressively. Add ?v=2 to the path when you change one."],
+"tips": ["Start from a square image of at least 512×512. A smaller image is scaled up to fill the larger icons, and those will look soft; the tool names every size it had to enlarge.","Detailed logos turn to mush at 16×16. Many brands use a simplified mark — a single letter or symbol — at the smallest sizes.","Maskable icons get cropped to a circle or squircle by Android. Keep important detail inside the middle 80%.","Browsers cache favicons aggressively. Add ?v=2 to the path when you change one."],
 "faq": [{"q":"Is my image uploaded anywhere?","a":"No. The resizing happens on a canvas inside your browser using the standard Canvas API. The file never leaves your device."},{"q":"Do I still need favicon.ico?","a":"Only for Internet Explorer and some feed readers. Every current browser prefers PNG or SVG, and a single SVG favicon scales to all sizes."}]
 };
 })();

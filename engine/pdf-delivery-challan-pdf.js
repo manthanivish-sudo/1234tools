@@ -286,7 +286,8 @@ window.PDF_TOOLS["delivery-challan-pdf"] = {
       rows.forEach(r => { if (units.indexOf(r.unit) < 0) units.push(r.unit); });
 
       const copyCount = [1, 2, 3].indexOf(Number(opts.copies)) >= 0 ? Number(opts.copies) : 3;
-      const COPY_NAMES = ['ORIGINAL FOR CONSIGNEE', 'DUPLICATE FOR TRANSPORTER', 'TRIPLICATE FOR CONSIGNOR'];
+      /* the markings of CGST Rule 55(2), word for word: the Rule spells it CONSIGNER */
+      const COPY_NAMES = ['ORIGINAL FOR CONSIGNEE', 'DUPLICATE FOR TRANSPORTER', 'TRIPLICATE FOR CONSIGNER'];
       const copyLabels = COPY_NAMES.slice(0, copyCount);
 
       /* ---------- the page ---------- */
@@ -600,7 +601,7 @@ window.PDF_TOOLS["delivery-challan-pdf"] = {
   "A delivery challan is not a tax invoice. It travels with the goods so that the consignee, the transporter and an inspecting officer can all see what is in the vehicle; the tax invoice is a separate document and only a supply produces one.",
   "The purposes offered are the ones the GST rules and the e-way bill portal name: supply, job work, goods sent on approval, exhibition or fairs, own use and line sales. Choosing anything other than supply prints the declaration that the value shown is for transport purposes only.",
   "An e-way bill is generated on the government portal, never here. The field is there so that the number can be written on the challan before the goods move; the tool warns if the declared value is over Rs 50,000 and the field is still empty.",
-  "Three copies are the convention: Original for the consignee, Duplicate for the transporter, Triplicate for the consignor. Each is printed as its own page with its name in the corner and in the footer, so they can be separated after printing.",
+  "For a supply, Rule 55(2) of the CGST Rules asks for three copies, marked ORIGINAL FOR CONSIGNEE, DUPLICATE FOR TRANSPORTER and TRIPLICATE FOR CONSIGNER, and those are the words printed, in the Rule’s own spelling. Each is printed as its own page with its name in the corner and in the footer, so they can be separated after printing.",
   "Print the challan on paper and hand a signed copy back. The acknowledgement block — received in good condition, name, signature, date — is the only evidence you will have if a shortage is claimed a week later.",
   "The standard PDF fonts cover Western European characters only, so the rupee sign cannot be drawn. Amounts are marked Rs, which every bank and auditor reads the same way.",
   "Everything is drawn on your device, so consignee names, values and vehicle numbers never leave it."

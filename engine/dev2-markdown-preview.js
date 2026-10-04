@@ -399,6 +399,56 @@ function markdownToHtml(md) {
     return t.replace(/\u0001(\d+)\u0002/g, (m, i) => kept[Number(i)]);
   };
 
+  /* GitHub-style pipe tables. A row is split at every | that is not written
+     \| (which becomes a plain | in the cell); one pipe at either end is
+     optional. The line under the header must be a divider row of ---, :---,
+     ---: or :---: with as many cells as the header, or neither line is a
+     table. Body rows are padded with empty cells or cut to the header's
+     width, and the table ends at a blank line or at a line that starts some
+     other block (#, >, a bullet, a number, a rule, a code block); any other
+     line is one more row, as on GitHub. Cells go through inline() above, so
+     the same escaping as a paragraph, and the alignment is taken from the
+     fixed list below, never copied from the text. */
+  const ALIGN = { left: ' style="text-align:left"', center: ' style="text-align:center"', right: ' style="text-align:right"', none: '' };
+  const splitRow = (row) => {
+    const s = row.trim();
+    const cells = [];
+    let cur = '', endPipe = false;
+    for (let i = 0; i < s.length; i++) {
+      const c = s.charAt(i);
+      endPipe = false;
+      if (c === '\\' && s.charAt(i + 1) === '|') { cur += '|'; i++; }
+      else if (c === '\\' && i + 1 < s.length) { cur += c + s.charAt(i + 1); i++; }
+      else if (c === '|') { cells.push(cur.trim()); cur = ''; endPipe = true; }
+      else cur += c;
+    }
+    if (!endPipe) cells.push(cur.trim());
+    if (s.charAt(0) === '|') cells.shift();
+    return cells;
+  };
+  const alignOf = (d) => d.charAt(0) === ':' ? (d.length > 1 && d.charAt(d.length - 1) === ':' ? 'center' : 'left')
+    : d.charAt(d.length - 1) === ':' ? 'right' : 'none';
+  const tableHead = (line, next) => {
+    if (next === undefined || line.indexOf('|') < 0) return null;
+    next = next.replace(/\s+$/, '');
+    if (next.indexOf('|') < 0) return null;
+    const delim = splitRow(next);
+    if (!delim.length || !delim.every((d) => /^:?-+:?$/.test(d))) return null;
+    const head = splitRow(line);
+    if (head.length !== delim.length) return null;
+    return { head, aligns: delim.map(alignOf) };
+  };
+  const startsBlock = (l) => !l.trim() || /^\u0000BLOCK\d+\u0000$/.test(l.trim()) || /^#{1,6}\s+/.test(l) ||
+    /^(-{3,}|\*{3,}|_{3,})$/.test(l.trim()) || /^>/.test(l) || /^\s*[-*+]\s+/.test(l) || /^\s*\d+[.)]\s+/.test(l);
+  const tableHtml = (t, rows) => {
+    const cell = (tag, text, i) => '<' + tag + ALIGN[t.aligns[i]] + '>' + inline(text) + '</' + tag + '>';
+    let h = '<table>\n<thead>\n<tr>' + t.head.map((c, i) => cell('th', c, i)).join('') + '</tr>\n</thead>';
+    if (rows.length) {
+      h += '\n<tbody>\n' + rows.map((r) => '<tr>' + t.aligns.map((a, i) => cell('td', r[i] || '', i)).join('') + '</tr>').join('\n') + '\n</tbody>';
+    }
+    return h + '\n</table>';
+  };
+
   const lines = src.split('\n');
   const out = [];
   let inList = null, inQuote = false, para = [];
@@ -409,8 +459,8 @@ function markdownToHtml(md) {
   const closeList = () => { if (inList) { out.push(`</${inList}>`); inList = null; } };
   const closeQuote = () => { if (inQuote) { out.push('</blockquote>'); inQuote = false; } };
 
-  for (let raw of lines) {
-    const line = raw.replace(/\s+$/, '');
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li].replace(/\s+$/, '');
 
     if (/^\u0000BLOCK\d+\u0000$/.test(line.trim())) {
       flushPara(); closeList(); closeQuote();
@@ -440,6 +490,15 @@ function markdownToHtml(md) {
       out.push(`<li>${inline(m[1])}</li>`);
     } else {
       closeList(); closeQuote();
+      const table = tableHead(line, lines[li + 1]);
+      if (table) {
+        flushPara();
+        const rows = [];
+        for (li += 2; li < lines.length && !startsBlock(lines[li].replace(/\s+$/, '')); li++) rows.push(splitRow(lines[li]));
+        li--;
+        out.push(tableHtml(table, rows));
+        continue;
+      }
       para.push(line.trim());
     }
   }
@@ -492,11 +551,12 @@ window.DEV_TOOLS["markdown-preview"] = {
           ['Paragraphs', String(count(/<p>/g))],
           ['Links', String(count(/<a /g))],
           ['Code blocks', String(count(/<pre>/g))],
-          ['Lists', String(count(/<[uo]l>/g))]
+          ['Lists', String(count(/<[uo]l>/g))],
+          ['Tables', String(count(/<table>/g))]
         ]
       };
     },
-"tips": ["Supported: headings, bold, italic, strikethrough, inline code, fenced code blocks, links, images, blockquotes, ordered and unordered lists, and horizontal rules.","HTML characters in your Markdown are escaped rather than passed through. That is deliberate — it means pasting untrusted Markdown cannot inject markup.","Links keep only http, https, mailto and tel addresses or relative ones, and images only http and https. Anything else, such as a javascript: address, is written as plain text.","The Preview renders the HTML through a sanitiser that keeps only the tags this converter writes. Images are shown as a labelled box rather than fetched, so nothing leaves your device.","Fenced code blocks are extracted before anything else runs, so asterisks and underscores inside them stay literal.","This is CommonMark-ish rather than a full implementation. Tables, footnotes and reference links are not supported."],
+"tips": ["Supported: headings, bold, italic, strikethrough, inline code, fenced code blocks, links, images, blockquotes, ordered and unordered lists, horizontal rules and GitHub-style pipe tables.","A table is a header row of cells between pipes, then a row of --- under it. Write :---, :---: or ---: to align a column left, centre or right, and \\| for a pipe inside a cell.","HTML characters in your Markdown are escaped rather than passed through. That is deliberate — it means pasting untrusted Markdown cannot inject markup.","Links keep only http, https, mailto and tel addresses or relative ones, and images only http and https. Anything else, such as a javascript: address, is written as plain text.","The Preview renders the HTML through a sanitiser that keeps only the tags this converter writes. Images are shown as a labelled box rather than fetched, so nothing leaves your device.","Fenced code blocks are extracted before anything else runs, so asterisks and underscores inside them stay literal.","This is CommonMark-ish rather than a full implementation. Footnotes, reference links and task lists are not supported."],
 "faq": [{"q":"Why is my raw HTML escaped instead of rendered?","a":"Because passing HTML through unchanged is how Markdown converters become an injection vector. Everything is escaped, which is the safe default for a tool that people paste other people’s text into."}]
 };
 })();

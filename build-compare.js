@@ -189,6 +189,7 @@ function headFor(parts, pathOnly, title, description) {
    build-sidebar that puts it back is a pipeline that never settles — which
    is exactly what happened the moment this section got a sidebar row. */
 const { apply: sidebarFor } = require('./build-sidebar.js');
+const { footerApply } = require('./build-site.js'); /* the footer note, as build-site.js words it */
 
 /* ---------- the pieces of a page -------------------------------------- */
 
@@ -313,7 +314,7 @@ function comparePage(c, parts) {
   }) + '</script>\n';
 
   const html = sidebarFor(headFor(parts, pathOnly, c.title, c.lede) + ld + parts.mid + '\n' + body + parts.tail, SECTION + '/' + c.slug + '/index.html');
-  return proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/' + c.slug + '/index.html'), SECTION + '/' + c.slug + '/index.html');
+  return footerApply(proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/' + c.slug + '/index.html'), SECTION + '/' + c.slug + '/index.html'), SECTION + '/' + c.slug + '/index.html');
 }
 
 function hubPage(parts) {
@@ -353,7 +354,7 @@ function hubPage(parts) {
   }) + '</script>\n';
 
   const html = sidebarFor(headFor(parts, pathOnly, title, description) + ld + parts.mid + '\n' + body + parts.tail, SECTION + '/index.html');
-  return proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/index.html'), SECTION + '/index.html');
+  return footerApply(proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/index.html'), SECTION + '/index.html'), SECTION + '/index.html');
 }
 
 /* ---------- wiring ---------------------------------------------------- */

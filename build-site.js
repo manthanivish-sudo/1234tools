@@ -31,6 +31,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const ROOT = __dirname;
 const CHECK = process.argv.includes('--check');
@@ -402,7 +403,10 @@ function buildPopular() {
  * Every tool page carries a "Related tools" list. Most were written by hand and
  * are better than anything computable, so they are kept: everything above the
  * marker is left exactly as found, and only the gap between that and a useful
- * number of links is filled.
+ * number of links is filled. The one exception is order on the conversion
+ * pair pages, whose lists were written by machine, not by hand: there the
+ * items above the marker are re-ordered popular first (see convKey), never
+ * added to or removed.
  *
  * The measured problem this closes, before the first run: 33 pages had no list
  * at all, 36 more had three links or fewer, and 241 pages had no inbound link
@@ -511,6 +515,69 @@ function curatedOf(html) {
     .map((u) => (u.endsWith('.html') ? u.replace(/\.html$/, '/') : u));
 }
 
+/**
+ * The 1,048 unit-conversion pair pages are the one place where a tie in
+ * relScore is the rule rather than the exception: every sibling in a family
+ * scores the same, so the url tie-break handed "Metre to Foot" a list that
+ * opened on Angstrom and Astronomical Unit. Their lists (the part written once
+ * with the pages as well as the part generated here) are ordered instead by
+ * what build/conversions/data.js says people look for: its POPULAR pairs in
+ * their declared order, then every other pair by how common its rarer unit is
+ * (UNIT_ORDER, then the bundle's own order — the order build-conversions.js
+ * uses), then its commoner unit. Which links a list holds, and how many, is
+ * decided exactly as for every other page.
+ */
+const PAIR_URL_RE = /^conversions\/([a-z0-9-]+)\/([a-z0-9-]+)-to-([a-z0-9-]+)\/$/;
+const slugify = (name) => String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+let convRanks = null;
+/** url -> [popular index, rarer unit's rank, commoner unit's rank], or null
+    for anything that is not a known conversion pair. Loaded on first use, so
+    a require() of this file for a helper reads nothing. */
+function convKey(url) {
+  if (!convRanks) {
+    const DATA = require('./build/conversions/data.js');
+    const box = { window: {} };
+    vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'engine', 'units.bundle.js'), 'utf8'), box, { filename: 'units.bundle.js' });
+    const UNITS = box.window.UNITS;
+    if (!UNITS) throw new Error('build-site.js: engine/units.bundle.js did not define UNITS');
+    convRanks = new Map();
+    for (const fam of Object.keys(UNITS)) {
+      const keys = Object.keys(UNITS[fam].units);
+      const order = (DATA.UNIT_ORDER[fam] || []).filter((k) => keys.includes(k));
+      keys.forEach((k) => { if (!order.includes(k)) order.push(k); });
+      const slug = (k) => slugify(UNITS[fam].units[k].name);
+      const pop = new Map((DATA.POPULAR[fam] || []).map(([a, b], i) => [slug(a) + '-to-' + slug(b), i]));
+      convRanks.set(fam, { unit: new Map(order.map((k, i) => [slug(k), i])), pop });
+    }
+  }
+  const m = PAIR_URL_RE.exec(url);
+  const f = m && convRanks.get(m[1]);
+  if (!f || !f.unit.has(m[2]) || !f.unit.has(m[3])) return null;
+  const ra = f.unit.get(m[2]), rb = f.unit.get(m[3]);
+  const p = f.pop.get(m[2] + '-to-' + m[3]);
+  return [p === undefined ? Infinity : p, Math.max(ra, rb), Math.min(ra, rb)];
+}
+
+/** Popular first; 0 on a tie, so a stable sort keeps the order it was given. */
+function convCmp(a, b) {
+  const ka = convKey(a), kb = convKey(b);
+  if (!ka || !kb) return ka ? -1 : kb ? 1 : 0;
+  for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return ka[i] < kb[i] ? -1 : 1;
+  return 0;
+}
+
+const isPairPage = (url) => PAIR_URL_RE.test(url) && convKey(url) !== null;
+
+/** A pair page's hand-written items, popular first. Left exactly as found
+    unless it is nothing but <li><a href> items. */
+function sortCurated(part) {
+  const items = part.match(/<li><a href="[^"]*">[\s\S]*?<\/a><\/li>/g) || [];
+  if (items.join('') !== part) return part;
+  const url = (li) => /href="\/?([^"#]*)/.exec(li)[1];
+  return items.slice().sort((x, y) => convCmp(url(x), url(y))).join('');
+}
+
 function relBlock(pageUrl, targets, byUrl) {
   return targets.map((u) => {
     return `<li><a href="${hrefOf(u)}">${esc(byUrl.get(u).title)}</a></li>`;
@@ -596,6 +663,16 @@ function patchRelated() {
       }
     };
 
+    /* A pair page breaks ties on popularity before url, over the whole set
+       so a popular sibling is never cut off by the cap of forty. */
+    if (isPairPage(t.url)) {
+      take(tools
+        .map((o) => [o.url === t.url ? 0 : relScore(t, o), o.url])
+        .filter((x) => x[0] > 0)
+        .sort((a, b) => b[0] - a[0] || convCmp(a[1], b[1]) || (a[1] < b[1] ? -1 : 1))
+        .map((x) => x[1]));
+      continue;
+    }
     take(ranked.get(t.url));
     if (gen.get(t.url).length < need) take(fullRanked(t));
   }
@@ -647,13 +724,15 @@ function patchRelated() {
   let touched = 0;
   for (const t of tools) {
     if (!t.editable) continue;
-    const items = relBlock(t.url, gen.get(t.url), byUrl);
+    const pair = isPairPage(t.url);
+    const items = relBlock(t.url, pair ? gen.get(t.url).slice().sort(convCmp) : gen.get(t.url), byUrl);
     const src = html.get(t.url);
     const m = REL_SECTION.exec(src);
     let next;
 
     if (m) {
-      const inner = m[1].split(REL_MARK)[0] + (items ? REL_MARK + items : '');
+      const above = m[1].split(REL_MARK)[0];
+      const inner = (pair ? sortCurated(above) : above) + (items ? REL_MARK + items : '');
       next = src.slice(0, m.index) +
         `<section class="panel"><h2>Related tools</h2><ul class="related">${inner}</ul></section>` +
         src.slice(m.index + m[0].length);
@@ -735,9 +814,160 @@ function upsert(html, start, end, block, insertBefore) {
   return html.slice(0, at) + block + html.slice(at);
 }
 
+/* ------------------------------------------------------------------ */
+/* footer note                                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Every page's footer says, under "About these tools.", the sentence below.
+ * It is true of the calculators, converters and file tools, and it is false
+ * wherever a page sends what is typed into it: the AI tools, the forms, the
+ * account pages. Those pages say what they actually do instead, and this is
+ * the one place that decides what each says.
+ *
+ * The sentence is hand-copied into every page and into the shells that a
+ * dozen generators clone (business/index.html is the shell of the tools,
+ * guides, compare, collections and showcase pages), so the default stays
+ * exactly as it is and a page's own wording sits in a marked block:
+ *
+ *   replace   <!--foot:KIND-->wording<!--/foot-->       instead of the sentence
+ *   append    sentence<!--foot:KIND--> wording<!--/foot-->   after it
+ *
+ * The hubs with a tool request form append rather than replace, so the
+ * sentence build-showcase.js looks for (its FOOT_FROM) is still there in a
+ * cloned tail and its own qualification still lands. footerApply() undoes
+ * any block first and then writes the one the page calls for, so its output
+ * depends only on the page: a block cloned onto a page without that form
+ * (a guide, the showcase) is taken off again, and a second run writes
+ * nothing. /showcase/ is never given a block — its wording is
+ * build-showcase.js's.
+ *
+ * What each page says is read from the code that does it: the AI pages from
+ * engine/ai-tools*.js (which tools send a picture) and the page's own
+ * AI_LIMITS (the free allowance); the backend that stores only a monthly
+ * count of calls and the tools used, never the text or the answer, is
+ * 1234tools-backend/functions/index.js (aiComplete, submitToolRequest).
+ */
+const FOOT_DEFAULT = 'Every calculation runs inside your browser — no figures are sent to a server, and nothing you type is stored or logged.';
+const FOOT_RE = /<!--foot:([a-z-]+)-->[\s\S]*?<!--\/foot-->/g;
+const FOOT_PRIVACY = 'as the <a href="/privacy/">privacy policy</a> explains';
+const FOOT_LOCAL = 'The calculators, converters and file tools on 1234Tools run inside your browser.';
+/* kinds written after the sentence rather than in its place */
+const FOOT_APPEND = new Set(['request']);
+
+/* The line under the logo ("… built by MVR IT Services and running entirely
+   in your browser.") is true everywhere except the AI pages, so there it is
+   qualified the same way, in its own marked block:
+     <!--about:KIND-->qualified ending<!--/about-->   instead of ABOUT_DEFAULT */
+const ABOUT_DEFAULT = 'and running entirely in your browser.';
+const ABOUT_RE = /<!--about:([a-z-]+)-->[\s\S]*?<!--\/about-->/g;
+const ABOUT = {
+  'ai': 'and running in your browser — except this AI tool, which sends what you give it to Anthropic’s API when you press its button, as the note below explains.',
+  'ai-hub': 'and running in your browser — except the AI tools in this section, which send what you give them to Anthropic’s API when you press their buttons, as the note below explains.'
+};
+
+/** The about line qualified for `kind`, on a page with no about block left. */
+function aboutApply(html, kind) {
+  const text = ABOUT[kind];
+  if (!text) return html;
+  const about = html.indexOf('<div class="footer-about">');
+  const at = about === -1 ? -1 : html.indexOf(ABOUT_DEFAULT, about);
+  if (at === -1 || at > html.indexOf('</div>', about)) return html;
+  return html.slice(0, at) + '<!--about:' + kind + '-->' + text + '<!--/about-->' + html.slice(at + ABOUT_DEFAULT.length);
+}
+
+let aiTools = null;
+/** window.AI_TOOLS from engine/ai-tools*.js, read once, only if an AI page is seen. */
+function aiToolSpecs() {
+  if (aiTools) return aiTools;
+  const box = { window: {} };
+  box.window.window = box.window;
+  const dir = path.join(ROOT, 'engine');
+  for (const f of fs.readdirSync(dir).filter((n) => /^ai-tools.*\.js$/.test(n)).sort()) {
+    vm.runInNewContext(fs.readFileSync(path.join(dir, f), 'utf8'), box, { filename: f });
+  }
+  aiTools = box.window.AI_TOOLS || {};
+  return aiTools;
+}
+
+/** The free monthly allowance the page itself enforces (render-ai.js reads
+    window.AI_LIMITS, and falls back to its own default). */
+function aiFreeCalls(html) {
+  const m = /window\.AI_LIMITS=(\{[^}]*\})/.exec(html);
+  if (m) { try { const n = JSON.parse(m[1]).free; if (n > 0) return n; } catch (e) { /* fall through */ } }
+  const d = /free:\s*(\d+)/.exec(fs.readFileSync(path.join(ROOT, 'engine', 'render-ai.js'), 'utf8'));
+  if (!d) throw new Error('build-site.js: no free AI allowance on the page or in engine/render-ai.js');
+  return Number(d[1]);
+}
+
+/** { kind, text } for a page that must not carry the default sentence alone, or null. */
+function footKind(html, rel) {
+  if (rel.startsWith('showcase/')) return null;   /* build-showcase.js words its own */
+
+  if (rel === 'ai/index.html') {
+    const free = aiFreeCalls(html);
+    return { kind: 'ai-hub', text: FOOT_LOCAL + ' The AI tools in this section are the exception: when you press a tool’s button, the text you give it — on the scan readers, the photo or scan, resized on your device — is sent through our server to Anthropic’s API, which writes the answer, and each page shows exactly what will be sent before anything goes. They need a free account, which includes ' + free + ' AI calls a month; we keep a monthly count of your calls and which tools made them, not what you sent or what came back. The tool request form on this page sends what you type in it to us when you press “Send the request”, ' + FOOT_PRIVACY + '.' };
+  }
+
+  const ai = /^ai\/([^/]+)\/index\.html$/.exec(rel);
+  if (ai && html.includes('/engine/render-ai.js')) {
+    const t = /data-tool="([^"]+)"/.exec(html);
+    const spec = aiToolSpecs()[t ? t[1] : ai[1]];
+    if (!spec) throw new Error('build-site.js: ' + rel + ' mounts an AI tool that engine/ai-tools*.js does not define');
+    const inputs = spec.inputs || [];
+    const what = inputs.some((i) => i.type === 'image')
+      ? 'the photo or scan you give it, resized on your device, and any notes you add are sent through our server to Anthropic’s API, which writes the answer'
+      : 'the text you give it is sent through our server to Anthropic’s API, which writes the answer' +
+        (inputs.some((i) => i.type === 'text+file') ? '; a file you add is read on your device and only its text goes' : '');
+    return { kind: 'ai', text: FOOT_LOCAL + ' This AI tool is the exception: when you press its button, ' + what + '. The page shows exactly what will be sent before anything goes. It needs a free account, which includes ' + aiFreeCalls(html) + ' AI calls a month. We keep a monthly count of your calls and which tools made them, not what you sent or what came back, ' + FOOT_PRIVACY + '.' };
+  }
+
+  if (/<form\b[^>]*\baction="https:\/\/formsubmit\.co\//.test(html)) {
+    return { kind: 'contact', text: FOOT_LOCAL + ' This page is the exception: the form above sends your name, email address and message to our inbox through FormSubmit.co when you press Send message, ' + FOOT_PRIVACY + '.' };
+  }
+  if (rel === 'account/index.html') {
+    return { kind: 'account', text: 'The calculators, converters and file tools on 1234Tools run inside your browser and need no account. This page is different: creating an account or signing in goes through Firebase Authentication, Google’s sign-in service, and the account keeps your email address, your plan, a monthly count of AI calls and any settings you choose to keep with it, ' + FOOT_PRIVACY + '.' };
+  }
+  if (rel === 'settings/index.html') {
+    return { kind: 'settings', text: FOOT_LOCAL + ' The preferences on this page are saved in this browser; if you press “Keep them with my account”, they are also stored with your account so they follow you to your other devices, ' + FOOT_PRIVACY + '.' };
+  }
+  if (rel === 'pricing/index.html') {
+    return { kind: 'pricing', text: 'The calculators, converters and file tools on 1234Tools run inside your browser and stay free without an account. Buying a plan or credits on this page needs an account, and the payment is taken by Razorpay or Stripe: we receive confirmation that it was paid, never your card details, ' + FOOT_PRIVACY + '.' };
+  }
+  if (html.includes('src="/assets/practice.js"')) {
+    return { kind: 'practice', text: 'This is the practice workspace, not one of the browser tools: the client details you enter and the documents you upload are stored in our Firebase project in London (europe-west2), so that your practice and your clients can see them. ' + FOOT_LOCAL };
+  }
+  if (/data-endpoint="[^"]*\/submitToolRequest"/.test(html)) {
+    return { kind: 'request', text: 'The one exception on this page is the tool request form: what you type into it is sent to us when you press “Send the request”, and kept until the request is dealt with, ' + FOOT_PRIVACY + '.' };
+  }
+  return null;
+}
+
+/**
+ * The page with its footer note worded for what the page does. Pure, and a
+ * fixed point: footerApply(footerApply(h, r), r) === footerApply(h, r).
+ * A page whose note no longer carries the default sentence (the showcase,
+ * or one edited by hand) is left as it is, apart from removing any block
+ * (an AI page still has its about line qualified).
+ */
+function footerApply(html, rel) {
+  const bare = html.replace(FOOT_RE, (m, kind) => (FOOT_APPEND.has(kind) ? '' : FOOT_DEFAULT))
+    .replace(ABOUT_RE, ABOUT_DEFAULT);
+  const want = footKind(bare, rel);
+  if (!want) return bare;
+  const note = bare.indexOf('<div class="footer-note">');
+  const at = note === -1 ? -1 : bare.indexOf(FOOT_DEFAULT, note);
+  if (at === -1) return aboutApply(bare, want.kind);
+  const block = '<!--foot:' + want.kind + '-->' + (FOOT_APPEND.has(want.kind) ? ' ' : '') + want.text + '<!--/foot-->';
+  const end = at + FOOT_DEFAULT.length;
+  return aboutApply(FOOT_APPEND.has(want.kind)
+    ? bare.slice(0, end) + block + bare.slice(end)
+    : bare.slice(0, at) + block + bare.slice(end), want.kind);
+}
+
 function patchPages() {
   const list = pages();
-  let fonts = 0, analytics = 0, skipped = [];
+  let fonts = 0, analytics = 0, footers = 0, skipped = [], unworded = [];
 
   for (const abs of list) {
     const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
@@ -761,12 +991,16 @@ function patchPages() {
                                  analyticsBlock(p), '</head>');
     if (withAnalytics !== html) { html = withAnalytics; analytics++; }
 
+    const withFooter = footerApply(html, rel);
+    if (withFooter !== html) { html = withFooter; footers++; }
+    if (!/<!--foot:[a-z-]+-->/.test(html) && footKind(html, rel)) unworded.push(rel);
+
     if (html !== before) {
       changes.push('update ' + rel);
       if (!CHECK) fs.writeFileSync(abs, html);
     }
   }
-  return { total: list.length, fonts, analytics, skipped };
+  return { total: list.length, fonts, analytics, footers, skipped, unworded };
 }
 
 /* ------------------------------------------------------------------ */
@@ -901,6 +1135,11 @@ function main() {
   console.log(`  pages scanned       ${page.total}`);
   console.log(`  font block          ${page.fonts} ${CHECK ? 'would be' : ''} patched`);
   console.log(`  analytics block     ${page.analytics} ${CHECK ? 'would be' : ''} patched`);
+  console.log(`  footer note         ${page.footers} ${CHECK ? 'would be' : ''} reworded`);
+  if (page.unworded.length) {
+    console.log(`  ! ${page.unworded.length} page(s) send what is typed but their footer note has no default sentence to reword:`);
+    page.unworded.slice(0, 5).forEach((s) => console.log('      ' + s));
+  }
   console.log(`  app.css             ${css}`);
   if (sw) console.log(`  service worker      ${sw}`);
   console.log(`  sitemap             ${map.count} URLs, ` +
@@ -943,4 +1182,4 @@ if (require.main === module) {
   catch (e) { console.error('\nbuild-site.js failed: ' + (e && e.message || e) + '\n'); process.exit(1); }
 }
 
-module.exports = { searchIndexTools, SECTIONS, META_PAGES };
+module.exports = { searchIndexTools, SECTIONS, META_PAGES, footerApply, footKind, FOOT_DEFAULT };

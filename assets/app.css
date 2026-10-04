@@ -675,6 +675,9 @@ details p { margin: 8px 0 0; color: var(--text-2); font-size: .93rem; }
 .md-preview code { font-family: var(--font-mono); font-size: .9em; }
 .md-preview blockquote { margin: 0 0 1em; padding-left: 12px; border-left: 3px solid var(--border); color: var(--text-2); }
 .md-preview a { color: var(--accent); }
+.md-preview table { display: block; max-width: 100%; overflow-x: auto; margin: 0 0 1em; border-collapse: collapse; }
+.md-preview th, .md-preview td { padding: 6px 12px; border: 1px solid var(--text-3); text-align: left; vertical-align: top; }
+.md-preview th { background: var(--bg-2); font-weight: 600; }
 .md-preview .md-img {
   display: inline-block; padding: 2px 8px; border: 1px dashed var(--border); border-radius: 6px;
   font-size: .85em; color: var(--text-2);

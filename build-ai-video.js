@@ -28,6 +28,7 @@ const crumbs = require('./build-crumbs.js');
 const outbound = require('./build-outbound.js');
 const sidebar = require('./build-sidebar.js');
 const share = require('./build-share.js'); /* the share bar and og:image, as build-share.js writes them */
+const { footerApply } = require('./build-site.js'); /* the footer note, as build-site.js words it */
 const proof = require('./build-proof.js'); /* the example, the story and the card thumbnails, as build-proof.js writes them */
 const { SECTIONS, trailFor } = require('./build/sections.js');
 
@@ -170,7 +171,7 @@ function toolPage(t, parts, all) {
   }) + '</script>\n';
   const rel = SECTION + '/' + t.slug + '/index.html';
   const html = headFor(parts, pathOnly, s.pageTitle || (s.title + ' — Free & Private | 1234Tools'), s.description, s.scripts) + ld + parts.mid + '\n' + body + parts.tail;
-  return proof.apply(share.apply(outbound.rewrite(keepRelated(rel, keepPwa(rel, hubs.apply(sidebar.apply(html, rel), rel))), SECTION).html, rel), rel);
+  return footerApply(proof.apply(share.apply(outbound.rewrite(keepRelated(rel, keepPwa(rel, hubs.apply(sidebar.apply(html, rel), rel))), SECTION).html, rel), rel), rel);
 }
 
 function hubPage(parts, all) {
@@ -193,7 +194,7 @@ function hubPage(parts, all) {
     '<li><strong>Silence and filler cuts</strong> — find the pauses and the ums from the transcript and cut them, with the words as the edit list.</li>' +
     '<li><strong>Clip from a long recording</strong> — pick a sentence in the transcript and export that stretch as a 9:16 clip with captions.</li>' +
     '<li><strong>Video compressor and GIF maker</strong> — re-encode on the device to a size a chat or a page will take.</li></ul>' +
-    '<p>The order depends on what people ask for. <a href="/contact/">The contact page</a> works, and so does the tool-request form in your <a href="/account/">account</a>.</p></section>\n' +
+    '<p>The order depends on what people ask for. <a href="/contact/">The contact page</a> works, and so does the finder at the top of this page: describe the tool you want, and when it is not here the finder offers a request form. The <a href="/utilities/tool-finder/">Tool Finder</a> takes requests too.</p></section>\n' +
     '<section class="panel"><h2>Frequently asked questions</h2>' +
     '<details><summary>Is anything uploaded?</summary><p>No. Two downloads happen on first use — the model and the runtime, both from this site — and your browser keeps both. Your video is opened, transcribed, drawn and re-encoded on your device. We never receive it and could not look at it if we wanted to.</p></details>' +
     '<details><summary>Why is the first run slow?</summary><p>The model has to be downloaded once and the runtime warmed up. After that both come from your browser’s cache, and the time that remains is the work itself: speech recognition at about real time on a laptop, and re-encoding the frames.</p></details>' +
@@ -208,7 +209,7 @@ function hubPage(parts, all) {
   }) + '</script>\n';
   const rel = SECTION + '/index.html';
   const html = headFor(parts, '/' + SECTION + '/', title, description, []) + ld + parts.mid + '\n' + body + parts.tail;
-  return proof.apply(share.apply(outbound.rewrite(keepPwa(rel, hubs.apply(sidebar.apply(html, rel), rel)), SECTION).html, rel), rel);
+  return footerApply(proof.apply(share.apply(outbound.rewrite(keepPwa(rel, hubs.apply(sidebar.apply(html, rel), rel)), SECTION).html, rel), rel), rel);
 }
 
 /* The redirect stub, in the shape the rest of the site uses, so every

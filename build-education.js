@@ -19,6 +19,9 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+/* The shell's footer carries utilities/index.html's tool-request note;
+   build-site.js words the footer for each page, and these must match it. */
+const { footerApply } = require('./build-site.js');
 
 const ROOT = __dirname;
 const CHECK = process.argv.includes('--check');
@@ -408,9 +411,10 @@ function main() {
   const already = fs.existsSync(path.join(ROOT, SECTION.slug, TOOLS[0][0], 'index.html'));
 
   let built = 0;
-  if (write(SECTION.slug + '/index.html', hubPage(parts))) built++;
+  if (write(SECTION.slug + '/index.html', footerApply(hubPage(parts), SECTION.slug + '/index.html'))) built++;
   for (const [slug, glyph] of TOOLS) {
-    if (write(SECTION.slug + '/' + slug + '/index.html', toolPage(slug, glyph, parts))) built++;
+    const rel = SECTION.slug + '/' + slug + '/index.html';
+    if (write(rel, footerApply(toolPage(slug, glyph, parts), rel))) built++;
   }
 
   const indexed = updateSearchIndex();

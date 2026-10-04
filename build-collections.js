@@ -32,6 +32,7 @@ let showcase = null;
 try { showcase = require('./build-showcase.js'); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }
 /* the sidebar has one owner; ours must match what it would write */
 const { apply: sidebarFor } = require('./build-sidebar.js');
+const { footerApply } = require('./build-site.js'); /* the footer note, as build-site.js words it */
 
 const ROOT = __dirname;
 const CHECK = process.argv.includes('--check');
@@ -205,7 +206,7 @@ function collectionPage(c, parts) {
 
   const head = headFor(parts, pathOnly, c.title, c.lede);
   const html = sidebarFor((c.hi ? alternates(head, c.slug) : head) + ld + parts.mid + '\n' + body + parts.tail, SECTION + '/' + c.slug + '/index.html');
-  return proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/' + c.slug + '/index.html'), SECTION + '/' + c.slug + '/index.html');
+  return footerApply(proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/' + c.slug + '/index.html'), SECTION + '/' + c.slug + '/index.html'), SECTION + '/' + c.slug + '/index.html');
 }
 
 function hubPage(parts, counts) {
@@ -247,7 +248,7 @@ function hubPage(parts, counts) {
     ]
   }) + '</script>\n';
   const html = sidebarFor(headFor(parts, pathOnly, title, description) + ld + parts.mid + '\n' + body + parts.tail, SECTION + '/index.html');
-  return proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/index.html'), SECTION + '/index.html');
+  return footerApply(proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/index.html'), SECTION + '/index.html'), SECTION + '/index.html');
 }
 
 /* ---------- Hindi twins ----------
@@ -314,7 +315,7 @@ function collectionPageHi(c, parts) {
   const head = alternates(headFor(parts, pathOnly, hi.title, hi.lede), c.slug)
     .replace(/<link rel="canonical" href="[^"]*">/, '<link rel="canonical" href="' + url + '">');
   const html = hiShell(sidebarFor(head + ld + parts.mid + '\n' + body + parts.tail, rel));
-  return proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, rel), rel);
+  return footerApply(proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, rel), rel), rel);
 }
 
 function hubPageHi(parts, list) {
@@ -343,7 +344,7 @@ function hubPageHi(parts, list) {
     ]
   }) + '</script>\n';
   const html = hiShell(sidebarFor(headFor(parts, pathOnly, h.title, h.lede) + ld + parts.mid + '\n' + body + parts.tail, 'hi/' + SECTION + '/index.html'));
-  return proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, 'hi/' + SECTION + '/index.html'), 'hi/' + SECTION + '/index.html');
+  return footerApply(proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, 'hi/' + SECTION + '/index.html'), 'hi/' + SECTION + '/index.html'), 'hi/' + SECTION + '/index.html');
 }
 
 /* ---------- wiring ---------- */

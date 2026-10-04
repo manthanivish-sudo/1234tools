@@ -40,6 +40,12 @@
  *      rounded border are white; the "larger" warning names real controls
  *   8  bulk resizer: never enlarges by default and says which image was left
  *      at its size; "Allow enlarging" does enlarge
+ *   9  cropper: with every ratio preset, on landscape, portrait and square
+ *      pictures, mouse drags inside and past every edge and corner give a
+ *      box inside the picture, anchored at the start, of the locked shape
+ *      and as big as the drag allows, and the crop is exactly that
+ *      rectangle; 1:1 past the street photo's bottom edge is a square (it
+ *      was 1121×1080); touch drags do the same
  *   and, through all of it, not one request to anything but 127.0.0.1.
  */
 'use strict';
@@ -576,6 +582,128 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
       d = await Promise.all(outs.map((b) => pixels(p, b, [[0, 0]])));
       check(d.map((x) => x.w + '×' + x.h).join() === '800×600,800×534', '8  shrinking is unaffected', d.map((x) => x.w + '×' + x.h).join());
       check(!p.__errors.length, '8  no page errors', p.__errors.join(' | '));
+      await p.close();
+    }
+
+    /* 9  cropper: a locked ratio holds when the drag runs past an edge */
+    {
+      /* `let`: the helpers below act on whichever page p is, the mouse page and then the touch page */
+      let p = await open(browser, '/image/image-cropper/');
+      await p.setViewport({ width: 1700, height: 2100 });
+      /* a PNG whose every pixel says where it is: r = x & 255, g = y & 255, b = (x >> 8) << 4 | (y >> 8) */
+      const posPng = (w, h) => p.evaluate((w, h) => {
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const x = c.getContext('2d'); const d = x.createImageData(w, h);
+        for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const k = (j * w + i) * 4; d.data[k] = i & 255; d.data[k + 1] = j & 255; d.data[k + 2] = ((i >> 8) << 4) | (j >> 8); d.data[k + 3] = 255; }
+        x.putImageData(d, 0, 0);
+        return c.toDataURL('image/png').split(',')[1];
+      }, w, h);
+      const ratios = await p.$$eval('#ic-ratio option', (l) => l.map((o) => o.value));
+      check(ratios.join() === 'free,1:1,4:3,3:2,16:9,9:16,3:4,2:3', '9  the ratio presets are Free, 1:1, 4:3, 3:2, 16:9, 9:16, 3:4, 2:3', ratios.join());
+      /* drags as fractions of the canvas; ±M means M px beyond that edge on screen */
+      const M = 90;
+      const DRAGS = {
+        inside: [0.2, 0.2, 0.7, 0.6],
+        E: [0.4, 0.3, '1+', 0.8], W: [0.6, 0.7, '-', 0.2], S: [0.3, 0.4, 0.9, '1+'], N: [0.7, 0.6, 0.1, '-'],
+        SE: [0.5, 0.5, '1+', '1+'], SW: [0.5, 0.5, '-', '1+'], NE: [0.5, 0.5, '1+', '-'], NW: [0.5, 0.5, '-', '-'],
+        'SE from a corner': [0.97, 0.97, '1+', '1+'], 'NW from a corner': [0.03, 0.03, '-', '-']
+      };
+      const readBox = async () => { const m = /(\d+) × (\d+) px\s+at (\d+), (\d+)/.exec(await p.$eval('.select-readout', (e) => e.textContent)) || []; return { w: +m[1], h: +m[2], x: +m[3], y: +m[4] }; };
+      /* the result card's image: its size, and the positions its corner pixels carry */
+      const readOut = () => p.evaluate(async () => {
+        const i = document.querySelector('.tool-io .image-stage img.image-preview');
+        const bm = await createImageBitmap(await (await fetch(i.src)).blob());
+        const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height;
+        const x = c.getContext('2d'); x.drawImage(bm, 0, 0);
+        const at = (a, b) => { const d = x.getImageData(a, b, 1, 1).data; return [d[0] | ((d[2] >> 4) << 8), d[1] | ((d[2] & 15) << 8)]; };
+        return { w: bm.width, h: bm.height, tl: at(0, 0), br: at(bm.width - 1, bm.height - 1) };
+      });
+      const doDrag = async (W, H, d, touch) => {
+        await p.$eval('.select-canvas', (e) => window.scrollTo({ top: e.getBoundingClientRect().top + window.scrollY - 150, behavior: 'instant' }));
+        await sleep(60);
+        const r = await p.$eval('.select-canvas', (e) => { const b = e.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; });
+        const vw = 1700, vh = 2100;
+        const to = (f, o, len, max) => f === '1+' ? Math.min(max - 2, o + len + M) : f === '-' ? Math.max(2, o - M) : o + len * f;
+        /* whole CSS pixels, so the event's clientX/Y is exactly the point computed here */
+        const x0 = Math.round(r.x + r.w * d[0]), y0 = Math.round(r.y + r.h * d[1]);
+        const x1 = Math.round(to(d[2], r.x, r.w, vw)), y1 = Math.round(to(d[3], r.y, r.h, vh));
+        const before = await previews(p);
+        if (touch) {
+          await p.touchscreen.touchStart(x0, y0);
+          for (let k = 1; k <= 6; k++) await p.touchscreen.touchMove(x0 + (x1 - x0) * k / 6, y0 + (y1 - y0) * k / 6);
+          await p.touchscreen.touchEnd();
+        } else {
+          await p.mouse.move(x0, y0); await p.mouse.down();
+          await p.mouse.move(x1, y1, { steps: 6 }); await p.mouse.up();
+        }
+        await p.waitForFunction((old) => { const i = document.querySelector('.tool-io .image-stage img.image-preview'); return i && i.src.startsWith('blob:') && old.indexOf(i.src) < 0; }, { timeout: 15000, polling: 50 }, before);
+        /* what the page should do, worked out here from the pointer: anchor at the start, pointer held inside the picture */
+        const src = (cx, cy) => ({ x: (cx - r.x) / r.w * W, y: (cy - r.y) / r.h * H });
+        const s = src(x0, y0), e = src(x1, y1);
+        const ex = Math.min(W, Math.max(0, e.x)), ey = Math.min(H, Math.max(0, e.y));
+        return { s, beyond: { x: e.x < 0 || e.x > W, y: e.y < 0 || e.y > H }, availW: Math.abs(ex - s.x), availH: Math.abs(ey - s.y), left: e.x < s.x, up: e.y < s.y };
+      };
+      const faults = [], errs = [];
+      let n = 0;
+      const IMAGES = [['landscape', 1600, 1000], ['portrait', 900, 1500], ['square', 1200, 1200]];
+      for (const [label, W, H] of IMAGES) {
+        const f = path.join(OUT, 'crop-' + label + '.png');
+        fs.writeFileSync(f, Buffer.from(await posPng(W, H), 'base64'));
+        /* a fresh page per picture, ratio Free to start */
+        if (label !== 'landscape') { errs.push(...p.__errors); await p.close(); p = await open(browser, '/image/image-cropper/'); await p.setViewport({ width: 1700, height: 2100 }); }
+        await upload(p, [f]);
+        for (const ratio of ratios) {
+          if (ratio !== 'free') await change(p, 'ratio', ratio);
+          const [ra, rb] = ratio === 'free' ? [0, 0] : ratio.split(':').map(Number);
+          for (const [dn, d] of Object.entries(DRAGS)) {
+            const g = await doDrag(W, H, d, false);
+            const b = await readBox(); const o = await readOut();
+            n++;
+            const name = label + ' ' + W + '×' + H + ', ' + ratio + ', ' + dn + ': ' + b.w + '×' + b.h + ' at ' + b.x + ',' + b.y;
+            const why = [];
+            if (!(b.x >= 0 && b.y >= 0 && b.x + b.w <= W && b.y + b.h <= H)) why.push('outside the picture');
+            if (ra && (ra >= rb ? Math.abs(b.h - b.w * rb / ra) > 0.5 : Math.abs(b.w - b.h * ra / rb) > 0.5)) why.push('not ' + ratio);
+            /* anchored: the edge the drag started from stays at the start point (rounding: 1 px) */
+            const ax = g.left ? b.x + b.w : b.x, ay = g.up ? b.y + b.h : b.y;
+            if (Math.abs(ax - g.s.x) > 1.01 || Math.abs(ay - g.s.y) > 1.01) why.push('moved off the start point ' + g.s.x.toFixed(1) + ',' + g.s.y.toFixed(1));
+            /* as big as the drag allows: free uses both sides in full; a ratio uses one in full and trims the other */
+            /* (the start is rounded to a whole pixel and a ratio's longer side rounds down: up to 1.5 px short) */
+            const fullW = Math.abs(b.w - g.availW) <= 1.6, fullH = Math.abs(b.h - g.availH) <= 1.6;
+            if (b.w > g.availW + 1.01 || b.h > g.availH + 1.01) why.push('bigger than the drag (' + g.availW.toFixed(1) + '×' + g.availH.toFixed(1) + ')');
+            else if (ra ? !(fullW || fullH) : !(fullW && fullH)) why.push('smaller than the drag allows (' + g.availW.toFixed(1) + '×' + g.availH.toFixed(1) + ')');
+            if (dn !== 'inside' && !g.beyond.x && !g.beyond.y) why.push('the pointer never left the picture');
+            /* the downloaded crop is that rectangle, pixel for pixel at its corners */
+            if (o.w !== b.w || o.h !== b.h || o.tl[0] !== b.x || o.tl[1] !== b.y || o.br[0] !== b.x + b.w - 1 || o.br[1] !== b.y + b.h - 1) why.push('result ' + o.w + '×' + o.h + ' from ' + o.tl + ' to ' + o.br);
+            if (why.length) faults.push(name + ' — ' + why.join('; '));
+          }
+        }
+      }
+      check(!faults.length, '9  ' + n + ' mouse drags (3 images × 8 ratios × ' + Object.keys(DRAGS).length + ' drags, past every edge and corner): each box inside the picture, anchored, the locked shape, as big as the drag allows, and the crop is exactly that rectangle', faults.slice(0, 6).join(' | '));
+      /* the regression the claims test found: 1:1 dragged past the bottom edge of the 1600×1200 street photo came out 1121×1080 */
+      errs.push(...p.__errors); await p.close();
+      p = await open(browser, '/image/image-cropper/'); await p.setViewport({ width: 1700, height: 2100 });
+      await setCtl(p, 'ratio', '1:1');
+      await upload(p, [path.join(SAMPLES, 'street.jpg')]);
+      await doDrag(1600, 1200, [0.1, 0.1, 0.8, '1+'], false);
+      let b = await readBox();
+      check(b.w === b.h && b.y + b.h === 1200, '9  street.jpg, 1:1, dragged past the bottom edge: a square that reaches the edge (was 1121×1080)', b.w + '×' + b.h + ' at ' + b.x + ',' + b.y);
+      errs.push(...p.__errors);
+      check(!errs.length, '9  no page errors', errs.join(' | '));
+      await p.close();
+      /* the same with a finger: touch events, on a page that reports a touch screen */
+      p = await open(browser, '/image/image-cropper/');
+      await p.setViewport({ width: 1700, height: 2100, hasTouch: true });
+      await upload(p, [path.join(OUT, 'crop-portrait.png')]);
+      const touched = [];
+      for (const [ratio, dn, ok] of [['16:9', 'SE', (b) => Math.abs(b.h - b.w * 9 / 16) <= 0.5], ['9:16', 'NW', (b) => Math.abs(b.w - b.h * 9 / 16) <= 0.5], ['1:1', 'E', (b) => b.w === b.h]]) {
+        await change(p, 'ratio', ratio);
+        await doDrag(900, 1500, DRAGS[dn], true);
+        b = await readBox();
+        const o = await readOut();
+        touched.push({ s: ratio + ' ' + dn + ' ' + b.w + '×' + b.h + ' at ' + b.x + ',' + b.y, good: ok(b) && b.w > 50 && b.x >= 0 && b.y >= 0 && b.x + b.w <= 900 && b.y + b.h <= 1500 && o.w === b.w && o.h === b.h && o.tl[0] === b.x && o.tl[1] === b.y });
+      }
+      check(touched.every((x) => x.good), '9  touch drags past the edges of the 900×1500 picture keep 16:9, 9:16 and 1:1 inside it', touched.map((x) => x.s).join(' | '));
+      check(!p.__errors.length, '9  no page errors (touch)', p.__errors.join(' | '));
       await p.close();
     }
 

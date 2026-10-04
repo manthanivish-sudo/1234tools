@@ -42,6 +42,9 @@
  *   8  quotation and purchase order: thousands separators, ambiguity shown
  *      not guessed, amount in words
  *   9  the merge page's copy and the delete page
+ *  10  payslip: blank UAN, PAN and bank print an em dash; delivery challan:
+ *      the CGST Rule 55(2) copy markings word for word; signature: one
+ *      "legally binding" FAQ, matching its FAQPage JSON-LD
  */
 'use strict';
 const path = require('path');
@@ -425,6 +428,35 @@ async function nodePart() {
   check(perr.error && /can be read 2 ways/.test(perr.error), 'purchase-order run: the same', perr.error);
   const dc = specInternals('delivery-challan-pdf', ['amountWords']);
   check(dc.amountWords(2650.5, 'GBP') === 'Pounds Two Thousand Six Hundred and Fifty and Fifty Pence Only', 'delivery challan words (same function) fixed too', dc.amountWords(2650.5, 'GBP'));
+
+  group('10 payslip blanks, challan copy markings, the signature FAQ');
+  /* a blank UAN, PAN or bank account is drawn as an em dash: WinAnsi byte 0x97, octal \227 */
+  const ps = await runSpec('payslip-pdf', [], Object.assign(defaults('payslip-pdf'), { uan: '', pan: '', bank: '' }));
+  const pst = (await analyse(ps.files[0].bytes)).text;
+  /* the label's own Tj, then the very next Tj is the lone dash */
+  const dashAfter = (label) => new RegExp('\\(' + label.replace(/[/]/g, '\\/') + '\\) Tj(?:(?!Tj)[\\s\\S]){0,200}\\((?:\\\\227|\\x97)\\) Tj').test(pst);
+  const dashed = ['PAN', 'UAN', 'BANK ACCOUNT / UPI'].filter(dashAfter);
+  check(dashed.length === 3 && /\/Encoding\s*\/WinAnsiEncoding/.test(pst), 'payslip: blank UAN, PAN and bank each print an em dash in a WinAnsi font', 'dash after: ' + dashed.join(', '));
+  const ps1 = await runSpec('payslip-pdf', [], defaults('payslip-pdf'));
+  const ps1t = (await analyse(ps1.files[0].bytes)).text;
+  check(!/\((?:\\227|\x97)\) Tj/.test(ps1t) && /\(100123456789\) Tj/.test(ps1t), 'payslip: a filled UAN prints itself, no dash', '');
+  /* CGST Rule 55(2), word for word, including the Rule's spelling CONSIGNER */
+  const ch = await runSpec('delivery-challan-pdf', [], Object.assign(defaults('delivery-challan-pdf'), { copies: '3' }));
+  const cht = (await analyse(ch.files[0].bytes)).text;
+  check(['ORIGINAL FOR CONSIGNEE', 'DUPLICATE FOR TRANSPORTER', 'TRIPLICATE FOR CONSIGNER'].every((s) => cht.indexOf(s) >= 0) && cht.indexOf('FOR CONSIGNOR') < 0,
+    'challan: the three copies carry the Rule 55(2) markings, TRIPLICATE FOR CONSIGNER', (cht.match(/TRIPLICATE FOR \w+/) || ['none'])[0]);
+  const sg = loadSpec('pdf-signature');
+  check((sg.faq || []).length === 1 && !/PKI|additional libraries/.test(JSON.stringify(sg.faq)), 'signature: one "legally binding" FAQ, not two near-duplicates', (sg.faq || []).map((f) => f.q).join(' | '));
+  const sgPage = path.join(ROOT, 'pdf/pdf-signature/index.html');
+  if (fs.existsSync(sgPage)) {
+    const h = fs.readFileSync(sgPage, 'utf8');
+    const ld = [...h.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => { try { return JSON.parse(m[1]); } catch (e) { return null; } });
+    const all = []; const walk = (x) => { if (!x || typeof x !== 'object') return; if (x['@type'] === 'FAQPage') all.push(x); Object.values(x).forEach(walk); }; ld.forEach(walk);
+    const qs = all.flatMap((f) => (f.mainEntity || []).map((e) => e.name));
+    const visible = [...h.matchAll(/<summary[^>]*>([\s\S]*?)<\/summary>/g)].map((m) => m[1].replace(/<[^>]+>/g, '').trim());
+    check(qs.filter((q) => /legally binding/i.test(q)).length === 1 && qs.every((q) => visible.some((v) => v.replace(/&#39;|&rsquo;/g, '’') === q.replace(/'/g, '’') || v === q)),
+      'signature page: FAQPage JSON-LD has one "legally binding" question and every question is on the page', qs.join(' | '));
+  }
 }
 
 function defaults(id) {

@@ -41,6 +41,7 @@ const proof = require('./build-proof.js'); /* the example, the story and the car
 const { trailFor } = require('./build/sections.js');
 /* the sidebar has one owner; ours must match what it would write */
 const { apply: sidebarFor } = require('./build-sidebar.js');
+const { footerApply } = require('./build-site.js'); /* the footer note, as build-site.js words it */
 
 const ROOT = __dirname;
 const CHECK = process.argv.includes('--check');
@@ -368,7 +369,7 @@ function page(parts, facts, list) {
 
   const script = '<script src="/assets/embed.js" defer></script>\n';
   const html = sidebarFor(headFor(parts, pathOnly, title, description) + script + ld + parts.mid + '\n' + body + parts.tail, rel);
-  return { html: proof.apply(share.apply(outbound.rewrite(hubs.apply(html, rel), SECTION).html, rel), rel), n, total };
+  return { html: footerApply(proof.apply(share.apply(outbound.rewrite(hubs.apply(html, rel), SECTION).html, rel), rel), rel), n, total };
 }
 
 /* ---------- wiring ----------------------------------------------------- */

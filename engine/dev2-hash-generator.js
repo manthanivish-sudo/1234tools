@@ -399,6 +399,56 @@ function markdownToHtml(md) {
     return t.replace(/\u0001(\d+)\u0002/g, (m, i) => kept[Number(i)]);
   };
 
+  /* GitHub-style pipe tables. A row is split at every | that is not written
+     \| (which becomes a plain | in the cell); one pipe at either end is
+     optional. The line under the header must be a divider row of ---, :---,
+     ---: or :---: with as many cells as the header, or neither line is a
+     table. Body rows are padded with empty cells or cut to the header's
+     width, and the table ends at a blank line or at a line that starts some
+     other block (#, >, a bullet, a number, a rule, a code block); any other
+     line is one more row, as on GitHub. Cells go through inline() above, so
+     the same escaping as a paragraph, and the alignment is taken from the
+     fixed list below, never copied from the text. */
+  const ALIGN = { left: ' style="text-align:left"', center: ' style="text-align:center"', right: ' style="text-align:right"', none: '' };
+  const splitRow = (row) => {
+    const s = row.trim();
+    const cells = [];
+    let cur = '', endPipe = false;
+    for (let i = 0; i < s.length; i++) {
+      const c = s.charAt(i);
+      endPipe = false;
+      if (c === '\\' && s.charAt(i + 1) === '|') { cur += '|'; i++; }
+      else if (c === '\\' && i + 1 < s.length) { cur += c + s.charAt(i + 1); i++; }
+      else if (c === '|') { cells.push(cur.trim()); cur = ''; endPipe = true; }
+      else cur += c;
+    }
+    if (!endPipe) cells.push(cur.trim());
+    if (s.charAt(0) === '|') cells.shift();
+    return cells;
+  };
+  const alignOf = (d) => d.charAt(0) === ':' ? (d.length > 1 && d.charAt(d.length - 1) === ':' ? 'center' : 'left')
+    : d.charAt(d.length - 1) === ':' ? 'right' : 'none';
+  const tableHead = (line, next) => {
+    if (next === undefined || line.indexOf('|') < 0) return null;
+    next = next.replace(/\s+$/, '');
+    if (next.indexOf('|') < 0) return null;
+    const delim = splitRow(next);
+    if (!delim.length || !delim.every((d) => /^:?-+:?$/.test(d))) return null;
+    const head = splitRow(line);
+    if (head.length !== delim.length) return null;
+    return { head, aligns: delim.map(alignOf) };
+  };
+  const startsBlock = (l) => !l.trim() || /^\u0000BLOCK\d+\u0000$/.test(l.trim()) || /^#{1,6}\s+/.test(l) ||
+    /^(-{3,}|\*{3,}|_{3,})$/.test(l.trim()) || /^>/.test(l) || /^\s*[-*+]\s+/.test(l) || /^\s*\d+[.)]\s+/.test(l);
+  const tableHtml = (t, rows) => {
+    const cell = (tag, text, i) => '<' + tag + ALIGN[t.aligns[i]] + '>' + inline(text) + '</' + tag + '>';
+    let h = '<table>\n<thead>\n<tr>' + t.head.map((c, i) => cell('th', c, i)).join('') + '</tr>\n</thead>';
+    if (rows.length) {
+      h += '\n<tbody>\n' + rows.map((r) => '<tr>' + t.aligns.map((a, i) => cell('td', r[i] || '', i)).join('') + '</tr>').join('\n') + '\n</tbody>';
+    }
+    return h + '\n</table>';
+  };
+
   const lines = src.split('\n');
   const out = [];
   let inList = null, inQuote = false, para = [];
@@ -409,8 +459,8 @@ function markdownToHtml(md) {
   const closeList = () => { if (inList) { out.push(`</${inList}>`); inList = null; } };
   const closeQuote = () => { if (inQuote) { out.push('</blockquote>'); inQuote = false; } };
 
-  for (let raw of lines) {
-    const line = raw.replace(/\s+$/, '');
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li].replace(/\s+$/, '');
 
     if (/^\u0000BLOCK\d+\u0000$/.test(line.trim())) {
       flushPara(); closeList(); closeQuote();
@@ -440,6 +490,15 @@ function markdownToHtml(md) {
       out.push(`<li>${inline(m[1])}</li>`);
     } else {
       closeList(); closeQuote();
+      const table = tableHead(line, lines[li + 1]);
+      if (table) {
+        flushPara();
+        const rows = [];
+        for (li += 2; li < lines.length && !startsBlock(lines[li].replace(/\s+$/, '')); li++) rows.push(splitRow(lines[li]));
+        li--;
+        out.push(tableHtml(table, rows));
+        continue;
+      }
       para.push(line.trim());
     }
   }
