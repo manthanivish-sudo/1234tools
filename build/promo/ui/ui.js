@@ -109,6 +109,7 @@
     if (name === 'log') loadLog();
     if (name === 'kits') loadKits();
     if (name === 'reels') loadReels();
+    if (name === 'opps') loadSavedOpps();
   }
   $$('.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
@@ -265,6 +266,44 @@
     ts.value = r.template;
     renderVenueInfo(r.venue);
     renderDraft(r);
+    await restoreDraft();
+  }
+
+  /* Edited drafts are saved as you type (drafts.json in the desk's data
+     folder) and come back when the same tool, venue, template and variant
+     are opened again, after a restart too. */
+  function draftId() { const d = S.draft; return { tool: d.tool, venue: d.venue, template: d.template, variant: d.variant, qurl: d.qurl, question: d.question }; }
+  function editedParts() {
+    const r = S.lastDraft; const out = {};
+    if (!r) return out;
+    for (const p of r.draft.parts) {
+      const ta = $('textarea[data-key="' + p.key + '"]');
+      if (ta && ta.value !== p.text) out[p.key] = ta.value;
+    }
+    return out;
+  }
+  let saveT = 0;
+  function saveDraftSoon() {
+    clearTimeout(saveT);
+    saveT = setTimeout(async () => {
+      if (!S.draft.tool) return;
+      try { await api('/api/drafts', Object.assign(draftId(), { parts: editedParts() })); $('#d-saved').textContent = 'Edits saved'; } catch (e) { /* the desk keeps working without it */ }
+    }, 600);
+  }
+  async function restoreDraft() {
+    const note = $('#d-saved');
+    note.textContent = '';
+    let r;
+    try { r = await api('/api/drafts?' + qs(draftId())); } catch (e) { return; }
+    if (!r.draft || !r.draft.parts) return;
+    let n = 0;
+    for (const [key, text] of Object.entries(r.draft.parts)) {
+      const ta = $('textarea[data-key="' + key + '"]');
+      if (ta) { ta.value = text; ta.dispatchEvent(new Event('input')); n++; }
+    }
+    if (!n) return;
+    clear(note).append('Restored your edits from ' + new Date(r.draft.updatedAt).toLocaleString() + ' · ',
+      h('button', { class: 'linkish', onclick: async () => { await api('/api/drafts', Object.assign(draftId(), { parts: {} })); await loadDraft(); } }, 'Reset to the generated text'));
   }
 
   function renderVenueInfo(v) {
@@ -308,6 +347,7 @@
         count.classList.toggle('over', !!(p.limit && n > p.limit));
         relint();
         updateComposer();
+        saveDraftSoon();
       });
       parts.appendChild(h('div', { class: 'part', 'data-part': p.key }, h('div', { class: 'part-head' }, h('span', { class: 'lab', text: p.label }), count, copyBtn), ta));
     }
@@ -399,41 +439,113 @@
     let r;
     try { r = await api('/api/find?' + qs(S.oppTool ? { tool: S.oppTool } : { audience: aud })); }
     catch (e) { clear(status).appendChild(h('p', { class: 'banner wait', text: e.message })); return; }
-    clear(status).appendChild(h('p', { class: 'small', text: 'Searched ' + r.venues.length + ' venues for: ' + r.queries.join(' | ') + '. ' + r.items.length + ' open questions.' }));
+    const fresh = r.items.filter((it) => it.status === 'new' && it.firstSeen === it.lastSeen).length;
+    clear(status).appendChild(h('p', { class: 'small', text: 'Searched ' + r.venues.length + ' venues for: ' + r.queries.join(' | ') + '. ' + r.items.length + ' open questions, ' + fresh + ' new to you. All of them are saved below.' }));
     if (r.errors.length) status.appendChild(h('details', { class: 'small' }, h('summary', { text: r.errors.length + ' venue(s) did not answer' }), h('ul', null, r.errors.map((e) => h('li', { text: e })))));
-    if (!r.items.length) box.appendChild(h('p', { class: 'muted', text: 'No open questions in the window. Try another tool, or come back tomorrow.' }));
-    for (const it of r.items) {
-      box.appendChild(h('div', { class: 'opp' },
-        h('a', { class: 't', href: it.url, target: '_blank', rel: 'noopener noreferrer', text: it.title }),
-        h('div', { class: 'meta' },
-          h('span', { class: 'score', text: it.matchScore + '%' }),
-          h('span', { text: it.venueName || it.venueId }),
-          h('span', { text: ago(it.created) }),
-          it.score != null ? h('span', { text: it.score + ' points' }) : null,
-          it.comments != null ? h('span', { text: it.comments + ' replies' }) : null,
-          h('span', { class: 'badge', text: it.suggestedTemplate }),
-          h('button', { class: 'btn', onclick: () => openDraft({ tool: r.tool || '', venue: it.venueId, template: it.suggestedTemplate, question: it.title, qurl: it.url }) }, 'Draft answer'))));
-    }
+    if (!r.items.length) status.appendChild(h('p', { class: 'muted', text: 'No open questions in the window. Try another tool, or come back tomorrow.' }));
+    S.oppFilter = 'new';
+    await loadSavedOpps();
   });
 
+  /* The saved list: everything the finder has ever found, from
+     opportunities.json in the desk's data folder, so a restart loses
+     nothing and a question you dismissed stays dismissed. */
+  S.oppFilter = 'new';
+  async function loadSavedOpps() {
+    let r;
+    try { r = await api('/api/opps?' + qs({ status: S.oppFilter })); }
+    catch (e) { return; }
+    for (const [k, n] of Object.entries(r.counts)) { const el = document.querySelector('#o-filters [data-n="' + k + '"]'); if (el) el.textContent = String(n); }
+    for (const b of document.querySelectorAll('#o-filters button')) b.classList.toggle('is-on', b.dataset.status === S.oppFilter);
+    const box = clear($('#o-results'));
+    if (!r.items.length) box.appendChild(h('p', { class: 'muted', text: S.oppFilter === 'new' ? 'Nothing new waiting. Search for a tool or an audience above.' : 'Nothing here yet.' }));
+    for (const it of r.items) box.appendChild(oppCard(it));
+  }
+  function oppCard(it) {
+    const tool = (it.query && it.query.tool) || '';
+    const setStatus = async (status) => { await api('/api/opps', { url: it.url, status }); await loadSavedOpps(); };
+    return h('div', { class: 'opp is-' + it.status },
+      h('a', { class: 't', href: it.url, target: '_blank', rel: 'noopener noreferrer', text: it.title }),
+      h('div', { class: 'meta' },
+        h('span', { class: 'score', text: it.matchScore + '%' }),
+        h('span', { text: it.venueName || it.venueId }),
+        h('span', { text: ago(it.created) }),
+        it.score != null ? h('span', { text: it.score + ' points' }) : null,
+        it.comments != null ? h('span', { text: it.comments + ' replies' }) : null,
+        tool && S.byPath[tool] ? h('span', { text: 'for ' + S.byPath[tool].title }) : (it.query && it.query.audience ? h('span', { text: 'for ' + it.query.audience }) : null),
+        h('span', { class: 'badge', text: it.suggestedTemplate }),
+        it.status !== 'new' ? h('span', { class: 'badge st-' + it.status, text: it.status }) : null,
+        h('button', { class: 'btn', onclick: async () => { if (it.status === 'new') await api('/api/opps', { url: it.url, status: 'drafted' }); openDraft({ tool, venue: it.venueId, template: it.suggestedTemplate, question: it.title, qurl: it.url }); } }, 'Draft answer'),
+        it.status !== 'answered' ? h('button', { class: 'ghost', onclick: () => setStatus('answered') }, 'Mark answered') : null,
+        it.status !== 'dismissed' ? h('button', { class: 'ghost', onclick: () => setStatus('dismissed') }, 'Dismiss') : h('button', { class: 'ghost', onclick: () => setStatus('new') }, 'Restore')));
+  }
+  for (const b of document.querySelectorAll('#o-filters button')) b.addEventListener('click', () => { S.oppFilter = b.dataset.status; loadSavedOpps(); });
+
   /* -------------------------------------------------------------- KITS */
-  makePicker($('#k-tool'), $('#k-tool-list'), (t) => { S.kitTool = t.path; });
+  makePicker($('#k-tool'), $('#k-tool-list'), (t) => { S.kitTool = t.path; $('#k-seed').value = ''; loadLooks(); });
   function kitImages(slug, files, stamp) {
     return h('div', { class: 'kitimgs' }, files.filter((f) => /\.png$/.test(f)).map((f) => h('figure', null,
       h('a', { href: '/kits/' + encodeURIComponent(slug) + '/' + f, target: '_blank', rel: 'noopener' }, h('img', { src: '/kits/' + encodeURIComponent(slug) + '/' + f + '?t=' + stamp, alt: f, loading: 'lazy' })),
       h('figcaption', { text: f }))));
   }
   function kitCard(k) {
+    const pdf = (k.files || []).filter((f) => /\.pdf$/.test(f));
     return h('div', { class: 'card' },
       h('div', { class: 'head-row' }, h('h3', { text: k.title, style: 'margin:0' }), h('span', { class: 'muted small', text: k.at ? new Date(k.at).toLocaleString() : '' })),
+      k.look ? h('p', { class: 'small k-lookline', text: 'Look: ' + k.look }) : null,
       h('p', { class: 'small' }, h('code', { text: k.dir })),
       h('div', { class: 'actions' },
         h('button', { class: 'btn', onclick: async () => { try { await api('/api/reveal', { slug: k.slug }); toast('Opened in Explorer'); } catch (e) { toast(e.message); } } }, 'Open folder'),
         h('a', { class: 'btn', href: '/kits/' + encodeURIComponent(k.slug) + '/kit.md', target: '_blank', rel: 'noopener' }, 'kit.md'),
+        pdf.map((f) => h('a', { class: 'btn', href: '/kits/' + encodeURIComponent(k.slug) + '/' + f, target: '_blank', rel: 'noopener' }, f)),
         h('button', { class: 'ghost', onclick: () => copyText(k.dir) }, 'Copy path')),
       kitImages(k.slug, k.files, Date.now()));
   }
+  /* look controls: Auto everywhere means "the next look for this tool" */
+  async function loadKitOptions() {
+    if (S.kitOptions) return;
+    S.kitOptions = await api('/api/kit-options');
+    const fill = (sel, list) => list.forEach((o) => $(sel).appendChild(h('option', { value: o.id, text: o.label })));
+    fill('#k-layout', S.kitOptions.layouts);
+    fill('#k-palette', S.kitOptions.palettes);
+    fill('#k-type', S.kitOptions.types);
+  }
+  function lookParams() {
+    const o = { layout: $('#k-layout').value, palette: $('#k-palette').value, type: $('#k-type').value, copy: $('#k-copy').value };
+    const seed = $('#k-seed').value.trim();
+    if (/^\d+$/.test(seed)) o.seed = seed;
+    return o;
+  }
+  let looksReq = 0;
+  async function loadLooks(seed) {
+    if (!S.kitTool) return;
+    const box = clear($('#k-looks'));
+    box.appendChild(h('span', { class: 'spinner' }));
+    const n = ++looksReq;
+    try {
+      const p = lookParams();
+      const r = await api('/api/kit-looks', Object.assign({ tool: S.kitTool, n: 6 }, p, { seed: seed != null ? seed : (p.seed || '') }));
+      if (n !== looksReq) return;
+      clear(box);
+      r.looks.forEach((l) => box.appendChild(h('button', {
+        type: 'button', 'aria-pressed': String($('#k-seed').value === String(l.variant.seed)), title: l.label + ' · seed ' + l.variant.seed, 'data-seed': l.variant.seed,
+        onclick: (ev) => {
+          $('#k-seed').value = String(l.variant.seed);
+          box.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+          ev.currentTarget.setAttribute('aria-pressed', 'true');
+        },
+      }, h('img', { src: l.png, alt: l.label }), h('span', { text: l.label }))));
+    } catch (e) { if (n === looksReq) clear(box).appendChild(h('p', { class: 'banner wait', text: e.message })); }
+  }
+  ['#k-layout', '#k-palette', '#k-type', '#k-copy'].forEach((s) => $(s).addEventListener('change', () => loadLooks()));
+  $('#k-shuffle').addEventListener('click', () => {
+    if (!S.kitTool) { toast('Pick a tool'); return; }
+    const seed = String(Math.floor(Math.random() * 4294967295));
+    $('#k-seed').value = seed;
+    loadLooks(seed);
+  });
   async function loadKits() {
+    loadKitOptions().catch(() => {});
     const r = await api('/api/kits');
     $('#k-dir').textContent = r.dir;
     const box = clear($('#k-list'));
@@ -443,12 +555,16 @@
   $('#k-go').addEventListener('click', async () => {
     if (!S.kitTool) { toast('Pick a tool'); return; }
     const box = clear($('#k-result'));
-    box.appendChild(h('p', null, h('span', { class: 'spinner' }), 'Rendering four images and kit.md…'));
+    box.appendChild(h('p', null, h('span', { class: 'spinner' }), 'Capturing the example and rendering the carousel, PDF, square, story, pin, wide and kit.md…'));
     try {
-      const r = await api('/api/kit', { tool: S.kitTool });
-      clear(box).appendChild(kitCard({ slug: r.slug, title: S.byPath[S.kitTool].title, dir: r.dir, files: r.files.map((f) => f.file || f.path.split(/[\\/]/).pop()), at: new Date().toISOString() }));
+      const r = await api('/api/kit', Object.assign({ tool: S.kitTool }, lookParams()));
+      const v = r.variant || {};
+      clear(box).appendChild(kitCard({ slug: r.slug, title: S.byPath[S.kitTool].title, dir: r.dir, files: r.files.map((f) => f.file || f.path.split(/[\\/]/).pop()), at: new Date().toISOString(),
+        look: v.layout ? v.layout + ' · ' + v.palette + ' · ' + v.type + ' · copy ' + v.copy + ' · seed ' + v.seed : '' }));
       box.firstChild.setAttribute('id', 'k-new');
+      $('#k-seed').value = '';
       loadKits();
+      loadLooks();
     } catch (e) { clear(box).appendChild(h('p', { class: 'banner wait', text: e.message })); }
   });
 

@@ -76,6 +76,7 @@
 
       <div class="card">
         <div id="d-status"></div>
+        <p id="d-saved" class="muted small" aria-live="polite"></p>
         <div id="d-parts" class="stack"></div>
         <div id="d-lint"></div>
         <div class="actions">
@@ -110,6 +111,16 @@
       <p class="muted small">Read-only public searches (Reddit, Hacker News, Stack Exchange), one request a second and slower for Reddit; results are cached for 30 minutes. Threads older than 30 days (48 hours on HN), locked or archived are left out.</p>
     </div>
     <div id="o-status" class="muted"></div>
+    <div class="row wrap o-saved-head">
+      <h3 class="grow">Saved questions <span class="muted small">kept on this computer, across restarts</span></h3>
+      <div class="o-filters" id="o-filters" role="group" aria-label="Show">
+        <button class="ghost is-on" data-status="new">New <span class="n" data-n="new">0</span></button>
+        <button class="ghost" data-status="drafted">Drafted <span class="n" data-n="drafted">0</span></button>
+        <button class="ghost" data-status="answered">Answered <span class="n" data-n="answered">0</span></button>
+        <button class="ghost" data-status="dismissed">Dismissed <span class="n" data-n="dismissed">0</span></button>
+        <button class="ghost" data-status="all">All <span class="n" data-n="all">0</span></button>
+      </div>
+    </div>
     <div id="o-results" class="stack"></div>
   </section>
 
@@ -124,7 +135,16 @@
         </div>
         <button class="btn gold" id="k-go">Generate kit</button>
       </div>
-      <p class="muted small">Writes kit.md (every template, best-fit venues, UTM links) and four PNGs (1080², 1000×1500 pin, 1080×1920 story with QR, 1200×630) to <code id="k-dir"></code>.</p>
+      <div class="row wrap k-look">
+        <label class="k-sel"><span class="lbl">Layout</span><select id="k-layout"><option value="">Auto</option></select></label>
+        <label class="k-sel"><span class="lbl">Palette</span><select id="k-palette"><option value="">Auto</option></select></label>
+        <label class="k-sel"><span class="lbl">Type</span><select id="k-type"><option value="">Auto</option></select></label>
+        <label class="k-sel"><span class="lbl">Copy</span><select id="k-copy"><option value="">Auto</option><option value="0">Story hook</option><option value="1">Alternate 1</option><option value="2">Alternate 2</option></select></label>
+        <label class="k-sel k-seed"><span class="lbl">Seed</span><input id="k-seed" type="text" inputmode="numeric" placeholder="new look" autocomplete="off"></label>
+        <button class="btn" id="k-shuffle" type="button">Shuffle look</button>
+      </div>
+      <div id="k-looks" class="k-looks" aria-live="polite"></div>
+      <p class="muted small">Every kit gets its own look (layout, palette, heading style, copy), different from this tool's last three kits and the last two of any tool; pick one below or fix any field. A seed reproduces a look exactly. Writes kit.md (the story, captions, venues, UTM links) plus a 5-slide carousel (PNGs and a PDF), square, story, pin and wide images to <code id="k-dir"></code>.</p>
     </div>
     <div id="k-result"></div>
     <h3>Existing kits</h3>

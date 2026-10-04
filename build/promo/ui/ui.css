@@ -88,6 +88,17 @@ select{cursor:pointer}
 .tbl td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
 .tbl tr.vrow{cursor:pointer}.tbl tr.vrow:hover td{background:rgba(255,255,255,.02)}
 .tbl tr.detail td{background:rgba(255,255,255,.02);color:var(--ink2);white-space:pre-wrap}
+.k-look{margin-top:12px;align-items:flex-end}
+.k-sel{display:flex;flex-direction:column;gap:4px;min-width:150px;flex:1}
+.k-sel.k-seed{max-width:150px}
+.k-looks{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:12px}
+.k-looks:empty{display:none}
+.k-looks button{all:unset;cursor:pointer;display:flex;flex-direction:column;gap:6px;border-radius:10px;padding:6px;border:1px solid var(--line2);background:var(--panel2)}
+.k-looks button:hover,.k-looks button:focus-visible{border-color:var(--gold)}
+.k-looks button[aria-pressed="true"]{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold)}
+.k-looks img{display:block;width:100%;height:auto;border-radius:6px}
+.k-looks span{font-size:11px;line-height:1.3;color:var(--muted)}
+.k-looks .spinner{margin:10px}
 .kitimgs{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
 .kitimgs figure{margin:0;text-align:center;font-size:12px;color:var(--muted)}
 .kitimgs img{display:block;height:180px;width:auto;border-radius:8px;border:1px solid var(--line2);background:#000}
@@ -102,3 +113,15 @@ select{cursor:pointer}
 .badge.verify{border-color:rgba(255,184,77,.6);color:#1a1200;background:var(--amber)}
 .banner.verifyb{background:rgba(255,184,77,.08);border:1px solid rgba(255,184,77,.4);color:#ffe0b0}
 [hidden]{display:none !important}
+/* saved opportunities and restored drafts (store.js) */
+.o-saved-head{margin-top:18px;align-items:center}
+.o-saved-head h3{margin:0;font:700 16px 'Sora',sans-serif}
+.o-filters{display:flex;gap:6px;flex-wrap:wrap}
+.o-filters .ghost{padding:6px 10px;font-size:13px}
+.o-filters .ghost.is-on{border-color:var(--gold);color:var(--gold)}
+.o-filters .n{opacity:.7;margin-left:4px}
+.opp.is-dismissed{opacity:.55}
+.opp.is-answered .t{text-decoration:line-through;text-decoration-color:var(--gold)}
+.badge.st-answered{color:#7dd3a0}
+.badge.st-drafted{color:var(--gold)}
+.linkish{background:none;border:0;padding:0;color:var(--gold);cursor:pointer;font:inherit;text-decoration:underline}

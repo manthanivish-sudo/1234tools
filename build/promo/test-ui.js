@@ -15,7 +15,8 @@ const assert = require('assert');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'promo-ui-'));
 process.env.PROMO_HOME = TMP;
 process.env.PROMO_NOW = '2026-10-06T10:00:00';
-const PORT = 8798;
+/* 8750-8759 is this test's range; createServer does not limit ports like serve() does */
+const PORT = +process.env.PROMO_UI_PORT || 8751;
 const BASE = 'http://127.0.0.1:' + PORT;
 const CHROME = process.env.PROMO_CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 
@@ -31,7 +32,18 @@ async function check(name, fn) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 (async () => {
-  const server = await desk.serve(PORT);
+  const server = desk.createServer(PORT);
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(PORT, '127.0.0.1', resolve); });
+  // the kit's example: copy the owner's captured one so examples.js serves it from its cache
+  try {
+    const E = require('./examples');
+    const from = path.join(process.env.PROMO_REAL_HOME || path.join(os.homedir(), '.1234tools-promo'), 'examples', E.slugFor('/pdf/merge-pdf/'));
+    if (fs.existsSync(path.join(from, 'example.json'))) {
+      const to = path.join(TMP, 'examples', E.slugFor('/pdf/merge-pdf/'));
+      fs.mkdirSync(to, { recursive: true });
+      for (const f of fs.readdirSync(from)) if (fs.statSync(path.join(from, f)).isFile()) fs.copyFileSync(path.join(from, f), path.join(to, f));
+    }
+  } catch (e) { /* no capture engine: the kit falls back to a schematic */ }
   const puppeteer = require('puppeteer-core');
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage();
@@ -146,22 +158,45 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     });
 
     // ---- Kits
-    await check('Kits generates 4 PNGs of the right size into PROMO_HOME', async () => {
+    await check('Kits: look selects are filled; picking a tool shows 6 alternative looks', async () => {
       await page.click('.tabs button[data-tab="kits"]');
+      await page.waitForFunction(() => document.querySelectorAll('#k-palette option').length >= 9 && document.querySelectorAll('#k-layout option').length >= 5 && document.querySelectorAll('#k-type option').length >= 5, { timeout: 15000 });
       await page.type('#k-tool', 'merge pdf');
       await page.waitForSelector('#k-tool-list li[data-path="/pdf/merge-pdf/"]');
       await page.click('#k-tool-list li[data-path="/pdf/merge-pdf/"]');
+      await page.waitForFunction(() => document.querySelectorAll('#k-looks button img').length === 6 && Array.from(document.querySelectorAll('#k-looks img')).every((i) => i.complete && i.naturalWidth > 0), { timeout: 90000 });
+      const labels = await page.$$eval('#k-looks button', (xs) => xs.map((b) => b.title));
+      assert.strictEqual(new Set(labels).size, 6, 'six different looks');
+    });
+    await check('Kits: Shuffle look sets a new seed and redraws the strip; a thumbnail picks its seed', async () => {
+      const before = await page.$$eval('#k-looks button', (xs) => xs.map((b) => b.dataset.seed).join());
+      await page.click('#k-shuffle');
+      await page.waitForFunction((b) => { const xs = document.querySelectorAll('#k-looks button'); return xs.length === 6 && Array.from(xs).map((x) => x.dataset.seed).join() !== b; }, { timeout: 90000 }, before);
+      const seed = await page.$eval('#k-seed', (i) => i.value);
+      assert.ok(/^\d+$/.test(seed), 'seed field: ' + seed);
+      await page.click('#k-looks button:nth-child(3)');
+      const picked = await page.evaluate(() => ({ seed: document.getElementById('k-seed').value, btn: document.querySelector('#k-looks button:nth-child(3)').dataset.seed, pressed: document.querySelector('#k-looks button:nth-child(3)').getAttribute('aria-pressed') }));
+      assert.ok(picked.seed === picked.btn && picked.pressed === 'true', JSON.stringify(picked));
+    });
+    await check('Kits generates the carousel (5 PNGs + PDF) and 4 singles in the chosen palette', async () => {
+      await page.select('#k-palette', 'paper');
+      const seed = await page.$eval('#k-seed', (i) => i.value);
       await page.click('#k-go');
-      await page.waitForSelector('#k-new img', { timeout: 90000 });
+      await page.waitForSelector('#k-new img', { timeout: 300000 });
       const dir = path.join(TMP, 'kits', 'merge-pdf');
-      const want = { 'square-1080.png': [1080, 1080], 'pin-1000x1500.png': [1000, 1500], 'story-1080x1920.png': [1080, 1920], 'wide-1200x630.png': [1200, 630] };
+      const want = { 'carousel-1.png': [1080, 1350], 'carousel-5.png': [1080, 1350], 'square-1080.png': [1080, 1080], 'pin-1000x1500.png': [1000, 1500], 'story-1080x1920.png': [1080, 1920], 'wide-1200x630.png': [1200, 630] };
       for (const [f, [w, h]] of Object.entries(want)) {
         const buf = fs.readFileSync(path.join(dir, f));
         assert.deepStrictEqual(kit.pngSize(buf), { w, h }, f);
       }
-      assert.ok(fs.readFileSync(path.join(dir, 'kit.md'), 'utf8').includes('# Launch kit: Merge PDF Files'));
+      assert.strictEqual(kit.pdfPages(fs.readFileSync(path.join(dir, 'carousel.pdf'))), 5);
+      const md = fs.readFileSync(path.join(dir, 'kit.md'), 'utf8');
+      assert.ok(md.includes('# Launch kit: Merge PDF Files'));
+      assert.ok(md.includes('palette `paper`') && md.includes('seed `' + seed + '`'), 'look recorded in kit.md');
       const imgs = await page.$$eval('#k-new img', (xs) => xs.map((i) => i.naturalWidth));
-      assert.strictEqual(imgs.length, 4);
+      assert.strictEqual(imgs.length, 9);
+      const look = await page.$eval('#k-new .k-lookline', (p) => p.textContent);
+      assert.ok(/paper/.test(look) && look.includes(seed), look);
     });
 
     // ---- Log and Reels
@@ -179,6 +214,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       }));
       if (s.href) assert.ok(s.href.startsWith('https://www.1234tools.com/ai-video/reel-maker/?tool=%2F'), s.href);
       else assert.ok(s.off > 0 && /not live/.test(s.note), JSON.stringify(s));
+    });
+    await check('Opportunities shows the saved list from disk, and statuses stick', async () => {
+      require('./store').mergeOpps([{ url: 'https://superuser.com/q/42', title: 'Saved question about merging PDFs', venueId: 'qa-stackexchange-superuser', matchScore: 77, created: '2026-10-01T09:00:00Z', suggestedTemplate: 'stackexchange-answer' }], { tool: '/pdf/merge-pdf/' });
+      await page.click('.tabs button[data-tab="opps"]');
+      await page.waitForFunction(() => /Saved question about merging PDFs/.test(document.querySelector('#o-results').textContent));
+      await page.evaluate(() => [...document.querySelectorAll('#o-results .opp button')].find((b) => b.textContent === 'Mark answered').click());
+      await page.waitForFunction(() => !/Saved question/.test(document.querySelector('#o-results').textContent));
+      assert.strictEqual(require('./store').listOpps({ status: 'answered' }).items.length, 1);
     });
     await check('no external requests and no page errors', async () => {
       assert.deepStrictEqual(external, []);

@@ -7,7 +7,7 @@
  *   node build/promo/desk.js plan
  *   node build/promo/desk.js draft <toolPath> <venueId> [--template id] [--variant n] [--question "..."]
  *   node build/promo/desk.js find <toolPath|audience:slug>
- *   node build/promo/desk.js kit <toolPath>
+ *   node build/promo/desk.js kit <toolPath> [--seed n] [--layout x] [--palette y] [--type z] [--copy 0-2] [--theme both]
  *   node build/promo/desk.js log [--venue id] | log add <venueId> <toolPath> [--kind post|help|removed] [--url u] [--template t]
  *   node build/promo/desk.js venues [--section s] [--audience a]
  *   node build/promo/desk.js lint "<text>" [--ai] [--section s]
@@ -102,6 +102,15 @@ async function reels() {
   return { available: live !== false, live, note, base: REEL_MAKER, sections: Object.values(bySection) };
 }
 
+/** Kit look options from a request body or CLI flags: seed and overrides, empty = automatic. */
+function kitOpts(b) {
+  const o = {};
+  if (b.seed != null && b.seed !== '' && b.seed !== true && !isNaN(+b.seed)) o.seed = +b.seed >>> 0;
+  for (const k of ['layout', 'palette', 'type', 'theme']) if (b[k] && b[k] !== true && b[k] !== 'auto') o[k] = String(b[k]);
+  if (b.copy != null && b.copy !== '' && b.copy !== 'auto' && b.copy !== true) o.copy = +b.copy;
+  return o;
+}
+
 function venuesPayload() {
   const reg = V.load();
   const venues = reg.venues.map((v) => {
@@ -187,13 +196,36 @@ function createServer(port) {
       if (p === '/api/find') {
         const F = require('./find');
         const r = await F.find({ tool: q.tool || undefined, audience: q.audience || undefined, fresh: q.fresh === '1', maxVenues: q.max ? parseInt(q.max, 10) : undefined });
+        /* every result is kept (store.js), so a restart loses nothing and a
+           question you dismissed stays dismissed when it turns up again */
+        r.items = require('./store').mergeOpps(r.items, { tool: q.tool ? T.normPath(q.tool) : undefined, audience: q.audience || undefined });
         return send(res, 200, r);
+      }
+      if (p === '/api/opps' && req.method === 'GET') return send(res, 200, require('./store').listOpps({ status: q.status, tool: q.tool ? T.normPath(q.tool) : '', audience: q.audience }));
+      if (p === '/api/opps' && req.method === 'POST') {
+        const b = await readBody(req);
+        try { return send(res, 200, { item: require('./store').setOppStatus(b.url, b.status, b.note) }); }
+        catch (e) { return send(res, 400, { error: e.message }); }
+      }
+      if (p === '/api/drafts' && req.method === 'GET') {
+        if (q.tool) return send(res, 200, { draft: require('./store').getDraft({ tool: T.normPath(q.tool), venue: q.venue, template: q.template, variant: q.variant, qurl: q.qurl }) });
+        return send(res, 200, { drafts: require('./store').listDrafts() });
+      }
+      if (p === '/api/drafts' && req.method === 'POST') {
+        const b = await readBody(req);
+        if (!b.tool) return send(res, 400, { error: 'tool required' });
+        return send(res, 200, { draft: require('./store').saveDraft(Object.assign({}, b, { tool: T.normPath(b.tool) }), b.parts || {}) });
       }
       if (p === '/api/kits' && req.method === 'GET') return send(res, 200, { dir: path.join(L.home(), 'kits'), kits: require('./kit').list() });
       if (p === '/api/kit' && req.method === 'POST') {
         const b = await readBody(req);
-        const r = await require('./kit').kit(b.tool);
+        const r = await require('./kit').kit(b.tool, kitOpts(b));
         return send(res, 200, r);
+      }
+      if (p === '/api/kit-options') return send(res, 200, require('./kit').options());
+      if (p === '/api/kit-looks' && req.method === 'POST') {
+        const b = await readBody(req);
+        return send(res, 200, await require('./kit').looks(b.tool, Object.assign(kitOpts(b), { n: Math.min(Math.max(parseInt(b.n, 10) || 6, 1), 12), format: b.format })));
       }
       if (p === '/api/reveal' && req.method === 'POST') {
         // open a kit folder in Explorer: a local convenience, never a network action
@@ -315,8 +347,11 @@ async function cli(argv) {
     return 0;
   }
   if (cmd === 'kit') {
-    const r = await require('./kit').kit(a._[1]);
+    const r = await require('./kit').kit(a._[1], kitOpts(a));
     console.log('Kit written to ' + r.dir);
+    console.log('  look: layout ' + r.variant.layout + ' · palette ' + r.variant.palette + ' · type ' + r.variant.type + ' · copy ' + r.variant.copy + ' · seed ' + r.variant.seed + ' (' + r.how + ')');
+    console.log('  example: ' + r.example.kind + (r.example.real ? ', real' : ', illustration') + ' · ' + r.example.how);
+    if (r.fit.overflow.length) console.log('  TEXT DID NOT FIT:\n    ' + r.fit.overflow.join('\n    '));
     for (const f of r.files) console.log('  ' + (f.file || path.basename(f.path)) + (f.actual ? ' ' + f.actual.w + '×' + f.actual.h : '') + ' ' + f.bytes + ' bytes');
     if (r.qr) console.log('  story QR: ' + r.qr.text + (r.qr.verified ? ' (read back OK)' : ' (NOT verified)'));
     return 0;
@@ -353,7 +388,7 @@ async function cli(argv) {
   return 2;
 }
 
-module.exports = { createServer, serve, draft, reels, venuesPayload, logPayload, cli, PORTS };
+module.exports = { createServer, serve, draft, reels, venuesPayload, logPayload, cli, kitOpts, PORTS };
 
 if (require.main === module) {
   cli(process.argv.slice(2)).then((code) => { if (code != null) process.exitCode = code; }).catch((e) => { console.error(e.message || e); process.exitCode = 1; });

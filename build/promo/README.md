@@ -25,8 +25,9 @@ The web app has seven tabs:
 
 - **Today**: the day's routine as tasks, each with the tool, the venue, the draft, the venue's red lines and a composer link where one exists. **Done…** asks for the post URL and logs it; **Skip** logs a skip. High-risk venues are never suggested here; venues whose rules the register could not confirm carry a **verify rules first** badge.
 - **Draft**: pick any of the 232 finder tools, then a venue (ranked by fit, with risk, self-promotion rule, cadence status, rules link, notes and how the register verified them), a template and a variant. Every part has a live character count against its limit, red lint errors and its own Copy button. While a venue is blocked by the log, Copy and Open composer are disabled until you tick the override (logged as an override).
-- **Opportunities**: open questions for a tool or an audience. **Draft answer** opens Draft with the question in the answer template.
-- **Kits**: generates a launch kit (see below), lists existing kits and opens their folder.
+- **Opportunities**: open questions for a tool or an audience. Every question found is saved (`opportunities.json`) with its status — new, drafted, answered, dismissed — so a restart loses nothing and a dismissed question stays dismissed when it turns up again. **Draft answer** opens Draft with the question in the answer template; **Mark answered** and **Dismiss** file it.
+- **Drafts survive restarts**: an edited draft is saved as you type (`drafts.json`) and comes back when the same tool, venue, template and variant are opened again, with **Reset to the generated text**.
+- **Kits**: generates a launch kit that tells the tool's story — the pain, the usual way, the fix with a REAL example captured from the live tool, three steps, a QR call to action — as a 5-slide carousel (plus `carousel.pdf` for LinkedIn documents), a square, a story, a Pinterest pin and a link-preview card. Every kit gets a different look (5 layouts × 8 palettes × 5 type styles × 3 copy variants, never repeating the tool's last 3 or the last 2 overall); **Shuffle look**, the Layout / Palette / Type / Copy menus, a seed and six alternative-look thumbnails let you choose.
 - **Venues**: the register as a filterable table, plus the excluded venues with reasons and the research insights.
 - **Log**: history with filters, a form for help-only replies and removals, and cadence status per venue.
 - **Reels**: the top tools per section with a link to the Reel Maker (`/ai-video/reel-maker/?tool=<path>`), which works once that page is deployed.
@@ -69,7 +70,10 @@ Visitor share targets (`roles: ["share"]`) are never limited and never suggested
 Nothing personal is in the repo (everything committed is published). Your data lives in `%USERPROFILE%\.1234tools-promo\`:
 
 - `log.json`: every post, help-only reply, skip and removal you log.
-- `kits\<slug>\`: `kit.md` (every template rendered with counts, the best-fit venues with their rules notes and links, a UTM link per venue) and four PNGs: `square-1080.png`, `pin-1000x1500.png`, `story-1080x1920.png` (with a QR to the `instagram-story` UTM link, read back by the site's own QR engine) and `wide-1200x630.png`.
+- `kits\<slug>\`: `kit.md` (every template rendered with counts, the best-fit venues with their rules notes and links, a UTM link per venue) the story and the look used (with the command that reproduces it), `carousel-1.png`…`carousel-5.png` (1080×1350), `carousel.pdf`, `square-1080.png`, `story-1080x1920.png` (QR to the `instagram-story` UTM link, read back by the site's own QR engine), `pin-1000x1500.png` and `wide-1200x630.png`. `kits\history.json` remembers the looks used so the next kit differs.
+- `examples\<tool>\`: real examples captured from the live tools by `node build/promo/examples.js capture-all` (published to the site by `build-examples.js`).
+- `opportunities.json`, `drafts.json`: saved questions with their status, and your edited drafts.
+- `seo\`: SEO control centre spreadsheets (`node build/seo/control-centre.js`).
 - `cache\`: finder responses, kept 30 minutes.
 - `config.json` (optional): `{"accounts": {"reddit": "yourname", "hn": "yourname"}}` so the finder skips your own posts.
 
@@ -100,6 +104,9 @@ In GA4: **Reports → Acquisition → Traffic acquisition**, set the primary dim
 | `log.js` | the posting log and every cadence rule |
 | `plan.js` | Today |
 | `find.js` | the opportunity finder |
-| `kit.js` | launch kits and images |
+| `kit.js`, `kit-templates/` | launch kits: layouts, palettes (WCAG AA checked on load), type styles, example frames, the look picker |
+| `stories/` | the story for every tool (pain, usual way, fix, steps, proof, example spec); `index.js` merges the shards |
+| `examples.js`, `samples/` | captures real examples by driving the live tools; CC0 sample photos with their licences |
+| `store.js` | saved opportunities and drafts |
 | `fixtures/` | one saved response per search API (Reddit JSON is a documented-shape synthetic: Reddit answered 403 from the network the fixtures were captured on) |
-| `test.js`, `test-ui.js` | `node build/promo/test.js` (no browser, no network); `node build/promo/test-ui.js` (puppeteer on port 8798) |
+| `test.js`, `test-ui.js`, `test-kit.js`, `test-examples.js` | `node build/promo/test.js` (no browser, no network; includes a real server-restart check); `test-ui.js` (puppeteer on port 8751); `test-kit.js` (kits, looks, overflow matrix); `test-examples.js` (live capture) |

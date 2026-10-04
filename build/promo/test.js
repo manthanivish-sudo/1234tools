@@ -311,8 +311,82 @@ const good = [
 for (const [t, ctx] of good) check('allows: ' + t, () => assert.ok(lint(t, ctx).ok, JSON.stringify(lint(t, ctx).errors)));
 check('X counts a URL as 23', () => assert.strictEqual(lint('a https://www.1234tools.com/pdf/merge-pdf/?utm_source=x', { countMode: 'x' }).count, 25));
 
+/* ------------------------------------------------------------- store */
+section('store: saved opportunities and drafts');
+const ST = require('./store');
+const oppA = { url: 'https://news.ycombinator.com/item?id=1', title: 'How do I merge PDFs offline?', venueId: 'launch-hacker-news', matchScore: 80, created: '2026-10-01T10:00:00Z', suggestedTemplate: 'hn-comment' };
+const oppB = { url: 'https://superuser.com/q/2', title: 'Merge two PDFs without uploading', venueId: 'qa-stackexchange-superuser', matchScore: 70, created: '2026-10-02T10:00:00Z', suggestedTemplate: 'stackexchange-answer' };
+check('merge saves new opportunities as "new"', () => {
+  const out = ST.mergeOpps([oppA, oppB], { tool: '/pdf/merge-pdf/' });
+  assert.strictEqual(out.length, 2);
+  assert.ok(out.every((x) => x.status === 'new' && x.firstSeen && x.query.tool === '/pdf/merge-pdf/'));
+  assert.ok(fs.existsSync(path.join(TMP, 'opportunities.json')));
+});
+check('a status survives the same question turning up again', () => {
+  ST.setOppStatus(oppA.url, 'dismissed');
+  const again = ST.mergeOpps([Object.assign({}, oppA, { matchScore: 90 })], { tool: '/pdf/merge-pdf/' });
+  assert.strictEqual(again[0].status, 'dismissed');
+  assert.strictEqual(again[0].matchScore, 90);
+});
+check('list filters by status and counts every status', () => {
+  const r = ST.listOpps({ status: 'new' });
+  assert.deepStrictEqual(r.items.map((x) => x.url), [oppB.url]);
+  assert.strictEqual(r.counts.all, 2); assert.strictEqual(r.counts.dismissed, 1);
+});
+check('an unknown status is refused', () => assert.throws(() => ST.setOppStatus(oppB.url, 'maybe')));
+check('drafts save, reload and delete by tool + venue + template + variant', () => {
+  const id = { tool: '/pdf/merge-pdf/', venue: 'launch-hacker-news', template: 'hn-comment', variant: 1, qurl: oppA.url };
+  ST.saveDraft(id, { body: 'My edited reply' });
+  assert.strictEqual(ST.getDraft(id).parts.body, 'My edited reply');
+  assert.strictEqual(ST.getDraft(Object.assign({}, id, { variant: 2 })), null);
+  ST.saveDraft(id, {});
+  assert.strictEqual(ST.getDraft(id), null);
+});
+check('a corrupt store file is treated as empty, not as a crash', () => {
+  fs.writeFileSync(path.join(TMP, 'drafts.json'), '{oops');
+  assert.deepStrictEqual(ST.listDrafts(), []);
+});
+
+/* the real thing: data written through one server process is there after
+   it is killed and a new one is started on the same PROMO_HOME */
+async function restartCheck() {
+  const { spawn } = require('child_process');
+  const http = require('http');
+  const port = 8796;
+  const call = (p, body) => new Promise((resolve, reject) => {
+    const data = body ? JSON.stringify(body) : null;
+    const req = http.request({ host: '127.0.0.1', port, path: p, method: body ? 'POST' : 'GET', headers: Object.assign({ Host: '127.0.0.1:' + port }, data ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) } : {}) }, (r) => {
+      let s = ''; r.on('data', (c) => { s += c; }); r.on('end', () => { try { resolve(JSON.parse(s)); } catch (e) { reject(e); } });
+    });
+    req.on('error', reject); if (data) req.write(data); req.end();
+  });
+  const start = () => new Promise((resolve) => {
+    const c = spawn(process.execPath, [path.join(__dirname, 'desk.js'), 'serve', '--port', String(port)], { env: Object.assign({}, process.env, { PROMO_HOME: TMP }), stdio: 'ignore' });
+    const tryIt = (n) => call('/api/health').then(() => resolve(c)).catch(() => (n > 0 ? setTimeout(() => tryIt(n - 1), 200) : resolve(c)));
+    setTimeout(() => tryIt(40), 300);
+  });
+  const stop = (c) => new Promise((resolve) => { c.once('exit', resolve); c.kill(); });
+  let ok = false, why = '';
+  try {
+    let srv = await start();
+    await call('/api/opps', { url: oppB.url, status: 'answered' });
+    await call('/api/drafts', { tool: '/pdf/merge-pdf/', venue: 'qa-stackexchange-superuser', template: 'stackexchange-answer', variant: 0, parts: { body: 'Kept across restarts' } });
+    await stop(srv);
+    srv = await start();
+    const o = await call('/api/opps?status=answered');
+    const d = await call('/api/drafts?tool=' + encodeURIComponent('/pdf/merge-pdf/') + '&venue=qa-stackexchange-superuser&template=stackexchange-answer&variant=0');
+    await stop(srv);
+    ok = o.items.length === 1 && o.items[0].url === oppB.url && d.draft && d.draft.parts.body === 'Kept across restarts';
+    if (!ok) why = JSON.stringify({ o, d }).slice(0, 300);
+  } catch (e) { why = e.message; }
+  if (ok) pass++; else { fail++; failures.push('opportunities and drafts survive a server restart: ' + why); }
+}
+
 /* ------------------------------------------------------------- report */
+(async () => {
+await restartCheck();
 fs.rmSync(TMP, { recursive: true, force: true });
 console.log('\n' + pass + ' passed, ' + fail + ' failed (' + renders + ' template renders)');
 for (const f of failures) console.log('  FAIL ' + f);
 process.exitCode = fail ? 1 : 0;
+})();
