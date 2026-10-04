@@ -392,14 +392,32 @@ const transpose = (m) => m.map((_, r) => m.map((row) => row[r]));
 
 /**
  * Find and read a QR code in an ImageData.
- * @returns {{text,version,ecLevel,corrected,corners}|null}
+ * @param {{invert?: boolean|'only'}} [options]
+ * @returns {{text,version,ecLevel,corrected,corners,mirrored,inverted?}|null}
  */
-function scanImageData(image) {
+function scanImageData(image, options) {
   const width = image.width, height = image.height;
   if (!width || !height) return null;
 
+  /* invert: true (the default) tries the picture as it is and then, only if
+     nothing read, with every grey level flipped, so a light-on-dark code —
+     a code on a dark-mode screen, or printed white on navy — reads too.
+     'only' tries the flipped picture alone (the camera loop spreads the two
+     over its frames); false never flips (the generator's read-back, which
+     must only pass codes that ordinary dark-on-light scanners read). */
+  const invert = options && options.invert !== undefined ? options.invert : true;
   const gray = toGray(image.data, width, height);
+  if (invert !== 'only') {
+    const got = scanGray(gray, width, height);
+    if (got || !invert) return got;
+  }
+  for (let i = 0; i < gray.length; i++) gray[i] = 255 - gray[i];
+  const got = scanGray(gray, width, height);
+  if (got) got.inverted = true;
+  return got;
+}
 
+function scanGray(gray, width, height) {
   // Sharp first, smoothed second: blurring costs a pass and can blunt a code
   // whose modules are only two or three pixels wide, so it is the fallback
   // rather than the default.

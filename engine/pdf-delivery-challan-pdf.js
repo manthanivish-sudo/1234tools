@@ -83,8 +83,11 @@ function westWords(n) {
   for (const [v, name] of scale) {
     if (n >= v) { parts.push(three(Math.floor(n / v)) + ' ' + name); n %= v; }
   }
+  /* "and" comes once, before the last two digits: One Thousand and One, but
+     Two Thousand Six Hundred and Fifty — three() supplies that "and" itself
+     whenever there are hundreds. */
   let s = parts.join(' ');
-  if (n) s += (s ? ' and ' : '') + three(n);
+  if (n) s += (s ? (n < 100 ? ' and ' : ' ') : '') + three(n);
   return s;
 }
 

@@ -140,6 +140,76 @@
     });
   }
 
+  /* ---------------- a rendered preview that cannot run anything ----------------
+
+     The Markdown converter's HTML, shown rendered. The engine already escapes
+     raw HTML and refuses unsafe addresses, but the preview does not take its
+     word for it. The markup is parsed by DOMParser into a separate, inert
+     document — scripts there never run, handlers never fire, nothing loads —
+     and then rebuilt here node by node with createElement:
+       - only the tags a Markdown converter writes are kept; script, style,
+         iframe, svg, form and the like are dropped with their content, and any
+         other unknown tag is replaced by its text;
+       - no attribute is copied except a link's address, checked by the
+         browser's own URL parser (http, https, mailto, tel; a relative one
+         resolves to this site), and a code block's language-… class;
+       - a picture is never fetched: a remote image would tell its server who
+         looked, so it becomes a labelled box naming the address;
+       - links open in a new tab, with no referrer and no opener. */
+  const PREVIEW_TAGS = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote',
+    'pre', 'code', 'em', 'strong', 'b', 'i', 'del', 's', 'hr', 'br', 'a', 'img',
+    'table', 'thead', 'tbody', 'tr', 'th', 'td']);
+  const PREVIEW_DROP = new Set(['script', 'style', 'iframe', 'frame', 'frameset', 'object', 'embed', 'applet',
+    'template', 'noscript', 'svg', 'math', 'link', 'meta', 'base', 'title', 'head', 'form', 'input', 'button',
+    'textarea', 'select', 'option', 'audio', 'video', 'source', 'track', 'canvas', 'portal', 'xmp', 'plaintext', 'noembed', 'noframes']);
+
+  function previewHref(href) {
+    try {
+      const u = new URL(String(href), location.href);
+      return ['http:', 'https:', 'mailto:', 'tel:'].indexOf(u.protocol) >= 0 ? u.href : null;
+    } catch (e) { return null; }
+  }
+
+  function sanitisedPreview(html) {
+    const frag = document.createDocumentFragment();
+    let doc;
+    try { doc = new DOMParser().parseFromString('<!DOCTYPE html><body>' + String(html || ''), 'text/html'); }
+    catch (e) { return frag; }
+    (function copy(from, to) {
+      Array.prototype.forEach.call(from.childNodes, function (n) {
+        if (n.nodeType === 3) { to.appendChild(document.createTextNode(n.nodeValue)); return; }
+        if (n.nodeType !== 1) return;                       // comments, processing instructions
+        const tag = n.localName;
+        if (PREVIEW_DROP.has(tag)) return;
+        if (!PREVIEW_TAGS.has(tag)) { copy(n, to); return; }
+        if (tag === 'img') {
+          const alt = n.getAttribute('alt') || '';
+          const box = el('span', 'md-img', 'Image: ' + (alt || 'no description') + ' (not loaded in the preview)');
+          const src = n.getAttribute('src');
+          if (src) box.title = src;
+          to.appendChild(box);
+          return;
+        }
+        const out = document.createElement(tag);
+        if (tag === 'a') {
+          const href = previewHref(n.getAttribute('href'));
+          if (href) {
+            out.href = href;
+            out.target = '_blank';
+            out.rel = 'noopener noreferrer nofollow';
+            out.referrerPolicy = 'no-referrer';
+          }
+        } else if (tag === 'code') {
+          const cls = n.getAttribute('class') || '';
+          if (/^language-[\w+-]+$/.test(cls)) out.className = cls;
+        }
+        copy(n, out);
+        to.appendChild(out);
+      });
+    })(doc.body, frag);
+    return frag;
+  }
+
   /* ---------------- text in, code out ---------------- */
 
   function mountCode(spec, root) {
@@ -174,14 +244,50 @@
     inWrap.appendChild(inHead);
     inWrap.appendChild(ta);
 
+    /* A tool whose spec has `files: { accept, label }` also takes a file:
+       an Open button and a drop on the text box both read it as text into
+       the box. Nothing is uploaded; the file is read by this page. */
+    let openedName = null;
+    if (spec.files) {
+      const picker = el('input', 'visually-hidden');
+      picker.type = 'file';
+      picker.accept = spec.files.accept || '';
+      picker.tabIndex = -1;
+      picker.setAttribute('aria-hidden', 'true');
+      const readInto = function (f) {
+        if (!f) return;
+        f.text().then(function (t) { openedName = f.name; touched = true; ta.value = t; run(); });
+      };
+      const ob = el('button', 'btn-ghost', spec.files.label || 'Open file');
+      ob.type = 'button';
+      ob.addEventListener('click', function () { picker.click(); });
+      picker.addEventListener('change', function () { readInto(picker.files[0]); picker.value = ''; });
+      inTools.insertBefore(ob, inTools.firstChild);
+      inWrap.appendChild(picker);
+      ['dragenter', 'dragover'].forEach(function (ev) {
+        ta.addEventListener(ev, function (e) {
+          if (e.dataTransfer && [].indexOf.call(e.dataTransfer.types || [], 'Files') >= 0) { e.preventDefault(); ta.classList.add('over'); }
+        });
+      });
+      ['dragleave', 'drop'].forEach(function (ev) { ta.addEventListener(ev, function () { ta.classList.remove('over'); }); });
+      ta.addEventListener('drop', function (e) {
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) { e.preventDefault(); readInto(e.dataTransfer.files[0]); }
+      });
+    }
+
     const outWrap = el('div', 'io-pane');
     const outHead = el('div', 'io-head');
     outHead.appendChild(el('span', 'io-label', spec.outputLabel || 'Output'));
     const outTools = el('div', 'io-actions');
     outTools.appendChild(copyButton(function () { return out.textContent; }));
+    /* `download: { ext, type, suffix }` saves the output as that file type,
+       named after the opened file when there is one (icon.svg →
+       icon-optimised.svg); otherwise a plain-text <tool>-output.txt. */
+    const dlSpec = spec.download || { ext: 'txt', type: 'text/plain' };
     outTools.appendChild(downloadButton('Download', function () {
-      return spec.id + '-output.txt';
-    }, function () { return new Blob([out.textContent], { type: 'text/plain' }); }));
+      const base = openedName && spec.download ? openedName.replace(/\.[^.]+$/, '') + (dlSpec.suffix || '') : spec.id + '-output';
+      return base + '.' + dlSpec.ext;
+    }, function () { return new Blob([out.textContent], { type: dlSpec.type }); }));
     outHead.appendChild(outTools);
     const out = el('pre', 'code-out');
     const msg = el('div', 'io-msg');
@@ -194,6 +300,19 @@
     io.appendChild(optBar);
     io.appendChild(inWrap);
     io.appendChild(outWrap);
+
+    /* A tool that writes HTML (the Markdown converter) also shows it
+       rendered, through sanitisedPreview: never as innerHTML. */
+    let preview = null;
+    if (spec.livePreview) {
+      const pWrap = el('div', 'io-pane');
+      const pHead = el('div', 'io-head');
+      pHead.appendChild(el('span', 'io-label', 'Preview'));
+      preview = el('div', 'md-preview');
+      pWrap.appendChild(pHead);
+      pWrap.appendChild(preview);
+      io.appendChild(pWrap);
+    }
 
     /* Text travels in a shared link only while it is short: past 300
        characters the link stops being a link, and long text is the kind most
@@ -218,6 +337,7 @@
 
       msg.textContent = '';
       msg.className = 'io-msg';
+      if (preview) preview.textContent = '';
       if (res.error) {
         out.textContent = '';
         msg.textContent = res.error;
@@ -228,6 +348,7 @@
       if (res.note) { msg.textContent = res.note; msg.className = 'io-msg is-note'; }
       if (res.warn) { msg.textContent = res.warn; msg.className = 'io-msg is-warn'; }
       out.textContent = res.output || '';
+      if (preview && res.preview) preview.appendChild(sanitisedPreview(res.preview));
       renderStats(stats, res.stats);
     }
 
@@ -929,7 +1050,10 @@
           ctx.fillStyle = '#ffffff';          // whatever is behind a transparent code
           ctx.fillRect(0, 0, px, px);
           ctx.drawImage(img, 0, 0, px, px);
-          const got = window.QRDetect.scan(ctx.getImageData(0, 0, px, px));
+          /* No inverted retry here: the scanner tool reads light-on-dark,
+             but many phone scanners do not, so Verified still means "reads
+             as an ordinary dark-on-light code". */
+          const got = window.QRDetect.scan(ctx.getImageData(0, 0, px, px), { invert: false });
           return !!(got && got.text === text);
         };
         const clean = at(10);
@@ -1975,7 +2099,7 @@
             ctx.fillStyle = '#ffffff';          // whatever sits behind a transparent code
             ctx.fillRect(0, 0, px, px);
             ctx.drawImage(img, 0, 0, px, px);
-            const got = window.QRDetect.scan(ctx.getImageData(0, 0, px, px));
+            const got = window.QRDetect.scan(ctx.getImageData(0, 0, px, px), { invert: false });
             return !!(got && got.text === expected);
           };
           const small = Math.min(native, 1000);
@@ -1998,7 +2122,7 @@
      * packed. A batch that leaves this page has been scanned, file by file.
      */
     async function zipOf(ext) {
-      if (!window.MVRZip) throw new Error('zip.js not loaded');
+      await loadZip();
       const kept = lastCount;
       const size = Number(style.sizeSel.value);
       /* The download is shut until the batch has been checked, so anything
@@ -2646,7 +2770,14 @@
       } else {
         view = [0, 0, width, height, FULL_MAX];
       }
-      return Detect.scan(grab(source, view[0], view[1], view[2], view[3], view[4]));
+      /* Every third frame is read with its grey levels flipped, for a
+         light-on-dark code (a phone in dark mode, white print on navy).
+         Trying both on every frame would double the cost of each empty
+         look; this way a frame still costs one read, and with the views
+         alternating, the flipped read lands on each view in turn. */
+      state.frameNo = (state.frameNo || 0) + 1;
+      const flipped = state.frameNo % 3 === 0;
+      return Detect.scan(grab(source, view[0], view[1], view[2], view[3], view[4]), { invert: flipped ? 'only' : false });
     }
 
     let looping = false;
@@ -3104,7 +3235,8 @@
       if (got.version) {
         return 'Version ' + got.version + ' · level ' + got.ecLevel + ' · mask ' + got.mask +
           (got.corrected ? ' · ' + got.corrected + ' damaged codeword' + (got.corrected === 1 ? '' : 's') + ' repaired' : '') +
-          (got.mirrored ? ' · mirrored' : '');
+          (got.mirrored ? ' · mirrored' : '') +
+          (got.inverted ? ' · light on dark' : '');
       }
       return got.native ? 'Read with the browser’s built-in detector' : '';
     }
@@ -3613,9 +3745,26 @@
     return (n / 1048576).toFixed(2) + ' MB';
   }
 
-  /* ZIP writing lives in engine/zip.js, shared with the image tools. */
+  /* ZIP writing lives in engine/zip.js, shared with the image tools. The page
+     loads it; if a page does not (the favicon generator once did not, so
+     "Download all as ZIP" did nothing), it is fetched from this site on
+     first use rather than failing silently. */
+  let zipLoading = null;
+  function loadZip() {
+    if (window.MVRZip) return Promise.resolve();
+    if (!zipLoading) {
+      zipLoading = new Promise(function (resolve, reject) {
+        const s = document.createElement('script');
+        s.src = (window.__BASE__ || '/') + 'engine/zip.js';
+        s.onload = function () { window.MVRZip ? resolve() : reject(new Error('zip.js loaded but defined no MVRZip')); };
+        s.onerror = function () { zipLoading = null; reject(new Error('zip.js could not be loaded')); };
+        document.head.appendChild(s);
+      });
+    }
+    return zipLoading;
+  }
   async function zipStore(files) {
-    if (!window.MVRZip) throw new Error('zip.js not loaded');
+    await loadZip();
     return window.MVRZip(files);
   }
 

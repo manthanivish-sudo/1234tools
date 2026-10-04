@@ -305,7 +305,7 @@ const PDF_TOOLS = {
         : {};
 
       const items = Array.from({ length: total }, (_, i) => ({ doc, pageIndex: i }));
-      const bytes = await core.assemble(items, { info });
+      const bytes = await core.assemble(items, { info, xmp: false });
       const base = docs[0].name.replace(/\.pdf$/i, '');
 
       const found = Object.entries(before).filter(([, v]) => v);

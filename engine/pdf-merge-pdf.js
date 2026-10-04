@@ -51,7 +51,15 @@ window.PDF_TOOLS["merge-pdf"] = {
       if (opts.keepMeta === 'first') Object.assign(info, await docs[0].doc.getInfo());
       if (opts.title) info.Title = opts.title;
 
-      const bytes = await core.assemble(items, { info });
+      /* Each file's bookmarks go under an entry named after it. The first
+         file's XMP travels only with its metadata, and not under a new
+         title, which it would contradict. */
+      const bytes = await core.assemble(items, {
+        info,
+        outline: 'per-file',
+        names: new Map(docs.map(d => [d.doc, d.name])),
+        xmp: opts.keepMeta === 'first' && !opts.title ? docs[0].doc : false
+      });
       return {
         files: [{ name: 'merged.pdf', bytes }],
         stats: [
@@ -62,7 +70,7 @@ window.PDF_TOOLS["merge-pdf"] = {
         ]
       };
     },
-"tips": ["Files merge in the order listed. Use the arrows in the file list to reorder before merging.","Give one page range to apply to every file, or separate them with | to set each file individually — for example \"1-3 | all | 2,5\".","Metadata is stripped by default, since a merged document inheriting one source file’s author and title is usually wrong.","Bookmarks, form fields and annotations from the source files are not carried across. Page content, images and page geometry are."],
-"faq": [{"q":"Are my files uploaded?","a":"No. The PDFs are parsed and rewritten by your own browser. Nothing is transmitted, which is why this works offline and why it is safe for contracts and financial documents."},{"q":"Why are my bookmarks missing?","a":"Merging rebuilds the page tree from scratch, which is what makes the output reliably valid. Carrying outlines across from several documents with conflicting structures is where most mergers produce broken files, so this deliberately drops them."}]
+"tips": ["Files merge in the order listed. Use the arrows in the file list to reorder before merging.","Give one page range to apply to every file, or separate them with | to set each file individually — for example \"1-3 | all | 2,5\".","Metadata is stripped by default, since a merged document inheriting one source file’s author and title is usually wrong.","Links, comments and form fields travel with their page. A link to another page of the same file lands on that page in the merged document; a link to a page you left out is removed rather than pointed somewhere wrong."],
+"faq": [{"q":"Are my files uploaded?","a":"No. The PDFs are parsed and rewritten by your own browser. Nothing is transmitted, which is why this works offline and why it is safe for contracts and financial documents."},{"q":"What happens to bookmarks and form fields?","a":"When any of the files has bookmarks, the merged file gets one top-level bookmark per file, named after it and opening at its first page, with that file’s own bookmarks underneath; a bookmark whose page you left out is dropped. Form fields stay fillable. Two files can both have a field called “name”, and a reader treats fields with one name as one field, so the later file’s copy is renamed name_2 rather than filling in both at once."}]
 };
 })();

@@ -52,9 +52,11 @@ window.PDF_TOOLS["watermark-pdf"] = {
       const items = [];
       for (let i = 0; i < total; i++) {
         if (!sel.has(i)) { items.push({ doc, pageIndex: i }); continue; }
-        const box = (await doc.resolve(pages[i].dict.MediaBox || pages[i].inherited.MediaBox)) || [0, 0, 595.28, 841.89];
-        const W = Math.abs(Number(box[2]) - Number(box[0]));
-        const H = Math.abs(Number(box[3]) - Number(box[1]));
+        /* The page as a reader sees it: cropped, and turned by its /Rotate.
+           The overlay is drawn in that frame (upright below), so the text
+           reads the right way up and centres on what is visible. */
+        const frame = await core.pageFrame(doc, i);
+        const W = frame.width, H = frame.height;
         const tw = core.textWidth(text, 'Helvetica-Bold', size);
 
         let ops = '';
@@ -75,7 +77,7 @@ window.PDF_TOOLS["watermark-pdf"] = {
         }
 
         items.push({ doc, pageIndex: i, overlay: {
-          content: ops, fontKey: 'MVRwm', fontName: 'Helvetica-Bold', needsGS: true, opacity
+          content: ops, fontKey: 'MVRwm', fontName: 'Helvetica-Bold', needsGS: true, opacity, upright: true
         }});
       }
 

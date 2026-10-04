@@ -414,7 +414,7 @@ const DESCS = {
   '/pdf/quotation-pdf/': 'A quotation, proforma invoice or estimate as a clean PDF, with GST or VAT worked out and terms included.',
   '/pdf/purchase-order-pdf/': 'A purchase order PDF from the buyer’s side: supplier, line items with HSN/SAC, charges, tax and terms.',
   '/pdf/delivery-challan-pdf/': 'The document that travels with the goods, printed as Original, Duplicate and Triplicate copies.',
-  '/image/background-remover/': 'Remove a plain background from product photos and logos, with an optional AI mode for complex subjects.',
+  '/image/background-remover/': 'Remove a plain background from product photos and logos by colour, in your browser; the AI Background Remover handles hair and busy scenes.',
   '/ai-image/text-behind-image/': 'Put text behind a person, car, building or sky in any photo. Animate it and export PNG, JPEG, GIF or MP4.',
   '/ai-image/background-remover/': 'Remove the background from any photo, or keep only the people, cars or sky. Transparent PNG or WebP.',
   '/ai-image/sticker-maker/': 'Cut a sticker from any photo, white outline and all: a WhatsApp or Telegram pack or a transparent PNG.',

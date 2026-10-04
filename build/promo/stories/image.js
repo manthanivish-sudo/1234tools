@@ -212,8 +212,8 @@ module.exports = {
     hook: 'Your exported SVG is carrying editor clutter. Strip it.',
     pain: 'The icon from your design app arrives with metadata, IDs and long decimals that browsers ignore.',
     usual: ['Shipping the export as it is', 'Optimisers that quietly break the artwork', 'Cleaning the markup by hand'],
-    promise: 'Paste the SVG. Get a smaller file with the same artwork.',
-    steps: ['Paste the SVG markup', 'Set the decimal precision', 'Copy or download it'],
+    promise: 'Paste or drop the SVG. Get a smaller file with the same artwork.',
+    steps: ['Paste or open the SVG', 'Set the decimal precision', 'Copy or download the .svg'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: {
       kind: 'text',

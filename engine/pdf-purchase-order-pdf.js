@@ -17,7 +17,12 @@ function num(v, d) {
   return isFinite(x) ? x : (d === undefined ? 0 : d);
 }
 
-const isNumTok = (s) => /^-?(?:\d[\d,]*)(?:\.\d+)?$/.test(String(s).trim());
+/* A number as people type one: 2650 or 2650.50, or grouped with commas the
+   western way (2,650 · 1,234,567) or the Indian way (1,25,000 · 12,34,567).
+   "2,65" is neither, so it is not read as a number at all. */
+const PLAIN_NUM = /^-?\d+(?:\.\d+)?$/;
+const GROUPED_NUM = /^-?(?:\d{1,3}(?:,\d{3})+|\d{1,2}(?:,\d{2})*,\d{3})(?:\.\d+)?$/;
+const isNumTok = (s) => { const t = String(s).trim(); return PLAIN_NUM.test(t) || GROUPED_NUM.test(t); };
 /* A unit is the one word in a line that is never a number: "Nos", "Sqm",
    "Hours", "Lot". It is what separates the quantity from the rate. */
 const isUnitTok = (s) => /^[A-Za-z][A-Za-z.\-\/ ]{0,13}$/.test(String(s).trim());
@@ -82,8 +87,11 @@ function westWords(n) {
   for (const [v, name] of scale) {
     if (n >= v) { parts.push(three(Math.floor(n / v)) + ' ' + name); n %= v; }
   }
+  /* "and" comes once, before the last two digits: One Thousand and One, but
+     Two Thousand Six Hundred and Fifty — three() supplies that "and" itself
+     whenever there are hundreds. */
   let s = parts.join(' ');
-  if (n) s += (s ? ' and ' : '') + three(n);
+  if (n) s += (s ? (n < 100 ? ' and ' : ' ') : '') + three(n);
   return s;
 }
 
@@ -127,42 +135,129 @@ function daysBetween(a, b) {
  *
  * Only the quantity and the rate are required. The description may contain
  * commas, because nothing is read from the left.
+ *
+ * A comma also groups thousands — "Item, 2, 2,650" is 2 at 2,650 — so the
+ * commas that separate fields and the ones inside a number are told apart:
+ *
+ *   - a line with a space after (or before) any comma uses spaced commas as
+ *     separators, and a comma with no space between digits is a thousands
+ *     separator: the digits it joins must make 2,650 or 1,25,000, or the
+ *     line is reported rather than guessed at;
+ *   - a line with no spaces at all ("Item,2,2,650") is read every way its
+ *     digit commas allow; one sensible reading is used, more than one is
+ *     reported, with the readings, instead of picking one;
+ *   - "Item x2 @ 2,650" (quantity after x, rate after @) is read as written.
+ *
+ * Returns { rows, bad, ambiguous }; ambiguous holds { line, message }.
  */
 function parseLineItems(text, defUnit) {
-  const rows = [], bad = [];
+  const rows = [], bad = [], ambiguous = [];
   for (const raw of String(text || '').split('\n')) {
     const line = raw.trim();
     if (!line) continue;
-    const parts = line.split(',').map(s => s.trim());
-    while (parts.length && parts[parts.length - 1] === '') parts.pop();
-
-    let disc = 0;
-    if (parts.length && /%$/.test(parts[parts.length - 1])) {
-      const d = parts.pop().replace(/%$/, '').trim();
-      if (!isNumTok(d)) { bad.push(line); continue; }
-      disc = num(d);
-    }
-    if (parts.length < 2 || !isNumTok(parts[parts.length - 1])) { bad.push(line); continue; }
-    const rate = num(parts.pop());
-
-    let unit = defUnit;
-    if (parts.length >= 2 && !isNumTok(parts[parts.length - 1]) && isUnitTok(parts[parts.length - 1])) {
-      unit = parts.pop();
-    }
-    if (parts.length < 2 || !isNumTok(parts[parts.length - 1])) { bad.push(line); continue; }
-    const qty = num(parts.pop());
-
-    let hsn = '';
-    if (parts.length >= 2 && /^\d{4,8}$/.test(parts[parts.length - 1])) hsn = parts.pop();
-
-    const desc = parts.join(', ').trim();
-    if (!desc) { bad.push(line); continue; }
-
-    const gross = qty * rate;
-    const discAmt = gross * disc / 100;
-    rows.push({ desc, hsn, qty, unit, rate, disc, gross, discAmt, amount: gross - discAmt });
+    const r = readItemLine(line, defUnit);
+    if (r.row) rows.push(r.row);
+    else if (r.message) ambiguous.push({ line, message: r.message });
+    else bad.push(line);
   }
-  return { rows, bad };
+  return { rows, bad, ambiguous };
+}
+
+const SHORTHAND = /^(.+?)\s+[x×]\s*(\d+(?:\.\d+)?)\s*@\s*(?:rs\.?\s*|inr\s*|[£$€]\s*)?(-?\d[\d,]*(?:\.\d+)?)\s*(?:,\s*(\d+(?:\.\d+)?)\s*%)?$/i;
+
+function itemRow(desc, hsn, qty, unit, rate, disc) {
+  const gross = qty * rate;
+  const discAmt = gross * disc / 100;
+  return { desc, hsn, qty, unit, rate, disc, gross, discAmt, amount: gross - discAmt };
+}
+
+/** The fields of one line, already split, read from the right; null if they do not fit. */
+function readItemFields(tokens, defUnit) {
+  const parts = tokens.map(s => s.trim());
+  while (parts.length && parts[parts.length - 1] === '') parts.pop();
+
+  let disc = 0;
+  if (parts.length && /%$/.test(parts[parts.length - 1])) {
+    const d = parts.pop().replace(/%$/, '').trim();
+    if (!isNumTok(d)) return null;
+    disc = num(d);
+  }
+  if (parts.length < 2 || !isNumTok(parts[parts.length - 1])) return null;
+  const rate = num(parts.pop());
+
+  let unit = defUnit;
+  if (parts.length >= 2 && !isNumTok(parts[parts.length - 1]) && isUnitTok(parts[parts.length - 1])) {
+    unit = parts.pop();
+  }
+  if (parts.length < 2 || !isNumTok(parts[parts.length - 1])) return null;
+  const qty = num(parts.pop());
+
+  let hsn = '';
+  if (parts.length >= 2 && /^\d{4,8}$/.test(parts[parts.length - 1])) hsn = parts.pop();
+
+  const desc = parts.join(', ').trim();
+  if (!desc) return null;
+  return itemRow(desc, hsn, qty, unit, rate, disc);
+}
+
+const notGrouped = (line, tok) => 'In “' + line + '”, “' + tok + '” is not a number with thousands separators (2,650 or 1,25,000), so it is not clear what it means. ' +
+  'If it is a decimal, write it with a point (2.65); if the comma separates two fields, put a space after it.';
+
+function readItemLine(line, defUnit) {
+  const sh = SHORTHAND.exec(line);
+  if (sh) {
+    if (!isNumTok(sh[3])) return { message: notGrouped(line, sh[3]) };
+    return { row: itemRow(sh[1].trim(), '', num(sh[2]), defUnit, num(sh[3]), sh[4] ? num(sh[4]) : 0) };
+  }
+
+  /* split on every comma, and note which commas could be inside a number:
+     no space on either side, digits before, digits after */
+  const raw = line.split(',');
+  const joints = [];
+  let spaced = false;
+  for (let i = 0; i < raw.length - 1; i++) {
+    const tight = !/\s$/.test(raw[i]) && !/^\s/.test(raw[i + 1]);
+    if (!tight) { spaced = true; continue; }
+    if (/^-?\d+$/.test(raw[i].trim()) && /^\d+(?:\.\d+)?$/.test(raw[i + 1].trim())) joints.push(i);
+  }
+  const join = (merge) => {
+    const out = [];
+    let cur = raw[0];
+    for (let i = 0; i < raw.length - 1; i++) {
+      if (merge.has(i)) cur += ',' + raw[i + 1];
+      else { out.push(cur); cur = raw[i + 1]; }
+    }
+    out.push(cur);
+    return out;
+  };
+  const oddNumber = (tokens) => tokens.find(t => t.indexOf(',') >= 0 && !GROUPED_NUM.test(t.trim()));
+
+  if (spaced) {
+    const tokens = join(new Set(joints));
+    const odd = oddNumber(tokens);
+    if (odd) return { message: notGrouped(line, odd.trim()) };
+    const row = readItemFields(tokens, defUnit);
+    return row ? { row } : {};
+  }
+
+  if (joints.length > 10) return {};
+  const readings = new Map();
+  for (let mask = 0; mask < (1 << joints.length); mask++) {
+    const tokens = join(new Set(joints.filter((j, k) => mask & (1 << k))));
+    if (oddNumber(tokens)) continue;
+    const row = readItemFields(tokens, defUnit);
+    if (!row) continue;
+    const key = [row.desc, row.hsn, row.qty, row.unit, row.rate, row.disc].join('\u0000');
+    if (!readings.has(key)) readings.set(key, row);
+  }
+  const all = Array.from(readings.values());
+  if (all.length === 1) return { row: all[0] };
+  if (!all.length) return {};
+  return {
+    message: '“' + line + '” can be read ' + all.length + ' ways: ' +
+      all.slice(0, 3).map(r => qtyText(r.qty) + ' at ' + r.rate + ' for “' + r.desc + '”').join(', or ') +
+      '. Put a space after each comma that separates the fields (“Item, 2, 2,650”), or write the number without its comma (2650).'
+  };
 }
 
 /** "Freight and insurance, 4500" / "Packing 1800" -> { label, amount }. */
@@ -289,6 +384,8 @@ window.PDF_TOOLS["purchase-order-pdf"] = {
 "run": async ({ opts, core }) => {
       const cur = CURRENCIES[opts.currency] ? opts.currency : 'INR';
       const parsed = parseLineItems(opts.items, 'Nos');
+      /* a line that could mean two prices is shown, not guessed at */
+      if (parsed.ambiguous.length) return { error: parsed.ambiguous[0].message };
       if (parsed.bad.length) {
         return { error: 'Could not read "' + parsed.bad[0].slice(0, 46) + '". Each line is: description, HSN/SAC, quantity, unit, rate, discount% — and only the quantity and the rate are required.' };
       }
@@ -636,6 +733,7 @@ window.PDF_TOOLS["purchase-order-pdf"] = {
 "tips": [
   "A purchase order is an offer to buy. It becomes a binding contract the moment the supplier accepts it — by acknowledging it, or simply by starting to supply against it. Everything you would want in that contract has to be on the order, which is why the terms, the Incoterm and the inspection clause are printed rather than assumed.",
   "Line items read from the right: description, HSN/SAC, quantity, unit, rate, discount%. Only the quantity and the rate are required, so \"Consulting, 2, 500\" works here exactly as it does in the Invoice and Quotation tools, and the description may contain commas.",
+  "Numbers may keep their thousands commas, western or Indian: \"Item, 2, 2,650\" is 2 at 2,650 and \"Item, 1, 1,25,000\" is 1 at 1,25,000, because a comma followed by a space separates fields and one between digits does not. \"Item x2 @ 2,650\" works too. When a line could mean two different prices, the tool says so and asks, rather than picking one.",
   "Freight, packing and other charges are listed separately but added to the taxable value before tax, because a charge the supplier recovers from you is part of the consideration for the supply.",
   "An Incoterm means nothing without the place that follows it. “DAP” does not say where delivery happens; “DAP Bengaluru 560025” does, and that is the line an insurer or a court will read.",
   "Quote your own PO number, not the supplier’s reference, on the order. Every invoice, challan and packing list that comes back should carry it, which is what makes a three-way match possible later.",

@@ -14,7 +14,7 @@ window.IMAGE_TOOLS["image-rotate-flip"] = {
 "multiple": true,
 "description": "Rotate by any angle and mirror horizontally or vertically, with the canvas resized to fit.",
 "keywords": ["rotate image","flip image","mirror image","rotate photo online","straighten image"],
-"controls": [{"key":"angle","label":"Rotation (degrees)","type":"range","default":0,"min":-180,"max":180,"step":1},{"key":"flipH","label":"Mirror horizontally","type":"select","default":"no","options":[{"value":"no","label":"No"},{"value":"yes","label":"Yes"}]},{"key":"flipV","label":"Mirror vertically","type":"select","default":"no","options":[{"value":"no","label":"No"},{"value":"yes","label":"Yes"}]},{"key":"bg","label":"Fill colour","type":"color","default":"#ffffff"}],
+"controls": [{"key":"angle","label":"Rotation (degrees)","type":"range","default":0,"min":-180,"max":180,"step":1},{"key":"flipH","label":"Mirror horizontally","type":"select","default":"no","options":[{"value":"no","label":"No"},{"value":"yes","label":"Yes"}]},{"key":"flipV","label":"Mirror vertically","type":"select","default":"no","options":[{"value":"no","label":"No"},{"value":"yes","label":"Yes"}]},{"key":"bg","label":"Fill colour","type":"color","default":"#ffffff"},{"key":"format","label":"Save as","type":"select","default":"image/png","options":[{"value":"image/png","label":"PNG — lossless"},{"value":"image/jpeg","label":"JPEG — much smaller for photos"},{"value":"image/webp","label":"WebP — small"}]},{"key":"quality","label":"Quality (JPEG / WebP)","type":"range","default":92,"min":10,"max":100}],
 "paint": (ctx, img, o, h) => {
       const rad = (Number(o.angle) || 0) * Math.PI / 180;
       const nw = img.naturalWidth, nh = img.naturalHeight;

@@ -751,45 +751,565 @@ const pdfString = (str) => {
    Page operations
    ============================================================ */
 
-/** Deep-copy an object graph from a source document into a writer, renumbering. */
-async function copyObject(doc, writer, value, map, depth) {
-  if ((depth || 0) > 80) return null;
+/* What copyObject returns for a reference it must not follow. A dictionary
+   leaves that key out; a list of things (Kids, Annots, Fields, CO) leaves the
+   entry out; any other array gets null in its place. */
+const BARRED = Object.freeze({ __barred: true });
+const LIST_KEYS = new Set(['Kids', 'Annots', 'Fields', 'CO']);
+
+/**
+ * Deep-copy an object graph from a source document into a writer, renumbering.
+ *
+ * With `ctx` (assemble passes one per source document) two kinds of reference
+ * are never followed. A page the output keeps is pointed at its new page
+ * object. Every other page, the page tree, the catalogue, and anything that
+ * belongs only to a page the output leaves out (its annotations, the form
+ * fields only it shows) is cut. Without that, a link or a form field on a kept
+ * page drags a deleted page into the file behind it, content and all — present
+ * in the bytes, invisible in every viewer.
+ */
+async function copyObject(doc, writer, value, map, depth, ctx) {
+  depth = depth || 0;
+  if (depth > 80) return null;
   if (value instanceof Ref) {
     const key = value.num;
+    if (ctx) {
+      if (ctx.kept.has(key)) return new Ref(ctx.kept.get(key), 0);
+      if (ctx.barred.has(key)) return BARRED;
+    }
     if (map.has(key)) return new Ref(map.get(key), 0);
     const slot = writer.alloc();
     map.set(key, slot);
-    const target = await doc.resolve(value);
-    const copied = await copyObject(doc, writer, target, map, (depth || 0) + 1);
-    writer.set(slot, copied === undefined ? null : copied);
+    let target = await doc.resolve(value);
+    if (ctx && ctx.rewrite) target = await ctx.rewrite(key, target);
+    const copied = await copyObject(doc, writer, target, map, depth + 1, ctx);
+    writer.set(slot, copied === undefined || copied === BARRED ? null : copied);
     return new Ref(slot, 0);
   }
-  if (Array.isArray(value)) {
-    const out = [];
-    for (const v of value) out.push(await copyObject(doc, writer, v, map, (depth || 0) + 1));
-    return out;
-  }
+  if (Array.isArray(value)) return copyArray(doc, writer, value, map, depth, ctx, false);
   if (value instanceof PDFStream) {
     const d = Object.create(null);
     for (const k of Object.keys(value.dict)) {
       if (k === 'Length') continue;
-      d[k] = await copyObject(doc, writer, value.dict[k], map, (depth || 0) + 1);
+      const c = await copyEntry(doc, writer, k, value.dict[k], map, depth, ctx);
+      if (c !== BARRED) d[k] = c;
     }
     return new PDFStream(d, value.raw);
   }
   if (isDict(value)) {
     const d = Object.create(null);
     for (const k of Object.keys(value)) {
-      d[k] = await copyObject(doc, writer, value[k], map, (depth || 0) + 1);
+      const c = await copyEntry(doc, writer, k, value[k], map, depth, ctx);
+      if (c !== BARRED) d[k] = c;
     }
     return d;
   }
   return value;
 }
 
+async function copyEntry(doc, writer, key, v, map, depth, ctx) {
+  if (Array.isArray(v)) return copyArray(doc, writer, v, map, depth, ctx, LIST_KEYS.has(key));
+  return copyObject(doc, writer, v, map, depth + 1, ctx);
+}
+
+async function copyArray(doc, writer, value, map, depth, ctx, isList) {
+  const out = [];
+  for (const v of value) {
+    const c = await copyObject(doc, writer, v, map, depth + 1, ctx);
+    if (c === BARRED) { if (!isList) out.push(null); }
+    else out.push(c);
+  }
+  return out;
+}
+
+/* ============================================================
+   The visible page, the right way up
+   ============================================================ */
+
+async function readBox(doc, v) {
+  const a = await doc.resolve(v);
+  if (!Array.isArray(a) || a.length < 4) return null;
+  const n = [];
+  for (const x of a.slice(0, 4)) {
+    const r = Number(await doc.resolve(x));
+    if (!isFinite(r)) return null;
+    n.push(r);
+  }
+  return [Math.min(n[0], n[2]), Math.min(n[1], n[3]), Math.max(n[0], n[2]), Math.max(n[1], n[3])];
+}
+
 /**
- * Assemble a new PDF from a list of {doc, pageIndex, rotate} instructions.
- * This is the shared core of merge, split, extract, delete, reorder and rotate.
+ * The part of a page a viewer shows (the CropBox, clipped to the MediaBox),
+ * turned the way the viewer turns it (/Rotate, plus any `extraRotate`).
+ *
+ * Returns { width, height, rotate, box, matrix }: width and height are what
+ * the reader sees, and matrix maps that upright frame — origin at the bottom
+ * left of the visible page, x to the right, y up — onto the page's own
+ * coordinates. A stamp drawn in the frame through that matrix lands upright
+ * and inside the visible area whatever the page's rotation and crop. It is
+ * the same frame pdf.js draws at scale 1, so a click on a preview and the
+ * point written to the file agree.
+ */
+async function pageFrame(doc, pageIndex, extraRotate) {
+  const pages = await doc.getPages();
+  const page = pages[pageIndex];
+  if (!page) throw new Error('There is no page ' + (pageIndex + 1) + ' in this document.');
+  const get = (k) => (page.dict[k] !== undefined ? page.dict[k] : page.inherited[k]);
+  const media = (await readBox(doc, get('MediaBox'))) || [0, 0, 595.28, 841.89];
+  let box = media;
+  const crop = await readBox(doc, get('CropBox'));
+  if (crop) {
+    const x0 = Math.max(crop[0], media[0]), y0 = Math.max(crop[1], media[1]);
+    const x1 = Math.min(crop[2], media[2]), y1 = Math.min(crop[3], media[3]);
+    if (x1 > x0 && y1 > y0) box = [x0, y0, x1, y1];
+  }
+  let rot = (Number(await doc.resolve(get('Rotate'))) || 0) + (Number(extraRotate) || 0);
+  rot = ((rot % 360) + 360) % 360;
+  if (rot % 90) rot = 0;                          // what viewers do with a bad angle
+  const [x0, y0, x1, y1] = box;
+  const w = x1 - x0, h = y1 - y0;
+  const matrix = rot === 90 ? [0, 1, -1, 0, x1, y0]
+    : rot === 180 ? [-1, 0, 0, -1, x1, y1]
+    : rot === 270 ? [0, -1, 1, 0, x0, y1]
+    : [1, 0, 0, 1, x0, y0];
+  return { width: rot % 180 ? h : w, height: rot % 180 ? w : h, rotate: rot, box, matrix };
+}
+
+/* ============================================================
+   What a rebuilt file may carry from each source
+   ============================================================ */
+
+function newSource(doc) {
+  return {
+    doc, map: new Map(),
+    kept: new Map(),          // source page object number -> output page object number
+    keptIdx: new Set(),       // source page indices in the output
+    first: null,              // output object number of the first page taken from it
+    pageNums: new Set(), barred: new Set(),
+    annotNums: new Set(), aliveAnnots: new Set(),
+    aliveFields: new Set(), liveWidgets: [],
+    root: null, acroForm: null, named: null, ctx: null
+  };
+}
+
+/** Everything about one source that assemble needs before it copies a page. */
+async function prepareSource(doc, st) {
+  const pages = await doc.getPages();
+  pages.forEach((p) => { if (p.ref) st.pageNums.add(p.ref.num); });
+  /* every page is barred; the kept ones are caught first and remapped */
+  for (const n of st.pageNums) st.barred.add(n);
+
+  const rootRef = doc.trailer && doc.trailer.Root;
+  if (rootRef instanceof Ref) st.barred.add(rootRef.num);
+  const root = await doc.resolve(rootRef);
+  st.root = isDict(root) ? root : Object.create(null);
+
+  /* the page tree */
+  const tree = async (ref, depth) => {
+    if (!(ref instanceof Ref) || depth > 64 || st.pageNums.has(ref.num)) return;
+    const node = await doc.resolve(ref);
+    if (!isDict(node) || isName(node.Type, 'Page') || st.barred.has(ref.num)) return;
+    st.barred.add(ref.num);
+    const kids = await doc.resolve(node.Kids);
+    if (Array.isArray(kids)) for (const k of kids) await tree(k, depth + 1);
+  };
+  await tree(st.root.Pages, 0);
+
+  /* document-level dictionaries no page owns */
+  for (const k of ['Outlines', 'AcroForm', 'Names', 'Dests', 'StructTreeRoot', 'Threads', 'PageLabels']) {
+    if (st.root[k] instanceof Ref) st.barred.add(st.root[k].num);
+  }
+  const ol = await doc.resolve(st.root.Outlines);
+  if (isDict(ol)) {
+    const seen = new Set();
+    const walk = async (ref, depth) => {
+      while (ref instanceof Ref && !seen.has(ref.num) && depth < 32 && seen.size < 100000) {
+        seen.add(ref.num);
+        st.barred.add(ref.num);
+        const it = await doc.resolve(ref);
+        if (!isDict(it)) return;
+        await walk(it.First, depth + 1);
+        ref = it.Next;
+      }
+    };
+    await walk(ol.First, 0);
+  }
+
+  /* annotations: alive when they sit on a page the output keeps */
+  for (let i = 0; i < pages.length; i++) {
+    const arr = await doc.resolve(pages[i].dict.Annots);
+    if (!Array.isArray(arr)) continue;
+    for (const r of arr) {
+      if (!(r instanceof Ref)) continue;
+      st.annotNums.add(r.num);
+      if (st.keptIdx.has(i)) st.aliveAnnots.add(r.num);
+    }
+  }
+  for (const n of st.annotNums) if (!st.aliveAnnots.has(n)) st.barred.add(n);
+
+  /* form fields: alive when one of their widgets is */
+  const af = await doc.resolve(st.root.AcroForm);
+  st.acroForm = isDict(af) ? af : null;
+  const nodes = new Set();
+  const down = async (ref, depth) => {
+    if (!(ref instanceof Ref) || nodes.has(ref.num) || depth > 32) return;
+    nodes.add(ref.num);
+    const d = await doc.resolve(ref);
+    if (!isDict(d)) return;
+    const kids = await doc.resolve(d.Kids);
+    if (Array.isArray(kids)) for (const k of kids) await down(k, depth + 1);
+  };
+  if (st.acroForm) {
+    const f = await doc.resolve(st.acroForm.Fields);
+    if (Array.isArray(f)) for (const r of f) await down(r, 0);
+  }
+  for (const n of st.annotNums) {
+    const a = await doc.resolve(new Ref(n, 0));
+    if (!isDict(a) || !isName(await doc.resolve(a.Subtype), 'Widget')) continue;
+    const live = st.aliveAnnots.has(n);
+    nodes.add(n);
+    if (live) { st.aliveFields.add(n); st.liveWidgets.push(a); }
+    let d = a, guard = 0;
+    while (isDict(d) && d.Parent instanceof Ref && guard++ < 32) {
+      nodes.add(d.Parent.num);
+      if (live) st.aliveFields.add(d.Parent.num);
+      d = await doc.resolve(d.Parent);
+    }
+  }
+  for (const n of nodes) if (!st.aliveFields.has(n)) st.barred.add(n);
+
+  st.ctx = {
+    kept: st.kept, barred: st.barred,
+    rewrite: async (num, v) => (st.annotNums.has(num) && isDict(v)) ? rewriteAnnot(doc, st, v) : v
+  };
+}
+
+/** Name -> destination, from the catalogue's /Dests and its /Names tree. */
+async function namedDests(doc, st) {
+  if (st.named) return st.named;
+  const m = new Map();
+  const old = await doc.resolve(st.root.Dests);
+  if (isDict(old)) for (const k of Object.keys(old)) m.set(k, old[k]);
+  const names = await doc.resolve(st.root.Names);
+  const seen = new Set();
+  const walk = async (ref, depth) => {
+    if (depth > 32) return;
+    if (ref instanceof Ref) { if (seen.has(ref.num)) return; seen.add(ref.num); }
+    const node = await doc.resolve(ref);
+    if (!isDict(node)) return;
+    const arr = await doc.resolve(node.Names);
+    if (Array.isArray(arr)) {
+      for (let i = 0; i + 1 < arr.length; i += 2) {
+        const k = await doc.resolve(arr[i]);
+        if (k && k.__string && !m.has(latin1(k.__string))) m.set(latin1(k.__string), arr[i + 1]);
+      }
+    }
+    const kids = await doc.resolve(node.Kids);
+    if (Array.isArray(kids)) for (const k of kids) await walk(k, depth + 1);
+  };
+  if (isDict(names)) await walk(names.Dests, 0);
+  st.named = m;
+  return m;
+}
+
+/**
+ * A destination as an explicit array whose first element is the source page's
+ * reference: { ok, page, array }. ok is false when it names nothing, or
+ * nothing that is a page of this document.
+ */
+async function resolveDest(doc, st, dest) {
+  let d = await doc.resolve(dest);
+  if (d instanceof Name || (d && d.__string)) {
+    const key = d instanceof Name ? d.name : latin1(d.__string);
+    d = await doc.resolve((await namedDests(doc, st)).get(key));
+  }
+  if (isDict(d) && d.D !== undefined) d = await doc.resolve(d.D);
+  if (!Array.isArray(d) || !d.length) return { ok: false, page: null, array: null };
+  let first = d[0];
+  if (typeof first === 'number') {               // a page index: meant for remote files, but some writers use it
+    const p = (await doc.getPages())[first];
+    first = p && p.ref ? p.ref : null;
+  }
+  if (!(first instanceof Ref) || !st.pageNums.has(first.num)) return { ok: false, page: null, array: null };
+  return { ok: true, page: first.num, array: [first].concat(d.slice(1)) };
+}
+
+/** Where an annotation jumps to inside its own file, or null when it does not. */
+async function annotTarget(doc, st, a) {
+  if (a.Dest !== undefined) return Object.assign({ via: 'Dest' }, await resolveDest(doc, st, a.Dest));
+  const act = await doc.resolve(a.A);
+  if (isDict(act) && isName(await doc.resolve(act.S), 'GoTo')) {
+    return Object.assign({ via: 'A', act }, await resolveDest(doc, st, act.D));
+  }
+  return null;
+}
+
+/** The annotation with its jump pointed at the kept page, or removed if that page is gone. */
+async function rewriteAnnot(doc, st, a) {
+  const t = await annotTarget(doc, st, a);
+  if (!t) return a;
+  const out = Object.assign(Object.create(null), a);
+  const live = t.ok && st.kept.has(t.page);
+  if (t.via === 'Dest') {
+    if (live) out.Dest = t.array; else delete out.Dest;
+  } else if (live) {
+    const act = Object.assign(Object.create(null), t.act);
+    act.D = t.array;
+    out.A = act;
+  } else delete out.A;
+  return out;
+}
+
+/** A kept page's annotations, without the links that lead to a page the output leaves out. */
+async function keptAnnots(doc, st, value) {
+  const arr = await doc.resolve(value);
+  if (!Array.isArray(arr)) return undefined;
+  const out = [];
+  for (const r of arr) {
+    if (r instanceof Ref && st.barred.has(r.num)) continue;
+    const a = await doc.resolve(r);
+    if (!isDict(a)) continue;
+    if (isName(await doc.resolve(a.Subtype), 'Link')) {
+      const t = await annotTarget(doc, st, a);
+      if (t && !(t.ok && st.kept.has(t.page))) continue;
+    }
+    out.push(r instanceof Ref ? r : await rewriteAnnot(doc, st, a));
+  }
+  return out;
+}
+
+/* Every /Name a page's content streams mention, or null when one of them
+   cannot be read — and then nothing is pruned. */
+async function contentNames(doc, contents) {
+  let list = await doc.resolve(contents);
+  if (list === undefined || list === null) return new Set();
+  if (!Array.isArray(list)) list = [contents];
+  const names = new Set();
+  for (const c of list) {
+    const s = await doc.resolve(c);
+    if (!(s instanceof PDFStream)) return null;
+    let filters = await doc.resolve(s.dict.Filter);
+    filters = filters === undefined || filters === null ? [] : Array.isArray(filters) ? filters : [filters];
+    for (const f of filters) {
+      const fn = await doc.resolve(f);
+      if (!(fn instanceof Name) || !/^(FlateDecode|Fl|ASCIIHexDecode|AHx|ASCII85Decode|A85)$/.test(fn.name)) return null;
+    }
+    let data;
+    try { data = await doc.decodeStream(s); } catch (e) { return null; }
+    const text = latin1(data);
+    const re = /\/([^\s\/\[\]()<>{}%]+)/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      names.add(m[1].replace(/#([0-9a-fA-F]{2})/g, (x, h) => String.fromCharCode(parseInt(h, 16))));
+    }
+  }
+  return names;
+}
+
+const PRUNABLE = ['XObject', 'Font', 'ExtGState', 'Pattern', 'Shading', 'ColorSpace', 'Properties'];
+
+/**
+ * A page's resources without the entries its content never names.
+ *
+ * Many writers give every page one shared resource dictionary listing every
+ * image and font in the file. Copied whole, it would carry a deleted page's
+ * scanned image into a file that no longer has the page. Returns the source
+ * value untouched when nothing is dropped, so sharing survives where it is
+ * harmless, and when anything is in doubt: a content stream it cannot read,
+ * or a form or Type 3 font with no resources of its own, which draws with the
+ * page's.
+ */
+async function pruneResources(doc, res, contents) {
+  const d = await doc.resolve(res);
+  if (!isDict(d)) return res;
+  const used = await contentNames(doc, contents);
+  if (!used) return res;
+  const out = Object.create(null);
+  let dropped = 0;
+  for (const k of Object.keys(d)) {
+    const sub = await doc.resolve(d[k]);
+    if (PRUNABLE.indexOf(k) < 0 || !isDict(sub)) { out[k] = d[k]; continue; }
+    const keep = Object.create(null);
+    for (const n of Object.keys(sub)) {
+      if (!used.has(n)) { dropped++; continue; }
+      const o = await doc.resolve(sub[n]);
+      const od = o instanceof PDFStream ? o.dict : o;
+      if (isDict(od) && od.Resources === undefined) {
+        const st = await doc.resolve(od.Subtype);
+        if (isName(st, 'Form') || isName(st, 'Type3')) return res;
+      }
+      keep[n] = sub[n];
+    }
+    out[k] = keep;
+  }
+  return dropped ? out : res;
+}
+
+/* ============================================================
+   Bookmarks and form fields
+   ============================================================ */
+
+/** A source outline, keeping entries whose destination survives; children of a dropped entry move up. */
+async function outlineEntries(doc, st, first, depth, seen) {
+  const out = [];
+  let ref = first;
+  while (ref !== undefined && ref !== null && depth < 32 && seen.size < 100000) {
+    if (ref instanceof Ref) { if (seen.has(ref.num)) break; seen.add(ref.num); }
+    const it = await doc.resolve(ref);
+    if (!isDict(it)) break;
+    const children = await outlineEntries(doc, st, it.First, depth + 1, seen);
+    const count = Number(await doc.resolve(it.Count)) || 0;
+    const e = { st, title: await doc.resolve(it.Title), C: it.C, F: it.F, open: count > 0, children };
+    let target = null, other = null;
+    if (it.Dest !== undefined) target = await resolveDest(doc, st, it.Dest);
+    else {
+      const act = await doc.resolve(it.A);
+      if (isDict(act)) {
+        if (isName(await doc.resolve(act.S), 'GoTo')) target = await resolveDest(doc, st, act.D);
+        else other = it.A;
+      }
+    }
+    if (target) {
+      if (target.ok && st.kept.has(target.page)) { e.dest = target.array; out.push(e); }
+      else out.push.apply(out, children);
+    } else if (other) { e.action = other; out.push(e); }
+    else if (children.length) out.push(e);
+    ref = it.Next;
+  }
+  return out;
+}
+
+const visibleCount = (list) => list.reduce((s, e) => s + 1 + (e.open ? visibleCount(e.children) : 0), 0);
+
+async function writeOutline(writer, top) {
+  const rootNum = writer.alloc();
+  const write = async (list, parentNum) => {
+    const nums = list.map(() => writer.alloc());
+    for (let i = 0; i < list.length; i++) {
+      const e = list[i];
+      const d = Object.create(null);
+      d.Title = e.title && e.title.__string !== undefined ? e.title : pdfString(String(e.title || ''));
+      d.Parent = new Ref(parentNum, 0);
+      if (i > 0) d.Prev = new Ref(nums[i - 1], 0);
+      if (i < list.length - 1) d.Next = new Ref(nums[i + 1], 0);
+      if (e.children.length) {
+        const kids = await write(e.children, nums[i]);
+        d.First = kids[0];
+        d.Last = kids[kids.length - 1];
+        const n = visibleCount(e.children);
+        d.Count = e.open ? n : -n;
+      }
+      if (e.destOut) d.Dest = e.destOut;
+      else if (e.dest) d.Dest = await copyObject(e.st.doc, writer, e.dest, e.st.map, 0, e.st.ctx);
+      else if (e.action) {
+        const a = await copyObject(e.st.doc, writer, e.action, e.st.map, 0, e.st.ctx);
+        if (a !== BARRED) d.A = a;
+      }
+      for (const k of ['C', 'F']) {
+        if (e[k] === undefined) continue;
+        const c = await copyObject(e.st.doc, writer, e[k], e.st.map, 0, e.st.ctx);
+        if (c !== BARRED) d[k] = c;
+      }
+      writer.set(nums[i], d);
+    }
+    return nums.map((n) => new Ref(n, 0));
+  };
+  const kids = await write(top, rootNum);
+  writer.set(rootNum, {
+    Type: new Name('Outlines'), First: kids[0], Last: kids[kids.length - 1], Count: visibleCount(top)
+  });
+  return rootNum;
+}
+
+/**
+ * A form holding the fields that still have a widget on a kept page. Fields
+ * from different files that share a name are renamed (name_2, name_3…), or a
+ * viewer would treat them as one field and type into both at once.
+ */
+async function buildForm(writer, states) {
+  const fields = [], co = [];
+  const taken = new Set();
+  let da, q, dr = null, need = false;
+  for (const [doc, st] of states) {
+    const af = st.acroForm;
+    if (!af || !st.aliveFields.size) continue;
+    const list = await doc.resolve(af.Fields);
+    if (!Array.isArray(list)) continue;
+    const mine = new Set();
+    for (const r of list) {
+      if (!(r instanceof Ref) || !st.aliveFields.has(r.num)) continue;
+      const c = await copyObject(doc, writer, r, st.map, 0, st.ctx);
+      if (!(c instanceof Ref)) continue;
+      const d = writer.objects[c.num];
+      if (isDict(d) && d.T && d.T.__string !== undefined) {
+        const t = decodePdfString(d.T.__string);
+        let name = t, k = 2;
+        while (taken.has(name)) name = t + '_' + k++;
+        if (name !== t) d.T = pdfString(name);
+        mine.add(name);
+      }
+      fields.push(c);
+    }
+    mine.forEach((n) => taken.add(n));
+    if (da === undefined && af.DA !== undefined) da = await copyObject(doc, writer, af.DA, st.map, 0, st.ctx);
+    if (q === undefined && af.Q !== undefined) q = await copyObject(doc, writer, af.Q, st.map, 0, st.ctx);
+    if (af.DR !== undefined) {
+      const c = await copyObject(doc, writer, af.DR, st.map, 0, st.ctx);
+      const cd = c instanceof Ref ? writer.objects[c.num] : c;
+      if (!dr) dr = isDict(cd) ? cd : null;
+      else if (isDict(cd)) {
+        /* fonts the later file's fields name, added where the first file has no font of that name */
+        const into = dr.Font instanceof Ref ? writer.objects[dr.Font.num] : dr.Font;
+        const from = cd.Font instanceof Ref ? writer.objects[cd.Font.num] : cd.Font;
+        if (isDict(from)) {
+          if (!isDict(into)) dr.Font = Object.assign(Object.create(null), from);
+          else for (const k of Object.keys(from)) if (into[k] === undefined) into[k] = from[k];
+        }
+      }
+    }
+    if ((await doc.resolve(af.NeedAppearances)) === true) need = true;
+    if (st.liveWidgets.some((w) => w.AP === undefined)) need = true;
+    const order = await doc.resolve(af.CO);
+    if (Array.isArray(order)) {
+      for (const r of order) {
+        if (!(r instanceof Ref) || !st.aliveFields.has(r.num)) continue;
+        const c = await copyObject(doc, writer, r, st.map, 0, st.ctx);
+        if (c instanceof Ref) co.push(c);
+      }
+    }
+  }
+  if (!fields.length) return null;
+  const form = { Fields: fields };
+  if (da !== undefined && da !== BARRED) form.DA = da;
+  if (dr) form.DR = dr;
+  if (q !== undefined && q !== BARRED) form.Q = q;
+  if (co.length) form.CO = co;
+  if (need) form.NeedAppearances = true;
+  return form;
+}
+
+/**
+ * Assemble a new PDF from a list of {doc, pageIndex, rotate, overlay}
+ * instructions. This is the shared core of merge, split, extract, delete,
+ * reorder, rotate and every tool that stamps a page.
+ *
+ * What the output carries, besides the pages:
+ *   - a page's annotations, minus links to pages the output leaves out; a
+ *     link or bookmark to a kept page points at its new page;
+ *   - bookmarks whose destination survives (options.outline 'per-file', for
+ *     a merge, puts each source's under an entry named after it — from
+ *     options.names, a Map of doc -> name);
+ *   - the form, with the fields that still have a widget on a kept page;
+ *   - options.info, when given; with no options.info and one source file,
+ *     that file's own Info dictionary;
+ *   - the XMP metadata of options.xmp (a source doc), or by default of the
+ *     only source file; false writes none.
+ * Nothing that belongs only to a page left out is copied: see copyObject.
+ *
+ * overlay: { content, fontKey, fontName, needsGS, opacity, upright }. The
+ * page's own content is wrapped in q … Q so whatever state it leaves cannot
+ * shift the overlay; with upright, the overlay is drawn in the visible,
+ * upright frame pageFrame() describes.
  */
 async function assemble(items, options) {
   const opts = options || {};
@@ -798,25 +1318,46 @@ async function assemble(items, options) {
   const pagesNum = writer.alloc();
   const kids = [];
 
-  const maps = new Map();       // doc -> renumber map
-
+  /* Number every output page before anything is copied, so a link or a
+     bookmark to a page the output keeps can point at its new object. */
+  const plan = [];
+  const states = new Map();       // doc -> what is kept of it, and how it maps
   for (const item of items) {
-    const doc = item.doc;
-    if (!maps.has(doc)) maps.set(doc, new Map());
-    const map = maps.get(doc);
-
-    const pages = await doc.getPages();
+    const pages = await item.doc.getPages();
     const page = pages[item.pageIndex];
     if (!page) continue;
+    let st = states.get(item.doc);
+    if (!st) { st = newSource(item.doc); states.set(item.doc, st); }
+    const num = writer.alloc();
+    plan.push({ item, page, num, st });
+    st.keptIdx.add(item.pageIndex);
+    if (page.ref && !st.kept.has(page.ref.num)) st.kept.set(page.ref.num, num);
+    if (st.first === null) st.first = num;
+  }
+  if (!plan.length) throw new Error('No pages were selected.');
+  for (const [doc, st] of states) await prepareSource(doc, st);
 
+  let isolate = 0;                // one shared "q" stream for every stamped page
+  const fmt = (v) => String(Number(Number(v).toFixed(4)));
+
+  for (const { item, page, num, st } of plan) {
+    const doc = item.doc;
+    const map = st.map;
     const src = page.dict;
     const out = Object.create(null);
     out.Type = new Name('Page');
 
     for (const k of ['Resources', 'MediaBox', 'CropBox', 'BleedBox', 'TrimBox',
                      'ArtBox', 'Contents', 'Annots', 'Group', 'UserUnit']) {
-      const v = src[k] !== undefined ? src[k] : page.inherited[k];
-      if (v !== undefined) out[k] = await copyObject(doc, writer, v, map, 0);
+      let v = src[k] !== undefined ? src[k] : page.inherited[k];
+      if (v === undefined) continue;
+      if (k === 'Annots') {
+        v = await keptAnnots(doc, st, v);
+        if (!v || !v.length) continue;
+      }
+      if (k === 'Resources') v = await pruneResources(doc, v, src.Contents);
+      const c = await copyObject(doc, writer, v, map, 0, st.ctx);
+      if (c !== BARRED && c !== undefined) out[k] = c;
     }
     if (out.MediaBox === undefined) out.MediaBox = [0, 0, 595.28, 841.89];
     if (out.Resources === undefined) out.Resources = Object.create(null);
@@ -827,13 +1368,21 @@ async function assemble(items, options) {
     if (rot) out.Rotate = rot;
 
     if (item.overlay) {
+      let body = item.overlay.content;
+      if (item.overlay.upright) {
+        const fr = await pageFrame(doc, item.pageIndex, item.rotate);
+        if (fr.matrix.join(' ') !== '1 0 0 1 0 0') {
+          body = 'q\n' + fr.matrix.map(fmt).join(' ') + ' cm\n' + body + '\nQ\n';
+        }
+      }
+      if (!isolate) isolate = writer.add(new PDFStream(Object.create(null), bytesOf('q\n')));
       const streamNum = writer.add(new PDFStream(
-        Object.create(null), bytesOf(item.overlay.content)));
-      const existing = out.Contents;
+        Object.create(null), bytesOf('\nQ\n' + body)));
+      let existing = out.Contents;
+      if (existing instanceof Ref && Array.isArray(writer.objects[existing.num])) existing = writer.objects[existing.num];
       const arr = existing === undefined ? []
         : Array.isArray(existing) ? existing.slice() : [existing];
-      arr.push(new Ref(streamNum, 0));
-      out.Contents = arr;
+      out.Contents = [new Ref(isolate, 0)].concat(arr, [new Ref(streamNum, 0)]);
 
       /* /Resources and its sub-dictionaries are usually indirect objects in
          real documents, and copyObject preserves that. Writing a key onto a
@@ -867,19 +1416,54 @@ async function assemble(items, options) {
       }
     }
 
-    const num = writer.alloc();
     out.Parent = new Ref(pagesNum, 0);
     writer.set(num, out);
     kids.push(new Ref(num, 0));
   }
 
-  if (!kids.length) throw new Error('No pages were selected.');
-
   writer.set(pagesNum, { Type: new Name('Pages'), Kids: kids, Count: kids.length });
-  writer.set(catalogNum, { Type: new Name('Catalog'), Pages: new Ref(pagesNum, 0) });
+  const catalog = { Type: new Name('Catalog'), Pages: new Ref(pagesNum, 0) };
+
+  /* bookmarks */
+  const top = [];
+  let anyOutline = false;
+  for (const [doc, st] of states) {
+    const ol = await doc.resolve(st.root.Outlines);
+    const entries = isDict(ol) ? await outlineEntries(doc, st, ol.First, 0, new Set()) : [];
+    if (entries.length) anyOutline = true;
+    if (opts.outline === 'per-file') {
+      const name = String((opts.names && opts.names.get(doc)) || 'Document').replace(/\.pdf$/i, '');
+      top.push({ st, title: name, destOut: [new Ref(st.first, 0), new Name('Fit')], open: true, children: entries });
+    } else top.push.apply(top, entries);
+  }
+  if (anyOutline && top.length) catalog.Outlines = new Ref(await writeOutline(writer, top), 0);
+
+  /* the form */
+  const form = await buildForm(writer, states);
+  if (form) catalog.AcroForm = new Ref(writer.add(form), 0);
+
+  const only = states.size === 1 ? states.keys().next().value : null;
+
+  /* XMP metadata */
+  const xmpDoc = opts.xmp === undefined ? only : (opts.xmp || null);
+  const xst = xmpDoc && states.get(xmpDoc);
+  if (xst && xst.root.Metadata !== undefined) {
+    const c = await copyObject(xmpDoc, writer, xst.root.Metadata, xst.map, 0, xst.ctx);
+    if (c instanceof Ref) catalog.Metadata = c;
+    else if (c instanceof PDFStream) catalog.Metadata = new Ref(writer.add(c), 0);
+  }
+
+  writer.set(catalogNum, catalog);
 
   let infoRef = null;
-  if (opts.info && Object.keys(opts.info).length) {
+  if (opts.info === undefined) {
+    const ist = only && states.get(only);
+    if (ist && only.trailer && only.trailer.Info !== undefined) {
+      const c = await copyObject(only, writer, only.trailer.Info, ist.map, 0, ist.ctx);
+      if (c instanceof Ref) infoRef = c;
+      else if (isDict(c) && Object.keys(c).length) infoRef = new Ref(writer.add(c), 0);
+    }
+  } else if (opts.info && Object.keys(opts.info).length) {
     const info = Object.create(null);
     for (const [k, v] of Object.entries(opts.info)) {
       if (v !== undefined && v !== null && String(v) !== '') info[k] = pdfString(String(v));
@@ -1113,7 +1697,7 @@ function rgb(hex) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     PDFDocument, PDFWriter, Lexer, Name, Ref, PDFStream,
-    assemble, parsePageRange, copyObject,
+    assemble, parsePageRange, copyObject, pageFrame,
     createPDF, textWidth, wrapText, contentEscape, PAGE_SIZES, FONTS,
     pdfString, decodePdfString, inflate, applyPredictor, ascii85Decode,
     latin1, bytesOf, isDict, isName, isRef

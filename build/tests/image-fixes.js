@@ -1,0 +1,594 @@
+/**
+ * The image-tool fixes of 2026-10-04, proved in headless Chrome against a
+ * static server of the site, with every result checked from its own bytes:
+ *
+ *   node build/tests/image-fixes.js [--port 8690] [--root <site>] [--out <dir>]
+ *
+ * --root defaults to the site this file sits in, served on --port by
+ * build/tests/serve.js (ports 8690-8699 are this test's). --out defaults to a
+ * folder in the OS temp dir. Exit code 2 when a case fails, 1 when the run
+ * itself breaks.
+ *
+ *   1  background remover: no AI option and no third-party URL anywhere in
+ *      the image engines; the page links to the AI Background Remover;
+ *      loading and using it (both methods, every control) makes no request
+ *      outside the site's origin; tolerance 0 removes only the exact colour
+ *      (a #f5f5f5 half survives) while 32 removes it too
+ *   2  SVG optimiser: an SVG with a linearGradient, a clipPath, a mask, <use>
+ *      (href and xlink:href), aria-labelledby and a <title> rasterises
+ *      pixel-identically before and after; the title is kept and only the
+ *      unreferenced ids go; Download saves image/svg+xml named .svg; a file
+ *      opened with the file input, or dropped on the box, is read in
+ *   3  EXIF remover: a JPEG with EXIF (camera, GPS) is cleaned; the result's
+ *      own bytes are parsed here — APP0 JFIF and an sRGB ICC profile, no
+ *      APP1 — and the page's "Metadata in result" row says exactly that; the
+ *      PNG result's chunks agree with its row too
+ *   4  colour palette: every swatch row has an HSL value and contrast ratios
+ *      with white and black text, equal to what the site's own Colour
+ *      Converter (engine/dev-color-converter.js, run here) gives for that hex
+ *   5  passport photo: the JPEG says 300 DPI in its JFIF header, the PNG in a
+ *      pHYs chunk (11,811 px/m), on the single photo and the print sheet;
+ *      51 mm is 602 px and the page shows the rounding (602.36) and the
+ *      printed size (50.97 mm); "Replace" cuts the person out on the device
+ *      (MODNet, from this site) and the corners take the chosen colour
+ *   6  image to PDF: a JPEG's bytes appear unchanged inside the PDF; a JPEG
+ *      with EXIF and GPS goes in with its image data unchanged and no
+ *      metadata; one turned by its orientation tag, a PNG, and "Re-encode"
+ *      are re-encoded; the PDF renders in the site's pdf.js
+ *   7  rotate, meme, filters, border, blur & redact: a Save as control with
+ *      PNG, JPEG and WebP and a quality slider that works; JPEG corners of a
+ *      rounded border are white; the "larger" warning names real controls
+ *   8  bulk resizer: never enlarges by default and says which image was left
+ *      at its size; "Allow enlarging" does enlarge
+ *   and, through all of it, not one request to anything but 127.0.0.1.
+ */
+'use strict';
+const path = require('path');
+const fs = require('fs');
+const os = require('os');
+const vm = require('vm');
+
+const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : d; };
+const PORT = Number(arg('--port', 8690));
+const ROOT = path.resolve(arg('--root', path.join(__dirname, '..', '..')));
+const OUT = path.resolve(arg('--out', path.join(os.tmpdir(), '1234tools-image-fixes')));
+const BASE = 'http://127.0.0.1:' + PORT;
+const CHROME = process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const SAMPLES = path.join(ROOT, 'build', 'promo', 'samples');
+fs.mkdirSync(OUT, { recursive: true });
+
+function loadPuppeteer() {
+  for (const p of [path.join(ROOT, 'node_modules/puppeteer-core'), path.join(__dirname, '..', '..', 'node_modules/puppeteer-core'), 'puppeteer-core']) {
+    try { return require(p); } catch (e) { /* next */ }
+  }
+  throw new Error('puppeteer-core not found; npm install puppeteer-core');
+}
+const puppeteer = loadPuppeteer();
+const { serve } = require('./serve.js');
+
+let pass = 0, fail = 0;
+function check(ok, what, detail) {
+  if (ok) pass++; else fail++;
+  console.log((ok ? 'PASS' : 'FAIL') + '  ' + what + (detail !== undefined && !ok ? '   (' + String(detail).slice(0, 500) + ')' : ''));
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/* ------------------------------------------------------------------ */
+/* byte parsers of our own, so a result is never judged by the code    */
+/* that made it                                                       */
+/* ------------------------------------------------------------------ */
+function jpegSegs(b) {
+  const out = [];
+  if (b[0] !== 0xff || b[1] !== 0xd8) return null;
+  let i = 2;
+  while (i < b.length - 3) {
+    if (b[i] !== 0xff) return null;
+    const m = b[i + 1];
+    const len = b.readUInt16BE(i + 2);
+    out.push({ m, at: i, len, id: b.slice(i + 4, i + 4 + 12).toString('latin1'), body: b.slice(i + 4, i + 2 + len) });
+    if (m === 0xda) break;
+    i += 2 + len;
+  }
+  return out;
+}
+function pngChunks(b) {
+  const out = [];
+  if (b.readUInt32BE(0) !== 0x89504e47) return null;
+  let i = 8;
+  while (i + 8 <= b.length) {
+    const len = b.readUInt32BE(i), type = b.slice(i + 4, i + 8).toString('latin1');
+    out.push({ type, data: b.slice(i + 8, i + 8 + len) });
+    if (type === 'IEND') break;
+    i += 12 + len;
+  }
+  return out;
+}
+const isJpeg = (b) => b[0] === 0xff && b[1] === 0xd8;
+const isPng = (b) => b.length > 8 && b.readUInt32BE(0) === 0x89504e47;
+const isWebp = (b) => b.slice(0, 4).toString() === 'RIFF' && b.slice(8, 12).toString() === 'WEBP';
+/** The scan: from the first SOS to the end-of-image marker, inclusive. */
+function jpegScan(b) {
+  const segs = jpegSegs(b);
+  const sos = segs[segs.length - 1];
+  const end = b.indexOf(Buffer.from([0xff, 0xd9]), sos.at + 2 + sos.len);
+  return b.slice(sos.at, end + 2);
+}
+
+/** A JPEG with an EXIF APP1 (big-endian TIFF) put in after SOI: Make, Orientation, GPS 44°6'30.6"S 170°9'15"E. */
+function withExif(jpeg, orientation) {
+  const t = [];
+  const u16 = (v) => t.push(v >> 8, v & 255);
+  const u32 = (v) => t.push((v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255);
+  const make = Buffer.from('DemoCam\0', 'latin1');
+  /* layout: header 8 | IFD0 (3 entries) 2+36+4=42 at 8 | make at 50 | GPS IFD (4 entries) 2+48+4=54 at 58 | lat at 112 | lon at 136 */
+  t.push(0x4d, 0x4d); u16(42); u32(8);
+  u16(3);
+  u16(0x010f); u16(2); u32(make.length); u32(50);
+  u16(0x0112); u16(3); u32(1); u16(orientation || 1); u16(0);
+  u16(0x8825); u16(4); u32(1); u32(58);
+  u32(0);
+  for (const c of make) t.push(c);
+  u16(4);
+  u16(1); u16(2); u32(2); t.push(0x53, 0, 0, 0);
+  u16(2); u16(5); u32(3); u32(112);
+  u16(3); u16(2); u32(2); t.push(0x45, 0, 0, 0);
+  u16(4); u16(5); u32(3); u32(136);
+  u32(0);
+  [[44, 1], [6, 1], [3060, 100], [170, 1], [9, 1], [1500, 100]].forEach(([n, d]) => { u32(n); u32(d); });
+  const tiff = Buffer.from(t);
+  const body = Buffer.concat([Buffer.from('Exif\0\0', 'latin1'), tiff]);
+  const head = Buffer.from([0xff, 0xe1, (body.length + 2) >> 8, (body.length + 2) & 255]);
+  return Buffer.concat([jpeg.slice(0, 2), head, body, jpeg.slice(2)]);
+}
+
+/* The site's own Colour Converter engine, run here as the reference. */
+function colourConverter() {
+  const w = {};
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'engine', 'dev-color-converter.js'), 'utf8'), { window: w, console });
+  return w.DEV_TOOLS['color-converter'];
+}
+
+/* ------------------------------------------------------------------ */
+/* browser helpers                                                    */
+/* ------------------------------------------------------------------ */
+const outside = [];
+async function open(browser, url) {
+  const p = await browser.newPage();
+  await p.setViewport({ width: 1280, height: 900 });
+  await p.setRequestInterception(true);
+  p.on('request', (r) => {
+    const u = r.url();
+    if (!u.startsWith(BASE) && !/^(data|blob):/.test(u)) { outside.push(url + ' -> ' + u); return r.abort(); }
+    r.continue();
+  });
+  p.__errors = [];
+  p.on('pageerror', (e) => p.__errors.push(String(e && e.message || e)));
+  await p.evaluateOnNewDocument(() => {
+    /* downloads are recorded, not saved: name, type and bytes */
+    window.__downloads = [];
+    HTMLAnchorElement.prototype.click = function () {
+      const a = this;
+      if (a.download) window.__downloads.push(fetch(a.href).then((r) => r.blob()).then(async (b) => ({ name: a.download, type: b.type, bytes: Array.from(new Uint8Array(await b.arrayBuffer())) })));
+    };
+    try { localStorage.setItem('1234tools-consent', 'declined'); } catch (e) { /* none */ }
+  });
+  await p.goto(BASE + url, { waitUntil: 'load' });
+  await p.waitForSelector('.tool-io > *', { timeout: 20000 });
+  return p;
+}
+const setCtl = (p, key, v) => p.evaluate((k, v) => {
+  const e = document.getElementById('ic-' + k);
+  if (!e) throw new Error('no control ' + k);
+  e.value = String(v);
+  e.dispatchEvent(new Event('input', { bubbles: true }));
+  e.dispatchEvent(new Event('change', { bubbles: true }));
+}, key, v);
+const previews = (p) => p.$$eval('.tool-io .image-stage img.image-preview', (l) => l.map((i) => i.src));
+/** Wait for a fresh set of results after `act` (an upload or a control change). */
+async function act(p, fn, timeout) {
+  const before = await previews(p);
+  const stamp = await p.evaluate(() => (window.__n = (window.__n || 0) + 1));
+  await fn();
+  await p.waitForFunction((old) => {
+    const now = [...document.querySelectorAll('.tool-io .image-stage img.image-preview')].map((i) => i.src).filter((s) => s.startsWith('blob:'));
+    const m = document.querySelector('.tool-io .io-msg');
+    if (m && m.classList.contains('is-error')) return true;
+    return now.length && now.every((s) => old.indexOf(s) < 0);
+  }, { timeout: timeout || 30000, polling: 100 }, before);
+  /* a batch appears card by card: wait until the set has stopped changing */
+  let last = '';
+  for (let k = 0; k < 60; k++) {
+    await sleep(350);
+    const now = (await previews(p)).join('|');
+    if (now && now === last) break;
+    last = now;
+  }
+  return stamp;
+}
+const upload = (p, files, timeout) => act(p, async () => { const i = await p.$('.tool-io input[type=file]'); await i.uploadFile(...files); }, timeout);
+const change = (p, key, v, timeout) => act(p, () => setCtl(p, key, v), timeout);
+async function resultBytes(p) {
+  const arr = await p.$$eval('.tool-io .image-stage img.image-preview', (l) => Promise.all(l.filter((i) => i.src.startsWith('blob:')).map(async (i) => Array.from(new Uint8Array(await (await fetch(i.src)).arrayBuffer())))));
+  return arr.map((a) => Buffer.from(a));
+}
+const stats = (p) => p.$$eval('.tool-io .stat-row', (l) => l.map((r) => [r.querySelector('.stat-key').textContent, r.querySelector('.stat-val').textContent]));
+const stat = (rows, k) => (rows.find((r) => r[0] === k) || [])[1];
+const msg = (p) => p.$eval('.tool-io .io-msg', (e) => ({ text: e.textContent, cls: e.className }));
+/** Decode an encoded image in the page and read pixels: [[x, y], …] → [[r, g, b, a], …] (negative x/y count from the far edge). */
+const pixels = (p, buf, pts) => p.evaluate(async (arr, pts) => {
+  const bm = await createImageBitmap(new Blob([new Uint8Array(arr)]));
+  const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height;
+  const x = c.getContext('2d'); x.drawImage(bm, 0, 0);
+  return { w: bm.width, h: bm.height, px: pts.map(([a, b]) => Array.from(x.getImageData(a < 0 ? bm.width + a : a, b < 0 ? bm.height + b : b, 1, 1).data)) };
+}, Array.from(buf), pts);
+const downloads = (p) => p.evaluate(() => Promise.all(window.__downloads));
+const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol);
+
+/* ------------------------------------------------------------------ */
+(async () => {
+  const server = await serve(ROOT, PORT);
+  const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--disable-gpu'] });
+  const t0 = Date.now();
+  try {
+    /* ============ 1 background remover ============ */
+    {
+      const engines = fs.readdirSync(path.join(ROOT, 'engine')).filter((f) => /^(img-|imagecore|render-image)/.test(f) && f.endsWith('.js'));
+      /* a third-party host by name, or code that loads anything from an absolute http(s) URL */
+      const hits = engines.filter((f) => /jsdelivr|imgly|img\.ly|staticimgly|unpkg|(import\s*\(|fetch\s*\(|\.src\s*=|loadScript\w*\s*\()\s*['"`]https?:/i.test(fs.readFileSync(path.join(ROOT, 'engine', f), 'utf8')));
+      check(!hits.length, '1  no image engine names a third-party host (jsDelivr, img.ly) or loads a remote URL', hits.join(', '));
+      const html = fs.readFileSync(path.join(ROOT, 'image', 'background-remover', 'index.html'), 'utf8');
+      check(!/AI mode|img\.ly|imgly|90 MB/i.test(html), '1  the page no longer offers or describes an AI mode', (html.match(/.{60}(AI mode|img\.ly|imgly|90 MB).{60}/i) || [])[0]);
+      const before = outside.length;
+      const p = await open(browser, '/image/background-remover/');
+      const opts = await p.$$eval('#ic-mode option', (l) => l.map((o) => o.value));
+      check(opts.join() === 'auto,colour', '1  Method offers Automatic and Pick a colour only', opts.join());
+      const link = await p.evaluate(() => {
+        const a = document.querySelector('a[href="/ai-image/background-remover/"]');
+        const box = a && a.closest('p, section, div');
+        return a ? { text: box.textContent.replace(/\s+/g, ' ').trim(), visible: !!(a.offsetWidth && a.offsetHeight), btn: /btn/.test(a.className) } : null;
+      });
+      check(!!link && link.visible && link.btn && /For hair, people and complex scenes use the AI Background Remover — it runs a model on your device/.test(link.text),
+        '1  a visible line and button send hair, people and complex scenes to /ai-image/background-remover/', JSON.stringify(link));
+      /* a 200×100 PNG: left half #f5f5f5, right half white, a navy square on the white */
+      const file = path.join(OUT, 'key-test.png');
+      const b64 = await p.evaluate(() => { const c = document.createElement('canvas'); c.width = 200; c.height = 100; const x = c.getContext('2d'); x.fillStyle = '#ffffff'; x.fillRect(0, 0, 200, 100); x.fillStyle = '#f5f5f5'; x.fillRect(0, 0, 100, 100); x.fillStyle = '#1d3557'; x.fillRect(120, 30, 40, 40); return c.toDataURL('image/png').split(',')[1]; });
+      fs.writeFileSync(file, Buffer.from(b64, 'base64'));
+      await setCtl(p, 'mode', 'colour');
+      await setCtl(p, 'feather', 0);
+      await setCtl(p, 'tolerance', 0);
+      await upload(p, [file]);
+      const clear = async () => {
+        const [png] = await resultBytes(p);
+        return p.evaluate(async (arr) => { const bm = await createImageBitmap(new Blob([new Uint8Array(arr)])); const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height; const x = c.getContext('2d'); x.drawImage(bm, 0, 0); const d = x.getImageData(0, 0, c.width, c.height).data; let z = 0; for (let i = 3; i < d.length; i += 4) if (d[i] === 0) z++; return z / (d.length / 4); }, Array.from(png));
+      };
+      const at0 = await clear();
+      check(Math.abs(at0 - 0.42) < 0.001, '1  tolerance 0 removes only the exact white: 42% transparent, the #f5f5f5 half kept', at0);
+      await change(p, 'tolerance', 32);
+      const at32 = await clear();
+      check(Math.abs(at32 - 0.92) < 0.001, '1  tolerance 32 removes the #f5f5f5 half too: 92% transparent', at32);
+      await change(p, 'mode', 'auto');
+      await change(p, 'replace', 'colour');
+      await change(p, 'bg', '#00aa00');
+      const [last] = await resultBytes(p);
+      check(isPng(last), '1  the result is a PNG');
+      check(outside.length === before, '1  loading and using the page made no request outside ' + BASE, outside.slice(before).join(' | '));
+      check(!p.__errors.length, '1  no page errors', p.__errors.join(' | '));
+      await p.close();
+    }
+
+    /* ============ 2 SVG optimiser ============ */
+    {
+      const SVG = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<!-- exported -->',
+        '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="120" height="120" viewBox="0 0 120 120" aria-labelledby="t" role="img">',
+        '  <title id="t">Test badge</title>',
+        '  <metadata>rdf junk</metadata>',
+        '  <defs>',
+        '    <linearGradient id="grad" x1="0" x2="1"><stop offset="0" stop-color="#0b5fff"/><stop offset="1" stop-color="#ff2c7a"/></linearGradient>',
+        '    <clipPath id="clip"><circle cx="60" cy="60" r="50"/></clipPath>',
+        '    <mask id="hole"><rect width="120" height="120" fill="#ffffff"/><rect x="52" y="0" width="16" height="120" fill="#000000"/></mask>',
+        '    <path id="star" d="M 10 0 L 13 7 L 20 7 L 14.5 11.5 L 17 19 L 10 14 L 3 19 L 5.5 11.5 L 0 7 L 7 7 Z" fill="#ffd400"/>',
+        '  </defs>',
+        '  <g id="layer1" inkscape:label="Layer 1">',
+        '    <rect id="bg" width="120" height="120" fill="url(#grad)" clip-path="url(#clip)" mask="url(#hole)"/>',
+        '    <use xlink:href="#star" x="12" y="12"/>',
+        '    <use href="#star" x="82" y="84"/>',
+        '    <rect id="unused" x="2" y="104" width="12" height="12" fill="#222222"/>',
+        '  </g>',
+        '</svg>'].join('\n');
+      const file = path.join(OUT, 'badge.svg');
+      fs.writeFileSync(file, SVG);
+      const p = await open(browser, '/image/svg-optimizer/');
+      const inputs = await p.$$('.tool-io input[type=file]');
+      check(inputs.length === 1, '2  the page has a file input for .svg files', inputs.length);
+      await inputs[0].uploadFile(file);
+      await p.waitForFunction(() => /Test badge/.test(document.querySelector('.tool-io textarea').value), { timeout: 10000 });
+      const ta = await p.$eval('.tool-io textarea', (e) => e.value);
+      check(ta === SVG, '2  opening the file puts its markup in the box');
+      await sleep(200);
+      const out = await p.$eval('.tool-io pre.code-out', (e) => e.textContent);
+      check(/<title id="t">Test badge<\/title>/.test(out), '2  <title> is kept, with the id aria-labelledby names', out.slice(0, 300));
+      for (const id of ['grad', 'clip', 'hole', 'star']) check(out.indexOf('id="' + id + '"') >= 0, '2  referenced id "' + id + '" is kept');
+      check(!/id="(bg|unused|layer1)"/.test(out), '2  unreferenced ids (bg, layer1, unused) are removed', out);
+      check(!/metadata|inkscape|<!--|<\?xml/.test(out), '2  editor metadata, comments and the declaration are still removed');
+      const raster = await p.evaluate(async (a, b) => {
+        const draw = async (svg) => {
+          const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+          const img = new Image(); img.src = url; await img.decode();
+          const c = document.createElement('canvas'); c.width = 120; c.height = 120;
+          const x = c.getContext('2d'); x.drawImage(img, 0, 0, 120, 120);
+          URL.revokeObjectURL(url);
+          return x.getImageData(0, 0, 120, 120).data;
+        };
+        const A = await draw(a), B = await draw(b);
+        let diff = 0, painted = 0;
+        for (let i = 0; i < A.length; i++) { if (A[i] !== B[i]) diff++; }
+        for (let i = 3; i < A.length; i += 4) if (A[i]) painted++;
+        const at = (d, x, y) => Array.from(d.slice((y * 120 + x) * 4, (y * 120 + x) * 4 + 4));
+        return { diff, painted, grad: at(A, 30, 60), gap: at(A, 60, 60), star: at(A, 22, 22) };
+      }, SVG, out);
+      check(raster.diff === 0, '2  before and after rasterise to identical pixels in Chrome (120×120, every channel)', JSON.stringify(raster));
+      check(raster.grad[3] === 255 && raster.grad[2] > 150 && raster.gap[3] === 0 && raster.star[0] > 200 && raster.star[1] > 150,
+        '2  the test really draws the gradient, the clip, the mask hole and the <use> star', JSON.stringify(raster));
+      await p.evaluate(() => [...document.querySelectorAll('.tool-io button')].find((b) => b.textContent === 'Download').click());
+      let [dl] = await downloads(p);
+      check(dl && dl.name === 'badge-optimised.svg' && dl.type === 'image/svg+xml', '2  Download saves badge-optimised.svg as image/svg+xml', dl && dl.name + ' ' + dl.type);
+      check(dl && Buffer.from(dl.bytes).toString('utf8') === out, '2  the downloaded file is the optimised markup');
+      /* drop a file on the box */
+      await p.evaluate(() => {
+        const dt = new DataTransfer();
+        dt.items.add(new File(['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><title>Dropped</title><rect id="x" width="10" height="10"/></svg>'], 'dropped.svg', { type: 'image/svg+xml' }));
+        const ta = document.querySelector('.tool-io textarea');
+        ta.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+        ta.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+      });
+      await p.waitForFunction(() => /Dropped/.test(document.querySelector('.tool-io textarea').value), { timeout: 10000 }).catch(() => {});
+      const dropped = await p.$eval('.tool-io textarea', (e) => e.value);
+      check(/<title>Dropped<\/title>/.test(dropped), '2  a .svg file dropped on the box is read in');
+      await p.evaluate(() => { window.__downloads = []; [...document.querySelectorAll('.tool-io button')].find((b) => b.textContent === 'Download').click(); });
+      [dl] = await downloads(p);
+      check(dl && dl.name === 'dropped-optimised.svg', '2  …and downloads as dropped-optimised.svg', dl && dl.name);
+      check(!p.__errors.length, '2  no page errors', p.__errors.join(' | '));
+      await p.close();
+    }
+
+    /* ============ 3 EXIF remover ============ */
+    {
+      const tagged = withExif(fs.readFileSync(path.join(SAMPLES, 'landscape.jpg')), 1);
+      const file = path.join(OUT, 'tagged.jpg');
+      fs.writeFileSync(file, tagged);
+      const p = await open(browser, '/image/exif-remover/');
+      await upload(p, [file]);
+      let rows = await stats(p);
+      check(/EXIF/.test(stat(rows, 'Metadata found in original') || ''), '3  the original\'s EXIF is listed', stat(rows, 'Metadata found in original'));
+      check(/^-44\.10850, 170\.15417$/.test(stat(rows, 'GPS removed') || ''), '3  the GPS position being removed is shown', stat(rows, 'GPS removed'));
+      let [jpg] = await resultBytes(p);
+      const segs = jpegSegs(jpg);
+      const appn = segs.filter((s) => (s.m >= 0xe0 && s.m <= 0xef) || s.m === 0xfe);
+      const app0 = appn.find((s) => s.m === 0xe0), app2 = appn.find((s) => s.m === 0xe2);
+      check(appn.length === 2 && app0 && /^JFIF\0/.test(app0.id) && app2 && /^ICC_PROFILE\0/.test(app2.id),
+        '3  parsed from the result\'s bytes: APP0 JFIF and APP2 ICC only, no APP1', appn.map((s) => 'FF' + s.m.toString(16) + ':' + s.id.replace(/\0/g, '·')).join(', '));
+      check(app2 && /sRGB|s\0R\0G\0B/.test(app2.body.toString('latin1')), '3  the ICC profile in the result is sRGB (its description, ASCII or UTF-16)');
+      check(jpg.indexOf('Exif') < 0 && jpg.indexOf('DemoCam') < 0, '3  no "Exif" header or camera make anywhere in the result');
+      check(stat(rows, 'Metadata in result') === 'No EXIF, GPS or camera data; standard JFIF header and sRGB colour profile kept',
+        '3  the page reports what the JPEG really holds', stat(rows, 'Metadata in result'));
+      await change(p, 'format', 'image/png');
+      rows = await stats(p);
+      [jpg] = await resultBytes(p);
+      const chunks = pngChunks(jpg).map((c) => c.type);
+      const extra = chunks.filter((t) => ['IHDR', 'IDAT', 'IEND', 'PLTE'].indexOf(t) < 0);
+      const tech = { iCCP: 'colour profile', sRGB: 'sRGB colour tag', gAMA: 'gamma and colour values', cHRM: 'gamma and colour values', pHYs: 'print resolution' };
+      const personal = extra.filter((t) => !tech[t]);
+      const keptList = [...new Set(extra.filter((t) => tech[t]).map((t) => tech[t]))];
+      const expect = personal.length ? null : 'No EXIF, GPS or camera data; ' + (keptList.length ? (keptList.length > 1 ? keptList.slice(0, -1).join(', ') + ' and ' + keptList[keptList.length - 1] : keptList[0]) + ' kept' : 'no other metadata either');
+      check(!personal.length && stat(rows, 'Metadata in result') === expect, '3  PNG result: chunks ' + chunks.join(',') + ' and the row agrees', stat(rows, 'Metadata in result') + ' vs ' + expect);
+      check(!p.__errors.length, '3  no page errors', p.__errors.join(' | '));
+      await p.close();
+    }
+
+    /* ============ 4 colour palette ============ */
+    {
+      const cc = colourConverter();
+      const p = await open(browser, '/image/color-palette-extractor/');
+      await setCtl(p, 'count', 6);
+      await p.$('.tool-io input[type=file]').then((i) => i.uploadFile(path.join(SAMPLES, 'food.jpg')));
+      await p.waitForSelector('.tool-io .palette-grid .palette-swatch', { timeout: 15000 });
+      await sleep(300);
+      const rows = await stats(p);
+      check(rows.length === 6, '4  six colour rows', rows.length);
+      let good = 0;
+      const bad = [];
+      for (const [k, v] of rows) {
+        const hex = (k.match(/#[0-9A-F]{6}/) || [])[0];
+        const w = cc.generate({ colour: hex, bg: '#ffffff' }), b = cc.generate({ colour: hex, bg: '#000000' });
+        const hsl = (w.output.match(/hsl\([^)]+\)/) || [])[0];
+        const rw = w.stats.find((s) => s[0] === 'Contrast ratio')[1], rb = b.stats.find((s) => s[0] === 'Contrast ratio')[1];
+        const ok = v.indexOf(hsl) >= 0 && v.indexOf('contrast with white text ' + rw) >= 0 && v.indexOf('with black text ' + rb) >= 0;
+        if (ok) good++; else bad.push(k + ' → ' + v + ' (want ' + hsl + ', ' + rw + ', ' + rb + ')');
+      }
+      check(good === rows.length, '4  every swatch has the HSL and WCAG ratios the Colour Converter gives for its hex', bad.join(' | '));
+      const grade = rows.every(([, v]) => /white text \d+\.\d\d:1 (AAA|AA|AA large|fail), with black text \d+\.\d\d:1 (AAA|AA|AA large|fail)/.test(v));
+      check(grade, '4  each ratio carries its WCAG grade', rows.map((r) => r[1]).join(' | '));
+      const sw = await p.$$eval('.palette-swatch', (l) => l.map((s) => s.textContent));
+      check(sw.every((t) => /hsl\(/.test(t) && /on white \d/.test(t) && /on black \d/.test(t)), '4  the swatches themselves show HSL and both ratios', sw[0]);
+      const css = await p.$eval('.tool-io pre.code-out', (e) => e.textContent);
+      check(/--colour-1: #[0-9a-f]{6}; \/\* hsl\(/.test(css), '4  the CSS custom properties carry the HSL too', css.split('\n')[1]);
+      check(!p.__errors.length, '4  no page errors', p.__errors.join(' | '));
+      await p.close();
+    }
+
+    /* ============ 5 passport photo ============ */
+    {
+      const p = await open(browser, '/image/passport-photo/');
+      await setCtl(p, 'preset', 0);                       // India 51×51 mm
+      await upload(p, [path.join(SAMPLES, 'portrait.jpg')]);
+      let outs = await resultBytes(p);
+      let rows = await stats(p);
+      check(outs.length === 2 && outs.every(isJpeg), '5  JPEG by default: the single photo and the print sheet', outs.map((b) => b.slice(0, 2).toString('hex')).join());
+      const jfif = outs.map((b) => { const s = jpegSegs(b).find((x) => x.m === 0xe0 && /^JFIF/.test(x.id)); return s && { unit: s.body[7], x: s.body.readUInt16BE(8), y: s.body.readUInt16BE(10) }; });
+      check(jfif.every((d) => d && d.unit === 1 && d.x === 300 && d.y === 300), '5  both JPEGs say 300 DPI in their JFIF header (units 1 = dots per inch)', JSON.stringify(jfif));
+      let dims = await Promise.all(outs.map((b) => pixels(p, b, [[0, 0]])));
+      check(dims[0].w === 602 && dims[0].h === 602 && dims[1].w === 1800 && dims[1].h === 1200, '5  51 mm at 300 DPI: 602×602 px; the 6×4 sheet 1800×1200', dims.map((d) => d.w + '×' + d.h).join(', '));
+      check(/602\.36/.test(stat(rows, 'Rounding') || '') && /50\.97 × 50\.97 mm/.test(stat(rows, 'Print size') || ''), '5  the page documents the rounding: 602.36 px → 602, printed 50.97 mm', stat(rows, 'Rounding') + ' / ' + stat(rows, 'Print size'));
+      await change(p, 'format', 'image/png');
+      outs = await resultBytes(p);
+      const phys = outs.map((b) => { const c = (pngChunks(b) || []).find((x) => x.type === 'pHYs'); return c && { x: c.data.readUInt32BE(0), y: c.data.readUInt32BE(4), unit: c.data[8] }; });
+      check(outs.every(isPng) && phys.every((d) => d && d.x === 11811 && d.y === 11811 && d.unit === 1), '5  both PNGs carry a pHYs chunk of 11,811 px per metre (300 DPI)', JSON.stringify(phys));
+      const order = pngChunks(outs[0]).map((c) => c.type);
+      check(order[0] === 'IHDR' && order.indexOf('pHYs') < order.indexOf('IDAT'), '5  pHYs sits before the image data, where PNG requires it', order.join(','));
+      const decodes = await Promise.all(outs.map((b) => pixels(p, b, [[0, 0]]).then(() => true, () => false)));
+      check(decodes.every(Boolean), '5  the PNGs with the new chunk (and its CRC) still decode');
+      /* keep: the colour does nothing, and the page says the background is as photographed */
+      await change(p, 'format', 'image/jpeg');
+      await change(p, 'sheet', 'single');
+      rows = await stats(p);
+      check(stat(rows, 'Background') === 'as photographed', '5  with "Keep", the page says the background is as photographed', stat(rows, 'Background'));
+      /* replace: MODNet on the device */
+      await change(p, 'bg', '#2255ee');
+      const tm = Date.now();
+      await change(p, 'bgmode', 'replace', 300000);
+      const m1 = await msg(p);
+      check(!/is-error/.test(m1.cls), '5  the cut-out model loads and runs', m1.text);
+      outs = await resultBytes(p);
+      const blue = await pixels(p, outs[0], [[3, 3], [-4, 3], [3, -4], [-4, -4], [301, 260]]);
+      const corners = blue.px.slice(0, 2);
+      check(corners.every((c) => near(c, [0x22, 0x55, 0xee], 14)), '5  "Replace": the top corners of the photo are the chosen #2255EE (' + ((Date.now() - tm) / 1000).toFixed(1) + ' s)', JSON.stringify(blue.px));
+      check(!near(blue.px[4], [0x22, 0x55, 0xee], 40), '5  …and the face in the middle is not', JSON.stringify(blue.px[4]));
+      await change(p, 'bg', '#ff3300', 120000);
+      outs = await resultBytes(p);
+      const red = await pixels(p, outs[0], [[3, 3], [-4, 3]]);
+      check(red.px.every((c) => near(c, [0xff, 0x33, 0x00], 14)), '5  another colour re-composites without running the model again', JSON.stringify(red.px));
+      rows = await stats(p);
+      check(/replaced with #FF3300/.test(stat(rows, 'Background') || ''), '5  the page says the background was replaced', stat(rows, 'Background'));
+      check(!p.__errors.length, '5  no page errors', p.__errors.join(' | '));
+      await p.close();
+    }
+
+    /* ============ 6 image to PDF ============ */
+    {
+      const doc = fs.readFileSync(path.join(SAMPLES, 'document.jpg'));
+      const tagged = withExif(fs.readFileSync(path.join(SAMPLES, 'street.jpg')), 1);
+      const turned = withExif(fs.readFileSync(path.join(SAMPLES, 'food.jpg')), 6);
+      fs.writeFileSync(path.join(OUT, 'pdf-tagged.jpg'), tagged);
+      fs.writeFileSync(path.join(OUT, 'pdf-turned.jpg'), turned);
+      const p = await open(browser, '/image/image-to-pdf/');
+      const pngB64 = await p.evaluate(() => { const c = document.createElement('canvas'); c.width = 300; c.height = 200; const x = c.getContext('2d'); x.fillStyle = '#3366cc'; x.fillRect(0, 0, 300, 200); return c.toDataURL('image/png').split(',')[1]; });
+      fs.writeFileSync(path.join(OUT, 'pdf-plain.png'), Buffer.from(pngB64, 'base64'));
+      const makePdf = async (files, set) => {
+        if (set) for (const k of Object.keys(set)) await setCtl(p, k, set[k]);
+        await p.evaluate(() => { window.__downloads = []; });
+        const i = await p.$('.tool-io input[type=file]');
+        await i.uploadFile(...files);
+        await p.waitForFunction(() => [...document.querySelectorAll('.tool-io .io-actions .btn-primary')].some((b) => /Download PDF/.test(b.textContent)), { timeout: 30000 });
+        await sleep(300);
+        await p.evaluate(() => [...document.querySelectorAll('.tool-io .io-actions .btn-primary')].find((b) => /Download PDF/.test(b.textContent)).click());
+        const [d] = await downloads(p);
+        return { pdf: Buffer.from(d.bytes), rows: await stats(p), name: d.name };
+      };
+      let r = await makePdf([path.join(SAMPLES, 'document.jpg')]);
+      check(r.pdf.includes(doc), '6  the JPEG\'s ' + doc.length.toLocaleString('en-GB') + ' bytes appear unchanged inside the PDF', r.pdf.length);
+      check(/1 JPEG embedded as it is, not re-encoded/.test(stat(r.rows, 'Embedding') || ''), '6  the page says it went in as it is', stat(r.rows, 'Embedding'));
+      const ok = await p.evaluate(async (arr) => {
+        const base = location.origin + '/engine/vendor/pdfjs/';
+        const lib = await import(base + 'pdf.min.mjs');
+        lib.GlobalWorkerOptions.workerSrc = base + 'pdf.worker.min.mjs';
+        const pdf = await lib.getDocument({ data: new Uint8Array(arr), standardFontDataUrl: base + 'standard_fonts/' }).promise;
+        const page = await pdf.getPage(1);
+        const vp = page.getViewport({ scale: 1 });
+        const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+        const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+        await page.render({ canvasContext: x, viewport: vp }).promise;
+        const d = x.getImageData(0, 0, c.width, c.height).data;
+        let dark = 0; for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] < 600) dark++;
+        return { pages: pdf.numPages, w: c.width, h: c.height, inked: dark / (d.length / 4) };
+      }, Array.from(r.pdf));
+      check(ok.pages === 1 && ok.inked > 0.2, '6  the PDF renders in the site\'s pdf.js with the photo on the page', JSON.stringify(ok));
+      r = await makePdf([path.join(OUT, 'pdf-tagged.jpg')]);
+      const scan = jpegScan(tagged);
+      check(r.pdf.includes(scan), '6  a JPEG with EXIF: its image data (' + scan.length.toLocaleString('en-GB') + ' bytes from SOS to EOI) is unchanged in the PDF');
+      check(r.pdf.indexOf('Exif') < 0 && r.pdf.indexOf('DemoCam') < 0, '6  …and its EXIF block (camera, GPS) is not');
+      check(/metadata left out of 1/.test(stat(r.rows, 'Embedding') || ''), '6  …and the page says so', stat(r.rows, 'Embedding'));
+      r = await makePdf([path.join(OUT, 'pdf-turned.jpg')]);
+      const m = await msg(p);
+      check(!r.pdf.includes(jpegScan(turned)) && /1 image re-encoded as JPEG at quality 88/.test(stat(r.rows, 'Embedding') || '') && /orientation/.test(m.text),
+        '6  a JPEG turned by its orientation tag is re-encoded upright, and the page says why', stat(r.rows, 'Embedding') + ' / ' + m.text);
+      r = await makePdf([path.join(OUT, 'pdf-plain.png')]);
+      check(/1 image re-encoded as JPEG at quality 88/.test(stat(r.rows, 'Embedding') || ''), '6  a PNG is encoded as JPEG at the slider\'s quality', stat(r.rows, 'Embedding'));
+      r = await makePdf([path.join(SAMPLES, 'document.jpg')], { jpeg: 'reencode', quality: 60 });
+      check(!r.pdf.includes(jpegScan(doc)) && /re-encoded as JPEG at quality 60/.test(stat(r.rows, 'Embedding') || ''), '6  "Re-encode" re-encodes a JPEG at the chosen quality', stat(r.rows, 'Embedding'));
+      check(!p.__errors.length, '6  no page errors', p.__errors.join(' | '));
+      await p.close();
+    }
+
+    /* ============ 7 format choice on five tools ============ */
+    for (const t of ['image-rotate-flip', 'meme-generator', 'photo-filters', 'image-border', 'blur-redact']) {
+      const p = await open(browser, '/image/' + t + '/');
+      const fmts = await p.$$eval('#ic-format option', (l) => l.map((o) => o.value));
+      check(fmts.join() === 'image/png,image/jpeg,image/webp' && !!(await p.$('#ic-quality')), '7  ' + t + ': Save as PNG / JPEG / WebP and a quality slider', fmts.join());
+      if (t === 'image-rotate-flip') await setCtl(p, 'angle', 5);
+      if (t === 'image-border') { await setCtl(p, 'radius', 80); await setCtl(p, 'width', 30); }
+      await upload(p, [path.join(SAMPLES, 'street.jpg')]);
+      let [b] = await resultBytes(p);
+      let m = await msg(p);
+      check(isPng(b), '7  ' + t + ': PNG by default');
+      if (t !== 'blur-redact') check(/choose JPEG or WebP under “Save as”/.test(m.text), '7  ' + t + ': the "larger" warning points at the real Save as control', m.text);
+      await change(p, 'format', 'image/jpeg');
+      const [j92] = await resultBytes(p);
+      await change(p, 'quality', 50);
+      const [j50] = await resultBytes(p);
+      check(isJpeg(j92) && isJpeg(j50) && j50.length < j92.length, '7  ' + t + ': JPEG works, and quality 50 is smaller than 92', j92.length + ' → ' + j50.length);
+      m = await msg(p);
+      check(!/Save as/.test(m.text) || /quality/.test(m.text), '7  ' + t + ': no warning that names a missing control', m.text);
+      if (t === 'image-border') {
+        const px = await pixels(p, j50, [[1, 1], [-2, -2]]);
+        check(px.px.every((c) => c[0] > 245 && c[1] > 245 && c[2] > 245), '7  image-border: rounded corners come out white in a JPEG, not black', JSON.stringify(px.px));
+      }
+      await change(p, 'format', 'image/webp');
+      [b] = await resultBytes(p);
+      check(isWebp(b), '7  ' + t + ': WebP works');
+      check(!p.__errors.length, '7  ' + t + ': no page errors', p.__errors.join(' | '));
+      await p.close();
+    }
+
+    /* ============ 8 bulk resizer ============ */
+    {
+      const p = await open(browser, '/image/bulk-image-resizer/');
+      const en = await p.$eval('#ic-enlarge', (e) => e.value);
+      check(en === 'no', '8  "Allow enlarging" exists and is off by default', en);
+      await setCtl(p, 'mode', 'width');
+      await setCtl(p, 'value', 2400);
+      await upload(p, [path.join(SAMPLES, 'street.jpg'), path.join(SAMPLES, 'food.jpg')]);
+      let outs = await resultBytes(p);
+      let d = await Promise.all(outs.map((b) => pixels(p, b, [[0, 0]])));
+      let m = await msg(p);
+      const caps = await p.$$eval('.tool-io .image-cap', (l) => l.map((c) => c.textContent));
+      check(d.map((x) => x.w + '×' + x.h).join() === '1600×1200,1600×1067', '8  width 2400 leaves both 1600-px photos at their own size', d.map((x) => x.w + '×' + x.h).join());
+      check(/2 of 2 images were smaller than that and were left at their own size/.test(m.text), '8  …and says so', m.text);
+      check(caps.every((c) => /kept: smaller than 2400×/.test(c)), '8  …on each card too', caps.join(' | '));
+      await change(p, 'enlarge', 'yes');
+      outs = await resultBytes(p);
+      d = await Promise.all(outs.map((b) => pixels(p, b, [[0, 0]])));
+      m = await msg(p);
+      check(d.map((x) => x.w + '×' + x.h).join() === '2400×1800,2400×1601' && !m.text, '8  "Allow enlarging: Yes" enlarges them', d.map((x) => x.w + '×' + x.h).join() + ' ' + m.text);
+      await change(p, 'value', 800);
+      outs = await resultBytes(p);
+      d = await Promise.all(outs.map((b) => pixels(p, b, [[0, 0]])));
+      check(d.map((x) => x.w + '×' + x.h).join() === '800×600,800×534', '8  shrinking is unaffected', d.map((x) => x.w + '×' + x.h).join());
+      check(!p.__errors.length, '8  no page errors', p.__errors.join(' | '));
+      await p.close();
+    }
+
+    check(outside.length === 0, 'not one request outside ' + BASE + ' on any page', outside.join(' | '));
+  } catch (e) {
+    console.error(e && e.stack || e);
+    fail++;
+    await browser.close();
+    if (server) server.close();
+    process.exit(1);
+  }
+  await browser.close();
+  if (server) server.close();
+  console.log('\n' + pass + ' passed, ' + fail + ' failed (' + ((Date.now() - t0) / 1000).toFixed(1) + ' s)');
+  process.exit(fail ? 2 : 0);
+})();

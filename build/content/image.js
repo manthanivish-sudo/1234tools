@@ -140,12 +140,12 @@ module.exports = {
       text: 'Each photo is decoded, drawn onto a canvas of the new size with `drawImage`, and encoded with `canvas.toBlob`, WebP at quality 85 unless you change it.',
       points: [
         'Fixed width or height works out the other side from the photo’s ratio; longest edge scales the bigger side to the value; percentage scales both; exact size stretches to your width and height.',
-        'There is no ceiling: a value above the original enlarges as readily as a smaller one shrinks.',
+        'Nothing is enlarged unless “Allow enlarging” is Yes: a photo the target would make bigger keeps its own size, and the page names it.',
         'Each result is named after its source plus the new size, such as street-800x600.webp, and a batch comes as one ZIP built in the page.'
       ]
     },
     worked: {
-      text: 'Three photos went in at full size: a head-and-shoulders portrait and a plate of pancakes at 1600×1067 and a street scene at 1600×1200, 803.0 KB together. Longest edge 800 with WebP at 85 gave 800×534, 800×600 and 800×534, 220.5 KB in all; as JPEG at 85 they came to 275.2 KB. Set by mistake to a width of 2400, the batch was enlarged to 2400×1601 and 2400×1800 without a warning and grew to 864.2 KB.'
+      text: 'Three photos went in at full size: a head-and-shoulders portrait and a plate of pancakes at 1600×1067 and a street scene at 1600×1200, 803.0 KB together. Longest edge 800 with WebP at 85 gave 800×534, 800×600 and 800×534, 220.5 KB in all; as JPEG at 85 they came to 275.2 KB. Set by mistake to a width of 2400, all three stayed at their own size, 624.6 KB, with a note saying so; with “Allow enlarging” on they became 2400×1601 and 2400×1800, 864.2 KB.'
     },
     uses: [
       ['Shop listings', 'Bring a folder of product shots to a marketplace’s width in one pass.'],
@@ -167,7 +167,11 @@ module.exports = {
          then all three uploaded in that order; figures from each card's caption and the stat row. */
       { browser: { inputs: 'portrait.jpg 1600x1067, street.jpg 1600x1200, food.jpg 1600x1067; 803.0 KB together', mode: 'longest', value: 800, format: 'image/webp', quality: 85 }, shown: ['800×534', '800×600', '220.5 KB'] },
       { browser: { inputs: 'the same three', mode: 'longest', value: 800, format: 'image/jpeg', quality: 85 }, shown: ['275.2 KB'] },
-      { browser: { inputs: 'the same three', mode: 'width', value: 2400, format: 'image/webp', quality: 85 }, shown: ['2400×1601', '2400×1800', '864.2 KB'] },
+      /* re-run 2026-10-04 after enlarging became opt-in: width 2400 with "Allow enlarging" No (the default) leaves
+         1600×1067, 1600×1200 and 1600×1067 with the note "3 of 3 images were smaller than that and were left at their
+         own size"; with Yes, the old result */
+      { browser: { inputs: 'the same three', mode: 'width', value: 2400, enlarge: 'no', format: 'image/webp', quality: 85 }, shown: ['624.6 KB'] },
+      { browser: { inputs: 'the same three', mode: 'width', value: 2400, enlarge: 'yes', format: 'image/webp', quality: 85 }, shown: ['2400×1601', '2400×1800', '864.2 KB'] },
       /* the FAQ's EXIF answer: pukaki-tagged.jpg (see /image/exif-viewer/), longest edge 800, JPEG 85 → 800×532;
          the result's segments read with MVRImage.metadataSegments: APP0, ICC only; readExif found nothing */
       { browser: { input: 'pukaki-tagged.jpg', mode: 'longest', value: 800, format: 'image/jpeg', quality: 85 }, shown: ['camera and GPS tags'] }
@@ -226,11 +230,11 @@ module.exports = {
         'Polaroid makes the bottom strip three times the border width.',
         'Double draws its inner line 45% of the border width in from the edge, 12% of the border thick, only when the border is wider than 8 px.',
         'A corner radius rounds the frame’s outer edge and leaves the cut-away corners transparent.',
-        'There is no format choice: a PNG comes out whatever goes in, so a JPEG photo returns much heavier.'
+        'It saves PNG unless you pick JPEG or WebP; a JPEG fills rounded corners white.'
       ]
     },
     worked: {
-      text: 'A 1600 × 1067 food photo, a 217.2 KB JPEG, with an even 60 px white border came out at 1720×1187, as a PNG of 2.29 MB, ten times the original. The polaroid style at the same width gave 1720×1307, all the extra height in the bottom strip. Run through the image compressor as JPEG at 85, the bordered picture went back down to 216.8 KB.'
+      text: 'A 1600 × 1067 food photo, a 217.2 KB JPEG, with an even 60 px white border came out at 1720×1187, as a PNG of 2.29 MB, ten times the original. The polaroid style at the same width gave 1720×1307, all the extra height in the bottom strip. Saved as JPEG at 85 instead, the bordered picture was 216.8 KB, smaller than the photo it framed.'
     },
     uses: [
       ['Prints with a margin', 'Add white space so a lab print or a mount does not crop into the picture.'],
@@ -238,12 +242,12 @@ module.exports = {
       ['Product grids', 'Give marketplace shots a matching margin so they sit evenly side by side.']
     ],
     mistakes: [
-      'Uploading the bordered PNG where a size limit applies. Pass it through the compressor afterwards; a plain border costs almost nothing as JPEG.',
+      'Uploading the bordered PNG where a size limit applies. Save it as JPEG instead; a plain border costs almost nothing in a JPEG.',
       'Choosing the width without looking at the photo’s size. A 40 px border is bold on a 1,000 px picture and a hairline on a 6,000 px one; aim for 2 to 4% of the width.'
     ],
     faq: [
-      { q: 'Does adding a border reduce image quality?', a: 'No. The photo is copied at its own size, pixel for pixel, and saved losslessly; only the file size goes up.' },
-      { q: 'Why is the bordered image so much bigger?', a: 'It is saved as PNG, which keeps every pixel exactly, while the JPEG it came from had already thrown detail away to stay small.' },
+      { q: 'Does adding a border reduce image quality?', a: 'Not as PNG: the photo is copied at its own size, pixel for pixel, and saved losslessly. A JPEG or WebP copy is compressed again.' },
+      { q: 'Why is the bordered image so much bigger?', a: 'PNG, the default, keeps every pixel exactly, while the JPEG it came from had already thrown detail away to stay small. Choose JPEG under Save as.' },
       { q: 'Can I add a border without changing the image size?', a: 'Not directly, as the border goes outside the photo. Shrink the photo by twice the border width first, then add the border.' }
     ],
     runs: [
@@ -251,8 +255,9 @@ module.exports = {
          border colour left at #ffffff, radius 0. */
       { browser: { input: 'food.jpg, 1600x1067', style: 'solid', width: 60 }, shown: ['217.2 KB', '1720×1187', '2.29 MB'] },
       { browser: { input: 'food.jpg', style: 'polaroid', width: 60 }, shown: ['1720×1307'] },
-      /* the solid-border PNG from the first run, downloaded, then put through /image/image-compressor/ */
-      { browser: { tool: '/image/image-compressor/', input: 'the 1720x1187 PNG from the first run', format: 'image/jpeg', quality: 85 }, shown: ['216.8 KB'] }
+      /* re-run 2026-10-04 with the Save as control: solid, 60 px, #ic-format JPEG, #ic-quality 85 (the same figure the
+         compressor gave for the PNG before the tool had a format choice) */
+      { browser: { input: 'food.jpg', style: 'solid', width: 60, format: 'image/jpeg', quality: 85 }, shown: ['216.8 KB'] }
     ]
   },
 
@@ -263,7 +268,7 @@ module.exports = {
       'Typical targets are faces, number plates and house numbers in photos, and names and account numbers in screenshots.'
     ],
     howItWorks: {
-      text: 'The photo is drawn at full size onto a canvas, the area you dragged is changed there, and the whole picture is encoded again as a PNG, with no layers.',
+      text: 'The photo is drawn at full size onto a canvas, the area you dragged is changed there, and the whole picture is encoded again, with no layers: PNG by default, or JPEG or WebP.',
       points: [
         'Pixelate shrinks the area to about one pixel per block, the strength being the block size in pixels, then draws it back with smoothing off, so each block is one flat colour.',
         'Blur clips to the area and redraws the photo through the canvas filter `blur()`, so colour from just outside bleeds in while the box edges stay sharp.',
@@ -272,7 +277,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'In a 1600 × 1200 street photo, a 321.4 KB JPEG, a drag over the people on a zebra crossing selected 352×179 pixels. Pixelated at the default strength of 16, each figure became a column of flat squares: a red top and a blue jacket still showed as colour, but no faces. Saved as PNG the result weighed 3.02 MB, so the copy for sharing went through the image compressor as JPEG at 85: 357.1 KB, squares intact.'
+      text: 'In a 1600 × 1200 street photo, a 321.4 KB JPEG, a drag over the people on a zebra crossing selected 352×179 pixels. Pixelated at the default strength of 16, each figure became a column of flat squares: a red top and a blue jacket still showed as colour, but no faces. Saved as PNG the result weighed 3.02 MB; for sharing, JPEG at 85 under Save as gave 357.1 KB, squares intact.'
     },
     uses: [
       ['Bug reports', 'Block a customer’s name and email in a screenshot before it goes into a ticket.'],
@@ -286,21 +291,22 @@ module.exports = {
     faq: [
       { q: 'Can a blurred image be unblurred?', a: 'Partly. A blur is a known mathematical operation, so deblurring software can sometimes bring back shapes and even text at low strengths. A solid block leaves nothing to work from.' },
       { q: 'Does the saved image keep the original under the blur?', a: 'No. Only the changed pixels are in the new file, and none of the source photo’s metadata is copied.' },
-      { q: 'Why is the redacted image bigger than the original?', a: 'It is a full-size PNG: the street photo went from a 321.4 KB JPEG to 3.02 MB. Compress it afterwards if size matters.' }
+      { q: 'Why is the redacted image bigger than the original?', a: 'PNG is the default: the street photo went from a 321.4 KB JPEG to 3.02 MB. Pick JPEG or WebP if size matters.' }
     ],
     runs: [
       /* input: build/promo/samples/street.jpg at full size (1600×1200, 321.4 KB). Method and Strength set,
          uploaded, then a mouse drag on the selection canvas from 38%,48% to 60%,63% of its width and height. */
       { browser: { input: 'street.jpg, 1600x1200, 321.4 KB', method: 'pixelate', strength: 16, drag: { x0: 0.38, y0: 0.48, x1: 0.6, y1: 0.63 } }, shown: ['352×179', '3.02 MB'] },
-      /* that PNG, downloaded, then put through /image/image-compressor/ */
-      { browser: { tool: '/image/image-compressor/', input: 'the pixelated 1600x1200 PNG', format: 'image/jpeg', quality: 85 }, shown: ['357.1 KB'] }
+      /* re-run 2026-10-04 with the Save as control: the same drag, #ic-format JPEG, #ic-quality 85 (the figure the
+         compressor gave for the PNG before the tool had a format choice) */
+      { browser: { input: 'street.jpg', method: 'pixelate', strength: 16, drag: { x0: 0.38, y0: 0.48, x1: 0.6, y1: 0.63 }, format: 'image/jpeg', quality: 85 }, shown: ['357.1 KB'] }
     ]
   },
 
   '/image/color-palette-extractor/': {
     term: 'a colour palette',
     whatIs: [
-      'A palette is a short list of colours that stands for a whole image. A photo can hold tens of thousands of distinct colours, so a palette groups similar ones and picks one representative for each.',
+      'A palette is a short list of colours that stands for a whole image: similar colours are grouped, and one represents each group.',
       'Hex #ED815C and rgb(237, 129, 92) are the same colour: red, green and blue amounts from 0 to 255, written in base 16 and base 10.'
     ],
     howItWorks: {
@@ -309,7 +315,7 @@ module.exports = {
         'All pixels start in one box. The box with the widest spread in one channel is sorted along it and cut in two, until there are as many boxes as colours asked for.',
         'The cut falls at the biggest jump in value, so a small, distinct group gets its own box; with no jump of 8 or more it falls at the halfway point.',
         'Each swatch is its box’s average colour, and its share the box’s fraction of the pixels, rounded to a whole percentage.',
-        'The palette is also written as CSS custom properties, `--colour-1` onwards.'
+        'Each swatch also gets its HSL value and its WCAG contrast with white and black text; the CSS properties, `--colour-1` onwards, carry the HSL too.'
       ]
     },
     worked: {
@@ -325,7 +331,7 @@ module.exports = {
       'Extracting from a screenshot with white page margins in it: margins take a swatch too, so crop to the picture first.'
     ],
     faq: [
-      { q: 'Does the extractor give HSL values?', a: 'No. Each swatch comes as hex and rgb() with its share; the site’s colour converter gives HSL.' },
+      { q: 'Does the extractor give HSL values and contrast?', a: 'Yes. The coral #ED815C is hsl(15, 80%, 65%), 2.66:1 against white text, a fail, and 7.90:1 against black, AAA.' },
       { q: 'Why does another tool give a different palette for the same image?', a: 'Methods differ: median cut like this one, k-means with random starting points, or a count of the commonest colours.' },
       { q: 'Can I extract colours from a transparent PNG logo?', a: 'Yes. Pixels with alpha under 125 out of 255 are skipped, so the transparent background never becomes a swatch.' }
     ],
@@ -333,6 +339,9 @@ module.exports = {
       /* input: build/promo/samples/food.jpg at full size (1600×1067). Number of colours set, then uploaded;
          figures from the stat rows ("Colour n #HEX", "rgb(…) · n% of image"). */
       { browser: { input: 'food.jpg, 1600x1067', count: 4 }, shown: ['#BFBCB8', '#67543E', '#1F1F1E', '#ED815C', 'rgb(237, 129, 92)', '0% of image', '50%', '25%'] },
+      /* re-run 2026-10-04 with HSL and contrast added: the same swatches; colour 4's row reads
+         "rgb(237, 129, 92) · hsl(15, 80%, 65%) · 0% of image · contrast with white text 2.66:1 fail, with black text 7.90:1 AAA" */
+      { browser: { input: 'food.jpg', count: 4 }, shown: ['hsl(15, 80%, 65%)', '2.66:1', '7.90:1'] },
       { browser: { input: 'food.jpg', count: 8 }, shown: ['13%'] }
     ]
   },
@@ -392,12 +401,12 @@ module.exports = {
       points: [
         'First the site’s own JPEG parser lists the original’s segments and any GPS position being removed.',
         'The browser applies the Orientation tag as it draws, so a photo stored sideways by a phone is saved upright.',
-        'Chrome’s JPEG encoder adds a 16-byte JFIF header and its own standard sRGB colour profile; neither says anything about you. A PNG from Chrome holds only the image.',
-        'That list reads JPEG only, so a PNG’s text chunks are not shown, though re-encoding drops them all the same.'
+        'Then it reads the cleaned file’s bytes back: Chrome adds a 16-byte JFIF header and an sRGB colour profile to a JPEG, neither about you; its PNG holds only the image.',
+        'The original’s list reads JPEG only; a PNG’s text chunks go unlisted but are dropped too.'
       ]
     },
     worked: {
-      text: 'The tagged test photo from the EXIF viewer page, 1600 × 1063 with camera, author and GPS tags, went in at 216.4 KB. The tool listed EXIF, XMP, APP0 and ICC colour profile and showed the position going, -44.10850, 170.15417. The clean JPEG at quality 92 held no EXIF or XMP, and at 254.6 KB it was 18% bigger than the original. A copy tagged to rotate 90° came out at 1063×1600, upright. As PNG it grew to 2.45 MB.'
+      text: 'The tagged test photo from the EXIF viewer page, 1600 × 1063 with camera, author and GPS tags, went in at 216.4 KB. The tool listed EXIF, XMP, APP0 and ICC colour profile and showed the position going, -44.10850, 170.15417. For the result it read “No EXIF, GPS or camera data; standard JFIF header and sRGB colour profile kept”, at 254.6 KB, 18% bigger. A copy tagged to rotate 90° came out at 1063×1600, upright. As PNG it grew to 2.45 MB.'
     },
     uses: [
       ['Selling and letting sites', 'Clean photos taken at home before they go on a listing.'],
@@ -406,17 +415,19 @@ module.exports = {
     ],
     mistakes: [
       'Stripping first and editing afterwards. Some editors write their own name, date and XMP on save, so strip last.',
-      'Sharing the original by mistake. Open the downloaded copy in the EXIF viewer first; a cleaned JPEG reports that no EXIF was found.'
+      'Sharing the original by mistake. Check the downloaded copy in the EXIF viewer before sending it.'
     ],
     faq: [
       { q: 'Does removing EXIF reduce photo quality?', a: 'Slightly, here: the picture is compressed again, at quality 92 by default. Tools that only cut out the metadata segments avoid that.' },
       { q: 'Will the stripped photo still be the right way up?', a: 'Yes. The rotation is applied to the pixels before saving, so the clean file needs no tag.' },
-      { q: 'How can I check that the metadata is gone?', a: 'Open the cleaned file in the EXIF viewer. The test JPEG showed only APP0 (16 B) and ICC colour profile (472 B), and no EXIF.' }
+      { q: 'How can I check that the metadata is gone?', a: 'The page reads the cleaned file back and says what is left; the EXIF viewer showed the test JPEG with only APP0 (16 B) and ICC colour profile (472 B).' }
     ],
     runs: [
       /* input: pukaki-tagged.jpg (made by .work/makeexif.js, see /image/exif-viewer/), 1600×1063, 216.4 KB.
-         Save as JPEG, quality 92, then uploaded; figures from the stat rows. */
-      { browser: { input: 'pukaki-tagged.jpg, 1600x1063', format: 'image/jpeg', quality: 92 }, shown: ['216.4 KB', '-44.10850, 170.15417', '254.6 KB', '18%'] },
+         Save as JPEG, quality 92, then uploaded; figures from the stat rows. Re-run 2026-10-04: the "Metadata in result"
+         row is now read from the result's bytes (APP0 JFIF + APP2 ICC, the profile's description sRGB); as PNG it reads
+         "No EXIF, GPS or camera data; no other metadata either". */
+      { browser: { input: 'pukaki-tagged.jpg, 1600x1063', format: 'image/jpeg', quality: 92 }, shown: ['216.4 KB', '-44.10850, 170.15417', '254.6 KB', '18%', 'No EXIF, GPS or camera data; standard JFIF header and sRGB colour profile kept'] },
       /* the Orientation 6 copy (pukaki-tagged-rot6.jpg), JPEG 92: the result card read 1063×1600 */
       { browser: { input: 'pukaki-tagged-rot6.jpg, orientation 6 = rotate 90 clockwise', format: 'image/jpeg', quality: 92 }, shown: ['1063×1600'] },
       { browser: { input: 'pukaki-tagged.jpg', format: 'image/png' }, shown: ['2.45 MB'] },
@@ -437,7 +448,7 @@ module.exports = {
         'Automatic takes the four corner pixels as reference colours; “Pick a colour” uses yours. A pixel matches when it is within the tolerance of a reference.',
         'The fill starts from every edge pixel and spreads only to matching neighbours above, below and beside, so background cut off from the border stays.',
         'Edge softness averages each pixel’s opacity with its four neighbours, once per step.',
-        'The AI option imports the @imgly/background-removal library (1.5.5) from jsDelivr on first use, which fetches a model of about 90 MB from img.ly and runs it in the tab.'
+        'At tolerance 0 only the exact reference colour goes. No model is loaded and no other server is contacted; hair and busy scenes need the AI Background Remover.'
       ]
     },
     worked: {
@@ -465,6 +476,8 @@ module.exports = {
       { browser: { input: 'logo-on-white.jpg, 800x600, JPEG 0.85', mode: 'auto', tolerance: 32, feather: 2, replace: 'transparent' }, shown: ['71.94%'] },
       /* input: build/promo/samples/portrait.jpg at full size (1600×1067), same defaults; alpha 0 at 79.28% */
       { browser: { input: 'portrait.jpg, 1600x1067', mode: 'auto', tolerance: 32, feather: 2 }, shown: ['79.28%'] }
+      /* re-run 2026-10-04 after the AI mode was removed and tolerance 0 fixed: the default path is unchanged (the
+         logo's PNG is still 800×600, 63.8 KB); build/tests/image-fixes.js proves tolerance 0 keeps a #f5f5f5 area */
     ]
   },
 
@@ -524,12 +537,12 @@ module.exports = {
       points: [
         'For any angle but zero the canvas is first painted with the fill colour, white by default; that is what shows in the corners.',
         'The origin moves to the centre, `ctx.rotate` turns it, `ctx.scale` with −1 applies a mirror, and the image is drawn once with high-quality smoothing.',
-        'The result is always PNG. There is no format or quality control here, so a JPEG photo comes back lossless and far heavier.',
+        'Save as is PNG by default, lossless and far heavier than a JPEG photo; JPEG or WebP take the quality slider, 92 to start.',
         'Several images dropped together get the same settings and download as one ZIP.'
       ]
     },
     worked: {
-      text: 'Straightening a 1600×1063 landscape, a 215.5 KB JPEG, by −4° produced a 1670×1172 canvas: the picture plus four white wedges in the corners, which a crop then has to remove. It came back as a 2.66 MB PNG. A plain horizontal mirror kept the size at 1600×1063 and still weighed 2.45 MB, while a 90° turn simply swapped the sides to 1063×1600. Compress the result before it goes on a web page.'
+      text: 'Straightening a 1600×1063 landscape, a 215.5 KB JPEG, by −4° produced a 1670×1172 canvas: the picture plus four white wedges in the corners, which a crop then has to remove. As a PNG it weighed 2.66 MB; saved as JPEG at 92, 288.3 KB. A plain horizontal mirror kept the size at 1600×1063 and weighed 2.45 MB as PNG, 254.7 KB as JPEG, while a 90° turn simply swapped the sides to 1063×1600.'
     },
     uses: [
       ['Straightening a horizon', 'Turn a tilted sea or skyline by a degree or two, then crop the corners off.'],
@@ -541,7 +554,7 @@ module.exports = {
       'Correcting a tilt in several small steps. Every odd angle resamples the pixels again; find the right angle and apply it once to the original.'
     ],
     faq: [
-      { q: 'Why is the rotated file so much bigger than my photo?', a: 'It is always saved as PNG, which has no lossy compression: a 215.5 KB JPEG mirrored here became 2.45 MB. Compress or convert it if size matters.' },
+      { q: 'Why is the rotated file so much bigger than my photo?', a: 'PNG, the default, has no lossy compression: a 215.5 KB JPEG mirrored here became 2.45 MB. Pick JPEG under Save as and it was 254.7 KB.' },
       { q: 'What is the difference between flipping and rotating 180 degrees?', a: 'A 180° turn leaves text readable once turned back; a vertical flip mirrors it. Mirroring both ways at once equals a 180° turn.' },
       { q: 'Can I rotate several photos at once?', a: 'Yes. Drop them in together and each gets the same angle and mirror.' }
     ],
@@ -554,6 +567,11 @@ module.exports = {
       /* the same photo, angle 0, #ic-flipH Yes */
       { browser: { tool: '/image/image-rotate-flip/', file: 'build/promo/samples/landscape.jpg, full size', angle: 0, flipH: 'yes' },
         shown: ['2.45 MB'] },
+      /* added 2026-10-04 with the Save as control: #ic-format JPEG, #ic-quality 92 (its default), angle −4, then the mirror */
+      { browser: { tool: '/image/image-rotate-flip/', file: 'build/promo/samples/landscape.jpg, full size', angle: -4, format: 'image/jpeg', quality: 92 },
+        shown: ['288.3 KB'] },
+      { browser: { tool: '/image/image-rotate-flip/', file: 'build/promo/samples/landscape.jpg, full size', angle: 0, flipH: 'yes', format: 'image/jpeg', quality: 92 },
+        shown: ['254.7 KB'] },
       /* the same photo, angle 90 */
       { browser: { tool: '/image/image-rotate-flip/', file: 'build/promo/samples/landscape.jpg, full size', angle: 90 },
         shown: ['1063×1600'] }
@@ -654,16 +672,16 @@ module.exports = {
       'PDF can hold JPEG data as it is, through its DCTDecode filter, so photo PDFs stay close to the size of their pictures. Text in the photos stays a picture.'
     ],
     howItWorks: {
-      text: 'The site’s own small PDF writer in `imagecore` builds the file; no PDF library is loaded. Your JPEG is not copied in untouched.',
+      text: 'The site’s own small PDF writer in `imagecore` builds the file; no PDF library is loaded. A JPEG goes in as it is.',
       points: [
-        'Each image is drawn on a white canvas, flattening transparency, and re-encoded with `canvas.toBlob` as JPEG at the slider’s quality (88 by default, never below 40).',
-        'Those bytes go in unchanged as a `DCTDecode` image, so that re-encode is the only lossy step.',
+        'A JPEG’s own compressed bytes become the page image (`DCTDecode`), with its colour profile; only EXIF, GPS, XMP and comment blocks are left out.',
+        'Other images, sideways or CMYK JPEGs, and any JPEG under Re-encode are drawn on white and saved with `canvas.toBlob` at the slider’s quality, 88 by default.',
         'Each image is fitted inside the margin (28 points by default) and centred; “Match each image” turns pages landscape for wide images, and “Fit to image” makes the page one point per pixel.',
-        'The result is a plain PDF 1.4 with no title, bookmarks or text layer.'
+        'The result is a plain PDF with no title, bookmarks or text layer.'
       ]
     },
     worked: {
-      text: 'Two landscape photos, 1600×1067 (264.5 KB) and 1600×1063 (215.5 KB), went onto Letter with “Match each image”, and both pages turned to 792 × 612 points. At the default quality 88 the PDF was 495.6 KB, a little more than the originals together, because each JPEG was encoded again. At 100 it grew to 1.82 MB; at 60 it fell to 218.7 KB. “Fit to image” made the first page 1600 × 1067 points.'
+      text: 'Two landscape photos, 1600×1067 (264.5 KB) and 1600×1063 (215.5 KB), went onto Letter with “Match each image”, and both pages turned to 792 × 612 points. Kept as they were, the PDF was 482.2 KB. Re-encoded at 88 it came to 495.6 KB, at 100 to 1.82 MB and at 60 to 218.7 KB. “Fit to image” made the first page 1600 × 1067 points.'
     },
     uses: [
       ['Applications that want one file', 'Put photos of a passport page and a utility bill into the single PDF a form accepts.'],
@@ -671,29 +689,31 @@ module.exports = {
       ['Screenshot evidence', 'Use “Fit to image” so each screenshot keeps its own shape in a complaint bundle.']
     ],
     mistakes: [
-      'Setting quality to 100 to keep the photos “untouched”. They are re-encoded at every setting, and 100 made a PDF nearly four times the size of 88 here.',
+      'Re-encoding at 100 to “keep” quality. Keeping the JPEGs as they are already loses nothing, and quality 100 made a PDF nearly four times the size of 88 here.',
       'Typing the margin in millimetres. The box is in points: 28 is just under 10 mm, and 10 gives about 3.5 mm.'
     ],
     faq: [
-      { q: 'Does converting JPG to PDF reduce image quality?', a: 'Slightly. Each image is re-encoded as JPEG at the quality you set before it goes in; the PDF adds no compression on top.' },
-      { q: 'Why is my PDF bigger than my photos?', a: 'Your photos may have been saved at a lower JPEG quality than the slider’s, so the re-encoded copies come out larger. Lower the slider.' },
+      { q: 'Does converting JPG to PDF reduce image quality?', a: 'Not by default: each JPEG’s own data goes in unchanged. PNGs, sideways phone shots and a chosen Re-encode are compressed again.' },
+      { q: 'How do I make the PDF smaller?', a: 'Choose Re-encode and lower the slider; at 60 the two photos above made 218.7 KB instead of 482.2 KB. Check small print stays readable.' },
       { q: 'What page size does “Fit to image” give?', a: 'One point per pixel, so a 1600-pixel-wide photo makes a page over 22 inches wide: fine on screen, too big for paper.' }
     ],
     related: { guides: ['/guides/convert-jpg-to-pdf/'] },
     runs: [
-      /* portrait.jpg then landscape.jpg from build/promo/samples, both full size (1600×1067, 270,812 B = 264.5 KB; 1600×1063,
-         220,631 B = 215.5 KB; the file list shows both). #ic-pageSize Letter, #ic-orientation Match each image, margin 28,
-         #ic-quality 88. Read the PDF size row; press Download PDF and read /MediaBox from the bytes. */
-      { browser: { tool: '/image/image-to-pdf/', files: ['build/promo/samples/portrait.jpg, full size 1600×1067, 264.5 KB', 'build/promo/samples/landscape.jpg, full size 1600×1063, 215.5 KB'], pageSize: 'letter', orientation: 'auto', margin: 28, quality: 88, mediaBox: '[0 0 792.00 612.00] on both pages' },
-        shown: ['264.5 KB', '215.5 KB', '792 × 612', '495.6 KB'] },
-      /* the same two files, #ic-quality 100 */
-      { browser: { tool: '/image/image-to-pdf/', files: ['portrait.jpg', 'landscape.jpg'], pageSize: 'letter', orientation: 'auto', quality: 100 },
+      /* Re-run 2026-10-04, after JPEGs began to go in as they are. portrait.jpg then landscape.jpg from build/promo/samples,
+         both full size (1600×1067, 270,812 B = 264.5 KB; 1600×1063, 220,631 B = 215.5 KB; the file list shows both).
+         #ic-pageSize Letter, #ic-orientation Match each image, margin 28, #ic-jpeg "Keep as they are". Read the PDF size
+         row; press Download PDF (493,746 B) and read /MediaBox from the bytes; both files' bytes are inside it unchanged. */
+      { browser: { tool: '/image/image-to-pdf/', files: ['build/promo/samples/portrait.jpg, full size 1600×1067, 264.5 KB', 'build/promo/samples/landscape.jpg, full size 1600×1063, 215.5 KB'], pageSize: 'letter', orientation: 'auto', margin: 28, jpeg: 'keep', mediaBox: '[0 0 792.00 612.00] on both pages' },
+        shown: ['264.5 KB', '215.5 KB', '792 × 612', '482.2 KB'] },
+      /* the same two files, #ic-jpeg "Re-encode at the quality below", #ic-quality 88, then 100, then 60 */
+      { browser: { tool: '/image/image-to-pdf/', files: ['portrait.jpg', 'landscape.jpg'], pageSize: 'letter', orientation: 'auto', jpeg: 'reencode', quality: 88 },
+        shown: ['495.6 KB'] },
+      { browser: { tool: '/image/image-to-pdf/', files: ['portrait.jpg', 'landscape.jpg'], pageSize: 'letter', orientation: 'auto', jpeg: 'reencode', quality: 100 },
         shown: ['1.82 MB'] },
-      /* the same two files, #ic-quality 60 */
-      { browser: { tool: '/image/image-to-pdf/', files: ['portrait.jpg', 'landscape.jpg'], pageSize: 'letter', orientation: 'auto', quality: 60 },
+      { browser: { tool: '/image/image-to-pdf/', files: ['portrait.jpg', 'landscape.jpg'], pageSize: 'letter', orientation: 'auto', jpeg: 'reencode', quality: 60 },
         shown: ['218.7 KB'] },
-      /* the same two files, #ic-pageSize Fit to image, quality 88; /MediaBox [0 0 1600.00 1067.00] and [0 0 1600.00 1063.00] */
-      { browser: { tool: '/image/image-to-pdf/', files: ['portrait.jpg', 'landscape.jpg'], pageSize: 'fit', quality: 88, mediaBox: '[0 0 1600.00 1067.00], [0 0 1600.00 1063.00]' },
+      /* the same two files, #ic-pageSize Fit to image, kept; /MediaBox [0 0 1600.00 1067.00] and [0 0 1600.00 1063.00] */
+      { browser: { tool: '/image/image-to-pdf/', files: ['portrait.jpg', 'landscape.jpg'], pageSize: 'fit', jpeg: 'keep', mediaBox: '[0 0 1600.00 1067.00], [0 0 1600.00 1063.00]' },
         shown: ['1600 × 1067'] }
     ]
   },
@@ -710,11 +730,11 @@ module.exports = {
         'Font size is a percentage of the picture’s height, in bold Impact, falling back to Haettenschweiler, Arial Narrow Bold or any sans-serif.',
         'The text is capitalised if “Force uppercase” is on, then broken at spaces into lines no wider than 94% of the picture.',
         'Each line is stroked in the outline colour at 12% of the font size, then filled in the text colour on top.',
-        'The meme is saved as PNG at the picture’s own size; there is no JPEG option.'
+        'The meme keeps the picture’s size: PNG by default, or JPEG or WebP at your quality.'
       ]
     },
     worked: {
-      text: 'On a 1600×1067 group photo, “when the meeting could have been an email” was typed in lower case and came out in capitals. At the default 10% size the top caption wrapped onto two lines; at 6% it fitted on one. Both versions were PNGs of 1600×1067: 2.49 MB at 10% and 2.64 MB at 6%, from a 308.3 KB original. Smaller text hides less photographic detail, and detail is what makes a PNG heavy.'
+      text: 'On a 1600×1067 group photo, “when the meeting could have been an email” was typed in lower case and came out in capitals. At the default 10% size the top caption wrapped onto two lines; at 6% it fitted on one. Both versions were PNGs of 1600×1067: 2.49 MB at 10% and 2.64 MB at 6%, from a 308.3 KB original. Smaller text hides less photographic detail, and detail is what makes a PNG heavy. Saved as JPEG at 92, the 10% meme was 378.0 KB.'
     },
     uses: [
       ['Team updates', 'Open a sprint review or an internal newsletter with a captioned office photo.'],
@@ -723,7 +743,7 @@ module.exports = {
     ],
     mistakes: [
       'Writing a full sentence in each caption. Long text wraps, and three or four lines at 10% bury much of the picture; cut the words or lower the size.',
-      'Sending the PNG where uploads are capped. A meme made from a phone photo is often several megabytes; convert it to JPEG before posting.'
+      'Sending the PNG where uploads are capped. A meme made from a phone photo is often several megabytes; pick JPEG under Save as before posting.'
     ],
     faq: [
       { q: 'What font do memes use?', a: 'Impact, in white capitals with a black outline. This tool asks for Impact and falls back to similar faces where it is missing, as it is on many phones.' },
@@ -739,7 +759,10 @@ module.exports = {
         shown: ['1600×1067', '308.3 KB', '2.49 MB', 'two lines'] },
       /* the same with #ic-size 6: the top caption fits on one line */
       { browser: { tool: '/image/meme-generator/', file: 'build/promo/samples/group.jpg, full size', top: 'when the meeting could have been an email', bottom: 'and it was', size: 6 },
-        shown: ['2.64 MB'] }
+        shown: ['2.64 MB'] },
+      /* added 2026-10-04 with the Save as control: size 10 again, #ic-format JPEG, #ic-quality 92 */
+      { browser: { tool: '/image/meme-generator/', file: 'build/promo/samples/group.jpg, full size', top: 'when the meeting could have been an email', bottom: 'and it was', size: 10, format: 'image/jpeg', quality: 92 },
+        shown: ['378.0 KB'] }
     ]
   },
 
@@ -750,21 +773,21 @@ module.exports = {
       'To print, millimetres become pixels at a set resolution: at 300 dots per inch, 35 mm is 413 pixels.'
     ],
     howItWorks: {
-      text: 'The tool knows six fixed sizes at 300 DPI: India passport / visa 51×51 mm, UK passport 35×45 mm, US passport 51×51 mm, Schengen visa 35×45 mm, India PAN card 25×35 mm and stamp size 20×25 mm. No face is detected and nothing is measured.',
+      text: 'The tool knows six fixed sizes at 300 DPI: India passport / visa 51×51 mm, UK passport 35×45 mm, US passport 51×51 mm, Schengen visa 35×45 mm, India PAN card 25×35 mm and stamp size 20×25 mm. No face is detected or measured.',
       points: [
-        'Pixels are `round(mm ÷ 25.4 × 300)`; your photo is scaled to cover that frame and cut from the centre.',
-        'The background colour sits behind the photo, so it shows only through transparent areas and never replaces a real background.',
+        'Pixels are `round(mm ÷ 25.4 × 300)`: 51 mm is 602.36, so 602 px, which prints at 50.97 mm. Your photo is scaled to cover the frame and cut from the centre.',
+        'Replace cuts the person out on your device with MODNet, a 25 MB portrait model served from this site, and lays them on your colour.',
         'The print sheet is 1800×1200 pixels, 6×4 inches, with as many copies as fit at a 12-pixel gap.',
-        'Both files are PNG with no resolution tag; the 300 DPI lives only in the pixel count.'
+        'Files are JPEG at quality 95, or PNG, and say 300 DPI inside: in the JFIF header or a pHYs chunk.'
       ]
     },
     worked: {
-      text: 'From a 1600×1067 portrait, the UK preset gave a 413×531 single photo of 439.8 KB and a 1800×1200 sheet with 8 copies. The India preset’s 602×602 square fitted only 2 copies on the same sheet: two rows of it plus the gap are taller than 1200 pixels, so it holds a single row. PAN card size fitted 10 copies and stamp size 21 copies.'
+      text: 'From a 1600×1067 portrait, the UK preset gave a 413×531 single photo of 70.8 KB as JPEG, 439.8 KB as PNG, and a 1800×1200 sheet with 8 copies. The India preset’s 602×602 square fitted only 2 copies, one row, on the same sheet; PAN card size fitted 10 copies and stamp size 21. Replace with white turned the dark hedge white: 47.0% of the photo.'
     },
     uses: [
       ['Kiosk or lab prints', 'Take the 6×4 sheet to a print service and cut the copies out along the grey lines.'],
       ['Pasted-photo forms', 'Use the PAN card or stamp size for admission forms and membership cards.'],
-      ['Portal uploads', 'Make the single photo, then convert it if the form asks for a JPEG.']
+      ['Portal uploads', 'Upload the single JPEG; most forms ask for that format.']
     ],
     mistakes: [
       'Shooting too close or off-centre. The crop always comes from the middle of the shot, so stand back from a plain wall with your face centred.',
@@ -773,22 +796,31 @@ module.exports = {
     faq: [
       { q: 'What size is a UK passport photo in pixels?', a: 'At 300 DPI, 35×45 mm is 413×531 pixels. The UK online application has its own rules for digital photos; read them before uploading.' },
       { q: 'How many passport photos fit on a 6×4 print?', a: 'Here, 8 at 35×45 mm and 21 at stamp size, but only 2 at 51×51 mm.' },
-      { q: 'Is a 2×2 inch photo the same as 51×51 mm?', a: 'Nearly. Two inches is 50.8 mm; the tool uses 51 mm, which is 602 pixels at 300 DPI rather than an exact 600, so each side prints about 0.2 mm longer.' }
+      { q: 'Is a 2×2 inch photo the same as 51×51 mm?', a: 'Nearly. Two inches is 50.8 mm; 51 mm comes out as 602 pixels, so each side prints about 0.2 mm longer.' }
     ],
     related: { conversions: ['/conversions/length/millimeter-to-inch/'] },
     runs: [
-      /* portrait.jpg from build/promo/samples at full size (1600×1067). #ic-preset "UK passport — 35×45 mm", background left
-         white, #ic-sheet "Single photo + print sheet". Read both result cards' captions. Neither PNG has a pHYs chunk. */
-      { browser: { tool: '/image/passport-photo/', file: 'build/promo/samples/portrait.jpg, full size 1600×1067', preset: '1 (UK passport 35×45 mm)', sheet: 'both' },
-        shown: ['413×531', '439.8 KB', '1800×1200', '8 copies'] },
-      /* the same photo, #ic-preset "India passport / visa — 51×51 mm", sheet both */
+      /* Re-run 2026-10-04 (JPEG became the default, both files now carry 300 DPI). portrait.jpg from build/promo/samples at
+         full size (1600×1067). #ic-preset "UK passport — 35×45 mm", #ic-bgmode keep, #ic-sheet "Single photo + print sheet",
+         #ic-format JPEG (quality 95), then PNG. Read both result cards' captions. The JPEGs' JFIF density reads 300×300 dpi,
+         the PNGs' pHYs 11,811 px/m. */
+      { browser: { tool: '/image/passport-photo/', file: 'build/promo/samples/portrait.jpg, full size 1600×1067', preset: '1 (UK passport 35×45 mm)', sheet: 'both', format: 'image/jpeg', quality: 95 },
+        shown: ['413×531', '70.8 KB', '1800×1200', '8 copies'] },
+      { browser: { tool: '/image/passport-photo/', file: 'build/promo/samples/portrait.jpg, full size', preset: '1', sheet: 'both', format: 'image/png' },
+        shown: ['439.8 KB'] },
+      /* the same photo, #ic-preset "India passport / visa — 51×51 mm", sheet both; the Print size and Rounding rows read
+         "602×602 px at 300 DPI = 50.97 × 50.97 mm" and "51×51 mm is 602.36 × 602.36 px" */
       { browser: { tool: '/image/passport-photo/', file: 'build/promo/samples/portrait.jpg, full size', preset: '0 (India passport / visa 51×51 mm)', sheet: 'both' },
-        shown: ['602×602', '2 copies'] },
+        shown: ['602×602', '2 copies', '602.36', '50.97 mm'] },
+      /* UK preset, single photo, #ic-bgmode replace, #ic-bg #ffffff: MODNet on WASM; the JPEG decoded in Chrome had
+         pixels with r, g and b all above 245 at 47.0% of 413×531, the top-left corner rgb(255, 255, 255) */
+      { browser: { tool: '/image/passport-photo/', file: 'build/promo/samples/portrait.jpg, full size', preset: '1', sheet: 'single', bgmode: 'replace', bg: '#ffffff' },
+        shown: ['47.0%'] },
       /* the same photo, #ic-preset India PAN card, then Stamp size, #ic-sheet "4×6 print sheet only" */
       { browser: { tool: '/image/passport-photo/', file: 'build/promo/samples/portrait.jpg, full size', preset: '4 (India PAN card 25×35 mm)', sheet: 'sheet' },
         shown: ['10 copies'] },
       { browser: { tool: '/image/passport-photo/', file: 'build/promo/samples/portrait.jpg, full size', preset: '5 (Stamp size 20×25 mm)', sheet: 'sheet' },
-        shown: ['21 copies'] }
+        shown: ['stamp size 21'] }
     ]
   },
 
@@ -804,11 +836,11 @@ module.exports = {
         'The preset comes first and any slider moved from its default is appended after it, so sliders adjust the filtered picture.',
         'Black & white is `grayscale(1)`, sepia `sepia(0.85)`; Cool and Warm add a `hue-rotate` of −12° and +12°.',
         'Blur is Gaussian, measured in the photo’s own pixels, so 3 px is subtle on a large photo.',
-        'The result is always PNG at the original size.'
+        'The result keeps the original size, as PNG unless Save as says JPEG or WebP.'
       ]
     },
     worked: {
-      text: 'A 1600×1200 street photo, a 321.4 KB JPEG, saved with no changes at all came back as a 3.15 MB PNG: that jump is the format, not the filter. With Black & white it was 2.17 MB, since grey pixels repeat one value across red, green and blue and compress better. Adding a 3 px blur brought it down to 1.11 MB, because smoothed detail compresses better still. Convert the result to JPEG before posting it online.'
+      text: 'A 1600×1200 street photo, a 321.4 KB JPEG, saved with no changes at all came back as a 3.15 MB PNG: that jump is the format, not the filter. With Black & white it was 2.17 MB, since grey pixels repeat one value across red, green and blue and compress better. Adding a 3 px blur brought it down to 1.11 MB, because smoothed detail compresses better still. The same Black & white picture saved as JPEG at 92 was 398.4 KB.'
     },
     uses: [
       ['A consistent set', 'Give a batch of product or event photos the same preset so they read as one series.'],
@@ -835,7 +867,10 @@ module.exports = {
         shown: ['2.17 MB'] },
       /* the same photo, #ic-preset Black & white and #ic-blur 3 */
       { browser: { tool: '/image/photo-filters/', file: 'build/promo/samples/street.jpg, full size', preset: 'grayscale', blur: 3 },
-        shown: ['1.11 MB'] }
+        shown: ['1.11 MB'] },
+      /* added 2026-10-04 with the Save as control: Black & white, blur 0, #ic-format JPEG, #ic-quality 92 */
+      { browser: { tool: '/image/photo-filters/', file: 'build/promo/samples/street.jpg, full size', preset: 'grayscale', format: 'image/jpeg', quality: 92 },
+        shown: ['398.4 KB'] }
     ]
   },
 
@@ -892,14 +927,14 @@ module.exports = {
     howItWorks: {
       text: 'The optimiser in the site’s `imagecore` edits the markup as text with regular expressions; it never parses the SVG into a tree or rewrites path commands.',
       points: [
-        'It deletes comments, the XML declaration, DOCTYPE, `<metadata>`, `<title>`, `<desc>`, editor elements, attributes and namespaces, empty `<defs>` and `<g>`, and every `id` and `data-name`.',
-        'With rounding on, decimal numbers in attributes and path data are rounded to the chosen precision, 2 by default.',
-        'Whitespace between tags is removed, and the stats count each kind of thing removed.',
-        'Download saves a plain-text file, `svg-optimizer-output.txt`; rename it to .svg, or copy the result.'
+        'It deletes comments, the XML declaration, DOCTYPE, `<metadata>`, a “Created with” `<desc>`, editor elements, attributes and namespaces, empty `<defs>` and `<g>`, and `data-name`.',
+        'An `id` goes only when nothing in the file points at it: `url(#…)`, `href="#…"`, `aria-labelledby`, animation timing and `<style>` rules keep theirs. The `<title>` always stays.',
+        'With rounding on, decimal numbers inside tags are rounded to the chosen precision, 2 by default.',
+        'Open or drop a .svg file, or paste; Download saves an .svg file of type image/svg+xml.'
       ]
     },
     worked: {
-      text: 'A hand-written 404 B button, a rounded rectangle with fill="url(#fade)" and a white triangle, came out at 349 B with precision 2, saving 55 B (13.6%). The Removed row said only ids and data-name (1), and that id was the gradient’s: the rectangle still pointed at #fade, so drawn in Chrome it came out transparent. Precision 0 saved 79 B (19.6%) but moved the rectangle’s half-pixel edge from 0.5 to x="1" y="1" and its corner radius from 7.75 to rx="8".'
+      text: 'A hand-written 404 B button, a rounded rectangle with fill="url(#fade)" and a white triangle, came out at 359 B with precision 2, saving 45 B (11.1%). The Ids kept row listed fade, the gradient’s id, so drawn in Chrome both versions gave the same colour at the centre. Precision 0 saved 69 B (17.1%) but moved the rectangle’s half-pixel edge from 0.5 to x="1" y="1" and its corner radius from 7.75 to rx="8".'
     },
     uses: [
       ['Icons in a web app', 'Shrink exported icons before inlining them in a component, where every byte ships with the page.'],
@@ -907,25 +942,25 @@ module.exports = {
       ['Cleaner commits', 'Remove volatile editor IDs so committed SVGs change only when the drawing does.']
     ],
     mistakes: [
-      'Optimising artwork that uses gradients, masks, clip paths or use elements. Every id is deleted while url(#…) and href="#…" references stay, so those parts vanish.',
-      'Stripping the title from a meaningful icon. The title element is what a screen reader announces for an inline SVG; put it back, or add an aria-label.'
+      'Expecting a page’s own script to find its ids. An id referenced only from outside the file goes; keep the original if code targets one.',
+      'Rounding to 0 on detailed artwork. Small curves and thin strokes can visibly shift; stay at 2 unless the drawing is a few large shapes.'
     ],
     faq: [
-      { q: 'How much smaller can an SVG get?', a: 'It depends on the clutter: the page’s own example lost 62.1%, mostly editor metadata. Paths are rounded, never simplified, so dense artwork shrinks less.' },
-      { q: 'Does optimising an SVG change how it looks?', a: 'Not when no reference breaks. Two decimals are usually invisible at icon sizes; at 0, points can move by up to half a unit.' },
-      { q: 'Can I optimise an .svg file without opening it?', a: 'No: open it in a text editor, copy the markup into the box, then copy the result back.' }
+      { q: 'How much smaller can an SVG get?', a: 'It depends on the clutter: the page’s own example lost 58.1%, mostly editor metadata. Paths are rounded, never simplified, so dense artwork shrinks less.' },
+      { q: 'Does optimising an SVG change how it looks?', a: 'Not through broken references, since referenced ids stay. Two decimals are usually invisible at icon sizes; at 0, points can move by up to half a unit.' },
+      { q: 'Does it keep the title for screen readers?', a: 'Yes. The title element, and any id that aria-labelledby points at, stay in the file.' }
     ],
     runs: [
       /* the gradient button, default options (precision 2, rounding on) */
-      { input: GRADIENT_SVG, check: [['stat:Original', '404 B'], ['stat:Optimised', '349 B'], ['stat:Saved', '55 B (13.6%)'], ['stat:Removed', 'ids and data-name (1)'], ['output', 'fill="url(#fade)"']] },
+      { input: GRADIENT_SVG, check: [['stat:Original', '404 B'], ['stat:Optimised', '359 B'], ['stat:Saved', '45 B (11.1%)'], ['stat:Ids kept', 'fade'], ['output', 'fill="url(#fade)"']] },
       /* the same at precision 0 */
-      { input: GRADIENT_SVG, options: { precision: '0' }, check: [['stat:Saved', '79 B (19.6%)'], ['output', 'x="1" y="1"'], ['output', 'rx="8"']] },
-      /* the page's own Example panel input, for the FAQ's 62.1% */
-      { input: CUP_SVG, check: [['stat:Saved', '62.1%']] },
+      { input: GRADIENT_SVG, options: { precision: '0' }, check: [['stat:Saved', '69 B (17.1%)'], ['output', 'x="1" y="1"'], ['output', 'rx="8"']] },
+      /* the page's own Example panel input, for the FAQ's 58.1% (its <title>cup</title> now stays) */
+      { input: CUP_SVG, check: [['stat:Saved', '58.1%']] },
       /* both versions of the button drawn in Chrome: each SVG as a data: URL on an Image, drawn to a 120×40 canvas, pixel
-         (80, 20) read back. The original gives rgba(85, 60, 255, 255); the optimised one rgba(0, 0, 0, 0). */
-      { browser: { what: 'GRADIENT_SVG before and after the default optimisation, drawn in Chrome to a 120×40 canvas, pixel (80, 20)', before: 'rgba(85, 60, 255, 255)', after: 'rgba(0, 0, 0, 0)' },
-        shown: ['transparent'] }
+         (80, 20) read back: rgba(85, 60, 255, 255) from both. */
+      { browser: { what: 'GRADIENT_SVG before and after the default optimisation, drawn in Chrome to a 120×40 canvas, pixel (80, 20)', before: 'rgba(85, 60, 255, 255)', after: 'rgba(85, 60, 255, 255)' },
+        shown: ['same colour'] }
     ]
   }
 };

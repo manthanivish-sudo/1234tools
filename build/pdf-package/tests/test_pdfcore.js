@@ -668,8 +668,10 @@ const strBytes = (v) => latin1(v.__string);
   const emptyInfo = await PDFDocument.load(await assemble(
     [{ doc: src5, pageIndex: 0 }], { info: { Title: '' } }));
   deep(await emptyInfo.getInfo(), {}, 'blank Info fields are not written');
+  deep(await (await PDFDocument.load(await assemble([{ doc: src5, pageIndex: 0 }], { info: {} }))).getInfo(),
+    {}, 'assembling with an empty Info strips the source metadata');
   deep(await (await PDFDocument.load(await assemble([{ doc: src5, pageIndex: 0 }], {}))).getInfo(),
-    {}, 'assembling with no Info strips the source metadata');
+    await src5.getInfo(), 'assembling one file with no Info given keeps that file’s metadata');
 
   await throwsAsync(() => assemble([], {}), 'assembling nothing is an error', /No pages were selected/);
   await throwsAsync(() => assemble([{ doc: src5, pageIndex: 99 }], {}),
@@ -710,7 +712,7 @@ const strBytes = (v) => latin1(v.__string);
   const ovDoc = await PDFDocument.load(ov);
   const ovPage = (await ovDoc.getPages())[0];
   ok(Array.isArray(ovPage.dict.Contents), 'an overlay turns Contents into an array');
-  eq(ovPage.dict.Contents.length, 2, 'the overlay is appended after the original content');
+  eq(ovPage.dict.Contents.length, 3, 'the original content is wrapped in q … Q and the overlay follows it');
   const ovRes = await ovDoc.resolve(ovPage.dict.Resources);
   const ovFont = await ovDoc.resolve(ovRes.Font);
   ok(isDict(ovFont) && ovFont.MVRwm !== undefined, 'the overlay font is added to Resources');
@@ -735,7 +737,7 @@ const strBytes = (v) => latin1(v.__string);
     'no ExtGState is added when needsGS is false');
 
   /* the original text must still be there under the watermark */
-  const ovContents = await ovDoc.resolve(ovPage.dict.Contents[0]);
+  const ovContents = await ovDoc.resolve(ovPage.dict.Contents[1]);
   const ovOrig = await ovDoc.decodeStream(ovContents);
   ok(latin1(ovOrig).includes('Tj'), 'the original page content is intact beneath the overlay');
 

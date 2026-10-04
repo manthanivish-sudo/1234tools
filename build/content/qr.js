@@ -41,7 +41,7 @@ module.exports = {
       ['Event posters', 'Add a calendar-event code so passers-by save the date.']
     ],
     mistakes: [
-      'Printing light on dark. This site’s own reader, like many, looks for dark finder patterns, so an inverted code can fail.',
+      'Printing light on dark. This site’s scanner reads it, but many phone cameras do not, so only a dark-on-light code earns Verified.',
       'Changing the destination after printing. The address is in the code, so use a URL on your own domain that you can redirect.'
     ],
     faq: [
@@ -74,11 +74,12 @@ module.exports = {
         'The camera opens through `getUserMedia`, asking for the rear camera at up to 1920 × 1080, with autofocus and a torch where available.',
         'About every 80 milliseconds a frame is read, alternating between the whole frame at 800 pixels and its central 62% in detail.',
         'Each 8 × 8 block of grey levels is thresholded against its neighbours; a failed read retries after a blur, and the grid is also tried transposed, for mirrored codes.',
+        'A picture that gives nothing is read again with its grey levels flipped, for light-on-dark codes; the camera flips every third frame.',
         'After a read the camera stops, and a link’s headline is its `URL.hostname`; nothing opens until you press the button.'
       ]
     },
     worked: {
-      text: 'A code for https://www.example.com@login.example.net/pay, made on the generator (version 4), was chosen as a PNG in the picture area. The headline read login.example.net: everything before the @ is a user name. With a white square 90 pixels wide painted over the 600-pixel image it still read, with 8 damaged codewords repaired, and a mirrored copy read too, marked mirrored. A colour-inverted copy got “No QR code was found in that image”: this reader looks for dark finder patterns.'
+      text: 'A code for https://www.example.com@login.example.net/pay, made on the generator (version 4), was chosen as a PNG in the picture area. The headline read login.example.net: everything before the @ is a user name. With a white square 90 pixels wide painted over the 600-pixel image it still read, with 8 damaged codewords repaired, and a mirrored copy read too, marked mirrored. A colour-inverted copy, white on black, read as well, marked light on dark.'
     },
     uses: [
       ['Proof checks', 'Read a printer’s proof before ordering 500 copies.'],
@@ -86,7 +87,7 @@ module.exports = {
       ['Worn signage', 'See whether a scuffed code still reads, and how much needed repair.']
     ],
     mistakes: [
-      'Scanning a code shown in dark mode. This site’s own reader does not find light-on-dark codes, so switch to light mode first.',
+      'Taking a dark-mode screenshot as proof a code works. This reader flips it, but many phone cameras cannot.',
       'Judging a link by how it starts. Read the Goes to line: it is the host the browser will visit.'
     ],
     faq: [
@@ -103,8 +104,8 @@ module.exports = {
       { browser: { page: '/qr/qr-code-scanner/', file: 'trick-M.png with a white 90 px square centred at (360, 360) of 600 px', barcodeDetector: false }, shown: ['8 damaged codewords repaired'] },
       /* the same PNG drawn mirrored left to right on a canvas (translate(width, 0), scale(-1, 1)), then uploaded; meta ends "· mirrored" */
       { browser: { page: '/qr/qr-code-scanner/', file: 'trick-M.png mirrored left to right', barcodeDetector: false }, shown: ['mirrored'] },
-      /* the same PNG drawn through ctx.filter = 'invert(1)', then uploaded: no card, the page's message line */
-      { browser: { page: '/qr/qr-code-scanner/', file: 'trick-M.png colour-inverted', barcodeDetector: false }, shown: ['No QR code was found in that image'] }
+      /* the same PNG drawn through ctx.filter = 'invert(1)', then uploaded (re-run after the inverted-read fix); result card "Goes to: login.example.net", meta "Version 4 · level M · mask 7 · light on dark" */
+      { browser: { page: '/qr/qr-code-scanner/', file: 'trick-M.png colour-inverted', barcodeDetector: false }, shown: ['light on dark'] }
     ]
   },
 

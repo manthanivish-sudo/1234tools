@@ -240,7 +240,11 @@ window.DEV_TOOLS["base64"] = {
         if (dir === 'enc') {
           let out = b64encode(text);
           if (safe === 'url') out = out.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-          return { output: out, stats: [['Input', bytes(text)], ['Output', bytes(out)], ['Growth', `+${Math.round((out.length / Math.max(1, text.length) - 1) * 100)}%`]] };
+          /* Growth is bytes out over bytes in, the same UTF-8 bytes the Input
+             figure counts. Characters undercounted accented text, so Café
+             Zoë — ₹1,499 paid ✓ (24 characters, 32 bytes) read +83%, not +38%. */
+          const inBytes = new TextEncoder().encode(text).length;
+          return { output: out, stats: [['Input', bytes(text)], ['Output', bytes(out)], ['Growth', `+${Math.round((out.length / Math.max(1, inBytes) - 1) * 100)}%`]] };
         }
         let src = text.trim().replace(/-/g, '+').replace(/_/g, '/');
         while (src.length % 4) src += '=';

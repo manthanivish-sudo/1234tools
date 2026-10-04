@@ -472,7 +472,8 @@ const statMap = (res) => new Map((res.stats || []).map(([k, v]) => [k, v]));
   ok(latin1(r.files[0].bytes).includes('(DRAFT) Tj'), 'the watermark text is drawn');
 
   /* the original page text must still be underneath */
-  const wmOrig = await wmDoc.decodeStream(await wmDoc.resolve(wmPage.dict.Contents[0]));
+  /* Contents[0] is the q that isolates the page's own state from the stamp */
+  const wmOrig = await wmDoc.decodeStream(await wmDoc.resolve(wmPage.dict.Contents[1]));
   ok(/\bT[jJ]\b/.test(latin1(wmOrig)), 'the original page content survives beneath the watermark');
 
   r = await run('watermark-pdf', { docs: [c5], opts: { text: '' } });

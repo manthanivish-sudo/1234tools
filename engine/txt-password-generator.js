@@ -8,14 +8,21 @@ window.TEXT_TOOLS["password-generator"] = {
 "regenerate": true,
 "fields": [{"key":"type","label":"Type","type":"select","default":"password","options":[{"value":"password","label":"Random characters"},{"value":"passphrase","label":"Passphrase (memorable words)"}]},{"key":"length","label":"Length (characters)","type":"number","default":20,"min":6,"max":128},{"key":"words","label":"Words (passphrase)","type":"number","default":5,"min":3,"max":12},{"key":"upper","label":"Uppercase A-Z","type":"select","default":"yes","options":[{"value":"yes","label":"Include"},{"value":"no","label":"Exclude"}]},{"key":"digits","label":"Digits 0-9","type":"select","default":"yes","options":[{"value":"yes","label":"Include"},{"value":"no","label":"Exclude"}]},{"key":"symbols","label":"Symbols","type":"select","default":"yes","options":[{"value":"yes","label":"Include"},{"value":"no","label":"Exclude"}]},{"key":"ambiguous","label":"Lookalike characters (l, 1, O, 0)","type":"select","default":"exclude","options":[{"value":"exclude","label":"Exclude"},{"value":"include","label":"Include"}]},{"key":"count","label":"How many","type":"number","default":5,"min":1,"max":50}],
 "generate": (f) => {
+      /* A uniform whole number from 0 to limit - 1 from the browser's
+         cryptographic generator. Rejection sampling keeps it unbiased: a
+         32-bit draw in the top slice that does not divide evenly by limit is
+         drawn again. There is no Math.random fallback: a password from a
+         predictable generator is worse than none, so without crypto the tool
+         says so and stops. */
+      const hasCrypto = typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function';
+      if (!hasCrypto) {
+        return { error: 'This browser has no cryptographic random source (crypto.getRandomValues), so no password was made. Use a current browser.' };
+      }
       const rand = (limit) => {
-        if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-          const max32 = 4294967296, bound = max32 - (max32 % limit);
-          const buf = new Uint32Array(1);
-          let v; do { crypto.getRandomValues(buf); v = buf[0]; } while (v >= bound);
-          return v % limit;
-        }
-        return Math.floor(Math.random() * limit);
+        const max32 = 4294967296, bound = max32 - (max32 % limit);
+        const buf = new Uint32Array(1);
+        let v; do { crypto.getRandomValues(buf); v = buf[0]; } while (v >= bound);
+        return v % limit;
       };
 
       const n = Math.max(1, Math.min(50, Number(f.count) || 1));
@@ -28,7 +35,13 @@ window.TEXT_TOOLS["password-generator"] = {
         const w = Math.max(3, Math.min(12, Number(f.words) || 5));
         for (let i = 0; i < n; i++) {
           const parts = Array.from({ length: w }, () => WORDS[rand(WORDS.length)]);
-          if (f.upper === 'yes') parts[rand(w)] = parts[rand(w)].replace(/^./, c => c.toUpperCase());
+          /* One word, picked once, gets a capital. Two separate draws here
+             once copied a capitalised word over a different one, so a word
+             appeared twice and another vanished. */
+          if (f.upper === 'yes') {
+            const k = rand(w);
+            parts[k] = parts[k].replace(/^./, c => c.toUpperCase());
+          }
           let p = parts.join('-');
           if (f.digits === 'yes') p += '-' + rand(100);
           out.push(p);
@@ -62,7 +75,7 @@ window.TEXT_TOOLS["password-generator"] = {
           ['Entropy', `${Math.round(entropy)} bits`],
           ['Character pool', String(poolSize) + (f.type === 'passphrase' ? ' words' : ' characters')],
           ['Offline cracking time*', crack],
-          ['Random source', (typeof crypto !== 'undefined' && crypto.getRandomValues) ? 'crypto.getRandomValues' : 'Math.random fallback']
+          ['Random source', 'crypto.getRandomValues']
         ],
         warn: entropy < 60 ? 'Below about 60 bits of entropy is weak for anything that matters. Increase the length or add character types.' : ''
       };
