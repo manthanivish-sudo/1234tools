@@ -3945,6 +3945,32 @@ html.is-embed .tool > .proof, html.is-embed .tool > .proof-pills { display: none
 /* embed mode shows the tool alone */
 html.is-embed .tool > .depth { display: none !important; }
 /* ==== /D7-depth ==== */
+/* ==== D7-depth-files ==== */
+/* Written by build-depth.js: the method a file or text tool uses, step by step. */
+.depth-points {
+  list-style: none; counter-reset: depth-pt; margin: 16px 0 0; padding: 6px 18px;
+  border-radius: var(--radius-sm); background: color-mix(in srgb, var(--accent) 7%, var(--bg-0));
+  border: 1px solid var(--border-gold); border-left: 4px solid var(--accent);
+}
+.depth-points li {
+  counter-increment: depth-pt; position: relative; padding: 10px 0 10px 34px;
+  font-size: .97rem; line-height: 1.62; color: var(--text-2); overflow-wrap: break-word;
+}
+.depth-points li + li { border-top: 1px dashed var(--border); }
+.depth-points li::before {
+  content: counter(depth-pt); position: absolute; left: 0; top: 11px; display: grid; place-items: center;
+  width: 22px; height: 22px; border-radius: 50%; font: 700 .76rem/1 var(--font-body);
+  color: var(--accent); background: var(--bg-0); border: 1px solid var(--border-gold);
+}
+.depth-works code, .depth-points code {
+  font: 500 .9em/1.4 var(--font-mono); color: var(--text-1); overflow-wrap: anywhere;
+  padding: 1px 5px; border-radius: 4px; background: var(--bg-0); border: 1px solid var(--border);
+}
+@media (max-width: 640px) {
+  .depth-points { padding: 4px 14px; }
+  .depth-points li { padding-left: 30px; font-size: .95rem; }
+}
+/* ==== /D7-depth-files ==== */
 
 /* ==== D6-conversions: unit picker, popular pairs, grouped lists, the formula and table on pair pages ==== */
 /* Written by build-conversions.js. Theme tokens only; the picker's live

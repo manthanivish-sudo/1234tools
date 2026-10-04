@@ -24,6 +24,16 @@
  * "Common uses", "Mistakes to avoid", "More questions" and "Related
  * conversions and guides" (a link is written only when its page exists).
  *
+ * The tools that work on files and text (/image/, /pdf/, /text/,
+ * /developer/, /qr/) have the same block in a different shape: their entry
+ * carries `howItWorks` ({ text, points }) in place of `formula`, rendered as
+ * "How it works in your browser" (the method the page's own engine uses, as
+ * a numbered list; `code spans` become <code>), and a worked example in
+ * words with no "Try these numbers". On any page, a section whose heading
+ * the page already gives one of its own panels is left out. The style for
+ * the numbered list is kept in this file (D7-depth-files, after D7-depth in
+ * app.css), so build/site/depth.css and the calculator pages are untouched.
+ *
  * The "More questions" are also merged into the page's FAQPage in its
  * JSON-LD: appended to the existing FAQPage's mainEntity, each Question
  * with an @id ending "#depth-q<n>" so a re-run can take exactly its own
@@ -77,8 +87,11 @@ const isNoindex = (html) => /<meta name="robots" content="noindex/.test(html);
 /* ---------- the content ---------- */
 
 /* `checks` is never rendered: it lists figures quoted outside the worked
-   example, with the inputs that produce them, for build/content/_check.js. */
-const KEYS = new Set(['term', 'whatTitle', 'whatIs', 'formula', 'howTo', 'worked', 'uses', 'mistakes', 'faq', 'related', 'checks']);
+   example, with the inputs that produce them, for build/content/_check.js.
+   `runs` is never rendered either: on a file or text tool (an entry with
+   `howItWorks` in place of `formula`) it records each run of the tool that
+   a quoted figure came from, with its parameters, so it can be re-run. */
+const KEYS = new Set(['term', 'whatTitle', 'whatIs', 'formula', 'howItWorks', 'howTo', 'worked', 'uses', 'mistakes', 'faq', 'related', 'checks', 'runs']);
 
 function validate(url, d, file) {
   const where = 'build-depth.js: ' + file + ' ' + url;
@@ -88,6 +101,12 @@ function validate(url, d, file) {
   if (!prose(d.whatIs)) throw new Error(where + ': whatIs is required (a string, or a list of paragraphs)');
   if (!d.term && !d.whatTitle) throw new Error(where + ': term (or whatTitle) is required');
   if (d.formula && (typeof d.formula.text !== 'string' || !d.formula.expr)) throw new Error(where + ': formula needs text and expr');
+  if (d.howItWorks) {
+    const h = d.howItWorks;
+    if (d.formula) throw new Error(where + ': formula or howItWorks, not both');
+    if (!prose(h.text) || !Array.isArray(h.points) || !h.points.length || !h.points.every((p) => typeof p === 'string' && p)) throw new Error(where + ': howItWorks needs text and a list of points');
+  }
+  if (d.runs !== undefined && !Array.isArray(d.runs)) throw new Error(where + ': runs is a list');
   if (d.worked && !prose(d.worked.text)) throw new Error(where + ': worked needs text');
   for (const k of ['uses', 'mistakes', 'faq', 'howTo']) if (d[k] !== undefined && !Array.isArray(d[k])) throw new Error(where + ': ' + k + ' is a list');
   (d.faq || []).forEach((f) => { if (!f || !f.q || !f.a) throw new Error(where + ': every faq entry has q and a'); });
@@ -153,10 +172,30 @@ function tryHref(inputs) {
   return '#' + q.toString();
 }
 
+/* `code spans` in a howItWorks text or point become <code>: the method is
+   often a call (canvas.toBlob, JSON.parse) best read as code */
+const inline = (s) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
+const headingKey = (s) => String(s).toLowerCase().replace(/&amp;/g, '&').replace(/<[^>]+>/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+
 function render(d, has) {
   const out = [];
+  /* a section whose heading the page already uses for a panel of its own is
+     left out: the page has that topic covered (the opening "What is" stays,
+     it names the block) */
+  const own = has.own || new Set();
+  const push = (html) => { if (!own.has(headingKey(/<h2 [^>]*>(?:<span>)?([^<]*)</.exec(html)[1]))) out.push(html); };
   const what = d.whatTitle || ('What is ' + d.term + '?');
   out.push(sec('depth-what-h', what, para(d.whatIs), 'depth-what'));
+
+  if (d.howItWorks) {
+    const h = d.howItWorks;
+    const text = (Array.isArray(h.text) ? h.text : [h.text]).map((p) => '<p>' + inline(p) + '</p>').join('');
+    /* the heading's text sits in a <span>: build-proof.js reads an <h2> that
+       opens "How it works" as the page's own steps panel and would then drop
+       the three steps from its "Why people use it" panel */
+    push(sec('depth-works-h', 'How it works in your browser', text + '<ol class="depth-points">' + h.points.map((p) => '<li>' + inline(p) + '</li>').join('') + '</ol>', 'depth-works')
+      .replace('<h2 id="depth-works-h">How it works in your browser</h2>', '<h2 id="depth-works-h"><span>How it works in your browser</span></h2>'));
+  }
 
   if (d.formula) {
     const f = d.formula;
@@ -164,12 +203,12 @@ function render(d, has) {
     const vars = (f.vars || []).length
       ? '<dl class="depth-vars">' + f.vars.map((v) => '<div><dt><code>' + esc(v[0]) + '</code></dt><dd>' + esc(v[1]) + '</dd></div>').join('') + '</dl>'
       : '';
-    out.push(sec('depth-calc-h', 'How it is calculated', para(f.text) + '<div class="depth-formula" role="figure" aria-label="Formula">' + exprs + '</div>' + vars, 'depth-calc'));
+    push(sec('depth-calc-h', 'How it is calculated', para(f.text) + '<div class="depth-formula" role="figure" aria-label="Formula">' + exprs + '</div>' + vars, 'depth-calc'));
   }
 
   if (d.howTo && d.howTo.length && !has.steps) {
     /* not "How to use …": build-proof.js reads that heading as the page's own steps */
-    out.push(sec('depth-how-h', 'Step by step','<ol class="depth-steps">' + d.howTo.map((s) => '<li>' + esc(s) + '</li>').join('') + '</ol>', 'depth-how'));
+    push(sec('depth-how-h', 'Step by step','<ol class="depth-steps">' + d.howTo.map((s) => '<li>' + esc(s) + '</li>').join('') + '</ol>', 'depth-how'));
   }
 
   if (d.worked) {
@@ -177,19 +216,19 @@ function render(d, has) {
     const go = w.inputs && has.tool
       ? '<p class="depth-try"><a class="btn-ghost" href="' + esc(tryHref(w.inputs)) + '" data-proof-try="' + esc(has.tool) + '">Try these numbers ↑</a></p>'
       : '';
-    out.push(sec('depth-worked-h', w.title || 'Another worked example', '<div class="depth-worked example-result">' + para(w.text) + '</div>' + go, 'depth-ex'));
+    push(sec('depth-worked-h', w.title || 'Another worked example', '<div class="depth-worked example-result">' + para(w.text) + '</div>' + go, 'depth-ex'));
   }
 
   if (d.uses && d.uses.length) {
-    out.push(sec('depth-uses-h', 'Common uses', '<ul class="depth-uses">' + d.uses.map((u) => '<li><strong>' + esc(u[0]) + '</strong> ' + esc(u[1]) + '</li>').join('') + '</ul>', 'depth-use'));
+    push(sec('depth-uses-h', 'Common uses', '<ul class="depth-uses">' + d.uses.map((u) => '<li><strong>' + esc(u[0]) + '</strong> ' + esc(u[1]) + '</li>').join('') + '</ul>', 'depth-use'));
   }
 
   if (d.mistakes && d.mistakes.length) {
-    out.push(sec('depth-mistakes-h', 'Mistakes to avoid', '<ul class="depth-mistakes">' + d.mistakes.map((m) => '<li>' + esc(m) + '</li>').join('') + '</ul>', 'depth-mis'));
+    push(sec('depth-mistakes-h', 'Mistakes to avoid', '<ul class="depth-mistakes">' + d.mistakes.map((m) => '<li>' + esc(m) + '</li>').join('') + '</ul>', 'depth-mis'));
   }
 
   if (d.faq && d.faq.length) {
-    out.push(sec('depth-faq-h', 'More questions', d.faq.map((f) => '<details><summary>' + esc(f.q) + '</summary><p>' + esc(f.a) + '</p></details>').join(''), 'depth-faq'));
+    push(sec('depth-faq-h', 'More questions', d.faq.map((f) => '<details><summary>' + esc(f.q) + '</summary><p>' + esc(f.a) + '</p></details>').join(''), 'depth-faq'));
   }
 
   const links = [];
@@ -202,7 +241,7 @@ function render(d, has) {
     const hasConv = links.some((l) => l[2] === 'conversion');
     const hasGuide = links.some((l) => l[2] === 'guide');
     const title = hasConv && hasGuide ? 'Related conversions and guides' : hasConv ? 'Related conversions' : 'Related guides';
-    out.push(sec('depth-rel-h', title, '<ul class="related depth-related">' + links.map((l) =>
+    push(sec('depth-rel-h', title, '<ul class="related depth-related">' + links.map((l) =>
       '<li><a href="' + esc(l[0]) + '">' + esc(l[1]) + '</a><span class="depth-kind">' + l[2] + '</span></li>').join('') + '</ul>', 'depth-rel'));
   }
 
@@ -281,6 +320,15 @@ function insertAt(html, from, end) {
   return { at: from, indent: '  ' };
 }
 
+/** The headings of the page's own panels in the article (not build-proof.js's). */
+function ownHeadings(article) {
+  const own = new Set();
+  const re = /<section class="panel(?: ([^"]*))?"[^>]*>\s*<h2[^>]*>([\s\S]*?)<\/h2>/g;
+  let m;
+  while ((m = re.exec(article))) if (!/\b(proof|depth)\b/.test(m[1] || '')) own.add(headingKey(m[2]));
+  return own;
+}
+
 /* ---------- one page ---------- */
 
 function plan(src, rel) {
@@ -304,7 +352,8 @@ function plan(src, rel) {
   const tail = html.slice(articleAt, end);
   const has = {
     steps: STEPS_RE.test(tail),
-    tool: /MVRTool\.mountCurrency\(/.test(html) ? 'currency' : /MVRTool\.mount\(/.test(html) ? 'calc' : ''
+    tool: /MVRTool\.mountCurrency\(/.test(html) ? 'currency' : /MVRTool\.mount\(/.test(html) ? 'calc' : '',
+    own: ownHeadings(tail)
   };
   const where = insertAt(html, from, end);
   const block = where.indent + OPEN + '\n' + where.indent + render(d, has) + '\n' + where.indent + CLOSE;
@@ -340,9 +389,59 @@ function patchCss() {
       ? src.slice(0, p + CSS_AFTER.length) + '\n' + block + src.slice(p + CSS_AFTER.length)
       : src.trimEnd() + '\n' + block + '\n';
   }
+  next = withBlock(next, FILES_CSS_OPEN, FILES_CSS_CLOSE, FILES_CSS, CSS_CLOSE);
   if (next === src) return false;
   if (!CHECK) fs.writeFileSync(abs, next);
   return true;
+}
+
+/* The file and text tools' "How it works in your browser": the method as a
+   numbered list in the formula's highlighted box. Kept here rather than in
+   build/site/depth.css so that fragment, and every calculator page, stays
+   exactly as it was; it sits in app.css straight after the D7 block. */
+const FILES_CSS_OPEN = '/* ==== D7-depth-files ==== */';
+const FILES_CSS_CLOSE = '/* ==== /D7-depth-files ==== */';
+const FILES_CSS = [
+  FILES_CSS_OPEN,
+  '/* Written by build-depth.js: the method a file or text tool uses, step by step. */',
+  '.depth-points {',
+  '  list-style: none; counter-reset: depth-pt; margin: 16px 0 0; padding: 6px 18px;',
+  '  border-radius: var(--radius-sm); background: color-mix(in srgb, var(--accent) 7%, var(--bg-0));',
+  '  border: 1px solid var(--border-gold); border-left: 4px solid var(--accent);',
+  '}',
+  '.depth-points li {',
+  '  counter-increment: depth-pt; position: relative; padding: 10px 0 10px 34px;',
+  '  font-size: .97rem; line-height: 1.62; color: var(--text-2); overflow-wrap: break-word;',
+  '}',
+  '.depth-points li + li { border-top: 1px dashed var(--border); }',
+  '.depth-points li::before {',
+  '  content: counter(depth-pt); position: absolute; left: 0; top: 11px; display: grid; place-items: center;',
+  '  width: 22px; height: 22px; border-radius: 50%; font: 700 .76rem/1 var(--font-body);',
+  '  color: var(--accent); background: var(--bg-0); border: 1px solid var(--border-gold);',
+  '}',
+  '.depth-works code, .depth-points code {',
+  '  font: 500 .9em/1.4 var(--font-mono); color: var(--text-1); overflow-wrap: anywhere;',
+  '  padding: 1px 5px; border-radius: 4px; background: var(--bg-0); border: 1px solid var(--border);',
+  '}',
+  '@media (max-width: 640px) {',
+  '  .depth-points { padding: 4px 14px; }',
+  '  .depth-points li { padding-left: 30px; font-size: .95rem; }',
+  '}',
+  FILES_CSS_CLOSE
+].join('\n');
+
+/** src with exactly one copy of block between open and close, placed after `after` when new. */
+function withBlock(src, open, close, block, after) {
+  const a = src.indexOf(open);
+  if (a >= 0) {
+    const b = src.indexOf(close, a);
+    if (b < 0) throw new Error('build-depth.js: unterminated ' + open + ' in assets/app.css');
+    return src.slice(0, a) + block + src.slice(b + close.length);
+  }
+  const p = src.indexOf(after);
+  return p >= 0
+    ? src.slice(0, p + after.length) + '\n' + block + src.slice(p + after.length)
+    : src.trimEnd() + '\n' + block + '\n';
 }
 
 /* ---------- the walk (build-proof.js's) ---------- */

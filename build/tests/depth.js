@@ -29,6 +29,18 @@
  *      the viewport; embed mode hides the block
  *   3  screenshots at 1366 and 390, light and dark
  *   and, through all of it, not one request to anything but 127.0.0.1.
+ *
+ * The file and text tools (/image/, /pdf/, /text/, /developer/, /qr/) have
+ * the block in its own shape, "How it works in your browser" in place of the
+ * formula. Statically: every such page has an entry, each recorded run of a
+ * code tool gives the quoted figures when its engine is run again in Node,
+ * and the four pages below carry the method list and no "Try these numbers".
+ * In the browser, /image/image-compressor/, /pdf/merge-pdf/,
+ * /developer/json-formatter/ and /qr/qr-code-generator/: the sections in
+ * order, after "Why people use it" and before the page's first own panel;
+ * the JSON-LD on the live page holds exactly one FAQPage, the page's own
+ * questions then each new one once; a new question opens; no overflow at
+ * 390 px; screenshots as above.
  */
 'use strict';
 const path = require('path');
@@ -45,6 +57,7 @@ const BASE = 'http://127.0.0.1:' + PORT;
 const CHROME = process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const SITE = 'https://www.1234tools.com';
 const PAGES = ['/mathematics/percentage/', '/india/emi-calculator/', '/health/bmi/', '/business/uk-take-home-pay/'];
+const FILE_PAGES = ['/image/image-compressor/', '/pdf/merge-pdf/', '/developer/json-formatter/', '/qr/qr-code-generator/'];
 fs.mkdirSync(OUT, { recursive: true });
 
 function loadPuppeteer() {
@@ -84,14 +97,47 @@ function staticChecks() {
   console.log('      content: ' + urls.length + ' pages, ' + words.reduce((a, b) => a + b, 0) + ' words, ' +
     Math.min.apply(null, words) + '–' + Math.max.apply(null, words) + ' a page');
   check(res.pages.length >= 70 && res.pages.every((u) => res.content[u]), 'every calculator page has a content entry (' + res.pages.length + ')', res.pages.filter((u) => !res.content[u]).join(', '));
+  check(res.files.length >= 70 && res.files.every((u) => res.content[u]), 'every file and text tool page (/image/, /pdf/, /text/, /developer/, /qr/) has a content entry (' + res.files.length + ')', res.files.filter((u) => !res.content[u]).join(', '));
   const dups = res.errors.filter((e) => /^duplicate sentence/.test(e));
   check(dups.length === 0, 'no sentence of 8 or more words appears on two pages', dups.slice(0, 3).join(' | '));
-  const figs = res.errors.filter((e) => /worked|checks\[|compute/.test(e));
+  const runs = res.errors.filter((e) => /\bruns(\[\d+\])?:/.test(e));
+  check(runs.length === 0, 'every recorded tool run is complete, and each code tool\'s run, repeated in Node with the page\'s own engine, gives the figures the text quotes', runs.slice(0, 3).join(' | '));
+  const figs = res.errors.filter((e) => runs.indexOf(e) < 0 && /worked|checks\[|compute/.test(e));
   check(figs.length === 0, 'every worked-example and quoted figure equals a fresh compute with the page\'s own engine', figs.slice(0, 3).join(' | '));
   const wc = res.errors.filter((e) => /words of new text/.test(e));
   check(wc.length === 0, 'every page has 250–450 words of new text', wc.slice(0, 4).join(' | '));
-  const rest = res.errors.filter((e) => dups.indexOf(e) < 0 && figs.indexOf(e) < 0 && wc.indexOf(e) < 0 && !/no content entry/.test(e));
+  const rest = res.errors.filter((e) => dups.indexOf(e) < 0 && runs.indexOf(e) < 0 && figs.indexOf(e) < 0 && wc.indexOf(e) < 0 && !/no content entry/.test(e));
   check(rest.length === 0, 'build/content/_check.js finds nothing else (' + res.warnings.length + ' warning(s))', rest.slice(0, 4).join(' | '));
+
+  /* the four file and text tool pages: the method list, and their code runs repeated here as well */
+  for (const url of FILE_PAGES) {
+    const d = res.content[url];
+    const block = fs.existsSync(file(url)) ? ((read(url).match(BLOCK) || [])[0] || '') : '';
+    const steps = (/<ol class="depth-points">([\s\S]*?)<\/ol>/.exec(block) || ['', ''])[1].split('<li>').length - 1;
+    check(!!(d && d.howItWorks) && /<h2 id="depth-works-h"><span>How it works in your browser<\/span><\/h2>/.test(block) && steps === d.howItWorks.points.length && !/depth-calc-h|data-proof-try/.test(block),
+      url + ': "How it works in your browser" with ' + steps + ' steps, no formula and no "Try these numbers"', block.slice(0, 200));
+    /* build-proof.js keeps its three steps in "Why people use it": the block's heading is not read as the page's own "How it works" */
+    const story = fs.existsSync(file(url)) ? read(url) : '';
+    check(/<section class="panel proof proof-why"[\s\S]*?<ol class="proof-steps"[\s\S]*?<!-- \/PROOF -->/.test(story) && require(path.join(ROOT, 'build-proof.js')).apply(story, url.replace(/^\/+/, '') + 'index.html') === story,
+      url + ': "Why people use it" keeps its three steps, and build-proof.js leaves the page as it is');
+    const code = ((d && d.runs) || []).filter((r) => !r.browser);
+    const browser = ((d && d.runs) || []).filter((r) => r.browser);
+    if (code.length) {
+      const bad = [];
+      code.forEach((r, i) => {
+        let out;
+        try { out = checker.runCode(checker.codeTool(url, ROOT), r); } catch (e) { bad.push(i + ': ' + e.message); return; }
+        (r.check || []).forEach((c) => { if (!checker.runShows(out, c[0], c[1])) bad.push(i + ': ' + c[0] + ' ≠ ' + c[1]); });
+      });
+      const n = code.reduce((a, r) => a + (r.check || []).length, 0);
+      check(bad.length === 0 && n > 0, url + ': ' + code.length + ' recorded run(s), repeated with the page\'s own engine, give all ' + n + ' quoted figures', bad.join(' | '));
+    }
+    if (browser.length) {
+      const all = checker.texts(d).join(' ');
+      const shown = browser.reduce((a, r) => a.concat(r.shown || []), []);
+      check(shown.length > 0 && shown.every((s) => all.indexOf(s) >= 0) && browser.every((r) => Object.keys(r.browser).length), url + ': ' + browser.length + ' browser run(s) recorded with their parameters; the ' + shown.length + ' figures they showed are the ones the text quotes (' + shown.slice(0, 4).join(', ') + ')');
+    }
+  }
 
   /* the four test pages: worked figures, recomputed here as well */
   for (const url of PAGES) {
@@ -259,6 +305,67 @@ async function caseDesktop(browser, url) {
   await page.close();
 }
 
+const FILE_SECTIONS_H2 = ['How it works in your browser', 'Another worked example', 'Common uses', 'Mistakes to avoid', 'More questions'];
+
+async function caseFileDesktop(browser, url) {
+  const d = checker.loadContent(ROOT).all[url];
+  /* the page's own panels are the ones in its HTML (scripts add others, such as the install prompt) */
+  const ownH2 = [];
+  const reOwn = /<section class="panel(?: ([^"]*))?"[^>]*>\s*<h2[^>]*>([^<]*)<\/h2>/g;
+  const src = read(url).replace(BLOCK, '');
+  let mo;
+  while ((mo = reOwn.exec(src))) if (!/\b(proof|depth)\b/.test(mo[1] || '')) ownH2.push(unescape(mo[2]).trim());
+  const page = await open(browser, url);
+  const st = await page.evaluate((ownH2) => {
+    const box = document.querySelector('.tool .depth');
+    if (!box) return null;
+    const why = document.querySelector('.tool .proof-why');
+    const owns = [...document.querySelectorAll('.tool > section.panel:not(.proof):not(.depth)')].filter((p) => p.querySelector('h2') && ownH2.indexOf(p.querySelector('h2').textContent.trim()) >= 0);
+    const own = owns[0];
+    const graphs = [...document.querySelectorAll('script[type="application/ld+json"]')].map((s) => { try { const j = JSON.parse(s.textContent); return Array.isArray(j['@graph']) ? j['@graph'] : [j]; } catch (e) { return [{ broken: true }]; } });
+    const nodes = [].concat.apply([], graphs);
+    const faqs = nodes.filter((x) => x && x['@type'] === 'FAQPage');
+    return {
+      h2: [...box.querySelectorAll('h2')].map((h) => h.textContent.trim()),
+      afterWhy: !!(why && (why.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      beforeOwn: owns.length === ownH2.length && owns.every((p) => box.compareDocumentPosition(p) & Node.DOCUMENT_POSITION_FOLLOWING),
+      ownH2: own ? own.querySelector('h2').textContent.trim() : null,
+      points: box.querySelectorAll('.depth-works .depth-points li').length,
+      formula: box.querySelectorAll('.depth-formula, .depth-calc').length,
+      tryLink: box.querySelectorAll('[data-proof-try]').length,
+      uses: box.querySelectorAll('.depth-uses li').length,
+      mistakes: box.querySelectorAll('.depth-mistakes li').length,
+      faq: box.querySelectorAll('.depth-faq details').length,
+      broken: nodes.some((x) => x && x.broken),
+      faqPages: faqs.length,
+      names: faqs.length ? faqs[0].mainEntity.map((q) => q.name) : [],
+      ids: faqs.length ? faqs[0].mainEntity.map((q) => q['@id'] || '') : [],
+      ownQs: [...document.querySelectorAll('.tool > section.panel:not(.depth) details > summary')].map((s) => s.textContent.trim()),
+      measure: Math.max.apply(null, [...box.querySelectorAll('.depth-sec')].map((s) => s.getBoundingClientRect().width)),
+      font: parseFloat(getComputedStyle(box.querySelector('.depth-points li')).fontSize)
+    };
+  }, ownH2);
+  check(!!st, url + ': the DEPTH panel is on the page');
+  if (!st) { await page.close(); return; }
+  const first = d.whatTitle || ('What is ' + d.term + '?');
+  const want = [first].concat(FILE_SECTIONS_H2);
+  const order = want.map((h) => st.h2.indexOf(h));
+  check(order.every((i, k) => i === k), url + ': sections ' + st.h2.join(' · '), JSON.stringify(st.h2));
+  check(st.afterWhy && st.beforeOwn, url + ': after "Why people use it", before the page\'s own panels (' + ownH2.join(', ') + ')', JSON.stringify(st));
+  check(st.points === d.howItWorks.points.length && st.points >= 2 && st.formula === 0 && st.tryLink === 0 && st.uses >= 3 && st.mistakes >= 2 && st.faq >= 3,
+    url + ': ' + st.points + ' method steps, no formula, no "Try these numbers", ' + st.uses + ' uses, ' + st.mistakes + ' mistakes, ' + st.faq + ' questions', JSON.stringify(st));
+  const newQs = d.faq.map((f) => f.q);
+  const onceEach = newQs.every((q) => st.names.filter((n) => n === q).length === 1);
+  const ownFirst = JSON.stringify(st.names.slice(0, st.ownQs.length)) === JSON.stringify(st.ownQs);
+  const tagged = st.ids.slice(-newQs.length).every((id, i) => id === SITE + url + '#depth-q' + (i + 1));
+  check(!st.broken && st.faqPages === 1 && onceEach && ownFirst && tagged && st.names.length === st.ownQs.length + newQs.length,
+    url + ': the live JSON-LD has one FAQPage: the page\'s ' + (st.names.length - newQs.length) + ' own question(s), then the ' + newQs.length + ' new ones once each (#depth-q1…)', JSON.stringify({ faqPages: st.faqPages, names: st.names, ownQs: st.ownQs }));
+  check(st.measure <= 1000 && st.font >= 14, url + ': long-form measure (' + Math.round(st.measure) + ' px) and method text ' + st.font + ' px', JSON.stringify(st));
+  const opened = await page.evaluate(() => { const s = document.querySelector('.depth-faq summary'); if (!s) return false; s.click(); return s.parentNode.open && s.parentNode.querySelector('p').getBoundingClientRect().height > 0; });
+  check(opened, url + ': a new question opens to its answer');
+  await page.close();
+}
+
 async function caseNarrow(browser, url) {
   const page = await open(browser, url, { width: 390, height: 844 });
   const st = await page.evaluate(() => {
@@ -282,7 +389,7 @@ async function screenshots(browser) {
   let n = 0;
   for (const theme of ['dark', 'light']) {
     for (const width of [1366, 390]) {
-      for (const url of PAGES) {
+      for (const url of PAGES.concat(FILE_PAGES)) {
         const page = await open(browser, url, { width, height: width > 500 ? 900 : 844, theme });
         const el = await page.$('.tool .depth');
         if (el) {
@@ -296,7 +403,7 @@ async function screenshots(browser) {
       }
     }
   }
-  check(n === 16, 'screenshots of the DEPTH panel written to ' + OUT + ' (' + n + ')');
+  check(n === 4 * (PAGES.length + FILE_PAGES.length), 'screenshots of the DEPTH panel written to ' + OUT + ' (' + n + ')');
 }
 
 (async () => {
@@ -307,6 +414,8 @@ async function screenshots(browser) {
   try {
     for (const url of PAGES) await caseDesktop(browser, url);
     for (const url of PAGES) await caseNarrow(browser, url);
+    for (const url of FILE_PAGES) await caseFileDesktop(browser, url);
+    for (const url of FILE_PAGES) await caseNarrow(browser, url);
     await caseEmbed(browser);
     if (SHOTS) await screenshots(browser);
   } finally {
