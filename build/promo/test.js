@@ -347,6 +347,41 @@ check('a corrupt store file is treated as empty, not as a crash', () => {
   assert.deepStrictEqual(ST.listDrafts(), []);
 });
 
+section('calendar: the 90-day short-video plan');
+const CAL = require('./calendar');
+check('a plan has about 1-2 videos a day for 90 days, in all five formats', () => {
+  const c = CAL.plan('2026-10-05');
+  assert.ok(c.items.length >= 100 && c.items.length <= 140, 'items ' + c.items.length);
+  const formats = new Set(c.items.map((x) => x.format));
+  for (const f of ['problem', 'before', 'dev', 'india', 'ai']) assert.ok(formats.has(f), 'missing ' + f);
+});
+check('no tool repeats within 21 days', () => {
+  const seen = {};
+  for (const it of CAL.get().items) {
+    const d = new Date(it.date);
+    if (seen[it.tool]) assert.ok((d - seen[it.tool]) / 864e5 >= 21, it.tool + ' on ' + it.date);
+    seen[it.tool] = d;
+  }
+});
+check('AI tools only in the AI format, and every slot has a hook and a Reel Maker link', () => {
+  for (const it of CAL.get().items) {
+    if (it.tool.indexOf('/ai/') === 0) assert.strictEqual(it.format, 'ai');
+    assert.ok(it.hook && it.reel.indexOf('/ai-video/reel-maker/?tool=') > 0, it.id);
+  }
+});
+check('re-planning keeps what was made or posted', () => {
+  const first = CAL.get().items[0];
+  CAL.setStatus(first.id, 'posted', 'https://www.instagram.com/p/example/');
+  const again = CAL.plan('2026-10-05').items.find((x) => x.id === first.id);
+  assert.strictEqual(again.status, 'posted');
+  assert.strictEqual(again.postedUrl, 'https://www.instagram.com/p/example/');
+});
+check('the CSV has a header and a row per slot', () => {
+  const lines = CAL.csv().trim().split('\r\n');
+  assert.strictEqual(lines.length, CAL.get().items.length + 1);
+  assert.ok(/^"Date","Format","Tool"/.test(lines[0]));
+});
+
 /* the real thing: data written through one server process is there after
    it is killed and a new one is started on the same PROMO_HOME */
 async function restartCheck() {

@@ -125,3 +125,15 @@ select{cursor:pointer}
 .badge.st-answered{color:#7dd3a0}
 .badge.st-drafted{color:var(--gold)}
 .linkish{background:none;border:0;padding:0;color:var(--gold);cursor:pointer;font:inherit;text-decoration:underline}
+/* the 90-day video calendar (calendar.js) */
+.cal-title{margin:0 0 4px;font:700 16px 'Sora',sans-serif}
+.cal-stats{margin-top:8px;color:var(--gold)}
+.cal-week>summary{cursor:pointer;font:700 14px 'Sora',sans-serif}
+.cal-item{display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:start;padding:10px 0;border-top:1px solid var(--line2)}
+.cal-item:first-child{border-top:0}
+.cal-when{display:flex;flex-direction:column;gap:6px}
+.cal-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:360px}
+.cal-item.is-posted{opacity:.6}
+.cal-item.is-skipped{opacity:.45}
+.cal-item.is-today{box-shadow:inset 3px 0 0 var(--gold);padding-left:10px}
+@media (max-width:820px){.cal-item{grid-template-columns:1fr}.cal-actions{justify-content:flex-start}}

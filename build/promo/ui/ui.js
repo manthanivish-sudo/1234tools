@@ -110,6 +110,7 @@
     if (name === 'kits') loadKits();
     if (name === 'reels') loadReels();
     if (name === 'opps') loadSavedOpps();
+    if (name === 'calendar') loadCalendar();
   }
   $$('.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
@@ -482,7 +483,7 @@
   for (const b of document.querySelectorAll('#o-filters button')) b.addEventListener('click', () => { S.oppFilter = b.dataset.status; loadSavedOpps(); });
 
   /* -------------------------------------------------------------- KITS */
-  makePicker($('#k-tool'), $('#k-tool-list'), (t) => { S.kitTool = t.path; $('#k-seed').value = ''; loadLooks(); });
+  const kPicker = makePicker($('#k-tool'), $('#k-tool-list'), (t) => { S.kitTool = t.path; $('#k-seed').value = ''; loadLooks(); });
   function kitImages(slug, files, stamp) {
     return h('div', { class: 'kitimgs' }, files.filter((f) => /\.png$/.test(f)).map((f) => h('figure', null,
       h('a', { href: '/kits/' + encodeURIComponent(slug) + '/' + f, target: '_blank', rel: 'noopener' }, h('img', { src: '/kits/' + encodeURIComponent(slug) + '/' + f + '?t=' + stamp, alt: f, loading: 'lazy' })),
@@ -644,6 +645,58 @@
   });
 
   /* ------------------------------------------------------------- REELS */
+  /* ------------------------------------------------------------ CALENDAR */
+  async function loadCalendar() {
+    const cal = await api('/api/calendar');
+    $('#cal-start').value = cal.start;
+    const counts = { planned: 0, made: 0, posted: 0, skipped: 0 };
+    for (const it of cal.items) counts[it.status] = (counts[it.status] || 0) + 1;
+    $('#cal-stats').textContent = cal.items.length + ' videos from ' + cal.start + ' · ' + counts.posted + ' posted · ' + counts.made + ' made · ' + counts.planned + ' planned' + (counts.skipped ? ' · ' + counts.skipped + ' skipped' : '');
+    const box = clear($('#cal-weeks'));
+    const today = new Date(); const todayIso = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    let week = null, list = null, n = 0;
+    for (const it of cal.items) {
+      const wk = Math.floor((new Date(it.date) - new Date(cal.start)) / (7 * 864e5));
+      if (wk !== week) {
+        week = wk;
+        list = h('div', { class: 'stack' });
+        box.appendChild(h('details', { class: 'card cal-week', open: n < 2 ? '' : null }, h('summary', { text: 'Week ' + (wk + 1) + ' · from ' + it.date }), list));
+        n++;
+      }
+      list.appendChild(calItem(it, todayIso));
+    }
+  }
+  function calItem(it, todayIso) {
+    const set = async (status) => {
+      let postedUrl;
+      if (status === 'posted') { postedUrl = prompt('Link to the post (optional):', it.postedUrl || '') || ''; }
+      await api('/api/calendar/status', { id: it.id, status, postedUrl });
+      await loadCalendar();
+    };
+    const fmt = { problem: '#f7c948', before: '#2dd4ff', dev: '#7c5cff', india: '#ff9d2e', ai: '#ff6b9d' }[it.format] || '#f7c948';
+    return h('div', { class: 'cal-item is-' + it.status + (it.date === todayIso ? ' is-today' : '') },
+      h('div', { class: 'cal-when' }, h('b', { text: it.date }), h('span', { class: 'badge', style: 'border-color:' + fmt + ';color:' + fmt, text: it.formatLabel })),
+      h('div', { class: 'cal-what' },
+        h('div', null, h('b', { text: it.title }), ' — ', h('span', { text: it.hook })),
+        h('div', { class: 'muted small', text: it.platforms.join(' · ') }),
+        h('details', { class: 'small' }, h('summary', { text: 'Beats for the Reel' }), h('ol', null, it.beats.map((b) => h('li', { text: b }))))),
+      h('div', { class: 'cal-actions' },
+        h('a', { class: 'btn', href: it.reel, target: '_blank', rel: 'noopener noreferrer' }, 'Make the Reel'),
+        h('button', { class: 'ghost', onclick: () => { S.kitTool = it.tool; kPicker.set(it.tool); $('#k-seed').value = ''; showTab('kits'); loadLooks(); } }, 'Kit'),
+        h('button', { class: 'ghost', onclick: () => openDraft({ tool: it.tool, template: 'instagram-caption' }) }, 'Caption'),
+        it.status === 'planned' ? h('button', { class: 'ghost', onclick: () => set('made') }, 'Made') : null,
+        it.status !== 'posted' ? h('button', { class: 'ghost', onclick: () => set('posted') }, 'Posted') : (it.postedUrl ? h('a', { class: 'ghost', href: it.postedUrl, target: '_blank', rel: 'noopener noreferrer' }, 'View post') : null),
+        it.status !== 'skipped' && it.status !== 'posted' ? h('button', { class: 'ghost', onclick: () => set('skipped') }, 'Skip') : null,
+        it.status !== 'planned' ? h('span', { class: 'badge st-' + it.status, text: it.status }) : null));
+  }
+  $('#cal-replan').addEventListener('click', async () => {
+    const start = $('#cal-start').value;
+    if (!start) { toast('Pick a start date'); return; }
+    await api('/api/calendar/plan', { start });
+    toast('Re-planned from ' + start + ' — slots you had made or posted are kept');
+    await loadCalendar();
+  });
+
   async function loadReels() {
     const r = await api('/api/reels');
     $('#r-note').textContent = r.note;
@@ -670,7 +723,7 @@
     a.vocabulary.forEach((v) => g2.appendChild(h('option', { value: v, text: v })));
     sel.appendChild(g1); sel.appendChild(g2);
     const tab = (location.hash || '#today').slice(1).split('?')[0];
-    showTab(['today', 'draft', 'opps', 'kits', 'venues', 'log', 'reels'].includes(tab) ? tab : 'today');
+    showTab(['today', 'draft', 'opps', 'kits', 'venues', 'log', 'reels', 'calendar'].includes(tab) ? tab : 'today');
     document.body.setAttribute('data-ready', '1');
   })().catch((e) => { document.body.setAttribute('data-ready', 'error'); toast(e.message); });
 })();

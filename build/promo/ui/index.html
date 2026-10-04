@@ -24,6 +24,7 @@
     <button role="tab" data-tab="venues">Venues</button>
     <button role="tab" data-tab="log">Log</button>
     <button role="tab" data-tab="reels">Reels</button>
+    <button role="tab" data-tab="calendar">Calendar</button>
   </nav>
 </header>
 
@@ -197,6 +198,21 @@
   <section id="tab-reels" class="tab" data-tab="reels" hidden>
     <div class="card notice"><strong>Available once deployed.</strong> <span id="r-note"></span></div>
     <div id="r-sections" class="stack"></div>
+  </section>
+
+  <section id="tab-calendar" class="tab" data-tab="calendar" hidden>
+    <div class="card">
+      <div class="row wrap">
+        <div class="grow">
+          <h3 class="cal-title">90-day short-video calendar</h3>
+          <p class="muted small">One problem, one tool, one result — about nine a week in five formats: problem → solution, before / after, 10-second developer tricks, India finance and AI at work. No tool repeats within 21 days. Each slot opens the Reel Maker with the tool's own story, makes a kit, or drafts the caption. Status is saved on this computer.</p>
+        </div>
+        <div><label class="lbl" for="cal-start">Start</label><input id="cal-start" type="date"></div>
+        <div class="end"><button class="ghost" id="cal-replan">Re-plan from this date</button> <a class="ghost" id="cal-csv" href="/api/calendar.csv">Download CSV</a></div>
+      </div>
+      <div class="cal-stats small" id="cal-stats"></div>
+    </div>
+    <div id="cal-weeks" class="stack"></div>
   </section>
 </main>
 

@@ -223,6 +223,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       await page.waitForFunction(() => !/Saved question/.test(document.querySelector('#o-results').textContent));
       assert.strictEqual(require('./store').listOpps({ status: 'answered' }).items.length, 1);
     });
+    await check('Calendar shows the 90-day plan and saves a status', async () => {
+      await page.click('.tabs button[data-tab="calendar"]');
+      await page.waitForSelector('#cal-weeks .cal-item');
+      const n = await page.$$eval('#cal-weeks .cal-item', (x) => x.length);
+      assert.ok(n >= 100, 'items ' + n);
+      await page.evaluate(() => [...document.querySelectorAll('#cal-weeks .cal-item button')].find((b) => b.textContent === 'Made').click());
+      await page.waitForFunction(() => document.querySelector('#cal-weeks .cal-item.is-made'));
+      assert.ok((await page.$eval('#cal-stats', (e) => e.textContent)).includes('1 made'));
+    });
     await check('no external requests and no page errors', async () => {
       assert.deepStrictEqual(external, []);
       assert.deepStrictEqual(pageErrors, []);

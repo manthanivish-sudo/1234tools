@@ -244,6 +244,15 @@ function createServer(port) {
         return send(res, 200, { entry });
       }
       if (p === '/api/plan') return send(res, 200, require('./plan').plan());
+      /* the 90-day short-video calendar (calendar.js), kept in calendar.json */
+      if (p === '/api/calendar' && req.method === 'GET') return send(res, 200, require('./calendar').get());
+      if (p === '/api/calendar.csv') { res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="1234tools-video-calendar.csv"' }); return res.end(require('./calendar').csv()); }
+      if (p === '/api/calendar/plan' && req.method === 'POST') { const b = await readBody(req); return send(res, 200, require('./calendar').plan(b.start || undefined)); }
+      if (p === '/api/calendar/status' && req.method === 'POST') {
+        const b = await readBody(req);
+        try { return send(res, 200, { item: require('./calendar').setStatus(b.id, b.status, b.postedUrl, b.note) }); }
+        catch (e) { return send(res, 400, { error: e.message }); }
+      }
       if (p === '/api/reels') return send(res, 200, await reels());
       if (p === '/api/lint') {
         const b = req.method === 'POST' ? await readBody(req) : q;
