@@ -3371,4 +3371,35 @@ html.is-embed .tool-results { position: static; }
 .embed-credit { display: none; }
 html.is-embed .embed-credit { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 6px 0 0; font-size: .78rem; color: var(--text-3); }
 .embed-credit a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--border-gold); }
+/* The social buttons in each platform's own colour, the utilities (copy,
+   QR, embed, card) left in the site's gold: colour says "this leaves the
+   site", and the green bubble is found before the word is read. A tint of
+   the brand behind a full-colour mark at rest, a deeper tint on hover; on
+   a phone, where only the mark shows, a solid disc as the apps draw it. */
+.share-btn[data-ch="whatsapp"] { --brand: #25D366; }
+.share-btn[data-ch="telegram"] { --brand: #26A5E4; }
+.share-btn[data-ch="x"]        { --brand: #e7e9ea; --brand-solid: #000000; }
+.share-btn[data-ch="facebook"] { --brand: #0866FF; }
+.share-btn[data-ch="linkedin"] { --brand: #0A66C2; }
+.share-btn[data-ch="reddit"]   { --brand: #FF4500; }
+[data-theme="light"] .share-btn[data-ch="x"] { --brand: #000000; }
+@media (prefers-color-scheme: light) { [data-theme="system"] .share-btn[data-ch="x"] { --brand: #000000; } }
+.share-btn.is-brand {
+  color: var(--text-1);
+  border-color: color-mix(in srgb, var(--brand) 42%, var(--border));
+  background: color-mix(in srgb, var(--brand) 11%, transparent);
+}
+.share-btn.is-brand .ico { color: var(--brand); width: 19px; height: 19px; }
+.share-btn.is-brand:hover, .share-btn.is-brand:focus-visible {
+  color: var(--text-1);
+  border-color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 22%, transparent);
+}
+.share-btn.is-brand:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 30%, transparent); }
+@media (max-width: 599px) {
+  .share-btn.is-brand { background: var(--brand-solid, var(--brand)); border-color: var(--brand-solid, var(--brand)); }
+  .share-btn.is-brand .ico { color: #ffffff; width: 21px; height: 21px; }
+  .share-btn.is-brand:hover, .share-btn.is-brand:focus-visible { background: var(--brand-solid, var(--brand)); filter: brightness(1.08); }
+  .share-btn[data-ch="x"].is-brand { border-color: var(--border); }
+}
 /* ==== /D1-share ==== */
