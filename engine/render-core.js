@@ -130,16 +130,64 @@
     return raw.slice(0, 200);
   }
 
+  /* The values a link carries. The query string is what the Tool Finder
+     sends; the fragment (#principal=5000) is what the share bar sends,
+     because a fragment never reaches a server, a hosting log or analytics.
+     Both are read, and the fragment wins where they name the same key. */
+  const linkParams = () => { const q = new URLSearchParams(location.search); try { const h = new URLSearchParams(location.hash.replace(/^#/, '')); for (const [k, v] of h) q.set(k, v); } catch (e) {} return q; };
+
+  /* Returns how many values were taken from the link, so the share bar can
+     tell figures somebody was sent from the worked example. */
   function prefill(spec, form) {
     let q;
-    try { if (!location.search) return; q = new URLSearchParams(location.search); } catch (e) { return; }
+    try { if (!location.search && !location.hash) return 0; q = linkParams(); } catch (e) { return 0; }
+    let n = 0;
     spec.inputs.forEach(inp => {
       const raw = q.get(inp.key);
       if (raw === null) return;
       const el = form.querySelector('[name="' + inp.key + '"]');
       const v = el ? fromQuery(inp, raw) : null;
-      if (v !== null) el.value = v;
+      if (v !== null) { el.value = v; n++; }
     });
+    return n;
+  }
+
+  /* The share bar's half of the page. Each engine that can reproduce its
+     result from a link says what it would put in one, as an event for a
+     share bar already listening and as a function for one that boots
+     later. Nothing here knows the share bar exists. */
+  function announce(state) {
+    (window.MVRTool = window.MVRTool || {}).shareState = function () { return state; };
+    document.dispatchEvent(new CustomEvent('mvr:result', { detail: state }));
+  }
+
+  /* Every declared input that holds a value, as the string the field holds,
+     so the link reproduces the figures even if a default changes later. */
+  function paramsOf(spec, form) {
+    const p = {};
+    spec.inputs.forEach(inp => {
+      const el = form.querySelector('[name="' + inp.key + '"]');
+      if (!el || el.value === '' || el.value === null || el.value === undefined) return;
+      p[inp.key] = inp.type === 'text' ? String(el.value).slice(0, 200) : String(el.value);
+    });
+    return p;
+  }
+
+  /* One line for the message: the primary output first, a second one if it
+     still fits in 90 characters. Formatted exactly as the page shows it. */
+  function summaryOf(spec, res) {
+    if (typeof spec.shareSummary === 'function') {
+      try { const s = spec.shareSummary(res); if (s) return String(s).slice(0, 120); } catch (e) { /* fall through */ }
+    }
+    const cur = curFor(spec);
+    const rows = spec.outputs
+      .filter(o => res[o.key] !== undefined && !(o.format === 'text' && (res[o.key] === '' || res[o.key] === null)))
+      .sort((a, b) => (b.primary ? 1 : 0) - (a.primary ? 1 : 0))
+      .map(o => (o.label ? o.label + ': ' : '') + (fmt[o.format] || fmt.number)(res[o.key], o.unit, cur));
+    if (!rows.length) return null;
+    let s = rows[0];
+    if (rows[1] && (s + ' · ' + rows[1]).length <= 90) s += ' · ' + rows[1];
+    return s.length > 90 ? s.slice(0, 89) + '…' : s;
   }
 
   function readValues(spec, form) {
@@ -225,12 +273,13 @@
       spec.inputs.forEach(inp => form.appendChild(buildInput(inp)));
       /* Values from the URL are not a change the visitor made on this page,
          so the first run below still does not count as use. */
-      prefill(spec, form);
+      const fromLink = prefill(spec, form) > 0;
 
       const run = () => {
         try {
           const res = spec.compute(readValues(spec, form)) || {};
           renderResults(spec, res, out);
+          announce({ kind: 'calc', params: paramsOf(spec, form), summary: summaryOf(spec, res), changed: touched || fromLink });
           /* Tells the install offer this tool has earned its place on someone's
              home screen. Every tool computes once on load to show a worked
              example, and that is not use: only a change the visitor made counts.
@@ -241,6 +290,7 @@
         } catch (e) {
           out.innerHTML = '<div class="result"><span class="result-label">Error</span>' +
                           '<span class="result-value">Check your inputs</span></div>';
+          announce({ kind: 'calc', params: {}, summary: null, changed: touched || fromLink });
         }
       };
 
@@ -285,14 +335,24 @@
       /* The Tool Finder sends "5 km to miles" here as ?v=5, so the answer is
          on screen as the page opens. Anything that is not a number keeps the
          worked example of 1. */
-      let asked = NaN;
-      try { const q = new URLSearchParams(location.search).get('v'); if (q !== null && q.trim() !== '') asked = Number(q); } catch (e) { /* no URL, no prefill */ }
+      let asked = NaN, qf = null, qt = null;
+      try {
+        const q = linkParams();
+        const g = q.get('v');
+        if (g !== null && g.trim() !== '') asked = Number(g);
+        qf = q.get('from'); qt = q.get('to');
+      } catch (e) { /* no URL, no prefill */ }
       vi.value = Number.isFinite(asked) ? String(asked) : '1';
       vw.appendChild(vi);
 
+      /* A shared link names the units too. Only units this page converts
+         between are taken; anything else keeps the page's own pair. */
+      const has = k => k !== null && Object.prototype.hasOwnProperty.call(dimData.units, k);
+      const fromLink = Number.isFinite(asked) || has(qf) || has(qt);
+
       form.appendChild(vw);
-      form.appendChild(mk('from', 'From', preset?.from || keys[0]));
-      form.appendChild(mk('to', 'To', preset?.to || keys[1]));
+      form.appendChild(mk('from', 'From', has(qf) ? qf : (preset?.from || keys[0])));
+      form.appendChild(mk('to', 'To', has(qt) ? qt : (preset?.to || keys[1])));
 
       const swap = document.createElement('button');
       swap.type = 'button'; swap.className = 'swap'; swap.textContent = '⇅ Swap units';
@@ -304,7 +364,7 @@
         const t = form.querySelector('[name="to"]').value;
         out.innerHTML = '';
 
-        if (v === null) return;
+        if (v === null) { announce({ kind: 'converter', params: {}, summary: null, changed: touched || fromLink }); return; }
 
         const main = document.createElement('div');
         main.className = 'result result-primary';
@@ -326,11 +386,18 @@
           tbl.appendChild(row);
         });
         out.appendChild(tbl);
+        announce({
+          kind: 'converter',
+          params: { v: String(v), from: f, to: t },
+          summary: `${fmt.number(v)} ${dimData.units[f].symbol} = ${fmt.number(convert(v, f, t, dim))} ${dimData.units[t].symbol}`,
+          changed: touched || fromLink
+        });
       };
 
       /* Same rule as the calculators: the worked example shown on load is not
          use, so the install offer waits for a change the visitor made. */
-      const used = () => { document.dispatchEvent(new CustomEvent('mvr:tool-used')); run(); };
+      let touched = false;
+      const used = () => { touched = true; document.dispatchEvent(new CustomEvent('mvr:tool-used')); run(); };
 
       swap.addEventListener('click', () => {
         const fs = form.querySelector('[name="from"]');
@@ -342,7 +409,10 @@
       form.addEventListener('input', used);
       form.addEventListener('change', used);
       run();
-    }
+    },
+
+    /* For an engine that wants the same hand-off without its own copy. */
+    announceShare: announce
   };
 })();
 

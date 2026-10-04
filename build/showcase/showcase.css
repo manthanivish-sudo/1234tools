@@ -1,0 +1,45 @@
+/* ==== D2-showcase ==== */
+/* /showcase/ and the "Made with this tool" panel. Text and links only:
+   nothing here loads an image from anywhere. */
+.showcase-grid { margin-bottom: 28px; }
+.showcase-card { gap: 4px; }
+.showcase-card:hover { transform: none; }
+.showcase-card.is-featured { border-color: var(--border-gold); }
+.showcase-platform {
+  font-size: .68rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--accent);
+}
+.showcase-name { font-size: 1.02rem; }
+.showcase-handle { font-size: .84rem; color: var(--text-3); font-family: var(--font-mono); overflow-wrap: anywhere; }
+.showcase-note { margin: 6px 0 0; font-size: .9rem; line-height: 1.5; color: var(--text-2); overflow-wrap: anywhere; }
+.showcase-tool { margin: 6px 0 0; font-size: .84rem; color: var(--text-3); }
+.showcase-out { margin-top: auto; padding-top: 10px; font-size: .88rem; font-weight: 600; color: var(--link); }
+.showcase-out:hover, .showcase-out:focus-visible { text-decoration: underline; }
+.showcase-empty {
+  margin: 8px 0 28px; padding: 18px 20px; max-width: 680px; line-height: 1.6; color: var(--text-2);
+  border: 1px dashed var(--border-gold); border-radius: var(--radius);
+}
+.showcase-how h3 { margin: 18px 0 6px; font-family: var(--font-head); font-size: .98rem; color: var(--text-1); }
+.showcase-how p { margin: 0; line-height: 1.65; color: var(--text-2); }
+.showcase-form select.control { font-family: var(--font-body); }
+.showcase-form textarea.control { min-height: 64px; }
+.field-error { display: block; margin-top: 6px; font-size: .84rem; color: #ff8a73; }
+.field-error[hidden] { display: none; }
+[data-theme="light"] .field-error { color: #8c1d0c; }
+.control[aria-invalid="true"] { border-color: #ff8a73; }
+[data-theme="light"] .control[aria-invalid="true"] { border-color: #b3261e; }
+.showcase-form .field-hint { display: block; margin-top: 6px; font-size: .8rem; color: var(--text-3); }
+.showcase-consent { margin-top: 4px; }
+.field label.showcase-check {
+  display: flex; gap: 10px; align-items: flex-start; margin: 0; cursor: pointer;
+  font-size: .92rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text-1); line-height: 1.45;
+}
+.showcase-check input { flex: 0 0 auto; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--gold-2); }
+.showcase-made .showcase-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.showcase-made .showcase-list li { line-height: 1.5; overflow-wrap: anywhere; }
+.showcase-made .showcase-out { padding: 0; font-weight: 600; }
+.showcase-by { display: block; font-size: .84rem; color: var(--text-3); }
+.showcase-more { margin: 14px 0 0; font-size: .88rem; }
+@media (max-width: 560px) {
+  .showcase-grid { grid-template-columns: 1fr; }
+}
+/* ==== /D2-showcase ==== */

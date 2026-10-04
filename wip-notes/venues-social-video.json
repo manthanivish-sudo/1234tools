@@ -1,0 +1,1052 @@
+{
+ "venues": [
+  {
+   "id": "instagram",
+   "name": "Instagram (Reels, Stories, Broadcast channel)",
+   "kind": "social",
+   "url": "https://www.instagram.com/",
+   "audiences": [
+    "creators",
+    "smallbiz",
+    "students",
+    "india",
+    "general"
+   ],
+   "sections": [
+    "image",
+    "ai-image",
+    "ai-video",
+    "qr",
+    "pdf",
+    "text",
+    "health",
+    "conversions"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "profile-only",
+   "cadenceDays": 1,
+   "maxPerWeek": 5,
+   "template": "instagram-caption",
+   "notes": "Owned account, so self-promotion is the format; the constraint is reach, not rules. Captions hold 2,200 chars but only the first ~125 show before 'more', and NOTHING in a caption is clickable, so the CTA is 'link in bio' and the URL (1234tools.com/<section>/<slug>) must be burned into the video as a text overlay or a QR in the last second. Stories allow a link sticker (any account) and Broadcast channels allow links; use Stories for the day's tool. Reels of 7-15 s showing a before/after (blurry 8 MB photo -> 300 KB, PDF merged in two taps, 'stop paying for a PDF subscription') outperform talking heads. 3-5 hashtags in the caption, not a block of 30; alt-text and on-screen captions count for discovery. Reels are reposted to Facebook automatically if the accounts are linked. Repeated identical captions and link-spam in comments get reach throttled, not banned. Use a Linktree-style /go/ page on the site itself so bio links carry UTM parameters.",
+   "verifiedHow": "from memory — Instagram help pages are not machine-readable; verify caption and link-sticker behaviour before first post",
+   "risk": "low",
+   "rulesUrl": "https://help.instagram.com/477434105621119",
+   "searchUrl": "https://www.instagram.com/explore/search/keyword/?q={q}",
+   "submitUrl": "",
+   "apiSearch": "",
+   "maxChars": 2200,
+   "titleMax": 0,
+   "hashtags": true,
+   "markdown": false,
+   "bestTimesUTC": [
+    "06:30-08:00 (UK commute)",
+    "12:00-13:30 (UK lunch / India evening)",
+    "14:00-16:30 (India evening, US morning)"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — depends on the owned account; Reels are shown to non-followers",
+   "tone": "show-don't-tell, one tool per Reel, plain words, no hype"
+  },
+  {
+   "id": "tiktok",
+   "name": "TikTok",
+   "kind": "video",
+   "url": "https://www.tiktok.com/",
+   "audiences": [
+    "students",
+    "creators",
+    "smallbiz",
+    "india",
+    "general",
+    "teachers"
+   ],
+   "sections": [
+    "image",
+    "ai-image",
+    "ai-video",
+    "pdf",
+    "mathematics",
+    "conversions",
+    "qr",
+    "text",
+    "health"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "profile-only",
+   "cadenceDays": 1,
+   "maxPerWeek": 5,
+   "template": "tiktok-caption",
+   "notes": "Captions now allow 4,000 chars but the algorithm reads the first line and the spoken/on-screen text; keep captions short with 3-5 hashtags (#freetools #studytok #smallbusinesstips). Links in captions are not clickable; a clickable bio link needs a Business account or 1,000 followers, so the site URL must be on screen (text overlay for the whole clip) and the hook must be the result ('this free site removes a background in 2 seconds, no sign-up'). Screen-recorded phone how-tos of 7-15 s, 'stop paying for X' and 'you don't need an app for this' are the shapes that get pushed. Posting daily for the first month matters more than production quality. Reposting the same clip across TikTok, Reels and Shorts is normal; strip the TikTok watermark first (Shorts downranks it). Comment replies with links are hidden; reply with the site name only.",
+   "verifiedHow": "from memory — community guidelines page fetched by hand in the past; verify bio-link eligibility before first post",
+   "risk": "low",
+   "rulesUrl": "https://www.tiktok.com/community-guidelines/en/",
+   "searchUrl": "https://www.tiktok.com/search?q={q}",
+   "submitUrl": "",
+   "apiSearch": "",
+   "maxChars": 4000,
+   "titleMax": 0,
+   "hashtags": true,
+   "markdown": false,
+   "bestTimesUTC": [
+    "06:00-08:00 (UK)",
+    "11:00-13:00 (UK lunch / India evening)",
+    "15:00-17:00 (India night / US midday)"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — owned account; new accounts get a cold-start push on the For You feed",
+   "tone": "fast, casual, result first, no corporate voice"
+  },
+  {
+   "id": "youtube-shorts",
+   "name": "YouTube (Shorts and long-form how-tos, owned channel)",
+   "kind": "video",
+   "url": "https://www.youtube.com/",
+   "audiences": [
+    "students",
+    "teachers",
+    "smallbiz",
+    "accountants",
+    "developers",
+    "india",
+    "uk",
+    "general"
+   ],
+   "sections": [
+    "pdf",
+    "image",
+    "business",
+    "india",
+    "education",
+    "mathematics",
+    "conversions",
+    "developer",
+    "qr",
+    "ai-image",
+    "ai-video"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "cadenceDays": 2,
+   "maxPerWeek": 4,
+   "template": "youtube-description",
+   "notes": "Owned channel: links ARE clickable in the description and in a pinned comment, so every video gets the tool URL with UTM in the first two description lines plus a pinned comment. Title max 100 chars; description 5,000; the first three #hashtags in the description show above the title. Shorts (under 3 min, vertical) feed discovery; 2-5 minute long-form 'how to merge PDFs free without uploading' videos rank in Google search for years and are the durable asset for a tools site. Chapters, a spoken 'no upload, runs in your browser' line, and an end screen pointing to the section hub work. Do not reupload TikTok-watermarked clips (downranked). Community posts (available once the channel is open) can carry links too. Channel description and 'links' box: use the /for/ collection pages.",
+   "verifiedHow": "from memory — YouTube policy pages are not machine-readable; limits are stable and well documented",
+   "risk": "low",
+   "rulesUrl": "https://www.youtube.com/howyoutubeworks/policies/community-guidelines/",
+   "searchUrl": "https://www.youtube.com/results?search_query={q}",
+   "submitUrl": "",
+   "apiSearch": "",
+   "maxChars": 5000,
+   "titleMax": 100,
+   "hashtags": true,
+   "markdown": false,
+   "bestTimesUTC": [
+    "12:00-14:00 (UK lunch, India evening)",
+    "16:00-18:00 (UK evening, US midday)"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — owned channel; long-form how-tos surface in Google results",
+   "tone": "calm screen-recording with voice or captions; say exactly what the tool does and does not do"
+  },
+  {
+   "id": "youtube-comments",
+   "name": "YouTube comments on how-to videos",
+   "kind": "video",
+   "url": "https://www.youtube.com/",
+   "audiences": [
+    "students",
+    "teachers",
+    "smallbiz",
+    "accountants",
+    "developers",
+    "india",
+    "general"
+   ],
+   "sections": [
+    "pdf",
+    "image",
+    "business",
+    "india",
+    "education",
+    "mathematics",
+    "conversions",
+    "developer"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "none",
+   "cadenceDays": 1,
+   "maxPerWeek": 10,
+   "template": "youtube-comment",
+   "notes": "Search for recent videos answering the same question a tool answers ('how to compress a PDF', 'GST invoice format', 'convert HEIC to JPG'), and leave a genuinely helpful comment that adds a step or caveat and names the tool and site in words ('1234tools dot com, the PDF compress tool, runs offline') — comments containing a URL are routinely held for review or hidden by the channel's default filter, and repeated identical comments are flagged as spam. Only comment where the uploader did not already promote a competing paid tool aggressively; never comment on tiny channels' videos with promotional text. Expect modest direct traffic; the value is branded search and the occasional creator who tries the tool and features it.",
+   "verifiedHow": "from memory — comment-filter behaviour is observed, not documented; verify by checking whether your own comment shows when logged out",
+   "risk": "medium",
+   "rulesUrl": "https://support.google.com/youtube/answer/2802268",
+   "searchUrl": "https://www.youtube.com/results?search_query={q}&sp=CAI%253D",
+   "submitUrl": "",
+   "apiSearch": "",
+   "maxChars": 10000,
+   "titleMax": 0,
+   "hashtags": false,
+   "markdown": false,
+   "bestTimesUTC": [
+    "within 24 h of a video's upload — sort search by upload date"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — per video; recent videos with 1k-50k views give the best comment visibility",
+   "tone": "helpful peer, one or two sentences, name the tool, no URL"
+  },
+  {
+   "id": "x",
+   "name": "X (Twitter) — posts, replies and Communities",
+   "kind": "social",
+   "url": "https://x.com/",
+   "audiences": [
+    "developers",
+    "designers",
+    "marketers",
+    "freelancers",
+    "smallbiz",
+    "accountants",
+    "india",
+    "uk",
+    "productivity"
+   ],
+   "sections": [
+    "developer",
+    "business",
+    "pdf",
+    "image",
+    "ai",
+    "text",
+    "utilities",
+    "india",
+    "design"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "comment-only",
+   "cadenceDays": 1,
+   "maxPerWeek": 7,
+   "template": "x-post",
+   "notes": "280 chars for free accounts (Premium gets up to 25,000). Posts with an external link get noticeably less distribution, so the working shape is: the post is a screenshot or a 10-second screen recording with the result, the link goes in the first reply (or in the quote of your own post). 1-2 hashtags at most; more reads as spam. Reply-first strategy works best for a small account: search 'how do I convert / is there a free tool for' in Latest, answer with the tool name and a one-line honest caveat, link in a follow-up reply only if asked or if the thread is yours. #buildinpublic and 'I made a free X because Y charged me for it' threads do well with indie-dev and freelancer audiences. Join one or two X Communities (e.g. build-in-public or indie-dev communities) — read their pinned rules, many allow a launch post once. Identical text across many replies triggers the automation filter. Share intent: https://x.com/intent/post?text=&url= (twitter.com/intent/tweet still redirects).",
+   "verifiedHow": "intent endpoint fetched today (403 to curl bot UA, works in a browser); rules from memory — verify before first post",
+   "risk": "low",
+   "rulesUrl": "https://help.x.com/en/rules-and-policies/x-rules",
+   "searchUrl": "https://x.com/search?q={q}&f=live",
+   "submitUrl": "https://x.com/intent/post?text={text}&url={url}",
+   "apiSearch": "",
+   "maxChars": 280,
+   "titleMax": 0,
+   "hashtags": true,
+   "markdown": false,
+   "bestTimesUTC": [
+    "08:00-10:00 (UK morning)",
+    "13:00-15:00 (UK afternoon, US morning, India evening)"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — owned account; reply visibility depends on the thread, not followers",
+   "tone": "terse, honest, numbers and screenshots, no exclamation marks"
+  },
+  {
+   "id": "linkedin",
+   "name": "LinkedIn personal posts (and company page)",
+   "kind": "social",
+   "url": "https://www.linkedin.com/",
+   "audiences": [
+    "accountants",
+    "hr-payroll",
+    "smallbiz",
+    "freelancers",
+    "marketers",
+    "uk",
+    "india",
+    "landlords"
+   ],
+   "sections": [
+    "business",
+    "pdf",
+    "india",
+    "finance",
+    "ai",
+    "time",
+    "text",
+    "utilities"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "comment-only",
+   "cadenceDays": 2,
+   "maxPerWeek": 3,
+   "template": "linkedin-post",
+   "notes": "Posts hold 3,000 chars; only the first ~210 show before 'see more', so the first line carries the hook ('I stopped paying £12/month to merge PDFs. Here's the free way, nothing uploaded.'). An external link in the body reduces reach; the convention is link in the first comment, or edit the link into the post 10 minutes after publishing. Documents (PDF carousels) and native video get the most reach; a 6-slide carousel 'month-end checklist for a one-person company, with the free tools for each step' fits the Business, PDF and India sections well. 3-5 hashtags at the end (#accountants #smallbusinessuk #payroll). Posting more than once a day cannibalises reach; 2-3 posts a week plus daily comments on accountants' and bookkeepers' posts is the sustainable cadence. The share-offsite URL accepts only url (text is dropped). A company page for MVR IT Services / 1234Tools can repost; it will get little organic reach on its own.",
+   "verifiedHow": "share-offsite URL fetched today (redirects to /shareArticle, so it is live); posting norms from memory — verify before first post",
+   "risk": "low",
+   "rulesUrl": "https://www.linkedin.com/legal/professional-community-policies",
+   "searchUrl": "https://www.linkedin.com/search/results/content/?keywords={q}",
+   "submitUrl": "https://www.linkedin.com/sharing/share-offsite/?url={url}",
+   "apiSearch": "",
+   "maxChars": 3000,
+   "titleMax": 0,
+   "hashtags": true,
+   "markdown": false,
+   "bestTimesUTC": [
+    "07:00-09:00 Tue-Thu (UK morning)",
+    "03:30-05:30 Tue-Thu (India morning)"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — owned profile; comments on larger accountants' posts reach their audience",
+   "tone": "practical, first-person, one story or checklist per post, no hype"
+  },
+  {
+   "id": "linkedin-groups",
+   "name": "LinkedIn Groups (UK accountants/bookkeepers, Indian CA/GST, HR & payroll)",
+   "kind": "community",
+   "url": "https://www.linkedin.com/groups/",
+   "audiences": [
+    "accountants",
+    "hr-payroll",
+    "smallbiz",
+    "india",
+    "uk"
+   ],
+   "sections": [
+    "business",
+    "india",
+    "pdf",
+    "finance"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "inline",
+   "cadenceDays": 7,
+   "maxPerWeek": 2,
+   "template": "linkedin-post",
+   "notes": "Groups are low-traffic compared to the feed, but the accountants/bookkeepers/payroll groups are where the exact questions the Business and India tools answer get asked ('free payslip template UK', 'GST invoice format'). Most groups require admin approval for posts and remove bare promotional posts; a reply to someone's question that explains the calculation and then names the free tool is accepted. Read each group's About/rules before posting; join 3-5, not 30. Search groups with the groups search URL and pick ones active in the last week. Do not cross-post the same text to several groups the same day — LinkedIn flags that as spam.",
+   "verifiedHow": "from memory — group names and rules change; verify each group's rules before first post",
+   "risk": "medium",
+   "rulesUrl": "https://www.linkedin.com/legal/professional-community-policies",
+   "searchUrl": "https://www.linkedin.com/search/results/groups/?keywords={q}",
+   "submitUrl": "",
+   "apiSearch": "",
+   "maxChars": 3000,
+   "titleMax": 0,
+   "hashtags": false,
+   "markdown": false,
+   "bestTimesUTC": [
+    "07:00-09:00 Tue-Thu (UK)",
+    "03:30-05:30 (India morning)"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — group sizes vary from 2k to 300k; engagement is a small fraction",
+   "tone": "colleague answering a colleague"
+  },
+  {
+   "id": "linkedin-newsletter",
+   "name": "LinkedIn Newsletter / Articles (owned)",
+   "kind": "newsletter",
+   "url": "https://www.linkedin.com/pulse/",
+   "audiences": [
+    "accountants",
+    "hr-payroll",
+    "smallbiz",
+    "freelancers",
+    "uk",
+    "india"
+   ],
+   "sections": [
+    "business",
+    "pdf",
+    "india",
+    "finance",
+    "ai",
+    "time"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "template": "newsletter-blurb",
+   "notes": "A LinkedIn newsletter is free to create once you have Creator mode / 150+ connections; subscribers get an in-app and email notification per issue, which is the only free 'owned email list' that needs no mail provider. Articles allow full links and headings (about 110,000 chars). Shape: a fortnightly or monthly 'what shipped at 1234Tools and one workflow' issue — e.g. 'Year-end for a one-person company: 6 free browser tools in order', linking the /for/year-end/ collection and the guides. Keep it useful first, tools second. Articles also get indexed by Google under your name.",
+   "verifiedHow": "from memory — verify newsletter eligibility on the Create menu before first issue",
+   "risk": "low",
+   "rulesUrl": "https://www.linkedin.com/legal/professional-community-policies",
+   "searchUrl": "",
+   "submitUrl": "",
+   "apiSearch": "",
+   "maxChars": 0,
+   "titleMax": 100,
+   "hashtags": false,
+   "markdown": false,
+   "bestTimesUTC": [
+    "07:00-08:00 Tue or Wed (UK)"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — owned list, grows from each post's audience",
+   "tone": "editorial, checklist-driven, one workflow per issue"
+  },
+  {
+   "id": "facebook-page",
+   "name": "Facebook Page (owned) + Reels cross-post",
+   "kind": "social",
+   "url": "https://www.facebook.com/",
+   "audiences": [
+    "smallbiz",
+    "india",
+    "uk",
+    "teachers",
+    "general",
+    "landlords"
+   ],
+   "sections": [
+    "business",
+    "pdf",
+    "image",
+    "india",
+    "education",
+    "conversions",
+    "qr"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "cadenceDays": 2,
+   "maxPerWeek": 4,
+   "template": "facebook-group",
+   "notes": "An owned Page has almost no organic reach of its own, but it is required to post in many groups as a Page, to run Reels (cross-posted from Instagram), and to give the site a place people can message. Links are clickable; link posts get less reach than photo/video posts, so lead with a result screenshot and put the link in the text. Hashtags are not customary. The sharer.php endpoint takes only u= (the quote= parameter is ignored by Facebook, the user writes their own text). Do not buy followers or boost early; use the Page mainly as the identity for group participation and as the Reels mirror.",
+   "verifiedHow": "from memory — sharer behaviour observed; verify Page-posting-in-groups rules before first post",
+   "risk": "low",
+   "rulesUrl": "https://transparency.meta.com/policies/community-standards/",
+   "searchUrl": "https://www.facebook.com/search/posts/?q={q}",
+   "submitUrl": "https://www.facebook.com/sharer/sharer.php?u={url}",
+   "apiSearch": "",
+   "maxChars": 63206,
+   "titleMax": 0,
+   "hashtags": false,
+   "markdown": false,
+   "bestTimesUTC": [
+    "08:00-10:00 (UK)",
+    "13:00-15:00 (India evening / US morning)"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — owned page",
+   "tone": "friendly, practical, local-business voice"
+  },
+  {
+   "id": "facebook-group-uk-small-business",
+   "name": "Facebook groups — UK small business, sole traders, bookkeepers",
+   "kind": "community",
+   "url": "https://www.facebook.com/groups/search/groups/?q=uk%20small%20business",
+   "audiences": [
+    "smallbiz",
+    "accountants",
+    "freelancers",
+    "uk",
+    "landlords"
+   ],
+   "sections": [
+    "business",
+    "pdf",
+    "finance",
+    "time",
+    "qr",
+    "utilities"
+   ],
+   "selfPromo": "weekly-thread",
+   "linkPolicy": "comment-only",
+   "cadenceDays": 7,
+   "maxPerWeek": 2,
+   "template": "facebook-group",
+   "notes": "The large UK sole-trader / small-business groups (tens to hundreds of thousands of members) almost all have 'no self-promotion except on Promo Day/Friday thread' rules and admin approval queues; posts with a link to your own site are removed outside those threads and repeat offenders are banned. What works: answer questions ('does anyone know a free invoice template', 'how do I make a PDF smaller for HMRC upload') with the steps and the tool name, link only in a follow-up comment if asked or if the group allows links in comments; use the weekly promo thread for the actual pitch (one tool, one screenshot, free, no sign-up). Join as yourself, not as the Page, and spend two weeks reading before posting. Pick 3-4 groups active this week; record each group's rules in the register notes once read.",
+   "verifiedHow": "from memory — group names and rules not fetchable without login; verify each group's rules before first post",
+   "risk": "medium",
+   "rulesUrl": "",
+   "searchUrl": "https://www.facebook.com/groups/search/groups/?q={q}",
+   "submitUrl": "",
+   "apiSearch": "",
+   "maxChars": 63206,
+   "titleMax": 0,
+   "hashtags": false,
+   "markdown": false,
+   "bestTimesUTC": [
+    "07:00-09:00 (UK)",
+    "19:00-21:00 (UK evening)"
+   ],
+   "promoThread": "Promo Day / 'Friday promo thread' — varies per group; check pinned post",
+   "estimatedReach": "unknown — groups range from 10k to 300k members",
+   "tone": "fellow business owner, plain, no sales copy"
+  },
+  {
+   "id": "facebook-group-india-gst-ca",
+   "name": "Facebook groups — India GST practitioners, CA students, tax professionals",
+   "kind": "community",
+   "url": "https://www.facebook.com/groups/search/groups/?q=gst%20practitioners",
+   "audiences": [
+    "accountants",
+    "smallbiz",
+    "india",
+    "students"
+   ],
+   "sections": [
+    "india",
+    "business",
+    "pdf",
+    "finance"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "cadenceDays": 7,
+   "maxPerWeek": 2,
+   "template": "facebook-group",
+   "notes": "Indian GST / CA / tax-practitioner groups are very active and question-driven (GST invoice format, HSN lookups, TDS calculations, PAN/GSTIN validation), which maps directly onto the India section. Many are run by coaching institutes and remove competing promotional links, but a correct answer with the formula or rule plus 'there is a free browser tool for this at 1234tools' is tolerated; pasting the link is safer in a reply comment. Hindi/English mixed posts are normal; keep the tool explanation in English. Avoid groups that are mostly ads. Indian Facebook usage peaks in the evening IST.",
+   "verifiedHow": "from memory — group rules not fetchable without login; verify each group's rules before first post",
+   "risk": "medium",
+   "rulesUrl": "",
+   "searchUrl": "https://www.facebook.com/groups/search/groups/?q={q}",
+   "submitUrl": "",
+   "apiSearch": "",
+   "maxChars": 63206,
+   "titleMax": 0,
+   "hashtags": false,
+   "markdown": false,
+   "bestTimesUTC": [
+    "03:30-05:00 (India morning)",
+    "13:30-16:00 (India evening)"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — several groups above 100k members",
+   "tone": "precise, rule-citing, helpful senior colleague"
+  },
+  {
+   "id": "facebook-group-teachers",
+   "name": "Facebook groups — teachers (UK primary/secondary, timetable and classroom tools)",
+   "kind": "community",
+   "url": "https://www.facebook.com/groups/search/groups/?q=uk%20teachers",
+   "audiences": [
+    "teachers",
+    "students",
+    "uk",
+    "maths-education"
+   ],
+   "sections": [
+    "education",
+    "mathematics",
+    "time",
+    "pdf",
+    "image",
+    "qr"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "cadenceDays": 7,
+   "maxPerWeek": 1,
+   "template": "facebook-group",
+   "notes": "Teacher groups are protective and remove anything that smells like an ed-tech pitch, but 'free, no account, works offline, nothing uploaded' is exactly what a teacher on a locked-down school laptop needs — QR codes for worksheets, PDF split/merge, timetable builder, worksheet image compression. Post only as an answer to a specific request or in the group's resource-sharing thread; the start-of-term weeks (late August, early January, mid-April) are when 'does anyone have a free…' requests spike. Include a screenshot of the result, never a logo.",
+   "verifiedHow": "from memory — group rules not fetchable without login; verify each group's rules before first post",
+   "risk": "medium",
+   "rulesUrl": "",
+   "searchUrl": "https://www.facebook.com/groups/search/groups/?q={q}",
+   "submitUrl": "",
+   "apiSearch": "",
+   "maxChars": 63206,
+   "titleMax": 0,
+   "hashtags": false,
+   "markdown": false,
+   "bestTimesUTC": [
+    "16:00-18:00 (UK after school)",
+    "20:00-21:30 (UK evening)"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — UK teacher groups range 20k-200k",
+   "tone": "teacher to teacher, specific classroom use"
+  },
+  {
+   "id": "pinterest",
+   "name": "Pinterest (standard pins and video pins for calculators, converters, templates)",
+   "kind": "social",
+   "url": "https://www.pinterest.com/",
+   "audiences": [
+    "teachers",
+    "students",
+    "smallbiz",
+    "health-fitness",
+    "personal-finance",
+    "maths-education",
+    "general",
+    "creators"
+   ],
+   "sections": [
+    "conversions",
+    "mathematics",
+    "health",
+    "finance",
+    "education",
+    "time",
+    "image",
+    "business",
+    "pdf"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "cadenceDays": 1,
+   "maxPerWeek": 10,
+   "template": "pinterest-pin",
+   "notes": "Pinterest is a search engine, not a feed: a pin for 'free BMI calculator', 'cm to inches chart', 'payslip template UK' or 'invoice generator free' keeps bringing clicks for years, and every pin links directly to the tool. Idea Pins were retired (2023); use standard image pins (2:3, 1000x1500) and short video pins. Title max 100 chars, description max 500 — write them as search phrases, hashtags are no longer meaningful. One board per section (Conversions, Calculators, PDF tools, Teacher tools…), 5-10 pins a week is normal and not penalised; identical images pinned many times to many boards is what gets flagged. Claim the website in Pinterest settings so pins show the domain and you get analytics; add og:image 2:3 variants or a 'Pin it' media URL per tool. The pin-create URL (url, media, description) is live.",
+   "verifiedHow": "pin create URL fetched today (HTTP 200); format limits from memory — verify before first pin",
+   "risk": "low",
+   "rulesUrl": "https://policy.pinterest.com/en/community-guidelines",
+   "searchUrl": "https://www.pinterest.com/search/pins/?q={q}",
+   "submitUrl": "https://www.pinterest.com/pin/create/button/?url={url}&media={media}&description={text}",
+   "apiSearch": "",
+   "maxChars": 500,
+   "titleMax": 100,
+   "hashtags": false,
+   "markdown": false,
+   "bestTimesUTC": [
+    "evenings and weekends UK/US: 20:00-23:00; Saturday morning"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — owned boards; search-driven, compounding",
+   "tone": "keyword-rich, descriptive, calm; the image does the selling"
+  },
+  {
+   "id": "threads",
+   "name": "Threads",
+   "kind": "social",
+   "url": "https://www.threads.com/",
+   "audiences": [
+    "creators",
+    "designers",
+    "marketers",
+    "freelancers",
+    "productivity",
+    "general"
+   ],
+   "sections": [
+    "image",
+    "ai-image",
+    "text",
+    "pdf",
+    "utilities",
+    "design",
+    "productivity"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "cadenceDays": 1,
+   "maxPerWeek": 7,
+   "template": "threads-post",
+   "notes": "500 chars, up to 20 images or a 5-minute video. Links are clickable and, unlike X, Meta says it does not penalise links, though link posts still get slightly less engagement than image posts; the pattern is result screenshot plus one line plus the link in the post or the first reply. Only one 'topic tag' per post (Threads' hashtag replacement); choose the audience tag (#smallbusiness, #teachers, #indiedev). The feed rewards replies to other people's posts more than broadcasting; search for 'anyone know a free' questions and answer. The compose intent (threads.com/intent/post?text=) is live and prefills text; threads.net redirects to threads.com.",
+   "verifiedHow": "intent URL fetched today (302 to login, endpoint live); limits from memory",
+   "risk": "low",
+   "rulesUrl": "https://help.instagram.com/769983657850450",
+   "searchUrl": "https://www.threads.com/search?q={q}",
+   "submitUrl": "https://www.threads.com/intent/post?text={text}",
+   "apiSearch": "",
+   "maxChars": 500,
+   "titleMax": 0,
+   "hashtags": true,
+   "markdown": false,
+   "bestTimesUTC": [
+    "08:00-10:00 (UK)",
+    "13:00-15:00 (US morning)"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — owned account",
+   "tone": "conversational, one idea per post"
+  },
+  {
+   "id": "bluesky",
+   "name": "Bluesky",
+   "kind": "social",
+   "url": "https://bsky.app/",
+   "audiences": [
+    "developers",
+    "designers",
+    "creators",
+    "productivity",
+    "general",
+    "uk"
+   ],
+   "sections": [
+    "developer",
+    "image",
+    "text",
+    "utilities",
+    "pdf",
+    "ai-image",
+    "design"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "cadenceDays": 1,
+   "maxPerWeek": 7,
+   "template": "bluesky-post",
+   "notes": "300 chars, links fully clickable with a card preview from your og:image/og:title, no link penalty. Hashtags work and custom feeds pick posts up by keyword, so #webdev #indiedev #smallbusiness are worth adding. The developer and privacy-conscious crowd is overrepresented, which fits the Developer, Image and Text sections and the 'runs in your browser, nothing uploaded' message — say it plainly and exactly (analytics load only after consent). Make a starter pack or follow a feed for 'buildinpublic'. The compose intent bsky.app/intent/compose?text= is documented by Bluesky (the SPA returns 404 to curl HEAD but loads in a browser). The public search API (public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=) works without auth from a browser UA.",
+   "verifiedHow": "intent and public search endpoints checked today by curl (bot UA blocked/404; both are documented at docs.bsky.app); limits from memory",
+   "risk": "low",
+   "rulesUrl": "https://bsky.social/about/support/community-guidelines",
+   "searchUrl": "https://bsky.app/search?q={q}",
+   "submitUrl": "https://bsky.app/intent/compose?text={text}",
+   "apiSearch": "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q={q}",
+   "maxChars": 300,
+   "titleMax": 0,
+   "hashtags": true,
+   "markdown": false,
+   "bestTimesUTC": [
+    "09:00-11:00 (UK)",
+    "14:00-17:00 (US)"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — owned account; ~40M registered accounts network-wide (public figure, 2026)",
+   "tone": "direct, technical where relevant, honest about trade-offs"
+  },
+  {
+   "id": "mastodon-social",
+   "name": "Mastodon (mastodon.social account; reach is by hashtag across the Fediverse)",
+   "kind": "social",
+   "url": "https://mastodon.social/",
+   "audiences": [
+    "developers",
+    "designers",
+    "creators",
+    "productivity",
+    "general"
+   ],
+   "sections": [
+    "developer",
+    "image",
+    "text",
+    "utilities",
+    "pdf",
+    "ai-image",
+    "conversions"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "cadenceDays": 1,
+   "maxPerWeek": 5,
+   "template": "mastodon-post",
+   "notes": "500 chars on mastodon.social (the largest open-registration server: 3.4M users, v4.8 nightly, registrations open per its API today). There is no algorithm: discovery is purely by hashtags people follow and by boosts, so 3-5 hashtags are mandatory (#WebDev #FOSS is wrong for a non-open-source site; use #FreeTools #PDF #SmallBusiness #Privacy) and you should write a #introduction post. Links are clickable with a preview card and nothing is downranked. The Fediverse is allergic to marketing voice and to tracking claims that are not exactly true — say 'analytics only if you accept the consent bar', never 'no tracking'. Add alt text to every image (expected). The /share?text=&url= endpoint is live (redirects to sign-in). Public hashtag timelines are readable without auth via /api/v1/timelines/tag/{tag}.",
+   "verifiedHow": "instance API (/api/v1/instance), tag timeline API and /share endpoint fetched today",
+   "risk": "low",
+   "rulesUrl": "https://mastodon.social/about",
+   "searchUrl": "https://mastodon.social/tags/{q}",
+   "submitUrl": "https://mastodon.social/share?text={text}&url={url}",
+   "apiSearch": "https://mastodon.social/api/v1/timelines/tag/{q}",
+   "maxChars": 500,
+   "titleMax": 0,
+   "hashtags": true,
+   "markdown": false,
+   "bestTimesUTC": [
+    "08:00-10:00 (EU morning)",
+    "16:00-19:00 (EU evening / US midday)"
+   ],
+   "promoThread": "",
+   "estimatedReach": "mastodon.social: 3,419,358 users (instance API, 2026-10-04); hashtag reach spans all federated servers",
+   "tone": "unmarketed, exact, alt text on images, no exclamation marks"
+  },
+  {
+   "id": "whatsapp-channel",
+   "name": "WhatsApp Channel (owned broadcast) + share link",
+   "kind": "newsletter",
+   "url": "https://www.whatsapp.com/channel",
+   "audiences": [
+    "india",
+    "smallbiz",
+    "accountants",
+    "students",
+    "general"
+   ],
+   "sections": [
+    "india",
+    "business",
+    "pdf",
+    "image",
+    "conversions",
+    "qr",
+    "finance"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "cadenceDays": 2,
+   "maxPerWeek": 3,
+   "template": "whatsapp-broadcast",
+   "notes": "WhatsApp Channels are one-way broadcasts followers opt into; they are the natural owned channel for the Indian audience and UK small traders who live in WhatsApp. Links are clickable with a preview from og tags. Keep updates to one tool + one screenshot + one link, 2-3 a week; followers mute channels that post daily. The on-site share button matters more than the channel: wa.me/?text= (verified today, redirects to api.whatsapp.com/send) opens the composer on phone and desktop, so every tool page and every result (e.g. 'GST on 1,00,000 = …') should offer 'Share on WhatsApp' with the result text, the tool URL and UTM. Group forwarding of a useful result is where Indian traffic comes from; do not join accountants' WhatsApp groups to post links unless invited.",
+   "verifiedHow": "wa.me share endpoint fetched today (302 to api.whatsapp.com/send); channel rules from memory",
+   "risk": "low",
+   "rulesUrl": "https://www.whatsapp.com/legal/channels-terms-of-service",
+   "searchUrl": "",
+   "submitUrl": "https://wa.me/?text={text}",
+   "apiSearch": "",
+   "maxChars": 65536,
+   "titleMax": 0,
+   "hashtags": false,
+   "markdown": false,
+   "bestTimesUTC": [
+    "03:30-05:00 (India morning)",
+    "13:30-15:30 (India evening)",
+    "07:00-08:00 (UK)"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — owned channel; forwards are the multiplier",
+   "tone": "short, friendly, result-first, one link"
+  },
+  {
+   "id": "telegram-channel",
+   "name": "Telegram Channel (owned) + share link",
+   "kind": "newsletter",
+   "url": "https://t.me/",
+   "audiences": [
+    "india",
+    "developers",
+    "students",
+    "general",
+    "productivity"
+   ],
+   "sections": [
+    "india",
+    "developer",
+    "pdf",
+    "image",
+    "utilities",
+    "conversions",
+    "ai-image"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "cadenceDays": 2,
+   "maxPerWeek": 3,
+   "template": "telegram-post",
+   "notes": "Telegram channels are strong with Indian students/professionals and developers. Message limit 4,096 chars (1,024 for a media caption); links are clickable with instant-view/preview cards; formatting is bold/italic/code via the app, not markdown. The t.me/share/url?url=&text= endpoint (verified today) is the share button for the site. Post 2-3 times a week: new tool, a tip, a before/after image. Do not post into other people's channels (impossible) or spam public groups — Telegram groups for CA/GST and dev topics exist but most ban links from new members; if you join one, contribute answers for weeks before mentioning the site, and never drop bare links.",
+   "verifiedHow": "t.me/share/url fetched today (HTTP 200); limits from memory",
+   "risk": "low",
+   "rulesUrl": "https://telegram.org/tos",
+   "searchUrl": "",
+   "submitUrl": "https://t.me/share/url?url={url}&text={text}",
+   "apiSearch": "",
+   "maxChars": 4096,
+   "titleMax": 0,
+   "hashtags": true,
+   "markdown": false,
+   "bestTimesUTC": [
+    "04:00-06:00 (India morning)",
+    "14:00-16:00 (India evening)"
+   ],
+   "promoThread": "",
+   "estimatedReach": "unknown — owned channel",
+   "tone": "informal, concise, emoji-free, code formatting for dev tips"
+  },
+  {
+   "id": "discord-programmers-hangout",
+   "name": "Discord — The Programmer's Hangout",
+   "kind": "community",
+   "url": "https://discord.gg/programming",
+   "audiences": [
+    "developers",
+    "students"
+   ],
+   "sections": [
+    "developer",
+    "text",
+    "utilities",
+    "image"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "inline",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "template": "discord-message",
+   "notes": "Largest general programming server (217,409 members, 20,691 online at fetch time). Rules forbid unsolicited advertising; sharing something you built is only acceptable in the designated projects/showcase channel and as a one-off, with no repeat posts. Realistic use: answer questions in the help channels (regex, JSON, base64, cron, hashing, colour conversion) and mention the Developer-section tool when it directly answers the question; post once in the showcase channel ('I built 20 offline dev utilities as static pages — feedback wanted') and engage with replies. Being seen only when promoting gets you removed. Discord posts have 2,000 chars and support Markdown.",
+   "verifiedHow": "invite fetched today via discord.com/api/v10/invites/programming (member counts); channel rules from memory — read #rules before posting",
+   "risk": "medium",
+   "rulesUrl": "https://discord.gg/programming",
+   "searchUrl": "",
+   "submitUrl": "",
+   "apiSearch": "",
+   "maxChars": 2000,
+   "titleMax": 0,
+   "hashtags": false,
+   "markdown": true,
+   "bestTimesUTC": [
+    "14:00-20:00 (US daytime, when most members are online)"
+   ],
+   "promoThread": "showcase / projects channel — check channel list after joining",
+   "estimatedReach": "217,409 members, ~20,700 online (Discord invite API, 2026-10-04)",
+   "tone": "peer developer, code-first, no marketing words"
+  },
+  {
+   "id": "discord-reactiflux",
+   "name": "Discord — Reactiflux",
+   "kind": "community",
+   "url": "https://discord.gg/reactiflux",
+   "audiences": [
+    "developers"
+   ],
+   "sections": [
+    "developer",
+    "text",
+    "image"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "inline",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "template": "discord-message",
+   "notes": "React/React Native professionals (76,198 members, ~8,900 online). Strict on self-promotion: there is a dedicated channel for showing your own work (i-made-this style) and advertising anywhere else is removed. The site is not a React product, so the fit is the Developer tools (JSON formatter, regex tester, JWT decoder, colour tools, image compression for assets) answered in help channels when relevant, and one showcase post. Low volume, high quality; treat it as a place to learn what devs want from browser tools rather than a traffic source.",
+   "verifiedHow": "invite fetched today via discord.com/api/v10/invites/reactiflux (member counts); channel rules from memory — read #rules before posting",
+   "risk": "medium",
+   "rulesUrl": "https://www.reactiflux.com/guidelines",
+   "searchUrl": "",
+   "submitUrl": "",
+   "apiSearch": "",
+   "maxChars": 2000,
+   "titleMax": 0,
+   "hashtags": false,
+   "markdown": true,
+   "bestTimesUTC": [
+    "14:00-20:00 (US daytime)"
+   ],
+   "promoThread": "'i-made-this' / showcase channel — confirm name after joining",
+   "estimatedReach": "76,198 members, ~8,900 online (Discord invite API, 2026-10-04)",
+   "tone": "senior dev, concise, link only when it answers the question"
+  },
+  {
+   "id": "discord-devcord",
+   "name": "Discord — devcord (web dev learners)",
+   "kind": "community",
+   "url": "https://discord.gg/devcord",
+   "audiences": [
+    "developers",
+    "students"
+   ],
+   "sections": [
+    "developer",
+    "image",
+    "text",
+    "design",
+    "utilities"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "inline",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "template": "discord-message",
+   "notes": "Web-dev learning community (46,051 members, ~3,800 online). Learners ask exactly the questions the Developer and Image tools answer (minify CSS, convert images to WebP, pick a colour palette, generate a favicon, test regex). Rules prohibit advertising outside a showcase channel; the accepted move is a helpful answer that names the tool, plus one showcase post with the honest story (solo operator, static site, runs offline). Because the audience is learners, 'how it works under the hood' posts (e.g. how the browser compresses an image without a server) get real engagement.",
+   "verifiedHow": "invite fetched today via discord.com/api/v10/invites/devcord (member counts); channel rules from memory — read #rules before posting",
+   "risk": "medium",
+   "rulesUrl": "https://discord.gg/devcord",
+   "searchUrl": "",
+   "submitUrl": "",
+   "apiSearch": "",
+   "maxChars": 2000,
+   "titleMax": 0,
+   "hashtags": false,
+   "markdown": true,
+   "bestTimesUTC": [
+    "15:00-21:00 (US afternoon/evening)"
+   ],
+   "promoThread": "showcase channel — confirm after joining",
+   "estimatedReach": "46,051 members, ~3,800 online (Discord invite API, 2026-10-04)",
+   "tone": "mentor voice, explain the how, then the tool"
+  },
+  {
+   "id": "discord-friends-of-figma",
+   "name": "Discord — Friends of Figma",
+   "kind": "community",
+   "url": "https://discord.gg/figma",
+   "audiences": [
+    "designers",
+    "creators"
+   ],
+   "sections": [
+    "design",
+    "image",
+    "ai-image",
+    "qr",
+    "developer"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "inline",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "template": "discord-message",
+   "notes": "Official Figma community server (34,071 members, ~2,000 online). Promotion is restricted to channels set aside for sharing resources/work; elsewhere it is removed. Designers ask for quick utilities constantly — background removal, image compression without quality loss, SVG/PNG conversion, colour contrast and palette tools, QR codes for mockups — so an answer naming the free browser tool is welcome, and the Image/AI Image/Design tools fit. Post the design-system-themed tools (contrast checker, palette generator) in the resource-sharing channel once, with a real screenshot. Figma plugins are the competition; the pitch is 'no plugin, no account, works on any file'.",
+   "verifiedHow": "invite fetched today via discord.com/api/v10/invites/figma (member counts); channel rules from memory — read #rules before posting",
+   "risk": "medium",
+   "rulesUrl": "https://discord.gg/figma",
+   "searchUrl": "",
+   "submitUrl": "",
+   "apiSearch": "",
+   "maxChars": 2000,
+   "titleMax": 0,
+   "hashtags": false,
+   "markdown": true,
+   "bestTimesUTC": [
+    "15:00-20:00 (US working hours)"
+   ],
+   "promoThread": "resources / share-your-work channel — confirm after joining",
+   "estimatedReach": "34,071 members, ~2,000 online (Discord invite API, 2026-10-04)",
+   "tone": "designer to designer, visual proof, specific use"
+  }
+ ],
+ "excluded": [
+  {
+   "name": "r/privacy, r/PrivacyGuides, r/degoogle",
+   "why": "Off-limits by the shared context: Microsoft Clarity session replay is loaded after consent, and these communities treat any session-replay vendor as disqualifying; a post there would invite a hostile audit rather than traffic."
+  },
+  {
+   "name": "Fosstodon (fosstodon.org)",
+   "why": "Instance API fetched today: invite-only and dedicated to free and open-source software; 1234Tools is not open source, so a promotional account there would violate the instance's purpose. Reach the same people via hashtags from mastodon.social instead."
+  },
+  {
+   "name": "Discord — The Coding Den (discord.gg/code)",
+   "why": "Invite API fetched today: the server description states it closed on 6 July 2026."
+  },
+  {
+   "name": "Discord — Python (discord.gg/python)",
+   "why": "Verified live (invite API) but its rules forbid advertising and the audience wants Python answers; browser JS utilities are off-topic. Not worth the moderation risk."
+  },
+  {
+   "name": "Discord — 'Frontend' (discord.gg/frontend)",
+   "why": "Invite API fetched today: a Russian-language community; the site is English-only, so the fit is poor."
+  },
+  {
+   "name": "Designer Hangout (Slack)",
+   "why": "Application-vetted Slack with a strict no-self-promotion policy; not a Discord server and not worth the vetting time for a tools site."
+  },
+  {
+   "name": "Indie Hackers Discord / various 'webdev' Discord invites",
+   "why": "Invite codes tried today (indiehackers, webdev, webdev-and-web-design) returned 'Unknown Invite'; no verified URL exists, so they are left out rather than invented."
+  },
+  {
+   "name": "Pinterest Idea Pins",
+   "why": "Format retired by Pinterest in 2023 and folded into standard/video pins; listed here so nobody looks for an 'Idea Pin' composer."
+  },
+  {
+   "name": "Other people's WhatsApp groups and Telegram groups (CA/GST, dev)",
+   "why": "Not verifiable from outside, almost all ban links from new members, and posting there is indistinguishable from spam. Use the owned WhatsApp Channel / Telegram Channel and the on-site share button instead; join a group only when invited."
+  },
+  {
+   "name": "Instagram comment outreach",
+   "why": "Comments cannot carry clickable links and comment-drops on others' Reels are the canonical Instagram spam signal; reach is lost, not gained."
+  },
+  {
+   "name": "X Communities as separate venues",
+   "why": "Real feature but community names/rules change and are only readable when logged in; covered inside the X venue notes rather than listed as separate unverified URLs."
+  },
+  {
+   "name": "Snapchat, Lemmy, Medium",
+   "why": "Not requested, poor audience fit for utility tools (Snapchat), tiny reach (Lemmy) or already covered by owned blog/guides (Medium)."
+  }
+ ],
+ "insights": [
+  "Reach on every closed feed (X, LinkedIn, Facebook, TikTok, Instagram) is best when the post itself contains no external link: show the result as a screenshot or a 7-15 second screen recording, say the site name in the text and on screen, and put the UTM link in the first reply/comment, the bio, or the description. Bluesky, Mastodon, Threads, Pinterest, WhatsApp and Telegram do not penalise links — link inline there.",
+  "Content shapes that work for free browser tools, in order: (1) before/after with the numbers visible (8.2 MB -> 310 KB, 'no upload'); (2) 'stop paying for X' framed as your own story, never naming a competitor; (3) 7-second phone how-tos; (4) a result screenshot answering a real question someone just asked (reply-first); (5) checklists by job (month-end, start of term, year-end) linking a /for/ collection rather than a single tool.",
+  "One tool per post. A list of 1,281 tools is a blur; 'this one does GST on a bill in your browser, nothing uploaded, no account' is a share.",
+  "Truthful phrasing to use everywhere: 'runs in your browser', 'nothing you type is uploaded', 'no account', 'works offline once opened'. Never write 'no tracking' or 'no third-party requests' — analytics (GA4 + Clarity) load after the consent bar; on Mastodon and Bluesky an inexact privacy claim gets corrected publicly.",
+  "Cadence the platforms reward for a solo operator: TikTok/Reels/Shorts daily or near-daily for the first 30 days then 3-5/week (the same vertical clip goes to all three, de-watermarked); X and Threads daily short posts plus replies; LinkedIn 2-3 posts a week plus daily comments; Pinterest 5-10 pins a week forever; owned WhatsApp/Telegram channels 2-3 updates a week; each Discord server or Facebook/LinkedIn group at most one self-mention a fortnight and only after answering questions there.",
+  "What gets banned: identical text pasted into several groups/threads the same day; links in YouTube/TikTok/Instagram comments; posting in Facebook groups outside the promo thread; mentioning your site in a Discord help channel when it does not answer the question; buying followers or boosting an empty page. What gets throttled: link-only posts, hashtag walls (>5), TikTok-watermarked uploads on Shorts/Reels, posting more than once a day on LinkedIn.",
+  "Share-intent templates that accept prefilled text and are confirmed live today: WhatsApp https://wa.me/?text={text}; Telegram https://t.me/share/url?url={url}&text={text}; Threads https://www.threads.com/intent/post?text={text}; Mastodon https://mastodon.social/share?text={text}&url={url}; Pinterest https://www.pinterest.com/pin/create/button/?url={url}&media={media}&description={text}; X https://x.com/intent/post?text={text}&url={url} (twitter.com/intent/tweet redirects); Bluesky https://bsky.app/intent/compose?text={text} (documented, SPA). URL-only: LinkedIn https://www.linkedin.com/sharing/share-offsite/?url={url} and Facebook https://www.facebook.com/sharer/sharer.php?u={url} (the quote= parameter is ignored). Also Reddit https://www.reddit.com/submit?url={url}&title={title}, Hacker News https://news.ycombinator.com/submitlink?u={url}&t={title}, email mailto:?subject={title}&body={text}%20{url}. Instagram, TikTok and YouTube have no web composer intent — the on-site share button should offer 'copy link' and navigator.share() for them.",
+  "For the on-site share button (the owner's actual request): per tool page emit og:title/og:description from build/jobs.js's verb + '≤110-char description', an og:image per section (or per tool when a result screenshot exists), and build the share text as '<tool title> — <description>. Free, runs in your browser: <url>?utm_source=share&utm_medium=<channel>&utm_campaign=<section>&utm_content=<slug>'. When a calculator has a result, prepend the result line ('GST on ₹1,00,000 at 18% = ₹18,000') so the shared message is useful on its own — WhatsApp and Telegram forwards of a result line are the highest-converting share on Indian and UK small-business audiences. Use navigator.share() when present (mobile), fall back to the intent URLs above, and always offer Copy link.",
+  "Timing across the three audiences in UTC: UK commute 06:30-08:30, UK lunch 12:00-13:30, India morning 03:30-05:30, India evening 13:30-16:30, US morning 13:00-15:00. The 13:00-15:00 UTC window hits UK afternoon, India evening and US morning at once and is the single best slot for LinkedIn, X and Threads.",
+  "Use UTM consistently: utm_source=<venue id above>, utm_medium=social|community|video|newsletter, utm_campaign=<section slug>, utm_content=<tool slug>. Shorten through an owned /go/ redirect on the site so bio links and spoken URLs stay memorable while still carrying attribution.",
+  "Pinterest and long-form YouTube are the compounding venues: a pin or a 3-minute how-to indexed by Google for 'free payslip generator uk' or 'cm to inches' keeps sending traffic for years, which matters more than any single viral Reel for a 1,281-tool directory. Budget a third of the weekly 3-5 hours there.",
+  "Discord and Facebook/LinkedIn groups are for listening and for one honest showcase post each; measure them by feature requests and bug reports (feed them into the tool-request form), not by clicks. Read a server's or group's rules channel in full before writing anything, and record what you read in this register's notes."
+ ]
+}

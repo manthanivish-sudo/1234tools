@@ -21,6 +21,9 @@
 (function () {
   'use strict';
 
+  /* A tool embedded in somebody else's page is not ours to offer as an app. */
+  if (document.documentElement.classList.contains('is-embed')) return;
+
   var MONTH = 30 * 24 * 60 * 60 * 1000;
 
   var manifest = document.querySelector('link[rel="manifest"]');

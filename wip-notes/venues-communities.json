@@ -1,0 +1,2046 @@
+{
+ "venues": [
+  {
+   "id": "reddit-r-smallbusiness",
+   "name": "r/smallbusiness",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/smallbusiness/",
+   "rulesUrl": "https://www.reddit.com/r/smallbusiness/about/rules",
+   "audiences": [
+    "smallbiz",
+    "accountants",
+    "freelancers",
+    "general"
+   ],
+   "sections": [
+    "business",
+    "pdf",
+    "finance",
+    "qr",
+    "text",
+    "ai"
+   ],
+   "selfPromo": "weekly-thread",
+   "linkPolicy": "comment-only",
+   "promoThread": "Promote your business thread (quarterly sticky; current one is 'Promote your business thread for Q4 2026', posted by mod u/BigSlowTarget) plus a yearly 'share your small business experience' sticky",
+   "cadenceDays": 90,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-16:00 Mon-Thu"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "https://www.reddit.com/r/smallbusiness/submit?title={title}&text={text}",
+   "searchUrl": "https://www.reddit.com/r/smallbusiness/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/smallbusiness/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "2.5m members (redlib mirror of sidebar, 2026-10-04)",
+   "notes": "Sidebar is explicit: 'NO business promotion, lead generation... in posts', 'No blog links', 'Promote your business in the weekly Promote-your-business thread only' (it is in practice a quarterly sticky now). The documented exception is the one to use: 'Allowed are links or quotes in comments and replies that are relevant to and come normally in the course of discussions' and 'You can promote your business in a relevant reply... providing that is not the main purpose of your account and it is not done repeatedly.' So: answer invoice/payslip/VAT/QR questions in comments with a one-line disclosure and a direct tool link; drop one entry with the full site in each quarterly Promote thread. Never post a tool as a top-level post.",
+   "verifiedHow": "sidebar rules, member count and stickies rendered 2026-10-04 via redlib mirror safereddit.com in headless Chrome; reddit.com about/rules.json returned 403 'blocked by network security' from this network, so re-open about/rules in a browser before first post",
+   "tone": "plain, practical, owner-to-owner; no marketing words",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-entrepreneur",
+   "name": "r/Entrepreneur",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/Entrepreneur/",
+   "rulesUrl": "https://www.reddit.com/r/Entrepreneur/about/rules",
+   "audiences": [
+    "smallbiz",
+    "marketers",
+    "freelancers"
+   ],
+   "sections": [
+    "business",
+    "ai",
+    "qr",
+    "image"
+   ],
+   "selfPromo": "weekly-thread",
+   "linkPolicy": "comment-only",
+   "promoThread": "Feedback Friday (website/portfolio feedback); Success Saturday; Mentor Monday; free offers and promotions only in the 'designated weekly threads'",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-16:00 Fri for Feedback Friday",
+    "14:00-17:00 Sat for Success Saturday"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "https://www.reddit.com/r/Entrepreneur/submit?title={title}&text={text}",
+   "searchUrl": "https://www.reddit.com/r/Entrepreneur/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/Entrepreneur/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "5.3m members (redlib mirror, 2026-10-04)",
+   "notes": "Rule 1: 'No promotion, sales, or solicitation... Free offers and promotions belong only in the designated weekly threads. Violations may result in a permanent ban.' Also: 'You must participate in the comments of other posts... before posting yourself' and 'In some cases, your brand may be permanently blacklisted.' Use it only two ways: (1) Feedback Friday thread with a specific question about one tool page; (2) helpful comments on 'what tool do you use for X' threads under the 'Tools and Technology' flair, link plus disclosure. Build comment karma here for weeks before the first link.",
+   "verifiedHow": "sidebar rules, weekly-thread list and stickies rendered 2026-10-04 via redlib mirror (safereddit.com); reddit.com JSON endpoints blocked from this network",
+   "tone": "candid founder voice; lead with the lesson, tool second",
+   "risk": "high"
+  },
+  {
+   "id": "reddit-r-startups",
+   "name": "r/startups",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/startups/",
+   "rulesUrl": "https://www.reddit.com/r/startups/about/rules",
+   "audiences": [
+    "smallbiz",
+    "developers",
+    "freelancers"
+   ],
+   "sections": [
+    "business",
+    "ai",
+    "developer"
+   ],
+   "selfPromo": "weekly-thread",
+   "linkPolicy": "comment-only",
+   "promoThread": "'Share your startup - quarterly post' sticky and weekly 'Feedback Friday' sticky",
+   "cadenceDays": 90,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "14:00-17:00 Fri"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "https://www.reddit.com/r/startups/submit?title={title}&text={text}",
+   "searchUrl": "https://www.reddit.com/r/startups/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/startups/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "2.1m members (redlib mirror, 2026-10-04)",
+   "notes": "Rule 2: 'No direct sales, advertisements, or promotional posts of any kind. We have designated places that are an exception... always stickied at the top.' 'You MAY share your startup in the Share Your Startup thread.' 'All Feedback Requests... belong in our Feedback Thread.' Rule 5 allows links in comments when they genuinely answer a question but 'we also don't want the discussion to turn into a self promotion'. Posts must carry the 'I will not promote' phrase. Realistic use: one entry per quarterly Share-your-startup thread, occasional Feedback Friday entry for a new section, and reply to others in those threads (mods ask you to).",
+   "verifiedHow": "sidebar rules and stickies rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "founder-to-founder, numbers and lessons, no hype",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-webdev",
+   "name": "r/webdev",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/webdev/",
+   "rulesUrl": "https://www.reddit.com/r/webdev/about/rules",
+   "audiences": [
+    "developers",
+    "designers"
+   ],
+   "sections": [
+    "developer",
+    "image",
+    "utilities",
+    "text",
+    "qr"
+   ],
+   "selfPromo": "weekly-thread",
+   "linkPolicy": "inline",
+   "promoThread": "Showoff Saturday (every Saturday; flair 'Showoff Saturday')",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "12:00-16:00 Sat"
+   ],
+   "template": "reddit-post",
+   "titleMax": 300,
+   "maxChars": 40000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "https://www.reddit.com/r/webdev/submit?title={title}&text={text}",
+   "searchUrl": "https://www.reddit.com/r/webdev/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/webdev/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "3.3m members (redlib mirror, 2026-10-04)",
+   "notes": "'Sharing your project, portfolio, or any other content that you want to either show off or request feedback on is limited to Showoff Saturday. If you post such content on any other day, it will be removed.' 'No excessive self-promotion... refer to the Reddit 9:1 rule.' 'We do not allow any commercial promotion or solicitation.' A free, no-account, client-side tool suite is exactly what does well here if the post is about the engineering (pdf.js self-hosting, offline Whisper in the browser, service-worker offline, no framework). Lead with the technical story, link the live tool; expect 'why not open source?' questions.",
+   "verifiedHow": "sidebar rules and Showoff Saturday stickies rendered 2026-10-04 via redlib mirror (safereddit.com); r/webdev RSS feed also fetched directly and shows Showoff Saturday posts",
+   "tone": "technical show-and-tell, honest about trade-offs",
+   "risk": "low"
+  },
+  {
+   "id": "reddit-r-javascript",
+   "name": "r/javascript",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/javascript/",
+   "rulesUrl": "https://www.reddit.com/r/javascript/about/rules",
+   "audiences": [
+    "developers"
+   ],
+   "sections": [
+    "developer",
+    "ai-image",
+    "ai-video",
+    "pdf"
+   ],
+   "selfPromo": "weekly-thread",
+   "linkPolicy": "comment-only",
+   "promoThread": "Showoff Saturday weekly sticky thread (current: 'Showoff Saturday (October 03, 2026)'); post as a comment inside it",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "12:00-18:00 Sat"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/javascript/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/javascript/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "2.5m members (redlib mirror, 2026-10-04)",
+   "notes": "Sidebar: 'Please keep self promotion to a minimum/reasonable level.' Unlike r/webdev, Showoff Saturday here is a single weekly sticky thread you comment in, not a flair for standalone posts; standalone posts must be about JavaScript itself (an article on how you ran Whisper or a QR decoder in the browser qualifies, a tool landing page does not). Best fit: the AI Image / AI Video on-device models and the pdf.js work, framed as 'how it works'.",
+   "verifiedHow": "sidebar and current Showoff Saturday sticky rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "engineering detail, code snippets welcome",
+   "risk": "low"
+  },
+  {
+   "id": "reddit-r-sideproject",
+   "name": "r/SideProject",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/SideProject/",
+   "rulesUrl": "https://www.reddit.com/r/SideProject/about/rules",
+   "audiences": [
+    "developers",
+    "freelancers",
+    "general"
+   ],
+   "sections": [
+    "developer",
+    "business",
+    "ai-image",
+    "ai-video",
+    "pdf",
+    "qr"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "promoThread": "",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-17:00 Tue-Thu"
+   ],
+   "template": "reddit-post",
+   "titleMax": 300,
+   "maxChars": 40000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "https://www.reddit.com/r/SideProject/submit?title={title}&text={text}",
+   "searchUrl": "https://www.reddit.com/r/SideProject/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/SideProject/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "859.7k members (redlib mirror, 2026-10-04)",
+   "notes": "'A subreddit for sharing and receiving constructive feedback on side projects.' Required title format: '[Project name] - [Short description]'. Promotion is the point here, so the risk is indifference, not removal: the current stickies ('Share your Not-AI projects', 'what's the project you're most proud of') show the crowd rewards hand-built, no-signup, free things with a story. Post one section at a time (e.g. 'Auto Captions - offline Whisper subtitles in the browser'), not the whole site, and come back monthly with a new one. Reply to every comment.",
+   "verifiedHow": "sidebar and stickies rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "maker story: why, what was hard, what's next",
+   "risk": "low"
+  },
+  {
+   "id": "reddit-r-internetisbeautiful",
+   "name": "r/InternetIsBeautiful",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/InternetIsBeautiful/",
+   "rulesUrl": "https://www.reddit.com/r/InternetIsBeautiful/about/rules",
+   "audiences": [
+    "general",
+    "creators",
+    "developers"
+   ],
+   "sections": [
+    "ai-video",
+    "ai-image",
+    "image",
+    "qr"
+   ],
+   "selfPromo": "launch-once",
+   "linkPolicy": "inline",
+   "promoThread": "",
+   "cadenceDays": 180,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-16:00 Mon-Thu"
+   ],
+   "template": "reddit-post",
+   "titleMax": 300,
+   "maxChars": 0,
+   "markdown": false,
+   "hashtags": false,
+   "submitUrl": "https://www.reddit.com/r/InternetIsBeautiful/submit?url={url}&title={title}",
+   "searchUrl": "https://www.reddit.com/r/InternetIsBeautiful/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/InternetIsBeautiful/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "16.6m members (redlib mirror, 2026-10-04)",
+   "notes": "Highly curated link sub. Rules that bite: 'Sites That Are Not Unique' (explicitly bans basic sites 'with a timer or a website to take notes' and anything similar to earlier submissions), 'Business Tools... any other tool aimed at businesses are not allowed', 'Websites That Require Personal Information' (fine: no account), 'Online Stores, Paid Services or Demos... freemium tiered services where the full version or key functionality requires payment are also not allowed' (so never submit the AI for Business section), '90/10 rule' for accounts. Only a single-purpose page with a wow factor qualifies: e.g. the offline Whisper Auto Captions page or an on-device AI image tool, submitted as a direct link to that page, once. Mods ban domains that get spammed ('New Banned Domain: Vercel.app' sticky), so one careful attempt per year at most.",
+   "verifiedHow": "sidebar rules and stickies rendered 2026-10-04 via redlib mirror (safereddit.com); RSS feed fetched directly confirms the banned-domain and 'generic submissions' notices",
+   "tone": "neutral descriptive title, no adjectives, no brand name in title",
+   "risk": "high"
+  },
+  {
+   "id": "reddit-r-alphaandbetausers",
+   "name": "r/alphaandbetausers",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/alphaandbetausers/",
+   "rulesUrl": "https://www.reddit.com/r/alphaandbetausers/about/rules",
+   "audiences": [
+    "developers",
+    "general"
+   ],
+   "sections": [
+    "ai-video",
+    "ai-image",
+    "pdf",
+    "developer"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "promoThread": "",
+   "cadenceDays": 60,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-17:00 Tue-Thu"
+   ],
+   "template": "reddit-post",
+   "titleMax": 300,
+   "maxChars": 40000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "https://www.reddit.com/r/alphaandbetausers/submit?title={title}&text={text}",
+   "searchUrl": "https://www.reddit.com/r/alphaandbetausers/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/alphaandbetausers/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "47.3k members (redlib mirror, 2026-10-04)",
+   "notes": "Purpose-built for recruiting testers: 'Posts must include links to products that are ready to be tested', 'Please add a description of your product', 'DO NOT post links to pages that only request email addresses', 'Links to products that are believed not to be in Alpha or Beta will be removed', 'If you are posting, please take the time to test someone else's product as well.' Use it for genuinely new tools (new section launch, new engine) with a specific ask ('does the camera QR scanner work on your Android?'), and test two other products in return each time.",
+   "verifiedHow": "sidebar rules rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "specific test request, list what feedback you need",
+   "risk": "low"
+  },
+  {
+   "id": "reddit-r-accounting",
+   "name": "r/Accounting",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/Accounting/",
+   "rulesUrl": "https://www.reddit.com/r/Accounting/about/rules",
+   "audiences": [
+    "accountants",
+    "hr-payroll"
+   ],
+   "sections": [
+    "business",
+    "pdf",
+    "finance"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-17:00 Mon-Fri"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/Accounting/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/Accounting/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "1.3m members (redlib mirror, 2026-10-04)",
+   "notes": "Rule 2: 'Avoid most self-promotion, advertising, or solicitation. This includes business solicitations and advertisements, referrals and job postings. Do not post your own blog, website, or video channel.' It is US-heavy and career-focused, so the only workable move is answering a concrete 'is there a free tool to...' comment with a disclosed link. Never a post. Pair it with r/Bookkeeping where practitioners actually ask tooling questions.",
+   "verifiedHow": "sidebar rules and stickies rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "peer professional, cite the rule or rate you used",
+   "risk": "high"
+  },
+  {
+   "id": "reddit-r-bookkeeping",
+   "name": "r/Bookkeeping",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/Bookkeeping/",
+   "rulesUrl": "https://www.reddit.com/r/Bookkeeping/about/rules",
+   "audiences": [
+    "accountants",
+    "smallbiz",
+    "freelancers"
+   ],
+   "sections": [
+    "business",
+    "pdf",
+    "finance",
+    "conversions"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-17:00 Mon-Fri"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/Bookkeeping/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/Bookkeeping/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "85.8k members (redlib mirror, 2026-10-04)",
+   "notes": "Rule 1: 'NO SPAM! If you solicit business for your company, or post/comment links to pages that are blatantly advertising a product or service, you will be banned. Rare exceptions may be made for comments where the link is clearly relevant to the post's discussion.' That exception is the whole play: 'Practice Management' and tooling questions appear daily (bank-statement PDF to CSV, invoice templates, mileage, VAT). Answer the question fully in text first, then 'I built a free in-browser one: link' as the last line.",
+   "verifiedHow": "sidebar rules and stickies rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "practitioner, step-by-step, disclose ownership",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-smallbusinessuk",
+   "name": "r/smallbusinessuk",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/smallbusinessuk/",
+   "rulesUrl": "https://www.reddit.com/r/smallbusinessuk/about/rules",
+   "audiences": [
+    "smallbiz",
+    "uk",
+    "freelancers",
+    "accountants"
+   ],
+   "sections": [
+    "business",
+    "pdf",
+    "qr",
+    "finance"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "07:00-09:00 Mon-Fri",
+    "19:00-21:00 Mon-Thu"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/smallbusinessuk/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/smallbusinessuk/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "82.0k members (redlib mirror, 2026-10-04)",
+   "notes": "Stickies: 'Welcome to Small Business UK. Please read this before posting' and 'Where can you find small business support in the UK?'. The rule list itself lives on new Reddit and was not captured today; UK business subs uniformly remove promotional posts and tolerate disclosed, relevant links in comments. Questions about VAT returns, MTD, invoicing, payslips and Companies House filings are the daily fare, which maps directly onto the Business and PDF sections and the /compare/ MTD page. Read the welcome sticky, then answer-only for the first month.",
+   "verifiedHow": "member count and stickies rendered 2026-10-04 via redlib mirror (safereddit.com); full rule text not captured, verify before first post",
+   "tone": "UK plain English, HMRC terminology, disclose you run the site",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-fireuk",
+   "name": "r/FIREUK",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/FIREUK/",
+   "rulesUrl": "https://www.reddit.com/r/FIREUK/about/rules",
+   "audiences": [
+    "personal-finance",
+    "uk"
+   ],
+   "sections": [
+    "finance",
+    "mathematics",
+    "time"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "Weekly General Chat and Newbie Questions Thread (Saturdays)",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "08:00-11:00 Sat",
+    "19:00-21:00 Mon-Thu"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/FIREUK/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/FIREUK/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "324.8k members (redlib mirror, 2026-10-04)",
+   "notes": "Sidebar defers to r/FinancialIndependence rules ('a bit out of date... so long as you know the spirit of them you should be ok') and lists community blogs and calculators, i.e. tools are part of the culture. The Saturday 'Weekly General Chat and Newbie Questions Thread' is where compound-interest, drawdown and salary-sacrifice calculator questions land; answer there with the number worked out plus the calculator link. Standalone posts about a tool would read as promotion.",
+   "verifiedHow": "sidebar and weekly thread sticky rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "numerate, show the working",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-personalfinanceindia",
+   "name": "r/personalfinanceindia",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/personalfinanceindia/",
+   "rulesUrl": "https://www.reddit.com/r/personalfinanceindia/about/rules",
+   "audiences": [
+    "personal-finance",
+    "india"
+   ],
+   "sections": [
+    "india",
+    "finance",
+    "mathematics"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "Monthly Money Thread (1st of each month)",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "03:00-05:00 daily",
+    "14:00-16:30 daily"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/personalfinanceindia/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/personalfinanceindia/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "612.3k members (redlib mirror, 2026-10-04)",
+   "notes": "Flaired question sub (Debt, Employment, Auto/Car...) with a 'Monthly Money Thread' sticky. Rule text sits on new Reddit and was not captured; Indian PF subs remove promotional posts and referral links but accept a relevant calculator link inside a substantive answer. Fit: EMI, SIP, HRA, income-tax (old vs new regime), gratuity and PF calculators from the India section. Give the computed answer in the comment and link the tool with the ?key= prefill so the reader lands on their numbers.",
+   "verifiedHow": "member count and stickies rendered 2026-10-04 via redlib mirror (safereddit.com); rules not captured, verify before first post",
+   "tone": "Indian English, rupee figures, FY terminology",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-indiainvestments",
+   "name": "r/IndiaInvestments",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/IndiaInvestments/",
+   "rulesUrl": "https://www.reddit.com/r/IndiaInvestments/about/rules",
+   "audiences": [
+    "personal-finance",
+    "india",
+    "accountants"
+   ],
+   "sections": [
+    "india",
+    "finance"
+   ],
+   "selfPromo": "weekly-thread",
+   "linkPolicy": "comment-only",
+   "promoThread": "Monthly 'Promotional Content thread' sticky (e.g. 'Promotional Content Show II: Promotional Content thread for September 2026') plus the Bi-Weekly Advice Thread",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "03:00-05:00 daily",
+    "14:00-16:30 daily"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/IndiaInvestments/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/IndiaInvestments/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "958.6k members (redlib mirror, 2026-10-04)",
+   "notes": "Rules: 'Do NOT make a post asking for advice, that belongs as a comment in the stickied advice thread'; the sidebar even links an 'Open Source MF analysis Tool', so community-built calculators are welcome. There is a dedicated monthly 'Promotional Content thread' sticky: that is the only place to present the India section as a whole. Elsewhere, answer in the Bi-Weekly Advice Thread with the tax or SIP maths worked out and a link.",
+   "verifiedHow": "sidebar rules and the September 2026 Promotional Content sticky rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "data-first, cite sections of the IT Act where relevant",
+   "risk": "low"
+  },
+  {
+   "id": "reddit-r-indiatax",
+   "name": "r/IndiaTax",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/IndiaTax/",
+   "rulesUrl": "https://www.reddit.com/r/IndiaTax/about/rules",
+   "audiences": [
+    "india",
+    "accountants",
+    "smallbiz",
+    "freelancers"
+   ],
+   "sections": [
+    "india",
+    "business",
+    "pdf"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "03:00-05:00 daily",
+    "14:00-16:30 daily"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/IndiaTax/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/IndiaTax/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "235.7k members (redlib mirror, 2026-10-04)",
+   "notes": "Active Q&A sub (GST, TDS, ITR, HRA, capital gains) with CA participants; rule text not captured today. Tax subs everywhere ban promoting a service you are involved in but accept a free calculator cited inside a correct answer. Best-fit tools: GST calculator, TDS, HRA exemption, income-tax regime comparison, salary breakup, the India payslip generator. Always state the FY and the rate you used; wrong tax maths gets you downvoted faster than a link does.",
+   "verifiedHow": "member count and stickies rendered 2026-10-04 via redlib mirror (safereddit.com); rules not captured, verify before first post",
+   "tone": "precise, cite the section and FY",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-charteredaccountants",
+   "name": "r/CharteredAccountants",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/CharteredAccountants/",
+   "rulesUrl": "https://www.reddit.com/r/CharteredAccountants/about/rules",
+   "audiences": [
+    "accountants",
+    "india",
+    "students"
+   ],
+   "sections": [
+    "india",
+    "business",
+    "pdf",
+    "mathematics"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "",
+   "cadenceDays": 21,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "14:00-17:00 daily"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/CharteredAccountants/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/CharteredAccountants/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "107.2k members (redlib mirror, 2026-10-04)",
+   "notes": "Indian CA students and young CAs; stickies are salary and interview megathreads, so it is career-heavy. Use sparingly: articleship/practice questions about producing payslips, invoices, bank-statement conversion and PDF handling for clients. Rules not captured; treat as no-promotion-posts, disclosed links in comments only.",
+   "verifiedHow": "member count and stickies rendered 2026-10-04 via redlib mirror (safereddit.com); rules not captured, verify before first post",
+   "tone": "peer, brief, practical",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-developersindia",
+   "name": "r/developersIndia",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/developersIndia/",
+   "rulesUrl": "https://www.reddit.com/r/developersIndia/about/rules",
+   "audiences": [
+    "developers",
+    "india"
+   ],
+   "sections": [
+    "developer",
+    "ai-image",
+    "ai-video",
+    "india"
+   ],
+   "selfPromo": "flair",
+   "linkPolicy": "inline",
+   "promoThread": "",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "14:00-17:00 Sat-Sun",
+    "04:00-06:00 daily"
+   ],
+   "template": "reddit-post",
+   "titleMax": 300,
+   "maxChars": 40000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "https://www.reddit.com/r/developersIndia/submit?title={title}&text={text}",
+   "searchUrl": "https://www.reddit.com/r/developersIndia/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/developersIndia/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "1.6m members (redlib mirror, 2026-10-04)",
+   "notes": "Has an 'I Made This' flair in active use (a hobby game was on the front page today) and a sidebar line 'These community members are the builders we need; use what they build and provide feedback'. Sidebar links to 'Community Rules' and 'Subreddit Flair Rules' (not captured). Post under 'I Made This' with the engineering story (static site, on-device AI models, no backend) and the India-specific tools; expect questions about monetisation and hosting costs. Monthly cadence at most.",
+   "verifiedHow": "sidebar and 'I Made This' sticky rendered 2026-10-04 via redlib mirror (safereddit.com); flair rules not captured, read them before posting",
+   "tone": "builder-to-builder, show the stack",
+   "risk": "low"
+  },
+  {
+   "id": "reddit-r-startupindia",
+   "name": "r/StartUpIndia",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/StartUpIndia/",
+   "rulesUrl": "https://www.reddit.com/r/StartUpIndia/about/rules",
+   "audiences": [
+    "smallbiz",
+    "india",
+    "developers"
+   ],
+   "sections": [
+    "india",
+    "business",
+    "ai"
+   ],
+   "selfPromo": "weekly-thread",
+   "linkPolicy": "comment-only",
+   "promoThread": "'Weekly Startups Promotion Thread' megathread (current one dated Sunday 28 September 2026) and 'Saturday Spotlight' flair",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "04:00-06:00 Sun-Mon",
+    "14:00-16:30 Sun-Mon"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/StartUpIndia/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/StartUpIndia/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "451.2k members (redlib mirror, 2026-10-04)",
+   "notes": "Sidebar says 'Read Rules Before Participating'; the stickied 'Weekly Startups Promotion Thread' is the sanctioned place, and 'Ask Me Anything' / 'Saturday Spotlight' posts from founders with real traction are the organic format. Drop one comment per month in the promotion megathread (India section plus one headline tool), and answer tooling questions elsewhere without links until you have history here.",
+   "verifiedHow": "stickies incl. the 28 Sep 2026 promotion megathread rendered 2026-10-04 via redlib mirror (safereddit.com); full rules not captured",
+   "tone": "founder story with numbers",
+   "risk": "low"
+  },
+  {
+   "id": "reddit-r-freelanceuk",
+   "name": "r/freelanceUK",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/freelanceUK/",
+   "rulesUrl": "https://www.reddit.com/r/freelanceUK/about/rules",
+   "audiences": [
+    "freelancers",
+    "uk",
+    "smallbiz"
+   ],
+   "sections": [
+    "business",
+    "pdf",
+    "time",
+    "finance"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "",
+   "cadenceDays": 21,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "07:00-09:00 Mon-Fri",
+    "19:00-21:00 Mon-Thu"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/freelanceUK/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/freelanceUK/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "14.3k members (redlib mirror, 2026-10-04)",
+   "notes": "Small but on-target: stickies are 'How to register as a UK freelancer' and 'Everything I know about finding work as a freelancer'. The parent r/freelance (701k) is excluded for its ban-on-first-offence rules, so this is the freelancer venue. Questions about invoicing, day-rate calculators, VAT registration thresholds and timesheets come up; answer with the figure and a tool link, disclosed. Rules not captured.",
+   "verifiedHow": "member count and stickies rendered 2026-10-04 via redlib mirror (safereddit.com); rules not captured, verify before first post",
+   "tone": "friendly UK freelancer, practical",
+   "risk": "low"
+  },
+  {
+   "id": "reddit-r-humanresources",
+   "name": "r/humanresources",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/humanresources/",
+   "rulesUrl": "https://www.reddit.com/r/humanresources/about/rules",
+   "audiences": [
+    "hr-payroll",
+    "smallbiz"
+   ],
+   "sections": [
+    "business",
+    "pdf",
+    "time"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "",
+   "cadenceDays": 21,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-17:00 Mon-Fri"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/humanresources/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/humanresources/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "241.4k members (redlib mirror, 2026-10-04)",
+   "notes": "'A subreddit for Human Resources professionals'; posts are location-tagged ([PA], [NY], [UK]). Rule text is on new Reddit (not captured) and, like all HR subs, bans vendor solicitation. Payslip, holiday-entitlement, working-days, pro-rata salary and PDF redaction tools answer real threads here. Comment-only, disclosed, and only when the thread asks for a tool.",
+   "verifiedHow": "member count and stickies rendered 2026-10-04 via redlib mirror (safereddit.com); rules not captured, verify before first post",
+   "tone": "HR professional, compliance-aware",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-askhr",
+   "name": "r/AskHR",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/AskHR/",
+   "rulesUrl": "https://www.reddit.com/r/AskHR/about/rules",
+   "audiences": [
+    "hr-payroll",
+    "general",
+    "uk"
+   ],
+   "sections": [
+    "business",
+    "time",
+    "pdf"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-17:00 Mon-Fri"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/AskHR/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/AskHR/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "1.9m members (redlib mirror, 2026-10-04)",
+   "notes": "Rules: 'Every thread must contain a question about employment or a workplace topic', 'No homework questions, surveys, or research questions', 'Pictures & links may be permissible if they do not otherwise violate the above rules', and a sticky 'AI posts will result in an instant ban'. Many [UK] threads about holiday pay, notice periods and payslip errors: answer the question properly, link the relevant calculator as supporting evidence. Never post; never use AI-sounding prose.",
+   "verifiedHow": "sidebar rules and stickies rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "calm, factual, employment-law aware",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-uklandlords",
+   "name": "r/uklandlords",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/uklandlords/",
+   "rulesUrl": "https://www.reddit.com/r/uklandlords/about/rules",
+   "audiences": [
+    "landlords",
+    "uk",
+    "personal-finance"
+   ],
+   "sections": [
+    "business",
+    "finance",
+    "pdf"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "",
+   "cadenceDays": 21,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "07:00-09:00 Mon-Fri",
+    "19:00-21:00 Mon-Thu"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/uklandlords/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/uklandlords/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "42.1k members (redlib mirror, 2026-10-04)",
+   "notes": "Sidebar 'Essential Links' already points to a mortgage broker, the RLA and a landlord forum, so useful external resources are normal. Today's front page had 'Excel formulas for analysing booking/tenancy data' and tenant-referencing questions: rent-arrears, pro-rata rent, yield, stamp duty and Section 24 tax calculators from the /for/landlords/ collection fit. Rules not captured; the US r/Landlord explicitly bans tool promotion, so stay comment-only here too.",
+   "verifiedHow": "member count, sidebar links and stickies rendered 2026-10-04 via redlib mirror (safereddit.com); rules not captured, verify before first post",
+   "tone": "fellow landlord, cite legislation (Renters' Rights Act, Section 24)",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-teachers",
+   "name": "r/Teachers",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/Teachers/",
+   "rulesUrl": "https://www.reddit.com/r/Teachers/about/rules",
+   "audiences": [
+    "teachers",
+    "students"
+   ],
+   "sections": [
+    "education",
+    "mathematics",
+    "pdf",
+    "time"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "Sister sub r/TeachersPromote ('allows promotion of education related products and services'; only ~720 members) is the sanctioned outlet",
+   "cadenceDays": 21,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "20:00-23:00 Mon-Thu",
+    "14:00-18:00 Sat-Sun"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/Teachers/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/Teachers/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "2,429,870 subscribers (redlib mirror of sidebar, 2026-10-04)",
+   "notes": "Rules: 'We Hate Spam', 'Non-teachers Participation is limited to supportive/inquisitive contributions', 'No AI-Generated Content', and 'posts from accounts with low ages or karma levels will be automatically removed by the filter'. The sidebar routes resource sharing to r/TeachingResources and tech to r/EdTech, and promotion to r/TeachersPromote. Use r/Teachers only to answer a 'does anyone have a free timetable/seating/mark-scheme tool' comment with disclosure; post resources in r/TeachingResources instead.",
+   "verifiedHow": "sidebar rules, subscriber count and stickies rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "supportive colleague, zero sales language",
+   "risk": "high"
+  },
+  {
+   "id": "reddit-r-teachingresources",
+   "name": "r/TeachingResources",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/TeachingResources/",
+   "rulesUrl": "https://www.reddit.com/r/TeachingResources/about/rules",
+   "audiences": [
+    "teachers",
+    "maths-education",
+    "students"
+   ],
+   "sections": [
+    "education",
+    "mathematics",
+    "pdf",
+    "image",
+    "qr"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "promoThread": "",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "20:00-23:00 Sun-Thu"
+   ],
+   "template": "reddit-post",
+   "titleMax": 300,
+   "maxChars": 40000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "https://www.reddit.com/r/TeachingResources/submit?title={title}&text={text}",
+   "searchUrl": "https://www.reddit.com/r/TeachingResources/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/TeachingResources/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "46.8k members (redlib mirror, 2026-10-04)",
+   "notes": "Sidebar 'Policy on self promotion' quotes reddiquette: 'Feel free to post links to your own content (within reason). But if that's all you ever post... you just might be a spammer' and adds 'It's okay to self promote on teaching resources, but we would love if you could also contribute other great resources that are not your own.' A 'Free Desktop Math Worksheet Generator' was on the front page today. Post the timetable, worksheet, flashcard, QR and PDF tools one at a time with grade flair, and share two non-own resources for every own one.",
+   "verifiedHow": "sidebar self-promotion policy and stickies rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "teacher sharing a classroom resource, state the grade/age range",
+   "risk": "low"
+  },
+  {
+   "id": "reddit-r-edtech",
+   "name": "r/EdTech",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/EdTech/",
+   "rulesUrl": "https://www.reddit.com/r/EdTech/about/rules",
+   "audiences": [
+    "teachers",
+    "developers",
+    "students"
+   ],
+   "sections": [
+    "education",
+    "ai",
+    "ai-video",
+    "pdf"
+   ],
+   "selfPromo": "weekly-thread",
+   "linkPolicy": "comment-only",
+   "promoThread": "'Monthly Developers/Sales Thread' (stickied; 'posted every Monday' per sidebar, currently 'Monthly Developers/Sales Thread for October 2026'); sister sub r/EdTechProducts for product posts",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-17:00 Mon"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/EdTech/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/EdTech/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "41.7k members (redlib mirror, 2026-10-04)",
+   "notes": "Rules: 'No self-promotion', 'Developers and Salespersons, use the monthly thread... to solicit feedback, seek advise, advertise, etc. Better still, check out /r/EdTechProducts', and a sticky 'Attention DEVS and SALES PERSONS'. So: one comment per month in the Developers/Sales thread (Education section, Auto Captions for lesson videos, no-account privacy angle for schools), nothing else.",
+   "verifiedHow": "sidebar rules and the October 2026 Developers/Sales sticky rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "straight product note: what it does, who it is for, privacy posture",
+   "risk": "low"
+  },
+  {
+   "id": "reddit-r-teachinguk",
+   "name": "r/TeachingUK",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/TeachingUK/",
+   "rulesUrl": "https://www.reddit.com/r/TeachingUK/about/rules",
+   "audiences": [
+    "teachers",
+    "uk"
+   ],
+   "sections": [
+    "education",
+    "mathematics",
+    "time",
+    "pdf"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "Weekly chat and well-being post (Fridays)",
+   "cadenceDays": 21,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "16:00-18:00 Mon-Fri",
+    "20:00-22:00 Sun"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/TeachingUK/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/TeachingUK/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "59.9k members (redlib mirror, 2026-10-04)",
+   "notes": "UK staffroom sub with Secondary/SEND flairs and a Friday weekly chat sticky; today's threads included SLT use of ChatGPT and workload. Rules not captured; UK teacher spaces are allergic to vendors, so comment-only when asked (timetable builder, pay-scale and pension calculators, PDF tools for reports), disclosed. Term-start (late Aug/early Sep, early Jan, mid Apr) is when 'free timetable software' questions spike; the /compare/free-timetable-software-schools page is the natural link.",
+   "verifiedHow": "member count and weekly chat stickies rendered 2026-10-04 via redlib mirror (safereddit.com); rules not captured, verify before first post",
+   "tone": "UK teacher, acronyms (SLT, SEND, PPA) used correctly",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-learnmath",
+   "name": "r/learnmath",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/learnmath/",
+   "rulesUrl": "https://www.reddit.com/r/learnmath/about/rules",
+   "audiences": [
+    "students",
+    "maths-education",
+    "teachers"
+   ],
+   "sections": [
+    "mathematics",
+    "education",
+    "conversions"
+   ],
+   "selfPromo": "weekly-thread",
+   "linkPolicy": "comment-only",
+   "promoThread": "Stickied '[Megathread] Post your favorite (or your own) resources/channels/what have you' and 'List of websites, ebooks, downloads, etc.'",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "14:00-18:00 Sun-Thu",
+    "00:00-03:00 Mon-Thu"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/learnmath/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/learnmath/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "474.2k members (redlib mirror, 2026-10-04)",
+   "notes": "Posting rules forbid 'advertisements of any form' and 'surveys', but explicitly allow 'Links to articles, Desmos, Wolfram|Alpha, and the like', and the permanent megathread invites 'your own' resources. So the Mathematics section (fraction, percentage, quadratic, matrix, statistics tools) goes once into the megathread, and otherwise appears only as a step-by-step answer that ends with 'check it here: link'. Give the method, not just the answer.",
+   "verifiedHow": "sidebar rules and resource megathread sticky rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "patient tutor, show every step",
+   "risk": "low"
+  },
+  {
+   "id": "reddit-r-mathhelp",
+   "name": "r/MathHelp",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/MathHelp/",
+   "rulesUrl": "https://www.reddit.com/r/MathHelp/about/rules",
+   "audiences": [
+    "students",
+    "maths-education"
+   ],
+   "sections": [
+    "mathematics",
+    "education"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "14:00-18:00 Sun-Thu",
+    "00:00-03:00 Mon-Thu"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/MathHelp/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/MathHelp/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "57.8k members (redlib mirror, 2026-10-04)",
+   "notes": "'No advertising for paid services of any sort. Not even paid tutoring.' Free tools are not banned, but the sticky 'If someone messages you, advertising a service/app... REPORT IT' shows how touchy the mods are. Rule for answers: 'Do not answer any questions that break rules #1 or #2' (poster must show their attempt). Mention a calculator only as a way for the student to check their own working, after you have explained the method.",
+   "verifiedHow": "sidebar rules and stickies rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "Socratic, never just give the answer",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-engineeringstudents",
+   "name": "r/EngineeringStudents",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/EngineeringStudents/",
+   "rulesUrl": "https://www.reddit.com/r/EngineeringStudents/about/rules",
+   "audiences": [
+    "engineering",
+    "students"
+   ],
+   "sections": [
+    "engineering",
+    "conversions",
+    "mathematics",
+    "pdf"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "",
+   "cadenceDays": 21,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "14:00-18:00 Sun-Thu",
+    "00:00-03:00 Mon-Thu"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/EngineeringStudents/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/EngineeringStudents/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "1.0m members (redlib mirror, 2026-10-04)",
+   "notes": "Rule wording worth memorising: 'Avoid posting blogspam, blog self-promotion, or personally monetized links. You can be an account with a website, but not a website with an account.' 'Resource Request' flair threads ask for unit converters, beam/ohm's-law calculators, PDF mergers for lab reports. Answer those with the Engineering and Conversions tools, keep your Reddit history mostly non-promotional.",
+   "verifiedHow": "sidebar rules and stickies rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "senior student helping, exam-season aware",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-askengineers",
+   "name": "r/AskEngineers",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/AskEngineers/",
+   "rulesUrl": "https://www.reddit.com/r/AskEngineers/about/rules",
+   "audiences": [
+    "engineering",
+    "developers"
+   ],
+   "sections": [
+    "engineering",
+    "conversions",
+    "mathematics"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "Career Monday megathread (weekly) for career questions only",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-17:00 Mon-Fri"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/AskEngineers/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/AskEngineers/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "2.7m members (redlib mirror, 2026-10-04)",
+   "notes": "Comment rule: 'Don't answer if you aren't knowledgeable. Answers must contain an explanation using engineering logic, and assertions of fact must be supported by links to credible sources.' A calculator link is not a credible source; it can only accompany a worked answer (unit conversions, pressure/flow, electrical). Low volume opportunity, high quality bar; use only when you can do the engineering.",
+   "verifiedHow": "sidebar submission and comment rules rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "rigorous, units and references",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-excel",
+   "name": "r/excel",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/excel/",
+   "rulesUrl": "https://www.reddit.com/r/excel/about/rules",
+   "audiences": [
+    "productivity",
+    "accountants",
+    "smallbiz",
+    "hr-payroll"
+   ],
+   "sections": [
+    "business",
+    "utilities",
+    "text",
+    "time",
+    "pdf"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-17:00 Mon-Fri"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/excel/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/excel/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "898.6k members (redlib mirror, 2026-10-04)",
+   "notes": "Rules: 'No link or image posts. Text posts only', 'No gig or job advertisements', 'Follow Reddit rules for self-promotion and spam', strict title format. People here want an Excel answer, so lead with the formula; the browser tool (PDF bank statement to CSV, CSV/JSON converters, date/working-day calculators, text clean-up) is the 'or, if you just need it once' alternative at the end. 'Most used Excel tools?' discussion threads are the safe place for a disclosed mention.",
+   "verifiedHow": "sidebar rules and stickies rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "formula-first, tool second",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-photography",
+   "name": "r/photography",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/photography/",
+   "rulesUrl": "https://www.reddit.com/r/photography/about/rules",
+   "audiences": [
+    "creators",
+    "designers"
+   ],
+   "sections": [
+    "image",
+    "ai-image",
+    "pdf",
+    "utilities"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "Official Question Thread (stickied, refreshed roughly every two days) is where post-processing and software questions must go",
+   "cadenceDays": 21,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "14:00-18:00 daily"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/photography/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/photography/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "5.7m members (redlib mirror, 2026-10-04)",
+   "notes": "Rule 4: 'Any self-promotion content must constitute no more than 10% of your submissions... No direct for-profit advertising or self-promotion of any kind is permitted outside of t[he designated threads]'. Rule 2 sends post-processing/software questions to the Official Question Thread, and a new sticky 'New rules regarding business and software development discussions' signals tightened enforcement on software talk; read it first. Only answer in the Question Thread: resize/compress/convert/EXIF-strip/background-removal questions, with disclosure. No posts.",
+   "verifiedHow": "sidebar rules and stickies (incl. the new software-discussion rule notice) rendered 2026-10-04 via redlib mirror (safereddit.com); read the new rule post before first comment",
+   "tone": "photographer first, mention the tool as a quick-fix option",
+   "risk": "high"
+  },
+  {
+   "id": "reddit-r-videoediting",
+   "name": "r/VideoEditing",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/VideoEditing/",
+   "rulesUrl": "https://www.reddit.com/r/VideoEditing/about/rules",
+   "audiences": [
+    "creators",
+    "students"
+   ],
+   "sections": [
+    "ai-video",
+    "image",
+    "utilities"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "Pinned weekly 'What software should I use?' thread, monthly 'Feedback on your edit' thread, and 'Friday Free for All' weekly thread",
+   "cadenceDays": 21,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "14:00-18:00 Fri-Sun"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/VideoEditing/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/VideoEditing/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "529.5k members (redlib mirror, 2026-10-04)",
+   "notes": "Hobbyist sub ('geared towards hobby/amateur editor'; pros go to r/editors). Sidebar: 'this is not a place to advertise your YouTube channel', and software questions belong in the pinned weekly 'What software' thread. Auto Captions (offline Whisper, free, no watermark) is a direct answer to the constant 'free captions without watermark' question: reply in the software thread or Friday Free for All, disclosed, with the honest caveat about model download size and speed.",
+   "verifiedHow": "sidebar rules and weekly/monthly thread stickies rendered 2026-10-04 via redlib mirror (safereddit.com)",
+   "tone": "hobbyist editor, concrete caveats (processing time, languages)",
+   "risk": "medium"
+  },
+  {
+   "id": "reddit-r-loseit",
+   "name": "r/loseit",
+   "kind": "reddit",
+   "url": "https://www.reddit.com/r/loseit/",
+   "rulesUrl": "https://www.reddit.com/r/loseit/about/rules",
+   "audiences": [
+    "health-fitness",
+    "general"
+   ],
+   "sections": [
+    "health",
+    "time",
+    "mathematics"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "OFFICIAL DAILY Q&A / check-in thread (every day) and Weekly Goalsetters thread",
+   "cadenceDays": 21,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "12:00-16:00 daily"
+   ],
+   "template": "reddit-comment",
+   "titleMax": 300,
+   "maxChars": 10000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.reddit.com/r/loseit/search/?q={q}&restrict_sr=1&sort=new",
+   "apiSearch": "https://www.reddit.com/r/loseit/search.json?q={q}&restrict_sr=1&sort=new",
+   "estimatedReach": "4.2m members (redlib mirror, 2026-10-04)",
+   "notes": "Sidebar says 'Up-to-date rules... can all be viewed by visiting via new reddit' (not captured); the known rules ban self-promotion, surveys and app advertising in posts. The only defensible use is the daily Q&A sticky, when someone asks how to work out TDEE/BMI/calorie deficit: give the formula and number, then the calculator link, disclosed. Treat r/xxfitness and r/running as off-limits (explicit 'No self-promotion' rules captured today).",
+   "verifiedHow": "member count and daily/weekly thread stickies rendered 2026-10-04 via redlib mirror (safereddit.com); rule text lives on new Reddit, verify before first comment",
+   "tone": "encouraging, evidence-based, no diet claims",
+   "risk": "high"
+  },
+  {
+   "id": "hn",
+   "name": "Hacker News (Show HN)",
+   "kind": "launch",
+   "url": "https://news.ycombinator.com/show",
+   "rulesUrl": "https://news.ycombinator.com/showhn.html",
+   "audiences": [
+    "developers",
+    "general",
+    "productivity"
+   ],
+   "sections": [
+    "developer",
+    "ai-video",
+    "ai-image",
+    "pdf",
+    "qr",
+    "utilities"
+   ],
+   "selfPromo": "launch-once",
+   "linkPolicy": "inline",
+   "promoThread": "",
+   "cadenceDays": 180,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-15:00 Tue-Thu"
+   ],
+   "template": "hn-show",
+   "titleMax": 80,
+   "maxChars": 0,
+   "markdown": false,
+   "hashtags": false,
+   "submitUrl": "https://news.ycombinator.com/submitlink?u={url}&t={title}",
+   "searchUrl": "https://hn.algolia.com/?q={q}",
+   "apiSearch": "https://hn.algolia.com/api/v1/search?query={q}&tags=story",
+   "estimatedReach": "unknown (HN publishes no member count; front page is several hundred thousand daily readers by common estimate)",
+   "notes": "Guidelines fetched today: 'Show HN is for something you've made that other people can play with... things people can run on their computers'; 'The project should be non-trivial. Don't post quickly-generated one-offs'; 'Please make it easy for users to try your thing out, ideally without barriers such as signups or emails' (a strength here); 'Don't post landing pages'; new features qualify only as major overhauls. Site guidelines: 'Please don't use HN primarily for promotion', no site name needed in title. Best candidates are the technically interesting pages: Auto Captions (Whisper in-browser, offline), on-device AI image tools, the 1,048-conversion static build. Post one Show HN per major piece, be in the thread for 6 hours, answer every 'why not open source / what about Clarity' question truthfully (analytics only after opt-in).",
+   "verifiedHow": "showhn.html and newsguidelines.html fetched 2026-10-04 (curl 200 + WebFetch); Algolia search API tested live",
+   "tone": "understated, technical, first comment explains how it works and limits",
+   "risk": "low"
+  },
+  {
+   "id": "producthunt",
+   "name": "Product Hunt",
+   "kind": "launch",
+   "url": "https://www.producthunt.com/",
+   "rulesUrl": "https://www.producthunt.com/launch",
+   "audiences": [
+    "developers",
+    "marketers",
+    "smallbiz",
+    "creators",
+    "general"
+   ],
+   "sections": [
+    "ai-video",
+    "ai-image",
+    "pdf",
+    "business",
+    "qr"
+   ],
+   "selfPromo": "launch-once",
+   "linkPolicy": "inline",
+   "promoThread": "",
+   "cadenceDays": 180,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "07:01 Tue-Thu (12:01 am Pacific)"
+   ],
+   "template": "ph-launch",
+   "titleMax": 40,
+   "maxChars": 260,
+   "markdown": false,
+   "hashtags": false,
+   "submitUrl": "https://www.producthunt.com/posts/new",
+   "searchUrl": "https://www.producthunt.com/search?q={q}",
+   "apiSearch": "",
+   "estimatedReach": "unknown (Product Hunt does not publish an audience figure)",
+   "notes": "Launch guide fetched today: must launch from a personal account ('company accounts prohibited'), submit via Submit > New Product, 'The best day to launch is the day on which you're most prepared', optimal time 12:01 am Pacific, you may relaunch 'only as often as you have new significant product iterations', makers should answer comments, and 'Cannot directly request upvotes; instead ask people to visit and comment'. Launch sections as separate products (Auto Captions, AI Image tools, PDF Tools) months apart rather than '1,281 tools' once. Tagline 40 chars shows as the name line (titleMax here is the tagline guideline; description 260).",
+   "verifiedHow": "https://www.producthunt.com/launch fetched 2026-10-04 via WebFetch (curl got 403)",
+   "tone": "one clear benefit, honest 'free, no account, runs in your browser'",
+   "risk": "low"
+  },
+  {
+   "id": "indiehackers",
+   "name": "Indie Hackers",
+   "kind": "community",
+   "url": "https://www.indiehackers.com/",
+   "rulesUrl": "https://www.indiehackers.com/",
+   "audiences": [
+    "developers",
+    "freelancers",
+    "smallbiz",
+    "marketers"
+   ],
+   "sections": [
+    "business",
+    "developer",
+    "ai"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "promoThread": "The Build Board (daily product voting leaderboard, BETA)",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-16:00 Mon-Thu"
+   ],
+   "template": "indiehackers-post",
+   "titleMax": 0,
+   "maxChars": 0,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "",
+   "apiSearch": "",
+   "estimatedReach": "unknown",
+   "notes": "Homepage fetched today confirms community posts and a 'Build Board' daily leaderboard for products; the community-guidelines page returns 403 to bots, so rules are from memory: milestone/revenue/'what I learned' posts with a link in context are the norm, pure launch posts without a story are ignored or removed, and paid 'Advertise on Indie Hackers' exists. Post the growth story (solo operator, static site, 1,281 pages, what GA4 showed), list the product once on the Build Board, and comment on others' posts weekly.",
+   "verifiedHow": "homepage rendered 2026-10-04 via WebFetch and headless Chrome; guidelines page 403 to curl/WebFetch, rules from memory, verify before first post",
+   "tone": "transparent numbers, lessons, questions for the community",
+   "risk": "low"
+  },
+  {
+   "id": "devto",
+   "name": "DEV Community (dev.to)",
+   "kind": "blog",
+   "url": "https://dev.to/",
+   "rulesUrl": "https://dev.to/terms",
+   "audiences": [
+    "developers",
+    "designers"
+   ],
+   "sections": [
+    "developer",
+    "ai-image",
+    "ai-video",
+    "pdf",
+    "image"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "promoThread": "#showdev tag (ongoing)",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-15:00 Tue-Thu"
+   ],
+   "template": "devto-article",
+   "titleMax": 128,
+   "maxChars": 0,
+   "markdown": true,
+   "hashtags": true,
+   "submitUrl": "https://dev.to/new?prefill={text}",
+   "searchUrl": "https://dev.to/search?q={q}",
+   "apiSearch": "https://dev.to/api/articles?tag=showdev&per_page=30",
+   "estimatedReach": "unknown (dev.to publishes no member figure)",
+   "notes": "Terms fetched today: 'Users must make a good-faith effort to share content that is on-topic, of high-quality, and is not designed primarily for the purposes of promotion or creating backlinks. Posts must contain substantial content; they may not merely reference an external link that contains the full post. If a post contains affiliate links, that fact must be clearly disclosed.' Write real engineering posts (self-hosting pdf.js and fonts, running Whisper/transformers in the browser, a service worker that keeps 1,281 pages offline, build scripts with --check) tagged #showdev #javascript #webdev, linking the live tool as the demo. Canonical URL can point back to a /guides/ page.",
+   "verifiedHow": "https://dev.to/terms fetched 2026-10-04 (curl 200); /api/articles tested live",
+   "tone": "tutorial with code, demo link at top and bottom",
+   "risk": "low"
+  },
+  {
+   "id": "directory-alternativeto",
+   "name": "AlternativeTo",
+   "kind": "directory",
+   "url": "https://alternativeto.net/",
+   "rulesUrl": "https://alternativeto.net/about/",
+   "audiences": [
+    "productivity",
+    "developers",
+    "general",
+    "smallbiz"
+   ],
+   "sections": [
+    "pdf",
+    "image",
+    "qr",
+    "business",
+    "utilities",
+    "ai-video"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "promoThread": "",
+   "cadenceDays": 90,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "any"
+   ],
+   "template": "directory-listing",
+   "titleMax": 0,
+   "maxChars": 0,
+   "markdown": false,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://alternativeto.net/browse/search/?q={q}",
+   "apiSearch": "",
+   "estimatedReach": "unknown (site publishes no figure)",
+   "notes": "Crowd-sourced software directory; listing is free, requires a logged-in account at Manage > Add app (returns 403 to bots, so no template), moderators review, and the listing should describe features neutrally ('Online, Free, Proprietary' tags are visible on the homepage). Developer-submitted apps are normal but the 'alternative to' relationships are what drive traffic: list the PDF tools as an alternative to iLovePDF/Smallpdf, the QR tools against QR-code generators, Auto Captions against subtitle tools. Keep the description factual; vote-begging gets listings removed.",
+   "verifiedHow": "homepage and /about fetched 2026-10-04; add-app page requires login (403), submission flow from memory, verify when listing",
+   "tone": "neutral catalogue copy",
+   "risk": "low"
+  },
+  {
+   "id": "forum-ukbusinessforums",
+   "name": "UK Business Forums (UKBF)",
+   "kind": "forum",
+   "url": "https://www.ukbusinessforums.co.uk/",
+   "rulesUrl": "https://www.ukbusinessforums.co.uk/help/terms/",
+   "audiences": [
+    "smallbiz",
+    "uk",
+    "accountants",
+    "freelancers",
+    "hr-payroll"
+   ],
+   "sections": [
+    "business",
+    "pdf",
+    "finance",
+    "qr"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "'Start Up Space' subforum for introducing a new business; Business Directory listing (free basic, featured with Member Upgrade)",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "08:00-10:00 Mon-Fri",
+    "19:00-21:00 Mon-Thu"
+   ],
+   "template": "forum-reply",
+   "titleMax": 0,
+   "maxChars": 0,
+   "markdown": false,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "",
+   "apiSearch": "",
+   "estimatedReach": "unknown (member count not shown to anonymous visitors today)",
+   "notes": "Terms fetched today forbid 'unsolicited or unauthorised advertising or promotional material', and the terms do not address signature links, which in practice are a paid-member perk. The sections that matter are Accounts & Finance, Legal/Employment, Sales & Marketing and the General Business Forum; UKBF regulars (many accountants) reward substantive replies and report drive-by links. Introduce the business once in Start Up Space, add a free directory listing, then reply to VAT/invoice/payslip/MTD questions with the answer and a link only when it directly solves the question.",
+   "verifiedHow": "terms page and homepage fetched 2026-10-04 via WebFetch (curl gets a JS challenge)",
+   "tone": "experienced UK business owner, polite, specific",
+   "risk": "medium"
+  },
+  {
+   "id": "forum-accountingweb",
+   "name": "AccountingWEB Any Answers",
+   "kind": "forum",
+   "url": "https://www.accountingweb.co.uk/any-answers",
+   "rulesUrl": "https://www.accountingweb.co.uk/terms-and-conditions",
+   "audiences": [
+    "accountants",
+    "uk",
+    "smallbiz"
+   ],
+   "sections": [
+    "business",
+    "pdf",
+    "finance"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "profile-only",
+   "promoThread": "",
+   "cadenceDays": 21,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "08:00-10:00 Mon-Fri",
+    "12:00-14:00 Mon-Fri"
+   ],
+   "template": "forum-reply",
+   "titleMax": 0,
+   "maxChars": 0,
+   "markdown": false,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "",
+   "apiSearch": "",
+   "estimatedReach": "unknown (AccountingWEB cites 300k+ registered UK accountants in media kits; unverified)",
+   "notes": "Could not fetch today (Cloudflare 403 to curl, WebFetch and headless Chrome). From memory, verify before first post: Any Answers is the UK practitioners' Q&A; vendor posts and links to your own product are removed and repeat offenders banned, software vendors are expected to buy Software Reviews/advertising, and members are sceptical of free tools (data-handling questions). Realistic use: a complete profile naming MVR IT Services and the site, then pure-text expert answers on payroll/VAT/MTD threads; let the profile carry the link. The /compare/mtd-bridging-software and capium-alternative pages are relevant background but must not be pasted into answers.",
+   "verifiedHow": "all fetches blocked (403) 2026-10-04; rules from memory, verify before first post",
+   "tone": "qualified-practitioner register, cite HMRC guidance",
+   "risk": "high"
+  },
+  {
+   "id": "forum-caclubindia",
+   "name": "CAclubindia Forum",
+   "kind": "forum",
+   "url": "https://www.caclubindia.com/forum/",
+   "rulesUrl": "https://www.caclubindia.com/terms_of_use.asp",
+   "audiences": [
+    "accountants",
+    "india",
+    "students",
+    "smallbiz"
+   ],
+   "sections": [
+    "india",
+    "business",
+    "pdf"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "04:00-06:00 Mon-Sat",
+    "13:00-15:30 Mon-Sat"
+   ],
+   "template": "forum-reply",
+   "titleMax": 0,
+   "maxChars": 0,
+   "markdown": false,
+   "hashtags": false,
+   "submitUrl": "https://www.caclubindia.com/forum/create_message.asp",
+   "searchUrl": "",
+   "apiSearch": "",
+   "estimatedReach": "4,349,818 members, 285,534 topics (site footer, 2026-10-04)",
+   "notes": "Forum fetched today: active through 3 Oct 2026 with categories Income Tax (75k topics), GST (58k), Students (52k), Accounts, Corporate Law, and a 'Technology & Tools' category. Terms prohibit 'unsanctioned advertising, promotional materials, or any other forms of unsanctioned solicitation'. In practice replies that answer a GST/TDS/payslip question and cite a free calculator are tolerated; new threads that are adverts are deleted. Post in Technology & Tools once to introduce the India section, otherwise reply to questions. Expect the audience to ask about data privacy and whether it works on low-end Android phones.",
+   "verifiedHow": "forum index and terms fetched 2026-10-04 via WebFetch/headless Chrome; forum_rules.asp returned an empty page",
+   "tone": "Indian CA register, cite sections and notifications",
+   "risk": "medium"
+  },
+  {
+   "id": "forum-property118",
+   "name": "Property118 Landlord Forum / Readers' Questions",
+   "kind": "forum",
+   "url": "https://www.property118.com/forum/",
+   "rulesUrl": "https://www.property118.com/terms-conditions/",
+   "audiences": [
+    "landlords",
+    "uk",
+    "personal-finance"
+   ],
+   "sections": [
+    "business",
+    "finance",
+    "pdf"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "'Submit A Readers Question or Article' page (editorially reviewed)",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "08:00-10:00 Mon-Fri"
+   ],
+   "template": "forum-reply",
+   "titleMax": 0,
+   "maxChars": 0,
+   "markdown": false,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "",
+   "apiSearch": "",
+   "estimatedReach": "unknown (recent threads show 29-101 comments each over 30 days)",
+   "notes": "Fetched today: an active UK landlord forum with 'Latest Comments' threads on the Renters' Rights Act, PRS database fees and registration, plus a 'Submit A Readers Question or Article' route that is editorially reviewed. Policy on links is not spelled out publicly; the site sells 'Advertising to Landlords', so blatant promotion is removed. Comment with Section 24 / yield / stamp-duty workings and a disclosed link; pitch one guest article (e.g. 'free in-browser tools for year-end landlord admin') via the submission page rather than posting it as a comment.",
+   "verifiedHow": "forum page fetched 2026-10-04 via WebFetch; link policy not published, verify before first post",
+   "tone": "experienced landlord, legislation-literate",
+   "risk": "medium"
+  },
+  {
+   "id": "forum-landlordzone",
+   "name": "LandlordZONE Forum",
+   "kind": "forum",
+   "url": "https://forums.landlordzone.co.uk/",
+   "rulesUrl": "https://forums.landlordzone.co.uk/",
+   "audiences": [
+    "landlords",
+    "uk"
+   ],
+   "sections": [
+    "business",
+    "finance",
+    "pdf"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "08:00-10:00 Mon-Fri",
+    "19:00-21:00 Mon-Thu"
+   ],
+   "template": "forum-reply",
+   "titleMax": 0,
+   "maxChars": 0,
+   "markdown": false,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "",
+   "apiSearch": "",
+   "estimatedReach": "unknown (new forum platform shows no counts to anonymous visitors)",
+   "notes": "The forum has moved to a new JavaScript platform ('Welcome: start here' landing fetched today); thread lists and rules did not render for a bot. LandlordZONE's long-standing position is no advertising outside paid placements, with helpful replies tolerated. Register, read the 'start here' post, and reply only to concrete questions (rent arrears calculations, deposit interest, tax on rental income) with disclosed links. Lower priority than Property118 and r/uklandlords until the new platform's rules are read.",
+   "verifiedHow": "landing page fetched 2026-10-04 (headless Chrome, 200) but rules and threads did not render; verify before first post",
+   "tone": "fellow landlord",
+   "risk": "medium"
+  },
+  {
+   "id": "forum-creativecow",
+   "name": "Creative COW Forums",
+   "kind": "forum",
+   "url": "https://creativecow.net/forums/",
+   "rulesUrl": "https://creativecow.net/forums/",
+   "audiences": [
+    "creators"
+   ],
+   "sections": [
+    "ai-video",
+    "image",
+    "utilities"
+   ],
+   "selfPromo": "answer-only",
+   "linkPolicy": "comment-only",
+   "promoThread": "",
+   "cadenceDays": 30,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "14:00-18:00 Mon-Fri"
+   ],
+   "template": "forum-reply",
+   "titleMax": 0,
+   "maxChars": 0,
+   "markdown": false,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "",
+   "apiSearch": "",
+   "estimatedReach": "unknown",
+   "notes": "Fetched today: active (posts dated 2 Oct 2026) with per-NLE forums (Premiere Pro, Final Cut Pro, DaVinci Resolve, Avid, VEGAS, CapCut) and CleanTalk anti-spam on the forms. No public self-promotion rule captured; the community is professional and tolerates a tool mention when it answers a workflow question (e.g. quick SRT generation for a client preview via Auto Captions, image resizing/compression for thumbnails). Don't start threads about the site.",
+   "verifiedHow": "forum index fetched 2026-10-04 via curl (200) and WebFetch; rules not published on the index, verify before first post",
+   "tone": "post-production professional, workflow-specific",
+   "risk": "medium"
+  },
+  {
+   "id": "quora",
+   "name": "Quora",
+   "kind": "qa",
+   "url": "https://www.quora.com/",
+   "rulesUrl": "https://www.quora.com/about/acceptable_use",
+   "audiences": [
+    "general",
+    "smallbiz",
+    "india",
+    "students",
+    "health-fitness",
+    "personal-finance",
+    "hr-payroll"
+   ],
+   "sections": [
+    "business",
+    "india",
+    "pdf",
+    "health",
+    "finance",
+    "mathematics",
+    "qr",
+    "conversions"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "promoThread": "",
+   "cadenceDays": 3,
+   "maxPerWeek": 3,
+   "bestTimesUTC": [
+    "03:00-06:00 daily (India)",
+    "13:00-16:00 daily (UK/US)"
+   ],
+   "template": "quora-answer",
+   "titleMax": 0,
+   "maxChars": 0,
+   "markdown": false,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://www.quora.com/search?q={q}",
+   "apiSearch": "",
+   "estimatedReach": "unknown (Quora cites 400m+ monthly visitors; unverified)",
+   "notes": "Acceptable Use Policy page rendered today (last updated 27 Sep 2022) but the spam section text was not captured; the standing policy is that answers must directly address the question, promotional content is allowed only when it answers the question and 'you must disclose any affiliation', and link-dropping answers are collapsed by moderators. Quora is strongest for Indian tax/salary/EMI questions and 'free payslip/invoice generator' long-tail queries; write a 150-300 word answer that solves it, then 'Disclosure: I built this free browser tool' with the ?key= prefilled link.",
+   "verifiedHow": "acceptable_use page rendered 2026-10-04 via headless Chrome (200), promo clause not captured; policy from memory, verify",
+   "tone": "explanatory, first-person disclosure",
+   "risk": "medium"
+  },
+  {
+   "id": "stackexchange-superuser",
+   "name": "Super User (Stack Exchange)",
+   "kind": "qa",
+   "url": "https://superuser.com/",
+   "rulesUrl": "https://superuser.com/help/promotion",
+   "audiences": [
+    "productivity",
+    "developers",
+    "general"
+   ],
+   "sections": [
+    "pdf",
+    "image",
+    "utilities",
+    "text",
+    "qr",
+    "conversions"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "promoThread": "",
+   "cadenceDays": 7,
+   "maxPerWeek": 2,
+   "bestTimesUTC": [
+    "13:00-17:00 Mon-Fri"
+   ],
+   "template": "stackexchange-answer",
+   "titleMax": 150,
+   "maxChars": 30000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://superuser.com/search?q={q}",
+   "apiSearch": "https://api.stackexchange.com/2.3/search/advanced?q={q}&site=superuser&order=desc&sort=activity",
+   "estimatedReach": "516,687 questions, 3,000,767 users (Stack Exchange API /info, 2026-10-04)",
+   "notes": "Network promotion policy fetched today ('How to not be a spammer'): 'The community here tends to vote down overt self-promotion and flag it as spam', 'Don't talk about your product / website / book / job too much', and 'If the only reason you're here is to sell something or drive traffic to your site, then please avoid posting answers.' Affiliation must be disclosed in the answer. Software-recommendation questions are off-topic here, so the fit is narrow: 'how do I merge/split/compress a PDF without installing anything', EXIF stripping, text clean-up; answer with the method (and an offline alternative) and disclose the tool.",
+   "verifiedHow": "api.stackexchange.com/2.3/info fetched 2026-10-04; /help/promotion rendered via headless Chrome",
+   "tone": "technical, disclosed, offers a non-tool method too",
+   "risk": "medium"
+  },
+  {
+   "id": "stackexchange-webapps",
+   "name": "Web Applications (Stack Exchange)",
+   "kind": "qa",
+   "url": "https://webapps.stackexchange.com/",
+   "rulesUrl": "https://webapps.stackexchange.com/help/promotion",
+   "audiences": [
+    "productivity",
+    "smallbiz",
+    "developers",
+    "general"
+   ],
+   "sections": [
+    "pdf",
+    "image",
+    "qr",
+    "text",
+    "utilities",
+    "business"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "promoThread": "",
+   "cadenceDays": 7,
+   "maxPerWeek": 2,
+   "bestTimesUTC": [
+    "13:00-17:00 Mon-Fri"
+   ],
+   "template": "stackexchange-answer",
+   "titleMax": 150,
+   "maxChars": 30000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://webapps.stackexchange.com/search?q={q}",
+   "apiSearch": "https://api.stackexchange.com/2.3/search/advanced?q={q}&site=webapps&order=desc&sort=activity",
+   "estimatedReach": "34,630 questions, 368,242 users (Stack Exchange API /info, 2026-10-04)",
+   "notes": "Same promotion policy as Super User (fetched from this site today). This is the one SE site where web tools are on-topic, including questions of the form 'is there a web app that does X without an account'. Disclose ownership in every answer ('I made this'), describe how it works (client-side, no upload), and include an alternative; undisclosed links are deleted as spam and repeat offences get the domain blocklisted network-wide.",
+   "verifiedHow": "api.stackexchange.com/2.3/info fetched 2026-10-04; /help/promotion rendered via headless Chrome",
+   "tone": "direct, disclosed, factual",
+   "risk": "low"
+  },
+  {
+   "id": "stackexchange-matheducators",
+   "name": "Mathematics Educators (Stack Exchange)",
+   "kind": "qa",
+   "url": "https://matheducators.stackexchange.com/",
+   "rulesUrl": "https://matheducators.stackexchange.com/help/promotion",
+   "audiences": [
+    "maths-education",
+    "teachers"
+   ],
+   "sections": [
+    "mathematics",
+    "education"
+   ],
+   "selfPromo": "disclosed",
+   "linkPolicy": "inline",
+   "promoThread": "",
+   "cadenceDays": 14,
+   "maxPerWeek": 1,
+   "bestTimesUTC": [
+    "13:00-17:00 Mon-Fri"
+   ],
+   "template": "stackexchange-answer",
+   "titleMax": 150,
+   "maxChars": 30000,
+   "markdown": true,
+   "hashtags": false,
+   "submitUrl": "",
+   "searchUrl": "https://matheducators.stackexchange.com/search?q={q}",
+   "apiSearch": "https://api.stackexchange.com/2.3/search/advanced?q={q}&site=matheducators&order=desc&sort=activity",
+   "estimatedReach": "4,096 questions, 25,239 users (Stack Exchange API /info, 2026-10-04)",
+   "notes": "Small, serious pedagogical community; the network promotion policy applies. Questions about classroom tools ('what free tool lets students explore fractions / check matrix arithmetic / generate practice problems') appear occasionally; answer with pedagogy first and a disclosed link to the Mathematics or Education tool. Volume is low, but answers rank in Google for years.",
+   "verifiedHow": "api.stackexchange.com/2.3/info fetched 2026-10-04; network promotion policy rendered via headless Chrome",
+   "tone": "pedagogical, references to research or curricula",
+   "risk": "low"
+  }
+ ],
+ "excluded": [
+  {
+   "name": "r/privacy, r/PrivacyGuides, r/degoogle",
+   "why": "Off-limits per site context: Microsoft Clarity session replay loads after consent, so the privacy-absolutist framing these subs demand would be untruthful and would be torn apart."
+  },
+  {
+   "name": "r/productivity (4.3m)",
+   "why": "Sidebar and sticky today: 'NO ADVERTISING IS ALLOWED OF ANY KIND (including solicitation)! Advertising = Instant ban'; 'Self-promotion is not allowed here. Advertising via DMs is included.'"
+  },
+  {
+   "name": "r/UKPersonalFinance (1.9m)",
+   "why": "Rule set (on new Reddit, not captured today) bans self-promotion, surveys and marketing; links to personal sites/tools are removed and the mods maintain their own wiki of approved calculators. Verify, but do not post."
+  },
+  {
+   "name": "r/personalfinance",
+   "why": "US-only and its rules prohibit self-promotion and links to your own site; nothing on the site targets US tax."
+  },
+  {
+   "name": "r/freelance (701.4k)",
+   "why": "Sidebar: 'Violating the rules will cause your post/comment will be removed and you will be banned permanently. This is your only warning!'; rules ban advertising/self-promotion. r/freelanceUK used instead."
+  },
+  {
+   "name": "r/Payroll (35.8k)",
+   "why": "Rule 2 'No Data-Mining, Advertising or Self Promotion'; 'Advertising a product or service in which the poster [is involved]' prohibited; current sticky mocks ADP for treating the sub as a sales space."
+  },
+  {
+   "name": "r/Landlord (213.3k)",
+   "why": "Rule V: 'Do not post asking for help, information, polling, or advertising, etc. for your new app, website, or tool'; immediate permanent ban. Mostly US anyway; r/uklandlords and Property118 cover landlords."
+  },
+  {
+   "name": "r/tax (477.3k)",
+   "why": "'Links to tax professionals, blogs and the like are not allowed... Promoting a product or service in which the poster is personally involved as an owner, employee or agent is strictly prohibited.' US-focused."
+  },
+  {
+   "name": "r/xxfitness (3.1m) and r/running (4.3m)",
+   "why": "Explicit rules captured today: 'No self-promotion or kickbacks' and 'No self-promotion (including links to personal blogs...), advertising, spam, or surveys'."
+  },
+  {
+   "name": "MyFitnessPal Community",
+   "why": "Guidelines fetched today prohibit posting 'any links, mentions, or solicit off-forum contact... for other services' and promoting 'websites and apps that compete with MyFitnessPal'."
+  },
+  {
+   "name": "MoneySavingExpert Forum",
+   "why": "Forum FAQ fetched today: 'If you – or someone you're closely connected to – are involved in a website, online group, app or tool, you shouldn't post about that product or service'; URL shorteners banned; signature links limited to MSE pages."
+  },
+  {
+   "name": "The Student Room",
+   "why": "Community guidelines rendered today: 'no advertising or other promotional activity', 'please don't post about commercial and non-commercial products/services... forums other than The Student Room', 'any accounts found advertising without permission will be banned'."
+  },
+  {
+   "name": "Tes Community forums",
+   "why": "community.tes.com redirects to the tes.com product page and /community/forums/ returns 404; the forums are no longer live."
+  },
+  {
+   "name": "Physics Forums",
+   "why": "Terms fetched today: 'Advertising for personal gain of any kind is not permitted in any forum'; 'Asking for interviews, members to join a group, cause or website is also prohibited'."
+  },
+  {
+   "name": "Eng-Tips",
+   "why": "Long-standing site policy forbids advertising and commercial self-promotion; staff remove tool links. Terms rendered today did not add an exception. Engineering covered by r/EngineeringStudents and r/AskEngineers."
+  },
+  {
+   "name": "r/graphic_design (2.9m)",
+   "why": "Sidebar rule 'No promotional/commercial activities'; Image tools get better reception from r/webdev and r/photography question threads."
+  },
+  {
+   "name": "r/matheducation (43.1k)",
+   "why": "Sidebar: 'This is not a subreddit to self-promote your blog, website, or YouTube channel'; r/learnmath's resource megathread and Mathematics Educators SE cover the audience."
+  },
+  {
+   "name": "r/InternetIsBeautiful for business tools",
+   "why": "Included for one standout single-purpose page only; the Business, India, PDF and AI-for-Business sections are explicitly disallowed ('Business Tools... not allowed', freemium 'not allowed', 'Sites That Are Not Unique')."
+  },
+  {
+   "name": "r/coolgithubprojects and r/opensource",
+   "why": "Both require an open-source repository as the subject; 1234Tools is a closed static site. Revisit only if a tool engine is released under an OSS licence."
+  },
+  {
+   "name": "r/editors (197.5k)",
+   "why": "'Geared towards post-professionals... Generally we're not a place for you to advertise your work'; hobby tools belong in r/VideoEditing."
+  },
+  {
+   "name": "r/startups_india, r/ukbusiness, r/UKTax, r/AccountingUK, r/TeachersPromote",
+   "why": "Dead or too small to justify an account's attention today (1, nonexistent, 290, 3.9k and 720 members respectively)."
+  },
+  {
+   "name": "r/selfpromotion",
+   "why": "NSFW-flagged community; a link there taints the domain for other subs."
+  },
+  {
+   "name": "Lobste.rs",
+   "why": "Invite-only; self-promotion of commercial sites is frowned upon and the owner has no invite."
+  },
+  {
+   "name": "TaxGuru",
+   "why": "Article site rather than a forum; the guest-article submission pages (/submit-post/, /submit-article/) returned 404 today. CAclubindia covers Indian practitioners."
+  },
+  {
+   "name": "Trading Q&A by Zerodha",
+   "why": "Active Discourse forum but centred on trading and brokerage; the Taxation category is small (1,642 topics) and the India personal-finance subs already cover the audience."
+  },
+  {
+   "name": "DPReview forums, VideoHelp forum, SitePoint Community, freeCodeCamp forum",
+   "why": "Not verifiable today (VideoHelp 503 anti-bot; DPReview rules not published; SitePoint has 'zero tolerance' first-post-link policy and no signatures; freeCodeCamp is a learning forum). Marginal fit; dropped to keep the register to defensible venues."
+  },
+  {
+   "name": "Property Tribes",
+   "why": "Active, but shows 2024-dated discussions and heavy sponsor placement; Property118 and LandlordZONE are the better two landlord forums for the time available."
+  }
+ ],
+ "insights": [
+  "Reddit blocks every JSON endpoint (about.json, rules.json, search.json) from datacenter/VPS networks with a 403 'blocked by network security' page; the RSS feeds (/r/<sub>/.rss) still work and the redlib mirror safereddit.com renders sidebars and member counts. Any promotion tooling must open the Reddit composer in the owner's logged-in browser and should use RSS, not JSON, to watch for new questions and weekly threads.",
+  "The venues that welcome a free browser tool outright are the ones built for it: r/SideProject (title format '[Name] - [description]'), r/alphaandbetausers (link to a testable product, test others back), r/webdev and r/javascript Showoff Saturday, r/TeachingResources ('okay to self promote... within reason'), r/EdTech's monthly Developers/Sales thread, r/IndiaInvestments' monthly Promotional Content thread, r/StartUpIndia's Weekly Startups Promotion Thread, r/smallbusiness's quarterly Promote-your-business thread and r/startups' quarterly Share-your-startup thread. Everywhere else the only durable move is a disclosed link inside a comment that fully answers a question.",
+  "What gets banned: a first post that is a link, any link where the account's history is mostly 1234Tools (every sub quotes the 9:1 or 90/10 rule), the same tool pasted across many subs in one day, undisclosed affiliation on Stack Exchange and Quora (the domain gets blocklisted network-wide), and AI-sounding prose (r/AskHR and r/Teachers now ban AI-generated content on sight). r/InternetIsBeautiful bans whole domains after repeat submissions (Vercel.app was banned in July 2026).",
+  "Disclosure is a feature, not a cost: 'I built this; it runs in your browser, nothing is uploaded, no account; analytics only if you accept the banner' pre-empts the three questions every community asks and is the sentence that converts privacy-conscious readers. Never claim 'no third-party requests' unqualified because Clarity loads after consent.",
+  "Share links should carry state. The finder already supports ?key=number for 21 calculators and ?v= for conversions; a share button on every tool page should encode the current inputs in the URL so a WhatsApp forward or a Reddit comment opens on the recipient's numbers. For the UK and India small-business audiences WhatsApp (https://wa.me/?text=), LinkedIn and Telegram matter more than X; include copy-link and email, and give each tool a per-tool og:title/og:description/og:image so the preview in WhatsApp, Reddit and LinkedIn names the tool rather than the site. Tag shared links utm_source=share_<channel>&utm_medium=social&utm_campaign=<section>&utm_content=<tool> so GA4 separates organic sharing from the owner's own posting.",
+  "Cadence that survives: one subreddit comment per day across the register, never two links in the same sub inside a week, weekly/quarterly promo threads on their day, one launch venue (Show HN, Product Hunt, Indie Hackers Build Board) per section launch rather than one launch for the whole site. Thirty minutes a day is enough for two good answers plus the day's thread.",
+  "Time zones: India subs and CAclubindia peak 14:00-16:30 UTC (IST evening) and 03:00-06:00 UTC; UK subs and forums 07:00-09:00 and 19:00-21:00 UTC; US-weighted subs and HN 13:00-17:00 UTC weekdays; Product Hunt launches go live at 12:01 am Pacific (07:01 UTC in summer, 08:01 in winter).",
+  "Term-time seasonality: timetable, seating and mark-scheme tools spike in late Aug/early Sep, early Jan and mid Apr (UK) and June (India); payslip, P60 and year-end tools spike in March-April (UK tax year) and July (India ITR); invoice and VAT tools around each quarter end. Queue the matching guides and comparison pages for those windows.",
+  "Stack Exchange and Quora answers compound for years in search; Reddit threads do too but only in subs that keep posts (not daily-thread-only subs). Favour evergreen 'how do I...' questions over 'what do you use' polls when choosing where to spend an answer."
+ ]
+}

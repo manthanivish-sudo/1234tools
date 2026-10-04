@@ -118,6 +118,17 @@
     };
   }
 
+  /* The query string and the fragment of the link, the fragment winning. The
+     share bar puts what it carries after the #, which never reaches a server
+     or analytics; the Tool Finder still sends ?text=. */
+  const linkParams = () => { const q = new URLSearchParams(location.search); try { const h = new URLSearchParams(location.hash.replace(/^#/, '')); for (const [k, v] of h) q.set(k, v); } catch (e) {} return q; };
+
+  /* The share bar's hand-off: the same three lines in every engine. */
+  function announce(state) {
+    (window.MVRTool = window.MVRTool || {}).shareState = function () { return state; };
+    document.dispatchEvent(new CustomEvent('mvr:result', { detail: state }));
+  }
+
   function renderStats(container, stats) {
     container.textContent = '';
     if (!stats || !stats.length) return;
@@ -148,12 +159,12 @@
     if (spec.sample) {
       const s = el('button', 'btn-ghost', 'Load example');
       s.type = 'button';
-      s.addEventListener('click', function () { ta.value = spec.sample; run(); });
+      s.addEventListener('click', function () { touched = true; ta.value = spec.sample; run(); });
       inTools.appendChild(s);
     }
     const clr = el('button', 'btn-ghost', 'Clear');
     clr.type = 'button';
-    clr.addEventListener('click', function () { ta.value = ''; run(); ta.focus(); });
+    clr.addEventListener('click', function () { touched = true; ta.value = ''; run(); ta.focus(); });
     inTools.appendChild(clr);
     inHead.appendChild(inTools);
     const ta = el('textarea', 'code-area');
@@ -184,7 +195,21 @@
     io.appendChild(inWrap);
     io.appendChild(outWrap);
 
+    /* Text travels in a shared link only while it is short: past 300
+       characters the link stops being a link, and long text is the kind most
+       likely to be somebody's draft. The output never travels. */
+    let touched = false, fromLink = false;
     function run() {
+      paint();
+      announce({
+        kind: 'code',
+        params: (ta.value && ta.value.length <= 300) ? { text: ta.value } : {},
+        summary: null,
+        changed: touched || fromLink
+      });
+    }
+
+    function paint() {
       const opts = {};
       readers.forEach(function (r) { opts[r.key] = r.read(); });
       let res;
@@ -210,13 +235,15 @@
        the word counter already counted. Up to 4,000 characters, read here in
        the browser and sent nowhere; nothing else is taken from the URL. */
     try {
-      const given = new URLSearchParams(location.search).get('text');
+      const given = linkParams().get('text');
       if (given !== null) ta.value = given.slice(0, 4000).replace(/[\uD800-\uDBFF]$/, '');
+      fromLink = given !== null && given !== '';
     } catch (e) { /* no URL, no prefill */ }
 
-    ta.addEventListener('input', run);
-    optBar.addEventListener('input', run);
-    optBar.addEventListener('change', run);
+    const used = function () { touched = true; run(); };
+    ta.addEventListener('input', used);
+    optBar.addEventListener('input', used);
+    optBar.addEventListener('change', used);
     run();
   }
 
@@ -1091,7 +1118,7 @@
      * start of making your own.
      */
     function applyViewMode() {
-      const params = new URLSearchParams(location.search);
+      const params = linkParams();
       // `v=1` is what links carry now; `view=code` was the first spelling and
       // still works, because links already sent to people have to keep working.
       if (params.get('v') !== '1' && params.get('view') !== 'code') return;
@@ -1177,6 +1204,7 @@
         msg.textContent = 'Fill in the fields above and your QR code will appear here.';
         msg.className = 'io-msg is-note';
         renderStats(stats, null);
+        announce({ kind: 'qr', params: {}, summary: null, changed: qrChanged });
         return;
       }
 
@@ -1189,6 +1217,7 @@
         msg.textContent = e.message;
         msg.className = 'io-msg is-error';
         renderStats(stats, null);
+        announce({ kind: 'qr', params: {}, summary: null, changed: qrChanged });
         return;
       }
 
@@ -1270,6 +1299,12 @@
         ['PNG export', pngSize + ' x ' + pngSize + ' px'],
         ['Smallest safe print', printMm + ' mm wide']
       ]);
+
+      /* The share bar sends the same parameters as "Copy share link", after
+         a # rather than a ?, so the code's content reaches no server. */
+      let params = {};
+      try { params = Object.fromEntries(new URL(shareLink()).searchParams); } catch (e) { params = {}; }
+      announce({ kind: 'qr', params: params, summary: null, changed: qrChanged });
     }
 
     /* Re-render on the next frame so a fast typist does not queue up work. */
@@ -1279,18 +1314,23 @@
       pending = requestAnimationFrame(function () { pending = 0; render(); });
     }
 
-    typeSel.addEventListener('change', function () { buildFields(); schedule(); });
-    fieldHost.addEventListener('input', schedule);
-    fieldHost.addEventListener('change', schedule);
-    controls.addEventListener('input', schedule);
-    controls.addEventListener('change', schedule);
+    /* Whether the code on screen is somebody's own rather than the page's
+       example: a change made here, or a code that arrived in the link. */
+    let qrChanged = false;
+    const changed = function () { qrChanged = true; schedule(); };
+    typeSel.addEventListener('change', function () { qrChanged = true; buildFields(); schedule(); });
+    fieldHost.addEventListener('input', changed);
+    fieldHost.addEventListener('change', changed);
+    controls.addEventListener('input', changed);
+    controls.addEventListener('change', changed);
 
     buildFields();
     captureDefaults();
     /* A link like ?t=wifi&ssid=Cafe&style=ec:H rebuilds the code on arrival,
        so a code can be sent as a URL rather than as a picture — and the person
-       who receives it can see what it contains before trusting it. */
-    try { applyShare(new URLSearchParams(location.search)); } catch (e) { /* a malformed link just shows the default */ }
+       who receives it can see what it contains before trusting it. The share
+       bar's links carry the same after a #, which is read here as well. */
+    try { if (applyShare(linkParams())) qrChanged = true; } catch (e) { /* a malformed link just shows the default */ }
     applyViewMode();
     render();
   }

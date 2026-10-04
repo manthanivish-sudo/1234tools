@@ -222,6 +222,7 @@ function hubPage(parts, counts) {
     '  <p class="collection-intro">The sidebar sorts tools by what they are, which is how a librarian would do it. Nobody arrives thinking “I need a Business tool”. These pages sort them the other way — by the person holding the problem, and by the job in front of them.</p>\n' +
     '  <section class="collection-group"><h2>By what you do</h2><p class="group-blurb">The page to bookmark.</p><div class="grid">' + roles + '</div></section>\n' +
     '  <section class="collection-group"><h2>By the job in hand</h2><p class="group-blurb">The page to send somebody.</p><div class="grid">' + tasks + '</div></section>\n' +
+    '  <section class="panel"><h2>Made with these tools</h2><p>People share what they make — a Reel with captions, a thumbnail, a class’s certificates, a shop’s product photos. The best are in the <a href="/showcase/">showcase</a>, with the maker’s name and a link to them. <a href="/showcase/#submit">Send yours</a>: it is checked by a person before anything is shown.</p></section>\n' +
     '  <section class="panel"><h2>What “free” means here</h2><ul class="tips">' +
       '<li><strong>Free, no account.</strong> ' + esc(PRICING.free.blurb) + ' That is ' + counts.free.toLocaleString('en-GB') + ' of them, and it stays that way because they cost us nothing to run — the work happens in your browser, not on our server.</li>' +
       '<li><strong>Free to try, then paid.</strong> ' + esc(PRICING.freemium.blurb) + ' That is the ' + counts.freemium + ' AI tools, which cost us money every time somebody presses the button.</li>' +
@@ -429,6 +430,7 @@ function audienceBlock() {
     '  <h2 class="section-title" id="aud-head">I am a…</h2>\n' +
     '  <p class="section-lede">Pick what you do and get the short list made for it: the tools, why each is there, and what is coming next.</p>\n' +
     '  <div class="aud-grid">' + tiles + '</div>\n' + (hi ? '  ' + hi + '\n' : '') +
+    '  <p class="aud-made">Made something with one of these tools? <a href="/showcase/">See what people have made</a>, and <a href="/showcase/#submit">send yours to be featured</a>, with your name and a link to you.</p>\n' +
     '</section>\n<!-- /AUDIENCES -->';
 }
 
