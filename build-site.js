@@ -855,16 +855,41 @@ const FOOT_LOCAL = 'The calculators, converters and file tools on 1234Tools run 
 /* kinds written after the sentence rather than in its place */
 const FOOT_APPEND = new Set(['request']);
 
-/* The line under the logo ("… built by MVR IT Services and running entirely
-   in your browser.") is true everywhere except the AI pages, so there it is
-   qualified the same way, in its own marked block:
-     <!--about:KIND-->qualified ending<!--/about-->   instead of ABOUT_DEFAULT */
-const ABOUT_DEFAULT = 'and running entirely in your browser.';
-const ABOUT_RE = /<!--about:([a-z-]+)-->[\s\S]*?<!--\/about-->/g;
+/* The line under the logo: "1,282+ free calculators and converters … —
+   built by MVR IT Services", then ABOUT_DEFAULT, which says almost all of
+   them run entirely in your browser and names the ones that do not: the AI
+   tools under /ai/ (the AI image and video tools run on the device) and the
+   three forms that send what is typed (the tool request form, the contact
+   form, the showcase form). Accounts and payments are not tools; their own
+   pages say what they send. ABOUT_DEFAULT starts with its own comma, so it
+   stands in for the space before it as well.
+   Pages written before it carry ABOUT_LEGACY (" and running entirely in
+   your browser.", which the AI tools made untrue); aboutBare() turns that
+   into ABOUT_DEFAULT, so the hand-copied shells need no editing.
+   On the AI pages the second sentence is narrowed to the page, in a marked
+   block that replaces ABOUT_DEFAULT:
+     Services<!--about:KIND-->ABOUT_LEAD + the page's own words<!--/about-->
+   Older blocks sat after a space ("Services <!--about:…"); ABOUT_RE takes
+   that space with them. */
+const ABOUT_LEAD = ', almost all of them running entirely in your browser.';
+const ABOUT_DEFAULT = ABOUT_LEAD + ' The exceptions are the <a href="/ai/">AI for Business</a> tools, which send what you give them through our server to Anthropic’s API, and the tool request, contact and showcase forms, which send what you type to us, as the <a href="/privacy/">privacy policy</a> explains.';
+const ABOUT_LEGACY = ' and running entirely in your browser.';
+const ABOUT_RE = / ?<!--about:([a-z-]+)-->[\s\S]*?<!--\/about-->/g;
 const ABOUT = {
-  'ai': 'and running in your browser — except this AI tool, which sends what you give it to Anthropic’s API when you press its button, as the note below explains.',
-  'ai-hub': 'and running in your browser — except the AI tools in this section, which send what you give them to Anthropic’s API when you press their buttons, as the note below explains.'
+  'ai': ABOUT_LEAD + ' This AI tool is one of the exceptions: when you press its button, what you give it is sent through our server to Anthropic’s API, as the note below explains.',
+  'ai-hub': ABOUT_LEAD + ' The exceptions here are the AI tools in this section, which send what you give them through our server to Anthropic’s API when you press their buttons, and the tool request form on this page, which sends what you type to us, as the note below explains.'
 };
+
+/** The page with its about line back to ABOUT_DEFAULT: any about block, and
+    the legacy ending, replaced. Only the footer-about div is touched. */
+function aboutBare(html) {
+  const start = html.indexOf('<div class="footer-about">');
+  const end = start === -1 ? -1 : html.indexOf('</div>', start);
+  if (end === -1) return html;
+  const region = html.slice(start, end);
+  const bare = region.replace(ABOUT_RE, () => ABOUT_DEFAULT).split(ABOUT_LEGACY).join(ABOUT_DEFAULT);
+  return bare === region ? html : html.slice(0, start) + bare + html.slice(end);
+}
 
 /** The about line qualified for `kind`, on a page with no about block left. */
 function aboutApply(html, kind) {
@@ -951,8 +976,7 @@ function footKind(html, rel) {
  * (an AI page still has its about line qualified).
  */
 function footerApply(html, rel) {
-  const bare = html.replace(FOOT_RE, (m, kind) => (FOOT_APPEND.has(kind) ? '' : FOOT_DEFAULT))
-    .replace(ABOUT_RE, ABOUT_DEFAULT);
+  const bare = aboutBare(html.replace(FOOT_RE, (m, kind) => (FOOT_APPEND.has(kind) ? '' : FOOT_DEFAULT)));
   const want = footKind(bare, rel);
   if (!want) return bare;
   const note = bare.indexOf('<div class="footer-note">');

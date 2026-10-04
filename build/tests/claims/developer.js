@@ -320,17 +320,36 @@ module.exports = function ({ claim, manual, kit: K }) {
   /* ================================================================ */
   const JF = '/developer/json-formatter/';
   const jf = () => T('dev-json-formatter.js', 'json-formatter');
-  /* [input, line, column]: the first character the grammar cannot accept.
-     Chrome's own messages give no position for several of these (trailing
-     comma in an array, single quotes, BOM, truncated input). */
+  /* [input, line, column]: the first character the grammar cannot accept,
+     except a trailing comma, which is placed on the comma itself rather than
+     on the } or ] after it. Chrome's own messages give no position for
+     several of these (trailing comma in an array, single quotes, BOM,
+     truncated input). */
   const JF_ERRS = [
-    ['{"a": 1,\n "b": [1,2,],\n}', 2, 12], ['[1, 2,\n]', 2, 1], ['{"a": 1,\n "b": 2,\n}', 3, 1],
+    ['{"a": 1,\n "b": [1,2,],\n}', 2, 11], ['[1, 2,\n]', 1, 6], ['{"a": 1,\n "b": 2,\n}', 2, 8],
     ['{"a": 1,\n  b: 2}', 2, 3], ["{'a': 1}", 1, 2], ["{\"a\": 'x'}", 1, 7], ['{"a": 1\n "b": 2}', 2, 2], ['[1 2]', 1, 4],
     ['{"a": "abc', 1, 11], ['{"a": "abc\n, "b": 1}', 1, 11], ['{"a": "c:\\path"}', 1, 10], ['{"a": "\\u12G4"}', 1, 8],
     ['{"a":', 1, 6], ['[tru', 1, 5], ['[1, [2, 3', 1, 10], ['\uFEFF{"a": 1}', 1, 1], ['{"a": 1 // note\n}', 1, 9],
-    ['{"a": 1}\nxyz', 2, 1], ['{"a": NaN}', 1, 7], ['{\r\n  "a": 1,\r\n  "b": 2,\r\n}', 4, 1],
-    ['['.repeat(5000) + '1,' + ']'.repeat(5000), 1, 5003]
+    ['{"a": 1}\nxyz', 2, 1], ['{"a": NaN}', 1, 7], ['{\r\n  "a": 1,\r\n  "b": 2,\r\n}', 3, 9],
+    ['['.repeat(5000) + '1,' + ']'.repeat(5000), 1, 5002]
   ];
+  /* trailing commas: [input, line, column of the comma, closing bracket].
+     Same line and a line or more above, LF and CRLF, objects and arrays,
+     nested, with whitespace or a comment between comma and bracket. */
+  const JF_TRAIL = [
+    ['{"a":1,}', 1, 7, '}'], ['[1,2,]', 1, 5, ']'], ['{"a": 1, }', 1, 8, '}'], ['[1, 2,  ]', 1, 6, ']'],
+    ['{\n  "a": 1,\n}', 2, 9, '}'], ['[\n  1,\n  2,\n]', 3, 4, ']'], ['[1, 2,\n\n\n]', 1, 6, ']'],
+    ['{\r\n  "a": 1,\r\n}', 2, 9, '}'], ['[\r\n  1,\r\n  2,\r\n]', 3, 4, ']'], ['{"a": [1,\r\n\t]}', 1, 9, ']'],
+    ['{"a": {"b": 1,\n  },\n "c": 2}', 1, 14, '}'], ['[1, // last\n]', 1, 3, ']'], ['{"a": 1, /* x */\r\n}', 1, 8, '}']
+  ];
+  const trailBad = (res) => res.map((r, i) => {
+    const [t, l, c, br] = JF_TRAIL[i];
+    const lines = String(r).split('\n');
+    const commaLine = t.split('\n')[l - 1].replace(/\r$/, '');
+    const ok = lines[0] === 'Invalid JSON at line ' + l + ', column ' + c + '.' && commaLine[c - 1] === ',' &&
+      lines[1] && lines[1].trim() === commaLine.trim() && lines[lines.length - 1].indexOf('Trailing comma: remove this comma (before the ' + br + ').') === 0;
+    return ok ? '' : JSON.stringify(t) + ' → ' + JSON.stringify(r);
+  }).filter(Boolean);
   claim(JF, 'card', 'Format, validate and minify JSON. Pinpoints the exact line and column of any syntax error.',
     'in Chrome: ' + JF_ERRS.length + ' faults (trailing commas, single quotes, bare keys, missing commas, unterminated strings, bad escapes, truncation, a BOM, comments, deep nesting) each land on the right line and column', B, async () => {
       const p = await K.open(JF);
@@ -343,7 +362,7 @@ module.exports = function ({ claim, manual, kit: K }) {
         return [bad.length === 0, bad.length ? bad.join(' | ') : 'all ' + res.length + ' placed, e.g. ' + res.slice(0, 3).join(' | ')];
       } finally { await p.close(); }
     });
-  claim(JF, 'point', 'When parsing fails, the tool’s own checker finds the first character the grammar refuses and prints its line, column and the reason', 'in Chrome: missing quote on line 2, with the line and the reason', B, async () => {
+  claim(JF, 'point', 'When parsing fails, the tool’s own checker finds the first fault and prints its line, column and the reason','in Chrome: missing quote on line 2, with the line and the reason', B, async () => {
     const r = out(await inPage(JF, 'json-formatter', '{"a": 1,\n  b: 2}'));
     return [/^Invalid JSON at line 2, column 3\.\n\s+b: 2\}\n.*double quotes/.test(r), K.j(r)];
   });
@@ -353,6 +372,42 @@ module.exports = function ({ claim, manual, kit: K }) {
     const bad = JF_ERRS.map(([t, l, c]) => { const r = (K.tx(spec, t).error || 'accepted').split('\n')[0]; return r === 'Invalid JSON at line ' + l + ', column ' + c + '.' ? '' : JSON.stringify(t.slice(0, 30)) + ' → ' + r; }).filter(Boolean);
     return [bad.length === 0, bad.length ? bad.join(' | ') : JF_ERRS.length + ' faults placed without a position from the parser'];
   });
+  claim(JF, 'point', 'A trailing comma is marked at the comma itself.',
+    'in Chrome: ' + JF_TRAIL.length + ' trailing commas (objects and arrays, same line and lines above, LF and CRLF, nested, a comment between) each give the comma\'s line and column, show its line and say "Trailing comma: remove this comma"', B, async () => {
+      const p = await K.open(JF);
+      try {
+        const res = await p.evaluate((cases) => {
+          const s = window.DEV_TOOLS['json-formatter'];
+          return cases.map(([t]) => s.transform(t, { mode: 'pretty', indent: '2' }).error || 'accepted');
+        }, JF_TRAIL);
+        const bad = trailBad(res);
+        return [bad.length === 0, bad.length ? bad.join(' | ') : 'all ' + res.length + ' on the comma, e.g. ' + JSON.stringify(res[4])];
+      } finally { await p.close(); }
+    });
+  claim(JF, 'point', 'A trailing comma is marked at the comma itself.', 'the same ' + JF_TRAIL.length + ' cases in Node, with JSON.parse throwing a bare "SyntaxError"', N, async () => {
+    const parse = JSON.parse;
+    const spec = K.tool('dev-json-formatter.js', 'json-formatter', { JSON: { parse: (t) => { try { return parse(t); } catch (e) { throw new SyntaxError('SyntaxError'); } }, stringify: JSON.stringify } });
+    const bad = trailBad(JF_TRAIL.map(([t]) => K.tx(spec, t).error || 'accepted'));
+    return [bad.length === 0, bad.length ? bad.join(' | ') : JF_TRAIL.length + ' trailing commas placed on the comma'];
+  });
+  claim(JF, 'what', 'The tool points at line 4, column 15: the stray comma after 3.', 'in Chrome: the worked five-line config', B, async () => {
+    const r = out(await inPage(JF, 'json-formatter', '{\n  "port": 8080,\n  "hosts": ["api.internal", "cache.internal"],\n  "retries": 3,\n}'));
+    return [/^Invalid JSON at line 4, column 15\.\n\s+"retries": 3,\nTrailing comma: remove this comma \(before the \}\)\.$/.test(r), K.j(r)];
+  });
+  claim(JF, 'mistake', 'Other than a trailing comma, the position is where the parser gave up, often a line after the real fault, such as a missing comma.',
+    'in Chrome: a missing comma at the end of line 1 is reported at line 2, column 2, where JSON.parse stops; a trailing comma on line 1 is reported on line 1', B, async () => {
+      const miss = '{"a": 1\n "b": 2}', trail = '{"a": 1,\n}';
+      const p = await K.open(JF);
+      try {
+        const r = await p.evaluate((miss, trail) => {
+          const s = window.DEV_TOOLS['json-formatter'];
+          let at = -1; try { JSON.parse(miss); } catch (e) { const m = /position (\d+)/.exec(e.message); at = m ? Number(m[1]) : -2; }
+          return { miss: s.transform(miss, { mode: 'pretty', indent: '2' }).error.split('\n')[0], trail: s.transform(trail, { mode: 'pretty', indent: '2' }).error.split('\n')[0], at };
+        }, miss, trail);
+        /* position 9 is the " of "b" on line 2, column 2: where the parser itself stopped */
+        return [r.miss === 'Invalid JSON at line 2, column 2.' && r.at === 9 && r.trail === 'Invalid JSON at line 1, column 8.', K.j(r)];
+      } finally { await p.close(); }
+    });
   claim(JF, 'faq', 'The JSON specification does not allow a comma after the last element of an object or array, even though JavaScript does. Remove it.', 'a trailing comma is refused', N, async () => {
     const r = K.tx(jf(), '[1,2,]'); return [!!r.error, r.error || 'accepted'];
   });
@@ -799,7 +854,6 @@ module.exports = function ({ claim, manual, kit: K }) {
   /* ---------- manual ---------- */
   manual(CO, 'tip', 'WCAG AA needs 4.5:1 for body text and 3:1 for large text (18pt, or 14pt bold). AAA raises these to 7:1 and 4.5:1.', 'WCAG 2 thresholds; check against the W3C text (the grading itself is checked above).');
   manual(HG, 'tip', 'MD5 has been collision-broken since 2004 and SHA-1 since 2017.', 'Cryptography history; needs sources.');
-  manual(JF, 'mistake', 'The parser reports where it gave up, often one line after the real fault.', 'Parser behaviour in general; partly covered by the line/column checks above.');
   manual(RB, 'faq', 'Blocking Google-Extended opts you out of Gemini training without affecting Google Search crawling or ranking', 'Google policy; needs Google\'s documentation with a date.');
   manual(RB, 'dfaq', 'Crawlers must read at least the first 500 kibibytes under RFC 9309, and Google ignores anything beyond that.', 'RFC 9309 and Google documentation.');
   manual(GR, 'dfaq', 'In every current one. Chrome and Safari added them first and Firefox followed in 2020.', 'Browser support history; needs a source (MDN / caniuse).');

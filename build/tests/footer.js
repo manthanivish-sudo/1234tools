@@ -20,9 +20,13 @@
  *   - every other page carries the default sentence, unchanged, with no block;
  *   - /showcase/, if built, carries no block of ours and not the default
  *     sentence (its builder words its own);
- *   - the line under the logo ("… running entirely in your browser") is
- *     qualified, in an <!--about:ai|ai-hub--> block, on the AI pages and
- *     carries no such block anywhere else;
+ *   - the line under the logo ends ", almost all of them running entirely in
+ *     your browser." and names the exceptions (the AI for Business tools,
+ *     the tool request, contact and showcase forms) on every page; on the
+ *     AI pages that second sentence is narrowed to the page in an
+ *     <!--about:ai|ai-hub--> block, and there is no such block anywhere
+ *     else; no page says "running entirely in your browser" without
+ *     "almost all of them" (the old unqualified ending);
  *   - footerApply() leaves every page as it is (the site is a fixed point).
  *
  * With the backend checked out beside the site (or --backend), the claim
@@ -40,6 +44,10 @@ const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 &
 const ROOT = path.resolve(arg('root', path.join(__dirname, '..', '..')));
 const BACKEND = path.resolve(arg('backend', path.join(ROOT, '..', '1234tools-backend')));
 const DEFAULT = 'Every calculation runs inside your browser — no figures are sent to a server, and nothing you type is stored or logged.';
+/* the about line's ending, written out here rather than read from build-site.js */
+const ABOUT_LEAD = ', almost all of them running entirely in your browser.';
+const ABOUT_DEFAULT = ABOUT_LEAD + ' The exceptions are the <a href="/ai/">AI for Business</a> tools, which send what you give them through our server to Anthropic’s API, and the tool request, contact and showcase forms, which send what you type to us, as the <a href="/privacy/">privacy policy</a> explains.';
+const ABOUT_LEGACY = ' and running entirely in your browser.';
 
 let pass = 0, fail = 0;
 const fails = [];
@@ -75,6 +83,37 @@ for (const abs of pages()) {
   const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
   const html = fs.readFileSync(abs, 'utf8');
   if (/http-equiv="refresh"/.test(html) && /noindex/.test(html)) continue;
+  const sendsAi = /^ai\/[^/]+\/index\.html$/.test(rel) && html.includes('/engine/render-ai.js');
+
+  /* the line under the logo: "… built by MVR IT Services, almost all of them
+     running entirely in your browser." and then the exceptions — the AI
+     tools and the three forms — everywhere, narrowed to the page in an
+     <!--about:ai|ai-hub--> block on the AI pages, and nowhere the old
+     unqualified "… and running entirely in your browser." */
+  const aboutM = /<div class="footer-about">([\s\S]*?)<\/div>/.exec(html);
+  if (aboutM) {
+    const about = aboutM[1];
+    const aboutKind = (/<!--about:([a-z-]+)-->/.exec(about) || [])[1] || null;
+    const aiKind = rel === 'ai/index.html' ? 'ai-hub' : (sendsAi ? 'ai' : null);
+    ok(!about.includes(ABOUT_LEGACY), rel + ': footer-about still says "and running entirely in your browser." unqualified');
+    if (aiKind) {
+      const aboutWords = (/<!--about:[a-z-]+-->([\s\S]*?)<!--\/about-->/.exec(about) || [])[1] || '';
+      ok(aboutKind === aiKind && about.includes('MVR IT Services<!--about:' + aiKind + '-->' + ABOUT_LEAD) &&
+        /Anthropic’s API/.test(aboutWords) && /as the note below explains\.$/.test(aboutWords) && !about.includes(ABOUT_DEFAULT) &&
+        (aiKind === 'ai' ? /This AI tool is one of the exceptions/.test(aboutWords) : /AI tools in this section/.test(aboutWords) && /tool request form/.test(aboutWords)) &&
+        (about.match(/<!--about:/g) || []).length === 1,
+        rel + ': footer-about line not qualified for the AI tool (' + aiKind + '), found ' + aboutKind);
+      bump('about-' + aiKind, rel);
+    } else {
+      ok(!aboutKind, rel + ': footer-about carries an about block (' + aboutKind + ') off the AI pages');
+      ok(about.includes('MVR IT Services' + ABOUT_DEFAULT + '</p>'), rel + ': footer-about does not end with the default about line');
+      bump('about-default', rel);
+    }
+  }
+  /* anywhere on the page, "running entirely in your browser" only after "almost all of them" */
+  const bare = html.split('almost all of them running entirely in your browser').join('');
+  ok(!/running entirely in your browser/.test(bare), rel + ': says "running entirely in your browser" without "almost all of them"');
+
   const n = /<div class="footer-note">([\s\S]*?)<\/div>/.exec(html);
   if (!n) continue;
   const note = n[1];
@@ -85,24 +124,6 @@ for (const abs of pages()) {
 
   ok(site.footerApply(html, rel) === html, rel + ': footerApply would change it (not a fixed point)');
   ok((note.match(/<!--foot:/g) || []).length <= 1, rel + ': more than one footer block');
-
-  const sendsAi = /^ai\/[^/]+\/index\.html$/.test(rel) && html.includes('/engine/render-ai.js');
-
-  /* the line under the logo: "… running entirely in your browser" is
-     qualified on the AI pages, and only there */
-  const aboutM = /<div class="footer-about">([\s\S]*?)<\/div>/.exec(html);
-  if (aboutM) {
-    const about = aboutM[1];
-    const aboutKind = (/<!--about:([a-z-]+)-->/.exec(about) || [])[1] || null;
-    const aiKind = rel === 'ai/index.html' ? 'ai-hub' : (sendsAi ? 'ai' : null);
-    if (aiKind) {
-      ok(aboutKind === aiKind && /Anthropic’s API/.test(about) && !/running entirely in your browser/.test(about) && (about.match(/<!--about:/g) || []).length === 1,
-        rel + ': footer-about line not qualified for the AI tool (' + aiKind + '), found ' + aboutKind);
-      bump('about-' + aiKind, rel);
-    } else {
-      ok(!aboutKind, rel + ': footer-about carries an about block (' + aboutKind + ') off the AI pages');
-    }
-  }
   const request = /data-endpoint="[^"]*\/submitToolRequest"/.test(html);
   const formsubmit = /<form\b[^>]*\baction="https:\/\/formsubmit\.co\//.test(html);
   const practice = html.includes('src="/assets/practice.js"');

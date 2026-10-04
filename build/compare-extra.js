@@ -179,7 +179,7 @@ const COMPARISONS = [
     name: 'Free JSON formatter',
     crumb: 'Free JSON formatter',
     title: 'Free JSON formatter: when a browser tab is the right tool, and when your editor is',
-    lede: 'Paste JSON and get it indented, minified or with its keys sorted — or get the exact line and column where it stops parsing — in your browser, with nothing sent anywhere. For anything bigger than a paste, your code editor and the command line do more, and this page says which jobs those are first.',
+    lede: 'Paste JSON and get it indented, minified or with its keys sorted — or get the exact line and column of the first fault — in your browser, with nothing sent anywhere. For anything bigger than a paste, your code editor and the command line do more, and this page says which jobs those are first.',
     honest: [
       'A JSON formatter is what you reach for when an API hands back one unbroken line, or a config file will not load and the error says “unexpected token” and nothing else. The one here parses with the browser’s built-in JSON engine as you type, prints the result with the indent you choose, and on a failure tells you the line, the column and the text around it. Nothing you paste leaves the page.',
       'We compare it against the tools a developer already has rather than against other websites: a code editor with a formatter built in or added, and command-line JSON processors. For a lot of jobs those are the better choice, and this page is for deciding which one to open.'
@@ -204,7 +204,7 @@ const COMPARISONS = [
         { edge: 'them', need: 'Querying, filtering and reshaping', us: 'Not attempted.', them: 'What command-line processors exist for.' },
         { edge: 'them', need: 'Big documents: folding, bracket matching, search', us: 'A plain text block, scrollable, with copy and download.', them: 'Built in.' },
         { edge: 'them', need: 'Comments, trailing commas, 64-bit integers, repeated keys', us: 'Strict JSON through the browser’s parser: comments and trailing commas are errors, very large integers lose precision, and a repeated key keeps its last value.', them: 'Work on the text, so nothing is silently changed.' },
-        { edge: 'level', need: 'Finding why it will not parse', us: 'The line, the column and the text around it, worked out from the parser’s own error.', them: 'Editors underline it as you type, which is at least as good.' },
+        { edge: 'level', need: 'Finding why it will not parse', us: 'The line, the column, the text around it and the reason, from the tool’s own checker.', them: 'Editors underline it as you type, which is at least as good.' },
         { edge: 'level', need: 'A token or a config with internal hostnames in it', us: 'Parsed in this page and sent nowhere; open the network panel and watch it stay empty.', them: 'Local too. The risk is pasting into a web page that does its work on a server, so check before you do.' },
         { edge: 'us', need: 'A machine you cannot install anything on', us: 'A browser tab: a locked-down work laptop, a client’s machine, a phone.', them: 'Needs the editor, and its extensions, installed and allowed.' },
         { edge: 'us', need: 'Starting from nothing', us: 'Open the page and paste. Indent with two spaces, four or a tab, minify, or sort the keys at every depth.', them: 'Install, configure, find the extension.' },

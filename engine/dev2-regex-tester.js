@@ -521,7 +521,7 @@ window.DEV_TOOLS["regex-tester"] = {
 "inputLabel": "Test text",
 "outputLabel": "Matches",
 "placeholder": "Paste the text you want to match against…",
-"sample": "Contact us at hello@mvritservices.com or support@example.co.uk\nCall 0118 496 0000 or 020 7946 0958\nOrder #12345 shipped on 2026-07-28",
+"sample": "Contact us at hello@example.com or support@example.co.uk\nCall 0118 496 0000 or 020 7946 0958\nOrder #12345 shipped on 2026-07-28",
 "options": [{"key":"pattern","label":"Pattern","type":"text","default":"[\\w.-]+@[\\w.-]+\\.\\w{2,}"},{"key":"flags","label":"Flags","type":"select","default":"g","options":[{"value":"g","label":"g — global"},{"value":"gi","label":"gi — global, ignore case"},{"value":"gm","label":"gm — global, multiline"},{"value":"gim","label":"gim — global, ignore case, multiline"},{"value":"gs","label":"gs — global, dot matches newline"},{"value":"","label":"(none) — first match only"}]},{"key":"view","label":"Show","type":"select","default":"matches","options":[{"value":"matches","label":"Matches with groups"},{"value":"highlight","label":"Text with matches marked"},{"value":"replace","label":"Replace result"},{"value":"split","label":"Split result"}]},{"key":"replacement","label":"Replacement (for replace mode)","type":"text","default":"[$&]"}],
 "transform": (text, o) => {
       const src = String(text || '');

@@ -803,7 +803,7 @@ const GUIDES = [
     name: 'How to format JSON',
     title: 'How to format JSON — pretty-print it, validate it, and fix the error it points at',
     description: 'Indent JSON so it can be read, find the line and column where broken JSON fails, fix the six faults that cause nearly every parse error, and minify or sort keys when you need to.',
-    answer: 'To format JSON, parse it and write it back out with one key per line and each level of nesting indented — two spaces per level is the common choice. Paste it into the JSON Formatter and it does both at once; if the JSON is broken, it says which line and column the parser gave up on, which is where to start looking.',
+    answer: 'To format JSON, parse it and write it back out with one key per line and each level of nesting indented — two spaces per level is the common choice. Paste it into the JSON Formatter and it does both at once; if the JSON is broken, it gives the line and column of the first fault, which is where to start looking.',
     minutes: { first: 'five minutes', again: 'seconds' },
     howLong: 'Seconds for valid JSON. Broken JSON takes as long as it takes to find the fault, which is usually a minute once you know that the error position is where the parser noticed the problem, not always where the problem is.',
     before: [
@@ -826,7 +826,7 @@ const GUIDES = [
         body: [
           { p: 'This JSON has one fault — a comma after the last value:' },
           { formula: '{ "invoice": "INV-0042", "total": 29500, "paid": false, }' },
-          { p: 'Laid out over five lines, as in the example the link below opens with, the formatter reports “Invalid JSON at line 5, column 1 — Expected double-quoted property name”. Line 5 is the closing brace. The parser read the comma, expected another key, found a brace, and stopped. The fault is on the line before the one reported, which is typical: the error marks where the parser noticed, so look just before it.' },
+          { p: 'Laid out over five lines, as in the example the link below opens with, the formatter reports “Invalid JSON at line 4, column 16” and “Trailing comma: remove this comma (before the })”. That is the comma itself. The parser stopped a line later, at the closing brace, the first point where it could tell the comma had nothing after it; the formatter traces it back. Most other faults are marked where the parser stopped, so look just before the position given.' },
           { tool: '/developer/json-formatter/', why: 'paste the broken version and it names the line and column; take the comma out and it formats', fill: textFill(JSON_BROKEN), fillLabel: 'Open the formatter with the broken example in, and see the error it gives' },
           { fact: {
             text: 'JSON is defined by RFC 8259. Strings, including every object key, begin and end with double quotation marks; a comma separates one member or value from the next, so it may not follow the last one; and the grammar has no comments. The literal names are exactly true, false and null, in lower case. Object keys should be unique, and the RFC notes that software differs in what it does when they are not.',
@@ -873,7 +873,7 @@ const GUIDES = [
       { q: 'Does JSON allow comments?', a: 'No. The grammar has no comment syntax. Some tools accept JSON-like files with comments, such as some editor settings files, but those are not JSON and a strict parser will reject them.' },
       { q: 'Two spaces, four spaces or tabs?', a: 'It makes no difference to the data. Two spaces is the most common choice in web projects; match whatever the rest of your project uses so that changes compare cleanly.' },
       { q: 'Is my JSON sent anywhere?', a: 'No. It is parsed and formatted in your browser with the browser’s built-in JSON engine. Nothing leaves the page, which matters for configuration files with hostnames or keys in them.' },
-      { q: 'Why does the error point at the wrong line?', a: 'It points at the place the parser could no longer continue, which is often just after the real mistake — the line after a trailing comma, or the end of the file after a missing bracket. Start at the position given and look backwards.' }
+      { q: 'Why does the error point at the wrong line?', a: 'For most faults it points at the place the parser could no longer continue, which is often just after the real mistake — the start of the line after a missing comma, or the end of the file after a missing bracket. Start at the position given and look backwards. A trailing comma is the exception: the formatter marks the comma itself.' }
     ],
     tools: ['/developer/json-formatter/', '/developer/csv-to-json/', '/developer/xml-formatter/', '/developer/jwt-decoder/'],
     collections: ['developers'],

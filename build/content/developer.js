@@ -21,14 +21,14 @@ module.exports = {
     howItWorks: {
       text: 'Your text goes to the browser’s own parser, `JSON.parse`, so the verdict is the one your code would get. Nothing leaves the tab.',
       points: [
-        'When parsing fails, the tool’s own checker finds the first character the grammar refuses and prints its line, column and the reason, whatever the browser’s message says.',
+        'When parsing fails, the tool’s own checker finds the first fault and prints its line, column and the reason, whatever the browser’s message says. A trailing comma is marked at the comma itself.',
         'A valid document is written back with `JSON.stringify`: indented by 2 or 4 spaces or a tab, or on one line when minified.',
         'With keys sorted, every object at every depth is rebuilt in alphabetical key order; arrays keep their own order.',
         'The figures count every key and array item at all levels, the deepest nesting, and both sizes in UTF-8 bytes.'
       ]
     },
     worked: {
-      text: 'A five-line service config, {"port": 8080, "hosts": ["api.internal", "cache.internal"], "retries": 3,}, will not load. The tool stops at line 5, column 1, the closing brace, where the parser still expected a property name: the stray comma sits on the line above. Without it the file is valid, with 5 keys and items and a maximum depth of 3. Minified it drops from 81 B to 67 B; sorted with 4-space indents it grows to 109 B.'
+      text: 'A five-line service config, {"port": 8080, "hosts": ["api.internal", "cache.internal"], "retries": 3,}, will not load. The tool points at line 4, column 15: the stray comma after 3. Without it the file is valid, with 5 keys and items and a maximum depth of 3. Minified it drops from 81 B to 67 B; sorted with 4-space indents it grows to 109 B.'
     },
     uses: [
       ['Reading an API response', 'Turn the one-line body from curl or the network tab into something you can scan.'],
@@ -37,7 +37,7 @@ module.exports = {
     ],
     mistakes: [
       'Pasting a JavaScript object literal. Single quotes, bare keys and comments work in a .js file and are invalid JSON.',
-      'Taking the error line literally. The parser reports where it gave up, often one line after the real fault.'
+      'Taking the error line literally. Other than a trailing comma, the position is where the parser gave up, often a line after the real fault, such as a missing comma.'
     ],
     faq: [
       { q: 'Can JSON have comments?', a: 'Not under RFC 8259. Dialects such as JSONC (VS Code settings) and JSON5 add them, but a standard parser, this one included, rejects them.' },
@@ -47,7 +47,7 @@ module.exports = {
     related: { guides: ['/guides/format-json/'] },
     runs: [
       /* the broken config, default options (formatted, 2 spaces) */
-      { input: '{\n  "port": 8080,\n  "hosts": ["api.internal", "cache.internal"],\n  "retries": 3,\n}', check: [['error', 'line 5, column 1']] },
+      { input: '{\n  "port": 8080,\n  "hosts": ["api.internal", "cache.internal"],\n  "retries": 3,\n}', check: [['error', 'line 4, column 15']] },
       /* the same config with the comma removed, minified */
       { input: '{\n  "port": 8080,\n  "hosts": ["api.internal", "cache.internal"],\n  "retries": 3\n}', options: { mode: 'minify' }, check: [['stat:Keys / items', '5'], ['stat:Max depth', '3'], ['stat:Input', '81 B'], ['stat:Output', '67 B']] },
       /* and formatted with keys sorted, 4-space indent */

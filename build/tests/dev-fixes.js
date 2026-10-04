@@ -37,6 +37,9 @@
  *     scanner's picture input and through a stubbed camera); the generator's
  *     read-back still refuses it
  * 11  Base64: Growth on UTF-8 bytes
+ * 12  Generator defaults: no default, sample or placeholder of a developer
+ *     or text tool, and no engine script, names mvritservices.com; the
+ *     robots.txt, .htaccess and meta-tag defaults are 1234Tools ones
  * and the published examples of these tools still match their engines.
  */
 'use strict';
@@ -751,6 +754,52 @@ function testBase64() {
   }
 }
 
+/* ======================================================================
+   12  Generator defaults name 1234Tools, not mvritservices.com
+   ====================================================================== */
+
+function testDefaults() {
+  section('12  Generator defaults: 1234Tools, never mvritservices.com');
+  // every default, sample and placeholder of every developer and text tool spec
+  const files = fs.readdirSync(path.join(ROOT, 'engine')).filter((f) => /^(dev|dev2|txt)-.*\.js$/.test(f)).sort();
+  const bad = [];
+  let specs = 0, values = 0;
+  const walk = (o, where) => {
+    if (Array.isArray(o)) { o.forEach((x, i) => walk(x, where + '[' + i + ']')); return; }
+    if (!o || typeof o !== 'object') return;
+    for (const k of Object.keys(o)) {
+      const v = o[k];
+      if (typeof v === 'string' && /^(default|sample|placeholder)$/.test(k)) { values++; if (/mvritservices/i.test(v)) bad.push(where + '.' + k + ' = ' + v); }
+      else if (v && typeof v === 'object') walk(v, where + '.' + k);
+    }
+  };
+  for (const f of files) {
+    let ctx;
+    try { ctx = current('engine/' + f); } catch (e) { check(false, f + ' loads in Node', e.message); continue; }
+    for (const reg of ['DEV_TOOLS', 'TEXT_TOOLS']) {
+      for (const [id, spec] of Object.entries(ctx[reg] || {})) { specs++; walk(spec, f + ' ' + id); }
+    }
+  }
+  check(specs >= files.length && values > 0 && bad.length === 0,
+    'no default, sample or placeholder in ' + specs + ' developer and text tool specs (' + values + ' values) contains mvritservices', bad.join(' | '));
+  // and no engine script at all, which covers the QR generators' tuple defaults and bulk examples in render-dev.js
+  const scripts = fs.readdirSync(path.join(ROOT, 'engine')).filter((f) => /\.js$/.test(f));
+  const hits = scripts.filter((f) => /mvritservices/i.test(fs.readFileSync(path.join(ROOT, 'engine', f), 'utf8')));
+  check(hits.length === 0, 'none of the ' + scripts.length + ' engine scripts mentions mvritservices', hits.join(', '));
+  // the defaults that replaced them
+  const rb = current('engine/dev-robots-txt-generator.js').DEV_TOOLS['robots-txt-generator'];
+  check(defaults(rb.fields).sitemap === 'https://www.1234tools.com/sitemap.xml' && /\nSitemap: https:\/\/www\.1234tools\.com\/sitemap\.xml\n$/.test(generate(rb, {}).output),
+    'robots.txt: the default sitemap is https://www.1234tools.com/sitemap.xml and is written', defaults(rb.fields).sitemap);
+  check(defaults(current('engine/dev-htaccess-generator.js').DEV_TOOLS['htaccess-generator'].fields).domain === '1234tools.com', '.htaccess: the default domain is 1234tools.com');
+  const mt = current('engine/dev-meta-tag-generator.js').DEV_TOOLS['meta-tag-generator'];
+  const md = defaults(mt.fields), mr = generate(mt, {});
+  check(md.url === 'https://www.1234tools.com/' && md.image === 'https://www.1234tools.com/assets/img/og-image.png' && md.site === '1234Tools' && /1234Tools$/.test(md.title),
+    'meta tags: the default URL, share image, site name and title are 1234Tools ones', JSON.stringify(md));
+  check(fs.existsSync(path.join(ROOT, 'assets/img/og-image.png')), 'meta tags: the default share image exists in the site (assets/img/og-image.png)');
+  check(stat(mr, 'Tags generated') === '14' && / — good$/.test(stat(mr, 'Title length') || '') && / — good$/.test(stat(mr, 'Description length') || ''),
+    'meta tags: the default form writes 14 tags with a title and description of good length', (mr.stats || []).join(' | '));
+}
+
 let exCache = null;
 function examples() {
   if (exCache) return exCache;
@@ -1201,6 +1250,7 @@ async function testQrBrowser(browser, watch) {
   testDiff();
   testQrNode();
   testBase64();
+  testDefaults();
   if (!NODE_ONLY) await browserPart();
   console.log('\n' + pass + ' passed, ' + fail + ' failed' + (skipped ? ', ' + skipped + ' skipped' : ''));
   process.exit(fail ? 2 : 0);

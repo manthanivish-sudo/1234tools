@@ -14,7 +14,9 @@ function bytes(s) {
    carry no position at all ("Unexpected end of JSON input"), and others quote
    the whole input instead. So the text is scanned here by a small RFC 8259
    checker that stops at the first character the grammar cannot accept, the
-   same place JSON.parse gives up, and says why. It runs only after JSON.parse
+   same place JSON.parse gives up, and says why. One exception: a trailing
+   comma is reported at the comma, not at the } or ] after it where the
+   parser stops, because the comma is what has to go. It runs only after JSON.parse
    has refused the text, so the verdict stays the browser's. It keeps its own
    stack rather than recursing, so deep nesting cannot overflow it. */
 function findJsonError(text) {
@@ -151,8 +153,23 @@ function findJsonError(text) {
     if (i >= n) return ended(closeWhat());
     const top = stack[stack.length - 1], close = top === '{' ? '}' : ']', ch = text[i];
     if (ch === ',') {
-      i++; skip();
-      if (text[i] === close) return fail('Trailing comma: remove the comma before this ' + close + '.');
+      /* a trailing comma is reported at the comma itself, not at the bracket
+         where the parser gives up: look past whitespace and any comments
+         (which JSON refuses too, so they are named) to the next character */
+      const comma = i;
+      let j = i + 1, comment = false;
+      for (;;) {
+        while (j < n && isWs(text.charCodeAt(j))) j++;
+        if (text[j] === '/' && text[j + 1] === '/') { comment = true; while (j < n && text[j] !== '\n' && text[j] !== '\r') j++; continue; }
+        if (text[j] === '/' && text[j + 1] === '*') {
+          const e = text.indexOf('*/', j + 2);
+          if (e < 0) break;
+          comment = true; j = e + 2; continue;
+        }
+        break;
+      }
+      if (text[j] === close) return fail('Trailing comma: remove this comma (before the ' + close + ').' + (comment ? ' The comment after it is not allowed in JSON either.' : ''), comma);
+      i++;
       state = top === '{' ? 'key' : 'value';
       continue;
     }

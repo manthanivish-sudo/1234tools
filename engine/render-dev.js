@@ -1624,7 +1624,7 @@
      a couple of rows in it. Far quicker to read than a paragraph explaining
      that columns come in field order unless there is a header. */
   const BULK_EXAMPLES = {
-    url: 'https://www.1234tools.com/\nhttps://www.1234tools.com/qr/\nhttps://www.mvritservices.com/',
+    url: 'https://www.1234tools.com/\nhttps://www.1234tools.com/qr/\nhttps://www.1234tools.com/pdf/',
     text: 'Bay A-01\nBay A-02\nBay A-03',
     wifi: 'ssid,pass,enc,name\nRio Cafe Guest,flatwhite22,WPA,rio-guest\nRio Cafe Staff,backofhouse9,WPA,rio-staff',
     vcard: 'first,last,org,phone,email,name\nPriya,Nair,MVR IT Services,+441189000111,priya@example.com,priya-nair\nSam,Okafor,MVR IT Services,+441189000112,sam@example.com,sam-okafor',

@@ -522,7 +522,7 @@ window.DEV_TOOLS["markdown-preview"] = {
 "outputLabel": "HTML",
 "livePreview": true,
 "placeholder": "# Heading\n\nSome **bold** text and a [link](https://example.com).",
-"sample": "# MVR Tools\n\nOver a thousand **free** tools that run entirely in your *browser*.\n\n## Features\n\n- No sign-up\n- Works offline\n- Nothing uploaded\n\n> Everything happens on your device.\n\n```js\nconst total = 1161;\n```\n\n1. First\n2. Second\n\n---\n\nSee the [documentation](https://www.mvritservices.com/tools/).",
+"sample": "# 1234Tools\n\nOver a thousand **free** tools, and all but the AI ones run in your *browser*.\n\n## Features\n\n- No sign-up for the calculators\n- Most tools work offline\n- Files stay on your device outside the AI tools\n\n> Each tool page says what, if anything, it sends.\n\n```js\nconst total = 1000;\n```\n\n1. First\n2. Second\n\n---\n\nSee the [guides](https://www.1234tools.com/guides/).",
 "options": [{"key":"wrap","label":"Output","type":"select","default":"fragment","options":[{"value":"fragment","label":"HTML fragment"},{"value":"document","label":"Full HTML document"}]}],
 "transform": (text, o) => {
       const md = String(text || '');

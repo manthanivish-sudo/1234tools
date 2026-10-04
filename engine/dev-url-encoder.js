@@ -232,7 +232,7 @@ window.DEV_TOOLS["url-encoder"] = {
 "inputLabel": "Text or encoded URL",
 "outputLabel": "Result",
 "placeholder": "https://example.com/search?q=hello world&lang=en-GB",
-"sample": "https://www.mvritservices.com/search?q=school management&region=UK",
+"sample": "https://www.1234tools.com/utilities/tool-finder/?q=merge two PDFs&lang=en-GB",
 "options": [{"key":"dir","label":"Direction","type":"select","default":"enc","options":[{"value":"enc","label":"Encode →"},{"value":"dec","label":"← Decode"}]},{"key":"scope","label":"Scope","type":"select","default":"component","options":[{"value":"component","label":"Component (a single value)"},{"value":"full","label":"Full URL (keeps :/?#&= intact)"}]}],
 "transform": (text, { dir, scope }) => {
       if (!text.trim()) return { output: '', note: 'Type or paste something above.' };
