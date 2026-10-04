@@ -73,7 +73,12 @@ const esc = (s) => String(s)
 const isStub = (html) => /name="robots" content="noindex/.test(html) && /http-equiv="refresh"/.test(html);
 const isNoindex = (html) => /<meta name="robots" content="noindex/.test(html);
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-const slugify = (name) => String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+/* Accents are folded, not dropped: "Réaumur" is reaumur and "Rømer" romer
+   (ø has no decomposition, so it is mapped by hand). Dropping them gave
+   r-aumur and r-mer until 2026-10-04; those addresses are redirect stubs now.
+   build-site.js holds the same function for its related-list ranking. */
+const slugify = (name) => String(name).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[øØ]/g, 'o')
+  .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
 /* ---------- numbers, exactly as the converter prints them ---------- */
 
@@ -100,20 +105,25 @@ function plain(x) {
 }
 function sci(x) {
   let e = Math.floor(Math.log10(Math.abs(x)));
-  let m = Number((x / Math.pow(10, e)).toPrecision(10));
-  if (Math.abs(m) >= 10) { m = Number((m / 10).toPrecision(10)); e++; }
+  /* 12 digits, so an exact 11-digit factor (an ounce is 2.8349523125 × 10⁻⁵ t)
+     is printed whole; factors shown as approximate arrive already rounded to 10 */
+  let m = Number((x / Math.pow(10, e)).toPrecision(12));
+  if (Math.abs(m) >= 10) { m = Number((m / 10).toPrecision(12)); e++; }
   return String(m) + ' × 10' + String(e).split('').map((c) => SUP[c]).join('');
 }
 function factorStr(x) {
   const a = Math.abs(x);
   return a !== 0 && (a < 1e-4 || a >= 1e12) ? sci(x) : plain(x);
 }
-/** x if it has at most 11 significant digits once float noise is gone. */
+/** x if it has at most 11 significant digits once float noise is gone.
+    Rounding to 12 digits can end in a zero by chance (14.5037737730209 →
+    14.5037737730), so the short form must also be x itself, within float
+    noise; otherwise a rounded factor would be printed as exact. */
 function clean(x) {
   if (!isFinite(x) || x === 0) return null;
   const s = Number(x.toPrecision(12));
   const digits = s.toExponential().split('e')[0].replace(/[-.]/g, '').length;
-  return digits <= 11 ? s : null;
+  return digits <= 11 && Math.abs(s - x) <= 1e-14 * Math.abs(x) ? s : null;
 }
 /** p/q with q <= 1000 within float noise, or null. */
 function frac(x) {
@@ -172,7 +182,8 @@ function D() {
       for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
         if (!ent.isDirectory()) continue;
         const f = path.join(dir, ent.name, 'index.html');
-        if (fs.existsSync(f)) set.add(ent.name);
+        /* a folder holding a redirect stub is an old address, not a page */
+        if (fs.existsSync(f) && !isStub(fs.readFileSync(f, 'utf8'))) set.add(ent.name);
       }
     }
     onDisk[fam] = set;
@@ -205,6 +216,17 @@ const colHead = (fam, k) => { const u = U(fam, k); return u.title.replace(/ \(([
 
 function mustExist(fam, a, b, where) {
   if (!pairExists(fam, a, b)) throw new Error('build-conversions.js: ' + where + ' names ' + fam + ' ' + a + ' → ' + b + ', but ' + pairHref(fam, a, b) + ' does not exist');
+}
+
+/** Pages named by data.js LINKS and EXTRA that are not built yet. The link
+    is still written (the page is due in the same release); the run lists
+    them so a missing page is never silent. */
+const notBuilt = new Set();
+function siteLink(href) {
+  if (!/^\/[a-z0-9-]+\/[a-z0-9-]+\/$/.test(href)) throw new Error('build-conversions.js: data.js names ' + href + ', which is not a /section/page/ path');
+  const file = path.join(ROOT, href.slice(1), 'index.html');
+  if (!fs.existsSync(file) || isStub(fs.readFileSync(file, 'utf8'))) notBuilt.add(href);
+  return href;
 }
 
 /** The helper the FAQ answers in data.js are written against. */
@@ -469,7 +491,33 @@ function pairBlock(fam, a, b) {
     '<div class="conv-tbl-wrap"><table class="conv-tbl example-result"><caption>' + esc(cap(ha) + ' to ' + hb) + '</caption>' +
     '<thead><tr><th scope="col">' + esc(colHead(fam, a)) + '</th><th scope="col">' + esc(colHead(fam, b)) + '</th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table></div>' +
-    '</section>\n  ' + CLOSE;
+    '</section>' + extraBlocks(fam, a, b) + '\n  ' + CLOSE;
+}
+
+/** A value rounded to d decimals and printed with all d of them, grouped
+    like the converter's own figures. */
+function fixed(v, d) {
+  return Number(v.toFixed(d)).toLocaleString('en-GB', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+/** data.js EXTRA: a second table on the pair pages it names, outside
+    .conv-how so nothing that reads the formula's table reads this one. */
+function extraBlocks(fam, a, b) {
+  return (DATA.EXTRA[fam] || []).filter((x) => x.pages.some(([p, q]) => p === a && q === b)).map((x) => {
+    x.pages.forEach(([p, q]) => mustExist(fam, p, q, 'data.js EXTRA.' + fam + ' ' + x.id));
+    const id = 'conv-' + x.id + '-h';
+    const head = '<tr><th scope="col">' + esc(colHead(fam, x.from)) + '</th>' + x.cols.map(([k]) => '<th scope="col">' + esc(colHead(fam, k)) + '</th>').join('') + '</tr>';
+    const rows = x.values.map((v) => '<tr><td>' + esc(val(fam, v, x.from)) + '</td>' +
+      x.cols.map(([k, d]) => '<td>' + esc(fixed(X(fam, v, x.from, k), d) + ' ' + U(fam, k).sym) + '</td>').join('') + '</tr>').join('');
+    const links = (x.links || []).map(([href, text]) => '<a href="' + siteLink(href) + '">' + esc(text) + '</a>').join('');
+    return '\n  <section class="panel conv-extra" aria-labelledby="' + id + '"><div class="conv-how-text">' +
+      '<h2 id="' + id + '">' + esc(x.heading) + '</h2>' +
+      (x.note ? '<p class="conv-note">' + esc(x.note(helper(fam))) + '</p>' : '') +
+      (links ? '<p class="conv-next">' + links + '</p>' : '') +
+      '</div>' +
+      '<div class="conv-tbl-wrap"><table class="conv-tbl"><caption>' + esc(x.caption) + '</caption>' +
+      '<thead>' + head + '</thead><tbody>' + rows + '</tbody></table></div></section>';
+  }).join('');
 }
 
 function pairPage(html, fam, rel) {
@@ -595,10 +643,13 @@ function familyBlock(fam) {
   const total = groupsOf(fam).reduce((n, g) => n + g.pairs.length, 0);
   const [qa, qb] = headingNames(fam, a0, b0);
   const quick = DATA.QUICK[fam].map((v) => '<tr><td>' + esc(val(fam, v, a0)) + '</td><td>' + esc(conv(fam, v, a0, b0)) + '</td></tr>').join('');
-  const rel = (DATA.RELATED[fam] || []).map(([href, why]) => {
+  const own = (DATA.LINKS[fam] || []).map(([href, name, why]) =>
+    '<li><a href="' + siteLink(href) + '">' + esc(name) + '</a><span>' + esc(why) + '</span></li>').join('');
+  const rel = own + (DATA.RELATED[fam] || []).map(([href, why]) => {
     const name = toolName(href);
     return '<li><a href="' + href + '">' + esc(name) + '</a><span>' + esc(why) + '</span></li>';
   }).join('');
+  const relHead = (DATA.LINKS[fam] || []).some(([href]) => href.indexOf('/guides/') === 0) ? 'Related calculators and guides' : 'Related calculators';
   const faq = faqItems(fam).map((f) => '<details><summary>' + esc(f.q) + '</summary><p>' + esc(f.a) + '</p></details>').join('');
 
   return OPEN + '\n' +
@@ -612,7 +663,7 @@ function familyBlock(fam) {
     '<table class="conv-tbl"><thead><tr><th scope="col">' + esc(colHead(fam, a0)) + '</th><th scope="col">' + esc(colHead(fam, b0)) + '</th></tr></thead><tbody>' + quick + '</tbody></table>' +
     '<p class="conv-ref-more"><a href="' + pairHref(fam, a0, b0) + '">' + esc(label(fam, a0, b0)) + ': converter, formula and full table</a></p></section>' +
     '</div>\n' +
-    (rel ? '<section class="panel conv-rel" aria-labelledby="conv-rel-h"><h2 id="conv-rel-h">Related calculators</h2><ul class="conv-rel-list">' + rel + '</ul></section>\n' : '') +
+    (rel ? '<section class="panel conv-rel" aria-labelledby="conv-rel-h"><h2 id="conv-rel-h">' + relHead + '</h2><ul class="conv-rel-list">' + rel + '</ul></section>\n' : '') +
     '<section class="panel conv-faq" aria-labelledby="conv-faq-h"><h2 id="conv-faq-h">Frequently asked questions</h2>' + faq + '</section>\n' +
     '<section class="conv-sec conv-list" aria-labelledby="conv-all-h"><h2 class="conv-h" id="conv-all-h">All ' + total.toLocaleString('en-GB') + ' ' + esc(noun) + ' conversions</h2>' +
     '<p class="conv-list-lede">Grouped by the unit you are converting from. Every pair works in both directions.</p>' +
@@ -849,6 +900,7 @@ function main() {
   });
   console.log('  service worker      ' + (sw ? (CHECK ? 'would bump' : 'bumped') : 'unchanged'));
   if (VERBOSE) files.slice(0, 60).forEach(function (f) { console.log('    ' + f); });
+  [...notBuilt].sort().forEach(function (h) { console.log('  ! linked, not built  ' + h + '   (data.js LINKS/EXTRA; it must ship in the same release)'); });
   console.log('\n  ' + files.length + ' file(s) ' + (CHECK ? 'would change' : 'changed') + '\n');
 }
 

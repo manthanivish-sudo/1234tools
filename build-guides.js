@@ -153,7 +153,8 @@ function toolMeta(p) {
   const t = /<title>([^<]*)<\/title>/.exec(src);
   const d = /<meta name="description" content="([^"]*)">/.exec(src);
   if (!t || !d) throw new Error(p + ' has no title or description to read');
-  const title = unesc(t[1]).replace(/\s*[—|]\s*(Free Online|AI for Business).*$/, '').trim();
+  /* the site name too, on a page whose title has no "Free Online" to cut at */
+  const title = unesc(t[1]).replace(/\s*[—|]\s*(Free Online|AI for Business).*$/, '').replace(/\s*\|\s*1234Tools\s*$/, '').trim();
   metaCache[p] = { path: p, title, description: unesc(d[1]), pricing: pricingFor(p) };
   return metaCache[p];
 }

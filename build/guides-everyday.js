@@ -68,12 +68,23 @@ const SRC = {
   nistSp811: ['NIST Guide to the SI (SP 811), Appendix B.8 — conversion factors listed alphabetically', 'https://www.nist.gov/pml/special-publication-811/nist-guide-si-appendix-b-conversion-factors/nist-guide-si-appendix-b8'],
   ukWma1985: ['legislation.gov.uk — Weights and Measures Act 1985, Schedule 1', 'https://www.legislation.gov.uk/ukpga/1985/72/schedule/1'],
   bipmKg: ['BIPM — SI base unit: the kilogram', 'https://www.bipm.org/en/si-base-units/kilogram'],
+  nistSp811Ch4: ['NIST Guide to the SI (SP 811), Chapter 4 — SI derived units with special names', 'https://www.nist.gov/pml/special-publication-811/nist-guide-si-chapter-4-two-classes-si-units-and-si-prefixes'],
+  nistSp811Ch5: ['NIST Guide to the SI (SP 811), Chapter 5 — units outside the SI', 'https://www.nist.gov/pml/special-publication-811/nist-guide-si-chapter-5-units-outside-si'],
+  nistSp811Ch7: ['NIST Guide to the SI (SP 811), Chapter 7 — rules for expressing values of quantities', 'https://www.nist.gov/pml/special-publication-811/nist-guide-si-chapter-7-rules-and-style-conventions-expressing-values'],
+  nistSp811Notes: ['NIST Guide to the SI (SP 811), footnotes to Appendix B', 'https://www.nist.gov/pml/special-publication-811/nist-guide-si-footnotes'],
   rfc4180: ['IETF RFC 4180 — Common Format and MIME Type for Comma-Separated Values (CSV) Files', 'https://www.rfc-editor.org/rfc/rfc4180']
 };
 const src = (key, note) => { const s = SRC[key]; return note ? [s[0], s[1], note] : [s[0], s[1]]; };
 
 /* One date for every fact block in this file, so a review is one pass. */
 const CHECKED = '2026-10-04';
+
+/* The gauge-to-absolute pressure converter is released with the pressure
+   guide. A guide may only name a tool whose page exists (build-guides.js
+   reads its title and description from it), so until that page is built the
+   guide names the unit converters alone. */
+const GAUGE_TOOL = '/engineering/gauge-absolute-pressure/';
+const HAS_GAUGE_TOOL = require('fs').existsSync(require('path').join(__dirname, '..', 'engineering', 'gauge-absolute-pressure', 'index.html'));
 
 /* The JSON guide's two examples, built without escape sequences so that
    nothing in this file depends on how a backslash survives an editor. */
@@ -1672,6 +1683,123 @@ const GUIDES = [
     tools: ['/conversions/mass/kilogram-to-pound/', '/conversions/mass/pound-to-kilogram/', '/conversions/mass/kilogram-to-stone/', '/health/bmi/'],
     collections: ['online-sellers'],
     related: ['convert-inches-to-centimetres', 'calculate-bmi']
+  },
+
+  /* ================================================================== */
+  {
+    slug: 'convert-pressure-units',
+    glyph: 'i-pressure',
+    name: 'How to convert pressure units, and gauge vs absolute pressure',
+    title: 'How to convert psi, bar, kPa and other pressure units — exact factors, tyre pressures, and gauge vs absolute (psig, barg)',
+    description: 'Psi, bar, kPa, MPa, mbar, hPa, atm, inHg and mmHg: what each is used for, the exact factors behind them, tyre pressures in all three units, and when a reading is gauge (psig, barg) or absolute (psia, bara).',
+    answer: 'To convert psi to bar, multiply by 0.0689476 (or divide by 14.5038); to convert psi to kPa, multiply by 6.89476; a bar is exactly 100 kPa. 32 psi is 2.2063 bar, or 220.6322 kPa. Then check what the number measures: a tyre gauge reads gauge pressure, above the air around it, while a barometer reads absolute pressure, and the two differ by about one atmosphere, 101.325 kPa.',
+    minutes: { first: 'five minutes', again: 'seconds' },
+    howLong: 'Seconds for the conversion itself. The minute that matters is the one spent deciding whether the figure in front of you is gauge or absolute, because converting the unit perfectly does not help if the reading is about a whole atmosphere out.',
+    before: [
+      'The pressure and its unit, exactly as printed: psi, bar, kPa, MPa, mbar, hPa, atm, inHg or mmHg.',
+      'Whether it is gauge or absolute — a g or an a after the unit (psig, bara), or the kind of instrument it came from.',
+      'For gauge-to-absolute sums, the air pressure where the reading was taken, if you need better than the standard atmosphere.'
+    ],
+    steps: [
+      {
+        name: 'Know what each unit is and where you will meet it',
+        body: [
+          { p: 'Pressure is force divided by area. The SI unit is the pascal (Pa), one newton per square metre, which is tiny, so everyday figures use multiples: the kilopascal (kPa, 1,000 Pa) and the megapascal (MPa, a million pascals).' },
+          { ul: [
+            'psi, pounds-force per square inch: tyre pressures, compressors, pumps and pressure washers in the US and the UK. 1 psi is 6.89476 kPa.',
+            'bar, exactly 100 kPa: tyre pressures in Europe, diving cylinders, boilers and hydraulics. 1 bar is 14.5038 psi.',
+            'kPa: tyre pressures on many vehicle labels, alongside bar or psi. 220 kPa is 2.2 bar.',
+            'MPa: hydraulics, gas cylinders and material strength. 1 MPa is exactly 10 bar.',
+            'mbar and hPa, which are the same size (100 Pa each): weather. Standard sea-level pressure is 1,013.25 hPa.',
+            'atm, the standard atmosphere, exactly 101,325 Pa: physics and chemistry. It is 1.01325 bar, not 1 bar.',
+            'inHg, inches of mercury: altimeter settings and weather reports in the US. 29.92 inHg is 1,013.21 mbar.',
+            'mmHg, millimetres of mercury: blood pressure. The torr, 1/760 of an atmosphere, is the same to seven significant figures, and this site’s converter treats them as one unit.'
+          ] },
+          { fact: {
+            text: 'The pascal is the SI unit of pressure, one newton per square metre. The bar is 100 kPa (10⁵ Pa), so a millibar is 100 Pa, the same as a hectopascal. The standard atmosphere is exactly 101,325 Pa, and the torr is defined as 101,325/760 Pa. NIST gives the millimetre of mercury as about 133.322 Pa, and lists the conventional millimetre of mercury and the torr with the same factor, 133.3224 Pa, to seven significant figures; it gives the conventional inch of mercury as 3,386.389 Pa. The pound-force is 0.45359237 kg × 9.80665 m/s², exactly 4.4482216152605 N, and a square inch is exactly 0.00064516 m², so 1 psi is 6,894.757293168… Pa, a figure with no last decimal; NIST lists it as 6.894 757 kPa.',
+            checked: CHECKED,
+            sources: [
+              src('nistSp811Ch4', 'the pascal as the SI derived unit of pressure, N/m²'),
+              src('nistSp811Ch5', 'the bar as 100 kPa and 1,000 hPa, mmHg ≈ 133.322 Pa, the torr as (101 325/760) Pa, the standard atmosphere as 101 325 Pa'),
+              src('nistSp811', 'psi 6.894 757 E+03 Pa; mmHg and torr 1.333 224 E+02 Pa; inHg 3.386 389 E+03 Pa; atm and bar marked exact'),
+              src('nistSp811Notes', 'the pound-force as exactly 4.448 221 615 260 5 N with standard gravity, 9.806 65 m/s²')
+            ]
+          } }
+        ]
+      },
+      {
+        name: 'Convert with the right factor',
+        body: [
+          { formula: 'bar = psi × 0.0689476      psi = bar × 14.5038' },
+          { formula: 'kPa = psi × 6.89476      psi = kPa × 0.145038' },
+          { formula: 'kPa = bar × 100      MPa = bar ÷ 10      hPa = mbar' },
+          { p: 'The psi factors are rounded to six significant figures, which is more than any tyre gauge can show; the converter uses the full value. 32 psi is 2.2063 bar and 220.6322 kPa. Going the other way, 2.2 bar and 220 kPa are both 31.9083 psi, and 2.5 bar is 36.2594 psi. The metric units step by powers of ten, so 200 bar is 20 MPa and 1 MPa is 10 bar.' },
+          { tool: '/conversions/pressure/psi-to-bar/', why: 'converts psi to bar with the full factor, lists the same pressure in every other unit, and has a table of tyre pressures from 26 to 45 psi', fill: 'v=32', fillLabel: 'Do it in the converter with 32 psi — it shows 2.2063 bar' },
+          { tool: '/conversions/pressure/bar-to-psi/', why: 'the same in the other direction', fill: 'v=2.2', fillLabel: 'Open it with 2.2 bar — it shows 31.9083 psi' }
+        ]
+      },
+      {
+        name: 'Decide whether the reading is gauge or absolute',
+        body: [
+          { p: 'A gauge pressure is measured from the pressure of the air around the gauge, so an open, empty tyre reads 0. An absolute pressure is measured from a perfect vacuum. Tyre gauges, compressor and workshop gauges, and blood pressure are gauge pressures; barometers, weather reports and altimeter settings are absolute.' },
+          { formula: 'absolute pressure = gauge pressure + atmospheric pressure' },
+          { p: 'With the standard atmosphere, 14.6959 psi or 1.01325 bar, a tyre at 32 psi gauge is 46.6959 psi absolute, and 2.2 bar gauge is 3.21325 bar absolute. A vacuum gauge reading −0.8 bar is 0.21325 bar absolute, or 21.325 kPa. On a 200 bar diving cylinder the difference is about half a percent; on a tyre it is nearly half as much again as the reading.' },
+          { p: 'Engineers mark the difference with a letter after the unit: psig and barg for gauge, psia and bara for absolute. NIST’s guide to the SI does not allow letters added to a unit symbol, so formal writing says “a gauge pressure of 2.2 bar” instead; a sheet that says “psi” alone usually means gauge, but check rather than assume.' },
+          ...(HAS_GAUGE_TOOL ? [{ tool: GAUGE_TOOL, why: 'adds or takes away the atmospheric pressure for you, in psi, bar or kPa, with the standard atmosphere or your own local figure' }] : []),
+          { fact: {
+            text: 'NIST’s guide to the SI says it is incorrect to attach letters or other symbols to a unit to give information about the quantity or how it was measured; the information belongs with the quantity instead. Written that way, “2.2 barg” is “a gauge pressure of 2.2 bar”.',
+            checked: CHECKED,
+            sources: [src('nistSp811Ch7', 'Section 7.4, the unacceptability of attaching information to units')]
+          } }
+        ]
+      },
+      {
+        name: 'Read a tyre pressure in all three units',
+        body: [
+          { example: {
+            caption: 'Illustrative tyre pressures, not a recommendation for any vehicle — use the figures in your handbook or on the label in the door frame. Each bar and kPa figure is what the converter’s own engine returns, rounded to 2 decimal places and to the nearest kPa.',
+            head: ['psi (gauge)', 'bar (gauge)', 'kPa (gauge)'],
+            rows: [
+              ['28 psi', '1.93 bar', '193 kPa'],
+              ['30 psi', '2.07 bar', '207 kPa'],
+              ['32 psi', '2.21 bar', '221 kPa'],
+              ['33 psi', '2.28 bar', '228 kPa'],
+              ['35 psi', '2.41 bar', '241 kPa'],
+              ['36 psi', '2.48 bar', '248 kPa'],
+              ['38 psi', '2.62 bar', '262 kPa'],
+              ['40 psi', '2.76 bar', '276 kPa']
+            ]
+          } },
+          { p: 'All three columns are gauge pressures, because that is what a tyre gauge and a forecourt air line read. Do not add the atmosphere to a tyre pressure: the figure in the handbook is a gauge figure too.' },
+          { tool: '/conversions/pressure/psi-to-kilopascal/', why: 'converts psi to kPa, for labels and air lines that use kPa', fill: 'v=33', fillLabel: 'Open it with 33 psi — it shows 227.527 kPa' }
+        ]
+      },
+      {
+        name: 'Weather, blood pressure and hydraulics',
+        body: [
+          { p: 'Weather: standard sea-level pressure is 1,013.25 hPa (the same as mbar), which is 29.9213 inHg. An altimeter setting of 29.92 inHg is 1,013.21 hPa and 30 inHg is 1,015.92 hPa; 1,000 hPa is 29.53 inHg.' },
+          { p: 'Blood pressure: 120/80 mmHg is 15.9987/10.6658 kPa. Clinical readings are gauge pressures, measured above the air pressure in the room.' },
+          { p: 'Hydraulics and cylinders: 200 bar is 2,900.75 psi or 20 MPa, and 10 MPa is 1,450.38 psi. At these pressures the atmosphere is a rounding error, but the gauge-or-absolute question still applies to the figure on a data sheet.' },
+          { tool: '/conversions/pressure/inches-of-mercury-to-millibar/', why: 'converts an altimeter setting or a US weather pressure to millibars (hectopascals)', fill: 'v=29.92', fillLabel: 'Open it with 29.92 inHg — it shows 1,013.21 mbar' }
+        ]
+      }
+    ],
+    wrong: [
+      { name: 'Treating a bar as an atmosphere', text: 'They are close but not equal: 1 atm is 1.01325 bar, so treating them as the same is 1.325% out. 2.2 bar is 31.9083 psi; 2.2 atm would be 32.3311 psi.' },
+      { name: 'Adding the atmosphere to a tyre pressure', text: 'A tyre at 32 psi on the gauge is 46.6959 psi absolute, but the handbook figure is a gauge figure, so 32 is the number to inflate to. Converting a gauge reading to absolute and then comparing it with a gauge specification overfills by a whole atmosphere.' },
+      { name: 'Rounding 14.5 to 14 or 15', text: '2.2 bar is 31.9083 psi. Multiplying by 15 gives 33 psi and by 14 gives 30.8, each about a pound out — enough to matter on a tyre. Use 14.5, or the converter.' },
+      { name: 'Forgetting that the outside air changes a gauge reading', text: 'A gauge reads the difference between inside and outside. If the air pressure falls from 1,013.25 to 900 mbar — a figure made up for this example, but the kind of drop that comes with driving up a mountain — a sealed tyre at the same temperature reads 1.6426 psi more, though nothing inside it has changed.' },
+      { name: 'Reading psia as psi', text: 'A data sheet that gives 14.7 psia is describing roughly the atmosphere, not a pressure 14.7 psi above it. Read the a or the g before converting, and carry it through to the answer.' }
+    ],
+    faq: [
+      { q: 'How many bar is 30, 33 or 36 psi?', a: '30 psi is 2.0684 bar, 33 psi is 2.2753 bar and 36 psi is 2.4821 bar. In kPa they are 206.8427, 227.527 and 248.2113. All are gauge pressures, like the tyre gauge that measured them.' },
+      { q: 'Is 1 bar the same as 1 atmosphere?', a: 'No. A bar is exactly 100,000 Pa; a standard atmosphere is exactly 101,325 Pa, which is 1.01325 bar. One bar is 0.986923 atm.' },
+      { q: 'What is the difference between psig and psia?', a: 'psig is gauge pressure, measured above the surrounding air; psia is absolute pressure, measured from a vacuum. psia = psig + atmospheric pressure, 14.6959 psi for the standard atmosphere. barg and bara work the same way with 1.01325 bar.' },
+      { q: 'Is a millibar the same as a hectopascal?', a: 'Yes. Both are 100 Pa, so 1,013.25 mbar and 1,013.25 hPa are the same pressure.' },
+      { q: 'Is mmHg the same as torr?', a: 'Almost. The torr is defined as 1/760 of a standard atmosphere, 133.3224 Pa; NIST lists the conventional millimetre of mercury with the same value to seven significant figures. For blood pressure or a vacuum gauge the difference is far below anything that can be measured.' }
+    ],
+    tools: ['/conversions/pressure/psi-to-bar/', '/conversions/pressure/bar-to-psi/', '/conversions/pressure/psi-to-kilopascal/', '/conversions/pressure/inches-of-mercury-to-millibar/'].concat(HAS_GAUGE_TOOL ? [GAUGE_TOOL] : []),
+    related: ['convert-inches-to-centimetres', 'convert-kg-to-pounds']
   },
 
   /* ================================================================== */

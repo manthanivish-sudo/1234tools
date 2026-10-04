@@ -49,38 +49,38 @@ module.exports = {
   '/india/advance-tax/': {
     term: 'advance tax',
     whatIs: [
-      'Advance tax is income tax paid in four instalments during the year the income is earned, instead of in one sum when the return is filed. It mainly concerns freelancers, consultants, landlords and investors, whose income has little or no tax deducted from it.',
-      'For FY 2026-27 the due dates are 15 June, 15 September and 15 December 2026, and 15 March 2027. Each date has a cumulative target, so a late start is caught up by paying more at the next one.'
+      'Advance tax is income tax paid in instalments during the year the income is earned, not in one sum at filing. It mainly concerns freelancers, consultants, landlords and investors, whose income has little or no tax deducted.',
+      'For FY 2026-27 the due dates are 15 June, 15 September and 15 December 2026, and 15 March 2027. Each date has a cumulative target, so a late start is caught up at the next one.'
     ],
     formula: {
-      text: 'The tool takes TDS and TCS off your estimated tax for the year, then applies the share that must be paid by each date. Each instalment is that cumulative target less what the earlier dates already required.',
+      text: 'TDS and TCS come off the estimated tax for the year, then each date’s share applies; an instalment is that target less what earlier dates required. Interest sets what was paid by each date against its target.',
       expr: [
         'net liability = estimated tax − TDS − TCS',
         'paid by each date = net liability × 15%, 45%, 75%, 100%',
-        'instalment = net liability × (this date’s % − previous date’s %)',
-        'still to pay = net liability − advance tax already paid'
+        'section 425 interest = shortfall × 3% (June, September, December) or 1% (March)',
+        'section 424 interest = unpaid balance × 1% × months from 1 April, if under 90% was paid'
       ],
-      vars: [['estimated tax', 'the whole year’s tax, including surcharge and the 4% cess'], ['TDS / TCS', 'tax others have deducted or collected']]
+      vars: [['estimated tax', 'the whole year’s tax, including surcharge and the 4% cess'], ['TDS / TCS', 'tax others have deducted or collected'], ['shortfall', 'the target less what was paid, cut to a whole ₹100']]
     },
     worked: {
-      inputs: { taxLiability: 320000, tdsPaid: 80000, paidSoFar: 36000 },
-      text: 'Suppose a consultant expects ₹3,20,000 of tax for FY 2026-27 and clients will deduct ₹80,000 as TDS. The net liability is ₹2,40,000. The instalments are ₹36,000 by 15 June, ₹72,000 by 15 September, ₹72,000 by 15 December and ₹60,000 by 15 March, so ₹1,80,000 should be paid by mid-December. With the June instalment already paid, ₹2,04,000 is still to pay.',
-      check: [['netLiability', '₹2,40,000'], ['q1', '₹36,000'], ['q2', '₹72,000'], ['q4', '₹60,000'], ['_table.rows.2.3', '₹1,80,000'], ['outstanding', '₹2,04,000']]
+      inputs: { taxLiability: 320000, tdsPaid: 80000, paidSoFar: 36000, scheme: 'four', paidJun: 36000, paidSep: 90000, paidDec: 150000, paidMar: 200000, balanceMonth: '4' },
+      text: 'A consultant expects ₹3,20,000 of tax for FY 2026-27, with ₹80,000 of TDS. The net liability is ₹2,40,000: ₹36,000 is due by 15 June, ₹72,000 by 15 September, ₹72,000 by 15 December and ₹60,000 by 15 March. She pays running totals of ₹36,000, ₹90,000, ₹1,50,000 and ₹2,00,000 by those dates, and the rest in July. September is ₹18,000 short, but she had paid over 36%, so it costs nothing. Section 425 charges ₹900 for December and ₹400 for March. Under 90% was paid by March, so section 424 adds 1% a month for four months on ₹40,000: ₹1,600. Total interest: ₹2,900.',
+      check: [['netLiability', '₹2,40,000'], ['q1', '₹36,000'], ['q2', '₹72,000'], ['q4', '₹60,000'], ['outstanding', '₹40,000'], ['_table.rows.1.3', '₹18,000'], ['_table.rows.2.5', '₹900'], ['_table.rows.3.5', '₹400'], ['interest424', '₹1,600'], ['interestTotal', '₹2,900']]
     },
     uses: [
-      ['Fees with partial TDS', 'Set aside each quarter’s share of tax on client income where the TDS covers only part of the bill.'],
-      ['Rent or interest on top of a salary', 'Find out whether the TDS your employer deducts leaves a gap that needs advance tax.'],
-      ['Revising mid-year', 'Re-run with a higher estimate before 15 December and pay the catch-up in that instalment.']
+      ['Fees with partial TDS', 'Set aside each quarter’s tax on client income the TDS only partly covers.'],
+      ['Rent or interest on top of a salary', 'See whether your employer’s TDS leaves a gap that needs advance tax.'],
+      ['Checking an interest demand', 'Compare the section 424 and 425 figures with your intimation.']
     ],
     mistakes: [
       'Entering tax before cess. The 4% health and education cess and any surcharge are part of the liability; leave them out and every instalment falls short.',
-      'Splitting the bill into four equal quarters. The dates call for 15%, then 30%, 30% and 25%, so June is the smallest payment and September and December the largest.',
-      'Counting TDS that no client has actually deposited. Check your Annual Information Statement first.'
+      'Counting TDS that no client has actually deposited. Check your Annual Information Statement first.',
+      'Entering single payments in the interest fields. They take running totals, so September includes June.'
     ],
     faq: [
-      { q: 'Do salaried employees have to pay advance tax?', a: 'Usually not on the salary itself, because the employer deducts TDS through the year. It becomes due when other income, such as rent, interest or capital gains, leaves ₹10,000 or more uncovered.' },
+      { q: 'Do salaried employees have to pay advance tax?', a: 'Usually not on the salary, because the employer deducts TDS. It becomes due when other income, such as rent, interest or capital gains, leaves ₹10,000 or more uncovered.' },
       { q: 'What happens if my net tax is below ₹10,000?', a: 'You pay it as self-assessment tax before filing the return. A ₹60,000 liability with ₹52,000 already deducted leaves ₹8,000, and the tool reports no advance tax due.' },
-      { q: 'How do I pay advance tax online?', a: 'Through e-Pay Tax on the income-tax e-filing portal, choosing advance tax as the type of payment and the correct year. Keep the challan details: the return asks for them.' }
+      { q: 'How do I pay advance tax online?', a: 'Through e-Pay Tax on the income-tax e-filing portal, choosing advance tax and the correct year. Keep the challan details for the return.' }
     ],
     checks: [
       { inputs: { taxLiability: 60000, tdsPaid: 52000, paidSoFar: 0 }, key: 'netLiability', shown: '₹8,000' },

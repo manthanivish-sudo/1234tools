@@ -83,12 +83,27 @@ function oldFile(rel) {
   } catch (e) { return null; }
 }
 
-function pairPages() {
+const isStub = (h) => /name="robots" content="noindex/.test(h) && /http-equiv="refresh"/.test(h);
+/** A pair folder that now holds a redirect stub is an old address (the
+    Réaumur/Rømer slugs moved on 2026-10-04): where it points, or null. */
+function movedTo(href) {
+  const f = path.join(ROOT, href.replace(/^\/+/, ''), 'index.html');
+  if (!/^\/conversions\/[a-z]+\/[a-z0-9-]+\/$/.test(href) || !fs.existsSync(f)) return null;
+  const h = fs.readFileSync(f, 'utf8');
+  const m = isStub(h) && /http-equiv="refresh" content="0; url=([^"]+)"/.exec(h);
+  return m ? m[1] : null;
+}
+
+function pairPages(stubs) {
   const out = [];
   for (const f of FAMILIES) {
     const dir = path.join(ROOT, 'conversions', f);
     for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (ent.isDirectory() && fs.existsSync(path.join(dir, ent.name, 'index.html'))) out.push('conversions/' + f + '/' + ent.name + '/index.html');
+      const p = path.join(dir, ent.name, 'index.html');
+      if (!ent.isDirectory() || !fs.existsSync(p)) continue;
+      const rel = 'conversions/' + f + '/' + ent.name + '/index.html';
+      if (isStub(fs.readFileSync(p, 'utf8'))) { if (stubs) stubs.push(rel); continue; }
+      out.push(rel);
     }
   }
   return out;
@@ -104,7 +119,8 @@ function staticChecks() {
     const was = oldFile(rel);
     if (was === null) { lost.push(rel + ': no older copy to compare with'); continue; }
     const before = hrefs(mainOf(was)), after = hrefs(mainOf(now));
-    const gone = [...before].filter((h) => !after.has(h));
+    /* a link to an address that moved counts as kept when the hub links where it went */
+    const gone = [...before].filter((h) => !after.has(h) && !after.has(movedTo(h)));
     if (gone.length) lost.push(rel + ' lost ' + gone.length + ': ' + gone.slice(0, 4).join(', '));
     if (rel !== 'conversions/index.html') {
       const m = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(now);
@@ -122,7 +138,8 @@ function staticChecks() {
   check(ld.length === 0, 'the 12 family hubs: JSON-LD parses, one FAQPage, as many questions as the page shows', ld.join(' | '));
 
   /* every pair page linked from its hub and from /conversions/ */
-  const pairs = pairPages();
+  const folderStubs = [];
+  const pairs = pairPages(folderStubs);
   const hub = fs.readFileSync(path.join(ROOT, 'conversions/index.html'), 'utf8');
   const unlinked = pairs.filter((rel) => {
     const href = '/' + rel.replace(/index\.html$/, '');
@@ -141,7 +158,11 @@ function staticChecks() {
     if (n !== 1 || !m || !/<h2 id="conv-how-h">How to convert /.test(m[0]) || !/<code>[^<]+ (?:=|≈) [^<]+<\/code>/.test(m[0]) || count(m[0], '<tr>') < 13) { bad.push(rel); continue; }
     const share = h.indexOf('<!-- /SHARE -->'), at = h.indexOf(OPEN_MARK), tips = h.indexOf('<section class="panel"><h2>Tips');
     if (!(share > 0 && at > share && (tips < 0 || at < tips))) bad.push(rel + ' (position)');
-    const b = Buffer.byteLength(m[0]);
+    /* a data.js EXTRA table (the tyre pressures) is its own section and is
+       measured on its own */
+    const extras = m[0].match(/<section class="panel conv-extra"[\s\S]*?<\/section>/g) || [];
+    extras.forEach((x) => { if (Buffer.byteLength(x) >= 3072) big.push(rel + ' extra ' + Buffer.byteLength(x)); });
+    const b = Buffer.byteLength(extras.reduce((s, x) => s.replace(x, ''), m[0]));
     if (b > max) max = b;
     if (b >= 3072) big.push(rel + ' ' + b);
   }
@@ -155,7 +176,8 @@ function staticChecks() {
       if (fs.readFileSync(path.join(ROOT, 'conversions', f, name), 'utf8').indexOf(OPEN_MARK) >= 0) stubs.push(name);
     }
   }
-  check(stubs.length === 0, 'no block on a redirect stub', stubs.slice(0, 4).join(', '));
+  folderStubs.forEach((rel) => { if (fs.readFileSync(path.join(ROOT, rel), 'utf8').indexOf(OPEN_MARK) >= 0) stubs.push(rel); });
+  check(stubs.length === 0, 'no block on a redirect stub (' + folderStubs.length + ' of them old folders)', stubs.slice(0, 4).join(', '));
 
   for (let i = 1; i <= 2; i++) {
     let out = '';

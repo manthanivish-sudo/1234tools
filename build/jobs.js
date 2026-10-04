@@ -79,6 +79,7 @@ const JOBS = {
 
   /* engineering, design */
   '/engineering/ohms-law/': ['Calculate', 'Any two of V, I, R → the rest'],
+  '/engineering/gauge-absolute-pressure/': ['Convert', 'Gauge or absolute → both'],
   '/design/aspect-ratio/': ['Calculate', 'One dimension → the other'],
 
   /* health */
@@ -450,7 +451,7 @@ const START = {
   '/health/': ['/health/bmi/', '/health/bmr-tdee/'],
   '/qr/': ['/qr/qr-code-generator/', '/qr/qr-code-scanner/'],
   '/utilities/': ['/utilities/tool-finder/', '/utilities/tip-calculator/'],
-  '/engineering/': ['/engineering/ohms-law/'],
+  '/engineering/': ['/engineering/ohms-law/', '/engineering/gauge-absolute-pressure/'],
   '/design/': ['/design/aspect-ratio/']
 };
 

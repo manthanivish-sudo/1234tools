@@ -541,12 +541,170 @@ function indiaTests() {
     same('hra-exemption', { basic: int(0, 3e6), hra: int(0, 1.5e6), rent: int(0, 2e6), metro: pick(['metro', 'non']), year: pick(['2026-27', '2025-26']) }, 'metro/non', ['note']);
   }
 
+  /* F. Advance tax interest, Income-tax Act, 2025 s.425 (formerly 234C) and
+     s.424 (formerly 234B), read 2026-10-04 in the Act as gazetted on
+     21 August 2025. Every expected figure is worked by hand below. */
+  const at = (o) => now('advance-tax', Object.assign({ taxLiability: 200000, tdsPaid: 50000, paidSoFar: 0, scheme: 'four', paidJun: null, paidSep: null, paidDec: null, paidMar: null, balanceMonth: '4' }, o));
+  /* No shortfall: net 1,50,000; 22,500 / 67,500 / 1,12,500 / 1,50,000 paid on time → nothing */
+  const atNone = at({ paidJun: 22500, paidSep: 67500, paidDec: 112500, paidMar: 150000 });
+  eq(atNone.interest425, 0, 'F advance tax: every instalment on time, no s.425 interest');
+  eq(atNone.interest424, 0, 'F advance tax: everything paid by 15 March, no s.424 interest');
+  eq(atNone.interestTotal, 0, 'F advance tax: no shortfall, no interest');
+  /* s.425 by hand, net 1,50,000, paid 15,000 / 50,000 / 90,000 / 1,20,000:
+       June  22,500 − 15,000 =  7,500 (15,000 < 12% = 18,000) × 3% = 225
+       Sept  67,500 − 50,000 = 17,500 (50,000 < 36% = 54,000) × 3% = 525
+       Dec 1,12,500 − 90,000 = 22,500 × 3% = 675
+       Mar 1,50,000 − 1,20,000 = 30,000 × 1% = 300          s.425 = 1,725
+     s.424: 1,20,000 < 90% (1,35,000); 30,000 × 1% × 4 (Apr–Jul) = 1,200
+     total 2,925 — the figures the FAQ quotes */
+  const atFaq = at({ paidJun: 15000, paidSep: 50000, paidDec: 90000, paidMar: 120000 });
+  eq(atFaq._table.rows[0][5], '₹225', 'F s.425 June: 3% of ₹7,500');
+  eq(atFaq._table.rows[1][5], '₹525', 'F s.425 September: 3% of ₹17,500');
+  eq(atFaq._table.rows[2][5], '₹675', 'F s.425 December: 3% of ₹22,500');
+  eq(atFaq._table.rows[3][5], '₹300', 'F s.425 March: 1% of ₹30,000');
+  eq(atFaq.interest425, 1725, 'F s.425 total ₹1,725');
+  eq(atFaq.interest424, 1200, 'F s.424: 1% × 4 months on ₹30,000');
+  eq(atFaq.interestTotal, 2925, 'F total interest ₹2,925');
+  eq(atFaq.outstanding, 30000, 'F still to pay counts the 15 March total');
+  /* s.425(2): 18,000 is exactly 12% and 54,000 exactly 36% of 1,50,000, so the
+     June (4,500 short) and September (13,500 short) interest is nil; December
+     and March paid in full; 1,50,000 paid, so no s.424 */
+  const atSpare = at({ paidJun: 18000, paidSep: 54000, paidDec: 112500, paidMar: 150000 });
+  eq(atSpare.interest425, 0, 'F s.425(2): 12% by June and 36% by September, no interest');
+  eq(atSpare._table.rows[0][3], '₹4,500', 'F s.425(2): the June shortfall is still shown');
+  eq(atSpare._table.rows[0][5], 'Nil, 12% paid', 'F s.425(2): June spared at 12%');
+  eq(atSpare._table.rows[1][5], 'Nil, 36% paid', 'F s.425(2): September spared at 36%');
+  /* One rupee under 12% (17,999): 22,500 − 17,999 = 4,501 → ₹4,500 × 3% = 135 */
+  eq(at({ paidJun: 17999, paidSep: 54000, paidDec: 112500, paidMar: 150000 }).interest425, 135, 'F s.425(2): 11.99% by June is charged, ₹135');
+  /* The exceptions do not reach December: 75% is 1,12,500, paid 1,00,000 →
+     12,500 × 3% = 375 */
+  eq(at({ paidJun: 22500, paidSep: 67500, paidDec: 100000, paidMar: 150000 }).interest425, 375, 'F s.425: no 12%/36% relief for December, ₹375');
+  /* s.424 over several months, nothing paid in March or later: net 2,40,000,
+     paid 1,50,000 by 15 March (62.5% < 90%), rest paid in September:
+     90,000 × 1% × 6 = 5,400; and in March of the next year: × 12 = 10,800 */
+  const at424 = (m) => now('advance-tax', { taxLiability: 320000, tdsPaid: 80000, paidSoFar: 0, scheme: 'four', paidJun: 36000, paidSep: 108000, paidDec: 150000, paidMar: 150000, balanceMonth: m });
+  eq(at424('6').interest424, 5400, 'F s.424: six months (April to September) on ₹90,000');
+  eq(at424('12').interest424, 10800, 'F s.424: twelve months on ₹90,000');
+  eq(at424('1').interest424, 900, 'F s.424: paid in April, one month (part month = full month)');
+  /* 90% exactly (2,16,000 of 2,40,000): no s.424, but the March shortfall of
+     24,000 still costs 1% under s.425 = 240 */
+  const at90 = now('advance-tax', { taxLiability: 320000, tdsPaid: 80000, paidSoFar: 0, scheme: 'four', paidJun: 36000, paidSep: 108000, paidDec: 180000, paidMar: 216000, balanceMonth: '4' });
+  eq(at90.interest424, 0, 'F s.424: exactly 90% paid, none');
+  eq(at90.interest425, 240, 'F s.425 March: 1% of ₹24,000 at exactly 90%');
+  /* Presumptive (s.408(2), s.425(3)): one instalment by 15 March. Net 1,50,000,
+     1,00,000 paid by 15 March: s.425 = 50,000 × 1% = 500, nothing for June to
+     December; s.424 = 50,000 × 1% × 4 = 2,000 */
+  const atPre = at({ scheme: 'presumptive', paidMar: 100000 });
+  eq(atPre.interest425, 500, 'F presumptive: s.425(3) 1% of the March shortfall only');
+  eq(atPre.interest424, 2000, 'F presumptive: s.424 still applies');
+  eq(atPre._table.rows.length, 2, 'F presumptive: one instalment row and the s.424 row');
+  eq(atPre.q1 + atPre.q2 + atPre.q3, 0, 'F presumptive: nothing due before 15 March');
+  eq(atPre.q4, 150000, 'F presumptive: all due by 15 March');
+  /* Rounding down to ₹100 (rule 119A): net 1,23,456, paid 10,000 / 40,000 /
+     80,000 / 1,00,000, rest in September:
+       June 18,518.40 − 10,000 =  8,518.40 → 8,500 × 3% = 255
+       Sept 55,555.20 − 40,000 = 15,555.20 → 15,500 × 3% = 465
+       Dec  92,592.00 − 80,000 = 12,592.00 → 12,500 × 3% = 375
+       Mar 1,23,456 − 1,00,000 = 23,456    → 23,400 × 1% = 234   s.425 = 1,329
+       s.424: 23,400 × 1% × 6 = 1,404 */
+  const atRound = now('advance-tax', { taxLiability: 123456, tdsPaid: 0, paidSoFar: 0, scheme: 'four', paidJun: 10000, paidSep: 40000, paidDec: 80000, paidMar: 100000, balanceMonth: '6' });
+  eq(atRound._table.rows[0][3], '₹8,500', 'F rounding: ₹8,518.40 shortfall becomes ₹8,500');
+  eq(atRound._table.rows[3][3], '₹23,400', 'F rounding: ₹23,456 shortfall becomes ₹23,400');
+  eq(atRound.interest425, 1329, 'F rounding: s.425 on rounded shortfalls, ₹1,329');
+  eq(atRound.interest424, 1404, 'F rounding: s.424 on ₹23,400 for six months, ₹1,404');
+  /* Below ₹10,000 (s.404): 60,000 − 52,000 = 8,000, no interest at all */
+  eq(at({ taxLiability: 60000, tdsPaid: 52000 }).interestTotal, 0, 'F net tax under ₹10,000: no interest');
+  /* Nothing entered: interest as if nothing paid, net 1,50,000:
+     675 + 2,025 + 3,375 + 1,500 = 7,575; s.424 1,50,000 × 4% = 6,000 */
+  eq(at({}).interest425, 7575, 'F nothing paid: s.425 ₹7,575');
+  eq(at({}).interest424, 6000, 'F nothing paid: s.424 ₹6,000');
+  /* A blank date carries the last total forward: 30,000 by June, nothing more
+     → September 67,500 − 30,000 = 37,500 × 3% = 1,125 */
+  eq(at({ paidJun: 30000 })._table.rows[1][5], '₹1,125', 'F a blank date means nothing more was paid');
+
   /* D. Wording only: these engines' figures must not move */
   for (let k = 0; k < N; k++) {
-    same('advance-tax', { taxLiability: int(0, 2e6), tdsPaid: int(0, 5e5), paidSoFar: int(0, 5e5) }, 'figures');
+    same('advance-tax', { taxLiability: int(0, 2e6), tdsPaid: int(0, 5e5), paidSoFar: int(0, 5e5) }, 'figures', ['_table', 'interest425', 'interest424', 'interestTotal', 'interestNote']);
     const fy = pick(['2026-27', '2025-26']);
     same('india-income-tax', { fy, gross: int(0, 6e6), type: pick(['salaried', 'other']), age: pick(['below60', 'senior', 'super']), deductions: int(0, 5e5) }, 'figures', fy === '2025-26' ? [] : ['_table']);
     same('india-capital-gains', { asset: pick(['equity', 'debt', 'property', 'other']), sale: int(0, 5e6), cost: int(0, 5e6), expenses: int(0, 1e5), months: int(0, 120), slabRate: pick([0, 5, 20, 30]) }, 'figures', ['basis']);
+  }
+}
+
+/* ---------- gauge ↔ absolute pressure ----------
+   Worked by hand from the exact definitions: 1 psi = 6894.757293168361 Pa,
+   1 bar = 100000 Pa, 1 atm = 101325 Pa; absolute = gauge + atmospheric. */
+function pressureTests() {
+  const S = 'gauge-absolute-pressure';
+  const PSI = 6894.757293168361;
+  const p = (inputs) => now(S, inputs);
+  const tight = (actual, expected, label) => ok(typeof actual === 'number' && Math.abs(actual - expected) <= 1e-9 * Math.max(1, Math.abs(expected)), label, { expected, actual });
+  /* the factors agree with the unit converter's */
+  const ub = fs.readFileSync(path.join(ROOT, 'engine', 'units.bundle.js'), 'utf8');
+  const fac = (u) => { const m = new RegExp('\\b' + u + ':\\s*\\{[^}]*factor:\\s*([0-9.e]+)').exec(ub.slice(ub.indexOf('pressure: {'))); return m ? Number(m[1]) : NaN; };
+  tight(fac('psi'), PSI, 'P units.bundle.js psi factor is the one the engine uses');
+  tight(fac('bar'), 100000, 'P units.bundle.js bar factor');
+  tight(fac('atm'), 101325, 'P units.bundle.js atm factor');
+  /* psig → psia: 30 psig + 14.69594877551345 psi */
+  let r = p({ value: 30, unit: 'psi', ref: 'gauge' });
+  tight(r.psia, 30 + 101325 / PSI, 'P 30 psig → psia');
+  ok(r.answer === '30 psig = 44.6959 psia', 'P 30 psig answer text', r.answer);
+  tight(r.barg, 30 * PSI / 1e5, 'P 30 psig → barg');
+  /* barg → bara */
+  r = p({ value: 2, unit: 'bar', ref: 'gauge' });
+  tight(r.bara, 3.01325, 'P 2 barg → 3.01325 bara');
+  tight(r.psig, 2e5 / PSI, 'P 2 barg → psig');
+  /* kPa(g) → bara */
+  r = p({ value: 250, unit: 'kPa', ref: 'gauge' });
+  tight(r.bara, 3.51325, 'P 250 kPag → 3.51325 bara');
+  tight(r.kpaa, 351.325, 'P 250 kPag → 351.325 kPa(a)');
+  /* MPag → kPag, and the absolute side */
+  r = p({ value: 0.5, unit: 'MPa', ref: 'gauge' });
+  tight(r.kpag, 500, 'P 0.5 MPag → 500 kPag');
+  tight(r.mpaa, 0.601325, 'P 0.5 MPag → 0.601325 MPa(a)');
+  /* absolute → gauge: a MAP sensor at 180 kPa absolute */
+  r = p({ value: 180, unit: 'kPa', ref: 'absolute' });
+  tight(r.kpag, 78.675, 'P 180 kPa(a) → 78.675 kPag');
+  tight(r.psia, 180000 / PSI, 'P 180 kPa(a) → psia');
+  ok(r.answer === '180 kPa(a) = 78.675 kPag', 'P MAP answer text', r.answer);
+  /* psia → MPa */
+  r = p({ value: 100, unit: 'psi', ref: 'absolute' });
+  tight(r.mpaa, 100 * PSI / 1e6, 'P 100 psia → MPa(a)');
+  /* a vacuum: below atmospheric, still possible */
+  r = p({ value: -0.5, unit: 'bar', ref: 'gauge' });
+  tight(r.bara, 0.51325, 'P −0.5 barg → 0.51325 bara');
+  ok(/partial vacuum/.test(r.note), 'P −0.5 barg is called a partial vacuum', r.note);
+  /* exactly a perfect vacuum */
+  r = p({ value: -101.325, unit: 'kPa', ref: 'gauge' });
+  ok(r.kpaa === 0 && /perfect vacuum/.test(r.note), 'P −101.325 kPag is a perfect vacuum, 0 kPa(a)', r);
+  /* atmospheric exactly: 1.01325 bara is 0 barg, no float dust */
+  r = p({ value: 1.01325, unit: 'bar', ref: 'absolute' });
+  ok(r.barg === 0 && r.psig === 0, 'P 1.01325 bara → exactly 0 barg', r);
+  /* impossible: beyond a perfect vacuum, never a negative absolute */
+  r = p({ value: -20, unit: 'psi', ref: 'gauge' });
+  ok(/^Impossible/.test(r.answer) && r.psia === undefined && r.bara === undefined, 'P −20 psig is flagged impossible, no absolute printed', r);
+  r = p({ value: -5, unit: 'psi', ref: 'absolute' });
+  ok(/^Impossible/.test(r.answer) && r.psig === undefined, 'P −5 psia is flagged impossible', r);
+  /* a custom atmosphere, in each of its units */
+  r = p({ value: 6, unit: 'bar', ref: 'gauge', atm: 900, atmUnit: 'hPa' });
+  tight(r.bara, 6.9, 'P 6 barg at 900 hPa → 6.9 bara');
+  r = p({ value: 30, unit: 'psi', ref: 'gauge', atm: 14, atmUnit: 'psi' });
+  tight(r.psia, 44, 'P 30 psig at 14 psi → 44 psia');
+  r = p({ value: 100, unit: 'kPa', ref: 'absolute', atm: 95, atmUnit: 'kPa' });
+  tight(r.kpag, 5, 'P 100 kPa(a) at 95 kPa → 5 kPag');
+  r = p({ value: 0, unit: 'psi', ref: 'gauge', atm: 29.92, atmUnit: 'inHg' });
+  tight(r.mbara, 29.92 * 3386.388640341 / 100, 'P 0 psig at 29.92 inHg → mbar(a)');
+  /* missing or nonsense input asks rather than computing */
+  ok(p({ value: null }).answer === '' && /Enter a pressure/.test(p({ value: null }).note), 'P blank pressure asks for one');
+  ok(p({ atm: 0 }).answer === '' && /above zero/.test(p({ atm: 0 }).note), 'P zero atmosphere is refused');
+  /* round trip on random values: gauge → absolute → gauge */
+  for (let k = 0; k < 200; k++) {
+    const unit = ['psi', 'bar', 'mbar', 'kPa', 'MPa'][int(0, 4)];
+    const v = (rnd() - 0.2) * 1000;
+    const a = p({ value: v, unit, ref: 'gauge' });
+    if (/^Impossible/.test(a.answer)) { ok(a.bara === undefined, 'P random impossible has no absolute'); continue; }
+    const back = p({ value: a.bara, unit: 'bar', ref: 'absolute' });
+    ok(Math.abs(back.barg - a.barg) <= 1e-9 * Math.max(1, Math.abs(a.barg)), 'P round trip ' + v + ' ' + unit, { a: a.barg, back: back.barg });
   }
 }
 
@@ -554,6 +712,7 @@ function indiaTests() {
 dateTests();
 if (!DATES_ONLY) {
   otherTests();
+  pressureTests();
   for (const tz of ['America/New_York', 'Asia/Kolkata', 'Pacific/Auckland']) {
     const extra = ['--tz', tz, '--dates-only', '--json'];
     if (arg('--root')) extra.push('--root', ROOT);

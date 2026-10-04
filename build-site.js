@@ -481,6 +481,16 @@ const REL_AFFINITY = {
   utilities:   ['conversions/length', 'conversions/volume']
 };
 
+/**
+ * Tools that every pair page of a conversions family links to, keyed
+ * 'conversions/<family>', in search-index form (no leading slash). Pressure
+ * readings are gauge or absolute, and a reader converting psi or bar may
+ * need the other one.
+ */
+const REL_PIN = {
+  'conversions/pressure': ['engineering/gauge-absolute-pressure/']
+};
+
 /** Higher is more related. Shared words dominate, which is what puts the
     reciprocal of a unit conversion at the top of its own list. */
 function relScore(a, b) {
@@ -528,7 +538,9 @@ function curatedOf(html) {
  * decided exactly as for every other page.
  */
 const PAIR_URL_RE = /^conversions\/([a-z0-9-]+)\/([a-z0-9-]+)-to-([a-z0-9-]+)\/$/;
-const slugify = (name) => String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+/* the same as build-conversions.js's: accents folded, ø mapped to o */
+const slugify = (name) => String(name).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[øØ]/g, 'o')
+  .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
 let convRanks = null;
 /** url -> [popular index, rarer unit's rank, commoner unit's rank], or null
@@ -677,6 +689,22 @@ function patchRelated() {
     if (gen.get(t.url).length < need) take(fullRanked(t));
   }
 
+  /* Pass 1b — a tool every pair page of a conversion family should point at,
+     whatever its list already holds (the pair pages' hand-written lists are
+     full, so pass 1 never reaches them). Added below the marker, within
+     REL_MAX; a tool not in the search index yet is reported, not linked. */
+  const pinsMissing = new Set();
+  for (const t of tools) {
+    const pins = t.editable && t.family ? REL_PIN[t.category + '/' + t.family] : null;
+    if (!pins || !isPairPage(t.url)) continue;
+    for (const u of pins) {
+      if (!byUrl.has(u)) { pinsMissing.add(u); continue; }
+      if (curated.get(t.url).includes(u) || gen.get(t.url).includes(u)) continue;
+      if (curated.get(t.url).length + gen.get(t.url).length >= REL_MAX) continue;
+      gen.get(t.url).push(u);
+    }
+  }
+
   /* Pass 2 — nothing may be unreachable. Similarity is near enough symmetric
      that a page's own best matches are also the best places to be listed. */
   const inbound = new Map(tools.map((t) => [t.url, 0]));
@@ -755,7 +783,7 @@ function patchRelated() {
   const stranded = tools.filter((t) => inbound.get(t.url) < REL_MIN_INBOUND);
   const thin = tools.filter((t) => t.editable &&
     curated.get(t.url).length + gen.get(t.url).length < REL_TARGET);
-  return { touched, created, injected, stranded, thin, tools: tools.length };
+  return { touched, created, injected, stranded, thin, tools: tools.length, pinsMissing: [...pinsMissing] };
 }
 
 /* ------------------------------------------------------------------ */
@@ -1180,6 +1208,9 @@ function main() {
     console.log(`  ! ${rel.stranded.length} tool(s) still under ${REL_MIN_INBOUND} inbound link(s):`);
     rel.stranded.slice(0, 5).forEach((t) => console.log('      ' + t.url));
     if (rel.stranded.length > 5) console.log(`      … +${rel.stranded.length - 5}`);
+  }
+  if (rel.pinsMissing.length) {
+    console.log(`  ! REL_PIN names ${rel.pinsMissing.join(' ')}, not in the search index yet — not linked`);
   }
   if (rel.thin.length) {
     console.log(`  ! ${rel.thin.length} page(s) still under ${REL_TARGET} link(s) — ` +

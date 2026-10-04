@@ -357,8 +357,13 @@
     }
     return { fill, filled: said.join(' and ') };
   }
+  /* "map sensor bar to psi", "30 psi gauge in bar": the question is gauge or
+     absolute pressure, which a plain unit page cannot answer, so it is ranked
+     like any other job and the gauge/absolute converter can win it. */
+  const PRESSURE_REF = /\b(?:psi[ga]|bar[ga]|[km]pa[ga]|mbarg|map sensor|manifold (?:absolute )?pressure|boost pressure|(?:gauge|absolute) pressure|(?:psi|bar|kpa|mpa) (?:gauge|absolute))\b/i;
   /** "5 km to miles", "psi in bar", "convert kg into lbs", "celsius fahrenheit" */
   function conversionIntent(text) {
+    if (PRESSURE_REF.test(text)) return null;
     let s = text.toLowerCase().replace(/→|->|=>/g, ' to ').replace(/\bconvert(ing|er|ed)?\b|\bconversion\b|\bplease\b|\bcalculator\b|\bhow (many|much)\b|\bis\b|\bwhat\b|\bare\b|\?/g, ' ').replace(/\s+/g, ' ').trim();
     /* a leading number is the value: it travels to the page as ?v= so the
        answer is on screen the moment it opens */

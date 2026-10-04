@@ -46,5 +46,52 @@ module.exports = {
       { inputs: { voltage: '', current: 0.5, resistance: 24 }, key: 'voltage', shown: 'with 12 V' }
     ],
     related: { conversions: ['/conversions/power/watt-to-milliwatt/', '/conversions/power/watt-to-kilowatt/'] }
+  },
+
+  '/engineering/gauge-absolute-pressure/': {
+    term: 'gauge and absolute pressure',
+    whatTitle: 'What are gauge and absolute pressure?',
+    whatIs: [
+      'Absolute pressure is measured from a perfect vacuum: the whole push of a gas or liquid. Gauge pressure is measured from the air around the gauge, so a gauge open to the room reads zero even though the room’s air is pressing on it. The two differ by the atmospheric pressure at that place and time.',
+      'Dials in garages, workshops and plant rooms mostly read gauge pressure, while gas law sums, vapour tables, weather reports and engine sensors use absolute. Mixing them up is an error of a whole atmosphere, about 14.7 psi.'
+    ],
+    formula: {
+      text: 'Absolute pressure is gauge pressure plus the atmospheric pressure, and gauge is absolute minus it. Both must be in one unit, so the tool turns everything into pascals first, using exact definitions: a bar is 100,000 Pa, a psi is 6,894.757 Pa and the standard atmosphere is 101,325 Pa.',
+      expr: ['p(abs) = p(gauge) + p(atm)', 'p(gauge) = p(abs) − p(atm)', '1 atm = 101,325 Pa = 1.01325 bar = 14.6959 psi'],
+      vars: [['p(abs)', 'absolute pressure, above a perfect vacuum'], ['p(gauge)', 'gauge pressure, above the surrounding air'], ['p(atm)', 'atmospheric pressure, standard or local']]
+    },
+    worked: {
+      inputs: { value: 180, unit: 'kPa', ref: 'absolute' },
+      text: 'A diagnostic scanner shows a MAP sensor reading of 180 kPa under boost. MAP stands for manifold absolute pressure, so choose kPa and Absolute. At the standard atmosphere the boost a dashboard gauge would show is 78.675 kPag, which is 0.78675 barg or 11.4108 psig.',
+      check: [['kpag', '78.675 kPag'], ['barg', '0.78675 barg'], ['psig', '11.4108 psig']]
+    },
+    uses: [
+      ['Datasheets', 'A pump or valve rated in bara set against a site gauge in barg: 10 bara is 8.98675 barg at the standard atmosphere.'],
+      ['Vacuum work', 'A vacuum gauge showing −0.9 barg means 0.11325 bara, the kind of figure a vacuum pump’s datasheet quotes.'],
+      ['Sites above sea level', 'Enter the local barometric pressure: with 900 hPa outside, 6 barg is 6.9 bara rather than 7.01325.']
+    ],
+    mistakes: [
+      'Changing the unit but not the reference. 30 psig is 2.0684 barg but 3.0817 bara; a plain psi to bar converter gives only the first.',
+      'Assuming a bare “psi” or “bar” is one or the other. Tyre and compressor figures are gauge; barometers and vapour pressure tables are absolute.'
+    ],
+    faq: [
+      { q: 'Can gauge pressure be negative?', a: 'Yes, under a vacuum, but no lower than minus the atmospheric pressure: at the standard atmosphere, −1.01325 barg or −14.6959 psig, a perfect vacuum. Anything lower is impossible, and the converter says so.' },
+      { q: 'Which atmospheric pressure should I enter?', a: 'The standard atmosphere, 1013.25 hPa, suits most work. For precise work use the barometric pressure where and when the reading was taken. Weather reports usually give pressure corrected to sea level, which is higher than the real pressure at a site above it.' },
+      { q: 'Is psia the same as bara?', a: 'Both are absolute, in different units: 1 bara is 14.5038 psia.' }
+    ],
+    checks: [
+      { inputs: { value: 0, unit: 'psi', ref: 'gauge' }, key: 'psia', shown: 'about 14.7 psi' },
+      { inputs: { value: 10, unit: 'bar', ref: 'absolute' }, key: 'barg', shown: '8.98675 barg' },
+      { inputs: { value: -0.9, unit: 'bar', ref: 'gauge' }, key: 'bara', shown: '0.11325 bara' },
+      { inputs: { value: 6, unit: 'bar', ref: 'gauge', atm: 900, atmUnit: 'hPa' }, key: 'bara', shown: '6.9 bara' },
+      { inputs: { value: 6, unit: 'bar', ref: 'gauge' }, key: 'bara', shown: 'rather than 7.01325' },
+      { inputs: { value: 30, unit: 'psi', ref: 'gauge' }, key: 'barg', shown: '2.0684 barg' },
+      { inputs: { value: 30, unit: 'psi', ref: 'gauge' }, key: 'bara', shown: '3.0817 bara' },
+      { inputs: { value: 0, unit: 'bar', ref: 'absolute' }, key: 'barg', shown: '−1.01325 barg' },
+      { inputs: { value: 0, unit: 'bar', ref: 'absolute' }, key: 'psig', shown: '−14.6959 psig' },
+      { inputs: { value: 1, unit: 'bar', ref: 'absolute' }, key: 'psia', shown: '14.5038 psia' },
+      { inputs: { value: 0, unit: 'bar', ref: 'gauge' }, key: 'mbara', shown: '1013.25 hPa' }
+    ],
+    related: { conversions: ['/conversions/pressure/psi-to-bar/', '/conversions/pressure/bar-to-psi/', '/conversions/pressure/'] }
   }
 };

@@ -18,7 +18,7 @@
  *
  *   generators, run once in this order, each only when named:
  *   --learn --ai            (never part of --all-generators; run first)
- *   --stories --examples --pdf-ship --finder --tools --collections --guides
+ *   --pdf-ship --finder --stories --examples --tools --collections --guides
  *   --compare --embed --biz --ai-image --ai-video --showcase --og   (og = build/make-og.js --cards;
  *                           with --collections, build-collections runs again after --showcase)
  *   --gen a,b,c             the same names as a list
@@ -66,9 +66,11 @@ const NODE = process.execPath;
 const SW_RE = /var V = '1234tools-v(\d+)';/;
 const BS_ALLOWED = new Set(['engine/biz-tally-converter.js']);
 
+/* finder before stories and examples: both read assets/finder-index.js, so a
+   new tool's story and example were left out until the next release */
 const GENERATORS = [
-  ['stories', 'build-stories.js'], ['examples', 'build-examples.js'], ['pdf-ship', 'build-pdf-ship.js'],
-  ['finder', 'build-finder.js'], ['tools', 'build-tools.js'], ['collections', 'build-collections.js'],
+  ['pdf-ship', 'build-pdf-ship.js'], ['finder', 'build-finder.js'],
+  ['stories', 'build-stories.js'], ['examples', 'build-examples.js'], ['tools', 'build-tools.js'], ['collections', 'build-collections.js'],
   ['guides', 'build-guides.js'], ['compare', 'build-compare.js'], ['embed', 'build-embed.js'],
   ['biz', 'build-biz.js'], ['ai-image', 'build-ai-image.js'], ['ai-video', 'build-ai-video.js'], ['showcase', 'build-showcase.js'],
   ['og', 'build/make-og.js', ['--cards']],

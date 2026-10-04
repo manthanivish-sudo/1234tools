@@ -191,9 +191,11 @@ const POPULAR = {
   area: [['m2', 'ft2'], ['ft2', 'm2'], ['acre', 'ha'], ['ha', 'acre'], ['km2', 'mi2'], ['mi2', 'km2'], ['acre', 'ft2'], ['yd2', 'm2'], ['in2', 'cm2'], ['ha', 'm2']],
   time: [['s', 'min'], ['min', 's'], ['h', 'min'], ['min', 'h'], ['day', 'h'], ['h', 'day'], ['week', 'day'], ['day', 'week'], ['ms', 's'], ['yr', 'day']],
   speed: [['kph', 'mph'], ['mph', 'kph'], ['mps', 'kph'], ['kph', 'mps'], ['knot', 'kph'], ['kph', 'knot'], ['mph', 'mps'], ['knot', 'mph']],
-  pressure: [['bar', 'psi'], ['psi', 'bar'], ['kPa', 'psi'], ['psi', 'kPa'], ['atm', 'Pa'], ['atm', 'psi'], ['bar', 'kPa'], ['inHg', 'mbar']],
+  pressure: [['bar', 'psi'], ['psi', 'bar'], ['kPa', 'psi'], ['psi', 'kPa'], ['bar', 'kPa'], ['kPa', 'bar'], ['mbar', 'bar'], ['bar', 'mbar'],
+    ['MPa', 'bar'], ['bar', 'MPa'], ['MPa', 'psi'], ['psi', 'MPa'], ['kPa', 'MPa'], ['MPa', 'kPa'], ['inHg', 'mbar'], ['mbar', 'inHg'], ['atm', 'psi'], ['atm', 'Pa']],
   energy: [['kcal', 'kJ'], ['kJ', 'kcal'], ['kWh', 'J'], ['kWh', 'BTU'], ['cal', 'J'], ['J', 'cal'], ['cal', 'kJ'], ['Wh', 'J']],
-  power: [['hp', 'kW'], ['kW', 'hp'], ['W', 'btuh'], ['btuh', 'W'], ['hpM', 'kW'], ['kW', 'hpM'], ['hp', 'W'], ['MW', 'kW']],
+  power: [['hp', 'kW'], ['kW', 'hp'], ['mW', 'W'], ['W', 'mW'], ['W', 'kW'], ['kW', 'W'], ['btuh', 'W'], ['W', 'btuh'], ['btuh', 'kW'], ['kW', 'btuh'],
+    ['hpM', 'kW'], ['kW', 'hpM'], ['hp', 'W'], ['MW', 'kW']],
   data: [['MB', 'GB'], ['GB', 'MB'], ['GB', 'TB'], ['TB', 'GB'], ['KB', 'MB'], ['MB', 'KB'], ['GB', 'GiB'], ['GiB', 'GB'], ['TB', 'TiB'], ['B', 'bit']],
   angle: [['deg', 'rad'], ['rad', 'deg'], ['turn', 'deg'], ['deg', 'arcmin'], ['arcmin', 'deg'], ['grad', 'deg']]
 };
@@ -353,6 +355,39 @@ const RELATED = {
   ]
 };
 
+/* Pages the family hub links to beside RELATED, by [href, label, what it
+   does]. Unlike RELATED these are not read from the search index, so a guide
+   can be named, and a page that is not built yet can be: build-conversions.js
+   writes the link and says in its run that the page is missing. */
+const PRESSURE_GUIDE = '/guides/convert-pressure-units/';
+const GAUGE_TOOL = '/engineering/gauge-absolute-pressure/';
+const LINKS = {
+  pressure: [
+    [GAUGE_TOOL, 'Gauge to absolute pressure converter', 'psig to psia and barg to bara, and back'],
+    [PRESSURE_GUIDE, 'Guide: pressure units, and gauge vs absolute', 'What psi, bar, kPa, mbar, atm and mmHg are for, with the exact factors']
+  ]
+};
+
+/* A second table on chosen pair pages, under the formula and its table:
+   whole input values that people look up as a set, each converted by the
+   converter's own arithmetic and rounded as `cols` says ([unit, decimals]).
+   `pages` are the pairs that carry it; `note(h)` is written from the data,
+   like the FAQ; `links` are [href, label], written even before the page is
+   built, like LINKS. */
+const EXTRA = {
+  pressure: [{
+    id: 'tyre',
+    pages: [['psi', 'bar'], ['bar', 'psi'], ['psi', 'kPa'], ['kPa', 'psi']],
+    heading: 'Tyre pressures: psi to bar and kPa',
+    caption: 'Tyre pressures from 26 to 45 psi, with bar to 2 decimal places and kPa to the nearest whole number',
+    from: 'psi',
+    values: [26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45],
+    cols: [['bar', 2], ['kPa', 0]],
+    note: (h) => 'Tyre pressures are gauge pressures: a tyre gauge shows how far the pressure inside is above the air around it, so a flat tyre reads 0. The absolute pressure is that plus the atmosphere: one standard atmosphere is ' + h.c(1, 'atm', 'psi') + ' (' + h.c(1, 'atm', 'kPa') + '), and the real figure varies with the weather and the altitude. These rows are conversions, not recommendations: use the pressures in your vehicle’s handbook or on the label in the door frame.',
+    links: [[GAUGE_TOOL, 'Convert gauge to absolute pressure'], [PRESSURE_GUIDE, 'Guide: pressure units, and gauge vs absolute']]
+  }]
+};
+
 /* The questions people ask, answered from the data. */
 const FAQ = {
   length: [
@@ -409,7 +444,8 @@ const FAQ = {
     ['How do I convert psi to kPa?', (h) => 'Multiply by about 6.895. A tyre at 32 psi is ' + h.c(32, 'psi', 'kPa') + ', or ' + h.c(32, 'psi', 'bar') + '.'],
     ['What is standard atmospheric pressure?', (h) => 'One standard atmosphere is defined as exactly ' + h.c(1, 'atm', 'Pa') + ': ' + h.c(1, 'atm', 'bar') + ', ' + h.c(1, 'atm', 'psi') + ' or ' + h.c(1, 'atm', 'inHg') + '.'],
     ['Is a millibar the same as a hectopascal?', (h) => 'Yes. 1 mbar is ' + h.c(1, 'mbar', 'Pa') + ', which is one hectopascal (hPa), so a weather pressure reads the same in either unit.'],
-    ['How many kPa is 1 bar?', (h) => 'Exactly ' + h.c(1, 'bar', 'kPa') + ': a bar is ' + h.c(1, 'bar', 'Pa') + '.']
+    ['How many kPa is 1 bar?', (h) => 'Exactly ' + h.c(1, 'bar', 'kPa') + ': a bar is ' + h.c(1, 'bar', 'Pa') + '.'],
+    ['What do psig, psia, barg and bara mean?', (h) => 'The g is gauge pressure, measured from the pressure of the air around the gauge; the a is absolute pressure, measured from a vacuum. Absolute is gauge plus atmospheric pressure; one standard atmosphere is ' + h.c(1, 'atm', 'psi') + ' or ' + h.c(1, 'atm', 'kPa') + ', and the real figure varies with the weather and the altitude. So with the standard atmosphere, a tyre at 32 psig is about ' + h.n(Math.round((32 + h.x(1, 'atm', 'psi')) * 10) / 10) + ' psia, and 2 barg is about ' + h.n(Math.round((2 + h.x(1, 'atm', 'bar')) * 100) / 100) + ' bara. Tyre and most workshop gauges read gauge pressure.']
   ],
   energy: [
     ['How many joules are in a kilowatt-hour?', (h) => 'Exactly ' + h.c(1, 'kWh', 'J') + ': 1,000 watts for 3,600 seconds.'],
@@ -422,7 +458,9 @@ const FAQ = {
     ['How many kilowatts is one horsepower?', (h) => 'One mechanical horsepower is ' + h.c(1, 'hp', 'kW') + '; one metric horsepower (PS) is ' + h.c(1, 'hpM', 'kW') + '.'],
     ['How do I convert kW to hp?', (h) => 'Multiply by about 1.341 for mechanical horsepower, or about 1.36 for metric. A 100 kW engine is ' + h.c(100, 'kW', 'hp') + ', or ' + h.c(100, 'kW', 'hpM') + '.'],
     ['How many watts is 1,000 BTU per hour?', (h) => h.c(1000, 'btuh', 'W') + '. An air conditioner rated at 12,000 BTU/h delivers ' + h.c(12000, 'btuh', 'kW') + ' of cooling.'],
-    ['What is the difference between power and energy?', () => 'Power is how fast energy is used; energy is power multiplied by time. A 2 kW heater running for 3 hours uses 6 kWh of energy.']
+    ['What is the difference between power and energy?', () => 'Power is how fast energy is used; energy is power multiplied by time. A 2 kW heater running for 3 hours uses 6 kWh of energy.'],
+    ['How many watts is a milliwatt?', (h) => 'A milliwatt is a thousandth of a watt: 1 mW = ' + h.c(1, 'mW', 'W') + ', so divide milliwatts by 1,000 to get watts. 500 mW is ' + h.c(500, 'mW', 'W') + ', and 1 W is ' + h.c(1, 'W', 'mW') + '. Small outputs are given in milliwatts: in the US, for example, the FDA limits laser pointers to 5 mW of visible light, which is ' + h.c(5, 'mW', 'W') + '.'],
+    ['How do I convert dBm to milliwatts?', (h) => 'dBm is power on a decibel scale measured from 1 mW, as radio and Wi-Fi figures are often given: milliwatts = 10 to the power of (dBm ÷ 10). 0 dBm is 1 mW, 10 dBm is 10 mW, 20 dBm is 100 mW and 30 dBm is 1,000 mW, which is ' + h.c(1000, 'mW', 'W') + '. Every 3 dB is close to double: 3 dBm is ' + h.n(Math.pow(10, 0.3)) + ' mW.']
   ],
   data: [
     ['How many MB are in a GB?', (h) => h.n(h.x(1, 'GB', 'MB')) + ' megabytes in a gigabyte, in decimal SI units. In binary units there are ' + h.n(h.x(1, 'GiB', 'MiB')) + ' mebibytes in a gibibyte.'],
@@ -441,5 +479,5 @@ const FAQ = {
 
 module.exports = {
   NAMES, FAMILY_ORDER, UNIT_ORDER, OPEN_GROUPS, POPULAR, TOP, TABLE_VALUES, GENERIC_VALUES,
-  TEMP_EXAMPLE, QUANTITY, NOUN, QUICK, ABOUT, RELATED, FAQ
+  TEMP_EXAMPLE, QUANTITY, NOUN, QUICK, ABOUT, RELATED, FAQ, LINKS, EXTRA
 };

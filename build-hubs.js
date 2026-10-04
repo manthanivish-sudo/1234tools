@@ -80,7 +80,7 @@ const INTRO = {
   '/health/': 'Health calculators that explain their formulas: a BMI calculator, BMR and daily calorie needs, body fat percentage, heart rate training zones, daily water intake, a pregnancy due date calculator and an ovulation calculator. Each is an estimate, with a note on what it can and cannot tell you.',
   '/qr/': 'QR code tools in the browser: a QR code generator for links, WiFi, contact cards and UPI payments with custom colours and a logo, a bulk QR code generator from a list or a CSV, and a QR code scanner that reads a code from your camera or a picture and shows where a link really goes.',
   '/utilities/': 'Everyday tools in one place: the Tool Finder that takes a job in plain words and points to the right tool, a tip calculator and bill splitter, a square footage calculator, a fuel cost and MPG converter, a GPA calculator, a cooking measurement converter, a shoe size converter, a random number generator and a dice roller.',
-  '/engineering/': 'Electronics and engineering calculators that show the formula: an Ohm’s law calculator that takes any two of voltage, current, resistance and power and gives the other two. More are planned; the unit conversions for pressure, energy and power live in the Conversions section.',
+  '/engineering/': 'Electronics and engineering calculators that show the formula: an Ohm’s law calculator that takes any two of voltage, current and resistance and gives the third and the power, and a gauge to absolute pressure converter for psig, psia, barg and bara. The plain unit conversions for pressure, energy and power live in the Conversions section.',
   '/design/': 'Design calculators in the browser: an aspect ratio calculator that scales a width or height proportionally and simplifies ratios for images and video. The colour and gradient tools sit in the Developer section, and the image tools handle resizing and cropping.'
 };
 
@@ -148,7 +148,8 @@ const FAQ = {
     { q: 'Why does cups to grams depend on the ingredient?', a: 'Because a cup is a volume and ingredients differ in density. The converter uses a weight per cup for each ingredient on its list, which is why flour and sugar give different grams.' }
   ],
   '/engineering/': [
-    { q: 'Does the Ohm’s law calculator handle power?', a: 'Yes. Enter any two of voltage, current, resistance and power and it solves for the other two, showing which formula it used.' },
+    { q: 'Does the Ohm’s law calculator handle power?', a: 'Yes. Enter any two of voltage, current and resistance and it works out the third and the power in watts.' },
+    { q: 'Is psi to bar the same as psig to barg?', a: 'The numbers are, as long as both are gauge or both are absolute. Changing between gauge and absolute adds or takes away the atmospheric pressure, which the gauge to absolute pressure converter does.' },
     { q: 'Where are the unit conversions for engineering?', a: 'In the Conversions section: pressure, energy, power, speed, temperature and the rest, each pair on its own page with the formula.' },
     { q: 'Which engineering tools are coming?', a: 'The order depends on what people ask for. The Tool Finder takes requests, and so does the contact page.' }
   ],
@@ -177,7 +178,7 @@ const STARTERS = {
   '/health/': ['my BMI', 'calories I need a day', 'due date from last period'],
   '/qr/': ['QR code for my WiFi', 'scan a QR code', 'QR codes from a CSV'],
   '/utilities/': ['which tool do I need', 'split a bill with tip', 'cups to grams'],
-  '/engineering/': ['ohm’s law', 'watts from volts and amps', 'psi to bar'],
+  '/engineering/': ['ohm’s law', 'psig to psia', 'psi to bar'],
   '/design/': ['aspect ratio for 1920 wide', '16:9 at 1280 wide', 'convert a colour to HSL']
 };
 

@@ -160,9 +160,11 @@ function patchHub(html, s, n) {
     return (t === s.slug || t === s.name) ? a + esc(s.name) + c : m;
   });
 
-  /* "3 free tools. No sign-up, no server, works offline." */
-  html = html.replace(/(<p class="lede">)(\d[\d,]*)( free tools\. No sign-up, no server, works offline\.)/,
-    function (m, a, k, c) { return a + num(n) + c; });
+  /* "3 free tools. No sign-up, no server, works offline." — and "1 free
+     tool." on a section of one, which the plural-only pattern never matched,
+     so a second tool left the hub saying 1. */
+  html = html.replace(/(<p class="lede">)(\d[\d,]*) free tools?(\. No sign-up, no server, works offline\.)/,
+    function (m, a, k, c) { return a + num(n) + (n === 1 ? ' free tool' : ' free tools') + c; });
 
   return html;
 }
