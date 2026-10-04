@@ -32,6 +32,7 @@ const { trailFor } = require('./build/sections.js');
    time, so the two never rewrite each other */
 const outbound = require('./build-outbound.js');
 const share = require('./build-share.js'); /* the share bar and og:image, as build-share.js writes them */
+const proof = require('./build-proof.js'); /* the example, the story and the card thumbnails, as build-proof.js writes them */
 
 const ROOT = __dirname;
 const CHECK = process.argv.includes('--check');
@@ -454,7 +455,7 @@ function main() {
     let html = headFor(parts, p.slug, p.title, p.description) + parts.mid + '\n' + crumbs.render(trailFor(pathOnly), p.name) + '\n' + p.body + parts.tail;
     if (p.indexable) html = html.replace('<meta name="robots" content="noindex,nofollow">\n', '');
     if (p.noAccount) html = html.replace('<script src="/assets/firebase-config.js"></script>\n<script src="/assets/account.js" defer></script>\n', '');
-    html = share.apply(sidebarFor(outbound.rewrite(html, p.slug).html, p.slug + '/index.html'), p.slug + '/index.html');
+    html = proof.apply(share.apply(sidebarFor(outbound.rewrite(html, p.slug).html, p.slug + '/index.html'), p.slug + '/index.html'), p.slug + '/index.html');
     if (write(p.slug + '/index.html', html)) built++;
   }
   /* indexable pages belong in the sitemap; the dark ones stay out of it */

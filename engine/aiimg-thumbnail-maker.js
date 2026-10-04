@@ -260,13 +260,33 @@
       pass(AC.colour, 0);
       ctx.restore();
     }
+    /* The title as it will be drawn: shrunk until the widest line fits
+       inside the frame with a 4% margin, then moved just far enough to stay
+       inside it. Without this a title longer than about six characters ran
+       off the left edge at the default size and position — "30 DAYS LATER"
+       lost its first letter — and the exported thumbnail was cropped. The
+       stroke is counted, since half of it sits outside the letters. */
+    function fitted(ctx, L, W, H) {
+      const margin = 0.04;
+      const stroke = (Number(L.strokeWidth) || 0) / 100;
+      let F = Object.assign({}, L);
+      let lay = A.layout(ctx, F, W);
+      const maxW = W * (1 - 2 * margin), maxH = H * (1 - 2 * margin);
+      const wOf = (l) => l.blockW + l.px * stroke * 2, hOf = (l) => l.blockH + l.px * stroke * 2;
+      const k = Math.min(1, maxW / Math.max(1, wOf(lay)), maxH / Math.max(1, hOf(lay)));
+      if (k < 1) { F.size = (Number(L.size) || 15) * k * 0.995; lay = A.layout(ctx, F, W); }
+      const hw = wOf(lay) / 2 / W, hh = hOf(lay) / 2 / H;
+      F.x = clamp(Number(L.x), margin + hw, 1 - margin - hw);
+      F.y = clamp(Number(L.y), margin + hh, 1 - margin - hh);
+      return F;
+    }
     function renderFrame(ctx, W, H, t) {
       const V = view();
       ctx.save();
       ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
       ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(background(W, H, V.bg), 0, 0, W, H);
-      const title = () => A.drawText(ctx, V.text, 0, W, H, 1);
+      const title = () => A.drawText(ctx, fitted(ctx, V.text, W, H), 0, W, H, 1);
       if (V.subject.front) title();
       if (S.cut) {
         if (V.subject.twin) {
@@ -286,7 +306,7 @@
         pctx.save();
         pctx.setLineDash([6, 5]); pctx.lineWidth = 1.5; pctx.strokeStyle = 'rgba(247,201,72,.9)';
         if (S.sel === 'text') {
-          const box = A.textBox(pctx, S.text, 0, canvas.width, canvas.height, 1);
+          const box = A.textBox(pctx, fitted(pctx, S.text, canvas.width, canvas.height), 0, canvas.width, canvas.height, 1);
           pctx.beginPath(); box.pts.forEach((p, i) => i ? pctx.lineTo(p[0], p[1]) : pctx.moveTo(p[0], p[1])); pctx.closePath(); pctx.stroke();
         } else if (S.sel === 'subject' && S.cut) {
           const R = subjectRect(canvas.width, canvas.height, S.subject);
@@ -311,11 +331,15 @@
       if (!S.image || S.exporting) return;
       const p = toCanvas(e);
       const W = canvas.width, H = canvas.height;
-      const box = A.textBox(pctx, S.text, 0, W, H, 1);
+      /* hit-test what is drawn, and start a drag from there, so a title the
+         fit has moved does not jump under the pointer */
+      const shown = fitted(pctx, S.text, W, H);
+      const box = A.textBox(pctx, shown, 0, W, H, 1);
       const R = S.cut ? subjectRect(W, H, S.subject) : null;
       const inSubject = R && p.x >= R.x && p.x <= R.x + R.w && p.y >= R.y && p.y <= R.y + R.h;
       if (A.pointInBox(box, p.x, p.y) && (S.sel === 'text' || !inSubject)) {
         S.sel = 'text';
+        S.text.x = shown.x; S.text.y = shown.y;
         drag = { what: 'text', dx: p.x - S.text.x * W, dy: p.y - S.text.y * H };
       } else if (inSubject) {
         S.sel = 'subject';

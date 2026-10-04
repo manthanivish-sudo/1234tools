@@ -52,6 +52,7 @@ const sources = require('./build/sources.js');
    each other for ever */
 const outbound = require('./build-outbound.js');
 const share = require('./build-share.js'); /* the share bar and og:image, as build-share.js writes them */
+const proof = require('./build-proof.js'); /* the example, the story and the card thumbnails, as build-proof.js writes them */
 const { trailFor } = require('./build/sections.js');
 
 /* slug -> icon glyph. Only what has been verified to work. A spec may carry
@@ -221,7 +222,7 @@ function toolPage(slug, glyph, parts) {
     }] : [])
   }) + '</script>\n';
 
-  return share.apply(outbound.rewrite(markActive(head(parts, slug, title, t.description, url) + ld + parts.mid + '\n' + body + parts.tail), 'pdf').html, 'pdf/' + slug + '/index.html');
+  return proof.apply(share.apply(outbound.rewrite(markActive(head(parts, slug, title, t.description, url) + ld + parts.mid + '\n' + body + parts.tail), 'pdf').html, 'pdf/' + slug + '/index.html'), 'pdf/' + slug + '/index.html');
 }
 
 /* ------------------------------------------------------------------ */

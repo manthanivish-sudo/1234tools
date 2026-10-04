@@ -24,6 +24,7 @@ const outbound = require('./build-outbound.js');
 /* the share row and the per-page link-preview card: build-share.js owns
    both, and a page written here must already carry what it would write */
 const share = require('./build-share.js');
+const proof = require('./build-proof.js'); /* the example, the story and the card thumbnails, as build-proof.js writes them */
 const { trailFor } = require('./build/sections.js');
 const { COLLECTIONS, PRICING, pricingFor, TILES, HI_HUB } = require('./build/collections.js');
 /* Approved showcase entries, when the showcase builder is present. */
@@ -204,7 +205,7 @@ function collectionPage(c, parts) {
 
   const head = headFor(parts, pathOnly, c.title, c.lede);
   const html = sidebarFor((c.hi ? alternates(head, c.slug) : head) + ld + parts.mid + '\n' + body + parts.tail, SECTION + '/' + c.slug + '/index.html');
-  return share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/' + c.slug + '/index.html');
+  return proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/' + c.slug + '/index.html'), SECTION + '/' + c.slug + '/index.html');
 }
 
 function hubPage(parts, counts) {
@@ -246,7 +247,7 @@ function hubPage(parts, counts) {
     ]
   }) + '</script>\n';
   const html = sidebarFor(headFor(parts, pathOnly, title, description) + ld + parts.mid + '\n' + body + parts.tail, SECTION + '/index.html');
-  return share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/index.html');
+  return proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, SECTION + '/index.html'), SECTION + '/index.html');
 }
 
 /* ---------- Hindi twins ----------
@@ -313,7 +314,7 @@ function collectionPageHi(c, parts) {
   const head = alternates(headFor(parts, pathOnly, hi.title, hi.lede), c.slug)
     .replace(/<link rel="canonical" href="[^"]*">/, '<link rel="canonical" href="' + url + '">');
   const html = hiShell(sidebarFor(head + ld + parts.mid + '\n' + body + parts.tail, rel));
-  return share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, rel);
+  return proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, rel), rel);
 }
 
 function hubPageHi(parts, list) {
@@ -342,7 +343,7 @@ function hubPageHi(parts, list) {
     ]
   }) + '</script>\n';
   const html = hiShell(sidebarFor(headFor(parts, pathOnly, h.title, h.lede) + ld + parts.mid + '\n' + body + parts.tail, 'hi/' + SECTION + '/index.html'));
-  return share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, 'hi/' + SECTION + '/index.html');
+  return proof.apply(share.apply(outbound.rewrite(hubs.apply(html, SECTION + '/index.html'), SECTION).html, 'hi/' + SECTION + '/index.html'), 'hi/' + SECTION + '/index.html');
 }
 
 /* ---------- wiring ---------- */
@@ -415,7 +416,7 @@ function patchHome(counts) {
     const at = hero >= 0 ? hero + '<!-- /HOME-HERO -->'.length : out.indexOf(marker);
     out = out.slice(0, at) + '\n' + aud + '\n' + out.slice(at);
   }
-  return write(rel, share.apply(outbound.rewrite(out, 'home').html, rel));
+  return write(rel, proof.apply(share.apply(outbound.rewrite(out, 'home').html, rel), rel));
 }
 
 /* One tile per audience: who, how many tools, and the three that sell the

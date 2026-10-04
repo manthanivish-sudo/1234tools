@@ -1,0 +1,20 @@
+# Sample photos for promotional examples
+
+`build/promo/examples.js` runs the image tools on these photos so a launch kit shows a real before and after. Every file comes from Wikimedia Commons. On 2026-10-04 each file page said **CC0 1.0 Universal Public Domain Dedication**, so no attribution is required. The authors are still credited here.
+
+Each photo was downloaded at 1600 px wide (`Special:FilePath/<name>?width=1600`) and re-encoded as JPEG in Chrome to stay under 350 KB. Nothing else was changed: no crop, no retouching.
+
+| file | what it is | Commons file page | author | licence | saved as |
+|---|---|---|---|---|---|
+| `portrait.jpg` | woman, head and shoulders, against a hedge | [Brunette woman portrait (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Brunette_woman_portrait_(Unsplash).jpg) | Christopher Campbell (Unsplash: chrisjoelcampbell) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 1600×1067, q86, 265 KB |
+| `product.jpg` | a black cup of coffee on a saucer, on a wooden table | [Black coffee cup (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Black_coffee_cup_(Unsplash).jpg) | Ross Parmly (Unsplash: rparmly) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 1600×1067, q86, 215 KB |
+| `street.jpg` | a New York street with people on a crossing | [People crossing street (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:People_crossing_street_(Unsplash).jpg) | Mike Petrucci (Unsplash: mikepetrucci) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 1600×1200, q74, 321 KB |
+| `landscape.jpg` | Lake Pukaki and Aoraki / Mt Cook under a clear sky | [Lake Pukaki and Mt Cook.NZ (15577767068).jpg](https://commons.wikimedia.org/wiki/File:Lake_Pukaki_and_Mt_Cook.NZ_(15577767068).jpg) | Bernard Spragg, Christchurch, New Zealand | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 1600×1063, q86, 215 KB |
+| `pet.jpg` | a dog lying in long grass | [Earnest dog in the grass (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Earnest_dog_in_the_grass_(Unsplash).jpg) | Rodion Kutsaev (Unsplash: frostroomhead) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 1600×1067, q86, 220 KB |
+| `food.jpg` | pancakes with banana on a plate | [Pancake Breakfast (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Pancake_Breakfast_(Unsplash).jpg) | Toa Heftiba (Unsplash: heftiba) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 1600×1067, q86, 217 KB |
+| `document.jpg` | a printed 1987 store receipt, photographed flat | [Circuit City Receipt - December 17, 1987.jpg](https://commons.wikimedia.org/wiki/File:Circuit_City_Receipt_-_December_17,_1987.jpg) | Mopenstein (own work) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 1600×1503, q50, 338 KB |
+| `group.jpg` | three friends walking by railway tracks, faces to camera | [Three friends by train tracks (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Three_friends_by_train_tracks_(Unsplash).jpg) | Priscilla Du Preez (Unsplash: artographybyp) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 1600×1067, q86, 308 KB |
+
+The Unsplash photos were uploaded to Commons while Unsplash still released photos under CC0, before June 2017. Commons keeps the archived Unsplash source link on each file page.
+
+The people in `portrait.jpg` and `group.jpg` can be recognised. A CC0 dedication covers the photographer's copyright but not the subjects' personality rights. Use these photos only to show what a tool does. Do not use them to suggest that the people in them endorse 1234Tools.

@@ -1,26 +1,42 @@
 /**
  * Reel Maker — a script, pictures, a voice and music in; a 9:16 MP4 out.
  *
- * Scenes of animated text, pictures and clips are laid end to end and drawn
- * by ONE function, renderFrame(ctx, W, H, t), for the preview, the cover and
- * every exported frame, so what is exported is what was seen. Sound (a
- * voiceover, music that ducks under it, a clip's own sound) is mixed in an
- * OfflineAudioContext; captions come from Whisper tiny on the device
- * (aivid-whisper.js) and are drawn by the Auto Captions tool's own
- * drawCaptions. Encoding is the shared runtime's encodeVideo /
- * encodeVideoFrames (aiimg-core.js). Nothing leaves the browser.
+ * Scenes are laid end to end and drawn by ONE function, renderFrame(ctx, W,
+ * H, t), for the preview, the cover and every exported frame, so what is
+ * exported is what was seen. Sound (a voiceover, music that ducks under it,
+ * a clip's own sound) is mixed in an OfflineAudioContext; captions come from
+ * Whisper tiny on the device (aivid-whisper.js) and are drawn by the Auto
+ * Captions tool's own drawCaptions. Encoding is the shared runtime's
+ * encodeVideo / encodeVideoFrames (aiimg-core.js). Nothing leaves the browser.
  *
- * "Promote a 1234Tools tool" is a preset inside the same product: it reads a
- * row of assets/finder-index.js (loaded on demand) and writes the script,
- * the end card with a QR code and an Instagram caption from it. The copy it
- * writes follows the site's truthfulness rules: browser tools "run in your
- * browser, nothing you type is uploaded, no account"; /ai/ tools "send your
- * text to an AI model and say so first; 10 free a month with an account".
+ * The visual language is the promotion kits' (build/promo/kit-templates):
+ * the same eight AA-checked palettes, the same five heading treatments
+ * (two-tone gradient, outlined keyword, highlighter marker, all-caps stack,
+ * serif editorial), the same beats and hero frames — animated. A look is
+ * { palette, type, motion, bg, layout, copy }; a seeded picker chooses one
+ * from (tool + reel number) and steps past the tool's last three looks and
+ * the last two of any reel (kept in localStorage), so no two reels look the
+ * same unless the visitor pins a look.
+ *
+ * "Promote a 1234Tools tool" reads the tool's story from assets/stories.js
+ * (loaded on demand) and tells it in seven beats: hook, pain, the usual way,
+ * the fix, a real example (assets/examples.js, loaded on demand; the in → out
+ * line when there is none), three steps, and an end card with the proof
+ * pills, a QR code to the UTM link and the story's call to action. A tool
+ * with no story falls back to a script written from its finder-index row.
+ * Visitors get seven script templates (Problem → Solution, Before / After,
+ * 3 Mistakes, Myth vs Fact, How-to, Top 5, Testimonial) written in a small
+ * line grammar: "HOOK: …", "USUAL: title | a | b | c", "STEPS: …" and so on.
+ *
+ * Every text block is fitted to its box by a shrink loop; a block that still
+ * does not fit is recorded in overflow() (the browser test asserts it stays
+ * empty). Nothing is drawn in the top 250 px or bottom 340 px of a 1080×1920
+ * frame except the progress bar's own strip.
  *
  * Exports: AIImg.tools['reel-maker'] = { mount, buildScript, captionFor,
  * mixAudio, sceneAt, renderFrame, scenesFromScript, tagsFor, qrUrlFor,
- * state() } — renderFrame/sceneAt/captionFor default to the mounted tool's
- * state, which is what the browser test and the share sheet use.
+ * encodeWAV, factsOf, templates, palettes, paletteAudit, chooseLook,
+ * overflow, state() }.
  */
 (function () {
   'use strict';
@@ -44,7 +60,11 @@
     '1920x1080': { w: 1920, h: 1080, rates: { standard: 8e6, high: 12e6, small: 5e6 }, utm: 'youtube' }
   };
   const EXAMPLE = 'Stop guessing your GST.\nType the amount, pick the slab.\nCGST, SGST and IGST split — in a second.\nFree. Runs in your browser.';
-  const ANIMS = [['zoom', 'Pop in'], ['slide', 'Slide in'], ['typewriter', 'Type on'], ['fade', 'Fade'], ['none', 'Still']];
+  const ANIMS = [['auto', 'The look’s motion'], ['pop', 'Kinetic pop'], ['slide', 'Slide stack'], ['type', 'Typewriter'], ['punch', 'Zoom punch'], ['fade', 'Fade'], ['none', 'Still']];
+  const OLD_ANIM = { zoom: 'pop', typewriter: 'type' };
+  const KIND_LABEL = { text: 'Text', hook: 'Hook', pain: 'Pain', usual: 'The usual way', fix: 'The fix', example: 'Example', steps: 'Steps', point: 'Point',
+    versus: 'Versus', quote: 'Quote', cta: 'Call to action', endcard: 'End card' };
+  const HEADING_LABEL = { usual: 'Title', fix: 'Name', steps: 'Title', point: 'Number', versus: 'Labels, e.g. Myth | Fact', quote: 'Who said it', pain: 'Label' };
   const FITS = [['card', 'Card — fits the width, rounded'], ['phone', 'Phone frame'], ['cover', 'Full-bleed']];
   const CAP_STYLES = [
     ['karaoke', 'Karaoke', 'Words light up as they are spoken'],
@@ -53,17 +73,143 @@
     ['minimal', 'Minimal', 'A dark box under one line']
   ];
 
-  /* The five looks. Text on each background is at least 7:1 (checked by
-     hand); the paper look's accent is a deepened bronze so an emphasised
-     word stays readable on cream. */
-  const LOOKS = [
-    { id: 'midnight', label: 'Midnight gold', swatch: '#f7c948', bg: ['#0e1428', '#06080f'], glow: 'rgba(247,201,72,0.14)', text: '#f4f6fb', muted: '#b7bfd2', accent: '#f7c948', bar: '#f7c948', plate: 'rgba(6,8,15,0.78)', plateText: '#f4f6fb', font: 'Sora', textAnim: 'zoom', uppercase: false, textGlow: 0, stroke: '#000000', strokeWidth: 0, shadow: 0.45, blobs: true, light: false, caption: { preset: 'karaoke', accent: '#f7c948', fill: '#ffffff', box: '#0b1020' } },
-    { id: 'violet', label: 'Violet neon', swatch: '#7c5cff', bg: ['#1a1240', '#06080f'], glow: 'rgba(124,92,255,0.2)', text: '#f4f6fb', muted: '#b7bfd2', accent: '#7c5cff', bar: '#2dd4ff', plate: 'rgba(10,6,30,0.8)', plateText: '#f4f6fb', font: 'Sora', textAnim: 'fade', uppercase: false, textGlow: 6, stroke: '#000000', strokeWidth: 0, shadow: 0.45, blobs: true, light: false, caption: { preset: 'pop', accent: '#2dd4ff', fill: '#ffffff', box: '#0b1020' } },
-    { id: 'sunrise', label: 'Sunrise', swatch: '#ff9d2e', bg: ['#3a2208', '#0a0e1a'], glow: 'rgba(255,157,46,0.16)', text: '#fff7e6', muted: '#e8c9a0', accent: '#ff9d2e', bar: '#ff9d2e', plate: 'rgba(20,12,4,0.8)', plateText: '#fff7e6', font: 'Sora', textAnim: 'slide', uppercase: false, textGlow: 0, stroke: '#000000', strokeWidth: 0, shadow: 0.45, blobs: true, light: false, caption: { preset: 'karaoke', accent: '#ff9d2e', fill: '#ffffff', box: '#0b1020' } },
-    { id: 'paper', label: 'Paper', swatch: '#efe6d2', bg: ['#fbf7ee', '#efe6d2'], glow: 'rgba(232,160,32,0.10)', text: '#1a1400', muted: '#5a5040', accent: '#a86400', bar: '#e8a020', plate: 'rgba(26,20,0,0.86)', plateText: '#ffffff', font: 'Sora', textAnim: 'zoom', uppercase: false, textGlow: 0, stroke: '#000000', strokeWidth: 0, shadow: 0.08, blobs: false, light: true, caption: { preset: 'minimal', accent: '#f7c948', fill: '#ffffff', box: '#1a1400' } },
-    { id: 'bold', label: 'Bold', swatch: '#ffe600', bg: ['#000000', '#000000'], glow: 'rgba(255,230,0,0.06)', text: '#ffffff', muted: '#cccccc', accent: '#ffe600', bar: '#ffe600', plate: 'rgba(0,0,0,0.85)', plateText: '#ffffff', font: 'Sora', textAnim: 'zoom', uppercase: true, textGlow: 0, stroke: '#000000', strokeWidth: 0, shadow: 0.3, blobs: false, light: false, caption: { preset: 'outline', accent: '#ffe600', fill: '#ffffff', box: '#0b1020' } }
-  ];
-  const lookCopy = (l) => Object.assign({}, l, { bg: l.bg.slice(), caption: Object.assign({}, l.caption) });
+  /* ------------------------------------------------------------------ */
+  /* looks: the kits' palettes and heading treatments, plus motion and  */
+  /* background                                                         */
+  /* ------------------------------------------------------------------ */
+  /* build/promo/kit-templates/palettes.js, value for value, so a Reel and a
+     kit for the same tool are one campaign. Pure #ffffff is written #fefefe:
+     the end card's QR plate is the only pure-white thing in a frame, which
+     is what lets a test (or a phone) find and read it. */
+  const PALETTES = {
+    midnight: {
+      label: 'Midnight Gold', light: false,
+      bg: '#06080f', ink: '#f4f6fb', ink2: '#c3c9d9', muted: '#8a93a8',
+      grad: ['#ffe29a', '#f7c948', '#ff9d2e'], chip: ['#ffe29a', '#f7c948', '#ff9d2e'], chipInk: '#1a1206',
+      accent: '#f7c948', accentInk: '#f7c948', coralInk: '#ff8f8f',
+      field: '#f7c948', fieldInk: '#120d02', card: '#0f1422', cardInk: '#f4f6fb', cardMuted: '#8f98ad',
+      glowA: 'rgba(247,201,72,.19)', glowB: 'rgba(124,92,255,.24)', glowC: 'rgba(45,212,255,.08)', dot: 'rgba(255,255,255,.055)'
+    },
+    daylight: {
+      label: 'Daylight', light: true,
+      bg: '#fbf7ee', ink: '#15171f', ink2: '#3c4050', muted: '#5f6375',
+      grad: ['#b86e00', '#c2570c', '#b8321a'], chip: ['#ffe29a', '#f7c948', '#ff9d2e'], chipInk: '#1a1206',
+      accent: '#b86e00', accentInk: '#9a5300', marker: '#f7c948', coralInk: '#c22f2f',
+      field: '#f7c948', fieldInk: '#15171f', card: '#fefefe', cardInk: '#15171f', cardMuted: '#5f6375',
+      glowA: 'rgba(247,201,72,.40)', glowB: 'rgba(124,92,255,.15)', glowC: 'rgba(45,212,255,.12)', dot: 'rgba(21,23,31,.075)'
+    },
+    violet: {
+      label: 'Violet Night', light: false,
+      bg: '#0e0a24', ink: '#f5f3ff', ink2: '#d0c9f2', muted: '#a197cf',
+      grad: ['#f5d0fe', '#c4b5fd', '#a78bfa'], chip: ['#f5d0fe', '#c4b5fd', '#a78bfa'], chipInk: '#1b0f3a',
+      accent: '#a78bfa', accentInk: '#c4b5fd', coralInk: '#ff9a9a',
+      field: '#6d4aff', fieldInk: '#fefefe', card: '#171135', cardInk: '#f5f3ff', cardMuted: '#a79ed6',
+      glowA: 'rgba(167,139,250,.26)', glowB: 'rgba(240,171,252,.16)', glowC: 'rgba(45,212,255,.07)', dot: 'rgba(255,255,255,.055)'
+    },
+    ocean: {
+      label: 'Ocean', light: false,
+      bg: '#041526', ink: '#eefaff', ink2: '#b7d3e3', muted: '#7fa3ba',
+      grad: ['#cffafe', '#67e8f9', '#2dd4ff'], chip: ['#a5f3fc', '#2dd4ff', '#38bdf8'], chipInk: '#04121f',
+      accent: '#2dd4ff', accentInk: '#5fe0ff', coralInk: '#ff9a9a',
+      field: '#2dd4ff', fieldInk: '#04121f', card: '#0a2238', cardInk: '#eefaff', cardMuted: '#8cb0c6',
+      glowA: 'rgba(45,212,255,.20)', glowB: 'rgba(56,189,248,.14)', glowC: 'rgba(124,92,255,.10)', dot: 'rgba(255,255,255,.05)'
+    },
+    ember: {
+      label: 'Ember', light: false,
+      bg: '#17110d', ink: '#fff6ee', ink2: '#ecd5c6', muted: '#b8998a',
+      grad: ['#ffd08a', '#ff9d2e', '#ff6b6b'], chip: ['#ffd08a', '#ff9d2e', '#ff7a5c'], chipInk: '#1f0d04',
+      accent: '#ff9d2e', accentInk: '#ffb15c', coralInk: '#ff9a8a',
+      field: '#ff9d2e', fieldInk: '#1f0d04', card: '#231a14', cardInk: '#fff6ee', cardMuted: '#c3a596',
+      glowA: 'rgba(255,157,46,.22)', glowB: 'rgba(255,107,107,.18)', glowC: 'rgba(247,201,72,.08)', dot: 'rgba(255,255,255,.05)'
+    },
+    mint: {
+      label: 'Mint', light: false,
+      bg: '#04100c', ink: '#eefff7', ink2: '#c2ead9', muted: '#86b6a4',
+      grad: ['#d1fae5', '#6ee7b7', '#2dd4bf'], chip: ['#d1fae5', '#6ee7b7', '#2dd4bf'], chipInk: '#03140e',
+      accent: '#6ee7b7', accentInk: '#6ee7b7', coralInk: '#ff9a9a',
+      field: '#6ee7b7', fieldInk: '#03140e', card: '#0a1d17', cardInk: '#eefff7', cardMuted: '#8fbfad',
+      glowA: 'rgba(110,231,183,.18)', glowB: 'rgba(45,212,191,.14)', glowC: 'rgba(247,201,72,.06)', dot: 'rgba(255,255,255,.05)'
+    },
+    paper: {
+      label: 'Paper', light: true,
+      bg: '#f4efe3', ink: '#1c1a17', ink2: '#45403a', muted: '#6b645a',
+      grad: ['#b42318', '#c2410c', '#9a3412'], chip: ['#b42318', '#c2410c', '#9a3412'], chipInk: '#fefefe',
+      accent: '#c2410c', accentInk: '#9a3412', marker: '#f2c14e', coralInk: '#a61b1b',
+      field: '#1c1a17', fieldInk: '#f4efe3', card: '#fffdf7', cardInk: '#1c1a17', cardMuted: '#665f55',
+      glowA: 'rgba(194,65,12,.07)', glowB: 'rgba(28,26,23,.05)', glowC: 'rgba(194,65,12,.04)', dot: 'rgba(28,26,23,.07)'
+    },
+    block: {
+      label: 'Bold Block', light: true,
+      bg: '#f7c948', ink: '#0b0b0f', ink2: '#2b2410', muted: '#4d4215',
+      grad: ['#4c1d95', '#5b21b6', '#3b0764'], chip: ['#0b0b0f', '#1f1a10', '#0b0b0f'], chipInk: '#f7c948',
+      accent: '#5b21b6', accentInk: '#4c1d95', marker: '#fefefe', coralInk: '#9f1239',
+      field: '#0b0b0f', fieldInk: '#f7c948', card: '#fffbef', cardInk: '#0b0b0f', cardMuted: '#5c5236',
+      glowA: 'rgba(255,255,255,.30)', glowB: 'rgba(255,157,46,.35)', glowC: 'rgba(255,255,255,.12)', dot: 'rgba(11,11,15,.10)'
+    }
+  };
+  const PAL_IDS = Object.keys(PALETTES);
+  /* old preset links (?preset=sunrise, ?preset=bold) still land on a look */
+  const PAL_ALIAS = { sunrise: 'ember', bold: 'block' };
+  const TYPES = ['gradient', 'outline', 'marker', 'caps', 'serif'];
+  const TYPE_LABELS = { gradient: 'Two-tone gradient', outline: 'Outlined keyword', marker: 'Highlighter marker', caps: 'All-caps stack', serif: 'Serif editorial' };
+  const MOTIONS = ['pop', 'slide', 'type', 'punch'];
+  const MOTION_LABELS = { pop: 'Kinetic pop', slide: 'Slide stack', type: 'Typewriter', punch: 'Zoom punch' };
+  const BGS = ['glow', 'grid', 'grain', 'mesh'];
+  const BG_LABELS = { glow: 'Glow field', grid: 'Grid', grain: 'Film grain', mesh: 'Gradient mesh' };
+  const LAYOUTS = ['classic', 'poster', 'split'];
+  const LAYOUT_LABELS = { classic: 'Classic stack', poster: 'Big-type poster', split: 'Split screen' };
+  /* the kits' section leanings (variant.js): every palette stays possible */
+  const LEAN = {
+    creator: { violet: 4, ember: 4, mint: 3, midnight: 2, block: 2, ocean: 2, daylight: 1, paper: 1 },
+    money: { midnight: 4, paper: 4, daylight: 3, ocean: 3, block: 2, mint: 1, violet: 1, ember: 1 },
+    dev: { mint: 4, ocean: 4, midnight: 3, violet: 2, paper: 1, daylight: 1, ember: 1, block: 1 },
+    docs: { daylight: 4, paper: 4, midnight: 3, ocean: 2, block: 2, violet: 1, mint: 1, ember: 1 },
+    ai: { violet: 4, midnight: 3, ocean: 3, paper: 2, daylight: 2, mint: 1, ember: 1, block: 1 },
+    general: { midnight: 3, daylight: 3, violet: 2, ocean: 2, ember: 2, mint: 2, paper: 2, block: 2 }
+  };
+  const SECTION_LEAN = {
+    'ai-image': 'creator', 'ai-video': 'creator', image: 'creator', design: 'creator', qr: 'creator',
+    business: 'money', india: 'money', finance: 'money', time: 'money',
+    developer: 'dev', engineering: 'dev', mathematics: 'dev', pdf: 'docs', text: 'docs', education: 'docs', ai: 'ai'
+  };
+  const TYPE_LEAN = {
+    paper: { serif: 4, marker: 3, caps: 2, outline: 1, gradient: 1 },
+    daylight: { marker: 3, gradient: 3, serif: 2, caps: 2, outline: 1 },
+    block: { caps: 4, outline: 3, marker: 2, serif: 1, gradient: 2 },
+    default: { gradient: 3, outline: 2, marker: 2, caps: 2, serif: 2 }
+  };
+  const CORAL = '#ff6b6b';
+
+  /* ---- WCAG 2 contrast, checked when the file loads ---- */
+  function lumOf(hex) {
+    const h = String(hex).replace('#', '');
+    return [h.slice(0, 2), h.slice(2, 4), h.slice(4, 6)].map((x) => parseInt(x, 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)))
+      .reduce((s, c, i) => s + c * [0.2126, 0.7152, 0.0722][i], 0);
+  }
+  function contrast(a, b) { const x = lumOf(a), y = lumOf(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+  /** Every pair a palette must pass (the kits' list, plus the Reel's own: the chip ink on the coral ✗, the card ink on the ticket). */
+  function palettePairs(p) {
+    const out = [
+      ['ink on bg', p.ink, p.bg, 4.5], ['ink2 on bg', p.ink2, p.bg, 4.5], ['muted on bg', p.muted, p.bg, 4.5],
+      ['accentInk on bg', p.accentInk, p.bg, 4.5], ['coralInk on bg', p.coralInk, p.bg, 4.5],
+      ['accent on bg', p.accent, p.bg, 3], ['ink on marker', p.ink, p.marker || p.bg, 4.5], ['fieldInk on field', p.fieldInk, p.field, 4.5],
+      ['cardInk on card', p.cardInk, p.card, 4.5], ['cardMuted on card', p.cardMuted, p.card, 4.5]
+    ];
+    p.grad.forEach((c, i) => out.push(['grad[' + i + '] on bg (large text)', c, p.bg, 3]));
+    p.chip.forEach((c, i) => out.push(['chipInk on chip[' + i + ']', p.chipInk, c, 4.5]));
+    return out;
+  }
+  function paletteAudit() {
+    const rows = [];
+    for (const id of PAL_IDS) for (const [pair, fg, bg, min] of palettePairs(PALETTES[id])) {
+      const ratio = contrast(fg, bg);
+      rows.push({ palette: id, pair, ratio: Math.round(ratio * 100) / 100, min, ok: ratio >= min });
+    }
+    return rows;
+  }
+  const AUDIT_BAD = paletteAudit().filter((r) => !r.ok);
+  if (AUDIT_BAD.length) console.error('Reel Maker: palette contrast below WCAG AA — ' + AUDIT_BAD.map((r) => r.palette + ' ' + r.pair + ' ' + r.ratio).join('; '));
 
   /* The quick picks in the promote picker. Kept in step with build-site.js
      POPULAR plus the high-interest list; filtered through the index at run
@@ -73,7 +219,7 @@
     'ai-image/text-behind-image/', 'pdf/split-pdf/', 'india/emi-calculator/', 'india/sip-calculator/', 'india/india-income-tax/',
     'business/uk-take-home-pay/', 'health/bmi/', 'time/age-calculator/', 'time/date-difference/', 'pdf/payslip-pdf/', 'pdf/invoice-pdf/'];
 
-  /* ---- the auto-script tables ---- */
+  /* ---- the fallback script's tables (tools with no story) ---- */
   const VERB_RULES = [
     [/checker|tester|validator|counter|diff|compare|readab|scanner|analy[sz]er|decoder|parser|lookup|inspector|viewer/i, 'Check'],
     [/compressor|remover|cleaner|strip|blur|eraser|upscal|dedup|optimi[sz]er|unblur/i, 'Clean up'],
@@ -85,7 +231,6 @@
     image: 'Convert', 'ai-image': 'Make', 'ai-video': 'Make', text: 'Check', mathematics: 'Calculate', finance: 'Calculate', time: 'Calculate',
     health: 'Calculate', qr: 'Make', utilities: 'Calculate', engineering: 'Calculate', design: 'Calculate', conversions: 'Convert' };
   const TRAIL_RE = /\s+(Calculator|Converter|Generator|Maker|Checker|Tester|Counter|Formatter|Validator|Decoder|Encoder|Compressor|Remover|Resizer|Solver|Tool|Tools|Online)$/i;
-  /* Hooks with the tool's own words in them. */
   const HOOKS = {
     Calculate: ['Stop guessing your {noun}.', '{noun} in ten seconds.\nFree.', 'Still working out\n{noun} by hand?'],
     Convert: ['{inPart} → {outPart}.\nNo upload.', 'Convert {inPart} to {outPart}\nwithout an app.', '{title}:\ndrop it in, it’s done.'],
@@ -93,13 +238,7 @@
     Make: ['Make {aNoun}\nin your browser. Free.', 'Need {aNoun}?\nNo account, no watermark.', '{title}:\nmade on your device.'],
     'Clean up': ['{title},\nwithout uploading the photo.', 'Clean it up.\nKeep it private.', '{title} —\nfree, no watermark.']
   };
-  /* /ai/ tools send text to a model on a server and need an account after
-     the free runs: none of the privacy, offline or no-sign-up hooks apply. */
   const AI_HOOKS = ['{title}:\nyour first draft, by AI.', 'Paste it in.\nRead what the AI sends back.', '{noun} with AI —\nyou do the checking.'];
-  /* The promotion desk's hook library (copy-spec §4), the same strings the
-     owner's other posts use. Result-first hooks (6, 12, 18, 21, 25, 30)
-     need a figure checked against the engine, so they are not here; hooks
-     written for one kind of tool carry a path pattern. */
   const LIBRARY = [
     ['Your PDFs never need to leave your laptop to be merged.', 'Make', 'privacy', /merge-pdf/],
     ['Three files, one PDF, zero uploads.', 'Make', 'speed', /merge-pdf/],
@@ -127,8 +266,6 @@
     ['Clean it offline; nobody reads your draft.', 'Clean up', 'offline', /^text\//]
   ];
   const HOOK_ACCENT = ['free', 'zero', 'nothing', 'never', 'offline', 'airplane', 'login', 'card', 'penalty', 'tidy', 'private', 'anywhere', 'no'];
-  /* Tools that need the network for their data (rates, lookups): no
-     "works offline" claim for them. */
   const ONLINE_RE = /currency|exchange|crypto|dns|whois|ip-|lookup|http|website|ping|speed-test|weather|url-/;
   const MODEL_SECTIONS = { 'ai-image': 1, 'ai-video': 1 };
   const FILE_SECTIONS = { pdf: 1, image: 1, 'ai-image': 1, 'ai-video': 1 };
@@ -147,7 +284,6 @@
     'QR Tools': 'Free, with no sign-up.'
   };
   const SECTION_LINE_DEFAULT = 'Free. No account. Nothing to install.';
-  /* copy-spec §3: ranked broad → niche; the caption takes the relevant ones. */
   const SECTION_TAGS = {
     business: ['#SmallBusiness', '#Productivity', '#Accounting', '#Invoicing', '#Payroll', '#UKBusiness', '#VAT', '#MTD', '#TakeHomePay', '#PAYE', '#Bookkeeping'],
     ai: ['#AI', '#Productivity', '#AITools', '#Automation', '#SmallBusiness', '#Copywriting', '#DocumentAI', '#AIForWork', '#Summarizer'],
@@ -172,6 +308,17 @@
   const BRAND_TAGS = ['#FreeTools', '#1234Tools'];
   const CTA_EMOJI = { pdf: '📄', business: '💷', india: '🇮🇳', ai: '✅' };
   const STOP = new Set('about above after again against because before being below between could doesn every first from have having here into itself just more most other ought our ours over same should some such than that their theirs them then there these they this those through under until very what when where which while with would your yours youre without still really thing things make makes made free'.split(' '));
+  /* words a hook's "strongest noun" is never */
+  const WEAK = new Set('the and for you your are was were has have had can will its it\'s that this with from into what when where which while who why how not but all any one two six ten get got gets make made takes take using use used every each just only still need needs want wants says said shows show seconds second minutes before after again ever never always really'.split(' '));
+
+  /* the kits' copy alternates (variant.js copyFor), chosen by the look's copy index */
+  const COPY = {
+    painLabel: ['Sound familiar?', 'The problem', 'You know this one'],
+    usualTitle: [['Still doing it the hard way?', 'the hard way?'], ['The usual way is a detour.', 'a detour'], ['Why is this still so fiddly?', 'so fiddly?']],
+    turn: ['There is a simpler way', 'There is a better way', 'Here is the fix'],
+    fixEyebrow: ['The fix', 'The better way', 'Meet the fix'],
+    stepsTitle: [['Three steps. Done.', 'Done.'], ['How it works, in three steps.', 'three steps.'], ['As easy as 1, 2, 3.', '1, 2, 3.']]
+  };
 
   /* ------------------------------------------------------------------ */
   /* small helpers                                                      */
@@ -188,29 +335,173 @@
   function fnv(s) { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h >>> 0; }
   const pickBy = (key, list) => list[fnv(key) % list.length];
   const wordCount = (t) => String(t || '').trim().split(/\s+/).filter(Boolean).length;
-  function secondsFor(text) { return r1(clamp(wordCount(text) / 2.75 + 0.6, 2.0, 4.5)); }
   const isWordChar = (c) => !!c && /[\p{L}\p{N}]/u.test(c);
   const hexA = (hex, a) => { const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || ''); return m ? 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + a + ')' : 'rgba(0,0,0,' + a + ')'; };
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const ease3 = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
+  const easeExpo = (t) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * clamp(t, 0, 1)));
+  const backOut = (t, k) => { t = clamp(t, 0, 1); const c = k || 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
+  const bump = (t) => (t <= 0 || t >= 1 ? 0 : Math.sin(Math.PI * t));
+  function rng(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function weighted(r, weights) {
+    const ks = Object.keys(weights);
+    const total = ks.reduce((s, k) => s + weights[k], 0);
+    let x = r() * total;
+    for (const k of ks) { x -= weights[k]; if (x < 0) return k; }
+    return ks[ks.length - 1];
+  }
   function roundRect(ctx, x, y, w, h, r) {
     r = Math.max(0, Math.min(r, w / 2, h / 2));
     ctx.beginPath();
     ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
     ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
-  /** Safe areas (fractions of H) and the content box, per frame shape. */
+  /** Safe areas (fractions of H) and the content box, per frame shape. 9:16 keeps the top 250 px and bottom 340 px of 1920 clear. */
   function safeOf(W, H) {
-    if (H > W * 1.3) return { top: 0.13, bottom: 0.167, box: [0.20, 0.70], maxW: 0.84 };
+    if (H > W * 1.3) return { top: 250 / 1920, bottom: 340 / 1920, box: [0.20, 0.70], maxW: 0.84 };
     if (W > H * 1.3) return { top: 0.08, bottom: 0.12, box: [0.16, 0.76], maxW: 0.70 };
     return { top: 0.06, bottom: 0.10, box: [0.14, 0.78], maxW: 0.84 };
   }
   const timeline = (scenes) => { let s = 0; const starts = scenes.map((sc) => { const v = s; s += Number(sc.seconds) || 0; return v; }); return { starts, D: s }; };
   const totalSeconds = (S) => timeline(S.scenes).D;
   const isVideoScene = (sc) => sc.type === 'media' && sc.media && sc.media.kind === 'video';
+  /** Scene types drawn as words (everything but pictures, clips and the end card). */
+  const WORDY = { text: 1, hook: 1, pain: 1, usual: 1, fix: 1, example: 1, steps: 1, point: 1, versus: 1, quote: 1, cta: 1 };
+  const isWordy = (sc) => !!WORDY[sc.type];
+  const itemsOf = (sc) => String(sc.text || '').split('\n').map((x) => x.trim()).filter(Boolean);
+  /** What a scene says, as one line: the teleprompter, the captions and the timing read this. */
+  function spoken(sc) {
+    if (!sc) return '';
+    switch (sc.type) {
+      case 'usual': case 'steps': return oneLine([sc.heading].concat(itemsOf(sc)).filter(Boolean).join('. '));
+      case 'fix': return oneLine([sc.heading, sc.text].filter(Boolean).join('. '));
+      case 'versus': return oneLine(itemsOf(sc).join('. '));
+      case 'endcard': return oneLine([sc.cta, sc.title].filter(Boolean).join('. '));
+      case 'media': return oneLine(sc.text || '');
+      default: return oneLine(sc.text || '');
+    }
+  }
+  /** Seconds a scene stays: ≈2.6 words a second, at least 1.6 s, at most 4 s; the example and end card need time to play. */
+  function beatSeconds(sc) {
+    let words = wordCount(spoken(sc));
+    if (sc.type === 'usual' || sc.type === 'steps') words = wordCount(sc.heading || '') + 0.65 * wordCount(itemsOf(sc).join(' '));
+    let s = clamp(words / 2.6, 1.6, 4);
+    if (sc.type === 'example') s = Math.max(s, sc.ex && sc.ex.kind !== 'flow' ? 3.6 : 3.0);
+    if (sc.type === 'usual' || sc.type === 'steps') s = Math.max(s, 3.2);
+    if (sc.type === 'endcard') s = sc.qr === false ? 3.0 : 3.6;
+    if (sc.type === 'hook') s = Math.max(s, 2.4);
+    /* beats whose motion needs time: two panels and a strike, a number that lands, a quote, a button */
+    const MIN = { versus: 3.4, point: 2.2, quote: 3.0, cta: 2.4, pain: 2.6, fix: 2.6 };
+    if (MIN[sc.type]) s = Math.max(s, MIN[sc.type]);
+    return r1(s);
+  }
 
   /* ------------------------------------------------------------------ */
-  /* the finder row → facts → a script                                  */
+  /* looks: choosing one, remembering it                                */
   /* ------------------------------------------------------------------ */
-  /** A FINDER_INDEX array as an object. */
+  const LOOK_STORE = 'reel-maker-looks-v2';
+  const sectionOf = (tool) => String(tool || '').split('/').filter(Boolean)[0] || '';
+  /** The look for (tool, seed). Pure. */
+  function pickLook(tool, seed) {
+    const r = rng(fnv(String(tool)) ^ (seed >>> 0));
+    const lean = LEAN[SECTION_LEAN[sectionOf(tool)] || 'general'];
+    const palette = weighted(r, lean);
+    const type = weighted(r, TYPE_LEAN[palette] || TYPE_LEAN.default);
+    const motion = MOTIONS[Math.floor(r() * MOTIONS.length)];
+    const bg = BGS[Math.floor(r() * BGS.length)];
+    const layout = LAYOUTS[Math.floor(r() * LAYOUTS.length)];
+    const copy = Math.floor(r() * 3);
+    return { palette, type, motion, bg, layout, copy, seed: seed >>> 0 };
+  }
+  const comboOf = (v) => [v.palette, v.type, v.motion, v.bg, v.layout].join('|');
+  function loadLookHistory() {
+    try { const h = JSON.parse(localStorage.getItem(LOOK_STORE) || 'null'); if (h && Array.isArray(h.e)) return h; } catch (e) { /* private window, blocked storage */ }
+    return { e: [] };
+  }
+  function saveLookHistory(h) {
+    try { h.e = h.e.slice(-200); localStorage.setItem(LOOK_STORE, JSON.stringify(h)); } catch (e) { /* the look is still used, just not remembered */ }
+  }
+  let MEMORY = null;   /* used when storage is unavailable, so one page still varies */
+  function history() { const h = loadLookHistory(); if (!h.e.length && MEMORY) return MEMORY; return h; }
+  function recordLook(tool, v, replace) {
+    const h = history();
+    const row = { tool, palette: v.palette, type: v.type, motion: v.motion, bg: v.bg, layout: v.layout, copy: v.copy };
+    if (replace && h.e.length && h.e[h.e.length - 1].tool === tool) h.e[h.e.length - 1] = row; else h.e.push(row);
+    MEMORY = h;
+    saveLookHistory(h);
+  }
+  /**
+   * The look for a new reel. o: { lock: { palette, type, motion, bg, layout } (pinned values), exclude: palettes to avoid (a batch),
+   * avoidCombos, record (default true), step (extra seed steps, for "Shuffle look") }.
+   * Steps the seed until the palette is not one of the tool's last three or the last two of any reel, and the
+   * treatment differs from the tool's last one — relaxing those rules one at a time if a pinned value makes them impossible.
+   */
+  function chooseLook(tool, o) {
+    o = o || {};
+    const lock = o.lock || {};
+    const h = history();
+    const mine = h.e.filter((e) => e.tool === tool);
+    const n = mine.length + 1 + (o.step || 0);
+    const lastMine = mine.slice(-3), lastAny = h.e.slice(-2);
+    const avoidPal = new Set(lastMine.map((e) => e.palette).concat(lastAny.map((e) => e.palette)).concat(o.exclude || []));
+    const avoidCombo = new Set(lastMine.concat(lastAny).map(comboOf).concat(o.avoidCombos || []));
+    const prev = mine[mine.length - 1];
+    const apply = (v) => { const w = Object.assign({}, v); for (const k of ['palette', 'type', 'motion', 'bg', 'layout']) if (lock[k]) w[k] = lock[k]; return w; };
+    const s0 = fnv(tool + '#' + n);
+    const rules = [
+      (w) => (lock.palette || !avoidPal.has(w.palette)) && (lock.type || !prev || w.type !== prev.type) && (lock.motion || !prev || w.motion !== prev.motion) && !avoidCombo.has(comboOf(w)),
+      (w) => (lock.palette || !avoidPal.has(w.palette)) && !avoidCombo.has(comboOf(w)),
+      (w) => (lock.palette || !(o.exclude || []).includes(w.palette)) && !avoidCombo.has(comboOf(w)),
+      (w) => !avoidCombo.has(comboOf(w)),
+      () => true
+    ];
+    let v = null;
+    for (const ok of rules) {
+      for (let k = 0; k < 400 && !v; k++) { const w = apply(pickLook(tool, (s0 + k) >>> 0)); if (ok(w)) v = w; }
+      if (v) break;
+    }
+    if (o.record !== false) recordLook(tool, v);
+    return v;
+  }
+  /** The drawing look: a palette's tokens, the treatment, motion and background, and the fields the media, caption and colour controls use. */
+  function lookFrom(v, over) {
+    const id = PALETTES[v.palette] ? v.palette : (PAL_ALIAS[v.palette] || 'midnight');
+    const p = PALETTES[id];
+    const L = Object.assign({}, p, {
+      id, palette: id, type: TYPES.includes(v.type) ? v.type : 'gradient', motion: MOTIONS.includes(v.motion) ? v.motion : 'pop',
+      bgT: BGS.includes(v.bg) ? v.bg : 'glow', layout: LAYOUTS.includes(v.layout) ? v.layout : 'classic', copy: Math.abs(v.copy | 0) % 3,
+      grad: p.grad.slice(), chip: p.chip.slice()
+    });
+    /* the fields the rest of the tool reads */
+    L.text = p.ink; L.bg = [p.bg, p.bg]; L.plate = hexA(p.card, 0.9); L.plateText = p.cardInk; L.font = 'Sora'; L.bar = p.accent;
+    L.caption = {
+      preset: { gradient: 'karaoke', outline: 'outline', marker: 'pop', caps: 'outline', serif: 'minimal' }[L.type],
+      accent: p.light ? p.chip[1] : p.grad[1], fill: '#fefefe', box: p.light ? p.ink : p.card
+    };
+    if (over) {
+      if (over.accent) { L.accent = over.accent; L.accentInk = over.accent; L.grad = [over.accent, over.accent, over.accent]; L.chip = [over.accent, over.accent, over.accent]; }
+      if (over.text) { L.ink = over.text; L.text = over.text; }
+      if (over.bg0) L.bg[0] = over.bg0;
+      if (over.bg1) L.bg[1] = over.bg1;
+    }
+    L.key = [id, L.type, L.motion, L.bgT, L.layout, L.copy, L.accent, L.ink, L.bg[0], L.bg[1]].join('|');
+    L.name = p.label + ' · ' + TYPE_LABELS[L.type] + ' · ' + MOTION_LABELS[L.motion] + ' · ' + BG_LABELS[L.bgT];
+    L.spec = { palette: id, type: L.type, motion: L.motion, bg: L.bgT, layout: L.layout, copy: L.copy };
+    return L;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* the finder row → facts                                             */
+  /* ------------------------------------------------------------------ */
   function rowObj(a) {
     if (!Array.isArray(a)) return a;
     return { title: String(a[0] || ''), path: String(a[1] || '').replace(/^\/+/, ''), glyph: String(a[2] || ''), section: String(a[3] || ''),
@@ -230,7 +521,6 @@
     if (/^(eu|uk|us|uni|one|use)/i.test(first)) return 'a ';
     return /^[aeiou]/i.test(first) ? 'an ' : 'a ';
   }
-  /** The description's first sentence, without an upload tail, at most 95 characters, cut at a comma or "and" — never an ellipsis. */
   function firstSentence(desc) {
     let s = String(desc || '').trim();
     const m = /^.*?[.!?](\s|$)/.exec(s);
@@ -274,7 +564,7 @@
   function fill(tpl, f) {
     return capFirst(tpl.replace(/\{(\w+)\}/g, (m, k) => (f[k] !== undefined ? f[k] : m)));
   }
-  /** The hook for a tool: its own words where a template fits, the desk's library otherwise; the same tool always gets the same one. */
+  /** The fallback hook for a tool with no story: its own words where a template fits, the desk's library otherwise. */
   function hookFor(f) {
     if (f.isAI) return { text: fill(pickBy(f.path, AI_HOOKS), f), emphasis: [f.noun] };
     const pool = (HOOKS[f.verb] || HOOKS.Make).filter((t) => !(/\{inPart\}|\{outPart\}/.test(t) && !(f.inPart && f.outPart)))
@@ -284,159 +574,170 @@
       if (fit && !fit.test(f.path)) continue;
       if (angle === 'offline' && !f.offlineOk) continue;
       const low = text.toLowerCase();
-      /* two short sentences read best as two lines */
       if (text.length > 26) text = text.replace(/([.;]) (?=\S)/, '$1\n');
-      /* every hook carries one word in the accent: a keyword if it has one, else its longest word */
       const acc = HOOK_ACCENT.find((w) => new RegExp('(^|[^a-z])' + w + '([^a-z]|$)').test(low)) ||
         (low.match(/[a-z’']+/g) || []).reduce((b, w) => (w.length > b.length ? w : b), '');
       pool.push({ text, emphasis: acc ? [acc] : [] });
     }
     return pickBy(f.path, pool);
   }
-  const textScene = (text, anim, extra) => Object.assign({ id: nid(), type: 'text', text, seconds: secondsFor(text), anim: anim || 'zoom', emphasis: [] }, extra || {});
 
-  /** Scenes for one tool: hook, what it does, in → out, trust, end card. */
-  function buildScript(row, brand) {
-    const f = factsOf(row);
-    brand = brand || {};
-    const out = [];
-    const hook = hookFor(f);
-    out.push(textScene(hook.text, 'zoom', { lines: [{ text: hook.text, size: 9.5, weight: 800, colour: 'text' }], emphasis: hook.emphasis, seconds: Math.max(2.4, secondsFor(hook.text)) }));
-    const regionLine = f.region && f.first.toLowerCase().indexOf(f.region.toLowerCase()) < 0 ? '(' + f.region + ')' : '';
-    const l2 = [{ text: f.first, size: 6.8, weight: 700, colour: 'text' }];
-    if (regionLine) l2.push({ text: regionLine, size: 5, weight: 600, colour: 'muted' });
-    out.push(textScene(l2.map((l) => l.text).join('\n'), 'slide', { lines: l2, seconds: secondsFor(f.first) }));
-    const trust = [{ text: f.trustLine, size: 6.2, weight: 700, colour: 'text' }, { text: f.sectionLine, size: 4.6, weight: 500, colour: 'muted' }];
-    if (f.inPart && f.outPart && f.inPart.toLowerCase() !== f.outPart.toLowerCase()) {
-      const l3 = [{ text: f.inPart, size: 7.5, weight: 800, colour: 'text' }, { text: '↓', size: 4.5, weight: 700, colour: 'accent', anim: 'fade' }, { text: f.outPart, size: 7.5, weight: 800, colour: 'accent' }];
-      out.push(textScene(l3.map((l) => l.text).join('\n'), 'typewriter', { lines: l3, seconds: r1(secondsFor(f.inPart + ' ' + f.outPart) + 0.5) }));
+  /* ------------------------------------------------------------------ */
+  /* highlights                                                         */
+  /* ------------------------------------------------------------------ */
+  const NUM_RE = /[₹£$€]?\d[\d,]*(?:\.\d+)?(?:\s?%|\s?(?:KB|MB|GB|kB|x|×))?/g;
+  /** The hook's key word: its first figure ("₹11,800", "200 KB"), else its strongest noun (an acronym, else the longest real word, later wins a tie). */
+  function keyWordOf(text) {
+    const t = String(text || '');
+    const m = t.match(NUM_RE);
+    if (m && m[0].replace(/[^\d]/g, '').length) return m[0].replace(/[.,]$/, '').trim();
+    const words = (t.match(/[\p{L}][\p{L}’'-]*/gu) || []).map((w) => w.replace(/[’']s$/, ''));
+    const acr = words.filter((w) => /^[A-Z]{2,6}s?$/.test(w));
+    if (acr.length) return acr[0];
+    let best = '';
+    for (const w of words) { const lw = w.toLowerCase(); if (WEAK.has(lw) || STOP.has(lw) || lw.length < 3) continue; if (w.length >= best.length) best = w; }
+    return best;
+  }
+  /**
+   * The kits' two-tone split (parts.js splitHighlight) as a [start, end) range:
+   * an explicit phrase; the last sentence when there are two; the part after a
+   * dash or colon; the last figure; else the last one or two words.
+   */
+  function hlRange(text, phrase) {
+    const t = String(text || '');
+    if (!t.trim()) return null;
+    if (phrase) {
+      const i = t.toLowerCase().lastIndexOf(String(phrase).toLowerCase());
+      if (i >= 0) return [i, i + phrase.length];
     }
-    out.push(textScene(trust.map((l) => l.text).join('\n'), 'zoom', { lines: trust, seconds: r1(clamp(secondsFor(f.trustLine + ' ' + f.sectionLine), 3, 4.5)) }));
-    if (brand.endcard !== false) out.push({ id: nid(), type: 'endcard', title: f.title, seconds: brand.qr === false ? 3.0 : 3.5 });
-    return out;
-  }
-  /** Split a long line at the sentence boundary nearest its middle (else a comma, else a space). */
-  function splitLong(line) {
-    if (line.length <= 110) return [line];
-    const mid = line.length / 2;
-    const cands = (re) => { const at = []; let m; re.lastIndex = 0; while ((m = re.exec(line))) at.push(m.index + m[0].length); return at; };
-    let at = cands(/[.!?;:]\s+/g);
-    if (!at.length) at = cands(/,\s+/g);
-    if (!at.length) at = cands(/\s+/g);
-    if (!at.length) return [line];
-    const cut = at.reduce((b, x) => (Math.abs(x - mid) < Math.abs(b - mid) ? x : b), at[0]);
-    return splitLong(line.slice(0, cut).trim()).concat(splitLong(line.slice(cut).trim())).filter(Boolean);
-  }
-  /** One scene per line. A line made only of #words colours those words in the scene above. */
-  function scenesFromScript(text, look) {
-    const anim = (look && look.textAnim) || 'zoom';
-    const scenes = [];
-    for (const raw of String(text || '').split('\n')) {
-      const line = raw.trim();
-      if (!line) continue;
-      if (/^#\S+(\s+#\S+)*$/.test(line)) {
-        const prev = scenes[scenes.length - 1];
-        if (prev) prev.emphasis = (prev.emphasis || []).concat(line.split(/\s+/).map((w) => w.replace(/^#/, '')).filter(Boolean));
-        continue;
-      }
-      for (const part of splitLong(line)) scenes.push(textScene(part, anim));
+    const sentences = t.match(/[^.?!]+[.?!]+["')\]]*|[^.?!]+$/g) || [t];
+    if (sentences.length >= 2) {
+      const last = sentences[sentences.length - 1].trim();
+      const i = t.lastIndexOf(last);
+      if (i > 0 && last.length >= 3) return [i, i + last.replace(/[.]$/, '').length];
     }
-    scenes.shrunk = fitToMax(scenes);
-    return scenes;
+    const dash = Math.max(t.lastIndexOf(' — '), t.lastIndexOf(' – '), t.lastIndexOf(': '));
+    if (dash > 4 && t.length - dash > 4) { const a = dash + (t[dash] === ':' ? 2 : 3); return [a, t.replace(/[.!?]$/, '').length]; }
+    const nums = [...t.matchAll(/[₹£$€]?\d[\d,.:]*\s?%?/g)];
+    if (nums.length) { const m = nums[nums.length - 1]; const s = m[0].replace(/[.,]$/, '').trim(); return [m.index, m.index + s.length]; }
+    const words = [...t.matchAll(/\S+/g)];
+    const n = words.length > 3 ? 2 : 1;
+    const from = words[words.length - n].index;
+    return [from, t.replace(/[.!?]+$/, '').length];
   }
-  /** Scale scenes down proportionally (never below 1.5 s) when the total is over 90 s. Returns whether it had to. */
-  function fitToMax(scenes) {
-    const D = timeline(scenes).D;
-    if (D <= MAX_SECONDS) return false;
-    const k = MAX_SECONDS / D;
-    for (const s of scenes) s.seconds = Math.max(1.5, Math.floor(s.seconds * k * 10) / 10);
-    return true;
+  /** A range from a list of emphasised words (a visitor's #word lines): the first one found, whole word. */
+  function rangeOfWords(text, words) {
+    const low = String(text || '').toLowerCase();
+    for (const w of words || []) {
+      const ww = String(w || '').toLowerCase().trim();
+      if (!ww) continue;
+      let i = -1;
+      while ((i = low.indexOf(ww, i + 1)) >= 0) { if (!isWordChar(low[i - 1]) && !isWordChar(low[i + ww.length])) return [i, i + ww.length]; }
+    }
+    return null;
   }
 
   /* ------------------------------------------------------------------ */
-  /* caption and hashtags                                               */
+  /* stories, examples, the tool glyph — loaded on demand               */
   /* ------------------------------------------------------------------ */
-  function camelTag(s, max) {
-    const words = (String(s || '').replace(/\(.*?\)/g, ' ').match(/[A-Za-z0-9]+/g) || []);
-    const t = '#' + words.map((w) => (/^[A-Z0-9]+$/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())).join('');
-    return t.length > 1 && t.length <= (max || 25) ? t : '';
-  }
-  /** 5–8 hashtags: the section's relevant ones (copy-spec §3), the tool's own, then the brand pair. */
-  function tagsFor(row) {
-    const f = factsOf(row);
-    const r = f.row;
-    const text = (r.title + ' ' + r.keywords + ' ' + r.description + ' ' + r.io + ' ' + r.section).toLowerCase();
-    const words = new Set(text.split(/[^a-z0-9]+/).filter(Boolean));
-    const squashed = text.replace(/[^a-z0-9]+/g, '');
-    const table = SECTION_TAGS[f.sectionSlug] || [];
-    const hit = (tag) => { const b = tag.slice(1).toLowerCase(); return b.length <= 3 ? words.has(b) : squashed.indexOf(b) >= 0; };
-    const relevant = table.filter(hit);
-    const niche = relevant.slice(0, 4);
-    for (const t of table) { if (niche.length >= 3) break; if (niche.indexOf(t) < 0) niche.push(t); }
-    const out = [];
-    const add = (t) => { if (t && out.length < 8 && !out.some((x) => x.toLowerCase() === t.toLowerCase())) out.push(t); };
-    niche.forEach(add);
-    add(camelTag(f.title, 24));
-    const kw = String(r.keywords || '').split('|').map((x) => x.trim()).filter(Boolean)[0];
-    if (out.length < 6) add(camelTag(kw, 24));
-    const brand = BRAND_TAGS.slice();
-    while (out.length > 8 - brand.length) out.pop();
-    brand.forEach(add);
-    return out;
-  }
-  /** Hashtags for a visitor's own script: its most frequent long words, plus #Reels. No brand tags of ours on someone else's reel. */
-  function scriptTags(text) {
-    const count = new Map();
-    for (const w of String(text || '').toLowerCase().match(/[a-z][a-z0-9]{4,}/g) || []) { if (!STOP.has(w)) count.set(w, (count.get(w) || 0) + 1); }
-    const top = [...count.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5).map(([w]) => '#' + w.charAt(0).toUpperCase() + w.slice(1));
-    return top.concat(['#Reels']);
-  }
-  function qrUrlFor(path, source) {
-    const f = factsOf({ title: '', path: String(path || '').replace(/^\/+/, '') });
-    return SITE + '/' + f.path + '?utm_source=' + encodeURIComponent(source || 'instagram') + '&utm_medium=social&utm_campaign=' + encodeURIComponent(f.sectionSlug) + '&utm_content=' + encodeURIComponent(f.slug);
-  }
-  /** The Instagram caption (copy-spec "instagram-caption"): hook, what, why, a link-in-bio line, 5–8 hashtags. The share module adds its "Made free, on my device" line. */
-  function captionFor(S) {
-    S = S || CUR;
-    if (!S) return '';
-    const firstText = S.scenes.find((s) => s.type === 'text');
-    if (S.promote) {
-      const f = factsOf(S.promote);
-      const hook = oneLine(firstText ? firstText.text : f.title);
-      const line3 = pickBy(f.path + '#3', f.offlineOk ? ['Save this for later.', 'Works offline once opened.', 'Send it to someone who needs it.'] : ['Save this for later.', 'Send it to someone who needs it.']);
-      return [hook, f.first, f.trustSentence, line3, 'Link in bio → ' + f.url + ' ' + f.emoji, '', tagsFor(S.promote).join(' ')].join('\n');
-    }
-    const texts = S.scenes.filter((s) => s.type === 'text').map((s) => oneLine(s.text));
-    const out = [texts[0] || ''];
-    let body = texts.slice(1, 3).join(' ');
-    if (body.length > 180) { body = body.slice(0, 180); body = body.slice(0, body.lastIndexOf(' ')).replace(/[,;:\s]+$/, '') + '.'; }
-    if (body) out.push(body);
-    if (S.brand.url) out.push('Link in bio → ' + S.brand.url);
-    out.push('', scriptTags(texts.join(' ')).join(' '));
-    return out.join('\n').trim();
-  }
-
-  /* ------------------------------------------------------------------ */
-  /* assets: the tool list, the logo, QR codes                          */
-  /* ------------------------------------------------------------------ */
-  let indexP = null;
-  function loadFinderIndex() {
-    if (window.FINDER_INDEX && window.FINDER_INDEX.tools) return Promise.resolve(window.FINDER_INDEX);
-    if (indexP) return indexP;
-    indexP = new Promise((res, rej) => {
-      if (!document.querySelector('script[data-reel-index]')) {
-        const s = document.createElement('script');
-        s.src = '/assets/finder-index.js'; s.async = true; s.dataset.reelIndex = '1';
-        document.head.appendChild(s);
-      }
-      const t0 = performance.now();
-      (function wait() {
-        if (window.FINDER_INDEX && window.FINDER_INDEX.tools) return res(window.FINDER_INDEX);
-        if (performance.now() - t0 > 15000) { indexP = null; return rej(new Error('The tool list could not be loaded — you may be offline.')); }
-        setTimeout(wait, 60);
-      })();
+  const loaders = {};
+  /** A site script that sets window[global], loaded once; resolves its value, or null if it is missing or the page is offline. */
+  function loadGlobal(src, global, timeout) {
+    if (window[global]) return Promise.resolve(window[global]);
+    if (loaders[src]) return loaders[src];
+    loaders[src] = new Promise((res) => {
+      const s = document.createElement('script');
+      s.src = src; s.async = true; s.dataset.reel = global;
+      let done = false;
+      const fin = () => { if (done) return; done = true; clearTimeout(timer); res(window[global] || null); if (!window[global]) loaders[src] = null; };
+      s.onload = fin; s.onerror = fin;
+      const timer = setTimeout(fin, timeout || 15000);
+      document.head.appendChild(s);
     });
-    return indexP;
+    return loaders[src];
+  }
+  function loadFinderIndex() {
+    return loadGlobal('/assets/finder-index.js', 'FINDER_INDEX').then((fi) => { if (!fi || !fi.tools) throw new Error('The tool list could not be loaded — you may be offline.'); return fi; });
+  }
+  const loadStories = () => loadGlobal('/assets/stories.js', 'TOOL_STORIES');
+  const loadExamples = () => loadGlobal('/assets/examples.js', 'TOOL_EXAMPLES', 10000);
+  const keyOf = (path) => '/' + String(path || '').replace(/^\/+|\/+$/g, '') + '/';
+  function storyFor(path) {
+    const S = window.TOOL_STORIES;
+    const s = S && S[keyOf(path)];
+    return s && s.hook && s.pain && Array.isArray(s.usual) && s.usual.length && Array.isArray(s.steps) && s.steps.length && s.promise ? s : null;
+  }
+  /** Where an example's picture is: a site path or data: URL as given, else a file name in /assets/img/examples/<dir>/. Nothing off the site. */
+  function exampleUrl(name, path, e) {
+    const n = String(name || '').trim();
+    if (!n) return '';
+    if (/^data:image\//i.test(n) || /^blob:/i.test(n)) return n;
+    if (/^\/(?!\/)/.test(n)) return n;
+    if (/^[a-z][a-z0-9+.-]*:|^\/\//i.test(n)) return '';
+    const segs = keyOf(path).split('/').filter(Boolean);
+    const dir = e.dir || segs[segs.length - 1] || '';
+    return '/assets/img/examples/' + dir + '/' + n;
+  }
+  /** The tool's captured example, normalised for the hero frames; null when there is none or it failed. */
+  function exampleFor(path) {
+    const E = window.TOOL_EXAMPLES;
+    const e = E && E[keyOf(path)];
+    if (!e || e.ok === false) return null;
+    const kind = String(e.kind || '');
+    const out = { kind, caption: String(e.caption || ''), stats: Array.isArray(e.stats) ? e.stats : [] };
+    if (kind === 'calc') {
+      out.inputs = (e.inputs || []).filter((x) => x && x.label).map((x) => ({ label: String(x.label), value: String(x.value == null ? '' : x.value) }));
+      out.results = (e.results || []).filter((x) => x && x.label).map((x) => ({ label: String(x.label), value: String(x.value == null ? '' : x.value), primary: !!x.primary }));
+      return out.results.length ? out : null;
+    }
+    if (kind === 'text') {
+      if (!e.output) return null;
+      return Object.assign(out, { input: String(e.input || ''), output: String(e.output), inputLabel: e.inputLabel || 'Input', outputLabel: e.outputLabel || 'Output' });
+    }
+    if (kind === 'schematic') return Object.assign(out, { kind: 'flow', input: String(e.input || ''), output: String(e.output || ''), sampleIn: e.sampleIn || '', sampleOut: e.sampleOut || '' });
+    const before = exampleUrl(e.before, path, e), after = exampleUrl(e.after, path, e), page = exampleUrl(e.page, path, e);
+    if (kind === 'document' || (page && !before)) return page ? Object.assign(out, { kind: 'document', page, fileName: e.fileName || '' }) : null;
+    if (before && after) return Object.assign(out, { kind: 'beforeAfter', before, after, alpha: !!e.alpha || /\.png(\?|$)/i.test(after) && /remov|cut|sticker/i.test(path) });
+    if (after) return Object.assign(out, { kind: 'image', after });
+    return null;
+  }
+  const imgCache = new Map();
+  /** A picture for the hero frames: { img, ok, ready }. Same-origin or data: only. */
+  function exImage(url) {
+    if (!url) return null;
+    let e = imgCache.get(url);
+    if (e) return e;
+    e = { img: new Image(), ok: false, ready: null };
+    e.ready = new Promise((res) => {
+      e.img.onload = () => { e.ok = e.img.naturalWidth > 0; res(); if (API) API.invalidate(); };
+      e.img.onerror = () => res();
+      e.img.decoding = 'async';
+      e.img.src = url;
+    });
+    imgCache.set(url, e);
+    return e;
+  }
+  function exImages(ex) { return ex ? [ex.before, ex.after, ex.page].filter(Boolean).map(exImage).filter(Boolean) : []; }
+  let spriteP = null;
+  const glyphCache = new Map();
+  /** The tool's icon from assets/icons.svg, drawn in `colour` on a 256 px canvas (null until loaded, or for an unknown id). */
+  function glyphCanvas(id, colour, fallback) {
+    if (!id) return null;
+    const key = id + '|' + colour;
+    let e = glyphCache.get(key);
+    if (e) return e.canvas;
+    e = { canvas: null };
+    glyphCache.set(key, e);
+    if (!spriteP) spriteP = fetch('/assets/icons.svg').then((r) => (r.ok ? r.text() : '')).catch(() => '');
+    e.ready = spriteP.then((sprite) => {
+      const find = (gid) => new RegExp('<symbol id="' + gid.replace(/[^\w-]/g, '') + '"([^>]*)>([\\s\\S]*?)</symbol>').exec(sprite);
+      const m = find(id) || (fallback ? find(fallback) : null);
+      if (!m) return null;
+      const vb = (/viewBox="([^"]+)"/.exec(m[1]) || [0, '0 0 24 24'])[1];
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + vb + '" width="256" height="256" fill="none" stroke="' + colour + '" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><style>.fill{fill:' + colour + ';stroke:none}.thin{stroke-width:1.25}</style>' + m[2] + '</svg>';
+      return loadSvgImage(svg).then((img) => { const c = document.createElement('canvas'); c.width = c.height = 256; c.getContext('2d').drawImage(img, 0, 0, 256, 256); e.canvas = c; if (API) API.invalidate(); });
+    }).catch(() => null);
+    return null;
   }
   function loadSvgImage(svgText) {
     return new Promise((res, rej) => {
@@ -487,6 +788,247 @@
     qrCache.set(url, e);
     return e;
   }
+
+  /* ------------------------------------------------------------------ */
+  /* scripts: a story's seven beats, the fallback, the visitor's lines  */
+  /* ------------------------------------------------------------------ */
+  const beat = (type, fields) => { const sc = Object.assign({ id: nid(), type, text: '', anim: 'auto' }, fields); sc.seconds = beatSeconds(sc); return sc; };
+  /** Keep a story reel near 15–22 s: if it runs long, every beat but the end card gives up to 15% of its time. */
+  function trimTo(scenes, target) {
+    const D = timeline(scenes).D;
+    if (D <= target) return scenes;
+    const body = scenes.filter((s) => s.type !== 'endcard');
+    const sum = body.reduce((a, s) => a + s.seconds, 0);
+    const k = Math.max(0.85, (sum - (D - target)) / sum);
+    for (const s of body) s.seconds = r1(Math.max(1.6, s.seconds * k));
+    return scenes;
+  }
+  /** The example scene's words: the capture's caption, else the io line (with the AI model said out loud). */
+  function exampleText(ex, f) {
+    let t = '';
+    if (ex && ex.kind === 'calc') { const p = ex.results.find((r) => r.primary) || ex.results[0]; t = p.label + ': ' + p.value; }
+    else if (ex && ex.kind === 'flow') t = [ex.input, ex.output].filter(Boolean).join(' → ');
+    else if (ex) t = ex.caption || (ex.kind === 'text' ? (ex.inputLabel + ' → ' + ex.outputLabel) : 'Before → after');
+    if (f.isAI) t += '\nYour text goes to an AI model.';
+    return t;
+  }
+  /**
+   * Scenes for one tool. With a story (assets/stories.js): hook, pain, the usual way, the fix, the example, three steps, the end card.
+   * Without one: the finder-index script (hook, what it does, in → out, trust, end card).
+   */
+  function buildScript(row, brand, look) {
+    const f = factsOf(row);
+    brand = brand || {};
+    const story = storyFor(f.path);
+    if (!story) return buildFallback(f, brand);
+    const c = look && look.copy !== undefined ? look.copy : fnv(f.path) % 3;
+    const ex = exampleFor(f.path) || (f.inPart && f.outPart ? { kind: 'flow', input: f.inPart, output: f.outPart, schematicOnly: true } : null);
+    const out = [];
+    out.push(beat('hook', { text: story.hook, eyebrow: story.persona || '', emphasis: [keyWordOf(story.hook)] }));
+    out.push(beat('pain', { text: story.pain, eyebrow: COPY.painLabel[c] }));
+    out.push(beat('usual', { heading: COPY.usualTitle[c][0], hl: COPY.usualTitle[c][1], text: story.usual.slice(0, 3).join('\n'), foot: COPY.turn[c] }));
+    out.push(beat('fix', { heading: f.title, text: story.promise, eyebrow: COPY.fixEyebrow[c], glyph: f.row.glyph, section: f.sectionSlug,
+      sub: f.isAI ? 'Sends your text to an AI model, and says so first.' : '' }));
+    if (ex) out.push(beat('example', { ex, text: exampleText(ex, f), glyph: f.row.glyph, section: f.sectionSlug, title: f.title, ai: f.isAI }));
+    out.push(beat('steps', { heading: COPY.stepsTitle[c][0], hl: COPY.stepsTitle[c][1], text: story.steps.slice(0, 3).join('\n'), eyebrow: f.title,
+      foot: f.outPart ? 'You get: ' + f.outPart : '' }));
+    if (brand.endcard !== false) {
+      out.push(beat('endcard', { title: f.title, cta: story.cta || (f.isAI ? 'Try 10 free runs' : 'Try it free'), proof: (story.proof || []).slice(0, 3),
+        text: f.isAI ? '10 free runs a month at 1234tools.com' : 'Free at 1234tools.com', qr: brand.qr !== false }));
+    }
+    for (const sc of out) for (const k of ['eyebrow', 'heading', 'hl', 'foot']) sc['_auto_' + k] = sc[k];
+    out.story = true;
+    return trimTo(out, 22);
+  }
+  /** The finder-index script for a tool with no story: the same words as before, drawn in the new beats. */
+  function buildFallback(f, brand) {
+    const out = [];
+    const hook = hookFor(f);
+    const hs = beat('hook', { text: hook.text, eyebrow: f.row.section || '', emphasis: hook.emphasis });
+    hs.seconds = Math.max(2.4, hs.seconds);
+    out.push(hs);
+    const regionLine = f.region && f.first.toLowerCase().indexOf(f.region.toLowerCase()) < 0 ? '(' + f.region + ')' : '';
+    out.push(beat('text', { text: f.first + (regionLine ? '\n' + regionLine : ''), eyebrow: f.title }));
+    if (f.inPart && f.outPart && f.inPart.toLowerCase() !== f.outPart.toLowerCase()) {
+      const ex = { kind: 'flow', input: f.inPart, output: f.outPart, schematicOnly: true };
+      out.push(beat('example', { ex, text: exampleText(ex, f), glyph: f.row.glyph, section: f.sectionSlug, title: f.title, ai: f.isAI }));
+    }
+    const trust = beat('text', { text: f.trustLine + '\n' + f.sectionLine, eyebrow: f.isAI ? 'Say so first' : 'Private by design' });
+    trust.seconds = r1(clamp(trust.seconds, 3, 4.5));
+    out.push(trust);
+    if (brand.endcard !== false) out.push(beat('endcard', { title: f.title, cta: f.isAI ? 'Try 10 free runs' : 'Try it free', proof: [], text: f.isAI ? '10 free runs a month at 1234tools.com' : 'Free at 1234tools.com', qr: brand.qr !== false }));
+    return out;
+  }
+
+  /* ---- the visitor's script: one line per scene, with an optional beat word ---- */
+  const TEMPLATES = [
+    ['problem', 'Problem → Solution', 'Hook, the pain, why the usual fixes annoy, your fix, three steps, a call to action.',
+      'HOOK: Still [doing the boring task] by hand?\nPAIN: The problem | Every [week] you lose [an hour] to [the boring task].\nUSUAL: The usual way | [Workaround one] | [Workaround two] | [Workaround three]\nFIX: [Your product] | [What it does for them], in [how long].\nSTEPS: How it works | [Step one] | [Step two] | [Step three]\nCTA: Follow for more [topic] tips'],
+    ['beforeafter', 'Before / After', 'The result first, then the before and after side by side, what changed, how to copy it.',
+      'HOOK: [The result] in [how long]. Here’s the before.\nVERSUS: Before | [What it looked like before] | After | [What it looks like now]\nTEXT: What changed: [the one thing you did]\nSTEPS: Do it yourself | [Step one] | [Step two] | [Step three]\nCTA: Save this for your next [project]'],
+    ['mistakes', '3 Mistakes', 'Three mistakes, crossed out one at a time, then the better way.',
+      'HOOK: 3 [topic] mistakes almost everyone makes\nMISTAKE: 1 | [Mistake one] — [why it hurts]\nMISTAKE: 2 | [Mistake two] — [why it hurts]\nMISTAKE: 3 | [Mistake three] — [why it hurts]\nFIX: Do this instead | [The better way, in one line]\nCTA: Follow so you never make them again'],
+    ['myth', 'Myth vs Fact', 'A belief, crossed out, and what is actually true — twice.',
+      'HOOK: [A common belief]? Not quite.\nVERSUS: Myth | [What people believe] | Fact | [What is actually true]\nVERSUS: Myth | [A second belief] | Fact | [The truth about it]\nTEXT: [One line on why it matters]\nCTA: Follow for more [topic] facts'],
+    ['howto', 'How-to in 3 steps', 'The promise, one step per scene, then a recap.',
+      'HOOK: How to [get the result] in 3 steps\nPOINT: 1 | [First, do this]\nPOINT: 2 | [Then this]\nPOINT: 3 | [Finally, this]\nSTEPS: Recap | [Step one] | [Step two] | [Step three]\nCTA: Save this for later'],
+    ['top5', 'Listicle (Top 5)', 'Five picks counted down, the best last.',
+      'HOOK: Top 5 [things] for [who it is for]\nPOINT: 5 | [Fifth pick] — [why]\nPOINT: 4 | [Fourth pick] — [why]\nPOINT: 3 | [Third pick] — [why]\nPOINT: 2 | [Second pick] — [why]\nPOINT: 1 | [Top pick] — [why it wins]\nCTA: Which one would you pick? Tell me below'],
+    ['testimonial', 'Testimonial-style', 'A customer’s own words — use a real quote, with their permission; nothing here is invented for you.',
+      'HOOK: “[The result your customer got, in their words]”\nQUOTE: [Paste a real quote from a customer, with their permission] | [Customer name, what they do]\nPAIN: Before | [What they struggled with]\nFIX: [Your product] | [What changed for them]\nCTA: [Your call to action]']
+  ];
+  /** The scene types a template makes, in order (the browser test checks these). */
+  const TEMPLATE_TYPES = {};
+  const LINE_RE = /^(HOOK|PAIN|USUAL|FIX|STEPS|POINT|MISTAKE|VERSUS|QUOTE|CTA|TEXT)\s*:\s*(.*)$/;
+  function sceneOfLine(kind, rest) {
+    const parts = rest.split(/\s*\|\s*/).map((x) => x.trim());
+    switch (kind) {
+      case 'HOOK': return beat('hook', { text: parts.join(' '), emphasis: [keyWordOf(parts.join(' '))] });
+      case 'PAIN': return parts.length > 1 ? beat('pain', { eyebrow: parts[0], text: parts.slice(1).join(' ') }) : beat('pain', { eyebrow: 'Sound familiar?', text: parts[0] });
+      case 'USUAL': return beat('usual', { heading: parts[0], text: parts.slice(1).filter(Boolean).join('\n'), foot: '' });
+      case 'FIX': return beat('fix', { heading: parts[0], text: parts.slice(1).join(' '), eyebrow: 'The fix' });
+      case 'STEPS': return beat('steps', { heading: parts[0], text: parts.slice(1).filter(Boolean).join('\n'), eyebrow: '' });
+      case 'POINT': case 'MISTAKE': {
+        const num = parts.length > 1 ? parts[0] : '';
+        return beat('point', { heading: num, text: parts.length > 1 ? parts.slice(1).join(' ') : parts[0], bad: kind === 'MISTAKE' });
+      }
+      case 'VERSUS': {
+        const p = parts.concat(['', '', '', '']);
+        const labels = p.length >= 4 && parts.length >= 4 ? [p[0], p[2]] : ['Myth', 'Fact'];
+        const lines = parts.length >= 4 ? [p[1], p[3]] : [p[0], p[1]];
+        return beat('versus', { heading: labels.join(' | '), text: lines.join('\n') });
+      }
+      case 'QUOTE': return beat('quote', { text: parts[0], heading: parts.slice(1).join(' ') });
+      case 'CTA': return beat('cta', { text: parts.join(' ') });
+      default: return beat('text', { text: parts.join(' ') });
+    }
+  }
+  /** Split a long line at the sentence boundary nearest its middle (else a comma, else a space). */
+  function splitLong(line) {
+    if (line.length <= 110) return [line];
+    const mid = line.length / 2;
+    const cands = (re) => { const at = []; let m; re.lastIndex = 0; while ((m = re.exec(line))) at.push(m.index + m[0].length); return at; };
+    let at = cands(/[.!?;:]\s+/g);
+    if (!at.length) at = cands(/,\s+/g);
+    if (!at.length) at = cands(/\s+/g);
+    if (!at.length) return [line];
+    const cut = at.reduce((b, x) => (Math.abs(x - mid) < Math.abs(b - mid) ? x : b), at[0]);
+    return splitLong(line.slice(0, cut).trim()).concat(splitLong(line.slice(cut).trim())).filter(Boolean);
+  }
+  /**
+   * One scene per line. "HOOK:", "PAIN:", "USUAL:", "FIX:", "STEPS:", "POINT:", "MISTAKE:", "VERSUS:", "QUOTE:", "CTA:" or "TEXT:"
+   * at the start makes that kind of scene (parts split by "|"); a line made only of #words colours those words in the scene above.
+   */
+  function scenesFromScript(text) {
+    const scenes = [];
+    for (const raw of String(text || '').split('\n')) {
+      const line = raw.trim();
+      if (!line) continue;
+      if (/^#\S+(\s+#\S+)*$/.test(line)) {
+        const prev = scenes[scenes.length - 1];
+        if (prev) { prev.emphasis = (prev._userEm ? prev.emphasis || [] : []).concat(line.split(/\s+/).map((w) => w.replace(/^#/, '')).filter(Boolean)); prev._userEm = true; }
+        continue;
+      }
+      const m = LINE_RE.exec(line);
+      if (m) { scenes.push(sceneOfLine(m[1], m[2])); continue; }
+      for (const part of splitLong(line)) scenes.push(beat('text', { text: part }));
+    }
+    scenes.shrunk = fitToMax(scenes);
+    return scenes;
+  }
+  for (const [id, , , body] of TEMPLATES) TEMPLATE_TYPES[id] = scenesFromScript(body).map((s) => s.type);
+  /** Scale scenes down proportionally (never below 1.5 s) when the total is over 90 s. Returns whether it had to. */
+  function fitToMax(scenes) {
+    const D = timeline(scenes).D;
+    if (D <= MAX_SECONDS) return false;
+    const k = MAX_SECONDS / D;
+    for (const s of scenes) s.seconds = Math.max(1.5, Math.floor(s.seconds * k * 10) / 10);
+    return true;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* caption and hashtags                                               */
+  /* ------------------------------------------------------------------ */
+  function camelTag(s, max) {
+    const words = (String(s || '').replace(/\(.*?\)/g, ' ').match(/[A-Za-z0-9]+/g) || []);
+    const t = '#' + words.map((w) => (/^[A-Z0-9]+$/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())).join('');
+    return t.length > 1 && t.length <= (max || 25) ? t : '';
+  }
+  /** 5–8 hashtags: the section's relevant ones (copy-spec §3), the tool's own, then the brand pair. */
+  function tagsFor(row) {
+    const f = factsOf(row);
+    const r = f.row;
+    const text = (r.title + ' ' + r.keywords + ' ' + r.description + ' ' + r.io + ' ' + r.section).toLowerCase();
+    const words = new Set(text.split(/[^a-z0-9]+/).filter(Boolean));
+    const squashed = text.replace(/[^a-z0-9]+/g, '');
+    const table = SECTION_TAGS[f.sectionSlug] || [];
+    const hit = (tag) => { const b = tag.slice(1).toLowerCase(); return b.length <= 3 ? words.has(b) : squashed.indexOf(b) >= 0; };
+    const relevant = table.filter(hit);
+    const niche = relevant.slice(0, 4);
+    for (const t of table) { if (niche.length >= 3) break; if (niche.indexOf(t) < 0) niche.push(t); }
+    const out = [];
+    const add = (t) => { if (t && out.length < 8 && !out.some((x) => x.toLowerCase() === t.toLowerCase())) out.push(t); };
+    niche.forEach(add);
+    add(camelTag(f.title, 24));
+    const kw = String(r.keywords || '').split('|').map((x) => x.trim()).filter(Boolean)[0];
+    if (out.length < 6) add(camelTag(kw, 24));
+    const brand = BRAND_TAGS.slice();
+    while (out.length > 8 - brand.length) out.pop();
+    brand.forEach(add);
+    return out;
+  }
+  /** Hashtags for a visitor's own script: its most frequent long words, plus #Reels. No brand tags of ours on someone else's reel. */
+  function scriptTags(text) {
+    const count = new Map();
+    for (const w of String(text || '').toLowerCase().replace(/\[[^\]]*\]/g, ' ').match(/[a-z][a-z0-9]{4,}/g) || []) { if (!STOP.has(w)) count.set(w, (count.get(w) || 0) + 1); }
+    const top = [...count.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5).map(([w]) => '#' + w.charAt(0).toUpperCase() + w.slice(1));
+    return top.concat(['#Reels']);
+  }
+  function qrUrlFor(path, source) {
+    const f = factsOf({ title: '', path: String(path || '').replace(/^\/+/, '') });
+    return SITE + '/' + f.path + '?utm_source=' + encodeURIComponent(source || 'instagram') + '&utm_medium=social&utm_campaign=' + encodeURIComponent(f.sectionSlug) + '&utm_content=' + encodeURIComponent(f.slug);
+  }
+  /**
+   * The Instagram caption, hook first, in one of three shapes picked with the look (so a new look is a new caption too):
+   * 0 the story (pain → fix → steps), 1 the usual way crossed out → instead, 2 who it is for → the promise → save it.
+   * Every shape ends with the link-in-bio line and 5–8 hashtags; the share module adds its "Made free, on my device" line.
+   */
+  function captionFor(S) {
+    S = S || CUR;
+    if (!S) return '';
+    const firstText = S.scenes.find((s) => isWordy(s));
+    if (S.promote) {
+      const f = factsOf(S.promote);
+      const story = storyFor(f.path);
+      const hook = oneLine(firstText ? firstText.text : f.title);
+      const bio = 'Link in bio → ' + f.url + ' ' + f.emoji;
+      const tags = tagsFor(S.promote).join(' ');
+      if (!story) {
+        const line3 = pickBy(f.path + '#3', f.offlineOk ? ['Save this for later.', 'Works offline once opened.', 'Send it to someone who needs it.'] : ['Save this for later.', 'Send it to someone who needs it.']);
+        return [hook, f.first, f.trustSentence, line3, bio, '', tags].join('\n');
+      }
+      const shape = ((S.look && S.look.copy) || 0) % 3;
+      const proof = (story.proof || []).join(' · ');
+      const lines = [hook, ''];
+      if (shape === 0) {
+        lines.push(story.pain, '', 'The fix: ' + f.title + '. ' + story.promise, story.steps.map((s, i) => (i + 1) + ') ' + s).join('  '), proof);
+      } else if (shape === 1) {
+        lines.push('The usual way:', story.usual.map((u) => '✗ ' + u).join('\n'), '', 'Instead: ' + story.promise, proof);
+      } else {
+        lines.push((story.persona || 'Anyone') + ': this one is for you.', story.promise, '', proof, 'Save this for later.');
+      }
+      lines.push((story.cta ? story.cta + ' → ' : '') + bio, '', tags);
+      return lines.join('\n').replace(/\n{3,}/g, '\n\n');
+    }
+    const texts = S.scenes.filter((s) => isWordy(s)).map((s) => spoken(s));
+    const out = [texts[0] || ''];
+    let body = texts.slice(1, 3).join(' ');
+    if (body.length > 180) { body = body.slice(0, 180); body = body.slice(0, body.lastIndexOf(' ')).replace(/[,;:\s]+$/, '') + '.'; }
+    if (body) out.push(body);
+    if (S.brand.url) out.push('Link in bio → ' + S.brand.url);
+    out.push('', scriptTags(texts.join(' ')).join(' '));
+    return out.join('\n').trim();
+  }
   /** What the QR on the end card carries: the UTM link in promote mode, the visitor's URL otherwise. */
   function qrPayload(S) {
     if (!S.brand.qr) return '';
@@ -497,12 +1039,1496 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* text layout                                                        */
+  /* type: laying words out, fitting them, drawing them in motion       */
   /* ------------------------------------------------------------------ */
+  const HEAD = '"Sora", "Inter", Arial, sans-serif';
+  const BODY = '"Inter", "Sora", Arial, sans-serif';
+  const SERIF = "'Palatino Linotype', 'Book Antiqua', Palatino, 'Iowan Old Style', Georgia, 'Times New Roman', serif";
+  const MONO = "'Cascadia Code', 'Cascadia Mono', Consolas, 'Courier New', monospace";
+  const HAS_LS = typeof CanvasRenderingContext2D !== 'undefined' && 'letterSpacing' in CanvasRenderingContext2D.prototype;
   const MEASURE = document.createElement('canvas').getContext('2d');
+  const fontCss = (weight, px, fam, italic) => (italic ? 'italic ' : '') + weight + ' ' + Math.max(1, px).toFixed(2) + 'px ' + fam;
   const fontOf = (weight, px, font) => weight + ' ' + px + 'px "' + (font || 'Sora') + '", "Inter", Arial, sans-serif';
+  let FONTGEN = 0;
+  /* Text that did not fit its box, and the smallest size drawn — the browser test reads both. */
+  const OVER = [];
+  const overSeen = new Set();
+  let MIN_PX = Infinity;
+  /* the smallest any text is drawn: 20 px on a 1080-wide frame, about 7 pt on a phone */
+  let FLOOR = 20;
+  const setFloor = (W, H) => { FLOOR = 20 * Math.min(W, H) / 1080; };
+  function noteOver(what) {
+    if (overSeen.has(what)) return;
+    overSeen.add(what);
+    OVER.push(what);
+    console.warn('Reel Maker: text does not fit — ' + what);
+  }
+
+  /**
+   * Words of `text` laid out at o.px within o.maxW. o: { px, weight, fam, upper, lh, track (em), hl: [a, b) of the text, hlItalic }.
+   * Returns { lines: [{ words: [{ t, x, w, hl, i, li, c0 }], w }], px, lh, h, w, n, chars, fBase, fHl, ls }.
+   */
+  function layWords(text, o) {
+    const src = String(text || '');
+    const shown = o.upper ? src.toUpperCase() : src;
+    const px = o.px;
+    const fBase = fontCss(o.weight, px, o.fam, !!o.italic), fHl = fontCss(o.weight, px, o.fam, !!(o.italic || o.hlItalic));
+    const ls = HAS_LS && o.track ? (o.track * px).toFixed(2) + 'px' : '0px';
+    const M = MEASURE;
+    if (HAS_LS) M.letterSpacing = ls;
+    const meas = (t, hl) => { M.font = hl ? fHl : fBase; return M.measureText(t).width; };
+    M.font = fBase;
+    const space = M.measureText(' ').width;
+    const hl = o.hl;
+    const lines = [];
+    let pos = 0, i = 0, c0 = 0;
+    for (const para of shown.split('\n')) {
+      let line = { words: [], w: 0 };
+      const re = /\S+/g;
+      let m;
+      while ((m = re.exec(para))) {
+        const a = pos + m.index, b = a + m[0].length;
+        const isHl = !!(hl && a < hl[1] && b > hl[0]);
+        const w = meas(m[0], isHl);
+        const x = line.words.length ? line.w + space : 0;
+        if (line.words.length && x + w > o.maxW) { lines.push(line); line = { words: [], w: 0 }; }
+        const wx = line.words.length ? line.w + space : 0;
+        line.words.push({ t: m[0], x: wx, w, hl: isHl, i: i++, li: lines.length, c0 });
+        line.w = wx + w;
+        c0 += m[0].length + 1;
+      }
+      lines.push(line);
+      pos += para.length + 1;
+    }
+    for (let li = 0; li < lines.length; li++) for (const w of lines[li].words) w.li = li;
+    while (lines.length > 1 && !lines[lines.length - 1].words.length) lines.pop();
+    const lh = px * (o.lh || 1.1);
+    const widest = lines.reduce((a, l) => Math.max(a, l.w), 0);
+    return { lines, px, lh, h: lines.length * lh, w: widest, n: i, chars: c0, fBase, fHl, ls, space };
+  }
+  /** layWords, shrinking until it fits maxW × maxLines (and maxH). Flags `over` when even minPx does not fit. */
+  function fitWords(text, o, maxW, maxLines, minPx, maxH) {
+    let px = Math.max(o.px, FLOOR), lay;
+    minPx = Math.max(minPx || 0, FLOOR);
+    for (let k = 0; k < 48; k++) {
+      lay = layWords(text, Object.assign({}, o, { px, maxW }));
+      const okH = maxH ? lay.h <= maxH + 0.5 : true;
+      if (lay.w <= maxW + 0.5 && lay.lines.length <= (maxLines || 99) && okH) return lay;
+      if (px <= minPx + 0.01) break;
+      px = Math.max(minPx, px * 0.94);
+    }
+    lay.over = true;
+    return lay;
+  }
+  /** A figure counting up: "₹11,800.00" at p = 0.5 is "₹5,900.00", grouping (Indian or Western) and decimals kept. */
+  function countText(final, p) {
+    const m = /^(\D*?)(\d[\d,]*(?:\.\d+)?)(.*)$/.exec(String(final));
+    if (!m || p >= 1) return final;
+    const num = m[2], n = parseFloat(num.replace(/,/g, ''));
+    if (!isFinite(n)) return final;
+    const dec = (num.split('.')[1] || '').length;
+    const v = (n * clamp(p, 0, 1)).toFixed(dec);
+    let [ip, fp] = v.split('.');
+    if (num.indexOf(',') >= 0) {
+      if (/\d,\d\d,\d{3}/.test(num)) { const last3 = ip.slice(-3); let rest = ip.slice(0, -3); const parts = []; while (rest.length > 2) { parts.unshift(rest.slice(-2)); rest = rest.slice(0, -2); } if (rest) parts.unshift(rest); ip = parts.concat(last3).filter(Boolean).join(','); }
+      else ip = ip.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+    return m[1] + ip + (fp !== undefined ? '.' + fp : '') + m[3];
+  }
+  /** Where a word is at time `local` for a motion style: alpha, scale, offset, how many characters are typed. */
+  function wordState(motion, wd, lay, local, seconds) {
+    switch (motion) {
+      case 'pop': {
+        const st = Math.min(0.075, 1.0 / Math.max(1, lay.n));
+        const d = wd.i * st + (wd.hl ? 0.08 : 0);
+        const p = clamp((local - d) / 0.34, 0, 1);
+        const t = local - d - 0.34;
+        /* a small overshoot only: a word that grows past its slot runs into its neighbour */
+        return { a: clamp(p * 3, 0, 1), s: (0.5 + 0.5 * backOut(p, 1.4)) * (wd.hl ? 1 + 0.06 * bump(t / 0.45) : 1), dy: (1 - ease3(p)) * lay.lh * 0.35, chars: Infinity, t };
+      }
+      case 'slide': {
+        const d = wd.li * 0.12, p = clamp((local - d) / 0.5, 0, 1);
+        return { a: 1, s: 1, dy: (1 - ease3(p)) * lay.lh * 1.08, clip: true, chars: Infinity, t: local - d - 0.5 };
+      }
+      case 'type': {
+        const cps = clamp(lay.chars / Math.max(0.6, seconds * 0.42), 18, 48);
+        const shown = Math.max(0, local) * cps;
+        const c = Math.floor(shown - wd.c0);
+        return { a: c > 0 ? 1 : 0, s: 1, dy: 0, chars: c, t: (shown - wd.c0 - wd.t.length) / cps, cps };
+      }
+      case 'fade': {
+        const d = wd.li * 0.08, p = ease3((local - d) / 0.45);
+        return { a: p, s: 1, dy: (1 - p) * lay.px * 0.25, chars: Infinity, t: local - d - 0.45 };
+      }
+      case 'punch': return { a: 1, s: wd.hl ? 1 + 0.16 * bump((local - 0.26) / 0.34) : 1, dy: 0, chars: Infinity, t: local - 0.3 };
+      default: return { a: 1, s: 1, dy: 0, chars: Infinity, t: 9 };
+    }
+  }
+  const OK_DARK = '#4ade80', OK_LIGHT = '#15803d';
+  const okOf = (L) => (L.light ? OK_LIGHT : OK_DARK);
+  /**
+   * Draw a laid-out block at (x, y) (top-left of a column `w` wide), in motion.
+   * o: { align, at, motion, treat ('gradient'|'outline'|'marker'|'caps'|'serif'|'plain'), ink, coral, field (on the split colour field),
+   *      count: word index that counts up, alpha }.
+   */
+  function drawBlock(g, lay, x, y, w, o) {
+    const ctx = g.ctx, L = g.look;
+    const motion = o.motion || 'none';
+    const local = g.local - (o.at || 0);
+    if (local < 0 && motion !== 'none') return;
+    if (lay.px < MIN_PX) MIN_PX = lay.px;
+    const ink = o.ink || L.ink;
+    const treat = o.treat || 'plain';
+    const coral = !!o.coral;
+    ctx.save();
+    ctx.globalAlpha = clamp(g.alpha * (o.alpha === undefined ? 1 : o.alpha), 0, 1);
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.lineJoin = 'round';
+    if (HAS_LS) ctx.letterSpacing = lay.ls;
+    const lx = (line) => x + (o.align === 'center' ? (w - line.w) / 2 : o.align === 'right' ? w - line.w : 0);
+    const bx0 = x + (o.align === 'center' ? (w - lay.w) / 2 : 0), by0 = y;
+    if (motion === 'punch') {
+      const p = clamp(local / 0.3, 0, 1);
+      const sc = 1 + 0.55 * (1 - easeExpo(p));
+      const cx = bx0 + lay.w / 2, cy = y + lay.h / 2;
+      ctx.translate(cx, cy); ctx.scale(sc, sc); ctx.translate(-cx, -cy);
+      ctx.globalAlpha *= clamp(p * 3, 0, 1);
+    }
+    const hlSolid = coral ? L.coralInk : L.accentInk;
+    const bigEnough = lay.px >= 40 * g.U;
+    const markerCol = coral ? 'rgba(255,107,107,.38)' : (L.marker ? hexA(L.marker, 0.85) : hexA(L.accent, 0.38));
+    /* marker bands go under every word */
+    if (treat === 'marker' && !o.field) {
+      lay.lines.forEach((line, li) => {
+        const words = line.words;
+        for (let k = 0; k < words.length; k++) {
+          const wd = words[k];
+          if (!wd.hl) continue;
+          const st = wordState(motion, wd, lay, local, g.seconds);
+          if (st.a <= 0) continue;
+          const sweep = motion === 'none' ? 1 : ease3((st.t + 0.12) / 0.32);
+          if (sweep <= 0) continue;
+          const nextHl = words[k + 1] && words[k + 1].hl;
+          const bw = (wd.w + (nextHl ? lay.space : 0) + lay.px * 0.08) * sweep;
+          const top = y + li * lay.lh + st.dy;
+          ctx.fillStyle = markerCol;
+          ctx.fillRect(lx(line) + wd.x - lay.px * 0.04, top + lay.lh * 0.5, bw, lay.lh * 0.38);
+        }
+      });
+    }
+    let grad = null;
+    let caret = null;
+    lay.lines.forEach((line, li) => {
+      const top = y + li * lay.lh;
+      const cy = top + lay.lh / 2;
+      for (const wd of line.words) {
+        const st = wordState(motion, wd, lay, local, g.seconds);
+        if (st.a <= 0.001 || st.chars <= 0) continue;
+        let t = wd.t;
+        if (st.chars < t.length) t = t.slice(0, st.chars);
+        if (o.count === wd.i && motion !== 'type') t = countText(wd.t, ease3((local - 0.05) / 1.0));
+        const wx = lx(line) + wd.x, ww = wd.w;
+        ctx.save();
+        ctx.globalAlpha *= st.a;
+        if (st.clip) { ctx.beginPath(); ctx.rect(x - lay.px, top - lay.lh * 0.18, w + lay.px * 2, lay.lh * 1.3); ctx.clip(); }
+        const cx = wx + ww / 2, wy = cy + st.dy;
+        ctx.translate(cx, wy);
+        if (st.s !== 1) ctx.scale(st.s, st.s);
+        ctx.font = wd.hl ? lay.fHl : lay.fBase;
+        const tx = -ww / 2;
+        if (wd.hl && o.field) {
+          ctx.fillStyle = ink; ctx.fillText(t, tx, 0);
+          ctx.fillRect(tx, lay.px * 0.42, ctx.measureText(t).width, Math.max(2, lay.px * 0.05));
+        } else if (wd.hl && treat === 'gradient' && !coral) {
+          /* the gradient spans this line's highlighted run, like the kits' clipped .hl span */
+          const s = st.s || 1;
+          const run = line.words.filter((q) => q.hl);
+          const rx0 = lx(line) + run[0].x, rx1 = lx(line) + run[run.length - 1].x + run[run.length - 1].w;
+          grad = ctx.createLinearGradient((rx0 - cx) / s, (top - wy) / s, (rx1 - cx) / s, (top + lay.lh - wy) / s);
+          grad.addColorStop(0, L.grad[0]); grad.addColorStop(0.42, L.grad[1]); grad.addColorStop(0.92, L.grad[2]);
+          ctx.fillStyle = grad; ctx.fillText(t, tx, 0);
+        } else if (wd.hl && treat === 'outline' && bigEnough) {
+          ctx.lineWidth = lay.px * 0.064; ctx.strokeStyle = coral ? L.coralInk : L.accent;
+          ctx.strokeText(t, tx, 0);
+        } else if (wd.hl && treat !== 'marker') {
+          ctx.fillStyle = hlSolid; ctx.fillText(t, tx, 0);
+        } else {
+          ctx.fillStyle = ink; ctx.fillText(t, tx, 0);
+        }
+        ctx.restore();
+        if (motion === 'type' && st.chars < wd.t.length + 1) caret = { x: wx + (st.chars >= wd.t.length ? ww : MEASURE_W(lay, wd, t)), y: cy };
+      }
+    });
+    if (motion === 'type') {
+      const last = lay.lines[lay.lines.length - 1];
+      const lw = last.words[last.words.length - 1];
+      const typingDone = !caret && lw && wordState('type', lw, lay, local, g.seconds).chars >= lw.t.length;
+      if (!caret && typingDone) caret = { x: lx(last) + last.w + lay.px * 0.06, y: y + (lay.lines.length - 0.5) * lay.lh, idle: true };
+      if (caret && (!caret.idle || (local * 2.2) % 1 < 0.55) && local < g.seconds - 0.2) {
+        ctx.fillStyle = L.accent;
+        ctx.fillRect(caret.x + lay.px * 0.03, caret.y - lay.px * 0.42, Math.max(2, lay.px * 0.07), lay.px * 0.84);
+      }
+    }
+    ctx.restore();
+  }
+  function MEASURE_W(lay, wd, t) { MEASURE.font = wd.hl ? lay.fHl : lay.fBase; if (HAS_LS) MEASURE.letterSpacing = lay.ls; return MEASURE.measureText(t).width; }
+  /** Spaced capitals on one line (eyebrows, tags), fitted to maxW. Returns the width drawn. */
+  function capsLine(ctx, text, x, y, px, colour, track, weight, maxW, align, fam) {
+    const t = String(text || '').toUpperCase();
+    let size = Math.max(px, FLOOR), w = 0;
+    for (let k = 0; k < 30; k++) {
+      ctx.font = fontCss(weight || 700, size, fam || BODY);
+      if (HAS_LS) ctx.letterSpacing = (track * size).toFixed(2) + 'px';
+      w = ctx.measureText(t).width + (HAS_LS ? 0 : t.length * track * size);
+      if (!maxW || w <= maxW || size <= FLOOR + 0.01) break;
+      size = Math.max(FLOOR, size * 0.94);
+    }
+    if (maxW && w > maxW + 0.5) noteOver('caps line "' + t.slice(0, 30) + '"');
+    if (size < MIN_PX) MIN_PX = size;
+    ctx.fillStyle = colour; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    const x0 = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+    if (HAS_LS) ctx.fillText(t, x0, y);
+    else { let cx = x0; for (const ch of t) { ctx.fillText(ch, cx, y); cx += ctx.measureText(ch).width + track * size; } }
+    if (HAS_LS) ctx.letterSpacing = '0px';
+    return w;
+  }
+  /** One line of plain text, shrunk to maxW (never below minPx: then it is cut with an ellipsis, a display choice, not an overflow). */
+  function fitLine(text, px, weight, fam, maxW, minPx) {
+    minPx = Math.max(minPx || 0, FLOOR);
+    let size = Math.max(px, FLOOR), t = String(text || '');
+    MEASURE.font = fontCss(weight, size, fam); if (HAS_LS) MEASURE.letterSpacing = '0px';
+    let w = MEASURE.measureText(t).width;
+    while (w > maxW && size > minPx) { size = Math.max(minPx, size * 0.94); MEASURE.font = fontCss(weight, size, fam); w = MEASURE.measureText(t).width; }
+    if (w > maxW) { while (t.length > 1 && MEASURE.measureText(t + '…').width > maxW) t = t.slice(0, -1); t = t.replace(/\s+$/, '') + '…'; w = MEASURE.measureText(t).width; }
+    return { t, px: size, w, font: fontCss(weight, size, fam) };
+  }
+  function drawLine(ctx, fl, x, y, colour, align) {
+    if (fl.px < MIN_PX) MIN_PX = fl.px;
+    ctx.font = fl.font; if (HAS_LS) ctx.letterSpacing = '0px';
+    ctx.fillStyle = colour; ctx.textBaseline = 'middle'; ctx.textAlign = align || 'left';
+    ctx.fillText(fl.t, x, y);
+    ctx.textAlign = 'left';
+  }
+  /** Line icons on the kits' 24-unit grid. */
+  function icon(ctx, name, cx, cy, size, colour, lw) {
+    ctx.save();
+    ctx.translate(cx - size / 2, cy - size / 2); ctx.scale(size / 24, size / 24);
+    ctx.strokeStyle = colour; ctx.fillStyle = colour; ctx.lineWidth = lw || 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    switch (name) {
+      case 'x': ctx.moveTo(6.5, 6.5); ctx.lineTo(17.5, 17.5); ctx.moveTo(17.5, 6.5); ctx.lineTo(6.5, 17.5); ctx.stroke(); break;
+      case 'check': ctx.moveTo(5, 12.5); ctx.lineTo(10, 17.5); ctx.lineTo(19, 7); ctx.stroke(); break;
+      case 'person': ctx.arc(12, 8, 4, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(4.5, 20.5); ctx.bezierCurveTo(4.5, 16, 8, 13.6, 12, 13.6); ctx.bezierCurveTo(16, 13.6, 19.5, 16, 19.5, 20.5); ctx.stroke(); break;
+      case 'spark': ctx.moveTo(12, 2.5); ctx.lineTo(14, 10); ctx.lineTo(21.5, 12); ctx.lineTo(14, 14); ctx.lineTo(12, 21.5); ctx.lineTo(10, 14); ctx.lineTo(2.5, 12); ctx.lineTo(10, 10); ctx.closePath(); ctx.fill(); break;
+      case 'arrow': ctx.moveTo(4.5, 12); ctx.lineTo(19, 12); ctx.moveTo(13, 6); ctx.lineTo(19, 12); ctx.lineTo(13, 18); ctx.stroke(); break;
+      case 'arrowDown': ctx.moveTo(12, 4.5); ctx.lineTo(12, 19); ctx.moveTo(6, 13); ctx.lineTo(12, 19); ctx.lineTo(18, 13); ctx.stroke(); break;
+      case 'lr': ctx.moveTo(4, 12); ctx.lineTo(20, 12); ctx.moveTo(8, 8); ctx.lineTo(4, 12); ctx.lineTo(8, 16); ctx.moveTo(16, 8); ctx.lineTo(20, 12); ctx.lineTo(16, 16); ctx.stroke(); break;
+      case 'bookmark': ctx.moveTo(6.5, 3.5); ctx.lineTo(17.5, 3.5); ctx.lineTo(17.5, 20.5); ctx.lineTo(12, 16.5); ctx.lineTo(6.5, 20.5); ctx.closePath(); ctx.globalAlpha *= 0.18; ctx.fill(); ctx.globalAlpha /= 0.18; ctx.stroke(); break;
+      case 'doc': ctx.moveTo(6, 3); ctx.lineTo(14, 3); ctx.lineTo(19, 8); ctx.lineTo(19, 21); ctx.lineTo(6, 21); ctx.closePath(); ctx.moveTo(14, 3); ctx.lineTo(14, 8); ctx.lineTo(19, 8); ctx.moveTo(9, 12.5); ctx.lineTo(16, 12.5); ctx.moveTo(9, 16); ctx.lineTo(14, 16); ctx.stroke(); break;
+      case 'table': ctx.rect(3.5, 5, 17, 14); ctx.moveTo(3.5, 10); ctx.lineTo(20.5, 10); ctx.moveTo(3.5, 14.5); ctx.lineTo(20.5, 14.5); ctx.moveTo(10, 5); ctx.lineTo(10, 19); ctx.stroke(); break;
+      case 'photo': ctx.rect(3.5, 5, 17, 14); ctx.moveTo(3.5, 16); ctx.lineTo(9, 11); ctx.lineTo(13, 15); ctx.lineTo(15.5, 12.5); ctx.lineTo(20.5, 17); ctx.stroke(); ctx.beginPath(); ctx.arc(15.5, 8.8, 1.5, 0, Math.PI * 2); ctx.fill(); break;
+      case 'text': ctx.moveTo(5, 7); ctx.lineTo(19, 7); ctx.moveTo(5, 11); ctx.lineTo(19, 11); ctx.moveTo(5, 15); ctx.lineTo(15, 15); ctx.moveTo(5, 19); ctx.lineTo(12, 19); ctx.stroke(); break;
+      default: break;
+    }
+    ctx.restore();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* the background: the kits' atmosphere, in four treatments           */
+  /* ------------------------------------------------------------------ */
+  const layerCache = new Map();
+  function cachedLayer(key, w, h, paint) {
+    let c = layerCache.get(key);
+    if (c) return c;
+    if (layerCache.size > 24) layerCache.clear();
+    c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h));
+    paint(c.getContext('2d'), c.width, c.height);
+    layerCache.set(key, c);
+    return c;
+  }
+  const rgbaA = (rgba, k) => String(rgba).replace(/,\s*([\d.]+)\)$/, (m, a) => ',' + (parseFloat(a) * k).toFixed(3) + ')');
+  function glowAt(ctx, cx, cy, rx, ry, colour) {
+    ctx.save();
+    ctx.translate(cx, cy); ctx.scale(1, ry / rx);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+    g.addColorStop(0, colour); g.addColorStop(1, rgbaA(colour, 0));
+    ctx.fillStyle = g; ctx.fillRect(-rx, -rx, rx * 2, rx * 2);
+    ctx.restore();
+  }
+  function drawBackground(ctx, W, H, t, L, scene, S) {
+    const U = Math.min(W, H) / 1080;
+    const ph = REDUCED ? 0 : t;
+    /* the base and its soft glows are smooth, so they are painted at a quarter of the size and scaled up: four
+       full-frame radial gradients a frame were the slowest part of an export */
+    const q = 4, aw = Math.ceil(W / q), ah = Math.ceil(H / q);
+    const atmo = cachedLayer('atmo|' + aw + 'x' + ah, aw, ah, () => {});
+    const ax = atmo.getContext('2d');
+    ax.setTransform(1 / q, 0, 0, 1 / q, 0, 0);
+    const g0 = ax.createLinearGradient(0, 0, 0, H);
+    g0.addColorStop(0, L.bg[0]); g0.addColorStop(1, L.bg[1]);
+    ax.fillStyle = g0; ax.fillRect(0, 0, W, H);
+    const k = L.bgT === 'grid' ? 0.7 : 1;
+    if (L.bgT === 'mesh') {
+      const a = L.light ? 0.34 : 0.22;
+      const cols = [L.grad[0], L.grad[2], L.chip[1], L.accent];
+      const R = Math.max(W, H) * 0.62;
+      cols.forEach((c, i) => {
+        const cx = W * (0.5 + 0.42 * Math.cos(ph * 0.21 + i * 1.7)), cy = H * (0.52 + 0.34 * Math.sin(ph * 0.17 + i * 2.3));
+        glowAt(ax, cx, cy, R * (0.8 + 0.1 * i), R * (0.8 + 0.1 * i), hexA(c, a * (i === 3 ? 0.5 : 1)));
+      });
+    } else {
+      /* the kits' three glows (style.js .deco g1/g2/g3), drifting */
+      glowAt(ax, W * (0.2 + 0.03 * Math.sin(ph * 0.4)), H * (0.24 + 0.02 * Math.cos(ph * 0.33)), W * 0.62, H * 0.42, rgbaA(L.glowA, k));
+      glowAt(ax, W * (0.82 + 0.03 * Math.cos(ph * 0.3)), H * (0.8 + 0.02 * Math.sin(ph * 0.37)), W * 0.64, H * 0.46, rgbaA(L.glowB, k));
+      glowAt(ax, W * (0.86 + 0.02 * Math.sin(ph * 0.5)), H * 0.5, W * 0.34, H * 0.24, rgbaA(L.glowC, k));
+    }
+    ax.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(atmo, 0, 0, aw, ah, 0, 0, aw * q, ah * q);
+    ctx.restore();
+    if (L.bgT === 'glow' || L.bgT === 'mesh') {
+      const sp = 30 * U;
+      const dots = cachedLayer('dots|' + L.dot + '|' + W + 'x' + H, W, H, (x, w, h) => {
+        x.fillStyle = L.dot;
+        for (let yy = sp / 2; yy < h; yy += sp) for (let xx = sp / 2; xx < w; xx += sp) { x.beginPath(); x.arc(xx, yy, 1.6 * U, 0, Math.PI * 2); x.fill(); }
+        x.globalCompositeOperation = 'destination-in';
+        x.save(); x.translate(w * 0.78, h * 0.3); x.scale(1, 0.62 * h / w);
+        const m = x.createRadialGradient(0, 0, 0, 0, 0, w * 0.8); m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)');
+        x.fillStyle = m; x.fillRect(-w, -w, w * 2, w * 2); x.restore();
+      });
+      ctx.drawImage(dots, 0, 0);
+    } else if (L.bgT === 'grid') {
+      const sp = 72 * U;
+      const grid = cachedLayer('grid|' + L.ink + '|' + W + 'x' + H, W, H + sp, (x, w, h) => {
+        x.strokeStyle = hexA(L.ink, L.light ? 0.09 : 0.075); x.lineWidth = Math.max(1, 1.4 * U);
+        x.beginPath();
+        for (let xx = (w % sp) / 2; xx <= w; xx += sp) { x.moveTo(xx, 0); x.lineTo(xx, h); }
+        for (let yy = 0; yy <= h; yy += sp) { x.moveTo(0, yy); x.lineTo(w, yy); }
+        x.stroke();
+        x.globalCompositeOperation = 'destination-in';
+        x.save(); x.translate(w * 0.5, h * 0.5); x.scale(1, (h * 0.55) / (w * 0.75));
+        const m = x.createRadialGradient(0, 0, 0, 0, 0, w * 0.75); m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(0.6, 'rgba(0,0,0,.55)'); m.addColorStop(1, 'rgba(0,0,0,0)');
+        x.fillStyle = m; x.fillRect(-w * 2, -w * 2, w * 4, w * 4); x.restore();
+      });
+      ctx.drawImage(grid, 0, -((ph * 14 * U) % sp));
+    } else if (L.bgT === 'grain') {
+      const vig = cachedLayer('vig|' + W + 'x' + H + '|' + L.light, W, H, (x, w, h) => {
+        x.save(); x.translate(w / 2, h / 2); x.scale(1, h / w);
+        const m = x.createRadialGradient(0, 0, w * 0.25, 0, 0, w * 0.78); m.addColorStop(0, 'rgba(0,0,0,0)'); m.addColorStop(1, L.light ? 'rgba(60,40,8,.16)' : 'rgba(0,0,0,.42)');
+        x.fillStyle = m; x.fillRect(-w, -w, w * 2, w * 2); x.restore();
+      });
+      ctx.drawImage(vig, 0, 0);
+      const tile = cachedLayer('grain|' + L.light, 256, 256, (x, w, h) => {
+        const id = x.createImageData(w, h), d = id.data, r = rng(1234);
+        for (let i = 0; i < d.length; i += 4) { const v = r() < 0.5 ? 0 : 255; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = Math.round(r() * (L.light ? 22 : 16)); }
+        x.putImageData(id, 0, 0);
+      });
+      const pat = ctx.createPattern(tile, 'repeat');
+      /* a new grain per scene, still within it: grain that boils every frame costs the encoder its whole bitrate */
+      const f = S && scene ? Math.max(0, S.scenes.indexOf(scene)) : Math.floor(t);
+      const r = rng(f + 7);
+      if (pat && pat.setTransform && typeof DOMMatrix !== 'undefined') pat.setTransform(new DOMMatrix([U * 1.5, 0, 0, U * 1.5, Math.floor(r() * 256), Math.floor(r() * 256)]));
+      ctx.fillStyle = pat; ctx.fillRect(0, 0, W, H);
+    }
+    /* the tool's glyph as a faint watermark, bottom right (the kits' .wm) */
+    const wmId = S && S.promote ? S.promote.glyph : '';
+    if (wmId) {
+      const gc = glyphCanvas(wmId, L.ink, 'i-' + sectionOf(S.promote.path));
+      if (gc) {
+        ctx.save();
+        ctx.globalAlpha = L.light ? 0.07 : 0.05;
+        const s = W * 0.62;
+        ctx.translate(W * 0.84, H * 0.8); ctx.rotate((-12 + 2 * Math.sin(ph * 0.3)) * Math.PI / 180);
+        ctx.drawImage(gc, -s / 2, -s / 2, s, s);
+        ctx.restore();
+      }
+    }
+    /* keep the platform's own UI bands calm */
+    const sf = safeOf(W, H);
+    const top = ctx.createLinearGradient(0, 0, 0, sf.top * H);
+    top.addColorStop(0, hexA(L.bg[0], 0.85)); top.addColorStop(1, hexA(L.bg[0], 0));
+    ctx.fillStyle = top; ctx.fillRect(0, 0, W, sf.top * H);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* the frame's chrome: header, footer, progress                       */
+  /* ------------------------------------------------------------------ */
+  function chromeOf(W, H, S) {
+    const sf = safeOf(W, H), U = Math.min(W, H) / 1080;
+    const promo = !!S.promote;
+    const hasHead = promo || !!S.brand.logo || !!String(S.brand.handle || '').trim();
+    const mx = W > H * 1.3 ? W * 0.15 : W * 0.065;
+    const headY = sf.top * H + 10 * U, headH = 58 * U;
+    const barH = Math.max(4, 7 * U);
+    const barY = (1 - sf.bottom) * H - 12 * U - barH;
+    const footY = barY - 30 * U;
+    const showFoot = promo || !!String(S.brand.url || '').trim();
+    return { sf, U, mx, headY, headH, hasHead, barY, barH, footY, showFoot, promo };
+  }
+  /** The content box every beat is fitted into: below the header, above the footer, clear of the caption band when captions run. */
+  function contentBox(W, H, S) {
+    const c = chromeOf(W, H, S);
+    const top = c.hasHead ? c.headY + c.headH + 34 * c.U : c.sf.top * H + 40 * c.U;
+    let bottom = (c.showFoot ? c.footY - 22 * c.U : c.barY - 26 * c.U);
+    if (S.captions && S.captions.source === 'auto' && S.captions.cues && S.captions.cues.length) bottom = Math.min(bottom, 0.69 * H);
+    return { x: c.mx, y: top, w: W - 2 * c.mx, h: bottom - top, U: c.U };
+  }
+  function drawHeader(ctx, W, H, L, S, at) {
+    const c = chromeOf(W, H, S);
+    if (!c.hasHead) return;
+    const U = c.U, y = c.headY, s = c.headH * 0.92, cy = y + c.headH / 2;
+    let x = c.mx;
+    const logo = S.brand.logo;
+    ctx.save();
+    if (logo) {
+      if (L.light && L.palette !== 'block') { /* the logo is drawn for dark grounds */ }
+      ctx.drawImage(logo, x, cy - s / 2, s, s);
+      x += s + 16 * U;
+    }
+    const label = c.promo ? '1234Tools' : String(S.brand.handle || '').trim();
+    let right = W - c.mx;
+    if (c.promo && at && at.n > 1) {
+      /* "3/7" in the chip gradient, like the kits' counter */
+      const txt = (at.i + 1) + '/' + at.n;
+      ctx.font = fontCss(800, 26 * U, HEAD);
+      const tw = ctx.measureText(txt).width + 36 * U, th = 46 * U;
+      const g = ctx.createLinearGradient(right - tw, 0, right, 0);
+      g.addColorStop(0, L.chip[0]); g.addColorStop(0.5, L.chip[1]); g.addColorStop(1, L.chip[2]);
+      ctx.fillStyle = g; roundRect(ctx, right - tw, cy - th / 2, tw, th, th / 2); ctx.fill();
+      ctx.fillStyle = L.chipInk; ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.fillText(txt, right - tw / 2, cy + 1 * U); ctx.textAlign = 'left';
+      right -= tw + 12 * U;
+      const sec = S.promote.section || '';
+      if (sec && sec.length < 26) {
+        const fl = fitLine(sec, 26 * U, 600, BODY, right - x - 220 * U, 18 * U);
+        const pw = fl.w + 40 * U;
+        ctx.fillStyle = L.light ? 'rgba(255,255,255,.62)' : hexA(L.ink, 0.06); roundRect(ctx, right - pw, cy - th / 2, pw, th, th / 2); ctx.fill();
+        ctx.strokeStyle = hexA(L.ink, 0.16); ctx.lineWidth = 1.5 * U; ctx.stroke();
+        drawLine(ctx, fl, right - pw / 2, cy + 1 * U, L.ink, 'center');
+        right -= pw + 12 * U;
+      }
+    }
+    if (label) {
+      const fl = fitLine(label, (c.promo ? 34 : 30) * U, c.promo ? 800 : 600, HEAD, Math.max(40 * U, right - x - 10 * U), 18 * U);
+      drawLine(ctx, fl, x, cy + 1 * U, L.ink, 'left');
+    }
+    ctx.restore();
+  }
+  function drawFooter(ctx, W, H, t, D, L, S, at) {
+    const c = chromeOf(W, H, S);
+    const U = c.U;
+    ctx.save();
+    if (c.showFoot && at && at.scene.type !== 'endcard') {
+      const url = c.promo ? '1234tools.com/' + S.promote.path : String(S.brand.url || '').trim();
+      const fl = fitLine(url, 22 * U, 600, BODY, W - 2 * c.mx, 16 * U);
+      drawLine(ctx, fl, c.mx, c.footY, L.muted, 'left');
+    }
+    if (S.brand.progress && at) {
+      /* one segment a scene, filling as it plays (the kits' .prog) */
+      const n = at.n, gap = 10 * U, x0 = c.mx, w = W - 2 * c.mx;
+      const sw = (w - gap * (n - 1)) / n;
+      for (let i = 0; i < n; i++) {
+        const x = x0 + i * (sw + gap);
+        ctx.fillStyle = hexA(L.ink, L.light ? 0.16 : 0.18); roundRect(ctx, x, c.barY, sw, c.barH, c.barH / 2); ctx.fill();
+        const f = i < at.i ? 1 : i > at.i ? 0 : clamp(at.local / Math.max(0.1, at.scene.seconds), 0, 1);
+        if (f > 0) {
+          const g = ctx.createLinearGradient(x, 0, x + sw, 0);
+          g.addColorStop(0, L.chip[0]); g.addColorStop(0.5, L.chip[1]); g.addColorStop(1, L.chip[2]);
+          ctx.fillStyle = g; roundRect(ctx, x, c.barY, Math.max(c.barH, sw * f), c.barH, c.barH / 2); ctx.fill();
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* beats: each is a stack of items fitted into the content box        */
+  /* ------------------------------------------------------------------ */
+  const famOf = (L, head) => (L.type === 'serif' && head ? SERIF : head ? HEAD : BODY);
+  const motionOf = (sc, L) => { const a = OLD_ANIM[sc.anim] || sc.anim; return a && a !== 'auto' ? a : L.motion; };
+  /** A headline item: kinetic words in the look's treatment. */
+  function itHead(text, c, o) {
+    const L = c.look, z = c.z;
+    const caps = L.type === 'caps';
+    const lay = fitWords(text, { px: o.px * z, weight: L.type === 'serif' ? 700 : 800, fam: famOf(L, true), upper: caps, lh: caps ? 0.98 : (o.lh || 1.04),
+      track: caps ? -0.02 : -0.025, hl: o.hl, hlItalic: L.type === 'serif' }, c.w - (o.indent || 0), o.maxLines || 6, (o.minPx || 34) * c.U);
+    return { h: lay.h, gap: o.gap === undefined ? 0 : o.gap * z, over: lay.over && 'headline "' + oneLine(text).slice(0, 40) + '"', lay,
+      draw: (g, x, y, w) => drawBlock(g, lay, x + (o.indent || 0), y, w - (o.indent || 0), { align: c.align, at: o.at || 0, motion: c.motion, treat: o.field ? 'plain' : L.type, coral: o.coral, count: o.count, field: o.field, ink: o.ink }) };
+  }
+  /** A paragraph item: body type, words in motion (no treatment). */
+  function itBody(text, c, o) {
+    const L = c.look, z = c.z;
+    const lay = fitWords(text, { px: o.px * z, weight: o.weight || 500, fam: o.fam || BODY, lh: o.lh || 1.3, track: -0.01, hl: o.hl }, c.w - (o.indent || 0), o.maxLines || 6, (o.minPx || 22) * c.U);
+    return { h: lay.h, gap: (o.gap || 0) * z, over: lay.over && 'body "' + oneLine(text).slice(0, 40) + '"', lay,
+      draw: (g, x, y, w) => drawBlock(g, lay, x + (o.indent || 0), y, w - (o.indent || 0), { align: o.align || c.align, at: o.at || 0, motion: o.motion || (c.motion === 'punch' ? 'fade' : c.motion), treat: 'plain', ink: o.ink || L.ink2 }) };
+  }
+  function itEyebrow(text, c, o) {
+    const z = c.z, L = c.look;
+    return { h: 36 * z, gap: (o.gap || 0) * z,
+      draw: (g, x, y, w) => {
+        const p = ease3((g.local - (o.at || 0)) / 0.35);
+        if (p <= 0) return;
+        const ctx = g.ctx;
+        ctx.save(); ctx.globalAlpha = g.alpha * p;
+        const colour = o.colour || L.accentInk;
+        const isz = 32 * z, gap = o.icon ? isz + 14 * z : 0;
+        ctx.font = fontCss(700, 26 * z, BODY);
+        if (HAS_LS) ctx.letterSpacing = (0.16 * 26 * z).toFixed(2) + 'px';
+        const tw = Math.min(w - gap, ctx.measureText(String(text).toUpperCase()).width);
+        if (HAS_LS) ctx.letterSpacing = '0px';
+        const x0 = c.align === 'center' ? x + (w - tw - gap) / 2 : x;
+        const dx = (1 - p) * -24 * z;
+        if (o.icon) icon(ctx, o.icon, x0 + dx + isz / 2, y + 18 * z, isz, colour, 2.4);
+        capsLine(ctx, text, x0 + dx + gap, y + 18 * z, 26 * z, colour, 0.16, 700, w - gap, 'left');
+        ctx.restore();
+      } };
+  }
+  /** A pill (badge, sticker): text in chipInk on the chip gradient, tilted. */
+  function itSticker(text, c, o) {
+    const z = c.z, L = c.look;
+    const fl = fitLine(text, 30 * z, 700, BODY, c.w - 120 * z, 18 * c.U);
+    const pw = fl.w + 64 * z + 34 * z, ph = 66 * z;
+    return { h: ph + 10 * z, gap: (o.gap || 0) * z,
+      draw: (g, x, y, w) => {
+        const local = g.local - (o.at || 0);
+        if (local < 0) return;
+        const p = backOut(clamp(local / 0.4, 0, 1), 2.4);
+        const ctx = g.ctx;
+        const right = o.align === 'left' ? x + pw : c.align === 'center' ? x + (w + pw) / 2 : x + w - 8 * z;
+        const cx = right - pw / 2, cy = y + ph / 2 + 4 * z;
+        ctx.save(); ctx.globalAlpha = g.alpha * clamp(local / 0.2, 0, 1);
+        ctx.translate(cx, cy); ctx.rotate((-2 - 6 * (1 - p)) * Math.PI / 180); ctx.scale(0.6 + 0.4 * p, 0.6 + 0.4 * p);
+        ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 24 * z; ctx.shadowOffsetY = 10 * z;
+        const gr = ctx.createLinearGradient(-pw / 2, 0, pw / 2, 0);
+        gr.addColorStop(0, L.chip[0]); gr.addColorStop(0.42, L.chip[1]); gr.addColorStop(0.92, L.chip[2]);
+        ctx.fillStyle = gr; roundRect(ctx, -pw / 2, -ph / 2, pw, ph, 18 * z); ctx.fill();
+        ctx.shadowColor = 'transparent';
+        icon(ctx, o.icon || 'check', -pw / 2 + 36 * z, 0, 30 * z, L.chipInk, 2.8);
+        drawLine(ctx, fl, -pw / 2 + 64 * z, 1 * z, L.chipInk, 'left');
+        ctx.restore();
+      } };
+  }
+  const panelOf = (L) => (L.light ? 'rgba(255,255,255,.62)' : hexA(L.ink, 0.045));
+  const lineOf = (L) => hexA(L.ink, L.light ? 0.17 : 0.16);
+  function chipGrad(ctx, x0, y0, x1, y1, L) {
+    const g = ctx.createLinearGradient(x0, y0, x1, y1);
+    g.addColorStop(0, L.chip[0]); g.addColorStop(0.42, L.chip[1]); g.addColorStop(0.92, L.chip[2]);
+    return g;
+  }
+  function cardShadow(ctx, L, z) { ctx.shadowColor = L.light ? 'rgba(60,40,8,.26)' : 'rgba(0,0,0,.6)'; ctx.shadowBlur = 60 * z; ctx.shadowOffsetY = 28 * z; }
+
+  const BUILD = {};
+  BUILD.hook = (sc, c) => {
+    const L = c.look;
+    const items = [];
+    if (sc.eyebrow) items.push(itEyebrow(sc.eyebrow, c, { icon: 'person', at: 0 }));
+    const hl = rangeOfWords(sc.text, sc.emphasis) || hlRange(sc.text);
+    const lay0 = layWords(sc.text, { px: 10, weight: 800, fam: HEAD, maxW: 1e9, hl });
+    const numWord = hl && /\d/.test(String(sc.text).slice(hl[0], hl[1])) ? (lay0.lines.flatMap((l) => l.words).find((w) => w.hl) || {}).i : undefined;
+    const field = L.layout === 'split';
+    const head = itHead(sc.text, c, { px: L.layout === 'poster' ? 150 : 132, hl, at: 0.12, gap: sc.eyebrow ? (L.layout === 'split' ? 64 : 30) : 0, count: numWord, field, ink: field ? L.fieldInk : undefined, maxLines: 7 });
+    if (field) {
+      /* the split layout: the hook on the palette's colour field, wiped in from the left */
+      const inner = head.draw;
+      head.draw = (g, x, y, w) => {
+        const p = ease3((g.local - 0.02) / 0.42);
+        const ctx = g.ctx, pad = 30 * c.z;
+        ctx.save(); ctx.globalAlpha = g.alpha;
+        ctx.fillStyle = L.field;
+        ctx.beginPath();
+        const right = g.W * p;
+        ctx.moveTo(0, y - pad); ctx.lineTo(right, y - pad); ctx.lineTo(right, y + head.h + pad * 0.6); ctx.lineTo(0, y + head.h + pad * 1.6); ctx.closePath(); ctx.fill();
+        ctx.restore();
+        inner(g, x, y, w);
+      };
+      head.h += 10 * c.z;
+    }
+    items.push(head);
+    return items;
+  };
+  BUILD.text = (sc, c) => {
+    const items = [];
+    if (sc.eyebrow) items.push(itEyebrow(sc.eyebrow, c, { icon: 'spark', at: 0 }));
+    const n = String(sc.text || '').length;
+    const px = n <= 24 ? 124 : n <= 48 ? 108 : n <= 90 ? 90 : 74;
+    const hl = sc.emphasis && sc.emphasis.length ? rangeOfWords(sc.text, sc.emphasis) : hlRange(sc.text);
+    items.push(itHead(sc.text, c, { px, hl, at: 0.1, gap: sc.eyebrow ? 30 : 0, maxLines: 9, minPx: 30 }));
+    return items;
+  };
+  BUILD.cta = (sc, c) => {
+    const L = c.look, z = c.z;
+    const items = [itHead(sc.text, Object.assign({}, c, { align: 'center' }), { px: 120, hl: hlRange(sc.text), at: 0.05, maxLines: 5 })];
+    items.push({ h: 120 * z, gap: 40 * z, draw: (g, x, y, w) => {
+      const local = g.local - 0.6;
+      if (local < 0) return;
+      const ctx = g.ctx, r = 54 * z, cx = x + w / 2, cy = y + 60 * z;
+      const p = backOut(clamp(local / 0.4, 0, 1), 2.6), pulse = 1 + 0.06 * Math.sin(local * 5);
+      ctx.save(); ctx.globalAlpha = g.alpha;
+      ctx.fillStyle = hexA(L.accent, 0.16 * clamp(local / 0.4, 0, 1)); ctx.beginPath(); ctx.arc(cx, cy, r * 1.32 * pulse, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = chipGrad(ctx, cx - r, cy - r, cx + r, cy + r, L); ctx.beginPath(); ctx.arc(cx, cy, r * p, 0, Math.PI * 2); ctx.fill();
+      icon(ctx, 'arrow', cx + 4 * z * Math.sin(local * 5), cy, 52 * z * p, L.chipInk, 2.8);
+      ctx.restore();
+    } });
+    const handle = String(c.S.brand.handle || '').trim();
+    if (handle) items.push(itBody(handle, Object.assign({}, c, { align: 'center' }), { px: 36, weight: 600, at: 0.9, gap: 26, maxLines: 1, ink: L.muted, align: 'center' }));
+    return items;
+  };
+  BUILD.pain = (sc, c) => {
+    const L = c.look, z = c.z;
+    const pad = 52 * z;
+    const label = sc.eyebrow || 'Sound familiar?';
+    const body = fitWords(sc.text, { px: 68 * z, weight: 500, fam: BODY, lh: 1.3, track: -0.01 }, c.w - pad * 2, 8, 24 * c.U);
+    const h = pad + 34 * z + 22 * z + body.h + pad;
+    return [{ h: h + 40 * z, over: body.over && 'pain "' + oneLine(sc.text).slice(0, 40) + '"', draw: (g, x, y, w) => {
+      const ctx = g.ctx, local = g.local;
+      const p = ease3(local / 0.45);
+      if (p <= 0) return;
+      const top = y + 40 * z + (1 - p) * 70 * z;
+      ctx.save(); ctx.globalAlpha = g.alpha * p;
+      ctx.save(); cardShadow(ctx, L, z);
+      ctx.fillStyle = L.light ? 'rgba(255,255,255,.72)' : hexA(L.ink, 0.06);
+      ctx.beginPath();
+      const r = 34 * z, rb = 10 * z, bw = w, bh = h;
+      ctx.moveTo(x + r, top); ctx.arcTo(x + bw, top, x + bw, top + bh, r); ctx.arcTo(x + bw, top + bh, x, top + bh, r); ctx.arcTo(x, top + bh, x, top, rb); ctx.arcTo(x, top, x + bw, top, r); ctx.closePath();
+      ctx.fill(); ctx.restore();
+      ctx.strokeStyle = lineOf(L); ctx.lineWidth = 1.5 * z; ctx.stroke();
+      /* the quote mark pops in at the corner */
+      const q = backOut(clamp((local - 0.2) / 0.4, 0, 1), 2.4);
+      if (q > 0) {
+        ctx.save(); ctx.translate(x + bw - 92 * z, top - 4 * z); ctx.scale(q, q);
+        ctx.font = fontCss(800, 190 * z, HEAD); ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+        ctx.fillStyle = chipGrad(ctx, -60 * z, -60 * z, 60 * z, 60 * z, L); ctx.fillText('“', 0, 46 * z);
+        ctx.restore();
+      }
+      capsLine(ctx, label, x + pad, top + pad + 17 * z, 24 * z, L.accentInk, 0.16, 700, bw - pad * 2 - 140 * z, 'left');
+      drawBlock(Object.assign({}, g, { alpha: 1 }), body, x + pad, top + pad + 34 * z + 22 * z, bw - pad * 2, { align: 'left', at: 0.3, motion: c.motion === 'punch' ? 'fade' : c.motion, treat: 'plain', ink: L.ink });
+      ctx.restore();
+    } }];
+  };
+  BUILD.usual = (sc, c) => {
+    const L = c.look, z = c.z;
+    const items = [itEyebrow(sc.eyebrow || 'The usual way', c, { icon: 'x', colour: L.coralInk, at: 0 })];
+    if (sc.heading) items.push(itHead(sc.heading, c, { px: 96, hl: hlRange(sc.heading, sc.hl), coral: true, at: 0.12, gap: 22, maxLines: 4 }));
+    const list = itemsOf(sc).slice(0, 5);
+    const n = Math.max(1, list.length);
+    const t0 = 0.6, step = clamp((sc.seconds * 0.66 - t0) / n, 0.32, 0.6);
+    const offs = [0, 34, 12, 26, 6], rots = [-1.2, 0.9, -0.5, 0.7, -0.8];
+    list.forEach((txt, i) => {
+      const xm = 80 * z, pad = 30 * z, off = offs[i % 5] * z;
+      const tw = c.w - off - pad * 2 - xm - 28 * z;
+      const lay = fitWords(txt, { px: 48 * z, weight: 600, fam: BODY, lh: 1.2, track: -0.015 }, tw, 2, 22 * c.U);
+      const ch = Math.max(xm, lay.h) + pad * 2;
+      items.push({ h: ch, gap: (i ? 26 : 40) * z, over: lay.over && 'usual "' + txt.slice(0, 40) + '"', draw: (g, x, y, w) => {
+        const local = g.local - (t0 + i * step);
+        if (local < 0) return;
+        const ctx = g.ctx, p = ease3(local / 0.38);
+        const cx = x + off, cw = w - off;
+        ctx.save(); ctx.globalAlpha = g.alpha * clamp(local / 0.2, 0, 1);
+        ctx.translate(cx + cw / 2 + (1 - p) * 90 * z, y + ch / 2); ctx.rotate(rots[i % 5] * Math.PI / 180);
+        ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 40 * z; ctx.shadowOffsetY = 20 * z;
+        ctx.fillStyle = L.light ? 'rgba(255,107,107,.10)' : 'rgba(255,107,107,.075)'; roundRect(ctx, -cw / 2, -ch / 2, cw, ch, 28 * z); ctx.fill(); ctx.restore();
+        ctx.strokeStyle = L.light ? 'rgba(229,72,77,.38)' : 'rgba(255,107,107,.34)'; ctx.lineWidth = 1.5 * z; roundRect(ctx, -cw / 2, -ch / 2, cw, ch, 28 * z); ctx.stroke();
+        const mx = -cw / 2 + pad + xm / 2;
+        const q = backOut(clamp((local - 0.08) / 0.34, 0, 1), 2.6);
+        ctx.fillStyle = 'rgba(255,107,107,.16)'; ctx.beginPath(); ctx.arc(mx, 0, (xm / 2 + 9 * z) * q, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = CORAL; ctx.beginPath(); ctx.arc(mx, 0, (xm / 2) * q, 0, Math.PI * 2); ctx.fill();
+        icon(ctx, 'x', mx, 0, 44 * z * q, '#fff4f4', 3.2);
+        const tx = -cw / 2 + pad + xm + 28 * z, ty = -lay.h / 2;
+        const strike = ease3((local - 0.42) / 0.36);
+        drawBlock(Object.assign({}, g, { local: 1, alpha: 1 - 0.25 * strike }), lay, tx, ty, tw, { align: 'left', motion: 'none', treat: 'plain', ink: L.ink });
+        if (strike > 0) {
+          ctx.strokeStyle = 'rgba(255,107,107,.78)'; ctx.lineWidth = Math.max(2, 4 * z); ctx.lineCap = 'round';
+          lay.lines.forEach((ln, li) => {
+            const yy = ty + li * lay.lh + lay.lh * 0.54;
+            const seg = clamp(strike * lay.lines.length - li, 0, 1);
+            if (seg <= 0) return;
+            ctx.beginPath(); ctx.moveTo(tx - 4 * z, yy); ctx.lineTo(tx - 4 * z + (ln.w + 8 * z) * seg, yy); ctx.stroke();
+          });
+        }
+        ctx.restore();
+      } });
+    });
+    if (sc.foot) {
+      const fl = fitLine(sc.foot, 36 * z, 700, HEAD, c.w - 60 * z, 20 * c.U);
+      const at = Math.min(sc.seconds - 0.7, t0 + n * step + 0.2);
+      items.push({ h: 48 * z, gap: 40 * z, draw: (g, x, y, w) => {
+        const local = g.local - at;
+        if (local < 0) return;
+        const p = ease3(local / 0.35), ctx = g.ctx;
+        ctx.save(); ctx.globalAlpha = g.alpha * p;
+        const x0 = c.align === 'center' ? x + (w - fl.w - 56 * z) / 2 : x;
+        drawLine(ctx, fl, x0, y + 24 * z, L.accentInk, 'left');
+        icon(ctx, 'arrow', x0 + fl.w + 30 * z + 10 * z * Math.sin(local * 6), y + 24 * z, 40 * z, L.accentInk, 2.6);
+        ctx.restore();
+      } });
+    }
+    items.deco = (g) => {
+      /* the kits' faint ✗ watermark */
+      const ctx = g.ctx;
+      ctx.save(); ctx.globalAlpha = g.alpha * 0.07 * ease3(g.local / 0.6);
+      ctx.translate(g.W * 0.8, g.H * 0.66); ctx.rotate(-8 * Math.PI / 180);
+      icon(ctx, 'x', 0, 0, g.W * 0.5, CORAL, 2.4);
+      ctx.restore();
+    };
+    return items;
+  };
+  function glyphTile(g, L, id, section, cx, cy, size, p, ring) {
+    const ctx = g.ctx;
+    ctx.save();
+    ctx.translate(cx, cy); ctx.rotate((1 - p) * -14 * Math.PI / 180); ctx.scale(p, p);
+    if (ring) { ctx.fillStyle = hexA(L.accent, 0.16); roundRect(ctx, -size / 2 - ring, -size / 2 - ring, size + ring * 2, size + ring * 2, size * 0.3 + ring); ctx.fill(); }
+    ctx.fillStyle = chipGrad(ctx, -size / 2, -size / 2, size / 2, size / 2, L); roundRect(ctx, -size / 2, -size / 2, size, size, size * 0.28); ctx.fill();
+    const gc = id ? glyphCanvas(id, L.chipInk, section ? 'i-' + section : '') : null;
+    if (gc) ctx.drawImage(gc, -size * 0.31, -size * 0.31, size * 0.62, size * 0.62);
+    else icon(ctx, 'spark', 0, 0, size * 0.5, L.chipInk);
+    ctx.restore();
+  }
+  BUILD.fix = (sc, c) => {
+    const L = c.look, z = c.z;
+    const items = [itEyebrow(sc.eyebrow || 'The fix', c, { icon: 'check', at: 0 })];
+    const ts = 170 * z;
+    items.push({ h: ts + 24 * z, gap: 34 * z, draw: (g, x, y, w) => {
+      const local = g.local - 0.12;
+      if (local < 0) return;
+      const p = backOut(clamp(local / 0.45, 0, 1), 2.2);
+      const cx = c.align === 'center' ? x + w / 2 : x + ts / 2 + 12 * z, cy = y + ts / 2 + 12 * z;
+      const ctx = g.ctx;
+      ctx.save(); ctx.globalAlpha = g.alpha;
+      /* a ring that spreads once the tile lands */
+      const rp = clamp((local - 0.3) / 0.7, 0, 1);
+      if (rp > 0 && rp < 1) { ctx.strokeStyle = hexA(L.accent, 0.5 * (1 - rp)); ctx.lineWidth = 6 * z; roundRect(ctx, cx - ts / 2 - rp * 60 * z, cy - ts / 2 - rp * 60 * z, ts + rp * 120 * z, ts + rp * 120 * z, ts * 0.3 + rp * 60 * z); ctx.stroke(); }
+      glyphTile(g, L, sc.glyph, sc.section, cx, cy, ts, p, 12 * z);
+      ctx.restore();
+    } });
+    if (sc.heading) items.push(itHead(sc.heading, c, { px: 100, hl: null, at: 0.32, gap: 30, maxLines: 3 }));
+    if (sc.text) items.push(itBody(sc.text, c, { px: 56, at: 0.6, gap: 24, maxLines: 5 }));
+    if (sc.sub) items.push(itBody(sc.sub, c, { px: 28, at: 1.0, gap: 22, maxLines: 2, ink: L.muted, motion: 'fade' }));
+    return items;
+  };
+  BUILD.steps = (sc, c) => {
+    const L = c.look, z = c.z;
+    const items = [];
+    if (sc.eyebrow) items.push(itEyebrow(sc.eyebrow, c, { icon: 'spark', at: 0 }));
+    if (sc.heading) items.push(itHead(sc.heading, c, { px: 100, hl: hlRange(sc.heading, sc.hl), at: 0.1, gap: sc.eyebrow ? 22 : 0, maxLines: 3 }));
+    const list = itemsOf(sc).slice(0, 5);
+    const n = Math.max(1, list.length);
+    const t0 = 0.5, step = clamp((sc.seconds * 0.7 - t0) / n, 0.3, 0.62);
+    const node = (n > 3 ? 104 : 128) * z, offs = [0, 150, 50, 120, 20];
+    const rows = list.map((txt, i) => {
+      const off = c.align === 'center' ? 0 : offs[i % 5] * z;
+      const tw = c.w - off - node - 34 * z;
+      const lay = fitWords(txt, { px: 52 * z, weight: 700, fam: famOf(L, true), lh: 1.12, track: -0.03 }, tw, 2, 24 * c.U);
+      return { txt, off, tw, lay, h: Math.max(node, lay.h) };
+    });
+    const gapR = 46 * z;
+    const totalH = rows.reduce((a, r) => a + r.h, 0) + gapR * (rows.length - 1) + 24 * z;
+    const over = rows.find((r) => r.lay.over);
+    items.push({ h: totalH, gap: 44 * z, over: over && 'step "' + over.txt.slice(0, 40) + '"', draw: (g, x, y, w) => {
+      const ctx = g.ctx;
+      ctx.save(); ctx.globalAlpha = g.alpha;
+      let yy = y + 12 * z;
+      const centres = rows.map((r) => { const cy = yy + r.h / 2; yy += r.h + gapR; return { x: x + r.off + node / 2, y: cy }; });
+      /* the dotted path draws from node to node */
+      for (let i = 0; i < centres.length - 1; i++) {
+        const a = centres[i], b = centres[i + 1];
+        const pr = ease3((g.local - (t0 + i * step + 0.25)) / Math.max(0.2, step));
+        if (pr <= 0) continue;
+        ctx.save(); ctx.strokeStyle = L.accent; ctx.lineWidth = 5 * z; ctx.setLineDash([2 * z, 14 * z]); ctx.lineCap = 'round';
+        const ax = a.x + (b.x - a.x) * 0.12, ay = a.y + node * 0.55, bx = b.x - (b.x - a.x) * 0.12, by = b.y - node * 0.55;
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + (bx - ax) * pr, ay + (by - ay) * pr); ctx.stroke();
+        ctx.restore();
+      }
+      rows.forEach((r, i) => {
+        const local = g.local - (t0 + i * step);
+        if (local < 0) return;
+        const ce = centres[i];
+        const p = backOut(clamp(local / 0.4, 0, 1), 2.4);
+        ctx.save();
+        ctx.fillStyle = hexA(L.accent, 0.16); ctx.beginPath(); ctx.arc(ce.x, ce.y, (node / 2 + 12 * z) * p, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = chipGrad(ctx, ce.x - node / 2, ce.y - node / 2, ce.x + node / 2, ce.y + node / 2, L); ctx.beginPath(); ctx.arc(ce.x, ce.y, (node / 2) * p, 0, Math.PI * 2); ctx.fill();
+        ctx.font = fontCss(800, node * 0.48 * p, HEAD); ctx.fillStyle = L.chipInk; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(String(i + 1), ce.x, ce.y + node * 0.03);
+        ctx.restore();
+        const tp = ease3((local - 0.12) / 0.4);
+        if (tp > 0) drawBlock(Object.assign({}, g, { local: 9, alpha: tp }), r.lay, x + r.off + node + 34 * z - (1 - tp) * 40 * z, ce.y - r.lay.h / 2, r.tw, { align: 'left', motion: 'none', treat: 'plain', ink: L.ink });
+      });
+      ctx.restore();
+    } });
+    if (sc.foot) {
+      const fl = fitLine(sc.foot, 30 * z, 600, BODY, c.w - 120 * z, 20 * c.U);
+      const at = Math.min(sc.seconds - 0.6, t0 + n * step + 0.1);
+      items.push({ h: 84 * z, gap: 34 * z, draw: (g, x, y, w) => {
+        const p = ease3((g.local - at) / 0.35);
+        if (p <= 0) return;
+        const ctx = g.ctx;
+        ctx.save(); ctx.globalAlpha = g.alpha * p;
+        ctx.fillStyle = panelOf(L); roundRect(ctx, x, y + (1 - p) * 20 * z, w, 84 * z, 22 * z); ctx.fill();
+        ctx.setLineDash([6 * z, 6 * z]); ctx.strokeStyle = lineOf(L); ctx.lineWidth = 1.5 * z; ctx.stroke(); ctx.setLineDash([]);
+        icon(ctx, 'check', x + 50 * z, y + 42 * z, 36 * z, okOf(L), 2.8);
+        drawLine(ctx, fl, x + 86 * z, y + 43 * z, L.ink2, 'left');
+        ctx.restore();
+      } });
+    }
+    return items;
+  };
+  BUILD.point = (sc, c) => {
+    const L = c.look, z = c.z;
+    const items = [];
+    const num = String(sc.heading || '').trim();
+    const ns = 230 * z;
+    items.push({ h: ns + 20 * z, draw: (g, x, y, w) => {
+      const local = g.local;
+      const p = backOut(clamp(local / 0.45, 0, 1), 2.2);
+      if (p <= 0) return;
+      const ctx = g.ctx, cx = c.align === 'center' ? x + w / 2 : x + ns / 2 + 14 * z, cy = y + ns / 2 + 10 * z;
+      ctx.save(); ctx.globalAlpha = g.alpha;
+      ctx.fillStyle = sc.bad ? 'rgba(255,107,107,.16)' : hexA(L.accent, 0.16); ctx.beginPath(); ctx.arc(cx, cy, (ns / 2 + 16 * z) * p, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = sc.bad ? CORAL : chipGrad(ctx, cx - ns / 2, cy - ns / 2, cx + ns / 2, cy + ns / 2, L);
+      ctx.beginPath(); ctx.arc(cx, cy, (ns / 2) * p, 0, Math.PI * 2); ctx.fill();
+      if (num) {
+        const fl = fitLine(num, ns * 0.52 * p, 800, HEAD, ns * 0.72, 10);
+        drawLine(ctx, fl, cx, cy + ns * 0.03, sc.bad ? '#fff4f4' : L.chipInk, 'center');
+      } else icon(ctx, sc.bad ? 'x' : 'check', cx, cy, ns * 0.5 * p, sc.bad ? '#fff4f4' : L.chipInk, 3);
+      if (sc.bad && num) {
+        const bx = cx + ns * 0.36, by = cy - ns * 0.36, br = 34 * z * p;
+        ctx.fillStyle = L.bg[0]; ctx.beginPath(); ctx.arc(bx, by, br + 6 * z, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = CORAL; ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2); ctx.fill();
+        icon(ctx, 'x', bx, by, br * 1.1, '#fff4f4', 3.4);
+      }
+      ctx.restore();
+    } });
+    items.push(itHead(sc.text, c, { px: 92, hl: hlRange(sc.text), coral: !!sc.bad, at: 0.3, gap: 40, maxLines: 6 }));
+    return items;
+  };
+  BUILD.versus = (sc, c) => {
+    const L = c.look, z = c.z;
+    const labels = String(sc.heading || 'Myth | Fact').split(/\s*\|\s*|\s+vs\.?\s+/i);
+    const lines = itemsOf(sc);
+    const badFirst = /myth|wrong|don|before|old|usual/i.test(labels[0] || '');
+    const strike = /myth|wrong|don/i.test(labels[0] || '');
+    const items = [];
+    const pad = 40 * z;
+    const mk = (i) => {
+      const txt = lines[i] || '';
+      const first = i === 0;
+      const lay = first
+        ? fitWords(txt, { px: 60 * z, weight: 600, fam: BODY, lh: 1.25, track: -0.01 }, c.w - pad * 2, 5, 24 * c.U)
+        : fitWords(txt, { px: 78 * z, weight: L.type === 'serif' ? 700 : 800, fam: famOf(L, true), lh: 1.1, track: -0.02, hl: hlRange(txt), hlItalic: L.type === 'serif' }, c.w - pad * 2, 5, 26 * c.U);
+      const h = pad + 44 * z + 20 * z + lay.h + pad;
+      const at = first ? 0.1 : clamp(sc.seconds * 0.42, 0.9, 2.2);
+      return { h, gap: first ? 0 : 34 * z, over: lay.over && 'versus "' + txt.slice(0, 40) + '"', draw: (g, x, y, w) => {
+        const local = g.local - at;
+        if (local < 0) return;
+        const ctx = g.ctx, p = ease3(local / 0.4);
+        ctx.save(); ctx.globalAlpha = g.alpha * p;
+        const top = y + (1 - p) * 50 * z;
+        const bad = first && badFirst;
+        ctx.save(); cardShadow(ctx, L, z * 0.6);
+        ctx.fillStyle = bad ? (L.light ? 'rgba(255,107,107,.10)' : 'rgba(255,107,107,.075)') : (first ? panelOf(L) : (L.light ? 'rgba(255,255,255,.8)' : hexA(L.accent, 0.08)));
+        roundRect(ctx, x, top, w, h, 30 * z); ctx.fill(); ctx.restore();
+        ctx.strokeStyle = bad ? 'rgba(255,107,107,.38)' : first ? lineOf(L) : hexA(L.accent, 0.55); ctx.lineWidth = 2 * z; roundRect(ctx, x, top, w, h, 30 * z); ctx.stroke();
+        const ic = 44 * z, icx = x + pad + ic / 2, icy = top + pad + 22 * z;
+        ctx.fillStyle = bad ? CORAL : first ? hexA(L.ink, 0.3) : okOf(L);
+        ctx.beginPath(); ctx.arc(icx, icy, ic / 2, 0, Math.PI * 2); ctx.fill();
+        icon(ctx, bad ? 'x' : first ? 'arrow' : 'check', icx, icy, ic * 0.6, bad || !first ? '#fefefe' : L.ink, 3);
+        capsLine(ctx, labels[i] || (first ? 'Myth' : 'Fact'), icx + ic / 2 + 16 * z, icy, 26 * z, bad ? L.coralInk : first ? L.muted : L.accentInk, 0.16, 800, w - pad * 2 - ic - 16 * z, 'left');
+        const tx = x + pad, ty = top + pad + 44 * z + 20 * z;
+        const sp = first && strike ? ease3((local - 0.6) / 0.4) : 0;
+        drawBlock(Object.assign({}, g, { local: first ? 9 : local, alpha: 1 - 0.3 * sp }), lay, tx, ty, w - pad * 2, { align: 'left', motion: first ? 'none' : c.motion, treat: first ? 'plain' : L.type, ink: first ? L.ink2 : L.ink });
+        if (sp > 0) {
+          ctx.strokeStyle = 'rgba(255,107,107,.8)'; ctx.lineWidth = Math.max(2, 4 * z); ctx.lineCap = 'round';
+          lay.lines.forEach((ln, li) => { const seg = clamp(sp * lay.lines.length - li, 0, 1); if (seg <= 0) return; const yy = ty + li * lay.lh + lay.lh * 0.54; ctx.beginPath(); ctx.moveTo(tx, yy); ctx.lineTo(tx + ln.w * seg, yy); ctx.stroke(); });
+        }
+        ctx.restore();
+      } };
+    };
+    items.push(mk(0), mk(1));
+    return items;
+  };
+  BUILD.quote = (sc, c) => {
+    const L = c.look, z = c.z;
+    const items = [{ h: 150 * z, draw: (g, x, y, w) => {
+      const p = backOut(clamp(g.local / 0.45, 0, 1), 2.4);
+      if (p <= 0) return;
+      const ctx = g.ctx;
+      ctx.save(); ctx.globalAlpha = g.alpha;
+      const cx = c.align === 'center' ? x + w / 2 : x + 70 * z;
+      ctx.translate(cx, y + 110 * z); ctx.scale(p, p);
+      ctx.font = fontCss(800, 300 * z, L.type === 'serif' ? SERIF : HEAD); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = chipGrad(ctx, -80 * z, -80 * z, 80 * z, 80 * z, L); ctx.fillText('“', 0, 0);
+      ctx.restore();
+    } }];
+    const lay = fitWords(sc.text, { px: 64 * z, weight: L.type === 'serif' ? 700 : 700, fam: L.type === 'serif' ? SERIF : HEAD, italic: L.type === 'serif', lh: 1.18, track: -0.02 }, c.w, 8, 26 * c.U);
+    items.push({ h: lay.h, gap: 20 * z, over: lay.over && 'quote', draw: (g, x, y, w) => drawBlock(g, lay, x, y, w, { align: c.align, at: 0.2, motion: c.motion === 'punch' ? 'fade' : c.motion, treat: 'plain', ink: L.ink }) });
+    if (sc.heading) items.push(itBody('— ' + sc.heading, c, { px: 34, weight: 600, at: 0.9, gap: 34, maxLines: 2, ink: L.muted, motion: 'fade' }));
+    return items;
+  };
+
+  /* ---- the example: the kits' hero frames, in motion ---- */
+  const tear = (ctx, x, y, w, z, bg) => {
+    ctx.save(); ctx.fillStyle = bg;
+    ctx.beginPath(); ctx.arc(x, y, 14 * z, 0, Math.PI * 2); ctx.arc(x + w, y, 14 * z, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  };
+  function heroCalc(ex, c, sc) {
+    const L = c.look, z = c.z;
+    const w = Math.min(c.w, 920 * z), pad = 34 * z, rowH = 50 * z;
+    const inputs = ex.inputs.slice(0, 3);
+    const prim = ex.results.find((r) => r.primary) || ex.results[0];
+    const others = ex.results.filter((r) => r !== prim).slice(0, 3);
+    const inner = w - pad * 2;
+    const pv = fitLine(prim.value, 112 * z, 800, HEAD, inner, 30 * c.U);
+    const plabH = 30 * z, headH = 70 * z;
+    const H = pad + headH + inputs.length * rowH + 40 * z + plabH + pv.px * 1.08 + 12 * z + others.length * rowH + pad;
+    const rowFit = (r) => {
+      const lf = fitLine(r.label, 27 * z, 500, BODY, inner * 0.46, 18 * c.U);
+      const vf = fitLine(r.value, 27 * z, 700, BODY, inner - lf.w - 24 * z, 16 * c.U);
+      return { lf, vf };
+    };
+    const inRows = inputs.map(rowFit), outRows = others.map(rowFit);
+    const title = fitLine(sc.title || '', 30 * z, 700, HEAD, inner - 60 * z - 200 * z, 18 * c.U);
+    return { h: H + 30 * z, w, draw: (g, x0, y, wAll) => {
+      const local = g.local - 0.3;
+      if (local < 0) return;
+      const ctx = g.ctx, x = x0 + (wAll - w) / 2;
+      const p = ease3(local / 0.45);
+      const top = y + (1 - p) * 90 * z;
+      ctx.save(); ctx.globalAlpha = g.alpha * p;
+      /* the ticket: rounded top, torn bottom */
+      ctx.save(); cardShadow(ctx, L, z);
+      ctx.fillStyle = L.card;
+      ctx.beginPath();
+      const r = 24 * z, bottom = top + H, tooth = 16 * z;
+      ctx.moveTo(x, bottom); ctx.lineTo(x, top + r); ctx.arcTo(x, top, x + r, top, r); ctx.lineTo(x + w - r, top); ctx.arcTo(x + w, top, x + w, top + r, r); ctx.lineTo(x + w, bottom);
+      const nT = Math.max(6, Math.round(w / (tooth * 2)));
+      for (let k = nT; k > 0; k--) { const xa = x + (k - 0.5) * (w / nT); ctx.lineTo(xa, bottom - tooth * 0.7); ctx.lineTo(x + (k - 1) * (w / nT), bottom); }
+      ctx.closePath(); ctx.fill(); ctx.restore();
+      ctx.strokeStyle = hexA(L.cardInk, 0.08); ctx.lineWidth = 1.5 * z; ctx.stroke();
+      let yy = top + pad;
+      /* head: icon tile, title, live dot */
+      const ts = 50 * z;
+      ctx.fillStyle = hexA(L.accent, 0.12); roundRect(ctx, x + pad, yy, ts, ts, 14 * z); ctx.fill();
+      ctx.strokeStyle = hexA(L.accent, 0.4); ctx.lineWidth = 1.5 * z; ctx.stroke();
+      const gc = sc.glyph ? glyphCanvas(sc.glyph, L.accent, 'i-' + (sc.section || '')) : null;
+      if (gc) ctx.drawImage(gc, x + pad + ts * 0.18, yy + ts * 0.18, ts * 0.64, ts * 0.64);
+      drawLine(ctx, title, x + pad + ts + 16 * z, yy + ts / 2, L.cardInk, 'left');
+      const blink = 0.55 + 0.45 * Math.sin(local * 6);
+      const lw = capsLine(ctx, 'Live result', x + w - pad, yy + ts / 2, 20 * z, okOf(L), 0.14, 800, 260 * z, 'right');
+      ctx.fillStyle = hexA(okOf(L), blink); ctx.beginPath(); ctx.arc(x + w - pad - lw - 16 * z, yy + ts / 2, 6 * z, 0, Math.PI * 2); ctx.fill();
+      yy += headH;
+      const row = (rf, i, at) => {
+        const q = ease3((local - at) / 0.3);
+        if (q <= 0) { yy += rowH; return; }
+        ctx.save(); ctx.globalAlpha *= q;
+        drawLine(ctx, rf.lf, x + pad + (1 - q) * 30 * z, yy + rowH / 2, L.cardMuted, 'left');
+        drawLine(ctx, rf.vf, x + w - pad + (1 - q) * 30 * z, yy + rowH / 2, L.cardInk, 'right');
+        ctx.strokeStyle = hexA(L.cardInk, 0.1); ctx.setLineDash([2 * z, 5 * z]); ctx.lineWidth = 1.2 * z;
+        ctx.beginPath(); ctx.moveTo(x + pad, yy + rowH); ctx.lineTo(x + w - pad, yy + rowH); ctx.stroke(); ctx.setLineDash([]);
+        ctx.restore();
+        yy += rowH;
+      };
+      inRows.forEach((rf, i) => row(rf, i, 0.2 + i * 0.09));
+      /* the tear line with its notches */
+      yy += 20 * z;
+      ctx.save(); ctx.strokeStyle = hexA(L.cardInk, 0.22); ctx.setLineDash([8 * z, 8 * z]); ctx.lineWidth = 2 * z;
+      ctx.beginPath(); ctx.moveTo(x + 20 * z, yy); ctx.lineTo(x + w - 20 * z, yy); ctx.stroke(); ctx.restore();
+      tear(ctx, x, yy, w, z, L.bg[0]);
+      yy += 20 * z;
+      capsLine(ctx, prim.label, x + pad, yy + plabH / 2, 19 * z, L.cardMuted, 0.16, 800, inner, 'left');
+      yy += plabH;
+      /* the primary result counts up in the gradient */
+      const cp = ease3((local - 0.55) / 1.1);
+      if (local > 0.5) {
+        const shown = countText(prim.value, cp);
+        ctx.save();
+        ctx.font = pv.font; ctx.textBaseline = 'middle';
+        const gy = yy + pv.px * 0.54;
+        const gr = ctx.createLinearGradient(x + pad, gy - pv.px / 2, x + pad + pv.w, gy + pv.px / 2);
+        gr.addColorStop(0, L.grad[0]); gr.addColorStop(0.42, L.grad[1]); gr.addColorStop(0.92, L.grad[2]);
+        ctx.fillStyle = gr;
+        const sc2 = 1 + 0.05 * bump((local - 1.65) / 0.35);
+        ctx.translate(x + pad, gy); ctx.scale(sc2, sc2); ctx.fillText(pv.t === prim.value ? shown : pv.t, 0, 0);
+        ctx.restore();
+      }
+      if (pv.px < MIN_PX) MIN_PX = pv.px;
+      yy += pv.px * 1.08 + 12 * z;
+      outRows.forEach((rf, i) => row(rf, i, 1.5 + i * 0.14));
+      ctx.restore();
+    } };
+  }
+  function looksLikeCode(s) {
+    const t = String(s || '').trim();
+    return /^[[{<]/.test(t) || /[;{}]\s*$/m.test(t) || /^\s*(const|let|var|function|def|SELECT|import)\b/m.test(t) || /=>|\b\w+\(\)/.test(t);
+  }
+  /** Wrap code or prose to `cols` characters, keeping at most `max` lines (the last one says how many more). */
+  function codeLines(src, cols, max) {
+    const out = [];
+    for (const raw of String(src || '').replace(/\r\n?/g, '\n').replace(/\t/g, '  ').split('\n')) {
+      let l = raw;
+      if (!l.length) { out.push(''); continue; }
+      while (l.length > cols) {
+        let cut = l.lastIndexOf(' ', cols);
+        if (cut < cols * 0.5) cut = cols;
+        out.push(l.slice(0, cut)); l = l.slice(cut).replace(/^ /, '');
+      }
+      out.push(l);
+    }
+    while (out.length > 1 && !out[out.length - 1].trim()) out.pop();
+    if (out.length > max) { const more = out.length - (max - 1); return out.slice(0, max - 1).concat(['… ' + more + ' more lines']); }
+    return out;
+  }
+  function drawCodeLine(ctx, line, x, y, L, plain, px) {
+    if (plain || /^… \d+ more lines$/.test(line)) { ctx.fillStyle = /^… /.test(line) ? L.cardMuted : L.cardInk; ctx.fillText(line, x, y); return; }
+    const re = /("(?:[^"\\]|\\.)*"\s*:)|("(?:[^"\\]|\\.)*"?)|(-?\b\d[\d_.]*\b)|(\btrue\b|\bfalse\b|\bnull\b)|([{}[\](),;:=<>+*/.-])|([^"\d{}[\](),;:=<>+*/.-]+)/g;
+    let m, cx = x;
+    while ((m = re.exec(line))) {
+      const t = m[0];
+      ctx.fillStyle = m[1] ? L.accentInk : m[2] ? okOf(L) : m[3] || m[4] ? L.coralInk : m[5] ? L.cardMuted : L.cardInk;
+      ctx.fillText(t, cx, y);
+      cx += ctx.measureText(t).width;
+    }
+  }
+  function heroCode(ex, c, sc) {
+    const L = c.look, z = c.z;
+    const w = c.w, px = 25 * z, lh = px * 1.5;
+    MEASURE.font = fontCss(500, px, MONO); if (HAS_LS) MEASURE.letterSpacing = '0px';
+    const cw = MEASURE.measureText('0').width || px * 0.6;
+    const cols = Math.max(16, Math.floor((w - 110 * z) / cw));
+    const plainIn = !looksLikeCode(ex.input), plainOut = !looksLikeCode(ex.output);
+    const inL = ex.input ? codeLines(ex.input, cols, 5) : [];
+    const outL = codeLines(ex.output, cols, 10);
+    const barH = 62 * z, labH = 40 * z, sepH = 56 * z;
+    const inH = inL.length ? labH + inL.length * lh + 22 * z : 0;
+    const outH = labH + outL.length * lh + 26 * z;
+    const H = barH + inH + (inL.length ? sepH : 0) + outH;
+    const title = fitLine(sc.title || '', 24 * z, 600, BODY, w - 420 * z, 16 * c.U);
+    return { h: H + 20 * z, draw: (g, x, y) => {
+      const local = g.local - 0.3;
+      if (local < 0) return;
+      const ctx = g.ctx, p = ease3(local / 0.45);
+      const top = y + (1 - p) * 80 * z;
+      ctx.save(); ctx.globalAlpha = g.alpha * p;
+      ctx.save(); cardShadow(ctx, L, z); ctx.fillStyle = L.card; roundRect(ctx, x, top, w, H, 26 * z); ctx.fill(); ctx.restore();
+      ctx.strokeStyle = hexA(L.cardInk, 0.09); ctx.lineWidth = 1.5 * z; roundRect(ctx, x, top, w, H, 26 * z); ctx.stroke();
+      ctx.save(); roundRect(ctx, x, top, w, H, 26 * z); ctx.clip();
+      ctx.fillStyle = hexA(L.cardInk, 0.05); ctx.fillRect(x, top, w, barH);
+      ['#ff5f57', '#febc2e', '#28c840'].forEach((col, i) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x + 34 * z + i * 30 * z, top + barH / 2, 9 * z, 0, Math.PI * 2); ctx.fill(); });
+      drawLine(ctx, title, x + 140 * z, top + barH / 2, L.cardMuted, 'left');
+      const lw = capsLine(ctx, 'Live output', x + w - 28 * z, top + barH / 2, 20 * z, okOf(L), 0.14, 800, 260 * z, 'right');
+      ctx.fillStyle = okOf(L); ctx.beginPath(); ctx.arc(x + w - 28 * z - lw - 16 * z, top + barH / 2, 6 * z, 0, Math.PI * 2); ctx.fill();
+      let yy = top + barH;
+      ctx.font = fontCss(500, px, MONO); ctx.textBaseline = 'middle';
+      const pane = (label, lines, plain, at, typing) => {
+        capsLine(ctx, label, x + 30 * z, yy + labH / 2 + 6 * z, 17 * z, L.cardMuted, 0.14, 700, w - 60 * z, 'left');
+        yy += labH;
+        ctx.font = fontCss(500, px, MONO);
+        lines.forEach((ln, i) => {
+          const q = typing ? clamp((local - at - i * 0.09) / 0.12, 0, 1) : ease3((local - at) / 0.3);
+          if (q <= 0) return;
+          ctx.save(); ctx.globalAlpha *= typing ? 1 : q;
+          ctx.fillStyle = hexA(L.cardMuted, 0.8); ctx.textAlign = 'right'; ctx.fillText(String(i + 1), x + 58 * z, yy + i * lh + lh / 2); ctx.textAlign = 'left';
+          const shown = typing ? ln.slice(0, Math.ceil(ln.length * q)) : ln;
+          drawCodeLine(ctx, shown, x + 76 * z, yy + i * lh + lh / 2, L, plain, px);
+          ctx.restore();
+        });
+        if (px < MIN_PX) MIN_PX = px;
+        yy += lines.length * lh + 22 * z;
+      };
+      if (inL.length) {
+        pane(ex.inputLabel || 'Input', inL, plainIn, 0.15, false);
+        ctx.fillStyle = hexA(L.cardInk, 0.06); ctx.fillRect(x, yy, w, sepH);
+        const ap = ease3((local - 0.55) / 0.3);
+        ctx.save(); ctx.globalAlpha *= ap;
+        icon(ctx, 'arrowDown', x + 46 * z, yy + sepH / 2 + (1 - ap) * -10 * z, 28 * z, L.accentInk, 2.6);
+        capsLine(ctx, ex.outputLabel || 'Output', x + 72 * z, yy + sepH / 2, 18 * z, L.accentInk, 0.14, 800, w - 100 * z, 'left');
+        ctx.restore();
+        yy += sepH - 4 * z;
+      }
+      pane(ex.outputLabel || 'Output', outL, plainOut, 0.75, true);
+      ctx.restore();
+      ctx.restore();
+    } };
+  }
+  function drawContain(ctx, img, x, y, w, h) {
+    const s = Math.min(w / img.naturalWidth, h / img.naturalHeight);
+    const dw = img.naturalWidth * s, dh = img.naturalHeight * s;
+    ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+  }
+  function checker(ctx, x, y, w, h, z) {
+    const s = 22 * z;
+    ctx.fillStyle = '#e9e9ee'; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#cfcfd6';
+    for (let yy = 0; yy < h; yy += s) for (let xx = ((yy / s) % 2) * s; xx < w; xx += s * 2) ctx.fillRect(x + xx, y + yy, Math.min(s, w - xx), Math.min(s, h - yy));
+  }
+  /** Where the before/after seam is, 0 (all after) … 1 (all before), at `local` seconds into the hero. */
+  function seamAt(local) {
+    if (local < 0.35) return 1;
+    if (local < 1.6) return 1 - 0.88 * (0.5 - 0.5 * Math.cos(Math.PI * (local - 0.35) / 1.25));
+    if (local < 2.4) return 0.12 + 0.38 * ease3((local - 1.6) / 0.8);
+    return 0.5;
+  }
+  function heroBA(ex, c, sc) {
+    const L = c.look, z = c.z;
+    const b = exImage(ex.before), a = exImage(ex.after);
+    const ar = b && b.ok ? b.img.naturalWidth / b.img.naturalHeight : 4 / 3;
+    let w = c.w, h = w / ar;
+    const maxH = 700 * z;
+    if (h > maxH) { h = maxH; w = h * ar; }
+    return { h: h + 20 * z, draw: (g, x0, y, wAll) => {
+      const local = g.local - 0.25;
+      if (local < 0) return;
+      const ctx = g.ctx, x = x0 + (wAll - w) / 2;
+      const p = ease3(local / 0.4);
+      ctx.save(); ctx.globalAlpha = g.alpha * p;
+      const sc2 = 0.94 + 0.06 * p;
+      ctx.translate(x + w / 2, y + h / 2); ctx.scale(sc2, sc2); ctx.translate(-(x + w / 2), -(y + h / 2));
+      ctx.save(); cardShadow(ctx, L, z); ctx.fillStyle = L.card; roundRect(ctx, x, y, w, h, 28 * z); ctx.fill(); ctx.restore();
+      ctx.save(); roundRect(ctx, x, y, w, h, 28 * z); ctx.clip();
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      if (b && b.ok) drawContain(ctx, b.img, x, y, w, h);
+      const sx = x + w * seamAt(local);
+      sc._ba = { x, y, w, h, sx, local };
+      ctx.save(); ctx.beginPath(); ctx.rect(sx, y, x + w - sx, h); ctx.clip();
+      if (ex.alpha) checker(ctx, x, y, w, h, z); else { ctx.fillStyle = L.card; ctx.fillRect(x, y, w, h); }
+      if (a && a.ok) drawContain(ctx, a.img, x, y, w, h);
+      ctx.restore();
+      /* the seam, its handle, the tags */
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 12 * z;
+      ctx.fillStyle = '#fefefe'; ctx.fillRect(sx - 3 * z, y, 6 * z, h); ctx.restore();
+      ctx.restore();
+      const hr = 46 * z;
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 30 * z; ctx.shadowOffsetY = 10 * z;
+      ctx.fillStyle = 'rgba(254,254,254,.28)'; ctx.beginPath(); ctx.arc(sx, y + h / 2, hr + 10 * z, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fefefe'; ctx.beginPath(); ctx.arc(sx, y + h / 2, hr, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      icon(ctx, 'lr', sx, y + h / 2, hr * 1.1, '#06080f', 2.6);
+      const tag = (txt, tx, align) => {
+        ctx.font = fontCss(700, 24 * z, BODY);
+        const tw = ctx.measureText(txt).width + 32 * z;
+        const bx = align === 'left' ? tx : tx - tw;
+        ctx.fillStyle = 'rgba(6,8,15,.66)'; roundRect(ctx, bx, y + 20 * z, tw, 46 * z, 23 * z); ctx.fill();
+        ctx.fillStyle = '#f4f6fb'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.fillText(txt, bx + tw / 2, y + 43 * z); ctx.textAlign = 'left';
+      };
+      tag('Before', x + 20 * z, 'left'); tag('After', x + w - 20 * z, 'right');
+      ctx.restore();
+    } };
+  }
+  function heroDoc(ex, c, sc) {
+    const L = c.look, z = c.z;
+    const pg = exImage(ex.page);
+    const w = c.w, barH = 64 * z;
+    const ar = pg && pg.ok ? pg.img.naturalWidth / pg.img.naturalHeight : 0.707;
+    const stageH = Math.min(760 * z, (w - 80 * z) / ar + 60 * z);
+    const H = barH + stageH;
+    const name = fitLine(ex.fileName || (sc.title ? slugify(sc.title) + '.pdf' : 'document.pdf'), 24 * z, 600, BODY, w - 360 * z, 16 * c.U);
+    return { h: H + 20 * z, draw: (g, x, y) => {
+      const local = g.local - 0.25;
+      if (local < 0) return;
+      const ctx = g.ctx, p = ease3(local / 0.45);
+      ctx.save(); ctx.globalAlpha = g.alpha * p;
+      ctx.save(); cardShadow(ctx, L, z); ctx.fillStyle = L.light ? '#e9e3d5' : '#161b29'; roundRect(ctx, x, y, w, H, 26 * z); ctx.fill(); ctx.restore();
+      ctx.save(); roundRect(ctx, x, y, w, H, 26 * z); ctx.clip();
+      ctx.fillStyle = L.light ? '#fefefe' : '#10141f'; ctx.fillRect(x, y, w, barH);
+      ctx.fillStyle = '#e5484d'; roundRect(ctx, x + 24 * z, y + barH / 2 - 18 * z, 70 * z, 36 * z, 8 * z); ctx.fill();
+      ctx.font = fontCss(800, 20 * z, BODY); ctx.fillStyle = '#fff5f5'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('PDF', x + 59 * z, y + barH / 2 + 1 * z); ctx.textAlign = 'left';
+      drawLine(ctx, name, x + 110 * z, y + barH / 2, L.light ? '#3c4050' : '#c3c9d9', 'left');
+      drawLine(ctx, fitLine('Page 1', 22 * z, 600, BODY, 120 * z, 14), x + w - 28 * z, y + barH / 2, L.light ? '#5f6375' : '#8f98ad', 'right');
+      if (pg && pg.ok) {
+        const q = ease3((local - 0.2) / 0.6);
+        const kb = 1 + 0.035 * clamp((local - 0.8) / 2.5, 0, 1);
+        const sx = x + 40 * z, sy = y + barH + 30 * z, sw = w - 80 * z, sh = stageH - 60 * z;
+        ctx.save(); ctx.translate(0, (1 - q) * sh * 0.6); ctx.globalAlpha *= q;
+        ctx.translate(sx + sw / 2, sy + sh / 2); ctx.scale(kb, kb); ctx.translate(-(sx + sw / 2), -(sy + sh / 2));
+        const s = Math.min(sw / pg.img.naturalWidth, sh / pg.img.naturalHeight);
+        const dw = pg.img.naturalWidth * s, dh = pg.img.naturalHeight * s;
+        ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 30 * z; ctx.shadowOffsetY = 12 * z;
+        ctx.drawImage(pg.img, sx + (sw - dw) / 2, sy + (sh - dh) / 2, dw, dh);
+        ctx.restore();
+      }
+      ctx.restore();
+      ctx.restore();
+    } };
+  }
+  function heroImage(ex, c) {
+    const L = c.look, z = c.z;
+    const a = exImage(ex.after);
+    const ar = a && a.ok ? a.img.naturalWidth / a.img.naturalHeight : 1;
+    let w = c.w, h = w / ar;
+    if (h > 720 * z) { h = 720 * z; w = h * ar; }
+    return { h: h + 20 * z, draw: (g, x0, y, wAll) => {
+      const local = g.local - 0.25;
+      if (local < 0) return;
+      const ctx = g.ctx, x = x0 + (wAll - w) / 2, p = backOut(clamp(local / 0.5, 0, 1), 1.6);
+      ctx.save(); ctx.globalAlpha = g.alpha * clamp(local / 0.25, 0, 1);
+      ctx.translate(x + w / 2, y + h / 2); ctx.scale(0.85 + 0.15 * p, 0.85 + 0.15 * p); ctx.translate(-(x + w / 2), -(y + h / 2));
+      ctx.save(); cardShadow(ctx, L, z); ctx.fillStyle = L.card; roundRect(ctx, x, y, w, h, 28 * z); ctx.fill(); ctx.restore();
+      ctx.save(); roundRect(ctx, x, y, w, h, 28 * z); ctx.clip();
+      if (a && a.ok) drawContain(ctx, a.img, x, y, w, h);
+      const sp = clamp((local - 0.7) / 0.8, 0, 1);
+      if (sp > 0 && sp < 1) {
+        const sxx = x - w * 0.5 + sp * w * 2;
+        const gr = ctx.createLinearGradient(sxx - 120 * z, y, sxx + 120 * z, y + h * 0.3);
+        gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, 'rgba(255,255,255,.22)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = gr; ctx.fillRect(x, y, w, h);
+      }
+      ctx.restore();
+      ctx.restore();
+    } };
+  }
+  function flowKind(words, side) {
+    const w = String(words || '').toLowerCase();
+    if (side === 'out') {
+      if (/table|csv|excel|spreadsheet|rows|sheet|columns|split|breakdown/.test(w)) return 'table';
+      if (/png|jpe?g|image|photo|picture|qr/.test(w)) return 'photo';
+      if (/pdf|document|letter|report|contract|invoice|plan|cv|résumé|resume/.test(w)) return 'doc';
+      return 'text';
+    }
+    if (/photo|image|picture|selfie|scan|screenshot/.test(w)) return 'photo';
+    if (/pdf|invoice|receipt|document|contract|letter|statement|cv|résumé|resume|form|bill|payslip/.test(w)) return 'doc';
+    if (/csv|excel|spreadsheet|table|data/.test(w)) return 'table';
+    return 'text';
+  }
+  function heroFlow(ex, c, sc) {
+    const L = c.look, z = c.z;
+    const mid = 190 * z, cw = (c.w - mid) / 2, ch = Math.min(340 * z, cw * 1.15);
+    const labIn = fitWords(ex.input || 'Your input', { px: 32 * z, weight: 700, fam: HEAD, lh: 1.12, track: -0.02 }, cw, 3, 18 * c.U);
+    const labOut = fitWords(ex.output || 'The result', { px: 32 * z, weight: 700, fam: HEAD, lh: 1.12, track: -0.02 }, cw, 3, 18 * c.U);
+    const labH = 34 * z + Math.max(labIn.h, labOut.h);
+    const sIn = ex.sampleIn ? fitWords(String(ex.sampleIn).split(/\s*(?:;|\n|·)\s*/).join('\n'), { px: 22 * z, weight: 500, fam: BODY, lh: 1.3 }, cw - 44 * z, 8, 14 * c.U, ch - 80 * z) : null;
+    const sOut = ex.sampleOut ? fitWords(String(ex.sampleOut).split(/\s*(?:;|\n|·)\s*/).join('\n'), { px: 22 * z, weight: 500, fam: BODY, lh: 1.3 }, cw - 44 * z, 8, 14 * c.U, ch - 80 * z) : null;
+    const H = ch + 30 * z + labH;
+    const over = (labIn.over || labOut.over) && 'flow labels';
+    return { h: H, over, draw: (g, x, y) => {
+      const ctx = g.ctx;
+      const card = (cx, at, kind, sample, dir) => {
+        const local = g.local - at;
+        if (local < 0) return;
+        const p = ease3(local / 0.45);
+        ctx.save(); ctx.globalAlpha = g.alpha * p;
+        ctx.translate(dir * (1 - p) * 60 * z, 0);
+        ctx.save(); cardShadow(ctx, L, z * 0.7);
+        const paper = kind === 'doc' && !L.light;
+        ctx.fillStyle = paper ? '#fdfcf8' : L.card; roundRect(ctx, cx, y, cw, ch, 24 * z); ctx.fill(); ctx.restore();
+        ctx.strokeStyle = hexA(L.cardInk, 0.1); ctx.lineWidth = 1.5 * z; roundRect(ctx, cx, y, cw, ch, 24 * z); ctx.stroke();
+        if (sample) {
+          drawBlock(Object.assign({}, g, { local: 9, alpha: 1 }), sample, cx + 22 * z, y + 26 * z, cw - 44 * z, { align: 'left', motion: 'none', treat: 'plain', ink: paper ? '#1c1a17' : L.cardInk });
+          ctx.fillStyle = paper ? '#665f55' : L.cardMuted;
+          capsLine(ctx, 'Illustration', cx + cw - 18 * z, y + ch - 24 * z, 15 * z, paper ? '#665f55' : L.cardMuted, 0.14, 700, cw - 30 * z, 'right');
+        } else if (kind === 'doc') {
+          const ink = paper ? 'rgba(28,26,23,.16)' : hexA(L.cardInk, 0.14);
+          ctx.fillStyle = paper ? '#1c1a17' : L.cardInk; ctx.font = fontCss(800, 22 * z, HEAD); ctx.textBaseline = 'middle'; ctx.fillText('Document', cx + 26 * z, y + 40 * z);
+          [0.86, 0.64, 0.92, 0.48, 0.78, 0.58].forEach((f, i) => { const q = clamp((local - 0.2 - i * 0.05) / 0.2, 0, 1); ctx.fillStyle = ink; roundRect(ctx, cx + 26 * z, y + 78 * z + i * 38 * z, (cw - 52 * z) * f * q, 16 * z, 8 * z); ctx.fill(); });
+        } else if (kind === 'table') {
+          for (let r = 0; r < 5; r++) for (let k = 0; k < 2; k++) {
+            const q = clamp((local - 0.2 - (r * 2 + k) * 0.04) / 0.2, 0, 1);
+            ctx.fillStyle = r === 0 ? hexA(L.accent, 0.35) : hexA(L.cardInk, 0.13);
+            roundRect(ctx, cx + 22 * z + k * (cw - 44 * z) / 2, y + 30 * z + r * 54 * z, ((cw - 60 * z) / 2) * q, 34 * z, 8 * z); ctx.fill();
+          }
+        } else icon(ctx, kind === 'photo' ? 'photo' : 'text', cx + cw / 2, y + ch / 2, Math.min(cw, ch) * 0.42, L.cardMuted, 1.6);
+        ctx.restore();
+      };
+      const local = g.local;
+      ctx.save(); ctx.globalAlpha = g.alpha;
+      /* the wire: dashes flowing from input to output */
+      const wy = y + ch / 2;
+      const wp = ease3((local - 0.4) / 0.5);
+      if (wp > 0) {
+        ctx.save(); ctx.strokeStyle = L.accent; ctx.lineWidth = 6 * z; ctx.lineCap = 'round'; ctx.setLineDash([3 * z, 18 * z]); ctx.lineDashOffset = -local * 60 * z;
+        ctx.beginPath(); ctx.moveTo(x + cw + 6 * z, wy); ctx.lineTo(x + cw + 6 * z + (mid - 12 * z) * wp, wy); ctx.stroke(); ctx.restore();
+      }
+      ctx.restore();
+      card(x, 0.2, flowKind(ex.input, 'in'), sIn, -1);
+      card(x + cw + mid, 0.75, flowKind(ex.output, 'out'), sOut, 1);
+      const ep = backOut(clamp((local - 0.5) / 0.45, 0, 1), 2.2);
+      if (ep > 0) {
+        ctx.save(); ctx.globalAlpha = g.alpha;
+        glyphTile(g, L, sc.glyph, sc.section, x + cw + mid / 2, wy, 136 * z, ep, 14 * z);
+        if (sc.ai) {
+          ctx.font = fontCss(800, 22 * z, HEAD);
+          const tw = ctx.measureText('AI').width + 22 * z;
+          ctx.fillStyle = L.card; roundRect(ctx, x + cw + mid / 2 + 30 * z, wy - 86 * z, tw, 36 * z, 18 * z); ctx.fill();
+          ctx.strokeStyle = hexA(L.accent, 0.6); ctx.lineWidth = 2 * z; ctx.stroke();
+          ctx.fillStyle = L.cardInk; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('AI', x + cw + mid / 2 + 30 * z + tw / 2, wy - 67 * z); ctx.textAlign = 'left';
+        }
+        ctx.restore();
+      }
+      const lab = (lx, small, lay, at) => {
+        const q = ease3((local - at) / 0.35);
+        if (q <= 0) return;
+        ctx.save(); ctx.globalAlpha = g.alpha * q;
+        capsLine(ctx, small, lx, y + ch + 30 * z + 12 * z, 18 * z, L.muted, 0.14, 700, cw, 'left');
+        drawBlock(Object.assign({}, g, { local: 9, alpha: 1 }), lay, lx, y + ch + 30 * z + 30 * z, cw, { align: 'left', motion: 'none', treat: 'plain', ink: L.ink });
+        ctx.restore();
+      };
+      lab(x, 'You give it', labIn, 0.45);
+      lab(x + cw + mid, 'You get', labOut, 1.0);
+    } };
+  }
+  BUILD.example = (sc, c) => {
+    const L = c.look, z = c.z;
+    const ex = sc.ex;
+    const items = [];
+    if (!ex) return BUILD.text(Object.assign({}, sc, { type: 'text' }), c);
+    const real = ex.kind !== 'flow';
+    const illus = !real && (ex.sampleIn || ex.sampleOut);
+    items.push(itSticker(real ? 'Real result from the tool' : illus ? 'How it works · illustration' : 'How it works', c, { icon: real ? 'check' : 'spark', at: 0.05 }));
+    const heroC = c;
+    const hero = ex.kind === 'calc' ? heroCalc(ex, heroC, sc) : ex.kind === 'text' ? heroCode(ex, heroC, sc) : ex.kind === 'beforeAfter' ? heroBA(ex, heroC, sc)
+      : ex.kind === 'document' ? heroDoc(ex, heroC, sc) : ex.kind === 'image' ? heroImage(ex, heroC, sc) : heroFlow(ex, heroC, sc);
+    hero.gap = 26 * z;
+    items.push(hero);
+    const lines = itemsOf(sc);
+    const cap = real ? (ex.caption || '') : '';
+    const foot = lines.slice(1).join(' ');
+    if (cap) items.push(itBody(cap, c, { px: 28, at: 1.0, gap: 26, maxLines: 2, ink: L.muted, motion: 'fade', align: c.align === 'center' ? 'center' : 'left' }));
+    if (foot) items.push(itBody(foot, c, { px: 28, at: 1.2, gap: 20, maxLines: 2, ink: L.muted, motion: 'fade' }));
+    return items;
+  };
+
+  /* ---- the end card: the call to action, the QR, the proof pills ---- */
+  BUILD.endcard = (sc, c) => {
+    const L = c.look, z = c.z, S = c.S;
+    const cc = Object.assign({}, c, { align: 'center' });
+    const promo = !!S.promote;
+    const items = [];
+    const head = promo ? (sc.cta || 'Try it free') : (String(sc.title || '').trim() || String(S.brand.handle || '').trim());
+    if (head) items.push(itHead(head, cc, { px: 124, hl: hlRange(head), at: 0.05, maxLines: 3 }));
+    if (promo && sc.title) items.push(itBody(sc.title, cc, { px: 36, weight: 600, at: 0.25, gap: 14, maxLines: 2, align: 'center', motion: 'fade' }));
+    const qrUrl = qrPayload(S);
+    const qe = qrUrl ? qrEntry(qrUrl) : null;
+    if (qe) {
+      const size = 360 * z, pad = size * 0.06, lab = 52 * z;
+      items.push({ h: size + pad * 2 + lab + 30 * z, gap: 40 * z, draw: (g, x, y, w) => {
+        const local = g.local - 0.35;
+        if (local < 0) return;
+        const ctx = g.ctx, p = backOut(clamp(local / 0.5, 0, 1), 1.8);
+        const cx = x + w / 2, top = y + 12 * z;
+        const tw = size + pad * 2, th = size + pad * 2 + lab;
+        ctx.save(); ctx.globalAlpha = g.alpha * clamp(local / 0.25, 0, 1);
+        ctx.translate(cx, top + th / 2); ctx.scale(0.7 + 0.3 * p, 0.7 + 0.3 * p); ctx.rotate((1 - clamp(local / 0.5, 0, 1)) * -6 * Math.PI / 180); ctx.translate(-cx, -(top + th / 2));
+        ctx.fillStyle = hexA(L.accent, 0.16); roundRect(ctx, cx - tw / 2 - 12 * z, top - 12 * z, tw + 24 * z, th + 24 * z, 40 * z); ctx.fill();
+        ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 50 * z; ctx.shadowOffsetY = 20 * z;
+        ctx.fillStyle = '#ffffff'; roundRect(ctx, cx - tw / 2, top, tw, th, 30 * z); ctx.fill(); ctx.restore();
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(qe.canvas, cx - size / 2, top + pad, size, size);
+        ctx.imageSmoothingEnabled = true;
+        capsLine(ctx, promo ? 'Scan to open' : 'Scan me', cx, top + pad + size + lab / 2, 22 * z, '#3f4456', 0.14, 700, size, 'center');
+        ctx.restore();
+      } });
+    }
+    const url = String(S.brand.url || '').trim();
+    const freeLine = promo ? (sc.text || 'Free at 1234tools.com') : url;
+    if (freeLine) {
+      const fl = fitLine(freeLine, 46 * z, 800, HEAD, c.w, 22 * c.U);
+      items.push({ h: 60 * z, gap: qe ? 34 * z : 40 * z, draw: (g, x, y, w) => {
+        const p = ease3((g.local - 0.6) / 0.35);
+        if (p <= 0) return;
+        const ctx = g.ctx;
+        ctx.save(); ctx.globalAlpha = g.alpha * p;
+        ctx.font = fl.font; if (HAS_LS) ctx.letterSpacing = '0px';
+        const host = fl.t.indexOf('1234tools.com');
+        const x0 = x + (w - fl.w) / 2, yy = y + 30 * z + (1 - p) * 16 * z;
+        ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+        if (promo && host >= 0) {
+          const a = fl.t.slice(0, host), b = '1234tools.com', rest = fl.t.slice(host + b.length);
+          ctx.fillStyle = L.ink; ctx.fillText(a, x0, yy);
+          const aw = ctx.measureText(a).width, bw = ctx.measureText(b).width;
+          ctx.fillStyle = L.accentInk; ctx.fillText(b, x0 + aw, yy);
+          ctx.fillStyle = L.ink; ctx.fillText(rest, x0 + aw + bw, yy);
+        } else { ctx.fillStyle = promo ? L.ink : L.accentInk; ctx.fillText(fl.t, x0, yy); }
+        if (fl.px < MIN_PX) MIN_PX = fl.px;
+        ctx.restore();
+      } });
+    }
+    const proof = (sc.proof || []).filter(Boolean).slice(0, 3);
+    if (proof.length) {
+      const px = 32 * z, ph = 66 * z, gp = 12 * z;
+      const pills = proof.map((t) => fitLine(t, px, 600, BODY, c.w - 80 * z, 18 * c.U));
+      /* one row if they fit, else one per row */
+      const rowW = pills.reduce((a, p) => a + p.w + 70 * z, 0) + gp * (pills.length - 1);
+      const rows = rowW <= c.w ? [pills] : pills.map((p) => [p]);
+      const dots = [L.accent, L.ink2, CORAL];
+      items.push({ h: rows.length * ph + (rows.length - 1) * gp, gap: 26 * z, draw: (g, x, y, w) => {
+        const ctx = g.ctx;
+        let k = 0;
+        rows.forEach((row, ri) => {
+          const rw = row.reduce((a, p) => a + p.w + 70 * z, 0) + gp * (row.length - 1);
+          let px0 = x + (w - rw) / 2;
+          row.forEach((p) => {
+            const q = backOut(clamp((g.local - 0.8 - k * 0.12) / 0.35, 0, 1), 2.2);
+            const pw = p.w + 70 * z, yy = y + ri * (ph + gp);
+            if (q > 0) {
+              ctx.save(); ctx.globalAlpha = g.alpha * clamp((g.local - 0.8 - k * 0.12) / 0.15, 0, 1);
+              ctx.translate(px0 + pw / 2, yy + ph / 2); ctx.scale(q, q);
+              ctx.fillStyle = hexA(L.accent, 0.1); roundRect(ctx, -pw / 2, -ph / 2, pw, ph, ph / 2); ctx.fill();
+              ctx.strokeStyle = hexA(L.accent, L.light ? 0.42 : 0.5); ctx.lineWidth = 1.5 * z; ctx.stroke();
+              ctx.fillStyle = dots[k % 3]; ctx.beginPath(); ctx.arc(-pw / 2 + 30 * z, 0, 6 * z, 0, Math.PI * 2); ctx.fill();
+              drawLine(ctx, p, -pw / 2 + 48 * z, 1 * z, L.ink, 'left');
+              ctx.restore();
+            }
+            px0 += pw + gp; k++;
+          });
+        });
+      } });
+    }
+    const handle = String(S.brand.handle || '').trim();
+    const tail = promo ? 'Link in bio' + (handle ? ' · ' + handle : '') : [url ? 'Link in bio' : '', handle && handle !== head ? handle : ''].filter(Boolean).join(' · ');
+    if (tail) {
+      const fl = fitLine(tail, 30 * z, 700, HEAD, c.w, 18 * c.U);
+      items.push({ h: 64 * z, gap: 26 * z, draw: (g, x, y, w) => {
+        const p = ease3((g.local - 1.1) / 0.35);
+        if (p <= 0) return;
+        const ctx = g.ctx;
+        ctx.save(); ctx.globalAlpha = g.alpha * p;
+        const bs = 56 * z, tot = bs + 16 * z + fl.w, x0 = x + (w - tot) / 2;
+        ctx.fillStyle = L.light ? '#fefefe' : hexA(L.ink, 0.075); roundRect(ctx, x0, y + 4 * z, bs, bs, 16 * z); ctx.fill();
+        ctx.strokeStyle = lineOf(L); ctx.lineWidth = 1.5 * z; ctx.stroke();
+        icon(ctx, 'bookmark', x0 + bs / 2, y + 4 * z + bs / 2, 30 * z, L.accentInk, 2.4);
+        drawLine(ctx, fl, x0 + bs + 16 * z, y + 4 * z + bs / 2, L.ink, 'left');
+        ctx.restore();
+      } });
+    }
+    if (!items.length) items.push({ h: 1, draw: () => {} });
+    return items;
+  };
+
+  /** The fitted plan of a wordy scene or end card: items, their places, cached on the scene. */
+  function planOf(scene, W, H, L, S) {
+    setFloor(W, H);
+    const box = contentBox(W, H, S);
+    const key = [W, H, L.key, FONTGEN, box.y | 0, box.h | 0, scene.type, scene.text, scene.heading, scene.eyebrow, scene.hl, scene.foot, scene.sub, scene.anim, scene.seconds,
+      (scene.emphasis || []).join(','), scene.cta, scene.title, (scene.proof || []).join('|'), S.brand.handle, S.brand.url, S.brand.qr, qrPayload(S), S.brand.logo ? 1 : 0,
+      scene.ex ? exImages(scene.ex).map((e) => (e.ok ? 1 : 0)).join('') : ''].join('\u0001');
+    if (scene._plan && scene._plan.key === key) return scene._plan;
+    const U = box.U;
+    const align = L.layout === 'poster' || W > H * 1.3 ? 'center' : 'left';
+    const build = BUILD[scene.type] || BUILD.text;
+    let s = 1, items = [], total = 0;
+    for (let k = 0; k < 30; k++) {
+      const c = { s, U, z: s * U, w: box.w, look: L, S, W, H, align: scene.type === 'endcard' ? 'center' : align, motion: motionOf(scene, L) };
+      items = build(scene, c);
+      total = items.reduce((a, it, i) => a + it.h + (i ? it.gap || 0 : 0), 0);
+      if (total <= box.h + 0.5) break;
+      s *= 0.94;
+    }
+    const overs = [];
+    if (total > box.h + 1) overs.push('stack ' + Math.round(total) + ' px in ' + Math.round(box.h) + ' px');
+    for (const it of items) if (it.over) overs.push(it.over);
+    for (const o of overs) noteOver(scene.type + ' at ' + W + '×' + H + ' (' + L.spec.palette + '/' + L.spec.type + '): ' + o);
+    let y = box.y + (box.h - total) / 2;
+    const placed = items.map((it, i) => { if (i) y += it.gap || 0; const at = { it, y }; y += it.h; return at; });
+    scene._plan = { key, placed, deco: items.deco, box, s, total, overs };
+    return scene._plan;
+  }
+  function drawBeat(ctx, W, H, scene, local, alpha, L, S) {
+    const P = planOf(scene, W, H, L, S);
+    const g = { ctx, W, H, U: P.box.U, local, alpha: clamp(alpha, 0, 1), look: L, S, seconds: scene.seconds };
+    if (g.alpha <= 0.002) return;
+    if (P.deco) P.deco(g);
+    for (const { it, y } of P.placed) it.draw(g, P.box.x, y, P.box.w);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* pictures and clips                                                 */
+  /* ------------------------------------------------------------------ */
   function wrapText(text, px, weight, font, maxW, upper) {
-    MEASURE.font = fontOf(weight, px, font);
+    MEASURE.font = fontOf(weight, px, font); if (HAS_LS) MEASURE.letterSpacing = '0px';
     const meas = (s) => MEASURE.measureText(upper ? s.toUpperCase() : s).width;
     const out = [];
     for (const para of String(text || '').split('\n')) {
@@ -519,112 +2545,13 @@
     for (const l of out) widest = Math.max(widest, meas(l));
     return { lines: out, widest };
   }
-  function autoSize(text) {
-    const n = String(text || '').length;
-    return n <= 24 ? 9 : n <= 48 ? 8 : n <= 90 ? 7 : 6.2;
-  }
-  /** Which glyphs of the laid-out text are emphasised (whole-word, case-insensitive), in the order the core lays glyphs out (no newlines). */
-  function marksFor(text, words) {
-    const chars = Array.from(text);
-    const lower = chars.map((c) => c.toLowerCase());
-    const marks = new Array(chars.length).fill(false);
-    for (const w of words || []) {
-      const ww = Array.from(String(w || '').toLowerCase().trim());
-      if (!ww.length) continue;
-      for (let i = 0; i + ww.length <= lower.length; i++) {
-        let ok = true;
-        for (let j = 0; j < ww.length; j++) { const c = lower[i + j], d = ww[j]; if (c !== d && !(c === '\n' && d === ' ')) { ok = false; break; } }
-        if (!ok || isWordChar(lower[i - 1]) || isWordChar(lower[i + ww.length])) continue;
-        for (let j = 0; j < ww.length; j++) marks[i + j] = true;
-      }
-    }
-    const out = [];
-    chars.forEach((c, i) => { if (c !== '\n') out.push(marks[i]); });
-    return out;
-  }
-  /** Layers for a text scene, wrapped to the safe width and shrunk to the content box. Cached on the scene. */
-  function layoutScene(scene, W, H, look) {
-    const key = W + 'x' + H + '|' + look.id + '|' + look.font + '|' + look.uppercase + '|' + scene.text + '|' + JSON.stringify(scene.lines || null) + '|' + (scene.emphasis || []).join(',');
-    if (scene._lay && scene._lay.key === key) return scene._lay;
-    const sf = safeOf(W, H), U = Math.min(W, H);
-    const top = sf.box[0] * H, bot = sf.box[1] * H, maxW = sf.maxW * W;
-    const specs = scene.lines && scene.lines.length ? scene.lines : [{ text: scene.text, size: autoSize(scene.text), weight: 800, colour: 'text' }];
-    let k = 1, blocks = [], total = 0, gap = 0;
-    for (let it = 0; it < 16; it++) {
-      blocks = specs.map((sp) => {
-        const px = Math.max(8, sp.size / 100 * U * k);
-        const wr = wrapText(sp.text, px, sp.weight, look.font, maxW, look.uppercase);
-        return { sp, px, lines: wr.lines, w: wr.widest, h: wr.lines.length * px * 1.12 };
-      });
-      gap = blocks.length > 1 ? Math.min(...blocks.map((b) => b.px)) * 0.55 : 0;
-      total = blocks.reduce((s, b) => s + b.h, 0) + gap * (blocks.length - 1);
-      if (total <= bot - top && blocks.every((b) => b.w <= maxW * 1.001)) break;
-      k *= 0.92;
-    }
-    let y = (top + bot) / 2 - total / 2;
-    const items = blocks.map((b) => {
-      const cy = y + b.h / 2;
-      y += b.h + gap;
-      const text = b.lines.join('\n');
-      const shown = look.uppercase ? text.toUpperCase() : text;
-      const L = { text, x: 0.5, y: cy / H, size: b.px / W * 100, font: look.font, weight: b.sp.weight, uppercase: look.uppercase, align: 'center', lineHeight: 1.12,
-        colour: b.sp.colour || 'text', anim: { type: 'none', speed: 1, amplitude: 0, direction: 'left' } };
-      return { L, marks: marksFor(shown, scene.emphasis), anim: b.sp.anim || null, chars: Array.from(text.replace(/\n/g, '')).length };
-    });
-    scene._lay = { key, items };
-    return scene._lay;
-  }
-  /** Map a scene's local time onto the core motion so it plays once, quickly, then holds. */
-  function motionTime(anim, local, seconds, chars) {
-    switch (anim) {
-      case 'zoom': return { type: 'zoom', Dm: 1.3, tm: Math.min(local, 0.78) };
-      case 'slide': return { type: 'slide', Dm: 2.0, tm: Math.min(local, 1.0) };
-      /* about 14 characters a second, finished within 80% of the scene */
-      case 'typewriter': { const Dm = clamp((chars || 20) / 14 / 0.75, 0.4, Math.max(0.4, seconds * 0.8)); return { type: 'typewriter', Dm, tm: Math.min(local, Dm * 0.76) }; }
-      case 'fade': return { type: 'fade', Dm: 1.2, tm: Math.min(local, 0.6) };
-      default: return { type: 'none', Dm: 1, tm: 0 };
-    }
-  }
-  /** The core's drawText, with a colour per glyph so emphasised words take the accent. */
-  function drawRich(ctx, L, tm, Dm, W, H, alpha, marks, look) {
-    const lay = A.layout(ctx, L, W);
-    const m = A.motion(L, tm, Dm, W, H, lay);
-    const a = clamp(alpha * m.alpha, 0, 1);
-    if (a <= 0.002 || m.visible <= 0) return;
-    const base = L.colour === 'accent' ? look.accent : L.colour === 'muted' ? look.muted : look.text;
-    const colourAt = (i) => (marks && marks[i] ? look.accent : base);
-    ctx.save();
-    ctx.globalAlpha = a;
-    ctx.translate(m.cx, m.cy);
-    ctx.rotate(m.rot * Math.PI / 180);
-    ctx.scale(m.scale, m.scale);
-    ctx.font = A.fontString(L, lay.px);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    const n = Math.min(lay.n, m.visible);
-    const each = (fn) => { for (let i = 0; i < n; i++) { const c = lay.chars[i]; fn(c.ch, c.x, c.y, i); } };
-    const glow = (Number(look.textGlow) || 0) / 100 * lay.px;
-    if (glow > 0) {
-      ctx.shadowBlur = glow; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-      each((ch, x, y, i) => { const f = colourAt(i); ctx.shadowColor = f; ctx.fillStyle = f; ctx.fillText(ch, x, y); });
-      ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
-    }
-    if (look.shadow > 0) {
-      ctx.shadowColor = 'rgba(0,0,0,' + look.shadow + ')'; ctx.shadowBlur = lay.px * 0.1; ctx.shadowOffsetY = lay.px * 0.03; ctx.shadowOffsetX = 0;
-      each((ch, x, y, i) => { ctx.fillStyle = colourAt(i); ctx.fillText(ch, x, y); });
-      ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-    }
-    const sw = (Number(look.strokeWidth) || 0) / 100 * lay.px;
-    if (sw > 0) { ctx.lineWidth = sw * 2; ctx.strokeStyle = look.stroke || '#000'; each((ch, x, y) => ctx.strokeText(ch, x, y)); }
-    each((ch, x, y, i) => { ctx.fillStyle = colourAt(i); ctx.fillText(ch, x, y); });
-    ctx.restore();
-  }
-  /** Lines of plain text, centred at (cx, cy), shrinking to maxW, at most maxLines (the rest is dropped). */
   function drawLines(ctx, text, cx, cy, px, weight, colourStr, maxW, maxLines, font) {
     let wr = wrapText(text, px, weight, font, maxW, false);
-    for (let k = 0; k < 6 && (wr.widest > maxW || wr.lines.length > maxLines); k++) { px *= 0.9; wr = wrapText(text, px, weight, font, maxW, false); }
+    for (let k = 0; k < 12 && (wr.widest > maxW || wr.lines.length > maxLines); k++) { px *= 0.9; wr = wrapText(text, px, weight, font, maxW, false); }
+    if (wr.widest > maxW + 0.5) noteOver('media caption "' + oneLine(text).slice(0, 40) + '"');
     const lines = wr.lines.slice(0, maxLines);
     const lh = px * 1.15;
-    ctx.font = fontOf(weight, px, font);
+    ctx.font = fontOf(weight, px, font); if (HAS_LS) ctx.letterSpacing = '0px';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = colourStr;
     lines.forEach((l, i) => ctx.fillText(l, cx, cy - (lines.length - 1) * lh / 2 + i * lh));
@@ -632,66 +2559,14 @@
   }
   function measureLines(text, px, weight, maxW, maxLines, font) {
     let wr = wrapText(text, px, weight, font, maxW, false);
-    for (let k = 0; k < 6 && (wr.widest > maxW || wr.lines.length > maxLines); k++) { px *= 0.9; wr = wrapText(text, px, weight, font, maxW, false); }
+    for (let k = 0; k < 12 && (wr.widest > maxW || wr.lines.length > maxLines); k++) { px *= 0.9; wr = wrapText(text, px, weight, font, maxW, false); }
     return Math.min(maxLines, wr.lines.length) * px * 1.15;
   }
-
-  /* ------------------------------------------------------------------ */
-  /* the frame                                                          */
-  /* ------------------------------------------------------------------ */
-  let CUR = null, API = null;
-  /** Which scene is on screen at t, and the one fading out under it. */
-  function sceneAt(t, S) {
-    S = S || CUR;
-    if (!S || !S.scenes.length) return null;
-    const sc = S.scenes;
-    const { starts, D } = timeline(sc);
-    if (t >= D) { const i = sc.length - 1; return { i, scene: sc[i], local: sc[i].seconds, prev: null, blend: 1, start: starts[i], starts, D }; }
-    let i = 0;
-    while (i < sc.length - 1 && t >= starts[i + 1]) i++;
-    const local = Math.max(0, t - starts[i]);
-    let prev = null, blend = 1;
-    if (i > 0 && local < XFADE) { prev = sc[i - 1]; blend = easeOut(local / XFADE); }
-    return { i, scene: sc[i], local, prev, blend, start: starts[i], starts, D };
-  }
-  function drawBackground(ctx, W, H, t, look) {
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, look.bg[0]); g.addColorStop(1, look.bg[1]);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    const R = Math.max(W, H) * 0.6;
-    const r = ctx.createRadialGradient(W / 2, H * 0.45, 10, W / 2, H * 0.45, R);
-    r.addColorStop(0, look.glow); r.addColorStop(1, hexA('#000000', 0));
-    ctx.fillStyle = r; ctx.fillRect(0, 0, W, H);
-    if (look.blobs) {
-      const ph = REDUCED ? 0 : 2 * Math.PI * t / 9;
-      const U = Math.min(W, H);
-      ctx.save();
-      for (let b = 0; b < 2; b++) {
-        const cx = W * (0.5 + (b ? -0.22 : 0.24) * Math.cos(ph + b * 2.1));
-        const cy = H * (0.5 + (b ? 0.12 : -0.1) * Math.sin(ph * 0.8 + b));
-        const rr = U * (0.36 + 0.04 * Math.sin(ph + b));
-        const bg = ctx.createRadialGradient(cx, cy, 1, cx, cy, rr);
-        bg.addColorStop(0, hexA(look.accent, 0.06)); bg.addColorStop(1, hexA(look.accent, 0));
-        ctx.fillStyle = bg; ctx.fillRect(cx - rr, cy - rr, rr * 2, rr * 2);
-      }
-      ctx.restore();
-    }
-  }
-  function drawTextScene(ctx, W, H, scene, local, alpha, look) {
-    const lay = layoutScene(scene, W, H, look);
-    lay.items.forEach((it, i) => {
-      const li = local - i * 0.22;
-      if (li < 0) return;
-      const mt = motionTime(it.anim || scene.anim, li, scene.seconds, it.chars);
-      it.L.anim.type = mt.type;
-      drawRich(ctx, it.L, mt.tm, mt.Dm, W, H, alpha, it.marks, look);
-    });
-  }
-  /** The rectangle media and its caption share: inside the safe area, the caption below. */
-  function mediaRegion(W, H, hasCaption) {
-    const sf = safeOf(W, H);
-    /* clear of the brand strip above and the progress bar below */
-    const top = (sf.top + 0.045) * H, bot = (1 - sf.bottom - (hasCaption ? 0.11 : 0.025)) * H;
+  /** The rectangle media and its caption share: inside the safe area, below the header, the caption below. */
+  function mediaRegion(W, H, hasCaption, S) {
+    const c = chromeOf(W, H, S);
+    const top = c.hasHead ? c.headY + c.headH + 24 * c.U : (c.sf.top + 0.03) * H;
+    const bot = (c.showFoot ? c.footY - 24 * c.U : c.barY - 20 * c.U) - (hasCaption ? 0.1 * H : 0);
     return { top, bot, capY: bot + 0.05 * H };
   }
   function drawCover(ctx, src, sw, sh, x, y, w, h, kb) {
@@ -708,11 +2583,12 @@
     const U = Math.min(W, H);
     const capText = String(scene.text || '').trim();
     const showCap = !!capText && S.captions.source !== 'none' && !(S.captions.source === 'auto' && activeCue(S, S._t));
-    const reg = mediaRegion(W, H, !!capText && S.captions.source !== 'none');
+    const reg = mediaRegion(W, H, !!capText && S.captions.source !== 'none', S);
     const kb = scene.motion ? 1 + 0.06 * clamp(local / Math.max(0.1, scene.seconds), 0, 1) : 1;
     ctx.save();
     ctx.globalAlpha = clamp(alpha, 0, 1);
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    const enter = ease3(local / 0.45);
     if (scene.fit === 'cover') {
       if (ready) drawCover(ctx, src, sw, sh, 0, 0, W, H, kb);
       const shade = ctx.createLinearGradient(0, H * 0.6, 0, H);
@@ -722,7 +2598,7 @@
       const maxH = reg.bot - reg.top;
       let ph = Math.min(maxH, H * 0.8), pw = ph * 9 / 19.5;
       if (pw > W * 0.62) { pw = W * 0.62; ph = pw * 19.5 / 9; }
-      const x = (W - pw) / 2, y = reg.top + (maxH - ph) / 2;
+      const x = (W - pw) / 2, y = reg.top + (maxH - ph) / 2 + (1 - enter) * 80 * U / 1080;
       ctx.save();
       ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = W * 0.05; ctx.shadowOffsetY = W * 0.012;
       ctx.fillStyle = '#0b0f19'; roundRect(ctx, x, y, pw, ph, pw * 0.12); ctx.fill();
@@ -740,11 +2616,11 @@
       const maxW = W * 0.88, maxH = reg.bot - reg.top;
       let s = Math.min(maxW / sw, maxH / sh);
       const cw = sw * s, ch = sh * s;
-      const x = (W - cw) / 2, y = reg.top + (maxH - ch) / 2;
+      const x = (W - cw) / 2, y = reg.top + (maxH - ch) / 2 + (1 - enter) * 80 * U / 1080;
       const rad = 36 * U / 1080;
       ctx.save();
       ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = W * 0.06; ctx.shadowOffsetY = W * 0.012;
-      ctx.fillStyle = look.light ? '#ffffff' : '#0b0f19'; roundRect(ctx, x, y, cw, ch, rad); ctx.fill();
+      ctx.fillStyle = look.light ? '#fefefe' : '#0b0f19'; roundRect(ctx, x, y, cw, ch, rad); ctx.fill();
       ctx.restore();
       ctx.save();
       roundRect(ctx, x, y, cw, ch, rad); ctx.clip();
@@ -755,9 +2631,8 @@
       const px = 0.046 * U;
       const maxW = W * safeOf(W, H).maxW;
       const h = measureLines(capText, px, 700, maxW - px, 2, look.font);
-      const capY = scene.fit === 'cover' ? (1 - safeOf(W, H).bottom) * H - h / 2 - 0.03 * H : reg.capY;
+      const capY = scene.fit === 'cover' ? (1 - safeOf(W, H).bottom) * H - h / 2 - 0.05 * H : reg.capY;
       ctx.fillStyle = look.plate;
-      MEASURE.font = fontOf(700, px, look.font);
       const wr = wrapText(capText, px, 700, look.font, maxW - px, false);
       const bw = Math.min(maxW, wr.widest + px * 1.2);
       roundRect(ctx, W / 2 - bw / 2, capY - h / 2 - px * 0.35, bw, h + px * 0.7, px * 0.45); ctx.fill();
@@ -765,96 +2640,25 @@
     }
     ctx.restore();
   }
-  /** The end card: logo, title, the readable URL, a QR code, "Link in bio", the handle — stacked in the safe area. */
-  function drawEndCard(ctx, W, H, scene, local, alpha, look, S) {
-    const a = clamp(alpha, 0, 1) * clamp(local / 0.4, 0, 1);
-    if (a <= 0.002) return;
-    const sf = safeOf(W, H), U = Math.min(W, H);
-    const landscape = W > H * 1.3;
-    const logo = S.brand.logo;
-    const title = String(scene.title || '').trim();
-    const url = String(S.brand.url || '').trim();
-    const handle = String(S.brand.handle || '').trim();
-    const qrUrl = qrPayload(S);
-    const qe = qrUrl ? qrEntry(qrUrl) : null;
-    const cta = url ? 'Link in bio' : '';
-    const font = look.font;
-    const pop = easeOut(clamp(local / 0.5, 0, 1));
-    ctx.save();
-    ctx.globalAlpha = a;
-    const colW = landscape ? W * 0.5 : W * sf.maxW;
-    const items = [];
-    if (logo) items.push({ kind: 'logo', h: U * (landscape ? 0.2 : 0.2) });
-    if (title) items.push({ kind: 'title', px: U * 0.066, h: measureLines(title, U * 0.066, 800, colW, 2, font) });
-    if (url) items.push({ kind: 'url', px: U * 0.042, h: measureLines(url, U * 0.042, 700, colW, 1, font) });
-    if (qe && !landscape) items.push({ kind: 'qr', h: U * 0.34 });
-    if (cta) items.push({ kind: 'cta', px: U * 0.04, h: U * 0.04 * 1.15 });
-    if (handle) items.push({ kind: 'handle', px: U * 0.036, h: U * 0.036 * 1.15 });
-    const gap = U * 0.035;
-    const regTop = (sf.top + 0.02) * H, regBot = (1 - sf.bottom - 0.02) * H;
-    let total = items.reduce((s, it) => s + it.h, 0) + gap * Math.max(0, items.length - 1);
-    const k = total > regBot - regTop ? (regBot - regTop) / total : 1;
-    total *= k;
-    const cx = landscape ? W * 0.36 : W / 2;
-    let y = (regTop + regBot) / 2 - total / 2;
-    const drawQr = (qx, qy, size) => {
-      const pad = size * 0.06;
-      ctx.save();
-      ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = size * 0.08; ctx.shadowOffsetY = size * 0.02;
-      ctx.fillStyle = '#ffffff'; roundRect(ctx, qx - size / 2 - pad, qy - size / 2 - pad, size + pad * 2, size + pad * 2, size * 0.08); ctx.fill();
-      ctx.restore();
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(qe.canvas, qx - size / 2, qy - size / 2, size, size);
-      ctx.imageSmoothingEnabled = true;
-    };
-    for (const it of items) {
-      const h = it.h * k, mid = y + h / 2;
-      if (it.kind === 'logo') {
-        const s = h * (0.6 + 0.4 * pop);
-        if (look.light) { ctx.fillStyle = '#0b0f19'; roundRect(ctx, cx - s / 2 - s * 0.08, mid - s / 2 - s * 0.08, s * 1.16, s * 1.16, s * 0.24); ctx.fill(); }
-        ctx.drawImage(logo, cx - s / 2, mid - s / 2, s, s);
-      } else if (it.kind === 'title') drawLines(ctx, title, cx, mid, it.px * k, 800, look.text, colW, 2, font);
-      else if (it.kind === 'url') drawLines(ctx, url, cx, mid, it.px * k, 700, look.accent, colW, 1, font);
-      else if (it.kind === 'qr') drawQr(cx, mid, h);
-      else if (it.kind === 'cta') drawLines(ctx, cta, cx, mid, it.px * k, 600, look.muted, colW, 1, font);
-      else if (it.kind === 'handle') drawLines(ctx, handle, cx, mid, it.px * k, 600, look.text, colW, 1, font);
-      y += h + gap * k;
-    }
-    if (qe && landscape) drawQr(W * 0.74, H * 0.5, Math.min(H * 0.42, W * 0.3));
-    ctx.restore();
-  }
-  function drawBrand(ctx, W, H, look, S) {
-    const logo = S.brand.logo, handle = String(S.brand.handle || '').trim();
-    if (!logo && !handle) return;
-    const sf = safeOf(W, H), U = Math.min(W, H);
-    const s = U * 0.05;
-    const x = W * 0.07, y = (sf.top + 0.01) * H;
-    ctx.save();
-    let tx = x;
-    if (logo) {
-      if (look.light) { ctx.fillStyle = '#0b0f19'; roundRect(ctx, x - s * 0.1, y - s * 0.1, s * 1.2, s * 1.2, s * 0.28); ctx.fill(); }
-      ctx.drawImage(logo, x, y, s, s);
-      tx = x + s * 1.3;
-    }
-    if (handle) {
-      ctx.font = fontOf(600, U * 0.034, look.font);
-      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      if (!look.light) { ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = U * 0.008; }
-      ctx.fillStyle = look.text;
-      ctx.fillText(handle, tx, y + s / 2);
-    }
-    ctx.restore();
-  }
-  function drawBar(ctx, W, H, t, D, look) {
-    const sf = safeOf(W, H), U = Math.min(W, H);
-    const h = Math.max(3, 6 * U / 1080);
-    const y = (1 - sf.bottom) * H - 10 * U / 1080 - h;
-    const x = W * 0.07, w = W * 0.86;
-    ctx.save();
-    ctx.fillStyle = hexA(look.muted, 0.25); roundRect(ctx, x, y, w, h, h / 2); ctx.fill();
-    const f = clamp(D > 0 ? t / D : 0, 0, 1);
-    if (f > 0) { ctx.fillStyle = hexA(look.bar, 0.9); roundRect(ctx, x, y, Math.max(h, w * f), h, h / 2); ctx.fill(); }
-    ctx.restore();
+
+  /* ------------------------------------------------------------------ */
+  /* the frame                                                          */
+  /* ------------------------------------------------------------------ */
+  let CUR = null, API = null;
+  /** Which scene is on screen at t, and the one fading out under it. */
+  function sceneAt(t, S) {
+    S = S || CUR;
+    if (!S || !S.scenes.length) return null;
+    const sc = S.scenes;
+    const { starts, D } = timeline(sc);
+    const n = sc.length;
+    if (t >= D) { const i = n - 1; return { i, n, scene: sc[i], local: sc[i].seconds, prev: null, blend: 1, start: starts[i], starts, D }; }
+    let i = 0;
+    while (i < n - 1 && t >= starts[i + 1]) i++;
+    const local = Math.max(0, t - starts[i]);
+    let prev = null, blend = 1;
+    if (i > 0 && local < XFADE) { prev = sc[i - 1]; blend = easeOut(local / XFADE); }
+    return { i, n, scene: sc[i], local, prev, blend, start: starts[i], starts, D };
   }
   function activeCue(S, t) {
     for (const c of S.captions.cues) if (t >= c.start && t < c.until) return c;
@@ -871,17 +2675,25 @@
     if (!S) return;
     const look = S.look;
     S._t = t;
+    setFloor(W, H);
     ctx.save();
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-    drawBackground(ctx, W, H, t, look);
     const at = sceneAt(t, S);
+    drawBackground(ctx, W, H, t, look, at && at.scene, S);
     if (at) {
       const draw = (scene, local, alpha) => {
-        if (scene.type === 'text') drawTextScene(ctx, W, H, scene, local, alpha, look);
+        if (isWordy(scene) || scene.type === 'endcard') drawBeat(ctx, W, H, scene, local, alpha, look, S);
         else if (scene.type === 'media') drawMedia(ctx, W, H, scene, local, alpha, look, S);
-        else if (scene.type === 'endcard') drawEndCard(ctx, W, H, scene, local, alpha, look, S);
       };
-      if (at.prev) draw(at.prev, at.prev.seconds, 1 - at.blend);
+      if (at.prev) {
+        /* the outgoing scene leaves in the look's own way */
+        ctx.save();
+        const k = at.blend, m = motionOf(at.prev, look);
+        if (m === 'slide') ctx.translate(0, -60 * Math.min(W, H) / 1080 * k);
+        else if (m === 'pop' || m === 'punch') { ctx.translate(W / 2, H / 2); const s = 1 + 0.06 * k; ctx.scale(s, s); ctx.translate(-W / 2, -H / 2); }
+        draw(at.prev, at.prev.seconds, 1 - k);
+        ctx.restore();
+      }
       const fadeUp = at.i === 0 ? clamp(t / 0.3, 0, 1) : 1;
       draw(at.scene, at.local, at.blend * fadeUp);
       const onEnd = at.scene.type === 'endcard';
@@ -891,15 +2703,12 @@
         const st = Object.assign({}, S.captions.style, { size: (Number(S.captions.style.size) || 7) * U / W });
         if (AC) AC.drawCaptions(ctx, W, H, t, S.captions.cues, st);
       }
-      if (S.brand.progress && o.progress !== false) drawBar(ctx, W, H, t, at.D, look);
-      if (!onEnd || at.prev) {
-        ctx.save(); ctx.globalAlpha = onEnd ? 1 - at.blend : 1; drawBrand(ctx, W, H, look, S); ctx.restore();
-      }
+      drawHeader(ctx, W, H, look, S, at);
+      if (o.progress !== false) drawFooter(ctx, W, H, t, at.D, look, S, at);
     }
     ctx.restore();
     if (o.credit !== false && A.share) A.share.drawCredit(ctx, W, H);
   }
-
   /* ------------------------------------------------------------------ */
   /* sound                                                              */
   /* ------------------------------------------------------------------ */
@@ -1075,13 +2884,17 @@
       yield { canvas: c, timestampUs: Math.round(i * 1e6 / FPS), durationUs: Math.round(1e6 / FPS) };
     }
   }
+  let fontsP = null;
+  /** The site's two faces in every weight the beats use; layouts measured before they arrived are thrown away. */
+  function loadFonts() {
+    if (fontsP) return fontsP;
+    if (!document.fonts || !document.fonts.load) return (fontsP = Promise.resolve());
+    const want = ['800 40px "Sora"', '700 40px "Sora"', '600 40px "Sora"', '500 20px "Sora"', '400 20px "Inter"', '500 20px "Inter"', '600 20px "Inter"', '700 20px "Inter"', '800 20px "Inter"'];
+    fontsP = Promise.all(want.map((f) => document.fonts.load(f).catch(() => {}))).then(() => { FONTGEN++; if (API) API.invalidate(); });
+    return fontsP;
+  }
   async function prepareFonts(S) {
-    if (document.fonts && document.fonts.load) {
-      await Promise.all(['800 40px "Sora"', '700 40px "Sora"', '600 20px "Sora"', '500 20px "Sora"', '500 20px "Inter"'].map((f) => document.fonts.load(f).catch(() => {})));
-    }
-    const fonts = new Set();
-    for (const sc of S.scenes) for (const l of (sc.lines || [{ weight: 800 }])) fonts.add(l.weight || 800);
-    await Promise.all([...fonts].map((wgt) => A.ensureFont({ font: S.look.font, weight: wgt })));
+    await loadFonts();
     const c = document.createElement('canvas'); c.width = 2; c.height = 2;
     try { renderFrame(c.getContext('2d'), 1080, 1920, 0, S, { credit: false }); } catch (e) { /* warm-up only */ }
   }
@@ -1089,6 +2902,18 @@
     if (S.brand.logoKind === 'site' && !S.brand.logo) { try { S.brand.logo = await loadSiteLogo(); } catch (e) { /* no logo then */ } }
     const q = qrPayload(S);
     if (q) { const e = qrEntry(q); if (e && e.ready) await e.ready; }
+    /* the example's pictures and the tool's glyph, so the first exported frame has them */
+    const waits = [];
+    for (const sc of S.scenes) {
+      if (sc.ex) for (const im of exImages(sc.ex)) waits.push(im.ready);
+      if (sc.glyph) {
+        const L = S.look;
+        for (const col of [L.chipInk, L.accent]) { glyphCanvas(sc.glyph, col, 'i-' + (sc.section || '')); const e = glyphCache.get(sc.glyph + '|' + col); if (e && e.ready) waits.push(e.ready); }
+      }
+    }
+    if (S.promote && S.promote.glyph) { glyphCanvas(S.promote.glyph, S.look.ink, 'i-' + sectionOf(S.promote.path)); const e = glyphCache.get(S.promote.glyph + '|' + S.look.ink); if (e && e.ready) waits.push(e.ready); }
+    await Promise.all(waits.map((p) => Promise.race([p, sleep(4000)]).catch(() => {})));
+    for (const sc of S.scenes) sc._plan = null;
     for (const sc of S.scenes) {
       if (isVideoScene(sc) && sc.media.video && sc.media.video.readyState < 2) {
         await new Promise((res) => { const v = sc.media.video; const fin = () => { v.removeEventListener('loadeddata', fin); res(); }; v.addEventListener('loadeddata', fin); setTimeout(fin, 3000); });
@@ -1107,7 +2932,8 @@
     io.innerHTML = '';
     const S = {
       mode: 'script', promote: null, slug: 'reel', scenes: [],
-      look: lookCopy(LOOKS[0]),
+      look: lookFrom({ palette: 'midnight', type: 'gradient', motion: 'pop', bg: 'glow', layout: 'classic', copy: 0 }),
+      lookLock: {}, lookOver: {}, lookTool: 'custom',
       brand: { handle: '', url: '', endcard: true, qr: false, progress: true, safe: true, logo: null, logoKind: 'none', utm: 'instagram' },
       voice: null, music: null,
       captions: { source: 'scene', chosen: false, segments: [], cues: [], status: 'idle',
@@ -1151,8 +2977,21 @@
     const scriptBox = el('textarea', 'control'); scriptBox.id = 'reel-script'; scriptBox.rows = 7;
     scriptBox.placeholder = 'One scene per line, for example:\n\n' + EXAMPLE;
     const makeBtn = button('Make my reel', 'btn-primary', () => makeFromScript());
-    const exampleBtn = button('Try an example', 'btn-ghost', () => { scriptBox.value = EXAMPLE; scriptBox.focus(); });
-    scriptPane.append(field('Your script', scriptBox, 'One line is one scene. #word on a line of its own colours that word in the scene above.'), row(makeBtn, exampleBtn));
+    const exampleBtn = button('Try an example', 'btn-ghost', () => { scriptBox.value = EXAMPLE; tplSel.value = ''; tplHint.textContent = TPL_HINT; scriptBox.focus(); });
+    const TPL_HINT = 'A template is a scene skeleton: replace the [bracketed] words with yours. HOOK:, PAIN:, USUAL:, FIX:, STEPS:, POINT:, VERSUS:, QUOTE: and CTA: at the start of a line pick the kind of scene; | separates its parts.';
+    const tplSel = select('reel-template', [['', 'Blank — write my own']].concat(TEMPLATES.map((t) => [t[0], t[1]])), '');
+    const tplHint = hint(TPL_HINT);
+    let tplText = '';
+    tplSel.addEventListener('change', () => {
+      const t = TEMPLATES.find((x) => x[0] === tplSel.value);
+      if (!t) { tplHint.textContent = TPL_HINT; return; }
+      const cur = scriptBox.value.trim();
+      if (cur && cur !== tplText.trim() && cur !== EXAMPLE && !confirm('Replace your script with the “' + t[1] + '” template?')) { tplSel.value = ''; return; }
+      scriptBox.value = tplText = t[3];
+      tplHint.textContent = t[2] + ' Replace the [bracketed] words with yours.';
+      scriptBox.focus();
+    });
+    scriptPane.append(field('Start from a template', tplSel), tplHint, field('Your script', scriptBox, 'One line is one scene. #word on a line of its own colours that word in the scene above.'), row(makeBtn, exampleBtn));
     const promotePane = el('div', 'reel-mode'); promotePane.dataset.mode = 'promote'; promotePane.hidden = true; promotePane.setAttribute('role', 'tabpanel');
     const picker = el('div', 'reel-picker');
     const find = el('input', 'control'); find.id = 'reel-find'; find.type = 'search'; find.placeholder = 'Search the tools…'; find.autocomplete = 'off';
@@ -1187,7 +3026,9 @@
     const scrub = el('input', 'range'); scrub.type = 'range'; scrub.min = 0; scrub.max = 1000; scrub.step = 1; scrub.value = 0; scrub.setAttribute('aria-label', 'Position in the reel');
     const clockEl = el('span', 'range-val', '0.0 / 0.0 s');
     const overBtn = button('Start over', 'btn-ghost', () => startOver());
-    transport.append(playBtn, scrub, clockEl, overBtn);
+    const shuffleBtn = button('Shuffle look', 'btn-ghost', () => shuffleLook()); shuffleBtn.id = 'reel-shuffle';
+    shuffleBtn.title = 'A new palette, type treatment, motion and background';
+    transport.append(playBtn, scrub, clockEl, shuffleBtn, overBtn);
     stageCol.append(stage, transport);
     const side = el('div', 'aiimg-side');
     const panes = {};
@@ -1347,9 +3188,17 @@
     const fitChk = on(check('reel-fit', 'Fit scenes to the voice', false), () => { S.fitVoice = fitChk.input.checked; applyFit(); });
     fitChk.hidden = true;
     const sceneList = el('ol', 'reel-scenes');
-    const addText = button('+ Text scene', 'btn-ghost', () => addScene(textScene('New scene', S.look.textAnim)));
+    const addText = button('+ Text scene', 'btn-ghost', () => addScene(beat('text', { text: 'New scene' })));
     const addMedia = button('+ Media scene', 'btn-ghost', () => { showPane('media'); mediaFile.click(); });
-    const addEnd = button('+ End card', 'btn-ghost', () => { if (!S.scenes.some((x) => x.type === 'endcard')) addScene({ id: nid(), type: 'endcard', title: S.promote ? S.promote.title : '', seconds: S.brand.qr ? 3.5 : 3.0 }, true); });
+    const addEnd = button('+ End card', 'btn-ghost', () => { if (!S.scenes.some((x) => x.type === 'endcard')) addScene(endCardScene(), true); });
+    /** A fresh end card: the story's (call to action, proof pills) for a tool, the visitor's own otherwise. */
+    function endCardScene() {
+      if (S.promote) {
+        const sc = buildScript(S.promote, Object.assign({}, S.brand, { endcard: true }), S.look).filter((x) => x.type === 'endcard')[0];
+        if (sc) return sc;
+      }
+      return beat('endcard', { title: S.brand.handle || '', qr: !!S.brand.qr });
+    }
     panes.scenes.append(h('Scenes', 'reel-scenes-h'), chosen, totalEl, undoRow, fitChk, sceneList, row(addText, addMedia, addEnd),
       hint('Click a scene to jump to it. Each scene fades into the next over a third of a second.'));
 
@@ -1377,7 +3226,7 @@
       syncTransport();
     }
     function scenesChanged(structural) {
-      S.scenes.forEach((x) => { x._lay = null; });
+      S.scenes.forEach((x) => { x._plan = null; });
       if (structural) renderScenes();
       updateTotal();
       if (S.voice) { S.captions.cues = cuesFor(S); updateCapStatusTail(); }
@@ -1431,7 +3280,7 @@
         const li = el('li', 'reel-scene'); li.dataset.id = sc.id; li.dataset.type = sc.type;
         const head = el('div', 'reel-scene-head');
         const badge = el('span', 'reel-badge', String(i + 1));
-        const kind = el('span', 'reel-kind', sc.type === 'text' ? 'Text' : sc.type === 'media' ? (sc.media && sc.media.kind === 'video' ? 'Clip' : 'Picture') : 'End card');
+        const kind = el('span', 'reel-kind', sc.type === 'media' ? (sc.media && sc.media.kind === 'video' ? 'Clip' : 'Picture') : (KIND_LABEL[sc.type] || 'Text'));
         const secs = el('input', 'control reel-secs'); secs.type = 'number'; secs.min = 1; secs.max = 15; secs.step = 0.5; secs.value = sc.seconds;
         secs.setAttribute('aria-label', 'Seconds for scene ' + (i + 1));
         secs.addEventListener('change', () => {
@@ -1443,28 +3292,42 @@
         const mv = (d) => { const j = i + d; if (j < 0 || j >= S.scenes.length) return; const [x] = S.scenes.splice(i, 1); S.scenes.splice(j, 0, x); scenesChanged(true); selectScene(j); };
         const upB = button('↑', 'btn-ghost', () => mv(-1)); upB.setAttribute('aria-label', 'Move up'); upB.disabled = i === 0;
         const dnB = button('↓', 'btn-ghost', () => mv(1)); dnB.setAttribute('aria-label', 'Move down'); dnB.disabled = i === S.scenes.length - 1;
-        const dup = button('⧉', 'btn-ghost', () => { const c = Object.assign({}, sc, { id: nid(), _lay: null, lines: sc.lines ? sc.lines.map((l) => Object.assign({}, l)) : sc.lines, emphasis: (sc.emphasis || []).slice() }); S.scenes.splice(i + 1, 0, c); scenesChanged(true); selectScene(i + 1); });
+        const dup = button('⧉', 'btn-ghost', () => { const c = Object.assign({}, sc, { id: nid(), _plan: null, emphasis: (sc.emphasis || []).slice(), proof: sc.proof ? sc.proof.slice() : sc.proof }); S.scenes.splice(i + 1, 0, c); scenesChanged(true); selectScene(i + 1); });
         dup.setAttribute('aria-label', 'Duplicate'); dup.disabled = sc.type === 'endcard';
         const del = button('✕', 'btn-ghost', () => { const [x] = S.scenes.splice(i, 1); scenesChanged(true); offerUndo(x, i); });
         del.setAttribute('aria-label', 'Delete scene ' + (i + 1));
         head.append(badge, kind, secs, unit, upB, dnB, dup, del);
         li.appendChild(head);
+        /* a heading for the beats that have one (the usual way's title, the tool name, a step list's title, a quote's name …) */
+        if (HEADING_LABEL[sc.type]) {
+          const hi = el('input', 'control reel-scene-heading'); hi.value = sc.heading || ''; hi.placeholder = HEADING_LABEL[sc.type];
+          hi.setAttribute('aria-label', HEADING_LABEL[sc.type] + ' for scene ' + (i + 1));
+          hi.addEventListener('input', () => { sc.heading = hi.value; sc._plan = null; refreshCaptionPreview(); invalidate(); });
+          hi.addEventListener('focus', () => { if (S.live !== i) selectScene(i); });
+          li.appendChild(hi);
+        }
         const ta = el('textarea', 'control reel-scene-text');
-        ta.rows = sc.type === 'text' ? 2 : 1;
+        const listy = sc.type === 'usual' || sc.type === 'steps' || sc.type === 'versus';
+        ta.rows = listy ? 3 : isWordy(sc) ? 2 : 1;
         ta.value = sc.type === 'endcard' ? (sc.title || '') : (sc.text || '');
-        ta.placeholder = sc.type === 'media' ? 'Optional caption line' : sc.type === 'endcard' ? 'Title on the end card' : 'Scene text';
+        ta.placeholder = sc.type === 'media' ? 'Optional caption line' : sc.type === 'endcard' ? 'Title on the end card' : listy ? 'One item per line' : 'Scene text';
         ta.setAttribute('aria-label', (sc.type === 'endcard' ? 'End card title' : sc.type === 'media' ? 'Caption for scene ' : 'Text of scene ') + (sc.type === 'endcard' ? '' : (i + 1)));
         ta.addEventListener('input', () => {
           if (sc.type === 'endcard') sc.title = ta.value;
-          else { sc.text = ta.value; if (sc.lines) sc.lines = null; }
-          sc._lay = null;
+          else {
+            const was = sc.text;
+            sc.text = ta.value;
+            /* the hook's key word follows the text unless the visitor chose one with #word */
+            if (sc.type === 'hook' && !sc._userEm && was !== sc.text) sc.emphasis = [keyWordOf(sc.text)];
+          }
+          sc._plan = null;
           refreshCaptionPreview();
           invalidate();
         });
         ta.addEventListener('focus', () => { if (S.live !== i) selectScene(i); });
         li.appendChild(ta);
-        if (sc.type === 'text') {
-          const an = select('reel-anim-' + sc.id, ANIMS, sc.anim);
+        if (isWordy(sc)) {
+          const an = select('reel-anim-' + sc.id, ANIMS, OLD_ANIM[sc.anim] || sc.anim || 'auto');
           an.setAttribute('aria-label', 'Animation for scene ' + (i + 1));
           an.addEventListener('change', () => { sc.anim = an.value; invalidate(); });
           li.appendChild(an);
@@ -1784,7 +3647,7 @@
     function stopMic() { if (mic && mic.rec.state !== 'inactive') mic.rec.stop(); }
     function renderPrompter() {
       prompter.innerHTML = '';
-      S.scenes.forEach((sc) => { if (sc.type === 'endcard') return; const li = el('li', null, oneLine(sc.type === 'text' ? sc.text : sc.text || '(' + (sc.media ? sc.media.name : 'picture') + ')')); li.dataset.id = sc.id; prompter.appendChild(li); });
+      S.scenes.forEach((sc) => { if (sc.type === 'endcard') return; const li = el('li', null, spoken(sc) || '(' + (sc.media ? sc.media.name : 'picture') + ')'); li.dataset.id = sc.id; prompter.appendChild(li); });
     }
     function highlightPrompter(s) {
       if (prompter.hidden) return;
@@ -1910,9 +3773,20 @@
     /* ---------------- brand pane ---------------- */
     const looksBox = el('div', 'aiimg-looks');
     const presets = share.presets({
-      list: LOOKS.map((l) => ({ id: l.id, label: l.label, swatch: l.swatch, apply: () => applyLook(l.id) })),
+      list: PAL_IDS.map((id) => ({ id, label: PALETTES[id].label, swatch: PALETTES[id].light ? PALETTES[id].bg : PALETTES[id].accent, apply: () => applyLook(id) })),
       root: looksBox
     });
+    const lookName = el('p', 'aiimg-status reel-look-name'); lookName.id = 'reel-look-name'; lookName.setAttribute('aria-live', 'polite');
+    const typeSel = select('reel-type', TYPES.map((k) => [k, TYPE_LABELS[k]]), S.look.type);
+    const motionSel = select('reel-motion', MOTIONS.map((k) => [k, MOTION_LABELS[k]]), S.look.motion);
+    const bgSel = select('reel-bg', BGS.map((k) => [k, BG_LABELS[k]]), S.look.bgT);
+    const layoutSel = select('reel-layout', LAYOUTS.map((k) => [k, LAYOUT_LABELS[k]]), S.look.layout);
+    const shuffle2 = button('Shuffle look', 'btn-ghost', () => shuffleLook());
+    const pinOne = (k, v) => { S.lookLock[k] = v; setLook(Object.assign({}, S.look.spec, { [k]: v }), { replace: true }); };
+    typeSel.addEventListener('change', () => pinOne('type', typeSel.value));
+    motionSel.addEventListener('change', () => pinOne('motion', motionSel.value));
+    bgSel.addEventListener('change', () => pinOne('bg', bgSel.value));
+    layoutSel.addEventListener('change', () => pinOne('layout', layoutSel.value));
     const handleIn = el('input', 'control'); handleIn.id = 'reel-handle'; handleIn.maxLength = 32; handleIn.placeholder = '@yourhandle';
     const urlIn = el('input', 'control'); urlIn.id = 'reel-url'; urlIn.placeholder = 'yoursite.com';
     const utmIn = el('input', 'control'); utmIn.id = 'reel-utm-source'; utmIn.value = 'instagram';
@@ -1920,7 +3794,7 @@
     const endChk = on(check('reel-endcard', 'End card', true), () => {
       S.brand.endcard = endChk.input.checked;
       const has = S.scenes.findIndex((x) => x.type === 'endcard');
-      if (S.brand.endcard && has < 0 && endCardHasContent()) S.scenes.push({ id: nid(), type: 'endcard', title: S.promote ? S.promote.title : '', seconds: S.brand.qr ? 3.5 : 3.0 });
+      if (S.brand.endcard && has < 0 && endCardHasContent()) S.scenes.push(endCardScene());
       else if (!S.brand.endcard && has >= 0) S.scenes.splice(has, 1);
       scenesChanged(true);
     });
@@ -1941,11 +3815,14 @@
       try { const im = await A.loadImageFile(f); const s = Math.min(1, 256 / Math.max(im.width, im.height)); S.brand.logo = A.scaled(im.canvas, im.width * s, im.height * s); S.brand.logoKind = 'upload'; drawLogoPrev(); invalidate(); }
       catch (e) { say((e && e.message) || String(e), 'error'); }
     });
-    const lookAccent = on(colour('reel-accent', S.look.accent), () => { S.look.accent = lookAccent.value; invalidate(); });
-    const lookText = on(colour('reel-text', S.look.text), () => { S.look.text = lookText.value; invalidate(); });
-    const lookBg1 = on(colour('reel-bg1', S.look.bg[0]), () => { S.look.bg[0] = lookBg1.value; invalidate(); });
-    const lookBg2 = on(colour('reel-bg2', S.look.bg[1]), () => { S.look.bg[1] = lookBg2.value; invalidate(); });
-    panes.brand.append(h('Look'), looksBox, grid(field('Handle', handleIn), field('URL', urlIn)), utmField,
+    const recolour = (k, v) => { S.lookOver[k] = v; S.look = lookFrom(S.look.spec, S.lookOver); scenesLook(); };
+    const lookAccent = on(colour('reel-accent', S.look.accent), () => recolour('accent', lookAccent.value));
+    const lookText = on(colour('reel-text', S.look.ink), () => recolour('text', lookText.value));
+    const lookBg1 = on(colour('reel-bg1', S.look.bg[0]), () => recolour('bg0', lookBg1.value));
+    const lookBg2 = on(colour('reel-bg2', S.look.bg[1]), () => recolour('bg1', lookBg2.value));
+    panes.brand.append(h('Look'), lookName, looksBox, grid(field('Headline type', typeSel), field('Motion', motionSel)), grid(field('Background', bgSel), field('Layout', layoutSel)),
+      row(shuffle2), hint('Each new reel gets a look of its own — not one of the last three for this tool. Pick a palette or a style to keep it; Shuffle look lets it vary again.'),
+      grid(field('Handle', handleIn), field('URL', urlIn)), utmField,
       endChk, qrChk, qrHint, barChk, safeChk, h('Logo'), logoRow, share.creditControl(),
       h('Colours'), grid(field('Accent', lookAccent), field('Text', lookText)), grid(field('Background top', lookBg1), field('Background bottom', lookBg2)));
     handleIn.addEventListener('input', () => { S.brand.handle = handleIn.value.trim(); invalidate(); refreshCaptionPreview(); ensureEndCard(); });
@@ -1955,7 +3832,7 @@
     function endCardHasContent() { return !!(S.promote || S.brand.handle || S.brand.url || S.brand.logo); }
     function ensureEndCard() {
       if (!S.brand.endcard || !S.scenes.length || S.scenes.some((x) => x.type === 'endcard') || !endCardHasContent()) return;
-      S.scenes.push({ id: nid(), type: 'endcard', title: S.promote ? S.promote.title : '', seconds: S.brand.qr ? 3.5 : 3.0 });
+      S.scenes.push(endCardScene());
       scenesChanged(true);
     }
     function syncQrUi() {
@@ -1975,16 +3852,58 @@
       } else { S.brand.logo = null; S.brand.logoKind = 'none'; }
       drawLogoPrev(); invalidate();
     }
+    /** A palette chip (or ?preset=): pins the palette, keeps the rest of the look. */
     function applyLook(id) {
-      const l = LOOKS.find((x) => x.id === id) || LOOKS[0];
-      S.look = lookCopy(l);
-      lookAccent.value = l.accent; lookText.value = l.text; lookBg1.value = l.bg[0]; lookBg2.value = l.bg[1];
-      Object.assign(S.captions.style, { preset: l.caption.preset, accent: l.caption.accent, fill: l.caption.fill, box: l.caption.box });
-      capAccent.value = st.accent; capFill.value = st.fill;
+      id = PALETTES[id] ? id : (PAL_ALIAS[id] || 'midnight');
+      S.lookLock.palette = id;
+      setLook(Object.assign({}, S.look.spec, { palette: id }), { replace: true });
+    }
+    /** Use look spec v: colours reset to the palette's, captions restyled, the controls and the look name brought up to date. */
+    function setLook(v, o) {
+      o = o || {};
+      S.lookOver = {};
+      S.look = lookFrom(v);
+      const L = S.look;
+      lookAccent.value = L.accent; lookText.value = L.ink; lookBg1.value = L.bg[0]; lookBg2.value = L.bg[1];
+      typeSel.value = L.type; motionSel.value = L.motion; bgSel.value = L.bgT; layoutSel.value = L.layout;
+      Object.assign(S.captions.style, { preset: L.caption.preset, accent: L.caption.accent, fill: L.caption.fill, box: L.caption.box, uppercase: L.type === 'caps' });
+      capAccent.value = st.accent; capFill.value = st.fill; capUpper.input.checked = st.uppercase;
       syncSwatches();
-      S.scenes.forEach((x) => { x._lay = null; });
+      if (o.record !== false && o.replace && S.scenes.length) recordLook(S.lookTool, L.spec, true);
+      /* a new copy index rewrites the story's eyebrows and titles, never what the visitor typed */
+      if (S.promote && S.scenes.story && o.recopy) {
+        const fresh = buildScript(S.promote, S.brand, L);
+        for (const sc of S.scenes) {
+          const nw = fresh.find((x) => x.type === sc.type);
+          if (!nw) continue;
+          for (const k of ['eyebrow', 'heading', 'hl', 'foot']) if (sc[k] === sc['_auto_' + k]) { sc[k] = nw[k]; sc['_auto_' + k] = nw[k]; }
+        }
+      }
+      scenesLook();
+      if (presets.current() !== L.palette) { const c = looksBox.querySelector('.chip[data-preset="' + L.palette + '"]'); for (const b of looksBox.querySelectorAll('.chip[data-preset]')) { const onIt = b === c; b.classList.toggle('is-on', onIt); b.setAttribute('aria-pressed', onIt ? 'true' : 'false'); } }
+      return L;
+    }
+    function scenesLook() {
+      lookName.textContent = 'This reel: ' + S.look.name + (S.lookLock.palette || S.lookLock.type || S.lookLock.motion || S.lookLock.bg || S.lookLock.layout ? ' (pinned)' : '');
+      S.scenes.forEach((x) => { x._plan = null; });
       prepareFonts(S).then(invalidate);
+      prepareAssets(S).then(invalidate);
+      refreshCaptionPreview();
       invalidate();
+    }
+    /** A new look: every pin let go, the next look in this tool's sequence that is not one of its recent ones. */
+    function shuffleLook() {
+      S.lookLock = {};
+      S.shuffles = (S.shuffles || 0) + 1;
+      const v = chooseLook(S.lookTool, { record: false, step: S.shuffles * 7, avoidCombos: [comboOf(S.look.spec)], exclude: [S.look.palette] });
+      setLook(v, { replace: true, recopy: true });
+    }
+    /** The look for a new reel: chosen by the picker unless pinned values say otherwise. */
+    function freshLook(tool) {
+      S.lookTool = tool;
+      S.shuffles = 0;
+      const v = chooseLook(tool, { lock: S.lookLock });
+      return setLook(v, { record: false });
     }
 
     /* ---------------- export pane ---------------- */
@@ -1994,7 +3913,7 @@
       S.sizeKey = sizeSel.value; const z = SIZES[S.sizeKey]; S.size = { w: z.w, h: z.h };
       if (!S.utmTouched) { S.brand.utm = z.utm; utmIn.value = z.utm; }
       qualSel.options[0].textContent = 'Standard — ' + z.rates.standard / 1e6 + ' Mbps'; qualSel.options[1].textContent = 'High — ' + z.rates.high / 1e6 + ' Mbps'; qualSel.options[2].textContent = 'Small — ' + z.rates.small / 1e6 + ' Mbps';
-      S.scenes.forEach((x) => { x._lay = null; });
+      S.scenes.forEach((x) => { x._plan = null; });
       sizePreview();
     });
     utmIn.addEventListener('input', () => { S.utmTouched = true; });
@@ -2171,12 +4090,27 @@
     }
     function currentSlug() {
       if (S.promote) return factsOf(S.promote).slug;
-      const f = S.scenes.find((x) => x.type === 'text');
+      const f = S.scenes.find((x) => isWordy(x));
       return (f && slugify(f.text.split(/\s+/).slice(0, 4).join(' '))) || 'reel';
     }
 
     /* ---------------- batch ---------------- */
     const folderOk = typeof window.showDirectoryPicker === 'function';
+    /** One look per reel of a batch, all different: the first is the one on screen, the rest step past each other's palettes. */
+    function planBatch(rows, o) {
+      o = o || {};
+      const out = [];
+      const used = [], combos = [];
+      rows.forEach((r, i) => {
+        const path = rowObj(r).path;
+        let v;
+        if (i === 0 && S.promote && S.promote.path === path) v = S.look.spec;
+        else v = chooseLook(path, { lock: S.lookLock, exclude: used.length < PAL_IDS.length ? used : [], avoidCombos: combos, record: o.record !== false });
+        used.push(v.palette); combos.push(comboOf(v));
+        out.push(v);
+      });
+      return out;
+    }
     async function openBatch() {
       const rows = [...S.picked.values()].slice(0, MAX_BATCH);
       if (rows.length < 2) return;
@@ -2215,14 +4149,17 @@
       const texts = [];
       let done = 0;
       const started = performance.now();
+      const looks = planBatch(rows);
+      S.lastBatchLooks = looks.map(comboOf);
       try {
         for (let i = 0; i < n; i++) {
           if (job.signal.aborted) throw abortError();
           const r = rows[i];
           const f = factsOf(r);
           const brand = Object.assign({}, S.brand, brandFor(r));
-          const X = Object.assign({}, S, { promote: r, brand, voice: null, scenes: buildScript(r, brand), mixP: null,
-            captions: Object.assign({}, S.captions, { source: 'scene', cues: [], segments: [] }) });
+          const look = i === 0 ? S.look : lookFrom(looks[i]);
+          const X = Object.assign({}, S, { promote: r, brand, voice: null, look, scenes: buildScript(r, brand, look), mixP: null,
+            captions: Object.assign({}, S.captions, { source: 'scene', cues: [], segments: [] }, { style: Object.assign({}, S.captions.style, look.caption) }) });
           const label = 'Reel ' + (i + 1) + ' of ' + n + ' — ' + r.title;
           bStatus.textContent = label + ' — preparing…' + (i === 1 && !dir ? ' Your browser may ask once to allow several downloads.' : '');
           const { r: out } = await encodeState(X, job.signal, (p) => {
@@ -2370,9 +4307,10 @@
       }
       S.mode = 'script'; S.promote = null; S.batchRows = null; batchBox.hidden = true;
       utmField.hidden = true; urlIn.readOnly = false;
-      const scenes = scenesFromScript(text, S.look);
+      const scenes = scenesFromScript(text);
       S.scenes = scenes;
-      if (S.brand.endcard && endCardHasContent()) S.scenes.push({ id: nid(), type: 'endcard', title: S.brand.handle || '', seconds: S.brand.qr ? 3.5 : 3.0 });
+      freshLook('script:' + (tplSel.value || 'own'));
+      if (S.brand.endcard && endCardHasContent()) S.scenes.push(endCardScene());
       if (scenes.shrunk) say('The script ran over 90 s, so every scene was shortened to fit.', 'warn'); else say('');
       openStudio();
     }
@@ -2385,7 +4323,14 @@
       S.brand.qr = true; qrChk.input.checked = true;
       utmField.hidden = false;
       if (S.brand.logoKind === 'none') { await setLogo('site'); S.brand.logoAuto = S.brand.logoKind === 'site'; }
-      S.scenes = buildScript(r, S.brand);
+      /* the story and the captured example are fetched only now, in promote mode */
+      note('Writing the script…');
+      await Promise.all([loadStories(), loadExamples(), loadFonts()]);
+      note('');
+      if (S.promote !== r) return;
+      const L = freshLook(r.path);
+      S.scenes = buildScript(r, S.brand, L);
+      S.reels = (S.reels || 0) + 1;
       S.coverT = null;
       openStudio();
       renderPicker();
@@ -2410,7 +4355,10 @@
     sizePreview();
     updateSoundStatus();
     syncQrUi();
-    presets.applyFromUrl();
+    const preParam = params.get('preset');
+    if (preParam && PAL_ALIAS[preParam]) presets.apply(PAL_ALIAS[preParam]);
+    else presets.applyFromUrl();
+    scenesLook();
     if (toolParam) {
       let p = toolParam;
       try { p = decodeURIComponent(p); } catch (e) { /* as given */ }
@@ -2426,7 +4374,10 @@
     }
 
     API = {
-      state: S, invalidate, renderFrame: (ctx, W, H, t) => renderFrame(ctx, W, H, t, S), usePromote, openBatch,
+      state: S, invalidate, renderFrame: (ctx, W, H, t) => renderFrame(ctx, W, H, t, S), usePromote, openBatch, planBatch, shuffleLook,
+      /** Pin a look (any of palette, type, motion, bg, layout, copy), as the selects do. */
+      setLook: (v) => { for (const k of ['palette', 'type', 'motion', 'bg', 'layout']) if (v[k]) S.lookLock[k] = v[k]; return setLook(Object.assign({}, S.look.spec, v), { replace: true, recopy: v.copy !== undefined }); },
+      prepare: async () => { await prepareFonts(S); await prepareAssets(S); },
       destroy: () => { mounted = false; if (CUR === S) CUR = null; }
     };
     A.tools['reel-maker'].current = API;
@@ -2435,6 +4386,12 @@
 
   A.tools['reel-maker'] = {
     mount, buildScript, captionFor, mixAudio, sceneAt, scenesFromScript, tagsFor, qrUrlFor, encodeWAV, factsOf,
+    templates: TEMPLATES.map((t) => ({ id: t[0], label: t[1], about: t[2], script: t[3], types: TEMPLATE_TYPES[t[0]] })),
+    palettes: PALETTES, types: TYPES, motions: MOTIONS, backgrounds: BGS, layouts: LAYOUTS, paletteAudit, chooseLook, pickLook, lookFrom, keyWordOf, contrast,
+    overflow: () => OVER.slice(), clearOverflow: () => { OVER.length = 0; overSeen.clear(); MIN_PX = Infinity; }, minPx: () => MIN_PX,
+    loadStories, loadExamples, storyFor, exampleFor,
+    /** The background alone, as renderFrame draws it under the scene (the test diffs the safe bands against it). */
+    background: (ctx, W, H, t, S) => { S = S || CUR; ctx.save(); drawBackground(ctx, W, H, t, S.look, (sceneAt(t, S) || {}).scene, S); ctx.restore(); },
     renderFrame: (ctx, W, H, t, S, o) => renderFrame(ctx, W, H, t, S || CUR, o),
     state: () => CUR
   };

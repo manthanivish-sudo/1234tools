@@ -1,0 +1,46 @@
+Photo credits for the examples on 1234Tools
+=============================================
+
+The before-and-after examples on the tool pages were made by the tools
+themselves, run on these sample photos. Each comes from Wikimedia Commons,
+where its file page carries a CC0 1.0 Universal Public Domain Dedication
+(https://creativecommons.org/publicdomain/zero/1.0/), so no attribution
+is required. The photographers are credited here all the same.
+
+portrait.jpg - woman, head and shoulders, against a hedge
+  by Christopher Campbell (Unsplash: chrisjoelcampbell), CC0 1.0
+  https://commons.wikimedia.org/wiki/File:Brunette_woman_portrait_(Unsplash
+
+product.jpg - a black cup of coffee on a saucer, on a wooden table
+  by Ross Parmly (Unsplash: rparmly), CC0 1.0
+  https://commons.wikimedia.org/wiki/File:Black_coffee_cup_(Unsplash
+
+street.jpg - a New York street with people on a crossing
+  by Mike Petrucci (Unsplash: mikepetrucci), CC0 1.0
+  https://commons.wikimedia.org/wiki/File:People_crossing_street_(Unsplash
+
+landscape.jpg - Lake Pukaki and Aoraki / Mt Cook under a clear sky
+  by Bernard Spragg, Christchurch, New Zealand, CC0 1.0
+  https://commons.wikimedia.org/wiki/File:Lake_Pukaki_and_Mt_Cook.NZ_(15577767068
+
+pet.jpg - a dog lying in long grass
+  by Rodion Kutsaev (Unsplash: frostroomhead), CC0 1.0
+  https://commons.wikimedia.org/wiki/File:Earnest_dog_in_the_grass_(Unsplash
+
+food.jpg - pancakes with banana on a plate
+  by Toa Heftiba (Unsplash: heftiba), CC0 1.0
+  https://commons.wikimedia.org/wiki/File:Pancake_Breakfast_(Unsplash
+
+document.jpg - a printed 1987 store receipt, photographed flat
+  by Mopenstein (own work), CC0 1.0
+  https://commons.wikimedia.org/wiki/File:Circuit_City_Receipt_-_December_17,_1987.jpg
+
+group.jpg - three friends walking by railway tracks, faces to camera
+  by Priscilla Du Preez (Unsplash: artographybyp), CC0 1.0
+  https://commons.wikimedia.org/wiki/File:Three_friends_by_train_tracks_(Unsplash
+
+The voice in the Auto Captions example is synthesised speech; the PDF
+examples start from sample documents the site's own generators made.
+
+People who can be recognised in a photo appear only to show what a tool
+does. Their appearance does not mean they endorse 1234Tools.

@@ -27,6 +27,7 @@ const sources = require('./build/sources.js');
    each other for ever */
 const outbound = require('./build-outbound.js');
 const share = require('./build-share.js'); /* the share bar and og:image, as build-share.js writes them */
+const proof = require('./build-proof.js'); /* the example, the story and the card thumbnails, as build-proof.js writes them */
 const { SECTIONS, trailFor } = require('./build/sections.js');
 const PLANS = require('./build/plans.json');
 
@@ -141,7 +142,7 @@ function toolPage(t, parts, all) {
     ]
   }) + '</script>\n';
   const rel = SECTION + '/' + t.slug + '/index.html';
-  return share.apply(outbound.rewrite(keepPwa(rel, hubs.apply(markActive(headFor(parts, pathOnly, s.title + ' — AI for Business | 1234Tools', s.description, s.scripts) + accountScripts + ld + parts.mid + '\n' + body + parts.tail), rel)), SECTION).html, rel);
+  return proof.apply(share.apply(outbound.rewrite(keepPwa(rel, hubs.apply(markActive(headFor(parts, pathOnly, s.title + ' — AI for Business | 1234Tools', s.description, s.scripts) + accountScripts + ld + parts.mid + '\n' + body + parts.tail), rel)), SECTION).html, rel), rel);
 }
 
 function hubPage(parts, all) {
@@ -176,7 +177,7 @@ function hubPage(parts, all) {
     ]
   }) + '</script>\n';
   const rel = SECTION + '/index.html';
-  return share.apply(keepPwa(rel, hubs.apply(markActive(headFor(parts, '/' + SECTION + '/', title, description, []) + ld + parts.mid + '\n' + body + parts.tail), rel)), rel);
+  return proof.apply(share.apply(keepPwa(rel, hubs.apply(markActive(headFor(parts, '/' + SECTION + '/', title, description, []) + ld + parts.mid + '\n' + body + parts.tail), rel)), rel), rel);
 }
 
 /* ---------- wiring ---------- */

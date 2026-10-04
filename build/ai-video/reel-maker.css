@@ -67,6 +67,11 @@
 .reel-unit { font-size: .78rem; color: var(--text-3); margin-right: 4px; }
 .aiimg-pane .reel-scene textarea.control { min-height: 40px; font-size: 14px; line-height: 1.35; padding: 7px 9px; }
 .aiimg-pane .reel-scene select.control { padding: 5px 8px; font-size: 13px; }
+.aiimg-pane .reel-scene input.control.reel-scene-heading { padding: 6px 9px; font-size: 13px; font-weight: 600; }
+.reel-look-name { margin: 0 0 10px; font-size: .82rem; color: var(--text-2); }
+.reel-look-name:empty { display: none; }
+.reel-mode select.control { max-width: 360px; }
+.reel-mode .field-hint { margin-top: -4px; }
 .reel-media-name { font-size: .75rem; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* media and sound */

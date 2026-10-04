@@ -181,7 +181,10 @@ async function setValue(page, sel, text) {
 async function press(page, sel) {
   const covered = await page.evaluate((s) => {
     const b = document.querySelector(s);
-    b.scrollIntoView({ block: 'center' });
+    /* instantly: the site scrolls smoothly, and a click sent mid-scroll
+       lands wherever the button was a frame ago (the install bar, often) */
+    document.documentElement.style.scrollBehavior = 'auto';
+    b.scrollIntoView({ block: 'center', behavior: 'instant' });
     const r = b.getBoundingClientRect();
     const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
     return top && (top === b || b.contains(top)) ? null : (top ? top.outerHTML.slice(0, 160) : 'nothing');

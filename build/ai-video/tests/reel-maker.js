@@ -8,7 +8,21 @@
  *      preselect the tool and write its script and end card; a hook frame
  *      drawn by renderFrame has text in the content band, a quiet top band
  *      and the accent colour; the QR payload carries the UTM link;
- *   4. ?preset=paper turns the look light;
+ *  3a. the same tool twice (three times) gets different looks;
+ *  3b. the story: GST makes hook, pain, usual, fix, example, steps, end card
+ *      in that order from assets/stories.js (loaded on demand), the hook is
+ *      the story's, the usual way carries its three frustrations, beats run
+ *      1.6–4 s, the palettes pass the AA audit, the end-card QR reads back in
+ *      three more looks, three caption shapes, the example degrades to the
+ *      in → out line without assets/examples.js, and looks.png (every beat,
+ *      settled and mid-motion, in three looks) is saved;
+ *  3c. 8 palettes × treatments × motions at three sizes: no overflow flag,
+ *      nothing under 20 px, nothing drawn in the 9:16 safe bands;
+ *  3d. a fixture TOOL_EXAMPLES before/after is wiped: before left of the
+ *      seam, after right of it, mid-wipe;
+ *  3e. a batch of three is planned in three palettes;
+ *   4. ?preset=paper turns the look light; 4b. each of the 7 visitor
+ *      templates makes its own scenes with no overflow; Shuffle look works;
  *   5. the caption copy: link-in-bio line, 3–8 hashtags (#gst, #1234tools),
  *      the share module's credit line; the bio link carries the UTMs;
  *   6. a voiceover WAV (Windows TTS) is transcribed by Whisper on the device;
@@ -16,7 +30,8 @@
  *      size, and captions drawn mid-reel; three frames are saved as PNG;
  *   8. the cover PNG is 1080×1920;
  *   9. a batch of two tools gives two MP4s and a captions file naming both;
- *  10. timing: a 15 s reel at 1080×1920, text only and with music;
+ *  10. timing: a 15 s reel at 1080×1920, text only and with music, and a
+ *      20 s seven-beat story reel;
  *  11. the microphone path, with Chrome's fake device;
  *  12. no request left 127.0.0.1 and no page error.
  * With --recorder, VideoEncoder and AudioEncoder are removed before the
@@ -106,6 +121,37 @@ async function probe(page, src, fractions, band) {
   }, src, fractions, band || null);
 }
 const savePng = (dataUrl, name) => fs.writeFileSync(path.join(OUT, name), Buffer.from(dataUrl.split(',')[1], 'base64'));
+/* The kits' looks, pinned, for the checks that need a known one. */
+const MIDNIGHT = { palette: 'midnight', type: 'gradient', motion: 'pop', bg: 'glow', layout: 'classic' };
+const TEMPLATE_TYPES = {
+  problem: ['hook', 'pain', 'usual', 'fix', 'steps', 'cta'],
+  beforeafter: ['hook', 'versus', 'text', 'steps', 'cta'],
+  mistakes: ['hook', 'point', 'point', 'point', 'fix', 'cta'],
+  myth: ['hook', 'versus', 'versus', 'text', 'cta'],
+  howto: ['hook', 'point', 'point', 'point', 'steps', 'cta'],
+  top5: ['hook', 'point', 'point', 'point', 'point', 'point', 'cta'],
+  testimonial: ['hook', 'quote', 'pain', 'fix', 'cta']
+};
+/* In the page: pin a look (optional), render the last frame of the reel and read the QR on the end card's white plate back. */
+const scanEndCard = (page, spec) => page.evaluate(async (spec) => {
+  const T = AIImg.tools['reel-maker']; const S = T.state();
+  if (spec) { T.current.setLook(spec); await T.current.prepare(); }
+  const qr = T.qrUrlFor(S.promote.path, 'instagram');
+  const D = S.scenes.reduce((s, x) => s + x.seconds, 0);
+  const e = document.createElement('canvas'); e.width = 1080; e.height = 1920; T.renderFrame(e.getContext('2d'), 1080, 1920, D - 0.05);
+  const ed = e.getContext('2d').getImageData(0, 0, 1080, 1920).data;
+  let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+  for (let y = 0; y < 1920; y++) for (let x = 0; x < 1080; x++) { const i = (y * 1080 + x) * 4; if (ed[i] === 255 && ed[i + 1] === 255 && ed[i + 2] === 255) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+  let scanned = 'no plate';
+  if (x1 > x0) {
+    const size = (x1 - x0 + 1) / 1.12, pad = size * 0.06, n = QR.encode(qr, 'M').size + 4, mod = size / n;
+    const m = [];
+    for (let r = 2; r < n - 2; r++) { const rowM = []; for (let col = 2; col < n - 2; col++) { const px = Math.round(x0 + pad + (col + 0.5) * mod), py = Math.round(y0 + pad + (r + 0.5) * mod); const i = (py * 1080 + px) * 4; rowM.push((ed[i] + ed[i + 1] + ed[i + 2]) / 3 < 128 ? 1 : 0); } m.push(rowM); }
+    const got = QR.decode(m);
+    scanned = got.ok ? got.text : 'ERR ' + got.error;
+  }
+  return { qr, scanned, look: S.look.name, png: e.toDataURL('image/png') };
+}, spec || null);
 const clickText = (page, scope, re) => page.evaluate((scope, src) => {
   const re = new RegExp(src);
   for (const b of document.querySelectorAll(scope + ' button')) if (re.test(b.textContent.trim()) && !b.disabled && b.offsetParent !== null) { b.click(); return true; }
@@ -209,6 +255,22 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
     check(types.length >= 5 && types[types.length - 1] === 'endcard', 'promote script has ≥ 5 scenes ending in an end card (' + types.join(',') + ')');
     const sceneTexts = await page.$$eval('.reel-scene-text', (t) => t.map((x) => x.value));
     console.log('  GST script:\n    ' + sceneTexts.map((s) => s.replace(/\n/g, ' / ')).join('\n    '));
+    /* ---- 3a. variety: the same tool twice gets two different looks ---- */
+    const twice = await page.evaluate(async () => {
+      const T = AIImg.tools['reel-maker']; const S = T.state();
+      const a = Object.assign({}, S.look.spec), an = S.look.name;
+      await T.current.usePromote(S.promote);
+      const b = Object.assign({}, S.look.spec), bn = S.look.name;
+      await T.current.usePromote(S.promote);
+      const c = Object.assign({}, S.look.spec), cn = S.look.name;
+      return { a, b, c, names: [an, bn, cn] };
+    });
+    console.log('  three GST reels in a row:\n    ' + twice.names.join('\n    '));
+    const combo = (v) => [v.palette, v.type, v.motion, v.bg, v.layout].join('|');
+    check(combo(twice.a) !== combo(twice.b) && twice.a.palette !== twice.b.palette, 'two consecutive promo reels for one tool differ in look (palette ' + twice.a.palette + ' → ' + twice.b.palette + ')');
+    check(new Set([twice.a.palette, twice.b.palette, twice.c.palette]).size === 3, 'three in a row use three palettes (the last three for a tool are avoided)');
+    /* the checks below were written for the brand look: pin it, as the Look selects would */
+    await page.evaluate(async (spec) => { const API = AIImg.tools['reel-maker'].current; API.setLook(spec); await API.prepare(); }, MIDNIGHT);
     await sleep(800);
     const mid = await page.evaluate(async () => {
       await document.fonts.ready;
@@ -244,6 +306,158 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
     check(mid.qr === 'https://www.1234tools.com/india/gst-calculator/?utm_source=instagram&utm_medium=social&utm_campaign=india&utm_content=gst-calculator', 'QR payload is the UTM link (' + mid.qr + ')');
     check(mid.scanned === mid.qr, 'the QR drawn on the end card scans back to the UTM link (' + mid.scanned + ')');
 
+    /* ---- 3b. the story: seven beats, the story's own words ---- */
+    const story = await page.evaluate(() => {
+      const T = AIImg.tools['reel-maker']; const S = T.state();
+      const st = window.TOOL_STORIES && window.TOOL_STORIES['/india/gst-calculator/'];
+      const ex = S.scenes.find((s) => s.type === 'example');
+      return { types: S.scenes.map((s) => s.type), secs: S.scenes.map((s) => s.seconds), hook: S.scenes[0].text, story: st,
+        usual: (S.scenes.find((s) => s.type === 'usual') || {}).text || '', exKind: ex && ex.ex && ex.ex.kind, fixture: !!(window.TOOL_EXAMPLES && window.TOOL_EXAMPLES['/india/gst-calculator/']),
+        storiesScript: !!document.querySelector('script[src="/assets/stories.js"]'), audit: T.paletteAudit().filter((r) => !r.ok) };
+    });
+    const D7 = story.secs.reduce((a, b) => a + b, 0);
+    console.log('  beats:', story.types.map((t, i) => t + ' ' + story.secs[i] + ' s').join(', '), '· total', D7.toFixed(1), 's');
+    check(JSON.stringify(story.types) === JSON.stringify(['hook', 'pain', 'usual', 'fix', 'example', 'steps', 'endcard']), 'promote mode for /india/gst-calculator/ gives the 7 beats in order');
+    check(!!story.story && story.hook === story.story.hook, 'the hook scene is the story hook ("' + story.hook + '")');
+    check(!!story.story && story.story.usual.every((u) => story.usual.indexOf(u) >= 0), 'the usual-way scene carries the three frustrations');
+    check(story.storiesScript, 'assets/stories.js was loaded on demand (promote mode)');
+    check(D7 >= 15 && D7 <= 24 && story.secs.slice(0, -1).every((s) => s >= 1.6 && s <= 4), 'beats last 1.6–4 s each, ' + D7.toFixed(1) + ' s in all');
+    check(story.exKind === (story.fixture ? 'calc' : 'flow'), 'the example scene is the ' + (story.fixture ? 'captured calculator receipt' : 'in → out line') + ' (' + story.exKind + ')');
+    check(story.audit.length === 0, 'every palette passes the AA contrast audit' + (story.audit.length ? ' (' + story.audit.map((r) => r.palette + ' ' + r.pair).join('; ') + ')' : ''));
+    for (const spec of [{ palette: 'block', type: 'caps', motion: 'punch', bg: 'grid', layout: 'split' }, { palette: 'paper', type: 'serif', motion: 'type', bg: 'grain', layout: 'poster' }, { palette: 'violet', type: 'outline', motion: 'slide', bg: 'mesh', layout: 'classic' }]) {
+      const s2 = await scanEndCard(page, spec);
+      check(s2.scanned === s2.qr, 'end card QR decodes to the UTM link in ' + s2.look);
+    }
+    /* captions: one shape per copy index, all with the link-in-bio line and 5–8 tags */
+    const caps3 = await page.evaluate(() => { const T = AIImg.tools['reel-maker']; const out = []; for (const copy of [0, 1, 2]) { T.current.setLook({ copy }); out.push(T.captionFor()); } return out; });
+    fs.writeFileSync(path.join(OUT, 'captions-3-shapes.txt'), caps3.join('\n\n=====\n\n'));
+    check(new Set(caps3).size === 3, 'three caption structures for three copy indexes');
+    check(caps3.every((c) => c.split('\n')[0] === story.hook && /link in bio/i.test(c) && hashtags(c).length >= 5 && hashtags(c).length <= 8 && !/100% private|no third-party|unlimited/i.test(c)), 'each caption leads with the hook, has the bio line and 5–8 hashtags');
+    /* examples.js absent or without an entry: the in → out line */
+    const degrade = await page.evaluate(() => {
+      const T = AIImg.tools['reel-maker']; const S = T.state();
+      const keep = window.TOOL_EXAMPLES; window.TOOL_EXAMPLES = undefined;
+      const sc = T.buildScript(S.promote, { endcard: true });
+      window.TOOL_EXAMPLES = keep;
+      const ex = sc.find((s) => s.type === 'example');
+      return ex && ex.ex.kind;
+    });
+    check(degrade === 'flow', 'without assets/examples.js the example beat falls back to the in → out line');
+    /* the contact sheet: every beat, settled and mid-motion, in three looks */
+    const sheet = await page.evaluate(async (looks) => {
+      const T = AIImg.tools['reel-maker']; const API = T.current; const S = T.state();
+      const n = S.scenes.length, tw = 270, th = 480, g = 10;
+      const c = document.createElement('canvas'); c.width = n * (tw + g) + g; c.height = looks.length * 2 * (th + g) + g;
+      const x = c.getContext('2d'); x.fillStyle = '#2a2d36'; x.fillRect(0, 0, c.width, c.height);
+      const f = document.createElement('canvas'); f.width = 1080; f.height = 1920; const fx = f.getContext('2d');
+      for (let li = 0; li < looks.length; li++) {
+        API.setLook(looks[li]); await API.prepare();
+        let st = 0;
+        S.scenes.forEach((sc, i) => {
+          for (const [k, frac] of [[0, 0.88], [1, 0.32]]) {
+            T.renderFrame(fx, 1080, 1920, st + sc.seconds * frac, S);
+            x.drawImage(f, g + i * (tw + g), g + (li * 2 + k) * (th + g), tw, th);
+          }
+          st += sc.seconds;
+        });
+      }
+      return c.toDataURL('image/png');
+    }, [Object.assign({ copy: 0 }, MIDNIGHT), { palette: 'paper', type: 'serif', motion: 'slide', bg: 'grain', layout: 'poster', copy: 1 }, { palette: 'block', type: 'caps', motion: 'punch', bg: 'grid', layout: 'split', copy: 2 }]);
+    savePng(sheet, 'looks.png');
+    console.log('  contact sheet: ' + path.join(OUT, 'looks.png'));
+
+    /* ---- 3c. no text overflows, nothing in the safe bands: every beat, every palette, three sizes ---- */
+    const sweep = await page.evaluate(async () => {
+      const T = AIImg.tools['reel-maker']; const API = T.current; const S = T.state();
+      T.clearOverflow();
+      const pals = Object.keys(T.palettes), types = T.types, motions = T.motions, bgs = T.backgrounds, layouts = T.layouts;
+      const sizes = [[1080, 1920], [1080, 1080], [1920, 1080]];
+      const bands = { top: 0, bottom: 0, inked: 0 };
+      const bgc = document.createElement('canvas'); bgc.width = 1080; bgc.height = 1920; const bgx = bgc.getContext('2d');
+      /* pixels that differ from the bare background in the top 250 px or the bottom 340 px: something was drawn there */
+      const inked = (x) => {
+        let n = 0;
+        for (const [y0, h] of [[0, 250], [1580, 340]]) {
+          const a = x.getImageData(0, y0, 1080, h).data, b = bgx.getImageData(0, y0, 1080, h).data;
+          for (let i = 0; i < a.length; i += 4) if (Math.max(Math.abs(a[i] - b[i]), Math.abs(a[i + 1] - b[i + 1]), Math.abs(a[i + 2] - b[i + 2])) > 24) n++;
+        }
+        return n;
+      };
+      const std = (d) => { let s = 0, s2 = 0; const n = d.length / 4; for (let i = 0; i < d.length; i += 4) { const l = (d[i] + d[i + 1] + d[i + 2]) / 3; s += l; s2 += l * l; } const m = s / n; return Math.sqrt(Math.max(0, s2 / n - m * m)); };
+      let frames = 0;
+      for (let p = 0; p < pals.length; p++) {
+        API.setLook({ palette: pals[p], type: types[p % types.length], motion: motions[p % motions.length], bg: bgs[p % bgs.length], layout: layouts[p % layouts.length], copy: p % 3 });
+        await API.prepare();
+        for (const [W, H] of (p < 3 ? sizes : [sizes[0]])) {
+          const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+          let st = 0;
+          for (const sc of S.scenes) {
+            for (const fr of [0.05, 0.3, 0.6, 0.98]) {
+              T.renderFrame(x, W, H, st + sc.seconds * fr, S);
+              frames++;
+              if (W === 1080 && H === 1920 && (fr === 0.3 || fr === 0.98)) {
+                bands.top = Math.max(bands.top, std(x.getImageData(0, 0, W, 240).data));
+                bands.bottom = Math.max(bands.bottom, std(x.getImageData(0, 1600, W, 320).data));
+                T.background(bgx, 1080, 1920, st + sc.seconds * fr, S);
+                bands.inked += inked(x);
+              }
+            }
+            st += sc.seconds;
+          }
+        }
+      }
+      return { over: T.overflow(), min: T.minPx(), bands, frames };
+    });
+    console.log('  sweep: ' + sweep.frames + ' frames · smallest text ' + sweep.min.toFixed(1) + ' px · band std top ' + sweep.bands.top.toFixed(1) + ', bottom ' + sweep.bands.bottom.toFixed(1));
+    check(sweep.over.length === 0, 'no overflow flags in 8 palettes × 5 treatments × 4 motions, 3 sizes' + (sweep.over.length ? ' (' + sweep.over.slice(0, 4).join(' | ') + ')' : ''));
+    check(sweep.min >= 19.9, 'no text drawn below 20 px on a 1080-wide frame (smallest ' + sweep.min.toFixed(1) + ')');
+    check(sweep.bands.inked === 0, 'nothing but the background in the top 250 px and bottom 340 px of 1080×1920, in any look (' + sweep.bands.inked + ' pixels drawn over it)');
+
+    /* ---- 3d. the example: a fixture before/after, wiped (pixel check mid-wipe) ---- */
+    const wipe = await page.evaluate(async () => {
+      const T = AIImg.tools['reel-maker']; const API = T.current; const S = T.state();
+      const solid = (col) => { const c = document.createElement('canvas'); c.width = 800; c.height = 600; const x = c.getContext('2d'); x.fillStyle = col; x.fillRect(0, 0, 800, 600); return c.toDataURL('image/png'); };
+      await T.loadExamples();
+      window.TOOL_EXAMPLES = window.TOOL_EXAMPLES || {};
+      window.TOOL_EXAMPLES['/image/image-compressor/'] = { kind: 'beforeAfter', caption: 'Fixture: blue before, orange after', before: solid('#1e50ff'), after: solid('#ff8a1e') };
+      const row = FINDER_INDEX.tools.find((r) => r[1] === 'image/image-compressor/');
+      await API.usePromote(row);
+      API.setLook({ palette: 'midnight', type: 'gradient', motion: 'pop', bg: 'glow', layout: 'classic' });
+      await API.prepare();
+      const i = S.scenes.findIndex((s) => s.type === 'example');
+      if (i < 0) return { err: 'no example scene: ' + S.scenes.map((s) => s.type).join(',') };
+      const sc = S.scenes[i];
+      const start = S.scenes.slice(0, i).reduce((a, s) => a + s.seconds, 0);
+      const c = document.createElement('canvas'); c.width = 1080; c.height = 1920; const x = c.getContext('2d');
+      let hit = null;
+      for (let t = 0.5; t < 1.9; t += 1 / 30) {
+        T.renderFrame(x, 1080, 1920, start + t, S);
+        const b = sc._ba;
+        if (b && b.sx > b.x + b.w * 0.42 && b.sx < b.x + b.w * 0.58) { hit = { t, b: Object.assign({}, b) }; break; }
+      }
+      if (!hit) return { err: 'the seam never crossed the middle' };
+      const at = (px, py) => Array.from(x.getImageData(Math.round(px), Math.round(py), 1, 1).data);
+      const b = hit.b, yy = b.y + b.h * 0.78;
+      return { t: hit.t, seam: (b.sx - b.x) / b.w, left: at(b.sx - b.w * 0.15, yy), right: at(b.sx + b.w * 0.15, yy), png: c.toDataURL('image/png'), kind: sc.ex.kind };
+    });
+    if (wipe.err) check(false, 'mid-wipe frame: ' + wipe.err);
+    else {
+      savePng(wipe.png, '5-wipe-frame.png');
+      console.log('  mid-wipe at ' + wipe.t.toFixed(2) + ' s into the example (seam ' + (wipe.seam * 100).toFixed(0) + '%): left ' + wipe.left + ', right ' + wipe.right);
+      const blue = (p) => p[2] > 200 && p[0] < 90, orange = (p) => p[0] > 220 && p[1] > 100 && p[1] < 180 && p[2] < 90;
+      check(wipe.kind === 'beforeAfter' && blue(wipe.left) && orange(wipe.right), 'with a fixture TOOL_EXAMPLES entry the example scene draws the before/after: before left of the seam, after right of it');
+    }
+
+    /* ---- 3e. a batch of three gets three looks ---- */
+    const plan = await page.evaluate(() => {
+      const T = AIImg.tools['reel-maker'];
+      const rows = ['india/gst-calculator/', 'pdf/merge-pdf/', 'text/word-counter/'].map((p) => FINDER_INDEX.tools.find((r) => r[1] === p));
+      T.current.state.lookLock = {};
+      return T.current.planBatch(rows, { record: false });
+    });
+    console.log('  batch of three:', plan.map((v) => v.palette + '/' + v.type + '/' + v.motion + '/' + v.bg).join(', '));
+    check(new Set(plan.map((v) => v.palette)).size === 3, 'a batch of 3 gives 3 different looks (three palettes)');
+
     await gotoTool('?tool=' + encodeURIComponent('/pdf/merge-pdf/'));
     await waitStudio();
     await page.waitForSelector('.reel-chosen:not([hidden])', { timeout: 20000 });
@@ -273,6 +487,41 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
     savePng(paper.png, '5-paper-frame.png');
     check(paper.pressed === 'true', '?preset=paper marks the Paper chip pressed');
     check(paper.mean > 180, 'paper frame mean luminance > 180 (' + paper.mean.toFixed(0) + ')');
+
+    /* ---- 4b. the visitor's templates: each makes its own scenes, nothing overflows ---- */
+    page.on('dialog', (d) => d.accept().catch(() => {}));
+    await gotoTool('');
+    const tplOpts = await page.$$eval('#reel-template option', (o) => o.map((x) => x.value).filter(Boolean));
+    check(tplOpts.length === 7, 'the template select offers 7 templates (' + tplOpts.join(', ') + ')');
+    const tplLooks = [];
+    for (const id of Object.keys(TEMPLATE_TYPES)) {
+      await page.select('#reel-template', id);
+      await clickText(page, '.reel-start', /^Make my reel$/);
+      await waitStudio();
+      const got = await page.evaluate(async () => {
+        const T = AIImg.tools['reel-maker']; const S = T.state();
+        await T.current.prepare();
+        T.clearOverflow();
+        const c = document.createElement('canvas'); c.width = 1080; c.height = 1920; const x = c.getContext('2d');
+        let st = 0;
+        for (const sc of S.scenes) { for (const fr of [0.1, 0.4, 0.7, 0.99]) T.renderFrame(x, 1080, 1920, st + sc.seconds * fr, S); st += sc.seconds; }
+        return { types: S.scenes.map((s) => s.type), over: T.overflow(), look: S.look.spec, D: st, png: (T.renderFrame(x, 1080, 1920, S.scenes[1].seconds * 0.9 + S.scenes[0].seconds, S), c.toDataURL('image/png')) };
+      });
+      savePng(got.png, 'template-' + id + '.png');
+      tplLooks.push(got.look.palette + '/' + got.look.type);
+      check(JSON.stringify(got.types) === JSON.stringify(TEMPLATE_TYPES[id]) && got.over.length === 0, 'template "' + id + '" makes ' + got.types.join(', ') + ' (' + got.D.toFixed(1) + ' s), no overflow' + (got.over.length ? ' — ' + got.over.join(' | ') : ''));
+      await clickText(page, '.aiimg-transport', /^Start over$/);
+    }
+    console.log('  template looks: ' + tplLooks.join(', '));
+    /* Shuffle look: a new palette and the look name says so */
+    await clickText(page, '.reel-start', /^Make my reel$/);
+    await waitStudio();
+    const before = await page.evaluate(() => AIImg.tools['reel-maker'].state().look.spec);
+    await page.click('#reel-shuffle');
+    await sleep(200);
+    const after = await page.evaluate(() => ({ spec: AIImg.tools['reel-maker'].state().look.spec, name: document.querySelector('#reel-look-name').textContent }));
+    check(after.spec.palette !== before.palette && after.name.indexOf(after.spec.palette === 'block' ? 'Bold Block' : '') >= 0, 'Shuffle look changes the palette (' + before.palette + ' → ' + after.spec.palette + '; "' + after.name + '")');
+    await clickText(page, '.aiimg-transport', /^Start over$/);
 
     if (RECORDER) {
       /* ---- recorder path ---- */
@@ -444,6 +693,8 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
         const caps = await page.evaluate(async () => { const a = document.querySelector('a[download="reel-captions.txt"]'); return a ? (await (await fetch(a.href)).text()) : ''; });
         fs.writeFileSync(path.join(OUT, 'reel-captions.txt'), caps);
         check(/GST Calculator \(India\)/.test(caps) && /Merge PDF Files/.test(caps), 'reel-captions.txt names both tools');
+        const bLooks = await page.evaluate(() => AIImg.tools['reel-maker'].state().lastBatchLooks || []);
+        check(bLooks.length === 2 && bLooks[0] !== bLooks[1], 'the two batch reels were made in two looks (' + bLooks.join(' · ') + ')');
         const blocks = caps.split(/\n(?=Merge PDF Files\n)/);
         check(blocks.length === 2 && blocks.every((b) => /link in bio/i.test(b) && hashtags(b).length >= 3 && hashtags(b).length <= 8), 'each batch caption has a link-in-bio line and 3–8 hashtags');
         await page.screenshot({ path: path.join(OUT, '6-batch.png') });
@@ -543,6 +794,27 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
           timings[withMusic ? 'reel15music' : 'reel15'] = took;
           check(Math.abs(p.duration - 15) <= 0.5 && traks === (withMusic ? 2 : 1), '15 s reel' + (withMusic ? ' with music' : '') + ' exports at 15 s with ' + (withMusic ? 'two tracks' : 'one track'));
         }
+
+        /* ---- 10b. timing: a 20 s story reel (seven beats, the receipt, the QR) at 1080×1920 ---- */
+        await gotoTool('?tool=india/gst-calculator/');
+        await waitStudio();
+        await page.evaluate(() => { const ins = document.querySelectorAll('.reel-secs'); const each = 20 / ins.length; for (const i of ins) { i.value = String(Math.round(each * 10) / 10); i.dispatchEvent(new Event('change', { bubbles: true })); } });
+        const t20 = await page.$eval('#reel-total', (e) => e.textContent);
+        await pane('export');
+        const client20 = await page.target().createCDPSession();
+        await client20.send('Page.setDownloadBehavior', { behavior: 'deny' });
+        const te20 = Date.now();
+        await page.click('#reel-export');
+        await waitExport();
+        const took20 = (Date.now() - te20) / 1000;
+        const src20 = await page.$eval('.aiimg-result video', (v) => v.src);
+        const p20 = await probe(page, src20, [0.08, 0.3, 0.55, 0.97]);
+        const b20 = Buffer.from(p20.b64, 'base64');
+        fs.writeFileSync(path.join(OUT, 'reel-gst-story-20s.mp4'), b20);
+        p20.frames.forEach((f, i) => savePng(f.png, 'story20-frame-' + (i + 1) + '.png'));
+        console.log(stamp(), '20 s story reel:', t20, '→', took20.toFixed(1) + 's | duration', p20.duration.toFixed(2), '|', (p20.size / 1e6).toFixed(2), 'MB');
+        timings.promo20 = took20;
+        check(b20.subarray(4, 8).toString('latin1') === 'ftyp' && Math.abs(p20.duration - 20) <= 0.6, '20 s story reel exports as an MP4 of 20 s');
       }
 
       /* ---- 11. the microphone, with Chrome's fake device ---- */

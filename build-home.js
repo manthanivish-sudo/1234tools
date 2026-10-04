@@ -39,6 +39,7 @@ const fs = require('fs');
 const path = require('path');
 const outbound = require('./build-outbound.js');
 const share = require('./build-share.js'); /* the share bar and og:image, as build-share.js writes them */
+const proof = require('./build-proof.js'); /* the example, the story and the card thumbnails, as build-proof.js writes them */
 const { PRICING } = require('./build/collections.js');
 const { indexTotal } = require('./build/totals.js');
 /* The same reader the collections use, so a tool is described in one
@@ -84,7 +85,9 @@ const HERO_JOBS = [
    families, the brand banner and the request form — is left where it is. */
 /* AUDIENCES is the "I am a…" row written by build-collections.js: who you
    are is the second question after what you came to do. */
-const ORDER = ['HOME-HERO', 'AUDIENCES', 'POPULAR', 'CATEGORIES', 'COLLECTIONS', 'HOME-PICKS', 'HOME-WHY'];
+/* SEEITWORK is the "See it work" strip of real before-and-after examples,
+   written by build-proof.js. */
+const ORDER = ['HOME-HERO', 'AUDIENCES', 'SEEITWORK', 'POPULAR', 'CATEGORIES', 'COLLECTIONS', 'HOME-PICKS', 'HOME-WHY'];
 
 /* The callable's address, built from the same config the account pages
    use so there is one place a project id is written down. While it says
@@ -444,7 +447,7 @@ function patchHome() {
   const order = reorder(html);
   html = order.html;
 
-  const changed = write(rel, share.apply(outbound.rewrite(html, 'home').html, rel));
+  const changed = write(rel, proof.apply(share.apply(outbound.rewrite(html, 'home').html, rel), rel));
   return { changed, c, checked, metas, asking: !!url, copy, order };
 }
 
