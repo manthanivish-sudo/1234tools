@@ -175,13 +175,13 @@ function hubPage(parts, all) {
   const sec = SECTIONS['/' + SECTION + '/'];
   const n = all.length;
   const title = 'AI Video Tools — Free, Private, Run in Your Browser | 1234Tools';
-  const description = 'Free AI video tools that run on your own device: automatic word-by-word captions with SRT and VTT, burned into the clip with its sound. No upload, no account, no watermark.';
+  const description = 'Free AI video tools that run on your own device: a reel maker that turns a script into a 9:16 MP4 with text, voice, music and captions, and automatic word-by-word captions with SRT and VTT. No upload, no account, no watermark.';
   const cards = all.map((t) => '<a class="card" href="/' + SECTION + '/' + t.slug + '/"><span class="card-icon">' + icon(t.spec.glyph) + '</span><strong>' + esc(t.spec.title) + '</strong><span class="card-desc">' + esc(t.spec.description) + '</span></a>').join('');
   const body =
     crumbs.render([], sec.hub || sec.name) + '\n' +
     '<p class="eyebrow">' + esc(sec.name) + '</p>\n' +
     '<h1>' + icon('i-ai-video', 'ico ico-title') + esc(sec.name) + '</h1>\n' +
-    '<p class="lede">AI video editing that happens on your own device. A small model is downloaded into your browser once; the video itself never leaves it. ' + n + ' tool' + (n === 1 ? '' : 's') + ' so far, free, with no account and no watermark.</p>\n' +
+    '<p class="lede">Video making and editing that happens on your own device: turn a script into a Reel, or caption a clip with a speech model that is downloaded into your browser once. Your video never leaves it. ' + n + ' tool' + (n === 1 ? '' : 's') + ' so far, free, with no account and no watermark.</p>\n' +
     '<div class="grid">' + cards + '</div>\n' +
     '<section class="panel ai-how"><h2>How these differ from the AI for Business tools</h2>' +
     '<p>The <a href="/ai/">AI for Business</a> tools send your text to a language model on a server, say so on every page, and count calls against a monthly allowance. These do not. The models here are small enough to run inside a browser — the speech recogniser is 41 MB — so they are served from this site, kept by your browser after the first visit, and run on your own processor through WebAssembly. The video is decoded, redrawn and re-encoded by the browser’s own media engine. No third-party server is contacted.</p>' +

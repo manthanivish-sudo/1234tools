@@ -37,7 +37,7 @@ const COLLECTIONS = [
       'These run in your browser. The AI models for captions, cut-outs, upscaling and the rest are downloaded once and run on your own device, so an unreleased video or a client’s product shot never leaves it, and nothing you export carries a watermark. The writing tools for hooks, scripts and titles are the exception: they send what you type to a language model, say so on the page, and give you ten free a month.'
     ],
     groups: [
-      { name: 'Video', blurb: 'Captions burned in word by word, and clips made out of stills.', tools: ['/ai-video/auto-captions/', '/ai-image/3d-photo-parallax/', '/ai-image/text-behind-image/', '/ai-image/face-blur/'] },
+      { name: 'Video', blurb: 'Reels from a script, captions burned in word by word, and clips made out of stills.', tools: ['/ai-video/reel-maker/', '/ai-video/auto-captions/', '/ai-image/3d-photo-parallax/', '/ai-image/text-behind-image/', '/ai-image/face-blur/'] },
       { name: 'Thumbnails and covers', blurb: 'The frame people decide on in half a second.', tools: ['/ai-image/thumbnail-maker/', '/ai-image/background-remover/', '/ai-image/blur-background/', '/ai-image/color-pop/', '/ai-image/image-upscaler/', '/ai-image/film-grain/'] },
       { name: 'Every size every app wants', blurb: 'One picture in; a carousel, a story, a square and an avatar out.', tools: ['/image/social-media-resizer/', '/image/image-splitter/', '/image/circle-crop/', '/image/image-compressor/', '/image/image-cropper/', '/ai-image/sticker-maker/', '/image/meme-generator/'] },
       { name: 'Words that get the click', blurb: 'Drafts to edit: the first three seconds, the script, the title and the tags.', tools: ['/ai/video-hook-writer/', '/ai/video-script-writer/', '/ai/youtube-metadata-writer/', '/ai/social-post-writer/', '/ai/content-repurposer/', '/ai/podcast-show-notes/', '/text/word-counter/'] },
@@ -51,7 +51,6 @@ const COLLECTIONS = [
     ],
     related: ['marketers', 'designers', 'photographers', 'freelancers'],
     next: [
-      { name: 'Reel Maker', what: 'Script and photos in; a 9:16 Reel with animated text, voiceover and captions out.' },
       { name: 'Engagement rate calculator', what: 'Followers, likes, comments and views in; engagement rate and how it compares out.' },
       { name: 'Video compressor and GIF maker', what: 'A clip under a platform’s size limit, without an upload.' },
       { name: 'Silence and filler cutter', what: 'The pauses and the ums found from the transcript and cut out.' }
@@ -206,7 +205,7 @@ const COLLECTIONS = [
  * accent as an angle, so the row reads as a set rather than a rainbow.
  */
 const TILES = [
-  { slug: 'creators', label: 'Creators & influencers', hue: 290, picks: ['/ai-video/auto-captions/', '/ai-image/thumbnail-maker/', '/ai-image/background-remover/'] },
+  { slug: 'creators', label: 'Creators & influencers', hue: 290, picks: ['/ai-video/reel-maker/', '/ai-video/auto-captions/', '/ai-image/thumbnail-maker/'] },
   { slug: 'online-sellers', label: 'Online sellers', hue: 25, picks: ['/ai-image/background-remover/', '/business/profit-margin/', '/pdf/invoice-pdf/'] },
   { slug: 'small-business', label: 'Small businesses', hue: 42, picks: ['/pdf/invoice-pdf/', '/business/bookkeeping/', '/business/payroll-run/'] },
   { slug: 'students', label: 'Students', hue: 200, picks: ['/education/cgpa-to-percentage/', '/mathematics/percentage/', '/pdf/merge-pdf/'] },

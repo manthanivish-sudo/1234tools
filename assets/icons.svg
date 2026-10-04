@@ -1741,4 +1741,11 @@
   <path d="M6.5 15.6h6.4M15 15.6h2.5" class="thin"/>
   <path d="M16.4 6.4l.55 1.25 1.25.55-1.25.55-.55 1.25-.55-1.25-1.25-.55 1.25-.55z" class="fill"/>
 </symbol>
+<symbol id="i-ai-reel" viewBox="0 0 24 24">
+  <rect x="6.5" y="3" width="11" height="18" rx="2.2"/>
+  <path d="M10.6 9.4v5.2l4.4-2.6z" class="fill"/>
+  <path d="M9 17.3h6" class="thin"/>
+  <path d="M4 7h1.2M4 12h1.2M4 17h1.2" class="thin"/>
+  <path d="M19.4 2.9l.55 1.25 1.25.55-1.25.55-.55 1.25-.55-1.25-1.25-.55 1.25-.55z" class="fill"/>
+</symbol>
 </svg>

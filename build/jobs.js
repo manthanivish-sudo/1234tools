@@ -226,6 +226,7 @@ const JOBS = {
   '/ai-image/film-grain/': ['Make', 'Photo → grainy PNG/GIF/MP4'],
   /* ai-video */
   '/ai-video/auto-captions/': ['Make', 'Video → captioned MP4 + SRT'],
+  '/ai-video/reel-maker/': ['Make', 'Script → 9:16 MP4 reel'],
 
   /* text */
   '/text/word-counter/': ['Check', 'Text → words, reading time'],
@@ -427,6 +428,7 @@ const DESCS = {
   '/ai-image/image-upscaler/': 'Upscale a photo 2× or 4×, or unblur it at its own size, with Real-ESRGAN. PNG, JPEG or WebP out.',
   '/ai-image/film-grain/': 'Film grain, light leaks, VHS tracking, a date stamp and faded colour. Seven presets; PNG, GIF or MP4.',
   '/ai-video/auto-captions/': 'Word-by-word animated captions on a video, transcribed offline by Whisper. MP4 with sound, SRT and VTT.',
+  '/ai-video/reel-maker/': 'A script becomes a 9:16 reel: animated text, screenshots or screen recording, voice, music, captions. MP4 out.',
   '/utilities/tool-finder/': 'Say what you need in plain words and it finds the right tool among all of them, on your device.'
 };
 
@@ -440,7 +442,7 @@ const START = {
   '/developer/': ['/developer/json-formatter/', '/developer/regex-tester/'],
   '/image/': ['/image/image-compressor/', '/image/image-converter/'],
   '/ai-image/': ['/ai-image/background-remover/', '/ai-image/text-behind-image/'],
-  '/ai-video/': ['/ai-video/auto-captions/'],
+  '/ai-video/': ['/ai-video/reel-maker/', '/ai-video/auto-captions/'],
   '/text/': ['/text/word-counter/', '/text/text-diff/'],
   '/mathematics/': ['/mathematics/percentage/', '/mathematics/scientific-calculator/'],
   '/finance/': ['/finance/loan-payment/', '/finance/compound-interest/'],
