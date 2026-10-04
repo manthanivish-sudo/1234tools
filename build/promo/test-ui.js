@@ -169,11 +169,16 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       await page.click('.tabs button[data-tab="log"]');
       await page.waitForFunction(() => document.querySelectorAll('#l-table tbody tr').length >= 1 && /reddit-r-sideproject/.test(document.querySelector('#l-table tbody').textContent));
     });
-    await check('Reels lists tools with Reel Maker links', async () => {
+    await check('Reels lists tools: a Reel Maker link when it is live, a switched-off button when not', async () => {
       await page.click('.tabs button[data-tab="reels"]');
-      await page.waitForSelector('#r-sections .reel a');
-      const href = await page.$eval('#r-sections .reel a', (a) => a.href);
-      assert.ok(href.startsWith('https://www.1234tools.com/ai-video/reel-maker/?tool=%2F'), href);
+      await page.waitForSelector('#r-sections .reel a, #r-sections .reel .is-off');
+      const s = await page.evaluate(() => ({
+        href: (document.querySelector('#r-sections .reel a') || {}).href || null,
+        off: document.querySelectorAll('#r-sections .reel .is-off').length,
+        note: document.querySelector('#r-note').textContent
+      }));
+      if (s.href) assert.ok(s.href.startsWith('https://www.1234tools.com/ai-video/reel-maker/?tool=%2F'), s.href);
+      else assert.ok(s.off > 0 && /not live/.test(s.note), JSON.stringify(s));
     });
     await check('no external requests and no page errors', async () => {
       assert.deepStrictEqual(external, []);

@@ -70,13 +70,36 @@ function draft(params) {
   };
 }
 
-function reels() {
+/* Whether the Reel Maker is live yet. The buttons used to link to it
+   unconditionally and landed on the 404 page before it shipped. One HEAD
+   request to the public page, remembered for ten minutes; offline counts
+   as "do not know", which leaves the buttons usable. */
+let reelLive = { at: 0, ok: null };
+function reelMakerLive() {
+  if (Date.now() - reelLive.at < 600000 && reelLive.ok !== null) return Promise.resolve(reelLive.ok);
+  return new Promise((resolve) => {
+    const req = require('https').request(REEL_MAKER, { method: 'HEAD', timeout: 6000, headers: { 'User-Agent': '1234Tools-promo-desk/1.0' } }, (res) => {
+      res.resume();
+      reelLive = { at: Date.now(), ok: res.statusCode >= 200 && res.statusCode < 400 };
+      resolve(reelLive.ok);
+    });
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+    req.on('error', () => resolve(null));
+    req.end();
+  });
+}
+
+async function reels() {
   const bySection = {};
   for (const r of T.listTools()) {
     if (!bySection[r.section]) bySection[r.section] = { section: r.section, name: r.sectionName, tools: [] };
     if (bySection[r.section].tools.length < 5) bySection[r.section].tools.push(Object.assign(lightTool(r), { reelUrl: REEL_MAKER + '?tool=' + encodeURIComponent(r.path) }));
   }
-  return { available: false, note: 'The Reel Maker is being built; these links work once it is deployed.', base: REEL_MAKER, sections: Object.values(bySection) };
+  const live = await reelMakerLive();
+  const note = live === true ? 'The Reel Maker is live. Each button opens it with the tool chosen and the script written; adjust, export, post.'
+    : live === false ? 'The Reel Maker is not live on the site yet, so these buttons are switched off. They come on by themselves once it is deployed.'
+    : 'Could not check whether the Reel Maker is live (offline?). The buttons are left on; a 404 means it has not been deployed yet.';
+  return { available: live !== false, live, note, base: REEL_MAKER, sections: Object.values(bySection) };
 }
 
 function venuesPayload() {
@@ -189,7 +212,7 @@ function createServer(port) {
         return send(res, 200, { entry });
       }
       if (p === '/api/plan') return send(res, 200, require('./plan').plan());
-      if (p === '/api/reels') return send(res, 200, reels());
+      if (p === '/api/reels') return send(res, 200, await reels());
       if (p === '/api/lint') {
         const b = req.method === 'POST' ? await readBody(req) : q;
         return send(res, 200, lint(b.text || '', { pricing: b.pricing || undefined, section: b.section || undefined, limit: b.limit ? +b.limit : undefined }));

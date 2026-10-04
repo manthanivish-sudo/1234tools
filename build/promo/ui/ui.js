@@ -535,7 +535,9 @@
     for (const s of r.sections) {
       box.appendChild(h('div', { class: 'card reelsec' }, h('h3', { text: s.name }),
         s.tools.map((t) => h('div', { class: 'reel' }, glyph(t.glyph), h('span', { text: t.title }), h('span', { class: 'io', text: t.io }),
-          h('a', { class: 'btn', href: t.reelUrl, target: '_blank', rel: 'noopener noreferrer' }, 'Open Reel Maker')))));
+          r.available
+            ? h('a', { class: 'btn', href: t.reelUrl, target: '_blank', rel: 'noopener noreferrer' }, 'Open Reel Maker')
+            : h('span', { class: 'btn is-off', title: 'The Reel Maker is not deployed yet', 'aria-disabled': 'true' }, 'Not live yet')))));
     }
   }
 
