@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -132,7 +139,7 @@ window.TOOLS["advance-tax"] = {
 "currency": "INR",
 "title": "Advance Tax Calculator",
 "category": "india",
-"description": "Quarterly advance tax instalments and the interest payable under Sections 234B and 234C if you underpay.",
+"description": "Quarterly advance tax instalments and the interest payable if you underpay — sections 424 and 425 of the Income-tax Act, 2025 from tax year 2026-27 (sections 234B and 234C of the 1961 Act before that).",
 "keywords": ["advance tax calculator","advance tax due dates","section 234C","section 234B","quarterly tax India"],
 "formula": "15% by 15 Jun, 45% by 15 Sep, 75% by 15 Dec, 100% by 15 Mar",
 "inputs": [{"key":"taxLiability","label":"Estimated annual tax liability","type":"number","unit":"₹","default":200000,"min":0},{"key":"tdsPaid","label":"TDS / TCS already deducted","type":"number","unit":"₹","default":50000,"min":0},{"key":"paidSoFar","label":"Advance tax already paid","type":"number","unit":"₹","default":0,"min":0}],
@@ -165,7 +172,7 @@ window.TOOLS["advance-tax"] = {
       };
     },
 "outputs": [{"key":"liable","label":"Liability","format":"text","primary":true},{"key":"netLiability","label":"Net tax payable","format":"currency"},{"key":"q1","label":"Instalment 1 (15 Jun)","format":"currency"},{"key":"q2","label":"Instalment 2 (15 Sep)","format":"currency"},{"key":"q3","label":"Instalment 3 (15 Dec)","format":"currency"},{"key":"q4","label":"Instalment 4 (15 Mar)","format":"currency"},{"key":"outstanding","label":"Still to pay","format":"currency"}],
-"tips": ["Advance tax applies once net liability after TDS reaches ₹10,000 for the year.","Section 234C charges 1% a month for shortfalls at each instalment; Section 234B charges 1% a month where less than 90% is paid by year end.","Senior citizens without business income are exempt from advance tax entirely.","Presumptive taxpayers under 44AD or 44ADA pay the whole amount in a single instalment by 15 March."],
+"tips": ["Advance tax applies once net liability after TDS reaches ₹10,000 for the year.","Section 425 of the Income-tax Act, 2025 (formerly 234C) charges 1% a month for shortfalls at each instalment; section 424 (formerly 234B) charges 1% a month where less than 90% is paid by year end. The 2025 Act replaced the 1961 Act from 1 April 2026 with the same rules.","Senior citizens without business income are exempt from advance tax entirely.","Presumptive taxpayers under 44AD or 44ADA pay the whole amount in a single instalment by 15 March."],
 "faq": [{"q":"What if my income is unpredictable?","a":"Estimate conservatively and revise at each instalment — the schedule is cumulative, so an increased estimate can be caught up at the next date. Capital gains are treated specially: the instalment falls due only from the quarter in which the gain arises."}]
 };
 })();

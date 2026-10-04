@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -158,7 +165,7 @@ window.TOOLS["ppf-calculator"] = {
       };
     },
 "outputs": [{"key":"maturity","label":"Maturity value","format":"currency","primary":true},{"key":"invested","label":"Total deposited","format":"currency"},{"key":"interest","label":"Interest earned","format":"currency"},{"key":"capped","label":"","format":"text"}],
-"tips": ["PPF is EEE: the deposit qualifies under 80C, the interest is exempt and the maturity amount is tax-free. Few instruments still offer all three.","The rate is set quarterly by the government and has moved over time, so treat any projection over fifteen years as indicative.","Interest is calculated on the lowest balance between the 5th and the last day of each month, so depositing before the 5th earns an extra month of interest.","The maximum is ₹1.5 lakh per financial year across all PPF accounts you hold. The account runs 15 years and can be extended in blocks of 5."],
+"tips": ["PPF is EEE: the deposit qualifies for the ₹1.5 lakh deduction (section 123 of the Income-tax Act, 2025, formerly 80C), the interest is exempt and the maturity amount is tax-free. Few instruments still offer all three.","The rate is set quarterly by the government and has moved over time, so treat any projection over fifteen years as indicative.","Interest is calculated on the lowest balance between the 5th and the last day of each month, so depositing before the 5th earns an extra month of interest.","The maximum is ₹1.5 lakh per financial year across all PPF accounts you hold. The account runs 15 years and can be extended in blocks of 5."],
 "faq": [{"q":"Is PPF worth it under the new tax regime?","a":"The 80C deduction is not available under the new regime, which removes part of the appeal. The tax-free interest and maturity remain, so it still functions as a safe, tax-free long-term instrument — just with a weaker case than before."}]
 };
 })();

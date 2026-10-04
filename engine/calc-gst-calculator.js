@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -142,6 +149,12 @@ window.TOOLS["gst-calculator"] = {
       const base = mode === 'inclusive' ? line / (1 + r) : line;
       const gst = base * r;
       const total = base + gst;
+      /* Two decimals, or three when the rate needs them: 0.25% splits into
+         CGST 0.125% + SGST 0.125%, not 0.13% each. */
+      const pc = (x) => {
+        const t = Number(x.toFixed(6));
+        return Math.abs(t * 100 - Math.round(t * 100)) < 1e-6 ? t.toFixed(2) : String(t);
+      };
 
       return {
         total, base, gst,
@@ -149,8 +162,8 @@ window.TOOLS["gst-calculator"] = {
         sgst: supply === 'intra' ? gst / 2 : 0,
         igst: supply === 'inter' ? gst : 0,
         splitLabel: supply === 'intra'
-          ? `CGST ${(Number(rate) / 2).toFixed(2)}% + SGST ${(Number(rate) / 2).toFixed(2)}%`
-          : `IGST ${Number(rate).toFixed(2)}%`,
+          ? `CGST ${pc(Number(rate) / 2)}% + SGST ${pc(Number(rate) / 2)}%`
+          : `IGST ${pc(Number(rate))}%`,
         effectiveRate: base ? (gst / base) * 100 : 0
       };
     },

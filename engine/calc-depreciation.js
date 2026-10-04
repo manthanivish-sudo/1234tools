@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -142,13 +149,22 @@ window.TOOLS["depreciation"] = {
 
       const depreciable = cost - salvage;
       const rows = [];
-      let book = cost, accumulated = 0;
+      let book = cost, accumulated = 0, switchYear = 0;
 
       for (let y = 1; y <= n; y++) {
         let charge;
         if (method === 'sl') charge = depreciable / n;
         else if (method === 'db') charge = book * (dbRate / 100);
-        else if (method === 'ddb') charge = book * (2 / n);
+        else if (method === 'ddb') {
+          /* Double declining balance switches to straight line once spreading
+             what is left above the residual value over the remaining years
+             gives the larger charge — the standard rule (as in Excel's VDB),
+             without which the asset never reaches its residual value. */
+          const ddb = book * (2 / n);
+          const sl = (book - salvage) / (n - y + 1);
+          if (sl > ddb) { charge = sl; if (!switchYear) switchYear = y; }
+          else charge = ddb;
+        }
         else charge = depreciable * ((n - y + 1) / (n * (n + 1) / 2));
 
         // never depreciate below the residual value
@@ -165,7 +181,7 @@ window.TOOLS["depreciation"] = {
         totalDepreciation: accumulated,
         finalBook: book,
         annualAverage: accumulated / n,
-        note: '',
+        note: switchYear ? `Switches to straight line from year ${switchYear}, when that gives the larger charge.` : '',
         _table: { head: ['Year', 'Charge', 'Accumulated', 'Closing book value'], rows }
       };
     },

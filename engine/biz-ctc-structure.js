@@ -30,7 +30,7 @@
       'The in-hand figure excludes the annual bonus or variable pay, because that is not paid monthly. It is included in the taxable income, so the TDS spread over twelve months already carries it.'
     ],
     faq: [
-      { q: 'Which financial year are these slabs for?', a: 'The tax constant is labelled FY 2026-27 (AY 2027-28) and carries the date it was last checked. It uses the new-regime slabs and the Rs 75,000 standard deduction and Rs 60,000 rebate introduced by the Finance Act 2025, and the long-standing old-regime slabs with a Rs 50,000 standard deduction. If a later Budget changed anything, this will be wrong until the constant is updated — so verify against the current Finance Act. The figures here are an estimate for planning, not a tax computation.' },
+      { q: 'Which financial year are these slabs for?', a: 'The tax constant is labelled tax year 2026-27 — the Income-tax Act, 2025 term that replaces the old financial year and assessment year pair from 1 April 2026 — and carries the date it was last checked. It uses the new-regime slabs and the Rs 75,000 standard deduction and Rs 60,000 rebate introduced by the Finance Act 2025, and the long-standing old-regime slabs with a Rs 50,000 standard deduction. If a later Budget changed anything, this will be wrong until the constant is updated — so verify against the current Finance Act. The figures here are an estimate for planning, not a tax computation.' },
       { q: 'Why is my in-hand lower than a simple CTC divided by twelve?', a: 'Because CTC is the employer’s cost, not your pay. Gratuity accrual, the employer’s PF and ESI, and any bonus never reach your monthly bank credit. Then your own PF, ESI, professional tax and TDS come out of what is left. The breakup shows every rupee of the gap.' },
       { q: 'Does it handle the old regime properly?', a: 'It computes the HRA exemption as the least of actual HRA, rent paid less 10% of Basic+DA, and 50% (metro) or 40% (non-metro) of Basic+DA; deducts the Rs 50,000 standard deduction, professional tax paid, 80C (capped at Rs 1,50,000, optionally counting your own PF), 80D and anything else you enter; then applies the slabs for your age band, the Rs 12,500 rebate below Rs 5,00,000, surcharge with marginal relief and 4% cess.' },
       { q: 'Is any of this sent anywhere?', a: 'No. Every figure is computed in your browser and the spreadsheet is written there too. Salary is the most sensitive number most people have; it never leaves the device.' },
@@ -57,7 +57,7 @@
    * EDIT THIS BLOCK — nothing else in the file hard-codes a rate.
    * ============================================================ */
   const TAX = {
-    fy: 'FY 2026-27 (AY 2027-28)',
+    fy: 'Tax year 2026-27',  /* Income-tax Act, 2025 wording; "tax year" replaces the FY/AY pair from 1 April 2026 */
     checked: '2026-09-20',
     basis: 'Finance Act 2025 rates applied to FY 2026-27 — check them against the current Budget',
     cess: 0.04,

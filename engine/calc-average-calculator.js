@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -134,7 +141,8 @@ window.TOOLS["average-calculator"] = {
 "formula": "mean = Σx / n  ·  weighted mean = Σ(w·x) / Σw",
 "inputs": [{"key":"data","label":"Numbers (comma or space separated)","type":"text","default":"12, 18, 7, 25, 18, 9, 30"},{"key":"weights","label":"Weights (optional, same order)","type":"text","default":""}],
 "compute": ({ data, weights }) => {
-      const nums = String(data).split(/[\s,;]+/).map(Number).filter(n => isFinite(n));
+      /* Empty tokens (a trailing comma, a leading space) are not zeros. */
+      const nums = String(data == null ? '' : data).split(/[\s,;]+/).filter(t => t !== '').map(Number).filter(n => isFinite(n));
       if (!nums.length) return { note: 'Enter some numbers.' };
       const n = nums.length;
       const sorted = [...nums].sort((x, y) => x - y);
@@ -148,7 +156,7 @@ window.TOOLS["average-calculator"] = {
       const mode = maxC === 1 ? 'No mode'
         : Object.keys(counts).filter(k => counts[k] === maxC).join(', ');
 
-      const w = String(weights || '').split(/[\s,;]+/).map(Number).filter(x => isFinite(x));
+      const w = String(weights || '').split(/[\s,;]+/).filter(t => t !== '').map(Number).filter(x => isFinite(x));
       let weighted = NaN;
       if (w.length === n) {
         const wsum = w.reduce((s, x) => s + x, 0);

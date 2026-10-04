@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -135,7 +142,7 @@ window.TOOLS["india-income-tax"] = {
 "description": "Compare tax under both regimes for FY 2026-27, including rebate, surcharge, cess and marginal relief.",
 "keywords": ["income tax calculator India","new tax regime","old tax regime","income tax slab","87A rebate","tax calculator FY 2026-27"],
 "formula": "tax = slab tax − 87A rebate + surcharge + 4% cess",
-"inputs": [{"key":"gross","label":"Gross annual income","type":"number","unit":"₹","default":1500000,"min":0},{"key":"fy","label":"Financial year","type":"select","options":[{"value":"2026-27","label":"FY 2026-27 (AY 2027-28)"},{"value":"2025-26","label":"FY 2025-26 (AY 2026-27)"}],"default":"2026-27"},{"key":"type","label":"Taxpayer","type":"select","options":[{"value":"salaried","label":"Salaried / pensioner"},{"value":"other","label":"Self-employed / other"}],"default":"salaried"},{"key":"age","label":"Age (old regime only)","type":"select","options":[{"value":"below60","label":"Below 60"},{"value":"senior","label":"Senior (60–79)"},{"value":"super","label":"Super senior (80+)"}],"default":"below60"},{"key":"deductions","label":"Old-regime deductions (80C, 80D, HRA…)","type":"number","unit":"₹","default":200000,"min":0}],
+"inputs": [{"key":"gross","label":"Gross annual income","type":"number","unit":"₹","default":1500000,"min":0},{"key":"fy","label":"Financial year","type":"select","options":[{"value":"2026-27","label":"FY 2026-27 (tax year 2026-27, Income-tax Act, 2025)"},{"value":"2025-26","label":"FY 2025-26 (AY 2026-27)"}],"default":"2026-27"},{"key":"type","label":"Taxpayer","type":"select","options":[{"value":"salaried","label":"Salaried / pensioner"},{"value":"other","label":"Self-employed / other"}],"default":"salaried"},{"key":"age","label":"Age (old regime only)","type":"select","options":[{"value":"below60","label":"Below 60"},{"value":"senior","label":"Senior (60–79)"},{"value":"super","label":"Super senior (80+)"}],"default":"below60"},{"key":"deductions","label":"Old-regime deductions (80C, 80D, HRA…)","type":"number","unit":"₹","default":200000,"min":0}],
 "compute": ({ gross, fy, type, age, deductions }) => {
       const T = IN_TAX[fy] || IN_TAX['2026-27'];
       const g = Math.max(0, Number(gross) || 0);
@@ -197,7 +204,7 @@ window.TOOLS["india-income-tax"] = {
             ['Other deductions', fmtR(0), fmtR(Number(deductions) || 0)],
             ['Taxable income', fmtR(n.taxable), fmtR(o.taxable)],
             ['Tax before rebate', fmtR(n.preRebate), fmtR(o.preRebate)],
-            ['Section 87A rebate', fmtR(n.rebate), fmtR(o.rebate)],
+            [fy === '2025-26' ? 'Section 87A rebate' : 'Rebate (s.156, formerly 87A)', fmtR(n.rebate), fmtR(o.rebate)],
             ['Marginal relief', fmtR(n.relief), fmtR(o.relief)],
             ['Surcharge', fmtR(n.surcharge), fmtR(o.surcharge)],
             ['Health & education cess (4%)', fmtR(n.cess), fmtR(o.cess)],
@@ -208,7 +215,7 @@ window.TOOLS["india-income-tax"] = {
       };
     },
 "outputs": [{"key":"better","label":"Better regime","format":"text","primary":true},{"key":"newTotal","label":"Tax — new regime","format":"currency"},{"key":"oldTotal","label":"Tax — old regime","format":"currency"},{"key":"saving","label":"Difference","format":"currency"},{"key":"newTaxable","label":"Taxable income (new)","format":"currency"},{"key":"newRebate","label":"87A rebate applied","format":"currency"},{"key":"newRelief","label":"Marginal relief applied","format":"currency"},{"key":"newEffective","label":"Effective rate (new)","format":"percent"},{"key":"oldEffective","label":"Effective rate (old)","format":"percent"},{"key":"newNet","label":"Income after tax (new)","format":"currency"}],
-"tips": ["The new regime is the default. You must actively opt for the old one, and salaried taxpayers can switch each year while business income generally cannot.","Under the new regime, taxable income up to ₹12 lakh attracts no tax because of the ₹60,000 rebate under Section 87A. With the ₹75,000 standard deduction, a salary up to ₹12.75 lakh is effectively tax-free.","The rebate does not apply to special-rate income such as capital gains under Sections 111A and 112A, so those remain taxable even below ₹12 lakh.","Marginal relief stops a small rise above ₹12 lakh producing a disproportionate jump in tax. This calculator applies it.","The old regime only wins when your deductions are large — typically above ₹4–5 lakh of 80C, 80D, HRA and home-loan interest combined."],
+"tips": ["The new regime is the default. You must actively opt for the old one, and salaried taxpayers can switch each year while business income generally cannot.","Under the new regime, taxable income up to ₹12 lakh attracts no tax because of the ₹60,000 rebate — section 156 of the Income-tax Act, 2025, formerly section 87A. With the ₹75,000 standard deduction, a salary up to ₹12.75 lakh is effectively tax-free.","From tax year 2026-27 the Income-tax Act, 2025 replaces the 1961 Act and renumbers its sections: 80C is now section 123, 80D section 126, 87A section 156, 111A section 196 and 112A section 198. The rates and limits used here did not change, and the familiar old numbers are kept as names.","The rebate does not apply to special-rate income such as capital gains under sections 196 and 198 of the 2025 Act (formerly 111A and 112A), so those remain taxable even below ₹12 lakh.","Marginal relief stops a small rise above ₹12 lakh producing a disproportionate jump in tax. This calculator applies it.","The old regime only wins when your deductions are large — typically above ₹4–5 lakh of 80C, 80D, HRA and home-loan interest combined."],
 "faq": [{"q":"Which regime should I choose?","a":"Enter your actual deductions above and compare. As a rough guide, the new regime wins for most people with modest deductions, while the old regime can still win for those with a home loan, substantial HRA and full 80C use. Run your own numbers rather than following a rule of thumb."},{"q":"Is this an official calculation?","a":"No. It applies the published slab structure and common reliefs, but ignores many situation-specific provisions. The Income Tax Department publishes its own calculator, and for anything consequential you should confirm with a chartered accountant."}]
 };
 })();

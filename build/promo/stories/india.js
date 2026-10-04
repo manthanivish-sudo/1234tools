@@ -37,7 +37,7 @@ module.exports = {
     persona: 'Salaried employees who pay rent',
     hook: 'Paying ₹30,000 a month in rent? See how much HRA is tax-free.',
     pain: 'Your payslip shows HRA. How much of it is tax-free depends on three tests nobody explains.',
-    usual: ['Reading Section 10(13A) yourself', 'Assuming all of your HRA is exempt', 'Waiting for payroll to reply'],
+    usual: ['Decoding the three tests yourself', 'Assuming all of your HRA is exempt', 'Waiting for payroll to reply'],
     promise: 'Enter salary, HRA and rent. Get the exempt HRA and the limiting test.',
     steps: ['Enter basic + DA and HRA', 'Add rent paid and city', 'Read the exempt HRA'],
     proof: PROOF,
@@ -61,9 +61,9 @@ module.exports = {
 
   '/india/tds-calculator/': {
     persona: 'Accountants and business owners',
-    hook: 'Vendor has no PAN? The TDS you deduct just doubled.',
+    hook: 'Vendor has no PAN? Your TDS on their fee jumps to 20%.',
     pain: 'A ₹1.5 lakh professional fee is due today. Which section, which rate — and what if PAN is missing?',
-    usual: ['Rate charts that change every Budget', 'Forgetting the 206AA higher rate', 'Messaging your CA for every payment'],
+    usual: ['Rate charts that change every Budget', 'Forgetting the no-PAN higher rate', 'Messaging your CA for every payment'],
     promise: 'Pick the section, enter the payment. Get the TDS and the net payable.',
     steps: ['Pick the nature of payment', 'Enter amount and PAN status', 'Deduct the TDS shown'],
     proof: PROOF,
@@ -153,12 +153,12 @@ module.exports = {
   '/india/nps-calculator/': {
     persona: 'NPS subscribers',
     hook: '₹5,000 a month into NPS from 30. What pension at 60?',
-    pain: 'You know 40% of the NPS pot must buy an annuity. You do not know what monthly pension that pays.',
+    pain: 'You know part of the NPS pot must buy an annuity. You do not know what monthly pension that pays.',
     usual: ['Projections that stop at the corpus', 'Forgetting the annuity is taxed', 'Guessing an annuity rate'],
     promise: 'Enter contribution, age and return. See corpus, lump sum and pension.',
     steps: ['Enter your monthly contribution', 'Set age, return, annuity share', 'Read corpus and pension'],
     proof: PROOF,
-    example: { kind: 'calc', inputs: { monthly: 5000, age: 30, rate: 10, annuityPct: 40, annuityRate: 6 } },
+    example: { kind: 'calc', inputs: { monthly: 5000, age: 30, rate: 10, sector: 'private', annuityPct: 40, annuityRate: 6 } },
     howTo: 'How to estimate your NPS pension at 60',
     cta: 'Project my NPS'
   },
@@ -192,8 +192,8 @@ module.exports = {
   '/india/advance-tax/': {
     persona: 'Freelancers and professionals',
     hook: 'Freelancing this year? 15 June is your first tax date.',
-    pain: 'Nobody deducts tax from client income. Miss the quarterly dates and 234B and 234C interest adds up.',
-    usual: ['Remembering four due dates alone', 'Working out cumulative percentages', 'Meeting 234C interest at filing time'],
+    pain: 'Nobody deducts tax from client income. Miss the quarterly dates and interest at 1% a month adds up.',
+    usual: ['Remembering four due dates alone', 'Working out cumulative percentages', 'Meeting shortfall interest at filing time'],
     promise: 'Enter your tax estimate and TDS. Get all four instalments and dates.',
     steps: ['Estimate your annual tax', 'Enter TDS and tax paid so far', 'Pay each instalment shown'],
     proof: PROOF,

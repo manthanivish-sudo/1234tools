@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -134,7 +141,11 @@ window.TOOLS["ovulation-calculator"] = {
 "formula": "ovulation ≈ next period − 14 days; fertile window is the five days before through the day after",
 "inputs": [{"key":"lastPeriod","label":"First day of last period","type":"date","default":"TODAY"},{"key":"cycle","label":"Average cycle length","type":"number","unit":"days","default":28,"min":20,"max":45},{"key":"luteal","label":"Luteal phase length","type":"number","unit":"days","default":14,"min":9,"max":17},{"key":"cycles","label":"Show this many cycles","type":"number","default":3,"min":1,"max":12}],
 "compute": ({ lastPeriod, cycle, luteal, cycles }) => {
-      const d = new Date(lastPeriod);
+      /* A date input gives "YYYY-MM-DD", which new Date() reads as UTC
+         midnight — the previous evening west of Greenwich. Read it as a
+         local calendar date instead. */
+      const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(lastPeriod || ''));
+      const d = ymd ? new Date(+ymd[1], +ymd[2] - 1, +ymd[3]) : new Date(lastPeriod);
       if (isNaN(d)) return { note: 'Enter a valid date.' };
       const cyc = Math.max(20, Math.min(45, Math.round(Number(cycle) || 28)));
       const lut = Math.max(9, Math.min(17, Math.round(Number(luteal) || 14)));
@@ -161,7 +172,13 @@ window.TOOLS["ovulation-calculator"] = {
         ovulation: fmt(ov1),
         fertileWindow: `${fmt(add(ov1, -5))} to ${fmt(add(ov1, 1))}`,
         nextPeriod: fmt(add(d, cyc)),
-        cycleDay: Math.floor((Date.now() - d) / 86400000) + 1,
+        /* whole calendar days from the period's first day to today's local
+           date: counting milliseconds was a day short after local midnight
+           in British Summer Time (00:00–01:00) and east of Greenwich */
+        cycleDay: (() => {
+          const t = new Date();
+          return Math.round((Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()) - Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000) + 1;
+        })(),
         note: '',
         _table: { head: ['Period starts', 'Fertile window', 'Ovulation (est.)', 'Next period'], rows }
       };

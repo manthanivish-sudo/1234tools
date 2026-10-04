@@ -2,7 +2,7 @@
   "id": "/india/tds-calculator.html",
   "name": "TDS Calculator — 1234Tools",
   "short_name": "TDS Calculator",
-  "description": "Tax deducted at source across common sections, with the higher rate where PAN is not furnished.",
+  "description": "Tax deducted at source on common payments to residents, with the higher rate where PAN is not furnished. Income-tax Act, 2025 (section 393) from 1 April 2026, with the 1961 Act section each payment used to fall under.",
   "start_url": "/india/tds-calculator/?src=pwa",
   "scope": "/india/tds-calculator/",
   "display": "standalone",

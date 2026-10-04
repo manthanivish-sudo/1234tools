@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -135,7 +142,7 @@ window.TOOLS["uk-take-home-pay"] = {
 "description": "Estimate income tax, National Insurance and net pay from a gross salary. England, Wales and Northern Ireland.",
 "keywords": ["take home pay calculator","salary calculator UK","net pay","income tax calculator","PAYE calculator","after tax salary"],
 "formula": "net = gross − income tax − National Insurance − pension",
-"inputs": [{"key":"gross","label":"Gross annual salary","type":"number","unit":"£","default":45000,"min":0},{"key":"year","label":"Tax year","type":"select","options":[{"value":"2026/27","label":"2026/27"},{"value":"2025/26","label":"2025/26"}],"default":"2026/27"},{"key":"pension","label":"Pension contribution","type":"number","unit":"%","default":5,"min":0,"step":0.1},{"key":"student","label":"Student loan","type":"select","options":[{"value":"none","label":"None"},{"value":"plan1","label":"Plan 1"},{"value":"plan2","label":"Plan 2"},{"value":"plan4","label":"Plan 4 (Scotland)"},{"value":"pgl","label":"Postgraduate loan"}],"default":"none"}],
+"inputs": [{"key":"gross","label":"Gross annual salary","type":"number","unit":"£","default":45000,"min":0},{"key":"year","label":"Tax year","type":"select","options":[{"value":"2026/27","label":"2026/27"},{"value":"2025/26","label":"2025/26"}],"default":"2026/27"},{"key":"pension","label":"Pension contribution","type":"number","unit":"%","default":5,"min":0,"step":0.1},{"key":"student","label":"Student loan","type":"select","options":[{"value":"none","label":"None"},{"value":"plan1","label":"Plan 1"},{"value":"plan2","label":"Plan 2"},{"value":"plan4","label":"Plan 4 (Scotland)"},{"value":"plan5","label":"Plan 5 (England, courses from August 2023)"},{"value":"pgl","label":"Postgraduate loan"}],"default":"none"}],
 "compute": ({ gross, year, pension, student }) => {
       const T = UK_TAX[year] || UK_TAX['2026/27'];
       const g = Math.max(0, Number(gross) || 0);
@@ -164,13 +171,30 @@ window.TOOLS["uk-take-home-pay"] = {
         if (niBase > T.ni.upper) ni += (niBase - T.ni.upper) * T.ni.upper_rate;
       }
 
-      const SL = { plan1: [26065, 0.09], plan2: [28470, 0.09], plan4: [32745, 0.09], pgl: [21000, 0.06] };
-      let loan = 0;
+      /* Student and postgraduate loan repayment thresholds, per tax year.
+         Checked 2026-10-04 against
+         https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+         (Plan 1 £26,900, Plan 2 £29,385, Plan 4 £33,795, Plan 5 £25,000,
+         Postgraduate £21,000) and ...-2025-to-2026 (Plan 1 £26,065, Plan 2
+         £28,470, Plan 4 £32,745, Postgraduate £21,000; no Plan 5 deductions
+         — they start in April 2026). 9% over the threshold, 6% for the
+         postgraduate loan. */
+      const SL_BY_YEAR = {
+        '2026/27': { plan1: [26900, 0.09], plan2: [29385, 0.09], plan4: [33795, 0.09], plan5: [25000, 0.09], pgl: [21000, 0.06] },
+        '2025/26': { plan1: [26065, 0.09], plan2: [28470, 0.09], plan4: [32745, 0.09], pgl: [21000, 0.06] }
+      };
+      const SL = SL_BY_YEAR[year] || SL_BY_YEAR['2026/27'];
+      let loan = 0, note = '';
       if (SL[student]) {
         const [thr, rate] = SL[student];
         loan = Math.max(0, g - thr) * rate;
+      } else if (student === 'plan5') {
+        note = 'Plan 5 repayments start from April 2026, so none are due in 2025/26.';
       }
 
+      /* Between £100,000 and £125,140 every extra £1 is taxed at 40% and also
+         withdraws 50p of allowance, which is then taxed at 40%: 60% in all. */
+      const inTaper = taxable0 > T.taperStart && pa > 0;
       const net = g - tax - ni - pensionAmt - loan;
       return {
         net, monthly: net / 12, weekly: net / 52,
@@ -178,11 +202,13 @@ window.TOOLS["uk-take-home-pay"] = {
         personalAllowance: pa,
         effectiveRate: g ? ((tax + ni + loan) / g) * 100 : 0,
         marginalRate: (taxable0 - pa) > T.bands[2].from ? 45
+                    : inTaper ? 60
                     : (taxable0 - pa) > T.bands[1].from ? 40
-                    : (taxable0 > pa) ? 20 : 0
+                    : (taxable0 > pa) ? 20 : 0,
+        note
       };
     },
-"outputs": [{"key":"monthly","label":"Take-home per month","format":"currency","primary":true},{"key":"net","label":"Take-home per year","format":"currency"},{"key":"weekly","label":"Take-home per week","format":"currency"},{"key":"tax","label":"Income tax","format":"currency"},{"key":"ni","label":"National Insurance","format":"currency"},{"key":"pensionAmt","label":"Pension contribution","format":"currency"},{"key":"loan","label":"Student loan","format":"currency"},{"key":"personalAllowance","label":"Personal allowance applied","format":"currency"},{"key":"effectiveRate","label":"Effective tax + NI rate","format":"percent"},{"key":"marginalRate","label":"Marginal income tax rate","format":"percent"}],
+"outputs": [{"key":"monthly","label":"Take-home per month","format":"currency","primary":true},{"key":"net","label":"Take-home per year","format":"currency"},{"key":"weekly","label":"Take-home per week","format":"currency"},{"key":"tax","label":"Income tax","format":"currency"},{"key":"ni","label":"National Insurance","format":"currency"},{"key":"pensionAmt","label":"Pension contribution","format":"currency"},{"key":"loan","label":"Student loan","format":"currency"},{"key":"personalAllowance","label":"Personal allowance applied","format":"currency"},{"key":"effectiveRate","label":"Effective tax + NI rate","format":"percent"},{"key":"marginalRate","label":"Marginal income tax rate (60% while the allowance is withdrawn)","format":"percent"},{"key":"note","label":"","format":"text"}],
 "tips": ["This is an estimate for England, Wales and Northern Ireland. Scotland has its own income tax bands and will produce a different figure.","Between £100,000 and £125,140 the personal allowance is withdrawn at £1 for every £2 earned, creating an effective marginal rate of about 60%.","It assumes the standard tax code and no benefits in kind, salary sacrifice beyond pension, or other adjustments. Your payslip is the authority.","Tax rates and thresholds change. Check the current figures on GOV.UK before relying on this for a decision."],
 "faq": [{"q":"Why does this differ from my payslip?","a":"Common causes are a non-standard tax code, benefits in kind such as a company car or private medical cover, salary sacrifice arrangements, a mid-year pay change, or the fact that PAYE spreads allowances across the year and can be catching up. For anything that matters, ask your payroll team or an accountant."},{"q":"Is this suitable for Scotland?","a":"No. Scotland sets its own income tax bands with additional rates, so the income tax figure would be wrong. National Insurance is the same UK-wide."}]
 };

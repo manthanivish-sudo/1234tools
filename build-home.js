@@ -140,7 +140,8 @@ function counts() {
  * the rest of the site is built to avoid.
  */
 function checkedPages() {
-  const skip = new Set(['node_modules', 'assets', 'engine', 'pwa', 'learn', 'conversions', 'for']);
+  /* guides cite their sources too, but they are not tools: the line counts tools */
+  const skip = new Set(['node_modules', 'assets', 'engine', 'pwa', 'learn', 'conversions', 'for', 'guides']);
   let n = 0;
   const walk = (dir) => {
     for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {

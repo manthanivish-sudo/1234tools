@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -134,24 +141,39 @@ window.TOOLS["age-calculator"] = {
 "formula": "calendar-aware difference between date of birth and a reference date",
 "inputs": [{"key":"dob","label":"Date of birth","type":"date","default":"1990-06-15"},{"key":"on","label":"Age at date","type":"date","default":"TODAY"}],
 "compute": ({ dob, on }) => {
-      const a = new Date(dob), b = new Date(on);
+      /* Whole calendar days in UTC. A birthday falling in British Summer
+         Time used to compare local midnight (23:00 UTC the day before)
+         against the reference date read as UTC midnight, so on the birthday
+         itself the next one was reported as a year away. */
+      const utc = (y, mo, da) => { const t = new Date(0); t.setUTCFullYear(y, mo, da); return t; };
+      const dayOf = (s) => {
+        const m = /^(-?\d{1,6})-(\d{2})-(\d{2})$/.exec(String(s == null ? '' : s).trim());
+        if (m) return utc(+m[1], +m[2] - 1, +m[3]);
+        const x = new Date(s);
+        return isNaN(x) ? x : utc(x.getFullYear(), x.getMonth(), x.getDate());
+      };
+      const a = dayOf(dob), b = dayOf(on);
       if (isNaN(a) || isNaN(b)) return { note: 'Enter two valid dates.' };
       if (a > b) return { note: 'The date of birth is after the reference date.' };
 
-      let years = b.getFullYear() - a.getFullYear();
-      let months = b.getMonth() - a.getMonth();
-      let days = b.getDate() - a.getDate();
-      if (days < 0) { months--; days += new Date(b.getFullYear(), b.getMonth(), 0).getDate(); }
-      if (months < 0) { years--; months += 12; }
+      /* Calendar difference: whole months, then the days counted on from the
+         birth date moved by those months (clamped to a short month's end),
+         so the day count is never negative. */
+      const ay = a.getUTCFullYear(), am = a.getUTCMonth(), ad = a.getUTCDate();
+      let total = (b.getUTCFullYear() - ay) * 12 + (b.getUTCMonth() - am);
+      if (b.getUTCDate() < ad) total--;
+      const anchor = utc(ay, am + total, 1);
+      anchor.setUTCDate(Math.min(ad, utc(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 0).getUTCDate()));
+      const years = Math.floor(total / 12), months = total % 12;
 
       const MS = 86400000;
-      const totalDays = Math.floor((Date.UTC(b.getFullYear(), b.getMonth(), b.getDate()) -
-                                    Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) / MS);
+      const days = Math.round((b - anchor) / MS);
+      const totalDays = Math.round((b - a) / MS);
 
-      // next birthday, allowing for 29 February
-      let next = new Date(b.getFullYear(), a.getMonth(), a.getDate());
-      if (next < b) next = new Date(b.getFullYear() + 1, a.getMonth(), a.getDate());
-      const toNext = Math.ceil((next - b) / MS);
+      // next birthday; 29 February falls on 1 March in other years
+      let next = utc(b.getUTCFullYear(), am, ad);
+      if (next < b) next = utc(b.getUTCFullYear() + 1, am, ad);
+      const toNext = Math.round((next - b) / MS);
 
       const DAYNAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
       return {
@@ -160,8 +182,8 @@ window.TOOLS["age-calculator"] = {
         totalWeeks: Math.floor(totalDays / 7),
         totalMonths: years * 12 + months,
         totalHours: totalDays * 24,
-        bornOn: DAYNAMES[a.getDay()],
-        nextBirthday: next.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+        bornOn: DAYNAMES[a.getUTCDay()],
+        nextBirthday: next.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }),
         daysToNext: toNext,
         note: toNext === 0 ? 'That reference date is the birthday itself.' : ''
       };

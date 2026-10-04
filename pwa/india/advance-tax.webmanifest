@@ -2,7 +2,7 @@
   "id": "/india/advance-tax.html",
   "name": "Advance Tax Calculator — 1234Tools",
   "short_name": "Advance Tax",
-  "description": "Quarterly advance tax instalments and the interest payable under Sections 234B and 234C if you underpay.",
+  "description": "Quarterly advance tax instalments and the interest payable if you underpay — sections 424 and 425 of the Income-tax Act, 2025 from tax year 2026-27 (sections 234B and 234C of the 1961 Act before that).",
   "start_url": "/india/advance-tax/?src=pwa",
   "scope": "/india/advance-tax/",
   "display": "standalone",

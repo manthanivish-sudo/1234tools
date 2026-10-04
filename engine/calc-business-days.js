@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -134,11 +141,25 @@ window.TOOLS["business-days"] = {
 "formula": "weekdays only, minus any dates you list as holidays",
 "inputs": [{"key":"start","label":"Start date","type":"date","default":"TODAY"},{"key":"mode","label":"Mode","type":"select","options":[{"value":"between","label":"Count business days until an end date"},{"value":"add","label":"Add business days to the start date"}],"default":"between"},{"key":"end","label":"End date (count mode)","type":"date","default":"TODAY"},{"key":"add","label":"Business days to add","type":"number","default":10},{"key":"holidays","label":"Holidays (YYYY-MM-DD, comma separated)","type":"text","default":""}],
 "compute": ({ start, mode, end, add, holidays }) => {
-      const d0 = new Date(start);
+      /* Whole calendar days, worked in UTC so that a clock change can never
+         shift a day: in local time, midnight after the spring change is
+         23:00 the previous day in UTC, so holidays after it were matched
+         against the wrong date. */
+      const dayOf = (s) => {
+        const m = /^(-?\d{1,6})-(\d{2})-(\d{2})$/.exec(String(s == null ? '' : s).trim());
+        if (m) { const t = new Date(0); t.setUTCFullYear(+m[1], +m[2] - 1, +m[3]); return t; }
+        const x = new Date(s);
+        return isNaN(x) ? x : new Date(Date.UTC(x.getFullYear(), x.getMonth(), x.getDate()));
+      };
+      const d0 = dayOf(start);
       if (isNaN(d0)) return { note: 'Enter a valid start date.' };
-      const hol = new Set(String(holidays || '').split(/[\s,;]+/).filter(Boolean));
+      /* Holidays are matched by calendar day; a typed 2026-4-3 counts as 2026-04-03. */
+      const hol = new Set(String(holidays || '').split(/[\s,;]+/).filter(Boolean).map((h) => {
+        const t = dayOf(h);
+        return isNaN(t) ? h : t.toISOString().slice(0, 10);
+      }));
       const isWork = (d) => {
-        const day = d.getDay();
+        const day = d.getUTCDay();
         if (day === 0 || day === 6) return false;
         return !hol.has(d.toISOString().slice(0, 10));
       };
@@ -149,12 +170,12 @@ window.TOOLS["business-days"] = {
         const cur = new Date(d0);
         let counted = 0, guard = 0;
         while (counted < n && guard < 100000) {
-          cur.setDate(cur.getDate() + 1);
+          cur.setUTCDate(cur.getUTCDate() + 1);
           guard++;
           if (isWork(cur)) counted++;
         }
         return {
-          result: cur.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+          result: cur.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }),
           iso: cur.toISOString().slice(0, 10),
           businessDays: n,
           calendarDays: Math.round((cur - d0) / MS),
@@ -163,21 +184,20 @@ window.TOOLS["business-days"] = {
         };
       }
 
-      const d1 = new Date(end);
+      const d1 = dayOf(end);
       if (isNaN(d1)) return { note: 'Enter a valid end date.' };
       const [a, b] = d0 <= d1 ? [d0, d1] : [d1, d0];
-      const total = Math.round((Date.UTC(b.getFullYear(), b.getMonth(), b.getDate()) -
-                                Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) / MS);
+      const total = Math.round((b - a) / MS);
       if (total > 40000) return { note: 'That range is over a century — narrow it down.' };
 
       let work = 0, weekend = 0, holidayHits = 0;
       const cur = new Date(a);
       for (let i = 0; i < total; i++) {
-        const day = cur.getDay();
+        const day = cur.getUTCDay();
         if (day === 0 || day === 6) weekend++;
         else if (hol.has(cur.toISOString().slice(0, 10))) holidayHits++;
         else work++;
-        cur.setDate(cur.getDate() + 1);
+        cur.setUTCDate(cur.getUTCDate() + 1);
       }
       return {
         result: `${work} business days`,

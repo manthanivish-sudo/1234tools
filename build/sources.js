@@ -90,7 +90,7 @@ const TABLE = {
 
   /* ---- India: tax, payroll and GST ---- */
   'ctc-structure': { checked: '2026-09-20', sources: [
-    src('inIncomeTaxActs', 'the slabs, the standard deduction and the section 87A rebate, under both regimes'),
+    src('inIncomeTaxActs', 'the slabs, the standard deduction and the rebate (section 156 of the Income-tax Act, 2025, formerly 87A), under both regimes'),
     src('inEpfo', 'the 12% contribution and the Rs 15,000 wage ceiling'),
     src('inEsic', 'the 0.75% and 3.25% contributions and the Rs 21,000 wage limit'),
     src('inIncomeTax', 'professional tax is a state tax — check your own state’s current schedule')
@@ -100,7 +100,7 @@ const TABLE = {
     src('inEsic'), src('inIncomeTaxActs', 'TDS is taken from your sheet here, never computed')
   ] },
   'full-final-settlement': { checked: '2026-09-20', sources: [
-    src('inLabour', 'the Payment of Gratuity Act, its 15/26 formula, the five-year rule and the cap'),
+    src('inLabour', 'the Code on Social Security, 2020, in force from 21 November 2025 in place of the Payment of Gratuity Act, 1972: the same 15/26 formula, the five-year rule and the cap'),
     src('inIncomeTaxActs', 'what part of gratuity and leave encashment is exempt')
   ] },
   'gst-reconciler': { checked: '2026-09-20', sources: [src('inGstPortal', 'GSTR-2B, and the conditions for claiming input tax credit'), src('inGstRates')] },

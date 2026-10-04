@@ -122,6 +122,7 @@ function validate(g, iconIds) {
         if (!b.example.head || !b.example.rows || !b.example.rows.length) throw new Error(where('an example block needs a head and rows'));
       }
       if (b.tool && !b.why) throw new Error(where('a tool named inside a step must say what it does at that step'));
+      if (b.fill !== undefined && !/^[A-Za-z]\w*=[^#\s]*(&[A-Za-z]\w*=[^#\s]*)*$/.test(b.fill)) throw new Error(where('a fill must be key=value pairs for the URL fragment: ' + b.fill));
     }
   }
   for (const c of g.collections || []) {
@@ -236,7 +237,13 @@ function block(b) {
     const m = toolMeta(b.tool);
     /* Linked by its own title and nothing else: the description belongs to
        the tools section at the foot of the page, and belongs there once. */
-    return '<p class="group-blurb">The tool for this step: <a href="' + m.path + '">' + esc(m.title) + '</a> — ' + esc(b.why) + '.</p>';
+    /* `fill` is what the tool reads from the URL fragment (#key=value, as
+       render-core.js and render-dev.js do), so the link lands on the tool
+       with the step's worked example already in it. */
+    const tryIt = b.fill
+      ? '<p class="guide-try"><a class="btn-primary proof-try" href="' + m.path + '#' + esc(b.fill) + '">' + esc(b.fillLabel || 'Open ' + m.title + ' with these figures') + '</a></p>'
+      : '';
+    return '<p class="group-blurb">The tool for this step: <a href="' + m.path + '">' + esc(m.title) + '</a> — ' + esc(b.why) + '.</p>' + tryIt;
   }
   throw new Error('a step block of an unknown kind: ' + JSON.stringify(b).slice(0, 80));
 }
@@ -337,7 +344,7 @@ function hubPage(parts) {
   const pathOnly = '/' + SECTION + '/';
   const trail = trailFor(pathOnly);
   const title = 'Guides: how to actually finish the job';
-  const description = 'How-to guides for the jobs this site has tools for — reconciling GSTR-2B, a VAT return from a spreadsheet, a bank reconciliation, a first MTD quarterly update, an Indian payroll run, a school timetable, chasing an invoice and getting a spreadsheet into Tally.';
+  const description = 'How-to guides for the jobs this site has tools for — reconciling GSTR-2B, a VAT return, a bank reconciliation, an Indian payroll run, getting a spreadsheet into Tally — and the everyday ones: a percentage, GST, an EMI, BMI, an exact age, CGPA to percentage, formatting JSON, and compressing, merging and converting images and PDFs.';
 
   const card = (g) => '<a class="card" href="/' + SECTION + '/' + g.slug + '/"><span class="card-icon">' + icon(g.glyph) + '</span>' +
     '<strong>' + esc(g.name) + '</strong><span class="card-desc">' + esc(g.description) + '</span></a>';

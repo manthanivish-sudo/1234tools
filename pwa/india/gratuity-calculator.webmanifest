@@ -2,7 +2,7 @@
   "id": "/india/gratuity-calculator.html",
   "name": "Gratuity Calculator — 1234Tools",
   "short_name": "Gratuity Calculator",
-  "description": "Gratuity payable under the Payment of Gratuity Act, with the tax-exempt portion.",
+  "description": "Gratuity payable under the Code on Social Security, 2020 — which replaced the Payment of Gratuity Act, 1972 from 21 November 2025 with the same formula — and the tax-exempt portion.",
   "start_url": "/india/gratuity-calculator/?src=pwa",
   "scope": "/india/gratuity-calculator/",
   "display": "standalone",

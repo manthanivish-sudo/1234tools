@@ -33,7 +33,8 @@
       if (!isFinite(v)) return v > 0 ? '∞' : (isNaN(v) ? '—' : '−∞');
       const abs = Math.abs(v);
       let s;
-      if (abs !== 0 && (abs < 1e-4 || abs >= 1e12)) s = v.toExponential(6);
+      /* trailing zeros of the mantissa say nothing: 1.000000e-6 reads as 1e-6 */
+      if (abs !== 0 && (abs < 1e-4 || abs >= 1e12)) s = v.toExponential(6).replace(/\.?0+e/, 'e');
       else {
         const dp = abs >= 1000 ? 2 : abs >= 1 ? 4 : 6;
         const nloc = locFor(code);
@@ -93,7 +94,12 @@
         if (input.min !== undefined) el.min = input.min;
       }
       let def = input.default;
-      if (def === 'TODAY') def = new Date().toISOString().slice(0, 10);
+      if (def === 'TODAY') {
+        /* the local calendar date: toISOString() is UTC, which is still
+           yesterday between midnight and 1 am in British Summer Time */
+        const n = new Date();
+        def = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
+      }
       if (def !== null && def !== undefined) el.value = def;
       if (input.optional) el.placeholder = 'leave blank to solve for this';
     }
@@ -304,7 +310,15 @@
       run();
     },
 
-    mountConverter(dim, dimData, convert, root, preset) {
+    mountConverter(dim, dimData, rawConvert, root, preset) {
+      /* Temperature is the one family with offsets, and subtracting them
+         leaves float dust where the answer is exactly zero: 32 °F showed
+         as 5.684342e-14 °C. Nothing measured in degrees is meaningful at
+         a billionth of one, so snap it. Other families only multiply, and
+         a genuinely tiny result (a nanometre in light years) is kept. */
+      const convert = dim === 'temperature'
+        ? (v, f, t, d) => { const r = rawConvert(v, f, t, d); return Math.abs(r) < 1e-9 ? 0 : r; }
+        : rawConvert;
       const form = root.querySelector('.tool-form');
       const out = root.querySelector('.tool-results');
       const keys = Object.keys(dimData.units);

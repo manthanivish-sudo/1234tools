@@ -1,16 +1,23 @@
 (function(){
 /* ---------- UK tax tables ----------
-   Verified against HMRC guidance and the House of Commons Library briefing
-   for 2026/27. England, Wales and Northern Ireland only — Scotland operates
-   its own income tax bands and is handled separately in the tool. */
+   England, Wales and Northern Ireland only — Scotland operates its own
+   income tax bands and is handled separately in the tool.
+   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
+   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
+   every £2 of adjusted net income over £100,000; on taxable income (after
+   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
+   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
+   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
+   Employment Allowance £10,500. Same figures in both years. */
 const UK_TAX = {
   '2026/27': {
     personalAllowance: 12570,
     taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate applied to income above `from`, after PA
+    bands: [                     // rate on taxable income (after PA) above `from`
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -21,7 +28,7 @@ const UK_TAX = {
     bands: [
       { from: 0,      rate: 0.20 },
       { from: 37700,  rate: 0.40 },
-      { from: 112570, rate: 0.45 }
+      { from: 125140, rate: 0.45 }
     ],
     ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
     employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
@@ -145,8 +152,8 @@ window.TOOLS["india-capital-gains"] = {
 
       let rate, exemption = 0, basis;
       if (asset === 'equity') {
-        if (isLong) { rate = 0.125; exemption = 125000; basis = 'LTCG u/s 112A — 12.5% above ₹1.25 lakh'; }
-        else { rate = 0.20; basis = 'STCG u/s 111A — 20%'; }
+        if (isLong) { rate = 0.125; exemption = 125000; basis = 'LTCG u/s 198 of the 2025 Act (was 112A) — 12.5% above ₹1.25 lakh'; }
+        else { rate = 0.20; basis = 'STCG u/s 196 of the 2025 Act (was 111A) — 20%'; }
       } else if (asset === 'debt') {
         rate = (Number(slabRate) || 0) / 100;
         basis = 'Taxed at your slab rate (no LTCG benefit after April 2023)';
@@ -171,6 +178,6 @@ window.TOOLS["india-capital-gains"] = {
     },
 "outputs": [{"key":"tax","label":"Capital gains tax (incl. cess)","format":"currency","primary":true},{"key":"gain","label":"Capital gain","format":"currency"},{"key":"term","label":"Classification","format":"text"},{"key":"basis","label":"Basis of charge","format":"text"},{"key":"exemption","label":"Exemption applied","format":"currency"},{"key":"taxable","label":"Taxable gain","format":"currency"},{"key":"rate","label":"Applicable rate","format":"percent"},{"key":"netProceeds","label":"Net proceeds after tax","format":"currency"}],
 "tips": ["The July 2024 changes reset these rates: listed equity STCG moved to 20%, and long-term gains across most assets to 12.5% without indexation.","The ₹1.25 lakh annual exemption applies to long-term gains on listed equity and equity mutual funds, aggregated across all such holdings for the year.","Property acquired before 23 July 2024 may still be eligible for the older 20%-with-indexation route where that produces a lower tax. This calculator uses the 12.5% basis, so check both with your CA.","Debt mutual funds bought on or after 1 April 2023 are taxed at slab rates regardless of holding period."],
-"faq": [{"q":"Can I reduce property capital gains tax?","a":"Sections 54, 54F and 54EC allow relief where proceeds are reinvested in residential property or specified bonds within set time limits. The conditions are strict and unforgiving of missed deadlines — take advice before selling, not after."}]
+"faq": [{"q":"Can I reduce property capital gains tax?","a":"Sections 82, 86 and 85 of the Income-tax Act, 2025 (formerly 54, 54F and 54EC) allow relief where proceeds are reinvested in residential property or specified bonds within set time limits. The conditions are strict and unforgiving of missed deadlines — take advice before selling, not after."}]
 };
 })();
