@@ -55,6 +55,18 @@
     else if (mq.addListener) mq.addListener(onChange);
   }
 
+  /* ---------- header height ----------
+     Sticky parts of the page sit below the header (app.css, --hdr-h). Its
+     height changes with the width and when the menu opens, so it is
+     measured rather than guessed; a hidden header measures 0. */
+  var hdr = document.querySelector('.site-header');
+  if (hdr) {
+    var setHdrH = function () { doc.style.setProperty('--hdr-h', hdr.offsetHeight + 'px'); };
+    setHdrH();
+    if (window.ResizeObserver) new ResizeObserver(setHdrH).observe(hdr);
+    else window.addEventListener('resize', setHdrH);
+  }
+
   /* ---------- mobile navigation ---------- */
   var toggle = document.querySelector('.nav-toggle');
   var links = document.getElementById('navlinks');

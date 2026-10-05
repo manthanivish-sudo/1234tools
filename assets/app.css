@@ -135,6 +135,12 @@ input, select, .result-value, .formula, .stat-num { font-variant-numeric: tabula
 
 /* ================= HEADER — mirrors the parent site ================= */
 
+/* --hdr-h is the header's height. app.js writes the measured value, because
+   below 900px the header wraps and its height depends on the width; the
+   78px here is the desktop height, for the moment before it runs. Anything
+   sticky starts at or below it, or it slides under the header. */
+:root { --hdr-h: 78px; }
+
 .site-header {
   position: sticky; top: 0; z-index: 100;
   background: color-mix(in srgb, var(--bg-0) 82%, transparent);
@@ -387,7 +393,10 @@ select.control { font-family: var(--font-body); }
 /* ---------- the directory: every tool on one page, filtered in the
    page rather than by a request. Rows, not cards: a card grid of two
    hundred is a wall, and somebody scanning for a name wants lines. */
-.dir-filter { position: sticky; top: 0; z-index: 4; padding: 14px 0 12px; background: var(--bg-0); }
+/* Not sticky: with four rows of chips it is 330–630px tall, half a desktop
+   screen and all of a small phone's, so pinned it hid the list it filters.
+   "/" brings the search back from anywhere. */
+.dir-filter { padding: 14px 0 12px; }
 .dir-search { width: 100%; margin: 0 0 12px; }
 .filter-chips, .filter-price { margin-bottom: 8px; }
 .filter-price .chip, .filter-chips .chip { cursor: pointer; font: inherit; font-size: .84rem; }
@@ -1453,10 +1462,13 @@ h1 { display: flex; align-items: center; gap: 14px; }
     display: grid; grid-template-columns: 262px minmax(0, 1fr);
     gap: 36px; align-items: start;
   }
+  /* inset first: it is a shorthand, and after top it reset top to auto,
+     which left the rail unstuck; it scrolled up over the header, and the
+     drawer's z-index 120 drew it on top of the logo. */
   .sidebar {
-    position: sticky; top: 94px; inset: auto;
+    position: sticky; inset: auto; top: calc(var(--hdr-h) + 16px); z-index: auto;
     width: auto; transform: none; box-shadow: none;
-    max-height: calc(100vh - 118px);
+    max-height: calc(100vh - var(--hdr-h) - 40px);
     padding: 4px 4px 20px 0;
     background: transparent; border-right: 0;
   }
@@ -2593,7 +2605,7 @@ table.schedule tbody tr:nth-child(even):hover td { background: var(--surface); }
    ============================================================ */
 .aiimg-studio { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 16px; align-items: start; }
 .aiimg .dropzone[hidden] { display: none; }
-.aiimg-stagecol { min-width: 0; position: sticky; top: 12px; }
+.aiimg-stagecol { min-width: 0; position: sticky; top: calc(var(--hdr-h) + 12px); }
 .aiimg-stage {
   position: relative; display: grid; place-items: center; min-height: 220px;
   background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;

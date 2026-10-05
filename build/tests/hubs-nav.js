@@ -116,6 +116,29 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
         await page.click('#sidebarOpen'); await wait(400);
         await page.screenshot({ path: path.join(OUT, 'drawer-390.png') });
         ok(await page.evaluate(() => getComputedStyle(document.querySelector('.side-find-fab')).display === 'none'), 'Find button steps aside while the drawer is open');
+      } else {
+        // The rail sticks below the header and never paints over it. An
+        // `inset: auto` after `top` once unstuck it, and its rows scrolled
+        // up over the logo. 1080px is where the rail starts.
+        for (const rw of [1080, w]) {
+          await page.setViewport({ width: rw, height: h });
+          await page.evaluate(() => { const c = document.querySelector('.cc'); if (c) c.remove(); window.scrollTo(0, 500); });
+          await wait(300);
+          const rail = await page.evaluate(() => {
+            const hd = document.querySelector('.site-header').getBoundingClientRect();
+            const sb = document.querySelector('.sidebar').getBoundingClientRect();
+            const lay = document.querySelector('.layout').getBoundingClientRect();
+            let over = 0;
+            for (let x = 4; x < innerWidth; x += 12) for (let y = hd.top + 2; y < hd.bottom - 1; y += 8) {
+              const el = document.elementFromPoint(x, y);
+              if (el && el.closest('.sidebar')) over++;
+            }
+            return { hdr: Math.round(hd.bottom), top: Math.round(sb.top), atEnd: Math.abs(sb.bottom - lay.bottom) < 2, over };
+          });
+          ok(rail.top === rail.hdr + 16 || rail.atEnd, 'rail sticks 16px below the header at ' + rw + 'px (top ' + rail.top + ', header ' + rail.hdr + ')');
+          ok(rail.over === 0, 'no sidebar row paints over the header at ' + rw + 'px' + (rail.over ? ' (' + rail.over + ' points)' : ''));
+        }
+        await page.setViewport({ width: w, height: h });
       }
 
       console.log('\n/tools/ at ' + w + 'px');
