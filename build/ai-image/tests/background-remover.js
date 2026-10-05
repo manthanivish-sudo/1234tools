@@ -38,7 +38,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const ratio = (w, h) => (w / h).toFixed(4);
 
 (async () => {
-  for (const f of ['engine/models/modnet-photographic-portrait-matting.onnx', 'engine/models/LICENSE-modnet.txt', 'engine/models/README-modnet.txt', 'engine/aiimg-matte.js', 'ai-image/background-remover/index.html']) {
+  for (const f of ['engine/models/modnet-photographic-portrait-matting.onnx.part0', 'engine/models/modnet-photographic-portrait-matting.onnx.part1', 'engine/models/LICENSE-modnet.txt', 'engine/models/README-modnet.txt', 'engine/aiimg-matte.js', 'ai-image/background-remover/index.html']) {
     check(fs.existsSync(path.join(ROOT, f)), 'export has ' + f);
   }
   const browser = await puppeteer.launch({

@@ -1,0 +1,32 @@
+/*
+ * 1234Tools on Cloudflare: a Worker with static assets and no script, so
+ * every request is a static-asset request (free and unlimited on the Free
+ * plan) and the repository root is the site root, exactly as GitHub Pages
+ * publishes it. Deployed by .github/workflows/cloudflare.yml on every push
+ * to main; build/split-models.js keeps every file under the 25 MiB cap.
+ *
+ * html_handling "auto-trailing-slash" is Cloudflare's default and the
+ * nearest to GitHub Pages: /folder/ serves folder/index.html, /folder
+ * redirects to /folder/, /file serves file.html. The difference: Cloudflare
+ * never serves a URL ending in .html as itself — /x/index.html redirects to
+ * /x/ and /x.html to /x (307). The old-URL stubs (x.html beside x/) are
+ * therefore listed in _redirects (build/cf-redirects.js) as permanent
+ * redirects straight to where each stub points; "none" is not an option,
+ * as it stops /folder/ from serving folder/index.html.
+ *
+ * not_found_handling "404-page" answers a missing path with /404.html and
+ * status 404, as GitHub Pages does. .assetsignore keeps what GitHub Pages
+ * does not publish (.github/, .git/) and local-only files out of the upload.
+ */
+{
+  "name": "1234tools",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": ".",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  /* the preview address, <name>.<account>.workers.dev; _headers marks it noindex */
+  "workers_dev": true,
+  "preview_urls": false
+}

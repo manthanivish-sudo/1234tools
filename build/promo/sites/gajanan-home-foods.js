@@ -1,0 +1,301 @@
+'use strict';
+/** Site profile: Gajanan Home Foods, a shop on XLeShop. Read from E:/projects/XLeShop/gajananafoods (read-only; git
+ *  https://github.com/vmanthani/gajananafoods.git, firebase project gajananafoodsknr) and the live site
+ *  https://gajananafoods.co.in on 2026-10-05, with the live menu.json / settings.json the storefront loads
+ *  (xleshop-menu.storage.googleapis.com/gf/). Telugu sweets, savouries and pickles from Karimnagar, Telangana,
+ *  delivered in Karimnagar and Hyderabad, with orders from abroad shipped on a WhatsApp quote. */
+const SHOP = require('./_shop');
+module.exports = {
+  id: 'gajanan-home-foods',
+  name: 'Gajanan Home Foods',
+  baseUrl: 'https://gajananafoods.co.in',
+  domainSource: 'public/brand-config.js domain "gajananafoods.co.in" and url "https://gajananafoods.co.in" (lines 21-22); public/sitemap.xml <loc>s; canonical tags in faq.html and contact.html (https://gajananafoods.co.in/...); curl https://gajananafoods.co.in/ -> 200 on 2026-10-05, title "Gajanan Home Foods – Fresh Home Made Sweets delivered in Karimnagar, Hyderabad, UK and USA"; www.gajananafoods.co.in fails TLS (certificate does not cover www), so the bare domain is canonical. The site uses clean URLs (/faq.html redirects to /faq).',
+  repo: 'E:/projects/XLeShop/gajananafoods',
+  platform: 'xleshop',
+  pickerGroup: SHOP.PICKER_GROUP,
+  kind: 'shop',
+  promotes: 'products',
+  utm: { medium: 'social' },
+  brandWords: ['Gajanan Home Foods', 'Gajanan', 'Ariselu', 'Bobbatlu', 'Bhakshalu', 'Chakina', 'Chagodilu', 'Murukulu', 'Gavvalu', 'Karijelu', 'Burelu', 'Kara Mixure', 'Kara Poosa', 'Kara Bondi', 'Palli Garelu', 'Pappu Garelu', 'Pesaru Undalu', 'Minapa Sunni Undalu', 'Ravva Laddu', 'Bondi Laddu', 'Kobbari Laddu', 'Palli Laddu', 'Nuvvula Laddu', 'Ragi Laddu'],
+  colours: { primary: '#e77b1c', accent: '#9b3f12', background: '#fff8f0', ink: '#2b2b1f' },
+  colourSource: 'public/brand-config.js colors.primary / accent / bg / text (lines 80, 82, 84, 85)',
+  logo: 'E:/projects/XLeShop/gajananafoods/public/images/logo.png',
+  audiences: ['general', 'india'],
+  regions: ['india'],
+  area: 'Karimnagar and Hyderabad, Telangana (shop at Karimnagar)',
+  areaSource: 'public/faq.html: "We currently deliver across Karimnagar, Hyderabad, and surrounding areas in Telangana. Please contact us via WhatsApp to confirm delivery availability for your specific location."; brand-config.js address "Opposite DMart Karimnagar, Telangana, India"',
+  social: {
+    instagram: null,
+    facebook: null,
+    whatsapp: 'https://wa.me/918074943608',
+    whatsappChannel: null,
+    youtube: null,
+    googleBusiness: null,
+    source: 'public/index.html and c/*.html schema sameAs ["https://wa.me/" + BRAND.phoneWA], phoneWA "918074943608" in brand-config.js; contact.html "Chat on WhatsApp". No Instagram, Facebook, YouTube or Maps profile is linked anywhere on the shop\'s pages.'
+  },
+  calendarTargets: SHOP.TARGETS,
+  disclosure: SHOP.disclosure('Gajanan Home Foods'),
+  rules: SHOP.rules({
+    type: 'food',
+    market: 'india',
+    allow: [],
+    free: false,
+    freePhrases: [],
+    forbid: [
+      { rule: 'gf-ghee-generations', re: '\\b(real|desi|pure) ghee\\b|\\bghee, not shortcuts\\b|\\bthree generations\\b|\\bsince 1992\\b|\\bthree decades\\b|\\b8 cities\\b|\\beight cities\\b', msg: 'The home-page banners say "real ghee" and "three generations", and an unused landing block says "since 1992" and "8 cities". None is on a product page and the owner has not confirmed them: leave them out.' },
+      { rule: 'gf-no-preservatives', re: '\\bno preservatives\\b|\\bpreservative[- ]free\\b|\\bwithout preservatives\\b', msg: 'The FAQ says "We do not use preservatives", but the desk cannot check it and it reads as a quality claim. Owner to confirm before it is used.' },
+      { rule: 'gf-fast-delivery', re: '\\bfast delivery\\b|\\bdelivered fast\\b|\\b1[–-]3 (business )?days\\b', msg: 'The top bar says "Fast Delivery" and the FAQ says "typically 1–3 business days": not a promise copy can make. Say the shop confirms delivery on WhatsApp.' },
+      { rule: 'gf-cities-abroad', re: '\\bmiddle east\\b|\\b(uae|dubai|saudi|qatar|kuwait|oman|bahrain|canada|australia|singapore)\\b', msg: 'The checkout lists more countries than the UK and USA, but the shop\'s own titles name only Karimnagar, Hyderabad, UK and USA. Name only those, and say shipping is quoted on WhatsApp.' }
+    ],
+    notes: [
+      'Gajanan Home Foods sells sweets (laddus, undalu, ariselu, bobbatlu, gavvalu, burelu, karijelu), savouries (kara mixure, chakina, murukulu, chagodilu, garelu) and pickles (chicken, mutton, prawns, mango, lemon, tomato). Every item on the live menu is a 1 kg pack. Source: live menu.json gf/ on 2026-10-05.',
+      'Delivery in India: Karimnagar, Hyderabad and surrounding areas in Telangana; the FAQ asks customers to confirm their location on WhatsApp. Delivery charges are communicated after the order is confirmed (FAQ; brand-config deliveryMode "communicate").',
+      'Abroad (the shop\'s titles name the UK and USA): the checkout asks for a shipping quote; "the cost depends on weight and courier, so we confirm it on WhatsApp before dispatch"; no cash on delivery outside India; import duty is paid by the recipient (live storefront.js).',
+      'Payment shown at checkout (live settings.json payments): cash on delivery and PhonePe / UPI QR. The FAQ still says COD only; say "cash on delivery or UPI" only, never card.',
+      'There is no customer login on this shop (brand-config features.customerLogin false): orders are followed on the Order Status page link, so do not promise an account or one-tap reorder.',
+      'WhatsApp / phone: Mon–Sat, 9 am – 7 pm (contact.html).',
+      'The shop calls its food "home made" in its tagline and titles; promotion copy must not (FSSAI reg 9(2)). "Home Foods" in the shop name is the name and is fine.'
+    ]
+  }),
+  items: [
+    {
+      id: 'sweets',
+      path: '/c/sweets',
+      title: 'Sweets',
+      group: 'sweets',
+      audiences: ['general', 'india'],
+      hook: 'Ravva laddu, bondi laddu, pesaru undalu and ariselu, from Karimnagar.',
+      pain: 'I want the laddus we had growing up, not a sweet-shop box that tastes the same as every other one.',
+      usual: ['Queueing at the sweet shop before a festival', 'Asking a relative to bring a box back from home'],
+      promise: 'Telugu sweets in 1 kg packs: laddus with jaggery or sugar, undalu, ariselu, bobbatlu, gavvalu, burelu and karijelu.',
+      steps: ['Open the Sweets page on gajananafoods.co.in', 'Add the sweets you want to the cart', 'Check out with your delivery details and place the order'],
+      cta: 'See the sweets at Gajanan Home Foods',
+      facts: [
+        'Jaggery Bondi Laddu, Ravva Laddu, Bondi Laddu, Ragi Laddu',
+        'Jaggery Palli Laddu, Jaggery Nuvvula Laddu, Jaggery Kobbari Laddu, Sugar Kobbari Laddu',
+        'Pesaru Undalu, Minapa Sunni Undalu',
+        'Ariselu, Bobbatlu/Bhakshalu, Burelu, Karijelu, Bellam Gavvalu, Sugar Gavvalu',
+        'Each sold as a 1 kg pack'
+      ],
+      source: 'public/c/sweets.html (live /c/sweets) + live menu.json gf/ category "Sweets" (16 items)'
+    },
+    {
+      id: 'ariselu',
+      path: '/product/ariselu-1kg',
+      title: 'Ariselu 1kg',
+      group: 'sweets',
+      audiences: ['general', 'india'],
+      hook: 'Ariselu for Sankranti, without a day at the stove.',
+      pain: 'Ariselu take a whole day to make, and nobody in our house has the time this year.',
+      usual: ['Making them at home over a weekend', 'Waiting for someone to bring them from the village'],
+      promise: 'Gajanan Home Foods in Karimnagar sells Ariselu in a 1 kg pack.',
+      steps: ['Open Ariselu 1kg on the shop', 'Add it to the cart', 'Place the order and follow it on the Order Status page'],
+      cta: 'Order Ariselu from Gajanan Home Foods',
+      facts: ['Ariselu 1kg', 'Category: Sweets', 'From Karimnagar, Telangana'],
+      source: 'public/product/ariselu-1kg.html (live /product/ariselu-1kg, title "Ariselu 1kg – Gajanan Home Foods") + live menu.json item "Ariselu 1kg"'
+    },
+    {
+      id: 'bobbatlu',
+      path: '/product/bobbatlu-bhakshalu-1kg',
+      title: 'Bobbatlu/Bhakshalu 1kg',
+      group: 'sweets',
+      audiences: ['general', 'india'],
+      hook: 'Bobbatlu for the festival table, in a 1 kg pack.',
+      pain: 'Everyone asks for bobbatlu at Ugadi and I never get them right.',
+      usual: ['Rolling them out at home the night before', 'Buying whatever the corner shop has left'],
+      promise: 'Bobbatlu (Bhakshalu) from Gajanan Home Foods in Karimnagar, in a 1 kg pack.',
+      steps: ['Open Bobbatlu/Bhakshalu 1kg on the shop', 'Add it to the cart', 'Check out and place the order'],
+      cta: 'Order Bobbatlu from Gajanan Home Foods',
+      facts: ['Bobbatlu/Bhakshalu 1kg', 'Category: Sweets', 'Sold as a 1 kg pack'],
+      source: 'public/product/bobbatlu-bhakshalu-1kg.html (live /product/bobbatlu-bhakshalu-1kg) + live menu.json item "Bobbatlu/Bhakshalu 1kg"'
+    },
+    {
+      id: 'savouries',
+      path: '/c/savoury',
+      title: 'Savoury',
+      group: 'savouries',
+      audiences: ['general', 'india'],
+      hook: 'Murukulu, chagodilu and kara mixure for the evening tea.',
+      pain: 'The packet namkeen from the supermarket does not taste anything like the murukulu at home.',
+      usual: ['Supermarket namkeen packets', 'Frying a batch at home once a year'],
+      promise: 'Telugu savouries in 1 kg packs: Kara Mixure, Chakina, Kara Poosa, Chagodilu, Murukulu, Kara Bondi, Palli Garelu and Pappu Garelu.',
+      steps: ['Open the Savoury page on gajananafoods.co.in', 'Add the savouries you want', 'Place the order with your delivery details'],
+      cta: 'See the savouries at Gajanan Home Foods',
+      facts: [
+        'Kara Mixure, Chakina, Kara Poosa, Chagodilu, Murukulu, Kara Bondi, Palli Garelu, Pappu Garelu',
+        'Each sold as a 1 kg pack'
+      ],
+      source: 'public/c/savoury.html (live /c/savoury) + live menu.json gf/ category "Savoury" (8 items)'
+    },
+    {
+      id: 'chakina',
+      path: '/product/chakina-1kg',
+      title: 'Chakina 1kg',
+      group: 'savouries',
+      audiences: ['general', 'india'],
+      hook: 'Chakina made from rice flour and sesame, in a 1 kg pack.',
+      pain: 'I want a crunchy snack in the tin for when guests drop in.',
+      usual: ['Store-bought chakli packets', 'A batch from a relative once a year'],
+      promise: 'Chakina from Gajanan Home Foods: the shop lists its ingredients as rice flour and sesame.',
+      steps: ['Open Chakina 1kg on the shop', 'Add it to the cart', 'Check out and place the order'],
+      cta: 'Order Chakina from Gajanan Home Foods',
+      facts: ['Ingredients: Rice Flour, Sesame', 'Chakina 1kg', 'Category: Savoury'],
+      source: 'public/product/chakina-1kg.html (live /product/chakina-1kg) + live menu.json item "Chakina 1kg", desc "Ingredients 1. Rice Flour 2. Sesame"'
+    },
+    {
+      id: 'pickles',
+      path: '/c/pickles',
+      title: 'Pickles',
+      group: 'pickles',
+      audiences: ['general', 'india'],
+      hook: 'Chicken, mutton and prawns pickle, plus mango, lemon and tomato.',
+      pain: 'The pickle jar is empty and the bottled ones never have the heat we are used to.',
+      usual: ['Bottled pickle from the supermarket', 'Waiting for the summer batch from home'],
+      promise: 'Gajanan Home Foods makes non-veg and veg pickles in 1 kg packs: Chicken, Mutton and Prawns, and Mango, Lemon and Tomato.',
+      steps: ['Open the Pickles page on gajananafoods.co.in', 'Add the pickles you want to the cart', 'Place the order with your delivery details'],
+      cta: 'See the pickles at Gajanan Home Foods',
+      facts: ['Chicken Pickle, Mutton Pickle, Prawns Pickle', 'Mango Pickle, Lemon Pickle, Tomato Pickle', 'Each sold as a 1 kg pack'],
+      source: 'public/c/pickles.html (live /c/pickles) + live menu.json gf/ category "Pickles" (6 items)'
+    },
+    {
+      id: 'chicken-pickle',
+      path: '/product/chicken-pickle-1kg',
+      title: 'Chicken Pickle 1kg',
+      group: 'pickles',
+      audiences: ['general', 'india'],
+      hook: 'Spicy chicken pickle, made in Karimnagar, in a 1 kg pack.',
+      pain: 'I miss the chicken pickle from home and the shops here only sell veg ones.',
+      usual: ['Carrying a jar back in the suitcase', 'Going without'],
+      promise: 'Chicken Pickle from Gajanan Home Foods, described by the shop as having a spicy taste, in a 1 kg pack.',
+      steps: ['Open Chicken Pickle 1kg on the shop', 'Add it to the cart', 'Place the order and follow it on the Order Status page'],
+      cta: 'Order Chicken Pickle from Gajanan Home Foods',
+      facts: ['Chicken Pickle 1kg', 'High Quality and spicy taste', 'Category: Pickles'],
+      source: 'public/product/chicken-pickle-1kg.html (live /product/chicken-pickle-1kg) + live menu.json item "Chicken Pickle 1kg", desc "High Quality and spicy taste"'
+    },
+    {
+      id: 'mango-pickle',
+      path: '/product/mango-pickle',
+      title: 'Mango Pickle',
+      group: 'pickles',
+      audiences: ['general', 'india'],
+      hook: 'Mango pickle season: the shop marks it as seasonal.',
+      pain: 'By the time I think of making avakaya, the raw mangoes are gone.',
+      usual: ['Cutting and drying mangoes at home', 'Buying a jar that tastes of vinegar'],
+      promise: 'Mango Pickle from Gajanan Home Foods, in a 1 kg pack, labelled SEASONAL on the shop.',
+      steps: ['Open Mango Pickle on the shop', 'Add it to the cart', 'Check out and place the order'],
+      cta: 'Order Mango Pickle from Gajanan Home Foods',
+      facts: ['Mango Pickle', 'Label: SEASONAL', 'Sold as a 1 kg pack'],
+      source: 'public/product/mango-pickle.html (live /product/mango-pickle) + live menu.json item "Mango Pickle", label "SEASONAL"'
+    },
+    {
+      id: 'delivery-telangana',
+      path: '/faq',
+      title: 'Delivery in Karimnagar and Hyderabad',
+      group: 'delivery',
+      audiences: ['general', 'india'],
+      hook: 'In Karimnagar or Hyderabad? Gajanan Home Foods delivers to your door.',
+      pain: 'I want Gajanan sweets for a function but I cannot get to Karimnagar to pick them up.',
+      usual: ['Asking someone travelling to bring a box', 'Settling for a city sweet shop'],
+      promise: 'Delivery across Karimnagar, Hyderabad and nearby areas in Telangana; confirm your location on WhatsApp.',
+      steps: ['Message the shop on WhatsApp to confirm your area', 'Place your order on gajananafoods.co.in', 'You are told any delivery charge when the order is confirmed'],
+      cta: 'Check delivery to your area with Gajanan Home Foods',
+      facts: [
+        'We currently deliver across Karimnagar, Hyderabad, and surrounding areas in Telangana',
+        'Please contact us via WhatsApp to confirm delivery availability for your specific location',
+        'There is no minimum order value for delivery',
+        'The applicable charge will be communicated when your order is confirmed'
+      ],
+      source: 'public/faq.html (live /faq, identical to the repo on 2026-10-05)'
+    },
+    {
+      id: 'shipping-abroad',
+      path: '/',
+      title: 'Orders from the UK and USA',
+      group: 'delivery',
+      audiences: ['general', 'india', 'uk'],
+      hook: 'Living in the UK or USA? Ask Gajanan Home Foods for a shipping quote.',
+      pain: 'Festivals abroad never feel the same without the sweets from home.',
+      usual: ['Packing sweets into a suitcase on the way back', 'Asking visiting parents to carry a box'],
+      promise: 'Choose your country at checkout and request a shipping quote: the shop WhatsApps you the cost, which depends on weight and courier, and how to pay. Nothing is charged when you ask.',
+      steps: ['Add sweets, savouries or pickles to the cart', 'Pick your country at checkout and tap Request shipping quote', 'The shop WhatsApps you the shipping cost and how to pay'],
+      cta: 'Ask Gajanan Home Foods for a shipping quote',
+      facts: [
+        'Delivered in Karimnagar, Hyderabad, UK and USA',
+        'The cost depends on weight and courier, so we confirm it on WhatsApp before dispatch',
+        'Get a shipping quote first',
+        'We\'ll WhatsApp you the shipping cost and how to pay. Nothing is charged now.',
+        'No cash on delivery outside India',
+        'Any import duty or tax in your country is paid by the recipient'
+      ],
+      source: 'live home page title (index.html <title>) and brand-config.js meta.description; checkout copy in live storefront.js?v=42 (abroad note and "Get a shipping quote first" payment tile), switched on by brand-config.js checkout.deliveryCountries'
+    },
+    {
+      id: 'how-to-order',
+      path: '/faq',
+      title: 'How to order and pay',
+      group: 'ordering',
+      audiences: ['general', 'india'],
+      hook: 'Order sweets and pickles online; pay cash on delivery or by UPI.',
+      pain: 'I would order online, but I do not want to type card details into a small shop\'s site.',
+      usual: ['Phoning the order in and hoping it is written down right', 'Sending a list on WhatsApp'],
+      promise: 'Fill the cart, add your delivery details and place the order. Pay cash on delivery or by PhonePe / UPI QR.',
+      steps: ['Browse the products and add them to your cart', 'Fill in your delivery details and click Place Order', 'Open the Order Status link from your confirmation to follow it'],
+      cta: 'Order from Gajanan Home Foods',
+      facts: [
+        'Browse our products on the home page, add items to your cart, then proceed to checkout',
+        'You\'ll receive an order confirmation with a tracking link',
+        'Cash on delivery and PhonePe / UPI QR at checkout',
+        'You can cancel your order as long as it hasn\'t been packed yet'
+      ],
+      source: 'public/faq.html (live /faq) + live settings.json gf/ payments {cod: true, phonepe: true} and brand-config.js features.phonepe.enabled'
+    },
+    {
+      id: 'whatsapp',
+      path: '/contact',
+      title: 'Chat on WhatsApp',
+      group: 'whatsapp',
+      audiences: ['general', 'india'],
+      hook: 'Questions about an order? Gajanan Home Foods answers on WhatsApp.',
+      pain: 'I want to ask about a big order for a function before I place it.',
+      usual: ['Calling and getting no answer', 'Emailing and waiting days'],
+      promise: 'Reach the shop on WhatsApp or by phone, Monday to Saturday, 9 am to 7 pm, or by email.',
+      steps: ['Open the Contact page', 'Tap Chat on WhatsApp', 'Have your Order ID ready if it is about an order'],
+      cta: 'Message Gajanan Home Foods on WhatsApp',
+      facts: [
+        'Reach us on WhatsApp for the fastest response',
+        'Phone / WhatsApp: Available Mon–Sat, 9 am – 7 pm',
+        'Browse and order online 24/7',
+        'Opposite DMart Karimnagar, Telangana, India'
+      ],
+      source: 'public/contact.html (live /contact) + brand-config.js phone "+91 80749 43608", address'
+    }
+  ],
+  notConfirmed: [
+    'The shop\'s own tagline "Fresh Home Made Sweets and Savouries", page titles ("Fresh Home Made Sweets delivered in ..."), the hero line "Homemade sweets & savouries, to your door." and the FAQ "prepared fresh at home using traditional recipes": "home-made" may not be used in food advertising (FSSAI claims regulations reg 9(2), rule fssai-home-made) and "fresh"/"traditional" need Schedule V conditions, so copy names the products and the town instead.',
+    'Prices: every product on the live menu has a rupee price (e.g. the pickles and sweets); left out by the rules.',
+    'Delivery charge / free delivery: settings.json fulfilment shows deliveryCharge 0 and freeDeliveryMin 0; brand-config freeDeliveryMin 1 / deliveryCharge 0; a splash slide says "Free Delivery – Across India, no minimum order"; the FAQ says "very small orders may incur a delivery charge — the applicable charge will be communicated when your order is confirmed". These disagree (and "across India" contradicts the FAQ area), so no free-delivery wording is used.',
+    'Top bar "🚚 Fast Delivery Across Karimnagar, Hyderabad, UK, USA, Middle East": "fast" is not a promise copy can make; the Middle East is not in the page titles. Left out (forbid rule gf-cities-abroad / gf-fast-delivery).',
+    'Checkout country list (brand-config checkout.deliveryCountries): India plus AE, US, GB, SA, QA, KW, OM, BH, CA, AU, SG. Only the UK and USA are named in the shop\'s titles, so copy names only those.',
+    'FAQ "Orders are typically delivered within 1–3 business days": a delivery time; left out.',
+    'FAQ "We do not use preservatives": a quality claim the desk cannot check; blocked by gf-no-preservatives until the owner confirms.',
+    'FAQ "What payment methods do you accept? We currently accept Cash on Delivery (COD). Online payment options will be added soon." is out of date: live settings.json has PhonePe on. Copy says cash on delivery or UPI QR.',
+    'Home-page banners from live settings.json: "Small batches, real ghee, no shortcuts", "Made with ghee, not shortcuts", "stirred by hand in a home kitchen, the way it has been for three generations", "Fresh the day it ships · Real ghee, always", "packed fresh the day they ship", "Assorted boxes for weddings, housewarmings" with a "Build a box" button. Ingredient and heritage claims with no product page behind them, and no assorted box product on the menu: left out.',
+    'brand-config landing block (landing.enabled false, so not shown): "Homemade with love, since 1992", "Karimnagar\'s favourite", "serves 8 cities", founder signature "Meena Kumari", Diwali 6/12/24-pc gift trays, Pootharekulu, Avakai/Magaya/Tokku, winter podis. Not on the live site and several products are not on the menu: left out.',
+    'heroBand trust chips ("🎁 Festive specials", "🔒 Secure pay") and splash "Made with Love – Authentic home-style flavours": the hero band is replaced by the settings.json slideshow on the live home page; left out.',
+    'Label "POPULAR" on Kara Mixure and Chakina: a popularity claim; left out.',
+    'Refund page: "Damaged or incorrect items... send us a photo via WhatsApp within 24 hours of delivery"; refunds for COD orders by bank transfer or UPI. Not used as an item (refund terms are not a promotion), but writers can point to /refund.',
+    'Contact hours: contact.html says Mon–Sat 9 am – 7 pm; the WhatsApp button shows 8:00–21:00 (brand-config waHours) and the schema says every day. Copy uses the contact page hours.',
+    'Store locator /stores: loads from the API; no store list was checked, so not used.',
+    'Instagram, Facebook, YouTube, Google Business Profile: none linked on the shop\'s pages.'
+  ],
+  todo: [
+    'Owner: confirm the free-delivery position (settings.json, brand-config splash "Free Delivery across India" and FAQ disagree) before any delivery-cost wording is used.',
+    'Owner: the FAQ payment answer says COD only while the checkout offers PhonePe / UPI QR; update faq.html.',
+    'Owner: confirm or remove the home-page banner claims ("real ghee", "three generations") and the "no preservatives" FAQ line.',
+    'brand-config.js legal block is marked TODO: entityName, registeredAddress ("TODO: confirm full registered address") and DPDP grievance officer name.',
+    'brand-config.js licenceKey is "xlsh_dev_gf_placeholder" and razorpay keyId "rzp_test_DUMMY_KEY_REPLACE_ME" (Razorpay is off) — platform housekeeping, not copy.',
+    'www.gajananafoods.co.in has no valid certificate (TLS name mismatch on 2026-10-05); add www to hosting or drop the DNS record.',
+    'Social: no Instagram or Facebook page is linked from the shop; if the owner has one, add it to the footer/schema and to this profile.'
+  ],
+  checked: '2026-10-05'
+};

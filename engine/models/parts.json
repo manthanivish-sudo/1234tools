@@ -1,0 +1,100 @@
+{
+ "note": "Written by build/split-models.js. Each file over 24 MiB ships as <file>.part0, .part1, … of at most 20 MiB; bytes and sha256 are of the whole file.",
+ "files": {
+  "engine/models/depth-anything-v2-small-uint8.onnx": {
+   "bytes": 27258801,
+   "sha256": "fcf51f1b230362b28690bb9d1809bf0431f29cad20534e3f589bd7285547f20d",
+   "parts": [
+    {
+     "file": "depth-anything-v2-small-uint8.onnx.part0",
+     "bytes": 20971520,
+     "sha256": "6255e0c9b2e6d89fb7b0be9e14e54948a5277a64a4379b3781421c002ba28481"
+    },
+    {
+     "file": "depth-anything-v2-small-uint8.onnx.part1",
+     "bytes": 6287281,
+     "sha256": "cc6af78e801d0ba7d2880e68026dd34facbe866b0b81fe1b1316b712c2ff0dbc"
+    }
+   ]
+  },
+  "engine/models/kokoro-82m/model_quantized.onnx": {
+   "bytes": 92361116,
+   "sha256": "fbae9257e1e05ffc727e951ef9b9c98418e6d79f1c9b6b13bd59f5c9028a1478",
+   "parts": [
+    {
+     "file": "model_quantized.onnx.part0",
+     "bytes": 20971520,
+     "sha256": "66c70ebf9d505502851a9316b3dd81d1e00c9bf6d9232e5c1ed1cb66ca4d847f"
+    },
+    {
+     "file": "model_quantized.onnx.part1",
+     "bytes": 20971520,
+     "sha256": "4793ad6ef4a249d909e315843c7b5d1fb4ec364dc52cfa8ae27dbac9eaf34690"
+    },
+    {
+     "file": "model_quantized.onnx.part2",
+     "bytes": 20971520,
+     "sha256": "11ef5498fcb27f47597631b293712d3a0c2aa9c6a24f198b4667859cbf99d3fc"
+    },
+    {
+     "file": "model_quantized.onnx.part3",
+     "bytes": 20971520,
+     "sha256": "46cc37347a6ddd92919b625f6ca9fedc3a4e6b6636b6e6bff20b976318ca31a0"
+    },
+    {
+     "file": "model_quantized.onnx.part4",
+     "bytes": 8475036,
+     "sha256": "6a38f960b86121c94c201cab83953f49a0b42f238e63b66c7739f76c0b123ad9"
+    }
+   ]
+  },
+  "engine/models/migan-512-places2.onnx": {
+   "bytes": 28037335,
+   "sha256": "35b6f906df44019abcbb375cad5dbc85d31e1b10f90c03d3153e3c713b88d3fc",
+   "parts": [
+    {
+     "file": "migan-512-places2.onnx.part0",
+     "bytes": 20971520,
+     "sha256": "406f1cc49b7c9ebb4e010e4ae8c92f20d98c909730dc857f0690ef7947eb04fa"
+    },
+    {
+     "file": "migan-512-places2.onnx.part1",
+     "bytes": 7065815,
+     "sha256": "89797291bf220c85526a496483b3ca7875eb2d7be99e2acccd9b8b291e6e7479"
+    }
+   ]
+  },
+  "engine/models/modnet-photographic-portrait-matting.onnx": {
+   "bytes": 25888640,
+   "sha256": "07c308cf0fc7e6e8b2065a12ed7fc07e1de8febb7dc7839d7b7f15dd66584df9",
+   "parts": [
+    {
+     "file": "modnet-photographic-portrait-matting.onnx.part0",
+     "bytes": 20971520,
+     "sha256": "9f215e3e67735e582620e3be8aec89e422b245cf52e565538bfae4396928191d"
+    },
+    {
+     "file": "modnet-photographic-portrait-matting.onnx.part1",
+     "bytes": 4917120,
+     "sha256": "88018de6fde154feed16a130024c79af68577c01d5af6ad522ebabcd6dfd4f63"
+    }
+   ]
+  },
+  "engine/models/whisper-tiny/decoder_model_merged_quantized.onnx": {
+   "bytes": 30719241,
+   "sha256": "25e807a962b6349356d0ea5d0dfe530b7e5bf0e2a484aeca0359d03143faddd3",
+   "parts": [
+    {
+     "file": "decoder_model_merged_quantized.onnx.part0",
+     "bytes": 20971520,
+     "sha256": "a7d3883db132ecb5f1c85e91e7235cb97c0ff96ef6a339f53712710b2d36e322"
+    },
+    {
+     "file": "decoder_model_merged_quantized.onnx.part1",
+     "bytes": 9747721,
+     "sha256": "93a7bc88fb5804c8623f564e100cc0b5e93b68af759ceb1090bd3918172cb625"
+    }
+   ]
+  }
+ }
+}

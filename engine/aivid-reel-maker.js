@@ -6,7 +6,15 @@
  * exported is what was seen. Sound (a voiceover, music that ducks under it,
  * a clip's own sound) is mixed in an OfflineAudioContext; captions come from
  * Whisper tiny on the device (aivid-whisper.js) and are drawn by the Auto
- * Captions tool's own drawCaptions. Encoding is the shared runtime's
+ * Captions tool's own drawCaptions. The voiceover can also be generated:
+ * "Generate voice" has Kokoro-82M (aivid-tts.js, in a worker) read each
+ * scene's line in one of 28 English voices, lays the lines on the timeline
+ * so each scene lasts as long as its line (plus a pause), and builds the
+ * same S.voice a recording makes — with `plan` (scene id → seconds) and
+ * `generated` added — so mixing, ducking and Fit scenes work unchanged and
+ * the captions are the script itself, timed as spoken, with no
+ * transcription. The post caption then says the voice is AI-generated.
+ * Encoding is the shared runtime's
  * encodeVideo / encodeVideoFrames (aiimg-core.js). Nothing leaves the browser.
  *
  * The visual language is the promotion kits' (build/promo/kit-templates):
@@ -996,6 +1004,14 @@
   function captionFor(S) {
     S = S || CUR;
     if (!S) return '';
+    const text = captionBody(S);
+    if (!(S.voice && S.voice.generated)) return text;
+    /* a generated voice is disclosed in the caption, just above the hashtags */
+    const line = '🔊 The voiceover is an AI-generated voice.';
+    const m = /\n\n(#[^\n]*)$/.exec(text);
+    return m ? text.slice(0, m.index) + '\n' + line + text.slice(m.index) : text + '\n' + line;
+  }
+  function captionBody(S) {
     const firstText = S.scenes.find((s) => isWordy(s));
     if (S.promote) {
       const f = factsOf(S.promote);
@@ -2769,7 +2785,9 @@
     if (S.music) {
       const mu = S.music;
       const src = octx.createBufferSource(); src.buffer = mu.audioBuffer;
-      if (mu.loop) { src.loop = true; src.loopStart = 0; src.loopEnd = mu.audioBuffer.duration; }
+      /* the track can start part-way in (its chorus, its drop); a loop goes back to that point, not to the intro */
+      const from = clamp(Number(mu.from) || 0, 0, Math.max(0, mu.audioBuffer.duration - 0.5));
+      if (mu.loop) { src.loop = true; src.loopStart = from; src.loopEnd = mu.audioBuffer.duration; }
       const g = octx.createGain();
       const g0 = dB(mu.gainDb);
       const duck = mu.duck && (S.voice || media.length);
@@ -2785,7 +2803,7 @@
       }
       g.gain.setValueCurveAtTime(curve, 0, D);
       src.connect(g); g.connect(octx.destination);
-      if (mu.loop) src.start(0, 0); else src.start(0, 0, Math.min(mu.audioBuffer.duration, D));
+      if (mu.loop) src.start(0, from); else src.start(0, from, Math.min(mu.audioBuffer.duration - from, D));
       if (mu.loop) src.stop(D);
     }
     const out = await octx.startRendering();
@@ -2871,7 +2889,7 @@
     }
   }
   function pauseAll(S) { for (const sc of S.scenes) if (isVideoScene(sc) && sc.media.video) { try { sc.media.video.pause(); } catch (e) { /* */ } } }
-  async function* framesOf(S, w, h, D, signal) {
+  async function* framesOf(S, w, h, D, signal, opening) {
     const c = document.createElement('canvas'); c.width = w; c.height = h;
     const ctx = c.getContext('2d');
     const total = Math.max(1, Math.round(D * FPS));
@@ -2881,8 +2899,45 @@
       await prepareMedia(S, t);
       ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
       renderFrame(ctx, w, h, t, S);
+      if (opening) opening(ctx, w, h, t);
       yield { canvas: c, timestampUs: Math.round(i * 1e6 / FPS), durationUs: Math.round(1e6 / FPS) };
     }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* opening on the cover                                               */
+  /* ------------------------------------------------------------------ */
+
+  /* Instagram, TikTok and Shorts take a video's first frame as its preview
+     unless a cover is picked by hand, and a reel's first frame is its opening
+     scene before anything has faded in: nearly blank. So the export lays the
+     cover frame over the first OPEN_HOLD seconds and dissolves it over the
+     next OPEN_FADE, while the reel runs underneath as usual: frame 0 IS the
+     cover, the length and the sound do not move, and with the default cover
+     (the opening scene, fully drawn) the dissolve is seamless. */
+  const OPEN_HOLD = 0.4, OPEN_FADE = 0.3;
+  /** The cover's moment: the one picked, else three quarters into the opening scene. */
+  function coverTimeOf(X) {
+    const D = totalSeconds(X);
+    if (X.coverT !== null && X.coverT !== undefined && X.coverT <= D) return X.coverT;
+    const f = X.scenes[0];
+    return f ? 0.75 * f.seconds : 0;
+  }
+  /** The overlay for an export of X at w×h, or null when the option is off. Call before encoding. */
+  async function openingFor(X, w, h) {
+    if (X.openOnCover === false || !X.scenes.length) return null;
+    const ct = coverTimeOf(X);
+    await prepareMedia(X, ct);
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const cx = c.getContext('2d');
+    cx.fillStyle = '#000'; cx.fillRect(0, 0, w, h);
+    renderFrame(cx, w, h, ct, X, { progress: false });
+    await prepareMedia(X, 0);
+    return (ctx, W, H, t) => {
+      if (t >= OPEN_HOLD + OPEN_FADE) return;
+      const a = t < OPEN_HOLD ? 1 : 1 - (t - OPEN_HOLD) / OPEN_FADE;
+      ctx.save(); ctx.globalAlpha = a; ctx.drawImage(c, 0, 0, W, H); ctx.restore();
+    };
   }
   let fontsP = null;
   /** The site's two faces in every weight the beats use; layouts measured before they arrived are thrown away. */
@@ -3502,15 +3557,58 @@
     const musicGain = range('reel-music-gain', -30, 0, 1, -8, (v) => v + ' dB');
     const duckChk = check('reel-duck', 'Duck under speech', true);
     const loopChk = check('reel-loop', 'Loop if shorter than the reel', true);
+    const mmss = (v) => Math.floor(v / 60) + ':' + String(Math.floor(v % 60)).padStart(2, '0');
+    const musicFrom = range('reel-music-from', 0, 1, 0.5, 0, (v) => mmss(v) + (S.music ? ' of ' + mmss(S.music.duration) : ''));
+    let listen = null;
+    const stopListen = () => { if (listen) { try { listen.src.stop(); } catch (e) { /* */ } listen.ctx.close().catch(() => {}); listen = null; } listenBtn.textContent = '▶ Listen'; listenBtn.setAttribute('aria-pressed', 'false'); };
+    const listenBtn = button('▶ Listen', 'btn-ghost', () => {
+      if (listen || !S.music) { stopListen(); return; }
+      const ctx = new AudioContext();
+      const src = ctx.createBufferSource(); src.buffer = S.music.audioBuffer;
+      const g = ctx.createGain(); g.gain.value = dB(S.music.gainDb + 8);
+      src.connect(g); g.connect(ctx.destination);
+      src.onended = stopListen;
+      src.start(0, Number(musicFrom.input.value) || 0, 8);
+      listen = { ctx, src };
+      listenBtn.textContent = '■ Stop'; listenBtn.setAttribute('aria-pressed', 'true');
+    });
+    listenBtn.id = 'reel-music-listen'; listenBtn.setAttribute('aria-pressed', 'false');
     const musicCtl = el('div', 'reel-music-ctl'); musicCtl.hidden = true;
-    musicCtl.append(field('Music volume', musicGain), duckChk, loopChk);
+    musicCtl.append(field('Start the track at', musicFrom), row(listenBtn), hint('Pick where the music begins, such as its chorus. Listen plays 8 seconds from there; a looped track goes back to this point, not to the start.'),
+      field('Music volume', musicGain), duckChk, loopChk);
+    on(musicFrom, () => { if (!S.music) return; S.music.from = Number(musicFrom.input.value) || 0; if (listen) stopListen(); soundDirty(); });
     on(musicGain, () => { if (!S.music) return; S.music.gainDb = Number(musicGain.input.value); S.music.touched = true; soundDirty(); });
     on(duckChk, () => { if (S.music) { S.music.duck = duckChk.input.checked; soundDirty(); } });
     on(loopChk, () => { if (S.music) { S.music.loop = loopChk.input.checked; soundDirty(); } });
     const prevSoundChk = on(check('reel-preview-sound', 'Play the sound with the preview', true), () => { S.previewSound = prevSoundChk.input.checked; if (!S.previewSound) stopPreviewSound(); else if (S.playing) startPreviewSound(); });
     const soundStatus = el('p', 'aiimg-status'); soundStatus.id = 'reel-sound-status'; soundStatus.setAttribute('aria-live', 'polite');
+    /* generated voice: Kokoro-82M on the device (aivid-tts.js) */
+    const TTS = window.AIVidTTS || null;
+    let ttsJob = null, ttsPlay = null;
+    const ttsVoice = el('select', 'control'); ttsVoice.id = 'reel-tts-voice';
+    if (TTS) {
+      for (const acc of Object.keys(TTS.ACCENTS)) {
+        const og = el('optgroup'); og.label = TTS.ACCENTS[acc];
+        for (const v of TTS.voices.filter((x) => x.accent === acc)) { const op = el('option', null, v.label); op.value = v.id; og.appendChild(op); }
+        ttsVoice.appendChild(og);
+      }
+      ttsVoice.value = 'af_heart';
+    }
+    const ttsSpeed = range('reel-tts-speed', 0.8, 1.2, 0.05, 1, (v) => v.toFixed(2) + '×');
+    const ttsPause = range('reel-tts-pause', 0, 1.5, 0.1, 0.4, (v) => v.toFixed(1) + ' s');
+    const previewBtn = button('▶ Preview', 'btn-ghost', () => previewVoice()); previewBtn.id = 'reel-tts-preview';
+    const genBtn = button('Generate voice', 'btn-primary', () => generateVoice()); genBtn.id = 'reel-tts-generate';
+    const ttsCancel = button('Cancel', 'btn-ghost', () => { if (ttsJob) ttsJob.abort(); }); ttsCancel.id = 'reel-tts-cancel'; ttsCancel.hidden = true;
+    const ttsProgress = el('div', 'aiimg-progress'); const ttsBar = el('i'); ttsProgress.appendChild(ttsBar); ttsProgress.hidden = true;
+    ttsProgress.setAttribute('role', 'progressbar'); ttsProgress.setAttribute('aria-valuemin', '0'); ttsProgress.setAttribute('aria-valuemax', '100'); ttsProgress.setAttribute('aria-label', 'Voice generation progress');
+    const ttsStatus = el('p', 'aiimg-status'); ttsStatus.id = 'reel-tts-status'; ttsStatus.setAttribute('aria-live', 'polite');
+    const ttsBox = el('div', 'reel-tts');
+    ttsBox.append(field('Voice', ttsVoice), field('Speed', ttsSpeed), field('Pause after each scene', ttsPause), row(genBtn, previewBtn, ttsCancel), ttsProgress, ttsStatus,
+      hint('A synthetic voice reads each scene’s text aloud, made on your device by Kokoro-82M (Apache-2.0 licence). The first use downloads about 94 MB from this site — the 92 MB model, a 1.5 MB pronunciation dictionary and 0.5 MB for each voice you try, plus the 14 MB AI runtime if the captions have not already fetched it — and your browser keeps them. The script never leaves your device. English only for now.'));
+    if (!TTS) ttsBox.hidden = true;
     panes.sound.append(h('Voiceover'), row(recVoiceBtn, upVoiceBtn), voiceFile, level, prompter, voiceInfo, voiceCtl,
       hint('Recording asks for the microphone only when you press the button. The script is shown as a teleprompter while you read.'),
+      h('Or generate a voice'), ttsBox,
       h('Music'), row(upMusicBtn), musicFile, musicInfo, musicCtl, hint('Use a track you have the rights to; the file never leaves your device.'),
       prevSoundChk, soundStatus);
     voiceFile.addEventListener('change', () => { const f = voiceFile.files[0]; voiceFile.value = ''; if (f) setVoice(f); });
@@ -3520,11 +3618,16 @@
       const parts = [];
       const D = totalSeconds(S);
       if (S.voice) parts.push('Voice ' + S.voice.duration.toFixed(1) + ' s from ' + S.voice.offset.toFixed(1) + ' s');
-      if (S.music) parts.push('music ' + S.music.gainDb + ' dB' + (S.music.duck && S.voice ? ', ducked' : '') + (S.music.loop ? ', looped' : ''));
+      if (S.music) parts.push('music ' + S.music.gainDb + ' dB' + (S.music.from ? ' from ' + mmss(S.music.from) : '') + (S.music.duck && S.voice ? ', ducked' : '') + (S.music.loop ? ', looped' : ''));
       const clips = S.scenes.filter((x) => x.type === 'media' && x.sound).length;
       if (clips) parts.push(clips + ' clip' + (clips === 1 ? '' : 's') + ' with their own sound');
       soundStatus.textContent = parts.length ? capFirst(parts.join(' · ')) + ' · reel ' + D.toFixed(1) + ' s' : 'No sound yet — the reel will be silent unless you add a voice or music.';
       fitChk.hidden = !S.voice;
+      if (S.voice && S.voice.generated && !ttsJob) {
+        const stale = scriptKey(spokenScenes()) !== S.voice.generated.script;
+        ttsStatus.textContent = stale ? 'The scene text has changed since the voice was made — press Generate voice again to match it.' : S.voice.generated.note;
+        ttsStatus.className = 'aiimg-status' + (stale ? ' is-warn' : '');
+      }
     }
     function infoRow(rowEl, name, dur, onRemove) {
       rowEl.innerHTML = '';
@@ -3572,9 +3675,12 @@
       try { dec = await Wh.decodeAudio(file, { sampleRate: SR }); }
       catch (e) { say((e && e.message) || String(e), 'error'); updateSoundStatus(); return; }
       const g = S.voice ? -16 : -8;
-      S.music = { file, name: file.name || 'music', duration: dec.duration, audioBuffer: dec.audioBuffer, gainDb: g, duck: duckChk.input.checked, loop: loopChk.input.checked, touched: false };
+      S.music = { file, name: file.name || 'music', duration: dec.duration, audioBuffer: dec.audioBuffer, gainDb: g, duck: duckChk.input.checked, loop: loopChk.input.checked, touched: false, from: 0 };
       musicGain.set(g);
-      infoRow(musicInfo, S.music.name, S.music.duration, () => { S.music = null; musicInfo.hidden = true; musicCtl.hidden = true; soundDirty(); });
+      stopListen();
+      musicFrom.input.max = String(Math.max(0, Math.floor((dec.duration - 1) * 2) / 2));
+      musicFrom.set(0);
+      infoRow(musicInfo, S.music.name, S.music.duration, () => { stopListen(); S.music = null; musicInfo.hidden = true; musicCtl.hidden = true; soundDirty(); });
       musicCtl.hidden = false;
       soundDirty();
     }
@@ -3582,7 +3688,10 @@
     function applyFit() {
       /* `base` is the length the visitor chose; fitting scales from it, unticking goes back to it */
       for (const sc of S.scenes) if (sc.base === undefined) sc.base = sc.seconds;
-      if (S.fitVoice && S.voice) {
+      if (S.fitVoice && S.voice && S.voice.plan) {
+        /* a generated voice knows how long each scene's line lasts: each scene lasts that long */
+        for (const sc of S.scenes) sc.seconds = S.voice.plan[sc.id] !== undefined ? S.voice.plan[sc.id] : sc.base;
+      } else if (S.fitVoice && S.voice) {
         const body = S.scenes.filter((x) => x.type !== 'endcard');
         const sum = body.reduce((s, x) => s + x.base, 0);
         const want = S.voice.duration + Math.max(0, S.voice.offset) + 0.3;
@@ -3592,6 +3701,153 @@
       }
       renderScenes();
       scenesChanged(false);
+    }
+
+    /* ---------------- generated voice ---------------- */
+    /** The scenes the voice reads, in order: every scene with words except the end card (the teleprompter's list). */
+    function spokenScenes() {
+      return S.scenes.filter((sc) => sc.type !== 'endcard').map((sc) => ({ sc, text: spoken(sc) })).filter((x) => /[\p{L}\p{N}]/u.test(x.text || ''));
+    }
+    function scriptKey(list) { return list.map((x) => x.sc.id + '\u0001' + x.text).join('\u0002'); }
+    function ttsBusy(on) {
+      genBtn.disabled = on; previewBtn.disabled = on; ttsVoice.disabled = on;
+      ttsCancel.hidden = !on;
+      if (on) { ttsProgress.hidden = false; ttsBarAt(0); } else setTimeout(() => { if (!ttsJob) ttsProgress.hidden = true; }, 400);
+    }
+    function ttsBarAt(f) { const p = Math.round(clamp(f, 0, 1) * 100); ttsBar.style.width = p + '%'; ttsProgress.setAttribute('aria-valuenow', String(p)); }
+    /** Progress from the worker: the first-use download, then the model starting, then the pieces spoken. */
+    function ttsProgressFn(prefix, base, span) {
+      return (p) => {
+        if (p.stage === 'download') { ttsStatus.textContent = 'Downloading the voice model — ' + Math.round(p.loaded / 1e6) + ' of ' + Math.round(p.total / 1e6) + ' MB'; ttsBarAt(p.loaded / Math.max(1, p.total)); }
+        else if (p.stage === 'compile') { ttsStatus.textContent = 'Starting the voice model…'; ttsBarAt(1); }
+        else if (p.stage === 'speak') { ttsStatus.textContent = prefix; ttsBarAt(base + span * p.done / Math.max(1, p.of)); }
+      };
+    }
+    function stopTtsPlay() { if (ttsPlay) { try { ttsPlay.close(); } catch (e) { /* closed */ } ttsPlay = null; } }
+    async function previewVoice() {
+      if (!TTS || ttsJob) return;
+      const v = TTS.voices.find((x) => x.id === ttsVoice.value) || TTS.voices[0];
+      const job = ttsJob = new AbortController();
+      ttsBusy(true); stopTtsPlay();
+      ttsStatus.className = 'aiimg-status';
+      ttsStatus.textContent = TTS.ready ? 'Making the preview…' : 'Getting the voice model ready…';
+      try {
+        const r = await TTS.speak('Hi, I’m ' + v.name + '. This is how your reel will sound.', { voice: v.id, speed: Number(ttsSpeed.input.value), signal: job.signal, onProgress: ttsProgressFn('Making the preview…', 0, 1) });
+        let peak = 0; for (let i = 0; i < r.samples.length; i++) { const a = Math.abs(r.samples[i]); if (a > peak) peak = a; }
+        S.ttsPreview = { voice: v.id, duration: r.duration, peak };
+        ttsStatus.textContent = 'Preview: ' + v.label + ' · ' + r.duration.toFixed(1) + ' s';
+        try {
+          const ac = ttsPlay = new (window.AudioContext || window.webkitAudioContext)();
+          const b = ac.createBuffer(1, r.samples.length, r.sampleRate); b.copyToChannel(r.samples, 0);
+          const src = ac.createBufferSource(); src.buffer = b; src.connect(ac.destination);
+          src.onended = () => { if (ttsPlay === ac) stopTtsPlay(); };
+          src.start();
+        } catch (e) { /* no audio output: the preview was still made */ }
+      } catch (e) {
+        if (e && e.name === 'AbortError') ttsStatus.textContent = 'Cancelled.';
+        else { ttsStatus.textContent = 'The preview could not be made.'; say((e && e.message) || String(e), 'error'); }
+      } finally { if (ttsJob === job) ttsJob = null; ttsBusy(false); }
+    }
+    async function generateVoice() {
+      if (!TTS || ttsJob) return;
+      const list = spokenScenes();
+      if (!list.length) { ttsStatus.textContent = 'There is no scene text to read yet — write a script first.'; return; }
+      if (mic) stopMic();
+      stopTtsPlay();
+      const v = TTS.voices.find((x) => x.id === ttsVoice.value) || TTS.voices[0];
+      const speed = Number(ttsSpeed.input.value), pause = Number(ttsPause.input.value);
+      const job = ttsJob = new AbortController();
+      ttsBusy(true);
+      ttsStatus.className = 'aiimg-status';
+      ttsStatus.textContent = TTS.ready ? 'Starting…' : 'Getting the voice model ready…';
+      const t0 = performance.now();
+      try {
+        const parts = [];
+        let total = Math.max(0, Number(voiceOffset.input.value)), cut = false;
+        for (let i = 0; i < list.length; i++) {
+          const msg = 'Speaking scene ' + (i + 1) + ' of ' + list.length + '…';
+          ttsStatus.textContent = TTS.ready ? msg : ttsStatus.textContent;
+          const r = await TTS.speak(list[i].text, { voice: v.id, speed, signal: job.signal, onProgress: ttsProgressFn(msg, i / list.length, 1 / list.length) });
+          if (job.signal.aborted) throw abortError();
+          parts.push({ sc: list[i].sc, text: list[i].text, r });
+          total += r.duration + pause;
+          if (total >= MAX_VOICE_SECONDS) { cut = list.length > i + 1 || total > MAX_VOICE_SECONDS; break; }
+        }
+        await useGenerated(parts, { v, speed, pause, cut, key: scriptKey(list), secs: (performance.now() - t0) / 1000 });
+      } catch (e) {
+        if (e && e.name === 'AbortError') ttsStatus.textContent = 'Cancelled — the voiceover was not changed.';
+        else { ttsStatus.textContent = 'The voice could not be generated.'; say((e && e.message) || String(e), 'error'); }
+      } finally { if (ttsJob === job) ttsJob = null; ttsBusy(false); }
+    }
+    /**
+     * Lay the spoken scenes on the reel's timeline and make them the voiceover:
+     * each spoken scene lasts its line plus the pause (1–15 s, the first one
+     * also the "Starts at" lead), the others keep their length, and every line
+     * starts as its scene does. The captions are the script's own words, timed
+     * sentence by sentence from what the model produced — no transcription.
+     */
+    async function useGenerated(parts, o) {
+      const offset = Math.max(0, Number(voiceOffset.input.value));
+      if (Number(voiceOffset.input.value) < 0) voiceOffset.set(offset);
+      for (const sc of S.scenes) if (sc.base === undefined) sc.base = sc.seconds;
+      const first = S.scenes[0];
+      const plan = {};
+      for (const p of parts) plan[p.sc.id] = clamp(Math.ceil(((p.sc === first ? offset : 0) + p.r.duration + o.pause) * 10) / 10, 1, 15);
+      /* where each line goes, in voice time (reel time minus the offset) */
+      let at = 0, prevEnd = 0;
+      const placed = [];
+      for (const sc of S.scenes) {
+        const p = parts.find((x) => x.sc === sc);
+        if (p) {
+          const pos = Math.max(prevEnd + (placed.length ? 0.05 : 0), at + (sc === first ? offset : 0) - offset);
+          placed.push({ p, pos });
+          prevEnd = pos + p.r.duration;
+        }
+        at += plan[sc.id] !== undefined ? plan[sc.id] : sc.base;
+      }
+      const sr = parts[0].r.sampleRate;
+      let dur = Math.min(MAX_VOICE_SECONDS, prevEnd);
+      const len = Math.max(1, Math.round(dur * sr));
+      const buf = new Float32Array(len);
+      for (const { p, pos } of placed) {
+        const o0 = Math.round(pos * sr);
+        if (o0 >= len) break;
+        buf.set(p.r.samples.subarray(0, Math.min(p.r.samples.length, len - o0)), o0);
+      }
+      const audioBuffer = new AudioBuffer({ length: len, numberOfChannels: 1, sampleRate: sr });
+      audioBuffer.copyToChannel(buf, 0);
+      const samples = await Wh.toMono16k(audioBuffer);
+      const segments = [];
+      for (const { p, pos } of placed) {
+        for (const s of p.r.sentences) {
+          const seg = { start: pos + s.start, end: Math.min(dur, pos + s.end), text: s.text };
+          if (seg.start >= dur || seg.end <= seg.start) continue;
+          seg.words = Wh.wordsFor(seg);
+          segments.push(seg);
+        }
+      }
+      if (S.capJob) S.capJob.abort();
+      const words = segments.reduce((n, s) => n + s.words.length, 0);
+      const note = 'Generated: ' + o.v.label + ', ' + fmtSec(dur) + ' of speech for ' + placed.length + ' scene' + (placed.length === 1 ? '' : 's') +
+        ' in ' + fmtSec(Math.max(1, o.secs)) + '. Scenes fitted to it; captions timed from the script.' + (o.cut ? ' Stopped at 90 s, the Reels limit.' : '');
+      S.voice = { file: null, name: 'Generated voice · ' + o.v.name + ' (' + TTS.ACCENTS[o.v.accent] + ')', duration: dur, audioBuffer, samples, offset,
+        gainDb: Number(voiceGain.input.value), peak: peakOf(audioBuffer), plan,
+        generated: { voice: o.v.id, speed: o.speed, pause: o.pause, script: o.key, note, seconds: o.secs } };
+      S.captions.segments = segments; S.captions.status = 'ready';
+      capStatus.dataset.base = words + ' words, timed from the script';
+      renderSegs(); againBtn.hidden = true;
+      infoRow(voiceInfo, S.voice.name, S.voice.duration, removeVoice);
+      voiceCtl.hidden = false;
+      if (S.music && !S.music.touched) { S.music.gainDb = -16; musicGain.set(-16); }
+      S.fitVoice = true; fitChk.input.checked = true;
+      applyFit();
+      if (!S.captions.chosen || S.captions.source === 'scene') setCapSource('auto', false);
+      S.captions.cues = cuesFor(S);
+      updateCapStatusTail();
+      soundDirty();
+      invalidate();
+      ttsStatus.textContent = note;
+      if (o.cut) say('The generated voice stops at 90 s, the Reels limit; shorten the script to hear it all.', 'warn');
     }
 
     /* microphone */
@@ -3661,8 +3917,8 @@
     }
 
     /* ---------------- captions pane ---------------- */
-    const capSource = select('reel-cap-source', [['auto', 'From the voiceover (Whisper, on this device)'], ['scene', 'The scene text, timed to the scene'], ['none', 'No captions']], 'scene');
-    const capHint = hint('First use downloads Whisper tiny (41 MB) from this site; it is kept for next time. English speech in this version.');
+    const capSource = select('reel-cap-source', [['auto', 'From the voiceover (on this device)'], ['scene', 'The scene text, timed to the scene'], ['none', 'No captions']], 'scene');
+    const capHint = hint('A recorded or uploaded voice is transcribed by Whisper tiny — the first use downloads it (41 MB) from this site and it is kept for next time; English speech in this version. A generated voice needs no transcription: its captions are the script, timed as it was spoken.');
     const capProgress = el('div', 'aiimg-progress'); const capBar = el('i'); capProgress.appendChild(capBar); capProgress.hidden = true;
     const capStatus = el('p', 'aiimg-status', 'Record or upload a voice to get captions from it.'); capStatus.id = 'reel-cap-status'; capStatus.setAttribute('aria-live', 'polite');
     const againBtn = button('Transcribe again', 'btn-ghost', () => transcribeVoice()); againBtn.hidden = true;
@@ -3932,6 +4188,8 @@
     const coverFmt = select('reel-cover-format', [['image/jpeg', 'JPG'], ['image/png', 'PNG']], 'image/jpeg');
     coverFmt.setAttribute('aria-label', 'Cover format');
     const coverBtn = button('Export cover', 'btn-ghost', () => exportCover()); coverBtn.id = 'reel-cover';
+    const openChk = on(check('reel-open-cover', 'Open the video on the cover', S.openOnCover !== false), () => { S.openOnCover = openChk.input.checked; });
+    const openHint = hint('Instagram, TikTok and Shorts show a video’s first frame as its preview unless you pick a cover by hand. With this on, the first frame is the cover above: it shows for 0.4 s and dissolves into the reel, which keeps its length and sound.');
     const capBtn = share.captionButton(() => captionFor(S));
     capBtn.id = 'reel-copy-caption';
     const linkBtn = button('Copy link for bio', 'btn-ghost', async () => {
@@ -3944,11 +4202,13 @@
     linkBtn.id = 'reel-copy-link';
     const capPreview = el('textarea', 'control reel-caption-text'); capPreview.readOnly = true; capPreview.rows = 7; capPreview.id = 'reel-caption-text';
     const shareBox = el('div', 'aiimg-share');
-    shareBox.append(field('Caption for Instagram, TikTok or Shorts', capPreview), row(capBtn, linkBtn), hint('Instagram does not link captions; put the link in your bio and say so.'));
+    const aiHint = hint('This reel’s voice is synthetic, and the caption says so. Meta requires its AI label on Instagram and Facebook for “realistic-sounding audio that was digitally created or altered” — switch on “AI info” (or “Add AI label”) when you post. YouTube and TikTok have their own rules for realistic AI content; check them when you upload.');
+    aiHint.id = 'reel-ai-hint'; aiHint.hidden = true;
+    shareBox.append(field('Caption for Instagram, TikTok or Shorts', capPreview), row(capBtn, linkBtn), hint('Instagram does not link captions; put the link in your bio and say so.'), aiHint);
     const batchBox = el('div', 'reel-batch'); batchBox.hidden = true;
     const results = el('div', 'aiimg-results');
     panes.export.append(grid(field('Size', sizeSel), field('Quality', qualSel)), exHint, row(exportBtn, cancelBtn), exProgress, exStatus,
-      h('Cover'), row(coverNow, coverThumb, coverFmt, coverBtn), h('Post it'), shareBox, batchBox, results);
+      h('Cover'), row(coverNow, coverThumb, coverFmt, coverBtn), openChk, openHint, h('Post it'), shareBox, batchBox, results);
 
     function bioLink() {
       if (S.promote) return qrUrlFor(S.promote.path, S.brand.utm || 'instagram');
@@ -3959,6 +4219,7 @@
       if (panes.export.hidden) return;
       capPreview.value = captionFor(S);
       linkBtn.disabled = !bioLink();
+      aiHint.hidden = !(S.voice && S.voice.generated);
     }
     function coverTime() {
       if (S.coverT !== null && S.coverT <= totalSeconds(S)) return S.coverT;
@@ -4016,12 +4277,13 @@
       const audio = mix ? { buffer: mix, bitrate: 128000 } : undefined;
       const hasVideo = X.scenes.some(isVideoScene);
       const webcodecs = typeof VideoEncoder !== 'undefined';
+      const opening = await openingFor(X, w, hh);
       let r;
       if (hasVideo && webcodecs && A.__forceRecorder !== true) {
-        r = await A.encodeVideoFrames(framesOf(X, w, hh, D, signal), { width: w, height: hh, fps: FPS, total: Math.round(D * FPS), audio, bitrate, onProgress, signal });
+        r = await A.encodeVideoFrames(framesOf(X, w, hh, D, signal, opening), { width: w, height: hh, fps: FPS, total: Math.round(D * FPS), audio, bitrate, onProgress, signal });
       } else {
         const live = hasVideo && !webcodecs;
-        const render = (ctx, Wd, Ht, t) => { if (live) liveMedia(X, t); renderFrame(ctx, Wd, Ht, t, X); };
+        const render = (ctx, Wd, Ht, t) => { if (live) liveMedia(X, t); renderFrame(ctx, Wd, Ht, t, X); if (opening) opening(ctx, Wd, Ht, t); };
         try { r = await A.encodeVideo(render, { width: w, height: hh, fps: FPS, duration: D, bitrate, audio, onProgress, signal }); }
         finally { if (live) pauseAll(X); }
       }

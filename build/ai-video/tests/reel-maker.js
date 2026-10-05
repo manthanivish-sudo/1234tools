@@ -656,6 +656,28 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
         });
         check(cover.w === 1080 && cover.h === 1920, 'cover is 1080×1920 (' + cover.w + '×' + cover.h + ')');
         check(cover.magic[0] === 0x89 && cover.magic[1] === 0x50 && cover.magic[2] === 0x4e && cover.magic[3] === 0x47, 'cover is a PNG (' + cover.name + ')');
+
+        /* ---- 8b. the video opens on the cover (the post preview is frame 0) ---- */
+        const open = await page.evaluate(async (vsrc) => {
+          const small = (src) => new Promise((res) => {
+            const c = document.createElement('canvas'); c.width = 108; c.height = 192;
+            const x = c.getContext('2d');
+            const done = (m) => { x.drawImage(m, 0, 0, 108, 192); const d = x.getImageData(0, 0, 108, 192).data; const g = []; for (let i = 0; i < d.length; i += 4) g.push((d[i] + d[i + 1] + d[i + 2]) / 3); res(g); };
+            if (src.kind === 'img') { const im = new Image(); im.onload = () => done(im); im.src = src.url; return; }
+            const v = document.createElement('video'); v.muted = true; v.src = src.url;
+            v.onloadeddata = () => { v.onseeked = () => setTimeout(() => done(v), 200); v.currentTime = src.t; };
+          });
+          const cov = await small({ kind: 'img', url: document.querySelector('.aiimg-result img').src });
+          const f0 = await small({ kind: 'video', url: vsrc, t: 0 });
+          const f2 = await small({ kind: 'video', url: vsrc, t: 2.0 });
+          const mad = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]); return s / a.length; };
+          const std = (a) => { const m = a.reduce((s, v) => s + v, 0) / a.length; return Math.sqrt(a.reduce((s, v) => s + (v - m) * (v - m), 0) / a.length); };
+          return { d0: mad(cov, f0), d2: mad(cov, f2), std0: std(f0), on: document.querySelector('#reel-open-cover').checked };
+        }, src);
+        console.log('  opening: frame 0 vs cover ' + open.d0.toFixed(1) + ', 2 s vs cover ' + open.d2.toFixed(1) + ', frame 0 std ' + open.std0.toFixed(1));
+        check(open.on, '"Open the video on the cover" is on by default');
+        check(open.d0 < 10 && open.d0 < open.d2 / 3, 'frame 0 of the MP4 is the cover (mean difference ' + open.d0.toFixed(1) + ' < 10, and under a third of the 2 s frame, ' + open.d2.toFixed(1) + ')');
+        check(open.std0 > 20, 'frame 0 is not blank (luminance std ' + open.std0.toFixed(1) + ' > 20)');
       }
 
       if (!SKIP_VIDEO && !SKIP_BATCH) {
@@ -866,6 +888,43 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
       await page.screenshot({ path: path.join(OUT, 'phone-picker.png') });
       await page.setViewport({ width: 1400, height: 1000, deviceScaleFactor: 1 });
     }
+
+    /* ---- music from a chosen position ----
+       a synthetic track: 440 Hz for its first 2 s, 880 Hz after; started
+       at 2 s, the mix carries 880 Hz from the reel's start, and a looped
+       track goes back to 2 s, not to 0 */
+    await gotoTool('?tool=india/gst-calculator/');
+    await waitStudio();
+    const mf = await page.evaluate(async () => {
+      const api = window.AIImg.tools['reel-maker'];
+      const S = api.state();
+      const SR = 48000, secs = 4;
+      const ab = new AudioBuffer({ length: SR * secs, numberOfChannels: 2, sampleRate: SR });
+      for (let ch = 0; ch < 2; ch++) {
+        const d = ab.getChannelData(ch);
+        for (let i = 0; i < d.length; i++) { const t = i / SR; d[i] = 0.5 * Math.sin(2 * Math.PI * (t < 2 ? 440 : 880) * t); }
+      }
+      const keep = { music: S.music, voice: S.voice };
+      const hz = (buf, t0, t1) => {
+        const d = buf.getChannelData(0); let n = 0;
+        const a = Math.round(t0 * buf.sampleRate), b = Math.round(t1 * buf.sampleRate);
+        for (let i = a + 1; i < b; i++) if ((d[i - 1] < 0) !== (d[i] < 0)) n++;
+        return n / 2 / (t1 - t0);
+      };
+      try {
+        S.voice = null;
+        const mk = (from, loop) => ({ name: 'tone', duration: secs, audioBuffer: ab, gainDb: 0, duck: false, loop, from });
+        S.music = mk(0, false); const m0 = await api.mixAudio(S);
+        S.music = mk(2, false); const m2 = await api.mixAudio(S);
+        S.music = mk(2, true); const l2 = await api.mixAudio(S);
+        return { at0: hz(m0, 0.6, 1.4), at2: hz(m2, 0.6, 1.4), loop: hz(l2, 2.6, 3.4), ui: !!document.querySelector('#reel-music-from') && !!document.querySelector('#reel-music-listen') };
+      } finally { S.music = keep.music; S.voice = keep.voice; }
+    });
+    console.log('  music from: ' + JSON.stringify(mf));
+    check(Math.abs(mf.at0 - 440) < 15, 'music from 0:00 starts with the track\'s opening (' + mf.at0.toFixed(0) + ' Hz ≈ 440)');
+    check(Math.abs(mf.at2 - 880) < 20, 'music from 0:02 starts 2 s into the track (' + mf.at2.toFixed(0) + ' Hz ≈ 880)');
+    check(Math.abs(mf.loop - 880) < 20, 'a looped track goes back to 0:02, not to the intro (' + mf.loop.toFixed(0) + ' Hz ≈ 880)');
+    check(mf.ui, '"Start the track at" and Listen are in the Sound pane');
 
     console.log('  third-party requests:', [...new Set(net)].slice(0, 12).join('\n    ') || 'none');
     check(net.length === 0, 'zero requests left 127.0.0.1');

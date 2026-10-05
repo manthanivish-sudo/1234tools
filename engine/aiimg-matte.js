@@ -20,7 +20,8 @@
   const { clamp, scaled, sleep, el } = A;
 
   const ORT_DIR = '/engine/vendor/ort/';
-  const MODEL_URL = '/engine/models/modnet-photographic-portrait-matting.onnx';
+  /* in two parts of at most 20 MiB (build/split-models.js); MODEL_BYTES is the whole file */
+  const MODEL_URL = ['/engine/models/modnet-photographic-portrait-matting.onnx.part0', '/engine/models/modnet-photographic-portrait-matting.onnx.part1'];
   const MODEL_BYTES = 25888640;
   /* MODNet was trained with the short edge at 512 (onnx/inference_onnx.py
      in the MODNet repo and Xenova's preprocessor_config.json both say so).
@@ -82,7 +83,14 @@
         s = await A.loadSession(url, { bytes, onProgress });
         if (s && s.session && typeof s.run !== 'function') s = s.session;
       } else {
-        const data = await fetchBytes(url, onProgress, bytes);
+        const list = Array.isArray(url) ? url : [url];
+        const got = [];
+        for (const u of list) got.push(await fetchBytes(u, onProgress, bytes));
+        const n = got.reduce((a, b) => a + b.length, 0);
+        if (list.length > 1 && bytes && n !== bytes) throw new Error('The model download was incomplete. Reload the page to try again.');
+        const data = new Uint8Array(n);
+        let o = 0;
+        for (const b of got) { data.set(b, o); o += b.length; }
         s = await ort.InferenceSession.create(data, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
       }
       return { ort, session: s };

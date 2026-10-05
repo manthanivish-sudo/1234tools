@@ -1,4 +1,7 @@
 modnet-photographic-portrait-matting.onnx
+  (shipped as .part0 and .part1, at most 20 MiB each, joined by the loader:
+  the static hosts cap a file at 25 MiB; see build/split-models.js and
+  engine/models/parts.json, which records each part's sha256)
   MODNet (Ke et al., "MODNet: Real-Time Trimap-Free Portrait Matting via
   Objective Decomposition", AAAI 2022), the photographic portrait matting
   checkpoint, 6.5M parameters, fp32, 25,888,640 bytes.

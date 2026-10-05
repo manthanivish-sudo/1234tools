@@ -13,3 +13,4 @@ build/pdf-package/sample-output/
 node_modules/
 package.json
 package-lock.json
+.wrangler/

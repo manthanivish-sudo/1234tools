@@ -389,7 +389,11 @@ async function cli(argv) {
 async function cliInSite(a) {
   const cmd = a._[0];
   if (cmd === 'sites') {
-    for (const s of SITE.list()) console.log((s.id === SITE.currentId() ? '* ' : '  ') + s.id.padEnd(12) + s.name.padEnd(18) + (s.baseUrl || '(no URL)').padEnd(32) + (s.items == null ? 'the 1234Tools catalogue' : s.items + ' ' + (s.promotes || 'items')) + (s.todo ? '  TODO: ' + s.todo : '') + (s.error ? '  ERROR: ' + s.error : ''));
+    let group = '';
+    for (const s of SITE.list()) {
+      if (s.group !== group) { group = s.group; console.log(group + ':'); }
+      console.log((s.id === SITE.currentId() ? '* ' : '  ') + s.id.padEnd(22) + s.name.padEnd(24) + (s.baseUrl || '(no URL)').padEnd(34) + (s.items == null ? 'the 1234Tools catalogue' : s.items + ' ' + (s.promotes || 'items')) + (s.todo ? '  TODO: ' + s.todo : '') + (s.error ? '  ERROR: ' + s.error : ''));
+    }
     console.log('Data folder for ' + SITE.currentId() + ': ' + L.home());
     return 0;
   }

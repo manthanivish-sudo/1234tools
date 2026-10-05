@@ -38,7 +38,7 @@ const stamp = () => ((Date.now() - t0) / 1000).toFixed(1) + 's';
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 (async () => {
-  for (const f of ['engine/models/modnet-photographic-portrait-matting.onnx', 'engine/aiimg-matte.js', 'engine/aiimg-sticker-maker.js', 'ai-image/sticker-maker/index.html']) {
+  for (const f of ['engine/models/modnet-photographic-portrait-matting.onnx.part0', 'engine/models/modnet-photographic-portrait-matting.onnx.part1', 'engine/aiimg-matte.js', 'engine/aiimg-sticker-maker.js', 'ai-image/sticker-maker/index.html']) {
     check(fs.existsSync(path.join(ROOT, f)), 'export has ' + f);
   }
   const browser = await puppeteer.launch({

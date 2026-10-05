@@ -63,13 +63,26 @@ for (const f of Object.values(FORMATS)) f.platforms = f.targets.map((id) => CH.g
    each item's own story, and the targets a profile names (calendarTargets) or these. */
 const SITE_TARGETS = ['instagram-reel', 'facebook-reel', 'youtube-shorts', 'linkedin-post', 'instagram-carousel'];
 const SITE_WEEK = [[], ['problem'], [], ['problem'], [], ['problem'], []];
-function siteTargets() {
+/* A shop (kind 'shop', sites/_shop.js) defaults to WhatsApp Status, an Instagram Reel,
+   a native Facebook Page post and an Instagram feed post. A calendarTargets entry is a
+   channel id, or { channel, native: true } for a post made without a link: its "no link"
+   box starts ticked, so it spends no linked-post cap or Facebook link budget. */
+const SHOP_TARGETS = ['whatsapp-status', 'instagram-reel', { channel: 'facebook-post', native: true }, 'instagram-carousel'];
+function siteTargetSpecs() {
   const S = require('./site');
   if (S.isDefault()) return null;
   const p = S.current();
-  return (Array.isArray(p.calendarTargets) && p.calendarTargets.length ? p.calendarTargets : SITE_TARGETS).filter((id) => CH.get(id));
+  const list = Array.isArray(p.calendarTargets) && p.calendarTargets.length ? p.calendarTargets : p.kind === 'shop' ? SHOP_TARGETS : SITE_TARGETS;
+  return list.map((x) => (typeof x === 'string' ? { channel: x } : x)).filter((x) => x && CH.get(x.channel) && (!x.native || CH.get(x.channel).noLinkOption));
 }
+function siteTargets() { const s = siteTargetSpecs(); return s && s.map((x) => x.channel); }
 function targetsFor(fmt) { return siteTargets() || (FORMATS[fmt] ? FORMATS[fmt].targets : []); }
+/** New target records for a slot: { channel, state } plus native: true where the profile presets it. */
+function newTargets(fmt, state) {
+  const specs = siteTargetSpecs();
+  if (!specs) return targetsFor(fmt).map((channel) => (state ? { channel, state } : { channel }));
+  return specs.map((x) => Object.assign({ channel: x.channel }, state ? { state } : {}, x.native ? { native: true } : {}));
+}
 
 /* Which slots each weekday fills (0 = Sunday). Nine a week: one a day,
    and a second on Tuesday and Thursday, the two days short video does best
@@ -146,7 +159,7 @@ function save(cal) {
 /* What is stored for a target: the record only. Names, issues and states
    are worked out on every read (decorate), so a change in channels.js
    reaches old records too. */
-const TARGET_FIELDS = ['channel', 'state', 'url', 'tick', 'note', 'reason', 'at', 'logAt', 'accepted', 'extra', 'migrated', 'noLink'];
+const TARGET_FIELDS = ['channel', 'state', 'url', 'tick', 'note', 'reason', 'at', 'logAt', 'accepted', 'extra', 'migrated', 'noLink', 'native'];
 function strip(it) {
   const out = {};
   for (const [k, v] of Object.entries(it)) if (!/^(view|progress|state)$/.test(k)) out[k] = v;
@@ -157,7 +170,7 @@ function strip(it) {
 /** Give a slot its targets if it has none (v1 slots, slots of an older plan). */
 function normalise(it) {
   if (!Array.isArray(it.targets)) it.targets = [];
-  if (!it.targets.length && FORMATS[it.format]) it.targets = targetsFor(it.format).map((channel) => ({ channel }));
+  if (!it.targets.length && FORMATS[it.format]) it.targets = newTargets(it.format);
   for (const t of it.targets) if (!t.state) t.state = 'due';
   it.targets = it.targets.filter((t) => CH.get(t.channel));
   if (FORMATS[it.format]) it.platforms = it.targets.map((t) => CH.get(t.channel).name);
@@ -235,7 +248,7 @@ function plan(start) {
           'The fix: ' + (st.promise || pick.description), own ? 'Show the real result' : 'Show it on screen, as the site shows it', 'Steps: ' + (st.steps || []).join(' → '), 'CTA: ' + (st.cta || (own ? 'Try it free' : 'See it on ' + SITE.current().name)) + ' — link in bio'],
         platforms: targetsFor(fmt).map((id) => CH.get(id).name), reel: own ? reelBase + encodeURIComponent(pick.path) : reelBase,
         status: 'planned', postedUrl: '', note: '',
-        targets: targetsFor(fmt).map((channel) => ({ channel, state: 'due' }))
+        targets: newTargets(fmt, 'due')
       });
       if (!own) items[items.length - 1].formatLabel = SITE.current().promotes === 'products' ? 'Product story' : SITE.current().promotes === 'app features' ? 'Feature story' : 'Service story';
     });
@@ -289,7 +302,7 @@ function viewTarget(it, t, idx) {
   const bad = issues.some((x) => x.level === 'bad');
   const done = t.state === 'skipped' ? !!t.reason : t.state === 'posted' && (!bad || !!t.accepted);
   return Object.assign({}, t, { name: ch.name, short: ch.short, platform: ch.platform, tickOnly: !!ch.tick && !ch.linkShape, tick: t.tick, allowsTick: !!ch.tick, venue: ch.venue || '', issues, flagged: bad && !t.accepted, done,
-    linkInPost: ch.linkInPost && !t.noLink, noLinkOption: !!ch.noLinkOption });
+    linkInPost: ch.linkInPost && !t.noLink && !(t.state === 'due' && t.native), noLinkOption: !!ch.noLinkOption, native: !!t.native });
 }
 
 function viewItem(it, idx) {
@@ -367,6 +380,8 @@ function target(id, channel, action, o) {
     if (!url && !o.tick) throw new Error('Paste the post\'s link' + (ch.tick ? ', or tick it as posted' : ''));
     if (url && !ch.linkShape) throw new Error(ch.name + ' gives a post no public link: tick it as posted instead (add a note if you like).');
     if (!url && !ch.tick) throw new Error(ch.name + ' gives every post its own link: paste it, so the desk can check the format.');
+    /* a native target (a shop's Facebook Page post) is "no link" unless the caller says otherwise */
+    if (o.noLink === undefined && t.native && ch.noLinkOption) o = Object.assign({}, o, { noLink: true });
     if (o.noLink && !ch.noLinkOption) throw new Error(ch.name + (ch.linkInPost ? ' always carries its link' : ' never carries a link in the post') + ': "no link" does not apply.');
     Object.assign(t, { state: 'posted', url: url || undefined, tick: url ? undefined : true, at: nowIso(), accepted: undefined, reason: undefined, noLink: o.noLink ? true : undefined });
     if (o.note !== undefined) t.note = String(o.note).slice(0, 500);

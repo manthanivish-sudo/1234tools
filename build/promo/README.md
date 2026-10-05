@@ -75,7 +75,18 @@ Platforms change their limits and links. To refresh: open each `src`, compare, e
 
 ## Several sites
 
-The desk promotes five sites, one at a time: **1234Tools** (the default), **XLeShop**, **MVR IT Services**, **Attend Now** and **FixOurTime**. Pick one in the header (each browser tab keeps its own), or pass `--site <id>` to any command (`node build/promo/desk.js sites` lists them).
+The desk promotes fourteen sites, one at a time. Under **Sites**: **1234Tools** (the default), **XLeShop**, **MVR IT Services**, **Attend Now** and **FixOurTime**. Under **XLeShop shops**, the nine client shops hosted on XLeShop: Gajanan Home Foods, Sri Balaji Stores, SouthBasket, Natural Cure Ayurveda, KBK Dairy Products, KBK Mart, Aarvik Dairy Products, DairyZest and RAP CLUB. Pick one in the header (the picker is grouped under those two headings; each browser tab keeps its own), or pass `--site <id>` to any command (`node build/promo/desk.js sites` lists them by group).
+
+**The shops** (`sites/<shop>.js`, `kind: 'shop'`, `pickerGroup: 'XLeShop shops'`) share `sites/_shop.js` (not a profile: site.js loads only `[a-z0-9-]+.js`):
+
+- Stories only from what the shop's own pages show: named products and categories, delivery area and terms, payment options, hours, how to order. No prices, offers, reviews, ratings, "bestseller", organic or certification claims, guarantees, or delivery times the pages do not state (the common shop rules).
+- Health rules for every food, grocery, dairy and Ayurveda shop: no "cures", "heals", "treats", "prevents", "boosts immunity", "medicine for…", "healthy", "good for…", nutrition claims. Natural Cure Ayurveda also refuses every disease in the Drugs and Magic Remedies (Objectionable Advertisements) Act 1954 Schedule, the section 3 purposes and any treatment language; the shop's name itself is not matched. Indian food shops follow the FSSAI Advertising and Claims Regulations 2018: "home-made" is refused; "fresh", "natural", "traditional", "authentic" show as owner-to-confirm warnings. Dairy shops: "pure", "chemical-free", "preservative-free", "no adulteration", "A2" are errors unless the shop's own page uses the word, and then a warning (owner to confirm); "100% pure" is always an error. The sources (India Code / Tamil Nadu Drugs Control copy of the Act, CAP Code sections 12 and 15, the FSSAI compendium) are cited in `_shop.js` with the date read.
+- A lint rule with `level: 'warn'` in a profile's `forbid` is shown, not refused. A profile's `forbid` rules read the words, not the links: a page path such as `/c/fresh` is not a claim.
+- Shop item paths are the shops' clean URLs (`/c/sweets`, `/product/fresh-paneer`, `/faq`). Git Bash turns `/c/sweets` into `C:/sweets`; the desk puts it back, or type `c/sweets`.
+- A shop whose catalogue the owner has not supplied is a **skeleton**: no items, its TODOs say what is missing, the picker shows "(skeleton)" (RAP CLUB on 2026-10-05: the live products are a developer sample range).
+- Disclosure: the owner builds and hosts these shops but does not run them, so shop copy says "Disclosure: I build and host the <shop> online shop on XLeShop." (profile `disclosure`), never "I run".
+- Calendar: three slots a week to **WhatsApp Status, Instagram Reel, Facebook Page post (native) and Instagram feed** (`_shop.js` `TARGETS`, also the default for any profile with `kind: 'shop'`). The Facebook target is preset "native": its **no link** box starts ticked, so it spends no linked-post cap and no Facebook link budget unless you untick it. A `calendarTargets` entry may be a channel id or `{ channel, native: true }`.
+- Venue: **Google Business Profile posts** (`social-google-business-profile`, `siteKinds: ["shop"]`) is offered to shops only, with "verify first": post only once the owner confirms the shop has a verified Profile.
 
 - `site.js` holds the switch. Each request and each command runs in one site (Node's AsyncLocalStorage), so two tabs on two sites never mix.
 - `sites/<id>.js` is a site's profile: base URL (and how it was confirmed), UTM medium, brand words, colours and logo from its repo, audiences, the items it promotes (products, services or app features, each with hook, pain, the usual way, promise, steps, call to action, the facts the site states and the file that shows it), what was seen but left out (`notConfirmed`), and its claim rules: `free` and `freePhrases` (a site is never called free unless it says so), `browserClaims` (the 1234Tools "nothing you type is uploaded" claims are refused elsewhere), `allowClaims`, and `forbid` regexes for that kind of site. Every profile was read from the site's own repo, read-only, on 2026-10-05.
@@ -132,7 +143,7 @@ Nothing personal is in the repo (everything committed is published). Your data l
 - `seo\`: SEO control centre spreadsheets (`node build/seo/control-centre.js`).
 - `cache\`: finder responses, kept 30 minutes.
 - `config.json` (optional): `{"accounts": {"reddit": "yourname", "hn": "yourname"}, "facebook": {"linkPostsPerMonth": 2}}`: the finder skips your own posts; the Facebook Page link budget (default 2).
-- `sites\<id>\`: the same files for each other site (XLeShop, MVR IT Services, Attend Now, FixOurTime); 1234Tools keeps the folder itself.
+- `sites\<id>\`: the same files for each other site (XLeShop, MVR IT Services, Attend Now, FixOurTime and each of the nine XLeShop shops); 1234Tools keeps the folder itself.
 
 Set `PROMO_HOME` to use another folder (the tests do). `PROMO_NOW` pins the clock, for planning ahead.
 
@@ -168,7 +179,7 @@ In GA4: **Reports → Acquisition → Traffic acquisition**, set the primary dim
 | `calendar.js` | the 90-day video calendar: slots, targets, link verification, coverage, v1 migration |
 | `channels.js` | every channel's format, limits, links, files, checklist and red lines, with sources and check dates; the link rules |
 | `guide.js` | the Guide's vision, process, red lines and FAQ (lint-clean), and the `guide` CLI text |
-| `site.js`, `sites/` | the site switch and the four other sites' profiles |
+| `site.js`, `sites/` | the site switch, the four other sites' profiles, the nine XLeShop shops' profiles and `sites/_shop.js` (their shared claim rules, sources, calendar targets and disclosure) |
 | `site-templates.js` | promotion copy for the other sites, from their stories, linted with their rules |
 | `fixtures/` | one saved response per search API (Reddit JSON is a documented-shape synthetic: Reddit answered 403 from the network the fixtures were captured on) |
 | `test.js`, `test-ui.js`, `test-kit.js`, `test-examples.js` | `node build/promo/test.js` (no browser, no network; channel link rules, guide lint, calendar targets, coverage and migration; a real server-restart check on port 8753, `PROMO_TEST_PORT` to change, which `serve` accepts only with `PROMO_TEST=1`); `test-ui.js` (puppeteer on port 8751, `PROMO_UI_PORT` to change; includes the Guide, target recording, the wrong-format warning and coverage); `test-kit.js` (kits, looks, overflow matrix); `test-examples.js` (live capture) |

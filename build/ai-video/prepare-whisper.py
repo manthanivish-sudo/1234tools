@@ -22,8 +22,9 @@ What ships (engine/models/whisper-tiny/):
                                        dimensions, special-token ids, suppress lists, mel settings
 A file over SHARD_OVER bytes is written as .part0, .part1, ... of at most
 PART_BYTES each, and the browser concatenates them before creating the
-session; the manifest lists the parts. Neither Whisper tiny file needs it,
-but the path is kept so a larger model can take the same route.
+session; the manifest lists the parts. The decoder (30.7 MB) is over
+SHARD_OVER, which matches build/split-models.js (24 MiB, parts of 20 MiB),
+so a re-run writes the same two parts that script does.
 
 Needs: huggingface_hub, numpy, onnxruntime (for --check/--transcribe). No
 torch, no transformers, no librosa: the mel filterbank is computed here
@@ -56,8 +57,9 @@ PINNED = {
     'generation_config.json':                   ('f5c67e5a4f7102f8cb4d058bc95da276bbc19eeec997267c3bb0f25ef68facd1', 3772),
     'preprocessor_config.json':                 ('a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d', 339),
 }
-SHARD_OVER = 48 * 1024 * 1024
-PART_BYTES = 40 * 1024 * 1024
+# the same rule as build/split-models.js: the static hosts cap a file at 25 MiB
+SHARD_OVER = 24 * 1024 * 1024
+PART_BYTES = 20 * 1024 * 1024
 
 SR = 16000; N_FFT = 400; HOP = 160; N_MELS = 80; N_SAMPLES = 480000; N_FRAMES = 3000
 

@@ -22,7 +22,8 @@
   const ORT_DIR = '/engine/vendor/ort/';
   const MODEL = {
     name: 'Depth Anything V2 Small',
-    url: '/engine/models/depth-anything-v2-small-uint8.onnx',
+    /* in two parts of at most 20 MiB (build/split-models.js); bytes is the whole file */
+    url: ['/engine/models/depth-anything-v2-small-uint8.onnx.part0', '/engine/models/depth-anything-v2-small-uint8.onnx.part1'],
     bytes: 27258801,
     licence: 'Apache-2.0',
     input: 'pixel_values',
@@ -75,6 +76,7 @@
         if (onProgress) onProgress({ stage: 'download', fraction: Math.min(1, got / Math.max(total, got)), loaded: got, total: Math.max(total, got) });
       }
     }
+    if (parts.length > 1 && expected && got !== Number(expected)) throw new Error('The depth model download was incomplete. Reload the page to try again.');
     if (chunks.length === 1) return chunks[0];
     const out = new Uint8Array(got);
     let o = 0;

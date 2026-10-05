@@ -138,7 +138,8 @@ check('fit() returns >= 3 venues for every section', () => {
   assert.deepStrictEqual(thin, []);
 });
 check('fitAudience', () => assert.ok(V.fitAudience('accountants', { noLog: true }).length >= 3));
-check('29 venues carry "verify rules first"', () => assert.strictEqual(reg.venues.filter(V.verifyFirst).length, 29));
+/* 29 in the 2026-10-04 register, plus Google Business Profile posts (2026-10-05: verify the shop has a Profile first) */
+check('30 venues carry "verify rules first"', () => assert.strictEqual(reg.venues.filter(V.verifyFirst).length, 30));
 check('7 high-risk venues are never auto-suggested', () => {
   const hi = reg.venues.filter((v) => v.risk === 'high');
   assert.strictEqual(hi.length, 7);
@@ -669,15 +670,20 @@ check('the Facebook guidance: native first, no Meta One push, reported figures l
 /* ---------------------------------------------------------- multi-site */
 section('sites: profiles, isolation, rules, migration');
 const SITE = require('./site');
-check('five sites: 1234tools built in, four profiles with at least 10 items each', () => {
+const SHOPS = ['aarvik-dairy-products', 'dairyzest', 'gajanan-home-foods', 'kbk-dairy-products', 'kbk-mart', 'natural-cure-ayurveda', 'rap-club', 'sri-balaji-stores', 'southbasket'];
+check('fourteen sites: 1234tools built in, four own sites with at least 10 items, nine XLeShop shops with at least 8', () => {
   const ids = SITE.list().map((s) => s.id).sort();
-  assert.deepStrictEqual(ids, ['1234tools', 'attend-now', 'fixourtime', 'mvr-it', 'xleshop']);
+  assert.deepStrictEqual(ids, ['1234tools', 'attend-now', 'fixourtime', 'mvr-it', 'xleshop'].concat(SHOPS).sort());
   for (const s of SITE.list()) {
     if (s.id === '1234tools') continue;
     const p = SITE.get(s.id);
     assert.ok(!p.error, s.id + ' ' + p.error);
-    assert.ok(/^https:\/\/[a-z0-9.-]+$/.test(p.baseUrl), s.id + ' baseUrl ' + p.baseUrl);
-    assert.ok(p.items.length >= 10, s.id + ' items ' + p.items.length);
+    assert.ok(/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}$/.test(p.baseUrl) && !/example\.|localhost|todo/i.test(p.baseUrl), s.id + ' baseUrl ' + p.baseUrl);
+    const shop = SHOPS.includes(s.id);
+    /* a shop whose catalogue could not be confirmed may be a skeleton: then it must say so in its TODOs */
+    const skeleton = shop && p.items.length < 8;
+    if (skeleton) assert.ok((p.todo || []).some((t) => /TODO/.test(t)), s.id + ' is a skeleton without TODO markers');
+    else assert.ok(p.items.length >= (shop ? 8 : 10), s.id + ' items ' + p.items.length);
     assert.ok(p.rules && Array.isArray(p.rules.forbid) && p.rules.forbid.length >= 1, s.id + ' forbid rules');
     for (const it of p.items) for (const k of ['id', 'path', 'title', 'hook', 'promise', 'cta', 'source']) assert.ok(it[k], s.id + ' ' + it.id + ' ' + k);
     assert.strictEqual(new Set(SITE.run(s.id, () => SITE.listItems().map((x) => x.path))).size, p.items.length, s.id + ' item keys are unique');
@@ -758,6 +764,104 @@ check('kits for another site: the profile\'s story, no live capture, a palette n
   assert.strictEqual(P.cleanHost('/pdf/merge-pdf/'), '1234tools.com/pdf/merge-pdf/');
   assert.strictEqual(P.brandName(), '1234Tools');
   assert.ok(typeof K.kit === 'function');
+});
+
+/* ------------------------------------------------------ the XLeShop shops */
+section('XLeShop shops: profiles, real domains, health-claim rules, calendar, isolation');
+check('every shop: kind shop, grouped "XLeShop shops", its own domain (matching its brand-config.js when the workspace is here), unique names and keys', () => {
+  const names = new Set();
+  const hosts = new Set();
+  for (const id of SHOPS) {
+    const p = SITE.get(id);
+    assert.ok(p && p.kind === 'shop' && p.promotes === 'products' && p.platform === 'xleshop', id + ' kind');
+    assert.strictEqual(SITE.list().find((s) => s.id === id).group, 'XLeShop shops');
+    assert.ok(!names.has(p.name) && !hosts.has(p.baseUrl), id + ' name and domain are its own');
+    names.add(p.name); hosts.add(p.baseUrl);
+    assert.ok(p.domainSource && p.repo && /XLeShop/.test(p.repo), id + ' domain source and repo');
+    assert.ok(p.checked === '2026-10-05', id + ' checked');
+    assert.ok(Array.isArray(p.calendarTargets) && p.disclosure && /Disclosure/.test(p.disclosure.line), id + ' targets and disclosure');
+    for (const it of p.items) assert.ok(it.source && it.facts && it.facts.length >= 1, id + ' ' + it.id + ' has its source and facts');
+    const cfg = path.join(p.repo, 'public', 'brand-config.js');
+    if (fs.existsSync(cfg)) {
+      const m = fs.readFileSync(cfg, 'utf8').match(/\bdomain:\s*["']([^"']+)["']/);
+      if (m) assert.strictEqual(new URL(p.baseUrl).hostname.replace(/^www\./, ''), m[1].replace(/^www\./, ''), id + ' baseUrl matches brand-config.js domain');
+    }
+    if (p.logo && /^[A-Z]:\//.test(p.logo) && fs.existsSync(p.repo)) assert.ok(fs.existsSync(p.logo), id + ' logo file ' + p.logo);
+  }
+  assert.strictEqual(SITE.list().filter((s) => s.group === 'XLeShop shops').length, 9);
+  assert.deepStrictEqual(SITE.list().slice(0, 5).map((s) => s.group), ['Sites', 'Sites', 'Sites', 'Sites', 'Sites'], 'own sites first, then the shops');
+});
+check('Natural Cure Ayurveda refuses cure, disease, treatment and immunity copy; the shop name itself is fine', () => {
+  SITE.run('natural-cure-ayurveda', () => {
+    for (const bad of ['Our churna cures diabetes.', 'Ayurvedic medicine for joint pain.', 'Treats acidity naturally.', 'Boosts immunity this winter.', 'Relief from cough and cold.',
+      'Controls blood pressure.', 'For arthritis and rheumatism.', 'Improves stamina and vigour.', 'Heals skin fast.', 'A remedy for piles.', 'No side effects, 100% herbal.', 'Doctor recommended.']) {
+      const r = lint(bad);
+      assert.ok(!r.ok && r.errors.some((e) => /^(health|ayurveda)-/.test(e.rule) || e.rule === 'shop-certified'), bad + ' ' + JSON.stringify(r.errors));
+    }
+    assert.ok(lint('Cures diabetes').errors.some((e) => e.rule === 'ayurveda-disease'), 'a Schedule disease is named');
+    const name = SITE.current().name;
+    assert.ok(lint(name + ' #NaturalCureAyurveda').ok, 'the shop name is not a claim: ' + JSON.stringify(lint(name).errors));
+  });
+});
+check('food, grocery and dairy shops refuse health claims; dairy "pure" needs the shop\'s own word and is still owner-to-confirm', () => {
+  const food = SHOPS.filter((id) => id !== 'rap-club' && id !== 'natural-cure-ayurveda');
+  for (const id of food) SITE.run(id, () => {
+    for (const bad of ['Cures diabetes.', 'Boosts immunity.', 'Medicine for a cold.', 'Good for digestion.', 'Lowers cholesterol.', 'Rich in protein.']) assert.ok(!lint(bad).ok, id + ': ' + bad);
+    assert.ok(!lint('Order now, 20% off, rated 5 stars.').ok, id + ' offers and ratings');
+    assert.ok(!lint('Same-day delivery guaranteed.').ok, id + ' delivery promise');
+  });
+  for (const id of SHOPS.filter((x) => SITE.get(x).rules.forbid.some((f) => /^dairy-/.test(f.rule)))) SITE.run(id, () => {
+    assert.ok(!lint('100% pure milk.').ok, id + ' 100% pure');
+    const pure = SITE.current().rules.forbid.find((f) => f.rule === 'dairy-pure');
+    const r = lint('Pure and simple.');
+    if (pure.level === 'warn') assert.ok(r.ok && r.warnings.some((w) => w.rule === 'dairy-pure' && /owner to confirm/i.test(w.msg)), id + ' evidenced pure warns');
+    else assert.ok(!r.ok, id + ' unevidenced pure is refused');
+  });
+  SITE.run('rap-club', () => assert.ok(lint('A new shirt for the weekend.').ok && !lint('20% off this weekend.').ok, 'menswear: no health rules, common shop rules'));
+});
+check('a shop calendar: three slots a week to WhatsApp Status, Instagram Reel, a native Facebook post and Instagram feed; the Facebook post logs as no-link', () => {
+  const id = SHOPS.find((x) => SITE.get(x).items.length >= 8);
+  SITE.run(id, () => {
+    const c = CAL.plan('2026-10-05');
+    assert.ok(c.items.length >= 36 && c.items.length <= 42, 'slots ' + c.items.length);
+    assert.ok(c.items.every((x) => x.targets.map((t) => t.channel).join() === 'whatsapp-status,instagram-reel,facebook-post,instagram-carousel'), 'shop targets');
+    assert.ok(c.items.every((x) => x.targets.find((t) => t.channel === 'facebook-post').native === true), 'the Facebook post is native');
+    assert.ok(/^Product story$/.test(c.items[0].formatLabel));
+    const r = CAL.target(c.items[0].id, 'facebook-post', 'post', { url: 'https://www.facebook.com/20531316728/posts/10154009990506729/' });
+    assert.ok(r.logged && r.logged.linked === false && r.logged.profileLink === true && r.target.noLink === true, JSON.stringify(r.logged));
+    const r2 = CAL.target(c.items[1].id, 'facebook-post', 'post', { url: 'https://www.facebook.com/20531316728/posts/10154009990506730/', noLink: false });
+    assert.ok(r2.logged && r2.logged.linked === true, 'unticking "no link" makes it a link post');
+    assert.ok(fs.existsSync(path.join(TMP, 'sites', id, 'calendar.json')) && fs.existsSync(path.join(TMP, 'sites', id, 'log.json')));
+  });
+});
+check('shops keep their data apart: one shop\'s log, drafts and calendar are invisible to another, to XLeShop and to 1234Tools', () => {
+  const [a, b] = SHOPS.filter((x) => SITE.get(x).items.length >= 1).slice(0, 2);
+  const before = L.entries().length;
+  const xle = SITE.run('xleshop', () => L.entries().length);
+  SITE.run(a, () => {
+    const it = SITE.listItems()[0];
+    L.append({ venueId: 'social-instagram', toolPath: it.path, kind: 'post', url: 'https://www.instagram.com/p/C1a2B3c4D5e/' });
+    require('./store').saveDraft({ tool: it.path, venue: 'social-instagram', template: 'instagram-caption', variant: 0 }, { text: a + ' draft' });
+    assert.strictEqual(L.home(), path.join(TMP, 'sites', a));
+  });
+  SITE.run(b, () => {
+    assert.ok(L.entries().every((e) => !SITE.get(a).items.some((i) => i.key === e.toolPath) || SITE.get(b).items.some((i) => i.key === e.toolPath)), b + ' sees none of ' + a);
+    assert.strictEqual(L.home(), path.join(TMP, 'sites', b));
+  });
+  assert.strictEqual(SITE.run('xleshop', () => L.entries().length), xle, 'XLeShop log unchanged');
+  assert.strictEqual(L.entries().length, before, '1234Tools log unchanged');
+  SITE.run(a, () => assert.ok(L.entries().some((e) => e.url === 'https://www.instagram.com/p/C1a2B3c4D5e/')));
+});
+check('venues: Google Business Profile is offered to shops only; shop copy discloses who posts', () => {
+  const gbp = V.get('social-google-business-profile');
+  assert.ok(gbp && gbp.siteKinds.includes('shop') && /support\.google\.com\/business/.test(gbp.rulesUrl), 'venue registered');
+  const shop = SHOPS.find((x) => SITE.get(x).items.length >= 1);
+  SITE.run(shop, () => {
+    assert.ok(V.postVenues().some((v) => v.id === gbp.id));
+    const d = TPL.render('facebook-group', T.listTools()[0], {});
+    assert.ok(/Disclosure: I build and host the /.test(d.text) && !/I run /.test(d.text), d.text.slice(-200));
+  });
+  for (const id of ['1234tools', 'xleshop', 'mvr-it']) SITE.run(id, () => assert.ok(!V.postVenues().some((v) => v.id === gbp.id), id + ' has no Business Profile venue'));
 });
 
 /* the real thing: data written through one server process is there after

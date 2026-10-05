@@ -20,6 +20,7 @@ whisper-tiny/  (used by engine/aivid-whisper.js for /ai-video/auto-captions/)
     encoder_model_quantized.onnx             10124990 bytes  2af4a414ca47aa30f61246017e5fe82b0a8d229281d1255ba666a2a7f6b84d19
       from onnx/encoder_model_quantized.onnx
     decoder_model_merged_quantized.onnx      30719241 bytes  25e807a962b6349356d0ea5d0dfe530b7e5bf0e2a484aeca0359d03143faddd3
+      parts: decoder_model_merged_quantized.onnx.part0, decoder_model_merged_quantized.onnx.part1
       from onnx/decoder_model_merged_quantized.onnx
     tokens.json                                545096 bytes  c3793c6eeb9d72bb5908f0341af745e8dc2d462848ecbc1d97d2f3f6aa7a57a2
       from vocab.json (ids 0-50256)

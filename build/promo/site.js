@@ -43,6 +43,11 @@ const BUILTIN = {
   items: null, builtin: true, checked: ''
 };
 
+/* The site picker's headings: a profile's pickerGroup ("XLeShop shops" for the shops
+   on XLeShop, sites/_shop.js), else "Sites". The list keeps 1234Tools first, then the
+   groups in the order they first appear. */
+const GROUP = 'Sites';
+
 let cache = { sig: '', map: null };
 
 function files() {
@@ -87,13 +92,20 @@ function normPath(p) {
   // Git Bash turns "/about.html" into "C:/Program Files/Git/about.html": drop the install prefix
   const gitBash = s.replace(/\\/g, '/').match(/^[A-Za-z]:\/(?:Program Files(?: \(x86\))?\/)?Git(\/.*)$/i);
   if (gitBash) s = gitBash[1];
+  /* Git Bash also turns a shop's "/c/sweets" (a category page) into "C:/sweets": the
+     drive letter was the first path segment, so put it back */
+  else { const drive = s.replace(/\\/g, '/').match(/^([A-Za-z]):\/(.*)$/); if (drive) s = '/' + drive[1].toLowerCase() + '/' + drive[2]; }
   if (/^https?:\/\//i.test(s)) { try { const u = new URL(s); s = u.pathname + u.search + u.hash; } catch (e) { /* keep */ } }
   if (!s.startsWith('/')) s = '/' + s;
   return s;
 }
 
 function list() {
-  return Array.from(loadAll().values()).map((p) => ({ id: p.id, name: p.name, baseUrl: p.baseUrl, kind: p.kind, promotes: p.promotes, items: p.builtin ? null : (p.items || []).length, todo: (p.todo || []).length, error: p.error || '', colours: p.colours || null }));
+  const all = Array.from(loadAll().values());
+  const order = [GROUP];
+  for (const p of all) if (p.pickerGroup && !order.includes(p.pickerGroup)) order.push(p.pickerGroup);
+  const rank = (p) => (p.builtin ? -1 : order.indexOf(p.pickerGroup || GROUP));
+  return all.map((p, i) => ({ p, i })).sort((a, b) => rank(a.p) - rank(b.p) || a.i - b.i).map(({ p }) => p).map((p) => ({ id: p.id, name: p.name, baseUrl: p.baseUrl, kind: p.kind, promotes: p.promotes, items: p.builtin ? null : (p.items || []).length, todo: (p.todo || []).length, error: p.error || '', colours: p.colours || null, group: p.pickerGroup || GROUP }));
 }
 function get(id) { return loadAll().get(id || DEFAULT) || null; }
 function exists(id) { return loadAll().has(id); }

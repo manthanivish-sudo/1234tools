@@ -527,7 +527,16 @@ module.exports = function ({ claim, manual, kit: K }) {
       const cv = await p.$$('.tool-io canvas');
       const c = cv[cv.length - 1];
       await c.evaluate((e) => e.scrollIntoView({ block: 'center' }));
-      const box = await c.boundingBox();
+      /* on a busy machine the page can still be laying out: click only once
+         the preview has stopped moving */
+      let box = await c.boundingBox();
+      for (let k = 0; k < 20; k++) {
+        await K.sleep(150);
+        const b2 = await c.boundingBox();
+        const still = Math.abs(b2.x - box.x) < 0.5 && Math.abs(b2.y - box.y) < 0.5 && Math.abs(b2.width - box.width) < 0.5 && Math.abs(b2.height - box.height) < 0.5;
+        box = b2;
+        if (still) break;
+      }
       const before = [await p.$eval('#pc-x', (e) => e.value), await p.$eval('#pc-y', (e) => e.value)];
       await p.mouse.click(box.x + box.width * 0.25, box.y + box.height * 0.25);
       await K.sleep(300);

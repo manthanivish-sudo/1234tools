@@ -76,21 +76,37 @@
     return out;
   }
 
+  /** A model file from the manifest must be its full size and, where the
+      browser can hash, its sha256: a file over 24 MiB arrives in parts
+      (build/split-models.js) and a short part must not reach the runtime. */
+  async function checkBytes(data, bytes, sha256) {
+    const bad = () => new Error('The model download was incomplete or damaged. Reload the page to try again.');
+    if (bytes && data.length !== bytes) throw bad();
+    if (sha256 && typeof crypto !== 'undefined' && crypto.subtle) {
+      const d = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
+      let hex = '';
+      for (const b of d) hex += (b < 16 ? '0' : '') + b.toString(16);
+      if (hex !== sha256) throw bad();
+    }
+  }
+
   const sessions = new Map();
   /**
    * An ONNX session for a URL or a list of shard URLs, created once and
    * kept. Uses the shared loader when aiimg-core provides one, otherwise
    * does the same thing here.
    */
-  function session(urlOrParts, bytes, onProgress) {
+  function session(urlOrParts, bytes, onProgress, sha256) {
     const key = Array.isArray(urlOrParts) ? urlOrParts.join('|') : urlOrParts;
     if (sessions.has(key)) return sessions.get(key);
     const p = (async () => {
       /* the shared loader resolves { ort, session, bytes, url }; this file
-         wants the session itself, as its own path below returns */
-      if (A && typeof A.loadSession === 'function') return A.loadSession(urlOrParts, { bytes, onProgress }).then((s) => (s && s.session) ? s.session : s);
+         wants the session itself, as its own path below returns. Both
+         check the joined parts' length and the manifest's sha256. */
+      if (A && typeof A.loadSession === 'function') return A.loadSession(urlOrParts, { bytes, onProgress, sha256 }).then((s) => (s && s.session) ? s.session : s);
       const ort = await runtime();
       const data = await fetchBytes(urlOrParts, bytes, onProgress);
+      await checkBytes(data, bytes, sha256);
       if (onProgress) onProgress({ stage: 'compile', fraction: 1 });
       return ort.InferenceSession.create(data, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
     })().catch((e) => { sessions.delete(key); throw e; });
@@ -127,8 +143,8 @@
       const ortReady = (A && typeof A.runtime === 'function') ? A.runtime() : runtime();
       const [tokens, encoder, decoder] = await Promise.all([
         fetchBytes(urlsOf('tokens.json'), files['tokens.json'].bytes, prog('tokens.json')).then((b) => JSON.parse(new TextDecoder().decode(b))),
-        ortReady.then(() => session(urlsOf('encoder_model_quantized.onnx'), files['encoder_model_quantized.onnx'].bytes, prog('encoder_model_quantized.onnx'))),
-        ortReady.then(() => session(urlsOf('decoder_model_merged_quantized.onnx'), files['decoder_model_merged_quantized.onnx'].bytes, prog('decoder_model_merged_quantized.onnx')))
+        ortReady.then(() => session(urlsOf('encoder_model_quantized.onnx'), files['encoder_model_quantized.onnx'].bytes, prog('encoder_model_quantized.onnx'), files['encoder_model_quantized.onnx'].sha256)),
+        ortReady.then(() => session(urlsOf('decoder_model_merged_quantized.onnx'), files['decoder_model_merged_quantized.onnx'].bytes, prog('decoder_model_merged_quantized.onnx'), files['decoder_model_merged_quantized.onnx'].sha256))
       ]);
       const ort = await ortReady;
       const model = {

@@ -20,7 +20,8 @@
      checkpoint by build/ai-image/export-migan.py at a fixed 512×512: inputs
      `image` 1×3×512×512 in [-1, 1] and `mask` 1×1×512×512 with 1 = keep and
      0 = hole; output 1×3×512×512 in [-1, 1]. See engine/models/README-migan.txt. */
-  const MODEL_URL = '/engine/models/migan-512-places2.onnx';
+  /* in two parts of at most 20 MiB (build/split-models.js); MODEL_BYTES is the whole file */
+  const MODEL_URL = ['/engine/models/migan-512-places2.onnx.part0', '/engine/models/migan-512-places2.onnx.part1'];
   const MODEL_BYTES = 28037335;
   const RES = 512;
   const WORK_MAX = 2048;          /* the working resolution: the mask and the fill live here */
@@ -94,6 +95,7 @@
     const got = [];
     let loaded = 0;
     for (const p of parts) { const b = await fetchBytes(p, onProgress, 0, loaded, expect); got.push(b); loaded += b.length; }
+    if (parts.length > 1 && expect && loaded !== expect) throw new Error('The model download was incomplete. Reload the page to try again.');
     const out = new Uint8Array(loaded);
     let o = 0;
     for (const c of got) { out.set(c, o); o += c.length; }

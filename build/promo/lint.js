@@ -60,7 +60,9 @@ function siteFor(ctx) {
   try { const S = require('./site'); return S.isDefault() ? null : S.current(); } catch (e) { return null; }
 }
 
-function siteRules(t, site, err) {
+/* A forbid rule with level 'warn' is shown to the human, not refused: a word the
+   site's own page uses but the desk cannot check ("owner to confirm"). */
+function siteRules(t, site, err, warn) {
   const r = site.rules || {};
   const phrases = (r.freePhrases || []).map((p) => String(p).toLowerCase());
   if (!r.free) {
@@ -74,11 +76,14 @@ function siteRules(t, site, err) {
     const allowed = (r.allowClaims || []).map((x) => String(x).toLowerCase());
     if (m && !allowed.includes(m[0].toLowerCase())) err('site-claim', 'That is a 1234Tools claim; ' + site.name + ' cannot make it' + ' (allowClaims in the site profile lists any the site itself states).', m[0]);
   }
+  /* a site's own forbid rules read the words, not the links: a page path such as
+     /c/fresh or /product/pure-ghee is the shop's address, not a claim in the copy */
+  const words = t.replace(/https?:\/\/\S+/g, ' ');
   for (const f of r.forbid || []) {
     let re;
     try { re = new RegExp(f.re, 'i'); } catch (e) { continue; }
-    const m = t.match(re);
-    if (m) err(f.rule || 'site-rule', f.msg || ('Not for ' + site.name + '.'), m[0]);
+    const m = words.match(re);
+    if (m) (f.level === 'warn' && warn ? warn : err)(f.rule || 'site-rule', f.msg || ('Not for ' + site.name + '.'), m[0]);
   }
 }
 
@@ -153,7 +158,7 @@ function lint(text, ctx) {
   }
 
   // 10b. another site's own rules
-  if (site) siteRules(t, site, err);
+  if (site) siteRules(t, site, err, warn);
 
   // 11. disclosure next to a link
   if (ctx.requireDisclosure && /(https?:\/\/|1234tools\.com|1234tools dot com)/i.test(t) && !DISCLOSURE.test(t)) {

@@ -1,0 +1,218 @@
+'use strict';
+/** Site profile: KBK Mart, a shop on XLeShop. Read from E:/projects/XLeShop/kbkmart (read-only; git
+ *  https://github.com/vmanthani/kbkmart.git, firebase project kbkmart2026) and the live site https://kbkmart.com on 2026-10-05.
+ *  The workspace CLAUDE.md lists it as "Grocery" and its titles say "Fresh Groceries & Daily Essentials", but the live catalogue
+ *  is dairy only: six products (Badam Milk on Mart, Milk on Mart, Fresh Paneer, Fresh Cheese, Pure Butter, Pure Ghee), two of
+ *  them out of stock. Delivery in Hyderabad, in Morning, Day or Evening slots; cash on delivery only. */
+const SHOP = require('./_shop');
+module.exports = {
+  id: 'kbk-mart',
+  name: 'KBK Mart',
+  baseUrl: 'https://kbkmart.com',
+  domainSource: 'public/brand-config.js domain "kbkmart.com" and url "https://kbkmart.com" (lines 21-22); public/sitemap.xml <loc>https://kbkmart.com/...; canonical tags on the apex host; no CNAME file (Firebase Hosting); curl https://kbkmart.com/ -> 200, title "KBK Mart – Fresh Groceries & Daily Essentials delivered in Hyderabad" on 2026-10-05. https://www.kbkmart.com/ fails its TLS certificate check (SEC_E_WRONG_PRINCIPAL), so the apex is the only working URL.',
+  repo: 'E:/projects/XLeShop/kbkmart',
+  platform: 'xleshop',
+  pickerGroup: SHOP.PICKER_GROUP,
+  kind: 'shop',
+  promotes: 'products',
+  utm: { medium: 'social' },
+  brandWords: ['KBK Mart', 'Badam Milk on Mart', 'Fresh Paneer', 'Fresh Cheese'],
+  colours: { primary: '#EF6C00', accent: '#2e7d32', background: '#fff8f2', ink: '#1c1c1e' },
+  colourSource: 'public/brand-config.js colors.primary / accent / bg / text (lines 82-87; accent is the "logo green")',
+  logo: 'E:/projects/XLeShop/kbkmart/public/images/logo.png',
+  audiences: ['general', 'india'],
+  regions: ['india'],
+  area: 'Hyderabad (Telangana)',
+  areaSource: 'brand-config.js heroBand.subtitle "delivered in Hyderabad" and the live home page title "KBK Mart – Fresh Groceries & Daily Essentials delivered in Hyderabad"; faq.html "We deliver across Hyderabad and surrounding areas in Telangana. Please contact us via WhatsApp to confirm delivery availability for your specific location."; contact.html schema areaServed State "Telangana", City "Hyderabad". Live settings.json deliveryLocations.label is empty.',
+  social: {
+    instagram: null,
+    facebook: null,
+    whatsapp: null,
+    whatsappChannel: null,
+    youtube: null,
+    googleBusiness: null,
+    source: 'public/brand-config.js: phone "+91 70134 55700" is marked "TODO: replace with KBK Mart\'s own number" (line 41) and phoneWA "917013455700" is the same number KBK Dairy Products uses, so the WhatsApp link is not KBK Mart\'s own and is left null. No Instagram, Facebook, YouTube or Google Maps profile link appears on any customer page.'
+  },
+  calendarTargets: SHOP.TARGETS,
+  disclosure: SHOP.disclosure('KBK Mart'),
+  rules: SHOP.rules({
+    type: 'dairy',
+    market: 'india',
+    pureEvidence: {
+      pure: 'product/pure-butter.html and product/pure-ghee.html: products named "Pure Butter" and "Pure Ghee"'
+    },
+    allow: [],
+    free: false,
+    freePhrases: [],
+    forbid: [
+      { rule: 'kbkm-health-slogan', re: '\\bhealth\\b|\\bwealth\\b', msg: 'The shop\'s tagline "Health is Wealth" is a health slogan: never use it, or "health" at all, in KBK Mart copy.' },
+      { rule: 'kbkm-placeholder-phone', re: '\\+?\\s?91[\\s-]?70134|\\b70134\\s?55700\\b|\\b917013455700\\b|wa\\.me|\\bwhats ?app\\b|\\bcall us\\b|\\bphone\\b', msg: 'KBK Mart\'s phone and WhatsApp number in brand-config.js is marked "TODO: replace with KBK Mart\'s own number" (it is KBK Dairy Products\' number). Do not publish it or send people to WhatsApp until the owner replaces it.' },
+      { rule: 'kbkm-not-sold', re: '\\b(grocer(y|ies)|staples|snacks|vegetables|fruits?|rice|dal|atta|household|daily essentials|pantry|curd)\\b', msg: 'KBK Mart\'s live catalogue is six dairy products. Its titles say "Groceries & Daily Essentials", but nothing else is listed: never promise groceries, staples or produce.' },
+      { rule: 'kbkm-out-of-stock', re: '(?<!badam )\\bmilk on mart\\b|\\bghee\\b', msg: 'Milk on Mart and Pure Ghee are marked out of stock in the live menu.json: do not promote them until they are back.' },
+      { rule: 'kbkm-online-pay', re: '\\b(upi|cards?|netbanking|online payments?|pay online|razorpay|payu|phonepe)\\b', msg: 'KBK Mart takes cash on delivery only (live settings.json; brand-config.js "online payments off — Cash on Delivery only").' },
+      { rule: 'kbkm-daily-promise', re: '\\b(delivered daily|every morning|every day|daily delivery|never run out|we will be there)\\b', msg: 'No daily-delivery promise: faq.html says orders are "typically delivered within 1–3 business days depending on your location and slot availability".' }
+    ],
+    notes: [
+      'What KBK Mart actually sells (live menu.json kbkm, 2026-10-05): MILK — Badam Milk on Mart, Milk on Mart (out of stock); PANEER — Fresh Paneer; CHEESE — Fresh Cheese; BUTTER — Pure Butter; GHEE — Pure Ghee (out of stock). Dairy only, despite the "Groceries & Daily Essentials" titles and the workspace CLAUDE.md calling it a grocery shop. Promote only the four in-stock products.',
+      'No phone or WhatsApp in copy: the number in brand-config.js is a TODO placeholder (KBK Dairy Products\' number). Contact is by email (contact@kbkmart.com) until the owner gives KBK Mart\'s own number.',
+      'Delivery slots (brand-config.js checkout.slots): Morning 6:00 AM – 9:00 AM, Day 9:00 AM – 5:00 PM, Evening 5:00 PM – 9:00 PM. Each slot has its own delivery charge (a price): never quote it, never call a slot free.',
+      'Payment: cash on delivery only (live settings.json payments: cod true, razorpay/payu/phonepe false; faq.html).',
+      '"Pure Butter" may be called "butter" in copy; "pure" only warns (owner to confirm). "Fresh" in the product names Fresh Paneer and Fresh Cheese warns under FSSAI Schedule V (owner to confirm).',
+      'Never use the tagline "Health is Wealth" (brand-config.js tagline and splash slide).',
+      'Sources: public/brand-config.js, faq.html, contact.html, refund.html, index.html, product/*.html, c/*.html, subscriptions.js, and the live https://xleshop-menu.storage.googleapis.com/kbkm/menu.json, settings.json, details.json (read 2026-10-05).'
+    ]
+  }),
+  items: [
+    {
+      id: 'badam-milk-on-mart',
+      path: '/product/badam-milk-on-mart',
+      title: 'Badam Milk on Mart',
+      group: 'milk',
+      audiences: ['general', 'india'],
+      hook: 'Badam Milk, ordered from KBK Mart and delivered in your slot in Hyderabad.',
+      pain: 'The family wants Badam Milk and I keep forgetting to pick it up.',
+      usual: ['Picking it up on the way home', 'Checking two shops before finding it'],
+      promise: 'KBK Mart lists Badam Milk on Mart in its MILK category: add it to your cart, choose a Morning, Day or Evening slot and pay cash on delivery.',
+      steps: ['Open Badam Milk on Mart on kbkmart.com', 'Add it to your cart and choose a delivery slot', 'Pay cash on delivery'],
+      cta: 'Order Badam Milk from KBK Mart',
+      facts: ['Badam Milk on Mart', 'Category: MILK', 'Cash on delivery'],
+      source: 'public/product/badam-milk-on-mart.html (title "Badam Milk on Mart – KBK Mart") + live menu.json product 2, category "MILK", in stock; live /product/badam-milk-on-mart 200'
+    },
+    {
+      id: 'fresh-paneer',
+      path: '/product/fresh-paneer',
+      title: 'Fresh Paneer',
+      group: 'paneer',
+      audiences: ['general', 'india'],
+      hook: 'Paneer for dinner, ordered from KBK Mart before you leave work.',
+      pain: 'I planned paneer for tonight and there is no time to go out for it.',
+      usual: ['A stop at the shop on the way home', 'Changing the dinner plan'],
+      promise: 'Fresh Paneer is in the PANEER category at KBK Mart: order online, pick an Evening or Morning slot and pay cash on delivery.',
+      steps: ['Open Fresh Paneer on kbkmart.com', 'Add it to your cart and choose a slot', 'Pay cash on delivery'],
+      cta: 'Order paneer from KBK Mart',
+      facts: ['Fresh Paneer', 'Category: PANEER', 'Cash on delivery'],
+      source: 'public/product/fresh-paneer.html (title "Fresh Paneer – KBK Mart") + live menu.json product 5, category "PANEER", in stock; live /product/fresh-paneer 200'
+    },
+    {
+      id: 'fresh-cheese',
+      path: '/product/fresh-cheese',
+      title: 'Fresh Cheese',
+      group: 'cheese',
+      audiences: ['general', 'india'],
+      hook: 'Cheese on the list? Add Fresh Cheese to your KBK Mart order.',
+      pain: 'Cheese is the one thing I forget until I am halfway through cooking.',
+      usual: ['A special trip to the supermarket', 'Leaving it out of the recipe'],
+      promise: 'Fresh Cheese is in the CHEESE category at KBK Mart: add it to your cart with your other dairy and choose a delivery slot.',
+      steps: ['Open Fresh Cheese on kbkmart.com', 'Add it to your cart', 'Choose a slot and pay cash on delivery'],
+      cta: 'Order cheese from KBK Mart',
+      facts: ['Fresh Cheese', 'Category: CHEESE', 'Cash on delivery'],
+      source: 'public/product/fresh-cheese.html (title "Fresh Cheese – KBK Mart") + live menu.json product 4, category "CHEESE", in stock; live /product/fresh-cheese 200'
+    },
+    {
+      id: 'butter',
+      path: '/c/butter',
+      title: 'Butter',
+      group: 'butter',
+      audiences: ['general', 'india'],
+      hook: 'Out of butter again? KBK Mart delivers it in your slot.',
+      pain: 'Butter always runs out on the morning I need it.',
+      usual: ['A quick run to the shop', 'Going without'],
+      promise: 'KBK Mart lists its butter in the BUTTER category: add it to your cart, choose a Morning, Day or Evening slot and pay cash on delivery.',
+      steps: ['Open the BUTTER category on kbkmart.com', 'Add the butter to your cart', 'Choose a slot and pay cash on delivery'],
+      cta: 'Order butter from KBK Mart',
+      facts: ['Category: BUTTER', 'Listed on the site as "Pure Butter"', 'Cash on delivery'],
+      source: 'public/c/butter.html ("BUTTER | KBK Mart"), product/pure-butter.html + live menu.json product 6 "Pure Butter", category "BUTTER", in stock; live /c/butter 200'
+    },
+    {
+      id: 'delivery-slots',
+      path: '/',
+      title: 'Delivery slots',
+      group: 'delivery',
+      audiences: ['general', 'india'],
+      hook: 'Morning, Day or Evening: choose when your KBK Mart order arrives.',
+      pain: 'Deliveries turn up when nobody is home.',
+      usual: ['Waiting in all day', 'Asking a neighbour to take the parcel in'],
+      promise: 'At checkout on kbkmart.com you pick a slot: Morning 6:00 AM – 9:00 AM, Day 9:00 AM – 5:00 PM or Evening 5:00 PM – 9:00 PM. KBK Mart delivers in Hyderabad.',
+      steps: ['Add your dairy to the cart on kbkmart.com', 'Pick Morning, Day or Evening at checkout', 'Pay cash on delivery when it arrives'],
+      cta: 'Pick your slot at KBK Mart',
+      facts: ['Morning: 6:00 AM – 9:00 AM', 'Day: 9:00 AM – 5:00 PM', 'Evening: 5:00 PM – 9:00 PM', 'Morning or evening delivery, chosen at checkout'],
+      source: 'public/brand-config.js checkout.slots (lines 235-239) and heroBand.subtitle "delivered in Hyderabad" + live settings.json hero slide "Slots — Morning or evening delivery, chosen at checkout."; live / 200'
+    },
+    {
+      id: 'cash-on-delivery',
+      path: '/faq',
+      title: 'Cash on Delivery',
+      group: 'ordering',
+      audiences: ['general', 'india'],
+      hook: 'KBK Mart: order online, pay cash when it reaches you.',
+      pain: 'I would rather pay when the order is at my door.',
+      usual: ['Paying in advance and hoping', 'Keeping a running tab in a notebook'],
+      promise: 'Every KBK Mart order is paid by cash on delivery. There is no minimum order value.',
+      steps: ['Add products to your cart on kbkmart.com', 'Fill in your delivery details and choose a slot', 'Pay cash on delivery'],
+      cta: 'Order from KBK Mart, pay on delivery',
+      facts: ['We currently accept Cash on Delivery (COD)', 'There is no minimum order value for delivery', 'Cash on delivery'],
+      source: 'public/faq.html ("What payment methods do you accept?", "Do you have a minimum order value?") + live settings.json payments {cod:true, razorpay:false, payu:false, phonepe:false} and hero stripe "Delivery slots you choose · Cash on delivery"; live /faq 200'
+    },
+    {
+      id: 'subscriptions',
+      path: '/',
+      title: 'Subscriptions',
+      group: 'subscriptions',
+      audiences: ['general', 'india'],
+      hook: 'Regular dairy deliveries from KBK Mart, set up once.',
+      pain: 'I order the same paneer and milk drinks every week and have to remember each time.',
+      usual: ['Reordering by hand', 'Running out and ordering again at the last minute'],
+      promise: 'From the cart, choose the regular delivery option, pick your delivery days and time, and the order repeats.',
+      steps: ['Add your items to the cart and tap the regular delivery option', 'Choose your delivery days, delivery time and address', 'Tap Start Subscription'],
+      cta: 'Set up regular delivery with KBK Mart',
+      facts: ['Subscribe for regular deliveries', 'Choose at least one delivery day', 'Start Subscription'],
+      source: 'public/index.html meta description "Subscribe for regular deliveries and save time." and cart button "Subscribe & Save (regular delivery)"; subscriptions.js builder ("Choose at least one delivery day", "Choose a delivery time", "Start Subscription"); brand-config.js features.subscriptions true; live / 200'
+    },
+    {
+      id: 'cancel-and-track',
+      path: '/refund',
+      title: 'Cancel before packing',
+      group: 'ordering',
+      audiences: ['general', 'india'],
+      hook: 'Ordered the wrong thing from KBK Mart? Cancel it before it is packed.',
+      pain: 'I placed an order by mistake and need to stop it.',
+      usual: ['Refusing the order at the door', 'Chasing the shop to cancel'],
+      promise: 'You can cancel a KBK Mart order before it is packed from your Order Status page, and follow every order from the tracking link in your confirmation.',
+      steps: ['Open your Order Status page from the confirmation', 'Use the cancel button before the order is packed', 'Follow the order status until it is delivered'],
+      cta: 'See how ordering works at KBK Mart',
+      facts: ['Before packing: You may cancel your order', 'Use the Order Status page', 'Orders cannot be cancelled once they are out for delivery'],
+      source: 'public/refund.html ("Cancellations") + faq.html ("Can I cancel my order?", "How do I track my order?"); live /refund 200'
+    }
+  ],
+  notConfirmed: [
+    'WHAT IT SELLS: the workspace CLAUDE.md says "Grocery" and the site says "Fresh Groceries & Daily Essentials" (page titles, topbarText, footerTagline, meta description, heroBand "Fresh groceries and daily essentials", live hero "Staples, snacks and fresh essentials"), but the live menu.json lists only six dairy products. No grocery, staples, snacks or produce is promoted.',
+    'Tagline "Health is Wealth" (brand-config.js tagline, line 20) and splash slide "Health is Wealth — Fresh, quality products for your whole family": a health slogan, left out.',
+    'Phone "+91 70134 55700" (brand-config.js line 41, marked "TODO: replace with KBK Mart\'s own number") and phoneWA 917013455700: the same number as KBK Dairy Products; shown live on contact.html (and in its page title) and behind the WhatsApp button, but not used as a fact. The FAQ\'s "contact us via WhatsApp to confirm delivery" is therefore not repeated.',
+    'Address "KBK Mart, India" (brand-config.js address and legal.registeredAddress, marked TODO): placeholder, not used. legal.entityName, governingLawCity and grievanceOfficer.name are also TODO.',
+    'Out of stock in the live menu.json: Milk on Mart (MILK) and Pure Ghee (GHEE). Not promoted.',
+    'Prices, strike-through prices and per-slot delivery charges (menu.json; brand-config.js checkout.slots, the Day slot carries a charge): never used.',
+    '"Free Delivery — On all orders, always free" (splash) and zero-charge Morning / Evening slots: a free-delivery claim with a charge on the Day slot and faq.html "very small orders may incur a delivery charge". Not used; free stays false.',
+    'faq.html is copied from KBK Dairy Products: its title says "Fresh Milk & Dairy Delivery Telangana", and "How fresh are your dairy products? ... Milk is processed and delivered within 24 hours ... kept refrigerated throughout the supply chain" is a handling claim the desk cannot check. Not used.',
+    'faq.html "Orders are typically delivered within 1–3 business days" conflicts with the "delivered daily" topbar and the hero "Pick a time. We will be there.": no delivery-time promise is used.',
+    'brand-config.js landing block (landing.enabled false, not shown): "SUBSCRIPTION Daily essentials · auto-renewing", "BESTSELLER Fresh produce, daily — Hand-picked fruits & vegetables", "Pantry staples & essentials — Rice · dal · oil · household items", "Hyderabad\'s neighbourhood mart": products not in the catalogue and a bestseller label; never used.',
+    '"Subscribe & Save" button label and meta "save time": "Save" not repeated. Subscriptions draw from a customer wallet (subscriptions.js); whether the backend subscription trigger runs for KBK Mart is not confirmed.',
+    'Loyalty tiers and wallet are switched on in brand-config.js but not described on any customer page; left out.',
+    'Vouchers / promo codes (faq.html): no live offer shown; not used.',
+    'details.json for KBK Mart has no items; no product has a description or pack size.',
+    'Contact hours "Mon–Sat, 9 am – 7 pm" (contact.html) are tied to the placeholder phone; not used. The schema says every day 05:00–21:00.',
+    'Refund rule: refund.html asks for a photo on WhatsApp "within 24 hours of delivery"; both the WhatsApp number (placeholder) and the shared shop-delivery-promise rule ("within 24 hours") keep it out of copy.'
+  ],
+  todo: [
+    'Phone and WhatsApp number in brand-config.js are marked "TODO: replace with KBK Mart\'s own number" (they are KBK Dairy Products\' number, and they show live on the contact page): replace them, then add a WhatsApp item to this profile.',
+    'Address in brand-config.js ("KBK Mart, India") and legal.registeredAddress / entityName / governingLawCity / grievanceOfficer are marked TODO: replace with real details.',
+    'Decide what KBK Mart is: the catalogue is six dairy products while the titles, meta and hero say "Groceries & Daily Essentials" (and CLAUDE.md says Grocery). Either list the groceries or change the wording.',
+    'Replace the tagline "Health is Wealth" (a health slogan) in brand-config.js tagline and the splash slide.',
+    'faq.html is KBK Dairy Products\' FAQ (title "Fresh Milk & Dairy Delivery Telangana", "How fresh are your dairy products?"): write KBK Mart\'s own.',
+    'Milk on Mart and Pure Ghee are out of stock: restock or hide them.',
+    'Owner to confirm "pure" (Pure Butter, Pure Ghee) and "fresh" (Fresh Paneer, Fresh Cheese) meet FSSAI Schedule V; the desk warns on both.',
+    'Set the delivery-area label in Admin → Store Settings (settings.json deliveryLocations.label is empty) so the area shown matches the FAQ.',
+    'https://www.kbkmart.com/ fails its TLS certificate check: add www to the Firebase Hosting custom domains or redirect it.',
+    'No Instagram, Facebook, YouTube or Google Business link appears on the site: add real profile links if the shop has them.'
+  ],
+  checked: '2026-10-05'
+};

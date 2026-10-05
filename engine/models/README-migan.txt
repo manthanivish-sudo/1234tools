@@ -1,4 +1,7 @@
 migan-512-places2.onnx
+  (shipped as .part0 and .part1, at most 20 MiB each, joined by the loader:
+  the static hosts cap a file at 25 MiB; see build/split-models.js and
+  engine/models/parts.json, which records each part's sha256)
   MI-GAN, 512×512, trained on Places2 (Sargsyan et al., "MI-GAN: A Simple
   Baseline for Image Inpainting on Mobile Devices", ICCV 2023). 5.97M
   parameters plus 1.40M constant buffers (the upsamplers' filters and the

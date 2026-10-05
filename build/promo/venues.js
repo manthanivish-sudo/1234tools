@@ -49,7 +49,13 @@ function load() {
 function all() { return load().venues; }
 function get(id) { return load().byId.get(id) || null; }
 function isPostVenue(v) { return (v.roles || ['post']).includes('post') && v.kind !== 'share'; }
-function postVenues() { return all().filter(isPostVenue); }
+/* A venue with siteKinds (Google Business Profile: ['shop']) is offered only to sites of
+   that kind (site.js); every other venue is offered to every site, as before. */
+function forSite(v) {
+  if (!Array.isArray(v.siteKinds) || !v.siteKinds.length) return true;
+  try { return v.siteKinds.includes(require('./site').current().kind); } catch (e) { return false; }
+}
+function postVenues() { return all().filter((v) => isPostVenue(v) && forSite(v)); }
 
 /* Extra templates per venue, after the venue's own. */
 function templatesFor(v) {

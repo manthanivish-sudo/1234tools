@@ -1,4 +1,7 @@
 depth-anything-v2-small-uint8.onnx
+  (shipped as .part0 and .part1, at most 20 MiB each, joined by the loader:
+  the static hosts cap a file at 25 MiB; see build/split-models.js and
+  engine/models/parts.json, which records each part's sha256)
   Depth Anything V2 Small (DINOv2-S encoder, DPT head), 24.8M parameters,
   weights dynamically quantised to 8-bit unsigned; 27,258,801 bytes.
   Source: the Depth Anything authors, https://github.com/DepthAnything/Depth-Anything-V2

@@ -45,7 +45,9 @@
  * working tree; reset sw.js's V to HEAD's; generators; the post-processor
  * chain twice (pass 2 must change 0 files); sw.js V = live + 1, where live is
  * the V in origin's main (git ls-remote, fetched only if that commit is not
- * already local); tree audit through a throwaway index (writes objects, no
+ * already local); build/split-models.js (no file over 24 MiB: parts the
+ * loaders read) and build/cf-redirects.js (Cloudflare's _redirects from the
+ * stubs); tree audit through a throwaway index (writes objects, no
  * refs); 0x08 scan of every changed text file; tests (the git-ignored
  * pdf-package fixtures are copied in for them, and the tree is rebuilt after
  * them to prove they wrote nothing that would be committed); the list of
@@ -366,6 +368,17 @@ try {
   if (NEWV <= HEADV) note('new sw.js V ' + NEWV + ' is not above HEAD\'s ' + HEADV);
   setSw(NEWV);
 
+  /* 5b. hosting limits: every file over 24 MiB split into parts its loader
+     reads (Cloudflare refuses files over 25 MiB), and Cloudflare's
+     _redirects rebuilt from the old-URL stubs */
+  for (const [name, script] of [['split-models', 'build/split-models.js'], ['cf-redirects', 'build/cf-redirects.js']]) {
+    const abs = path.join(opt.out, script);
+    if (!fs.existsSync(abs)) { note(script + ' is not in the export; skipped'); continue; }
+    const r = runNode(name, abs, ['--root', opt.out], opt.out);
+    say(pad(name, 13) + (r.out.trim().split('\n').pop() || '') + '  (' + r.secs.toFixed(0) + ' s)');
+    if (r.status !== 0) fail(script + ' exited ' + r.status + '; see ' + r.log + tailOf(r.out));
+  }
+
   /* 6. tree audit + 0x08 scan */
   console.log('[4] tree audit');
   TREE = buildTree('a');
@@ -401,7 +414,8 @@ try {
       if (fs.existsSync(path.join(REPO, 'build/tests', t + '.js'))) suites.push({ suite: t, script: 'build/tests/' + t + '.js', port: true });
     }
     suites.push({ suite: 'engines', script: 'build/tests/engines.js', args: ['--root', opt.out] });
-    for (const t of ['reel-maker', 'auto-captions']) suites.push({ suite: t, script: 'build/ai-video/tests/' + t + '.js', port: true });
+    for (const t of ['reel-maker', 'auto-captions', 'reel-voice']) suites.push({ suite: t, script: 'build/ai-video/tests/' + t + '.js', port: true });
+    suites.push({ suite: 'tts-g2p', script: 'build/ai-video/tests/tts-g2p.js', args: ['--root', opt.out] });
     suites.push({ suite: 'content-check', script: 'build/content/_check.js', inExport: true,
       parse: (o) => { const m = /(\d+) page\(s\)[^\n]*?(\d+) error\(s\)/.exec(o); return m && { passed: +m[1] - +m[2], failed: +m[2] }; } });
     suites.push({ suite: 'test_pdfcore', script: 'build/pdf-package/tests/test_pdfcore.js', inExport: true });

@@ -1,0 +1,45 @@
+# Response headers on Cloudflare (GitHub Pages ignores this file).
+#
+# Cloudflare's default for every static file is
+#   Cache-Control: public, max-age=0, must-revalidate   (with an ETag)
+# GitHub Pages sends max-age=600 for everything. Pages and sw.js keep
+# Cloudflare's default: they are revalidated on every visit, so a release
+# is seen at once. The engine, the styles, fonts and models keep GitHub's
+# ten minutes, so a visit does not revalidate a dozen unchanged files.
+# Nothing here is cached longer: no file name carries a content hash (sw.js
+# versions its own cache by name), so none of them is immutable.
+/engine/*
+  Cache-Control: public, max-age=600
+/assets/*
+  Cache-Control: public, max-age=600
+
+# Cloudflare sends .onnx files, and the .partN pieces build/split-models.js
+# cuts the big ones into, with no Content-Type, and compresses only listed
+# types, so the models would travel uncompressed. GitHub Pages gzips them
+# (Whisper and Kokoro shrink by about a third). ONNX files are protocol
+# buffers, and application/x-protobuf is on Cloudflare's compression list.
+# One splat per rule is allowed, hence a rule per piece number.
+/engine/models/*.onnx
+  Content-Type: application/x-protobuf
+/engine/models/*.part0
+  Content-Type: application/x-protobuf
+/engine/models/*.part1
+  Content-Type: application/x-protobuf
+/engine/models/*.part2
+  Content-Type: application/x-protobuf
+/engine/models/*.part3
+  Content-Type: application/x-protobuf
+/engine/models/*.part4
+  Content-Type: application/x-protobuf
+/engine/models/*.part5
+  Content-Type: application/x-protobuf
+/engine/models/*.part6
+  Content-Type: application/x-protobuf
+/engine/models/*.part7
+  Content-Type: application/x-protobuf
+
+# The preview address (<worker>.<account>.workers.dev) must never be
+# indexed; www.1234tools.com is the only public host, and every page's
+# canonical already points there.
+https://:worker.:account.workers.dev/*
+  X-Robots-Tag: noindex

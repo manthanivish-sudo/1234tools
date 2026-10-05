@@ -44,7 +44,6 @@
     {
       k: 'H',
       p: [
-        { n: 'House of Spices', t: 'Restaurant pre-order, pickup & delivery', u: ATTEND + '/hos/hos-pre-order.html', d: 'attend-now.com' },
         { n: 'Hospital Apps', t: 'Patient records, billing, pharmacy & labs', u: MVR + '/products/#hospital', d: 'mvritservices.com' }
       ]
     },
@@ -101,7 +100,7 @@
     {
       k: 'T',
       p: [
-        { n: '1234Tools', t: '1,185+ free calculators & converters', u: 'https://www.1234tools.com/', d: '1234tools.com' },
+        { n: '1234Tools', t: '1,280+ free calculators, converters & file tools', u: 'https://www.1234tools.com/', d: '1234tools.com' },
         { n: 'Telemarketing Suite', t: 'Outbound sales, organised', u: MVR + '/products/#telemarketing', d: 'mvritservices.com' }
       ]
     },
@@ -131,7 +130,7 @@
     }
   ];
 
-  var DIGIT_PRODUCT = { n: '1234Tools', t: '1,185+ free calculators & converters — free forever', u: 'https://www.1234tools.com/', d: '1234tools.com' };
+  var DIGIT_PRODUCT = { n: '1234Tools', t: '1,280+ free calculators, converters & file tools', u: 'https://www.1234tools.com/', d: '1234tools.com' };
   var RESERVED = { n: 'Reserved for your idea', t: 'This letter is waiting for your product. Let’s build it together.', u: MVR + '/contact/', d: 'Talk to MVR IT →' };
 
   /* ----------------------------------------------------------------- styles */
@@ -317,7 +316,7 @@
 
     root.appendChild(board);
     root.appendChild(el('p', 'mvraz-legend',
-      '<b>10 digits</b> &middot; <b>26 letters</b> &middot; <b>25+ products &amp; platforms</b> &middot; one team behind all of it'));
+      '<b>10 digits</b> &middot; <b>26 letters</b> &middot; one team behind all of it'));
 
     var cta = el('a', 'mvraz-cta', 'Explore every product →');
     cta.href = tagged(MVR + '/products/', 'az-cta');

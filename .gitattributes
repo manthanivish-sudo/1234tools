@@ -22,4 +22,6 @@ engine/vendor/pdfjs/** -text
 
 # Vendored ONNX Runtime and the segmentation model, likewise stored as published.
 engine/vendor/ort/** -text
-engine/models/** -text
+# models (and their 20 MiB .partN pieces) are binary: no line-ending
+# conversion, no text diff, and release.js's 0x08 scan skips them
+engine/models/** binary

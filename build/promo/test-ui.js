@@ -327,6 +327,26 @@ let S_ch = '';
       await page.waitForSelector('.cal-item[data-id="' + slotId + '"] .cal-prog', { timeout: 15000 });
       assert.strictEqual(await page.$eval('.cal-item[data-id="' + slotId + '"] .cal-prog', (e) => e.textContent), before);
     });
+    await check('site picker with 14 sites: grouped "Sites" and "XLeShop shops"; a shop gets its own items and the shop calendar (Facebook post starts as "no link")', async () => {
+      const groups = await page.$$eval('#site optgroup', (gs) => gs.map((g) => ({ label: g.label, n: g.querySelectorAll('option').length })));
+      assert.deepStrictEqual(groups.map((g) => g.label), ['Sites', 'XLeShop shops'], JSON.stringify(groups));
+      assert.deepStrictEqual(groups.map((g) => g.n), [5, 9], JSON.stringify(groups));
+      assert.strictEqual(await page.$$eval('#site option', (o) => o.length), 14);
+      const shop = await page.evaluate(async () => { const r = await (await fetch('/api/sites')).json(); return r.sites.find((s) => s.group === 'XLeShop shops' && s.items >= 8); });
+      assert.ok(shop, 'a shop with items');
+      await page.select('#site', shop.id);
+      await page.waitForFunction((id) => document.body.dataset.site === id && document.body.dataset.ready === '1', { timeout: 20000 }, shop.id);
+      const label = await page.$eval('#site', (s) => s.options[s.selectedIndex].parentElement.label);
+      assert.strictEqual(label, 'XLeShop shops');
+      await page.click('.tabs button[data-tab="calendar"]');
+      await page.waitForSelector('#cal-weeks .cal-item .tg[data-channel="facebook-post"]', { timeout: 15000 });
+      const t = await page.$eval('#cal-weeks .cal-item', (el) => ({ chans: Array.from(el.querySelectorAll('.tg')).map((x) => x.dataset.channel), native: !!(el.querySelector('.tg[data-channel="facebook-post"] .tg-nolink-box') || {}).checked }));
+      assert.deepStrictEqual(t.chans, ['whatsapp-status', 'instagram-reel', 'facebook-post', 'instagram-carousel'], JSON.stringify(t));
+      assert.ok(t.native, 'the Facebook Page post starts as "no link"');
+      assert.ok(fs.existsSync(path.join(TMP, 'sites', shop.id, 'calendar.json')), 'the shop calendar in its own folder');
+      await page.select('#site', '1234tools');
+      await page.waitForFunction(() => document.body.dataset.site === '1234tools' && document.body.dataset.ready === '1', { timeout: 20000 });
+    });
     await check('no external requests and no page errors', async () => {
       assert.deepStrictEqual(external, []);
       assert.deepStrictEqual(pageErrors, []);

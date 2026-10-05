@@ -36,7 +36,8 @@ function ctx(templateId, rec, opts, step) {
   const leads = [st.hook, st.pain, st.promise].filter(Boolean);
   const lead = leads.length ? leads[v % leads.length] : rec.title;
   const steps = (st.steps || []).filter(Boolean);
-  const disclose = 'Disclosure: I run ' + site.name + '.';
+  /* a profile may say who is speaking (sites/_shop.js disclosure(): the shops are built and hosted, not run, by the owner) */
+  const disclose = (site.disclosure && site.disclosure.line) || ('Disclosure: I run ' + site.name + '.');
   const tags = step >= 1 ? [] : [tag(site.name), tag(rec.section)].filter((x) => x.length > 2);
   return {
     site, st, rec, venue, medium, URL, utm, clean, v, step, lead, steps, disclose, tags,
@@ -110,7 +111,7 @@ function build(id, C) {
       { key: 'url', label: 'URL', text: C.clean }], main: 'long' };
     case 'email-outreach': return { parts: [
       { key: 'subject', label: 'Subject', text: trunc(C.rec.title + ' for ' + (opts0(C).theirPageTitle || 'your readers'), 80) },
-      { key: 'body', label: 'Email', text: lines('Hi' + (opts0(C).firstName ? ' ' + opts0(C).firstName : '') + ',', '', sentence(C.promise) + ' ' + C.clean, '', 'I run ' + C.site.name + '; happy to answer questions. If this is not useful, ignore this note and I will not write again.') }], main: 'body' };
+      { key: 'body', label: 'Email', text: lines('Hi' + (opts0(C).firstName ? ' ' + opts0(C).firstName : '') + ',', '', sentence(C.promise) + ' ' + C.clean, '', ((C.site.disclosure && C.site.disclosure.email) || ('I run ' + C.site.name + '; happy to answer questions.')) + ' If this is not useful, ignore this note and I will not write again.') }], main: 'body' };
     case 'signature': return { parts: [{ key: 'text', label: 'Signature', text: C.site.name + ' — ' + trunc(C.rec.title, 50) + ' · ' + C.clean }], main: 'text' };
     case 'bio': return { parts: [{ key: 'text', label: 'Bio', text: trunc(C.site.name + ': ' + (C.site.promotes === 'products' ? 'shop ' : '') + C.rec.title + '. ' + C.site.baseUrl.replace(/^https?:\/\//, ''), 150) }], main: 'text' };
     default: return B.long(C, false);

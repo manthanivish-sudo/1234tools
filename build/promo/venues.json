@@ -3496,6 +3496,44 @@
       "source": "desk"
     },
     {
+      "id": "social-google-business-profile",
+      "name": "Google Business Profile posts (a shop's own profile, if it has one)",
+      "kind": "social",
+      "roles": [
+        "post"
+      ],
+      "siteKinds": [
+        "shop"
+      ],
+      "url": "https://business.google.com/",
+      "rulesUrl": "https://support.google.com/business/answer/7213077",
+      "audiences": [
+        "india",
+        "uk",
+        "general",
+        "smallbiz"
+      ],
+      "sections": [],
+      "cadenceDays": 3,
+      "maxPerWeek": 2,
+      "maxChars": 0,
+      "risk": "low",
+      "linkPolicy": "inline",
+      "selfPromo": "owned",
+      "submitUrl": "",
+      "searchUrl": "",
+      "apiSearch": "",
+      "template": "threads-post",
+      "titleMax": 0,
+      "markdown": false,
+      "hashtags": false,
+      "estimatedReach": "people who find the shop on Google Search and Maps",
+      "tone": "plain and factual: what is in stock, how to order, when the shop is open",
+      "notes": "Only for a shop whose owner has a verified Business Profile (none of the nine shops' own pages links one as of 2026-10-05, so ask the owner first). Post an Update (description, optional photo or video, optional button to the shop's page); Offers and Events need a title and dates, so the desk drafts Updates only and never invents an offer. Google's help: 'Posts older than 6 months are archived unless a date range is set' (support.google.com/business/answer/7342169). The content policy says posts with unverified contact information (phone numbers, email addresses, social handles) may be removed (support.google.com/business/answer/7213077): leave the phone number out and use the button. Character limit not confirmed on either page; check in the editor. Desk cadence: at most two a week, three days apart.",
+      "verifiedHow": "added 2026-10-05 by the desk for the XLeShop shops; post types, archive rule and the contact-information rule read from Google's Business Profile help pages 7342169 and 7213077 on 2026-10-05; the cadence is the desk's own advice, not a Google rule. Verify the Profile exists before the first post.",
+      "source": "desk"
+    },
+    {
       "id": "social-whatsapp",
       "name": "WhatsApp Channel (owned broadcast) + share link",
       "kind": "social",

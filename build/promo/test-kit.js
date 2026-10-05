@@ -156,6 +156,24 @@ function pngDims(file) { return kit.pngSize(fs.readFileSync(file)); }
       });
     }
 
+    /* the XLeShop shops: a kit from each shop's first item, with its own name, host and logo, nothing of 1234Tools */
+    const SITE = require('./site');
+    for (const s of SITE.list().filter((x) => x.group === 'XLeShop shops' && x.items > 0)) {
+      await check('shop kit ' + s.id + ': sizes, no overflow, its own host, a schematic (never "real"), QR reads back', async () => {
+        const r = await SITE.run(s.id, async () => {
+          const item = SITE.listItems()[0];
+          return kit.kit(item.path, { browser, seed: 300 + s.id.length });
+        });
+        for (const [f, [w, h]] of Object.entries(DIMS)) assert.deepStrictEqual(pngDims(path.join(r.dir, f)), { w, h }, f);
+        assert.deepStrictEqual(r.fit.overflow, [], 'overflow');
+        assert.ok(r.qr.verified, 'story QR reads back');
+        assert.ok(!r.example.real, 'a shop kit is a schematic');
+        const md = fs.readFileSync(path.join(r.dir, 'kit.md'), 'utf8');
+        const host = new URL(s.baseUrl).hostname;
+        assert.ok(md.includes(host) && !/1234tools\.com/i.test(md), 'kit.md uses ' + host);
+      });
+    }
+
     await check('two consecutive kits for one tool differ in 2+ of layout/palette/type; a neighbour differs too', async () => {
       const a = await kit.kit('/developer/json-formatter/', { browser, example: { kind: 'schematic', input: 'JSON', output: 'Formatted JSON', real: false } });
       const b = await kit.kit('/developer/json-formatter/', { browser, example: { kind: 'schematic', input: 'JSON', output: 'Formatted JSON', real: false } });

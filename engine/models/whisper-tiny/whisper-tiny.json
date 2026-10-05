@@ -16,7 +16,8 @@
    "bytes": 30719241,
    "sha256": "25e807a962b6349356d0ea5d0dfe530b7e5bf0e2a484aeca0359d03143faddd3",
    "parts": [
-    "decoder_model_merged_quantized.onnx"
+    "decoder_model_merged_quantized.onnx.part0",
+    "decoder_model_merged_quantized.onnx.part1"
    ],
    "source": "onnx/decoder_model_merged_quantized.onnx"
   },

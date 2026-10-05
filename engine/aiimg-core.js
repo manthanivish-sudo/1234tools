@@ -216,13 +216,18 @@
   /**
    * Read a model's weights with progress, so a first run can say how far it
    * is. `url` is one file, an array of files, or a `…part0` whose siblings
-   * part1, part2… are fetched in turn until one is missing (GitHub Pages
-   * caps a file at 100 MB, so larger models ship in pieces). The pieces come
-   * back as one Uint8Array. `expectedBytes` sizes the progress bar before
-   * the server has said; without it the content-length headers are used.
+   * part1, part2… are fetched in turn until one is missing. A model over
+   * 24 MiB ships as <file>.part0, .part1, … of at most 20 MiB (the static
+   * hosts cap a file at 25 MiB; build/split-models.js writes them), and its
+   * loader passes the parts as an array with the whole file's size. The
+   * pieces come back as one Uint8Array. `expectedBytes` sizes the progress
+   * bar before the server has said; without it the content-length headers
+   * are used. For pieces it is the whole file's exact size, and joined
+   * pieces of any other length are refused, as is a mismatch with `sha256`
+   * (hex, optional) when the browser can hash.
    * onProgress gets { stage: 'download', fraction, loaded, total }.
    */
-  async function fetchModel(url, onProgress, expectedBytes) {
+  async function fetchModel(url, onProgress, expectedBytes, sha256) {
     const report = onProgress || (() => {});
     const urls = Array.isArray(url) ? url.map(String) : [String(url)];
     const shard = urls.length === 1 ? /^(.*\.part)(0+)$/.exec(urls[0]) : null;
@@ -259,7 +264,21 @@
     const out = new Uint8Array(got);
     let o = 0;
     for (const c of chunks) { out.set(c, o); o += c.length; }
+    await checkModel(out, (urls.length > 1 || shard) ? expectedBytes : 0, sha256);
     return out;
+  }
+
+  /** Refuse joined model bytes of the wrong length, or (when given and the
+      browser can hash) the wrong sha256. */
+  async function checkModel(bytes, exactBytes, sha256) {
+    const bad = () => new Error('The model download was incomplete or damaged. Reload the page to try again.');
+    if (exactBytes && bytes.length !== Number(exactBytes)) throw bad();
+    if (sha256 && typeof crypto !== 'undefined' && crypto.subtle) {
+      const d = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+      let hex = '';
+      for (const b of d) hex += (b < 16 ? '0' : '') + b.toString(16);
+      if (hex !== String(sha256).toLowerCase()) throw bad();
+    }
   }
 
   const sessions = new Map();
@@ -267,7 +286,8 @@
    * One ONNX Runtime session per model, created once per page and shared:
    * a second caller while the first is still loading gets the same promise.
    * `url` as for fetchModel. opts: { bytes: expected size for the progress
-   * bar, onProgress, sessionOptions } — the session runs on WebAssembly with
+   * bar (exact for parts), sha256, onProgress, sessionOptions } — the
+   * session runs on WebAssembly with
    * every graph optimisation unless sessionOptions says otherwise. Resolves
    * { ort, session, bytes, url }; a failure clears the slot so the next call
    * tries again. onProgress sees stage 'download' then 'compile'.
@@ -279,7 +299,7 @@
     const report = opts.onProgress || (() => {});
     const p = (async () => {
       const ort = await runtime();
-      const bytes = await fetchModel(url, report, opts.bytes);
+      const bytes = await fetchModel(url, report, opts.bytes, opts.sha256);
       report({ stage: 'compile', fraction: 0, loaded: bytes.length, total: bytes.length });
       await sleep(0);
       const session = await ort.InferenceSession.create(bytes, Object.assign({ executionProviders: ['wasm'], graphOptimizationLevel: 'all' }, opts.sessionOptions || {}));

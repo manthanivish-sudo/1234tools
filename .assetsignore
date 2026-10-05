@@ -1,0 +1,18 @@
+# Files under the repository root that Cloudflare must not publish.
+# GitHub Pages publishes every tracked file except .github/; the CI
+# checkout holds only tracked files, so this list mostly guards a deploy
+# run from a working copy.
+.git
+.github
+.wrangler
+.dev.vars*
+.env*
+node_modules
+package.json
+package-lock.json
+wrangler.jsonc
+.assetsignore
+# git-ignored test artefacts (see .gitignore)
+build/pdf-package/tests/fixtures
+build/pdf-package/tests/output
+build/pdf-package/sample-output

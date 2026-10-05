@@ -713,6 +713,7 @@
       if (!t.tickOnly) {
         const inp = h('input', { type: 'url', class: 'tg-input', placeholder: 'Paste the ' + t.name + ' link', 'aria-label': t.name + ' link' });
         const noLink = t.noLinkOption ? h('input', { type: 'checkbox', class: 'tg-nolink-box' }) : null;
+        if (noLink && t.native) noLink.checked = true; // a native post (a shop's Facebook Page post) starts as "no link"
         const rec = () => { const v = inp.value.trim(); if (!v) { toast('Paste the post\'s link first'); return; } doTarget(it, t.channel, 'post', { url: v, noLink: noLink ? noLink.checked : undefined }); };
         inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); rec(); } });
         controls.appendChild(inp);
@@ -961,7 +962,13 @@
   (async function boot() {
     const sites = await api('/api/sites');
     const pick = $('#site');
-    sites.sites.forEach((s) => pick.appendChild(h('option', { value: s.id, text: s.name + (s.error ? ' (profile error)' : '') })));
+    /* grouped, so 14 sites stay readable: "Sites" (1234Tools and the owner's own sites), then "XLeShop shops" */
+    const groups = new Map();
+    sites.sites.forEach((s) => {
+      const label = s.group || 'Sites';
+      if (!groups.has(label)) { groups.set(label, h('optgroup', { label })); pick.appendChild(groups.get(label)); }
+      groups.get(label).appendChild(h('option', { value: s.id, title: s.baseUrl || '', text: s.name + (s.error ? ' (profile error)' : s.items === 0 ? ' (skeleton)' : '') }));
+    });
     if (!sites.sites.some((s) => s.id === SITE_ID)) SITE_ID = sites.current;
     pick.value = SITE_ID;
     pick.addEventListener('change', async () => {
