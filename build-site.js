@@ -1017,9 +1017,43 @@ function footerApply(html, rel) {
     : bare.slice(0, at) + block + bare.slice(end), want.kind);
 }
 
+/* ------------------------------------------------------------------ */
+/* version line                                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Under the footer's legal lines, every page carries an empty line that
+ * assets/version.js fills with the version this browser has installed
+ * ("Version 191 · 5 Oct 2026"), and with "Update ready — reload" when a newer
+ * release takes over while the page is open. The record in that file is
+ * written by build/release.js; sw.js precaches it and serves it cache-first,
+ * so it is the installed release, not the server's. Without JavaScript the
+ * line stays empty; shell.css reserves its height, so filling it moves
+ * nothing.
+ *
+ * The block goes straight after the legal row's "Made with dedication" line,
+ * which every page's hand-copied footer carries. versionApply() removes any
+ * block first and writes one, so it is a fixed point and a block cloned from
+ * a shell lands once.
+ */
+const VER_BLOCK = '<!--ver--><div class="site-ver" data-site-ver></div><script src="/assets/version.js" defer></script><!--/ver-->';
+const VER_RE = /\s*<!--ver-->[\s\S]*?<!--\/ver-->/g;
+const VER_AFTER = '<div>Made with dedication by MVR IT Services.</div>';
+
+/** The page with exactly one version block, after VER_AFTER in the legal row.
+    A page without that row (none today) is left without one. */
+function versionApply(html) {
+  const bare = html.replace(VER_RE, '');
+  const legal = bare.indexOf('<div class="footer-legal">');
+  const at = legal === -1 ? -1 : bare.indexOf(VER_AFTER, legal);
+  if (at === -1) return bare;
+  const end = at + VER_AFTER.length;
+  return bare.slice(0, end) + '\n      ' + VER_BLOCK + bare.slice(end);
+}
+
 function patchPages() {
   const list = pages();
-  let fonts = 0, analytics = 0, footers = 0, skipped = [], unworded = [];
+  let fonts = 0, analytics = 0, footers = 0, versions = 0, skipped = [], unworded = [], unversioned = [];
 
   for (const abs of list) {
     const rel = path.relative(ROOT, abs).replace(/\\/g, '/');
@@ -1047,12 +1081,16 @@ function patchPages() {
     if (withFooter !== html) { html = withFooter; footers++; }
     if (!/<!--foot:[a-z-]+-->/.test(html) && footKind(html, rel)) unworded.push(rel);
 
+    const withVersion = versionApply(html);
+    if (withVersion !== html) { html = withVersion; versions++; }
+    if (html.includes('<div class="footer-legal">') && !html.includes(VER_BLOCK)) unversioned.push(rel);
+
     if (html !== before) {
       changes.push('update ' + rel);
       if (!CHECK) fs.writeFileSync(abs, html);
     }
   }
-  return { total: list.length, fonts, analytics, footers, skipped, unworded };
+  return { total: list.length, fonts, analytics, footers, versions, skipped, unworded, unversioned };
 }
 
 /* ------------------------------------------------------------------ */
@@ -1192,6 +1230,11 @@ function main() {
     console.log(`  ! ${page.unworded.length} page(s) send what is typed but their footer note has no default sentence to reword:`);
     page.unworded.slice(0, 5).forEach((s) => console.log('      ' + s));
   }
+  console.log(`  version line        ${page.versions} ${CHECK ? 'would be' : ''} written`);
+  if (page.unversioned.length) {
+    console.log(`  ! ${page.unversioned.length} page(s) have a footer-legal row without the "Made with dedication" line, so no version line:`);
+    page.unversioned.slice(0, 5).forEach((s) => console.log('      ' + s));
+  }
   console.log(`  app.css             ${css}`);
   if (sw) console.log(`  service worker      ${sw}`);
   console.log(`  sitemap             ${map.count} URLs, ` +
@@ -1237,4 +1280,4 @@ if (require.main === module) {
   catch (e) { console.error('\nbuild-site.js failed: ' + (e && e.message || e) + '\n'); process.exit(1); }
 }
 
-module.exports = { searchIndexTools, SECTIONS, META_PAGES, footerApply, footKind, FOOT_DEFAULT };
+module.exports = { searchIndexTools, SECTIONS, META_PAGES, footerApply, footKind, FOOT_DEFAULT, versionApply, VER_BLOCK };

@@ -28,6 +28,12 @@
  *     else; no page says "running entirely in your browser" without
  *     "almost all of them" (the old unqualified ending);
  *   - footerApply() leaves every page as it is (the site is a fixed point).
+ *   - every page with a footer-legal row carries exactly one version line
+ *     (an empty <div data-site-ver> and the /assets/version.js script, right
+ *     after "Made with dedication by MVR IT Services."), versionApply() is a
+ *     fixed point, assets/version.js holds a valid record, sw.js precaches
+ *     it past the HTTP cache, and app.css reserves the line's height. That
+ *     the script fills it, offline too, is build/tests/version.js.
  *
  * With the backend checked out beside the site (or --backend), the claim
  * "we keep a count of your calls, not what you sent or what came back" and
@@ -48,6 +54,9 @@ const DEFAULT = 'Every calculation runs inside your browser — no figures are s
 const ABOUT_LEAD = ', almost all of them running entirely in your browser.';
 const ABOUT_DEFAULT = ABOUT_LEAD + ' The exceptions are the <a href="/ai/">AI for Business</a> tools, which send what you give them through our server to Anthropic’s API, and the tool request, contact and showcase forms, which send what you type to us, as the <a href="/privacy/">privacy policy</a> explains.';
 const ABOUT_LEGACY = ' and running entirely in your browser.';
+/* the version line (build-site.js versionApply), written out here too */
+const VER_AFTER = '<div>Made with dedication by MVR IT Services.</div>';
+const VER_MARKUP = '<!--ver--><div class="site-ver" data-site-ver></div><script src="/assets/version.js" defer></script><!--/ver-->';
 
 let pass = 0, fail = 0;
 const fails = [];
@@ -114,6 +123,17 @@ for (const abs of pages()) {
   const bare = html.split('almost all of them running entirely in your browser').join('');
   ok(!/running entirely in your browser/.test(bare), rel + ': says "running entirely in your browser" without "almost all of them"');
 
+  /* the version line: one empty line and its script, straight after the
+     legal row's last line, on every page with a legal row */
+  if (html.includes('<div class="footer-legal">')) {
+    const legal = html.slice(html.indexOf('<div class="footer-legal">'));
+    ok((html.match(/<!--ver-->/g) || []).length === 1 && (html.match(/data-site-ver/g) || []).length === 1 &&
+      (html.match(/\/assets\/version\.js/g) || []).length === 1, rel + ': not exactly one version line');
+    ok(legal.includes(VER_AFTER + '\n      ' + VER_MARKUP), rel + ': version line missing, or not right after "' + VER_AFTER + '"');
+    ok(site.versionApply(html) === html, rel + ': versionApply would change it (not a fixed point)');
+    bump('version', rel);
+  } else ok(!html.includes('<!--ver-->'), rel + ': a version line outside a footer-legal row');
+
   const n = /<div class="footer-note">([\s\S]*?)<\/div>/.exec(html);
   if (!n) continue;
   const note = n[1];
@@ -170,6 +190,27 @@ for (const abs of pages()) {
     continue;
   }
   ok(kind === 'default', rel + ': expected the default sentence alone, found ' + kind);
+}
+
+/* what the version line reads and how it is served: the record parses; sw.js
+   precaches it past the HTTP cache and serves .js cache-first; the line's
+   height is reserved in app.css (build/site/shell.css) */
+{
+  const vsrc = fs.existsSync(path.join(ROOT, 'assets/version.js')) ? fs.readFileSync(path.join(ROOT, 'assets/version.js'), 'utf8') : '';
+  const m = /var REC = (\{[^}\n]*\});/.exec(vsrc);
+  let rec = null;
+  try { rec = m && JSON.parse(m[1]); } catch (e) { /* null */ }
+  ok(!!rec && Number.isInteger(rec.v) && /^\d{4}-\d\d-\d\d$/.test(rec.date) && (rec.built_on == null || /^[0-9a-f]{7,40}$/.test(rec.built_on)),
+    'assets/version.js: no valid record (v, date, built_on): ' + (m && m[1]));
+  ok(/data-site-ver/.test(vsrc) && /Update ready — reload/.test(vsrc) && !/https?:\/\//.test(vsrc.replace(/\/\*[\s\S]*?\*\//g, '')),
+    'assets/version.js: does not fill [data-site-ver], offer the reload, or stays off the network');
+  const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  ok(/var SHELL = \[[^\]]*'\.\/assets\/version\.js'/.test(sw) && /'\.\/assets\/version\.js': true/.test(sw) && /cache: 'no-cache'/.test(sw),
+    'sw.js: does not precache assets/version.js past the HTTP cache');
+  const css = fs.readFileSync(path.join(ROOT, 'assets/app.css'), 'utf8');
+  const rule = /\.site-ver \{([^}]*)\}/.exec(css);
+  ok(!!rule && /min-height:\s*24px/.test(rule[1]) && /flex-basis:\s*100%/.test(rule[1]), 'app.css: no .site-ver rule reserving the line');
+  ok(/\.site-ver-update:focus-visible/.test(css), 'app.css: the reload button has no focus style');
 }
 
 /* the backend: what aiComplete keeps, and the free allowance */

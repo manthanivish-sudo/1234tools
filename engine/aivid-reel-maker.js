@@ -340,6 +340,8 @@
   const oneLine = (s) => String(s || '').replace(/\s*\n\s*/g, ' ').replace(/\s+/g, ' ').trim();
   const capFirst = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
   const reelsWord = (n) => n + ' reel' + (n === 1 ? '' : 's');
+  /** The local time as HHMM, so exports of the same reel do not overwrite each other: reel-gst-calculator-1432.mp4. */
+  const hhmm = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0'); };
   const slugify = (s) => (String(s || '').toLowerCase().match(/[a-z0-9]+/g) || []).join('-').slice(0, 40).replace(/-+$/, '');
   function fnv(s) { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h >>> 0; }
   const pickBy = (key, list) => list[fnv(key) % list.length];
@@ -380,7 +382,14 @@
     if (W > H * 1.3) return { top: 0.08, bottom: 0.12, box: [0.16, 0.76], maxW: 0.70 };
     return { top: 0.06, bottom: 0.10, box: [0.14, 0.78], maxW: 0.84 };
   }
-  const timeline = (scenes) => { let s = 0; const starts = scenes.map((sc) => { const v = s; s += Number(sc.seconds) || 0; return v; }); return { starts, D: s }; };
+  /* an end card with nothing on it is left out of the export, so it takes no time in the preview either (sc._skip, set by emptyEnds) */
+  const timeline = (scenes) => { let s = 0; const starts = scenes.map((sc) => { const v = s; s += sc._skip ? 0 : (Number(sc.seconds) || 0); return v; }); return { starts, D: s }; };
+  /** Mark the end cards that would be left out of an export (no title, and no handle, URL or logo to show). */
+  function emptyEnds(S) {
+    let n = 0;
+    for (const sc of S.scenes) { const e = sc.type === 'endcard' && !(sc.title || S.brand.logo || S.brand.url || S.brand.handle); if (!!sc._skip !== e) { sc._skip = e; n++; } }
+    return n;
+  }
   const totalSeconds = (S) => timeline(S.scenes).D;
   const isVideoScene = (sc) => sc.type === 'media' && sc.media && sc.media.kind === 'video';
   /** Scene types drawn as words (everything but pictures, clips and the end card). */
@@ -1036,7 +1045,8 @@
   ];
   /** The scene types a template makes, in order (the browser test checks these). */
   const TEMPLATE_TYPES = {};
-  const LINE_RE = /^(HOOK|PAIN|USUAL|FIX|STEPS|POINT|MISTAKE|VERSUS|QUOTE|CTA|TEXT)\s*:\s*(.*)$/;
+  /* the beat word may be typed in any case: "hook:" works like "HOOK:" */
+  const LINE_RE = /^(HOOK|PAIN|USUAL|FIX|STEPS|POINT|MISTAKE|VERSUS|QUOTE|CTA|TEXT)\s*:\s*(.*)$/i;
   function sceneOfLine(kind, rest) {
     const parts = rest.split(/\s*\|\s*/).map((x) => x.trim());
     switch (kind) {
@@ -1087,7 +1097,7 @@
         continue;
       }
       const m = LINE_RE.exec(line);
-      if (m) { scenes.push(sceneOfLine(m[1], m[2])); continue; }
+      if (m) { scenes.push(sceneOfLine(m[1].toUpperCase(), m[2])); continue; }
       for (const part of splitLong(line)) scenes.push(beat('text', { text: part }));
     }
     scenes.shrunk = fitToMax(scenes);
@@ -1135,10 +1145,34 @@
     return out;
   }
   /** Hashtags for a visitor's own script: its most frequent long words, plus #Reels. No brand tags of ours on someone else's reel. */
+  /* every word the seven templates are made of: scaffolding, never a hashtag */
+  let TEMPLATE_WORDS = null;
+  const templateWords = () => TEMPLATE_WORDS || (TEMPLATE_WORDS = new Set(TEMPLATES.flatMap((t) => (t[3] + ' ' + t[1] + ' ' + t[2]).toLowerCase().match(/[a-z][a-z0-9’']*/g) || [])));
+  /** Text still holding a template's [bracketed] placeholder. */
+  const hasPlaceholder = (s) => /\[[^\]\n]{1,80}\]/.test(String(s || ''));
+  /**
+   * Hashtags for a visitor's script — meaningful words only: acronyms (GST,
+   * SEO), names written with a capital mid-sentence, and longer words used
+   * at least twice. Never a placeholder, a template's own words, a stop word
+   * or a link. None found → just #Reels.
+   */
   function scriptTags(text) {
-    const count = new Map();
-    for (const w of String(text || '').toLowerCase().replace(/\[[^\]]*\]/g, ' ').match(/[a-z][a-z0-9]{4,}/g) || []) { if (!STOP.has(w)) count.set(w, (count.get(w) || 0) + 1); }
-    const top = [...count.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5).map(([w]) => '#' + w.charAt(0).toUpperCase() + w.slice(1));
+    const src = String(text || '').replace(/\[[^\]]*\]/g, ' ').replace(/\bhttps?:\/\/\S+|\bwww\.\S+|(^|\s)[#@]\S+/g, ' ');
+    const skip = (lw) => STOP.has(lw) || WEAK.has(lw) || templateWords().has(lw);
+    const score = new Map();
+    const add = (w, k) => { const key = w.toLowerCase(); score.set(key, { w, n: ((score.get(key) || {}).n || 0) + k }); };
+    for (const sent of src.split(/[.!?\n]+/)) {
+      const words = sent.match(/[A-Za-z][A-Za-z0-9’']*/g) || [];
+      words.forEach((w, i) => {
+        const lw = w.toLowerCase().replace(/[’']s$/, '');
+        if (skip(lw) || lw.length < 3) return;
+        if (/^[A-Z]{2,6}s?$/.test(w)) add(w.replace(/s$/, ''), 3);                 /* GST, SEO */
+        else if (i > 0 && /^[A-Z][a-z]{2,}/.test(w)) add(w, 2);                       /* a name mid-sentence */
+        else if (lw.length >= 5) add(lw, 1);
+      });
+    }
+    const top = [...score.values()].filter((x) => x.n >= 2).sort((a, b) => b.n - a.n || a.w.localeCompare(b.w)).slice(0, 5)
+      .map((x) => '#' + (/^[A-Z]{2,6}$/.test(x.w) ? x.w : x.w.charAt(0).toUpperCase() + x.w.slice(1)));
     return top.concat(['#Reels']);
   }
   function qrUrlFor(path, source) {
@@ -1150,9 +1184,16 @@
    * 0 the story (pain → fix → steps), 1 the usual way crossed out → instead, 2 who it is for → the promise → save it.
    * Every shape ends with the link-in-bio line and 5–8 hashtags; the share module adds its "Made free, on my device" line.
    */
+  /** What Copy caption copies and the preview box shows: the caption, then the page's credit line while "Made with 1234Tools.com" is on. */
+  function postCaption(S) {
+    S = S || CUR;
+    const text = captionFor(S);
+    if (!text) return '';
+    return madeWithOn(S) && A.share ? text + '\nMade free, on my device: ' + A.share.pageUrl() : text;
+  }
   function captionFor(S) {
     S = S || CUR;
-    if (!S) return '';
+    if (!S || !S.scenes || !S.scenes.length) return '';
     const text = captionBody(S);
     if (!(S.voice && S.voice.generated)) return text;
     /* a generated voice is disclosed in the caption, just above the hashtags */
@@ -1329,6 +1370,8 @@
       default: return { a: 1, s: 1, dy: 0, chars: Infinity, t: 9 };
     }
   }
+  /* a test hook: when set to an array, drawBlock records each drawn word's horizontal extent (word gaps must never close) */
+  let GAPS = null;
   const OK_DARK = '#4ade80', OK_LIGHT = '#15803d';
   const okOf = (L) => (L.light ? OK_LIGHT : OK_DARK);
   /**
@@ -1396,8 +1439,11 @@
         ctx.globalAlpha *= st.a;
         if (st.clip) { ctx.beginPath(); ctx.rect(x - lay.px, top - lay.lh * 0.18, w + lay.px * 2, lay.lh * 1.3); ctx.clip(); }
         const cx = wx + ww / 2, wy = cy + st.dy;
+        /* a word may grow (pop's overshoot, punch's emphasis) only into a third of the gap on each side, so two growing neighbours never touch */
+        const sw = st.s > 1 ? Math.min(st.s, 1 + 0.6 * lay.space / Math.max(1, ww)) : st.s;
+        if (GAPS) GAPS.push({ key: GAPS.frame + '|' + li + '|' + y.toFixed(1) + '|' + x.toFixed(1), i: wd.i, x0: cx - ww * sw / 2, x1: cx + ww * sw / 2, space: lay.space, t: wd.t });
         ctx.translate(cx, wy);
-        if (st.s !== 1) ctx.scale(st.s, st.s);
+        if (sw !== 1) ctx.scale(sw, sw);
         ctx.font = wd.hl ? lay.fHl : lay.fBase;
         const tx = -ww / 2;
         if (wd.hl && o.field) {
@@ -1405,7 +1451,7 @@
           ctx.fillRect(tx, lay.px * 0.42, ctx.measureText(t).width, Math.max(2, lay.px * 0.05));
         } else if (wd.hl && treat === 'gradient' && !coral) {
           /* the gradient spans this line's highlighted run, like the kits' clipped .hl span */
-          const s = st.s || 1;
+          const s = sw || 1;
           const run = line.words.filter((q) => q.hl);
           const rx0 = lx(line) + run[0].x, rx1 = lx(line) + run[run.length - 1].x + run[run.length - 1].w;
           grad = ctx.createLinearGradient((rx0 - cx) / s, (top - wy) / s, (rx1 - cx) / s, (top + lay.lh - wy) / s);
@@ -1712,7 +1758,11 @@
     const c = chromeOf(W, H, S);
     const top = c.hasHead ? c.headY + c.headH + 34 * c.U : c.ai ? c.pillY + c.pillH + 30 * c.U : c.sf.top * H + 40 * c.U;
     let bottom = (c.showFoot ? c.footY - 22 * c.U : c.barY - 26 * c.U);
-    if (S.captions && S.captions.source === 'auto' && S.captions.cues && S.captions.cues.length) bottom = Math.min(bottom, 0.69 * H);
+    if (S.captions && S.captions.source === 'auto' && S.captions.cues && S.captions.cues.length) {
+      /* the scene's words stay clear of the caption band: above the bottom captions, or above two lines of middle captions */
+      const px = (Number(S.captions.style.size) || 7) / 100 * Math.min(W, H);
+      bottom = S.captions.style.position === 'middle' ? Math.min(bottom, H * 0.5 - 1.5 * px - 16 * c.U) : S.captions.style.position === 'top' ? bottom : Math.min(bottom, 0.69 * H);
+    }
     return { x: c.mx, y: top, w: W - 2 * c.mx, h: bottom - top, U: c.U };
   }
   function drawHeader(ctx, W, H, L, S, at) {
@@ -2819,7 +2869,21 @@
   }
   function drawMedia(ctx, W, H, scene, local, alpha, look, S) {
     const m = scene.media;
-    if (!m) return;
+    if (!m) {
+      /* a restored scene whose file was not kept: a plain card says what goes here */
+      if (!scene.missing) return;
+      const U0 = Math.min(W, H) / 1080, box = contentBox(W, H, S);
+      ctx.save(); ctx.globalAlpha = clamp(alpha, 0, 1);
+      ctx.setLineDash([18 * U0, 12 * U0]); ctx.lineWidth = 3 * U0; ctx.strokeStyle = hexA(look.ink, 0.5);
+      roundRect(ctx, box.x, box.y + box.h * 0.25, box.w, box.h * 0.5, 24 * U0); ctx.stroke();
+      ctx.setLineDash([]); ctx.fillStyle = look.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = fontCss(700, 34 * U0, BODY);
+      ctx.fillText('Add the ' + (scene.missing.kind === 'video' ? 'clip' : 'picture') + ' again in Media', W / 2, box.y + box.h * 0.48);
+      ctx.font = fontCss(500, 26 * U0, BODY); ctx.fillStyle = look.muted;
+      ctx.fillText(String(scene.missing.name || '').slice(0, 40), W / 2, box.y + box.h * 0.56);
+      ctx.restore();
+      return;
+    }
     const src = m.kind === 'video' ? m.video : m.canvas;
     const ready = !!src && (m.kind !== 'video' || src.readyState >= 2);
     const sw = m.width || 1, sh = m.height || 1;
@@ -2895,7 +2959,7 @@
     const sc = S.scenes;
     const { starts, D } = timeline(sc);
     const n = sc.length;
-    if (t >= D) { const i = n - 1; return { i, n, scene: sc[i], local: sc[i].seconds, prev: null, blend: 1, start: starts[i], starts, D }; }
+    if (t >= D) { let i = n - 1; while (i > 0 && sc[i]._skip) i--; return { i, n, scene: sc[i], local: sc[i].seconds, prev: null, blend: 1, start: starts[i], starts, D }; }
     let i = 0;
     while (i < n - 1 && t >= starts[i + 1]) i++;
     const local = Math.max(0, t - starts[i]);
@@ -3018,7 +3082,8 @@
       const mu = S.music;
       const src = octx.createBufferSource(); src.buffer = mu.audioBuffer;
       /* the track can start part-way in (its chorus, its drop); a loop goes back to that point, not to the intro */
-      const from = clamp(Number(mu.from) || 0, 0, Math.max(0, mu.audioBuffer.duration - 0.5));
+      /* a long WAV is held as a window starting at mu.base seconds into the track */
+      const from = clamp((Number(mu.from) || 0) - (Number(mu.base) || 0), 0, Math.max(0, mu.audioBuffer.duration - 0.5));
       if (mu.loop) { src.loop = true; src.loopStart = from; src.loopEnd = mu.audioBuffer.duration; }
       const g = octx.createGain();
       const g0 = dB(mu.gainDb);
@@ -3087,17 +3152,29 @@
   /* ------------------------------------------------------------------ */
   /* media during an export                                             */
   /* ------------------------------------------------------------------ */
-  function seekTo(video, want) {
+  /**
+   * Seek a clip and wait until the frame is really there: 'seeked' and then
+   * decoded data (readyState ≥ 2). Resolves true, or false after `ms` — a
+   * high-bitrate clip can take seconds per seek, and drawing before then
+   * would put the previous frame in the export.
+   */
+  function seekTo(video, want, ms) {
     return new Promise((res) => {
       let done = false;
-      const fin = () => { if (done) return; done = true; video.removeEventListener('seeked', fin); setTimeout(res, 0); };
-      video.addEventListener('seeked', fin);
-      try { video.currentTime = want; } catch (e) { fin(); }
-      setTimeout(fin, 2000);
+      const fin = (ok) => { if (done) return; done = true; video.removeEventListener('seeked', onSeeked); video.removeEventListener('loadeddata', onData); clearTimeout(timer); setTimeout(() => res(ok), 0); };
+      const onData = () => { if (video.readyState >= 2 && !video.seeking) fin(true); };
+      const onSeeked = () => { if (video.readyState >= 2) fin(true); else video.addEventListener('loadeddata', onData); };
+      video.addEventListener('seeked', onSeeked);
+      const timer = setTimeout(() => fin(!video.seeking && video.readyState >= 2 && Math.abs(video.currentTime - want) < 0.05), ms || 2000);
+      try { video.currentTime = want; } catch (e) { fin(false); }
     });
   }
-  /** Put every visible clip on the frame time t needs (the outgoing one too, during a transition). */
-  async function prepareMedia(S, t) {
+  /**
+   * Put every visible clip on the frame time t needs (the outgoing one too,
+   * during a transition). With `strict` (an export) a clip that will not reach
+   * its frame in 20 s stops the export with a message, instead of a stale frame.
+   */
+  async function prepareMedia(S, t, strict) {
     const at = sceneAt(t, S);
     if (!at) return;
     const list = [[at.scene, at.local]];
@@ -3106,8 +3183,24 @@
       if (!isVideoScene(sc) || !sc.media.video) continue;
       const v = sc.media.video;
       const want = clamp((Number(sc.start) || 0) + local, 0, Math.max(0, (sc.media.duration || 0) - 0.04));
-      if (Math.abs(v.currentTime - want) > 0.5 / FPS || v.readyState < 2) await seekTo(v, want);
+      if (Math.abs(v.currentTime - want) > 0.5 / FPS || v.readyState < 2 || v.seeking) {
+        let ok = await seekTo(v, want, strict ? 8000 : 2000);
+        if (!ok && strict) ok = await seekTo(v, want, 12000);
+        if (!ok && strict) throw new Error('The clip “' + sc.media.name + '” could not be read at ' + want.toFixed(2) + ' s in time, so the export stopped rather than show a wrong frame. A clip with a lower bitrate (re-saved by your phone or any video app) exports faster.');
+      }
     }
+  }
+  /** How long reading a clip's frames will take: three timed seeks, scaled to the frames its scenes need. Seconds, or 0 with no clips. */
+  async function clipCost(S) {
+    let total = 0;
+    for (const sc of S.scenes) {
+      if (!isVideoScene(sc) || !sc.media.video) continue;
+      const v = sc.media.video, d = sc.media.duration || 1;
+      const t0 = performance.now();
+      for (const f of [0.31, 0.62, 0.17]) await seekTo(v, clamp((Number(sc.start) || 0) + sc.seconds * f, 0, Math.max(0, d - 0.04)), 8000);
+      total += (performance.now() - t0) / 3 / 1000 * sc.seconds * FPS;
+    }
+    return total;
   }
   /** Real-time recording (no WebCodecs): play each clip while its scene is on. */
   function liveMedia(S, t) {
@@ -3128,7 +3221,7 @@
     for (let i = 0; i < total; i++) {
       if (signal && signal.aborted) throw abortError();
       const t = i / FPS;
-      await prepareMedia(S, t);
+      await prepareMedia(S, t, true);
       ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
       renderFrame(ctx, w, h, t, S);
       if (opening) opening(ctx, w, h, t);
@@ -3282,10 +3375,11 @@
     const promotePane = el('div', 'reel-mode'); promotePane.dataset.mode = 'promote'; promotePane.hidden = true; promotePane.setAttribute('role', 'tabpanel');
     const picker = el('div', 'reel-picker');
     const find = el('input', 'control'); find.id = 'reel-find'; find.type = 'search'; find.placeholder = 'Search the tools…'; find.autocomplete = 'off';
-    find.setAttribute('role', 'combobox'); find.setAttribute('aria-controls', 'reel-tools'); find.setAttribute('aria-expanded', 'true');
+    find.setAttribute('aria-controls', 'reel-tools');
     const filterRow = el('div', 'reel-filter'); filterRow.setAttribute('role', 'group'); filterRow.setAttribute('aria-label', 'Filter by section');
-    const toolList = el('ul', 'reel-tools'); toolList.id = 'reel-tools'; toolList.setAttribute('role', 'listbox'); toolList.setAttribute('aria-label', 'Tools');
+    const toolList = el('ul', 'reel-tools'); toolList.id = 'reel-tools'; toolList.setAttribute('aria-label', 'Tools');
     const pickStatus = el('p', 'aiimg-status', 'Loading the tool list…');
+    const pickCount = hint(''); pickCount.id = 'reel-pick-count'; pickCount.hidden = true;
     /* one click makes every ticked tool's reel: the button says how many, changes at once, and the run starts without a second "Start" */
     const batchBtn = button('Make reels', 'btn-primary', () => openBatch()); batchBtn.id = 'reel-batch'; batchBtn.disabled = true;
     const clearBtn = button('Clear', 'btn-ghost', () => { S.picked.clear(); renderPicker(); });
@@ -3293,7 +3387,7 @@
     const batchCaps = check('reel-batch-captions', 'Also save reel-captions.txt', true);
     const batchLine = el('p', 'aiimg-status reel-batch-line'); batchLine.id = 'reel-batch-line'; batchLine.setAttribute('aria-live', 'polite');
     const pickFoot = el('div', 'aiimg-row reel-picker-foot'); pickFoot.append(batchBtn, clearBtn, hint('Click a tool to open its reel; tick one or more and press Make to export one reel each.'));
-    picker.append(field('Find a tool', find), filterRow, pickStatus, toolList, pickFoot, row(batchFolder, batchCaps), batchLine);
+    picker.append(field('Find a tool', find), pickCount, filterRow, pickStatus, toolList, pickFoot, row(batchFolder, batchCaps), batchLine);
     promotePane.appendChild(picker);
     start.append(modeTabs.bar, scriptPane, promotePane);
 
@@ -3337,9 +3431,24 @@
     wrap.append(start, studio, msg, hiddenMedia);
     io.appendChild(wrap);
 
-    function say(text, kind) { msg.textContent = text || ''; msg.className = 'io-msg' + (kind ? ' is-' + kind : ''); }
+    /**
+     * A message where the visitor is looking: beside the control that caused it
+     * (`near`), else at the top of the open pane in the studio, else under the
+     * start form — and scrolled into view. Errors are announced as alerts.
+     */
+    function say(text, kind, near) {
+      msg.textContent = text || ''; msg.className = 'io-msg' + (kind ? ' is-' + kind : '');
+      msg.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+      if (!text) return;
+      let host = near && near.isConnected ? (near.closest('.aiimg-row, .field, .field-check') || near) : null;
+      if (host) host.insertAdjacentElement('afterend', msg);
+      else if (!studio.hidden) { const open = Object.values(panes).find((p) => !p.hidden); if (open) open.insertAdjacentElement('afterbegin', msg); else side.appendChild(msg); }
+      else { const m = S.modeTab === 'promote' ? promotePane : scriptPane; m.appendChild(msg); }
+      if (kind === 'warn' || kind === 'error') { try { msg.scrollIntoView({ block: 'nearest' }); } catch (e) { /* old browsers */ } }
+    }
     function note(text) { stageMsg.textContent = text || ''; stageMsg.hidden = !text; }
-    function showPane(k) { paneTabs.set(k); for (const p in panes) panes[p].hidden = p !== k; if (k === 'export') refreshCaptionPreview(); }
+    /* a message belongs to what was on screen when it was said: a new pane starts clean */
+    function showPane(k) { paneTabs.set(k); for (const p in panes) panes[p].hidden = p !== k; if (msg.textContent && !S.job) say(''); if (k === 'export') refreshCaptionPreview(); }
     function setMode(k) {
       S.modeTab = k; modeTabs.set(k);
       scriptPane.hidden = k !== 'script'; promotePane.hidden = k !== 'promote';
@@ -3349,7 +3458,8 @@
     /* ---------------- preview ---------------- */
     const pctx = canvas.getContext('2d');
     let dirty = true;
-    const invalidate = () => { dirty = true; };
+    /* every change that redraws also re-checks the scene warnings and schedules a draft save (both debounced) */
+    const invalidate = () => { dirty = true; sceneWarnSoon(); saveDraftSoon(); };
     function sizePreview() {
       const { w, h: hh } = S.size;
       const s = PREVIEW_MAX / Math.max(w, hh);
@@ -3364,6 +3474,8 @@
       pctx.setTransform(1, 0, 0, 1, 0, 0);
       pctx.clearRect(0, 0, canvas.width, canvas.height);
       if (!S.scenes.length) { dirty = false; return; }
+      /* a brand change can empty or fill the end card: the timeline and the scene list follow */
+      if (emptyEnds(S)) { updateTotal(); if (!sceneList.contains(document.activeElement)) renderScenes(); }
       pctx.save();
       pctx.scale(canvas.width / w, canvas.height / hh);
       renderFrame(pctx, w, hh, S.t, S, { credit: false });
@@ -3475,7 +3587,7 @@
     const chosen = el('div', 'reel-chosen'); chosen.hidden = true;
     const totalEl = el('p', 'aiimg-status'); totalEl.id = 'reel-total'; totalEl.setAttribute('aria-live', 'polite');
     const undoRow = el('div', 'aiimg-row reel-undo'); undoRow.hidden = true;
-    const fitChk = on(check('reel-fit', 'Fit scenes to the voice', false), () => { S.fitVoice = fitChk.input.checked; applyFit(); });
+    const fitChk = on(check('reel-fit', 'Fit scenes to the voice', false), () => { S.fitVoice = fitChk.input.checked; try { fitChk2.input.checked = S.fitVoice; } catch (e) { /* */ } applyFit(); });
     fitChk.hidden = true;
     const sceneList = el('ol', 'reel-scenes');
     const addText = button('+ Text scene', 'btn-ghost', () => addScene(beat('text', { text: 'New scene' })));
@@ -3487,7 +3599,8 @@
         const sc = buildScript(S.promote, Object.assign({}, S.brand, { endcard: true }), S.look).filter((x) => x.type === 'endcard')[0];
         if (sc) return sc;
       }
-      return beat('endcard', { title: S.brand.handle || '', qr: !!S.brand.qr });
+      /* the title follows the handle as it is typed, until the visitor writes a title of their own */
+      return beat('endcard', { title: S.brand.handle || '', qr: !!S.brand.qr, _autoTitle: true });
     }
     panes.scenes.append(h('Scenes', 'reel-scenes-h'), chosen, totalEl, undoRow, fitChk, sceneList, row(addText, addMedia, addEnd),
       hint('Click a scene to jump to it. Each scene fades into the next over a third of a second.'));
@@ -3500,17 +3613,32 @@
       const ic = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); ic.setAttribute('class', 'ico'); ic.setAttribute('aria-hidden', 'true');
       const use = document.createElementNS('http://www.w3.org/2000/svg', 'use'); use.setAttribute('href', '/assets/icons.svg#' + r.glyph); ic.appendChild(use);
       const txt = el('div', 'reel-chosen-text'); txt.append(el('strong', null, r.title), el('small', null, r.section + (r.io ? ' · ' + r.io : '')));
-      const change = button('Change tool', 'btn-ghost', () => { startOver(); setMode('promote'); find.focus(); });
+      const change = button('Change tool', 'btn-ghost', () => { if (startOver('Change the tool?') === false) return; setMode('promote'); find.focus(); });
       const rewrite = button('Rewrite script', 'btn-ghost', () => {
         if (!confirm('Write the script for ' + r.title + ' again? Your edits to the scenes will be lost.')) return;
         usePromote(r, true);
       });
       chosen.append(ic, txt, change, rewrite);
     }
+    /** With no scenes there is nothing to play or export: the buttons say so instead of failing silently. */
+    function syncEmptyUi() {
+      const none = !S.scenes.length;
+      try {
+        playBtn.disabled = none; scrub.disabled = none;
+        exportBtn.disabled = none || !!S.exporting; coverBtn.disabled = none || !!S.exporting; coverNow.disabled = none;
+        const why = 'Add a scene first — there is nothing to play or export.';
+        for (const b of [playBtn, exportBtn, coverBtn, coverNow]) b.title = none ? why : '';
+        emptyNote.hidden = !none;
+        if (none) { S.t = 0; capPreview.value = ''; }
+      } catch (e) { /* the Export pane is built after the Scenes pane */ }
+    }
     function updateTotal() {
+      emptyEnds(S);
       const D = totalSeconds(S);
       const n = S.scenes.length;
-      if (D > MAX_SECONDS) { totalEl.textContent = n + ' scenes · ' + D.toFixed(1) + ' s — over 90 s: Reels are cut at 90 s; shorten a scene'; totalEl.className = 'aiimg-status is-warn'; }
+      syncEmptyUi();
+      if (!n) { totalEl.textContent = 'No scenes — add a text scene, a picture or a clip below.'; totalEl.className = 'aiimg-status is-warn'; }
+      else if (D > MAX_SECONDS) { totalEl.textContent = n + ' scenes · ' + D.toFixed(1) + ' s — ' + (D - MAX_SECONDS).toFixed(1) + ' s over 90 s: Reels are cut at 90 s; shorten or delete scenes'; totalEl.className = 'aiimg-status is-warn'; }
       else { totalEl.textContent = n + ' scene' + (n === 1 ? '' : 's') + ' · ' + D.toFixed(1) + ' s'; totalEl.className = 'aiimg-status'; }
       addEnd.disabled = S.scenes.some((x) => x.type === 'endcard');
       syncTransport();
@@ -3523,6 +3651,102 @@
       soundDirty();
       invalidate();
       refreshCaptionPreview();
+      S.edited = true;
+      drawCoverSoon();
+    }
+    /** A visitor's edit: the reel has unsaved changes worth confirming before they are thrown away. */
+    function edited() { S.edited = true; updateSoundStatus(); drawCoverSoon(); }
+    let coverT_ = 0;
+    function drawCoverSoon() { clearTimeout(coverT_); coverT_ = setTimeout(() => { try { drawCoverThumb(); } catch (e) { /* not built yet */ } }, 300); }
+
+    /* ---- scenes whose text cannot be fitted ---- */
+    let warnT = 0;
+    function sceneWarnSoon() { clearTimeout(warnT); warnT = setTimeout(sceneWarnings, 250); }
+    /**
+     * Each scene whose words would not fit at a readable size (the same check
+     * that feeds overflow()) shows a warning beside it, with a suggested length.
+     */
+    function sceneWarnings() {
+      if (studio.hidden || !S.look) return;
+      const { w, h: hh } = S.size;
+      for (const p of sceneList.querySelectorAll('.reel-scene-warn')) {
+        const sc = S.scenes.find((x) => x.id === p.dataset.id);
+        let over = 0;
+        if (sc && (isWordy(sc) || sc.type === 'endcard')) { try { over = planOf(sc, w, hh, S.look, S).overs.length; } catch (e) { over = 0; } }
+        p.hidden = !over;
+        if (over) {
+          const need = r1(clamp(wordCount(spoken(sc)) / 2.2, sc.seconds, 15));
+          p.textContent = 'This scene’s text is too long to read: shorten it or split it into two scenes' + (need > sc.seconds + 0.2 ? ', and give it more time (about ' + need + ' s).' : '.');
+        }
+      }
+    }
+
+    /* ---- the draft: the reel is kept in this browser as it is edited, and offered back next time ---- */
+    const DRAFT_KEY = 'reel-maker-draft-v1';
+    let draftT = 0, draftOff = false;
+    function saveDraftSoon() { if (draftOff) return; clearTimeout(draftT); draftT = setTimeout(saveDraft, 800); }
+    /** Everything a reel is made of, as JSON — except pictures, clips, the voice and the music (files are not kept). */
+    function draftOf() {
+      const drop = new Set(['media', '_plan', 'base', '_skip']);
+      const scenes = S.scenes.map((sc) => {
+        const o = {};
+        for (const k of Object.keys(sc)) { if (drop.has(k) || typeof sc[k] === 'function') continue; o[k] = sc[k]; }
+        if (sc.type === 'media') o.missing = sc.media ? { name: sc.media.name, kind: sc.media.kind } : sc.missing || { name: 'picture', kind: 'image' };
+        return o;
+      });
+      const b = S.brand;
+      return {
+        v: 1, savedAt: Date.now(), mode: S.mode, promote: S.promote ? S.promote.path : null, script: scriptBox.value, tpl: tplSel.value,
+        scenes, look: S.look && S.look.spec, lookLock: S.lookLock,
+        brand: { handle: b.handle, handleTouched: !!b.handleTouched, url: S.promote ? '' : b.url, endcard: b.endcard, qr: b.qr, progress: b.progress, safe: b.safe,
+          logoKind: b.logoKind === 'site' ? 'site' : 'none', logoLost: b.logoKind === 'upload', utm: b.utm, aiLabel: !!b.aiLabel, madeWith: b.madeWith !== false },
+        captions: { source: S.captions.source === 'auto' ? 'scene' : S.captions.source, chosen: S.captions.chosen, style: S.captions.style },
+        coverT: S.coverT, sizeKey: S.sizeKey, quality: S.quality, openOnCover: S.openOnCover !== false,
+        hadVoice: !!S.voice, hadMusic: !!S.music
+      };
+    }
+    function saveDraft() {
+      if (draftOff || !S.scenes.length || studio.hidden) return;
+      try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draftOf())); } catch (e) { /* storage full or blocked: the draft is not kept */ }
+    }
+    function readDraft() {
+      try { const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); return d && d.v === 1 && Array.isArray(d.scenes) && d.scenes.length ? d : null; } catch (e) { return null; }
+    }
+    function dropDraft() { try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* */ } }
+    const agoText = (ms) => { const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? 'a moment ago' : m < 60 ? m + ' min ago' : m < 60 * 36 ? Math.round(m / 60) + ' h ago' : new Date(ms).toLocaleDateString(); };
+    /** Put a saved reel back. Pictures, clips, a voice and music are not in a draft: the scenes that need theirs are named. */
+    async function restoreDraft(d) {
+      draftOff = true;
+      try {
+        scriptBox.value = d.script || ''; tplSel.value = d.tpl || '';
+        Object.assign(S.brand, d.brand || {});
+        if (S.brand.logoKind === 'site') { try { S.brand.logo = await loadSiteLogo(); } catch (e) { S.brand.logo = null; S.brand.logoKind = 'none'; } } else S.brand.logo = null;
+        handleIn.value = S.brand.handle || ''; urlIn.value = S.brand.url || ''; utmIn.value = S.brand.utm || 'instagram';
+        if (d.promote) {
+          await Promise.all([loadStories(), loadExamples(), loadFonts()]);
+          const idx = await ensureIndex();
+          const r = idx && idx.find((x) => x.path === d.promote);
+          if (r) { S.mode = 'promote'; S.promote = r; S.brand.url = '1234tools.com/' + r.path; urlIn.value = S.brand.url; urlIn.readOnly = true; utmField.hidden = false; }
+        } else { S.mode = 'script'; S.promote = null; }
+        S.scenes = d.scenes.map((o) => Object.assign({}, o, { id: nid(), media: null }));
+        S.lookLock = d.lookLock || {};
+        if (d.look) setLook(d.look, { replace: true });
+        Object.assign(S.captions, { source: d.captions ? d.captions.source : 'scene', chosen: !!(d.captions && d.captions.chosen), segments: [], cues: [] });
+        if (d.captions && d.captions.style) Object.assign(S.captions.style, d.captions.style);
+        S.coverT = d.coverT === undefined ? null : d.coverT; S.openOnCover = d.openOnCover !== false;
+        if (d.sizeKey && SIZES[d.sizeKey]) { S.sizeKey = d.sizeKey; S.size = { w: SIZES[d.sizeKey].w, h: SIZES[d.sizeKey].h }; try { sizeSel.value = d.sizeKey; } catch (e) { /* */ } }
+        if (d.quality) { S.quality = d.quality; try { qualSel.value = d.quality; } catch (e) { /* */ } }
+        try { syncMarksUi(); openChk.input.checked = S.openOnCover; qrChk.input.checked = !!S.brand.qr; endChk.input.checked = S.brand.endcard !== false; } catch (e) { /* */ }
+        openStudio();
+        S.edited = false;
+        const missing = S.scenes.map((sc, i) => (sc.type === 'media' ? (i + 1) + ' (' + ((sc.missing && sc.missing.name) || 'picture') + ')' : null)).filter(Boolean);
+        const lost = [];
+        if (missing.length) lost.push((missing.length === 1 ? 'scene ' : 'scenes ') + missing.join(', ') + ' need ' + (missing.length === 1 ? 'its picture or clip' : 'their pictures or clips') + ' again — pick the scene, then add the file in Media');
+        if (d.hadVoice) lost.push('the voiceover was not saved — record, upload or generate it again');
+        if (d.hadMusic) lost.push('the music was not saved — upload it again');
+        if (d.brand && d.brand.logoLost) lost.push('your uploaded logo was not saved');
+        say('Your last reel is back' + (lost.length ? '. Files are not kept with a draft: ' + lost.join('; ') + '.' : '.'), lost.length ? 'warn' : 'note', totalEl);
+      } finally { draftOff = false; }
     }
     function addScene(sc, atEnd) {
       const endAt = S.scenes.findIndex((x) => x.type === 'endcard');
@@ -3533,6 +3757,9 @@
       S.scenes.splice(at, 0, sc);
       scenesChanged(true);
       selectScene(at);
+      /* the new scene takes the focus, ready to type into */
+      const ta = sceneList.children[at] && sceneList.children[at].querySelector('.reel-scene-text');
+      if (ta && !studio.hidden && !panes.scenes.hidden) ta.focus({ preventScroll: false });
       return at;
     }
     function selectScene(i) {
@@ -3566,6 +3793,7 @@
     }
     function renderScenes() {
       sceneList.innerHTML = '';
+      emptyEnds(S);
       S.scenes.forEach((sc, i) => {
         const li = el('li', 'reel-scene'); li.dataset.id = sc.id; li.dataset.type = sc.type;
         const head = el('div', 'reel-scene-head');
@@ -3579,7 +3807,14 @@
           scenesChanged(false);
         });
         const unit = el('span', 'reel-unit', 's');
-        const mv = (d) => { const j = i + d; if (j < 0 || j >= S.scenes.length) return; const [x] = S.scenes.splice(i, 1); S.scenes.splice(j, 0, x); scenesChanged(true); selectScene(j); };
+        const mv = (d) => {
+          const j = i + d; if (j < 0 || j >= S.scenes.length) return;
+          const [x] = S.scenes.splice(i, 1); S.scenes.splice(j, 0, x); scenesChanged(true); selectScene(j);
+          /* keep the keyboard on the scene that moved: the same arrow, or the other one at the end of the list */
+          const li2 = sceneList.children[j];
+          const btn = li2 && (li2.querySelector('[aria-label="' + (d < 0 ? 'Move up' : 'Move down') + '"]:not(:disabled)') || li2.querySelector('[aria-label^="Move"]:not(:disabled)'));
+          if (btn) btn.focus();
+        };
         const upB = button('↑', 'btn-ghost', () => mv(-1)); upB.setAttribute('aria-label', 'Move up'); upB.disabled = i === 0;
         const dnB = button('↓', 'btn-ghost', () => mv(1)); dnB.setAttribute('aria-label', 'Move down'); dnB.disabled = i === S.scenes.length - 1;
         const dup = button('⧉', 'btn-ghost', () => { const c = Object.assign({}, sc, { id: nid(), _plan: null, emphasis: (sc.emphasis || []).slice(), proof: sc.proof ? sc.proof.slice() : sc.proof }); S.scenes.splice(i + 1, 0, c); scenesChanged(true); selectScene(i + 1); });
@@ -3592,7 +3827,7 @@
         if (HEADING_LABEL[sc.type]) {
           const hi = el('input', 'control reel-scene-heading'); hi.value = sc.heading || ''; hi.placeholder = HEADING_LABEL[sc.type];
           hi.setAttribute('aria-label', HEADING_LABEL[sc.type] + ' for scene ' + (i + 1));
-          hi.addEventListener('input', () => { sc.heading = hi.value; sc._plan = null; syncVO(sc); refreshCaptionPreview(); invalidate(); });
+          hi.addEventListener('input', () => { sc.heading = hi.value; sc._plan = null; syncVO(sc); refreshCaptionPreview(); invalidate(); edited(); });
           hi.addEventListener('focus', () => { if (S.live !== i) selectScene(i); });
           li.appendChild(hi);
         }
@@ -3603,7 +3838,7 @@
         ta.placeholder = sc.type === 'media' ? 'Optional caption line' : sc.type === 'endcard' ? 'Title on the end card' : listy ? 'One item per line' : 'Scene text';
         ta.setAttribute('aria-label', (sc.type === 'endcard' ? 'End card title' : sc.type === 'media' ? 'Caption for scene ' : 'Text of scene ') + (sc.type === 'endcard' ? '' : (i + 1)));
         ta.addEventListener('input', () => {
-          if (sc.type === 'endcard') sc.title = ta.value;
+          if (sc.type === 'endcard') { sc.title = ta.value; sc._autoTitle = false; emptyEnds(S); endNote.hidden = !sc._skip; updateTotal(); }
           else {
             const was = sc.text;
             sc.text = ta.value;
@@ -3614,9 +3849,16 @@
           syncVO(sc);
           refreshCaptionPreview();
           invalidate();
+          edited();
         });
         ta.addEventListener('focus', () => { if (S.live !== i) selectScene(i); });
         li.appendChild(ta);
+        /* text that cannot be fitted at a readable size says so, here, beside the scene */
+        const warnEl = el('p', 'aiimg-status is-warn reel-scene-warn'); warnEl.hidden = true; warnEl.dataset.id = sc.id;
+        li.appendChild(warnEl);
+        const endNote = el('small', 'field-hint reel-empty-end', 'Empty end card: left out of the preview and the export until it has a title here, or Brand has a handle, a URL or a logo.');
+        endNote.hidden = !(sc.type === 'endcard' && sc._skip);
+        if (sc.type === 'endcard') li.appendChild(endNote);
         /* what the voice says in this scene (the same line as in Sound) */
         const vo = el('textarea', 'control reel-scene-vo'); vo.rows = 1; vo.value = voOf(sc); vo.dataset.id = sc.id;
         vo.placeholder = 'Voice-over: silent';
@@ -3665,15 +3907,29 @@
       const sc = S.scenes[S.live];
       if (!sc || sc.type !== 'media') { mediaCtl.appendChild(hint('Pick a picture or clip scene in Scenes (or add one above) to set how it is shown.')); return; }
       const m = sc.media;
-      mediaCtl.appendChild(el('p', 'aiimg-status', m.name + ' · ' + m.width + '×' + m.height + (m.kind === 'video' ? ' · ' + fmtSec(m.duration) : '')));
+      if (!m) {
+        /* a scene from a restored draft: its file was not kept */
+        const lost = (sc.missing && sc.missing.name) || 'its picture';
+        const refill = hiddenFile('reel-media-refill', 'image/*,video/*', 'Add this scene’s picture or clip again');
+        refill.addEventListener('change', () => { const f = refill.files[0]; refill.value = ''; if (f) refillMedia(sc, f); });
+        mediaCtl.append(el('p', 'aiimg-status is-warn', 'This scene’s ' + (sc.missing && sc.missing.kind === 'video' ? 'clip' : 'picture') + ' (' + lost + ') was not saved with the draft.'),
+          row(button('Add it again', 'btn-primary', () => refill.click())), refill);
+        return;
+      }
+      mediaCtl.appendChild(el('p', 'aiimg-status', m.name + ' · ' + m.width + '×' + m.height + (m.kind === 'video' ? ' · ' + fmtSec(m.duration) + (m.mbps ? ' · ' + Math.round(m.mbps) + ' Mbps' : '') : '')));
       const fitSel = select('reel-fit-mode', FITS, sc.fit);
       fitSel.addEventListener('change', () => { sc.fit = fitSel.value; renderScenes(); invalidate(); });
       mediaCtl.appendChild(field('Show it as', fitSel));
       if (m.kind === 'video') {
-        const mx = Math.max(0, (m.duration || 0) - 1);
-        const st = range('reel-media-start', 0, r1(mx), 0.1, clamp(sc.start || 0, 0, mx), (v) => v.toFixed(1) + ' s');
-        on(st, () => { sc.start = Number(st.input.value); invalidate(); soundDirty(); });
-        mediaCtl.appendChild(field('Start at', st));
+        /* start no later than the clip's length less the scene's, so the scene never runs past the end of the clip */
+        const mx = Math.max(0, Math.floor(((m.duration || 0) - sc.seconds) * 10) / 10);
+        if ((sc.start || 0) > mx) sc.start = mx;
+        const st = range('reel-media-start', 0, Math.max(0.1, mx), 0.1, clamp(sc.start || 0, 0, mx), (v) => v.toFixed(1) + ' s');
+        st.input.disabled = mx <= 0;
+        on(st, () => { sc.start = Math.min(mx, Number(st.input.value)); invalidate(); soundDirty(); });
+        mediaCtl.appendChild(field('Start at', st, mx <= 0
+          ? 'The clip (' + fmtSec(m.duration) + ') is no longer than the scene (' + fmtSec(sc.seconds) + '), so it plays from the start' + (m.duration < sc.seconds ? ' and its last frame holds for ' + fmtSec(sc.seconds - m.duration) + '.' : '.')
+          : 'Up to ' + fmtSec(mx) + ': the clip is ' + fmtSec(m.duration) + ' and the scene ' + fmtSec(sc.seconds) + ' long.'));
         const snd = on(check('reel-media-sound', 'Use the clip’s own sound', !!sc.sound), async () => {
           sc.sound = snd.input.checked;
           if (sc.sound && !m.audioBuffer) await decodeClipSound(sc, snd.input);
@@ -3703,35 +3959,49 @@
         setTimeout(() => res(v.readyState >= 1), 10000);
       });
     }
+    /** Open one picture or clip for a scene; throws an Error whose message says why not. */
+    async function loadMedia(f, extra) {
+      const isVideo = /^video\//.test(f.type) || /\.(mp4|m4v|mov|webm|mkv|ogv)$/i.test(f.name || '');
+      const isImage = /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|bmp|avif|heic|heif)$/i.test(f.name || '');
+      if (!isVideo && !isImage) throw new Error('not a picture or a video');
+      if (isVideo && f.size > MAX_VIDEO_BYTES) throw new Error('over 200 MB — trim it first, the whole clip is held in memory');
+      if (isImage && f.size > MAX_IMAGE_BYTES) throw new Error('over 40 MB');
+      const name = String(f.name || (isVideo ? 'clip' : 'picture'));
+      if (isImage) {
+        const im = await A.loadImageFile(f);
+        let c = im.canvas;
+        const s = Math.min(1, MEDIA_MAX_EDGE / Math.max(c.width, c.height));
+        if (s < 1) c = A.scaled(c, c.width * s, c.height * s);
+        return { kind: 'image', name, file: f, canvas: c, width: c.width, height: c.height, duration: 0 };
+      }
+      const url = URL.createObjectURL(f);
+      const v = el('video', 'aivid-video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = url;
+      hiddenMedia.appendChild(v);
+      const ok = await videoMeta(v);
+      if (!ok || !v.videoWidth) { URL.revokeObjectURL(url); v.remove(); throw new Error('could not be opened as a video in this browser'); }
+      v.addEventListener('seeked', invalidate); v.addEventListener('loadeddata', invalidate);
+      const duration = isFinite(v.duration) ? v.duration : (extra && extra.duration) || 5;
+      return { kind: 'video', name, file: f, url, video: v, width: v.videoWidth, height: v.videoHeight, duration, mbps: f.size * 8 / Math.max(0.1, duration) / 1e6 };
+    }
+    /**
+     * Add pictures and clips as scenes. Anything not added is listed with its
+     * reason, and the message stays (it used to be wiped by the success of the
+     * files that did go in).
+     */
     async function addMediaFiles(files, extra) {
       const list = Array.from(files || []);
       let added = 0, firstAt = -1;
-      for (const f of list) {
+      const skipped = [];
+      for (let k = 0; k < list.length; k++) {
+        const f = list[k];
+        const name = String(f.name || 'file');
         const count = S.scenes.filter((x) => x.type === 'media').length;
-        if (count >= MAX_MEDIA) { say('Ten pictures or clips per reel — everything is held in your browser’s memory.', 'warn'); break; }
-        const isVideo = /^video\//.test(f.type) || /\.(mp4|m4v|mov|webm|mkv|ogv)$/i.test(f.name || '');
-        const isImage = /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|bmp|avif|heic|heif)$/i.test(f.name || '');
-        if (!isVideo && !isImage) { say(f.name + ' is not a picture or a video.', 'warn'); continue; }
-        if (isVideo && f.size > MAX_VIDEO_BYTES) { say(f.name + ' is over 200 MB. Trim it first — the whole clip is held in memory.', 'warn'); continue; }
-        if (isImage && f.size > MAX_IMAGE_BYTES) { say(f.name + ' is over 40 MB.', 'warn'); continue; }
+        if (count >= MAX_MEDIA) {
+          for (const g of list.slice(k)) skipped.push(String(g.name || 'file') + ' (a reel holds ten pictures or clips — everything is kept in your browser’s memory)');
+          break;
+        }
         try {
-          let media;
-          const name = String(f.name || (isVideo ? 'clip' : 'picture'));
-          if (isImage) {
-            const im = await A.loadImageFile(f);
-            let c = im.canvas;
-            const s = Math.min(1, MEDIA_MAX_EDGE / Math.max(c.width, c.height));
-            if (s < 1) c = A.scaled(c, c.width * s, c.height * s);
-            media = { kind: 'image', name, file: f, canvas: c, width: c.width, height: c.height, duration: 0 };
-          } else {
-            const url = URL.createObjectURL(f);
-            const v = el('video', 'aivid-video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = url;
-            hiddenMedia.appendChild(v);
-            const ok = await videoMeta(v);
-            if (!ok || !v.videoWidth) { URL.revokeObjectURL(url); v.remove(); say(name + ' could not be opened as a video in this browser.', 'warn'); continue; }
-            v.addEventListener('seeked', invalidate); v.addEventListener('loadeddata', invalidate);
-            media = { kind: 'video', name, file: f, url, video: v, width: v.videoWidth, height: v.videoHeight, duration: isFinite(v.duration) ? v.duration : (extra && extra.duration) || 5 };
-          }
+          const media = await loadMedia(f, extra);
           const sc = { id: nid(), type: 'media', media, fit: media.width / media.height < 0.7 ? 'phone' : 'card', start: 0, sound: false, motion: media.kind === 'image', text: '',
             seconds: media.kind === 'video' ? r1(clamp(media.duration, 1, 15)) : 3 };
           if (extra && extra.fit) sc.fit = extra.fit;
@@ -3739,9 +4009,22 @@
           if (firstAt < 0) firstAt = at;
           if (extra && extra.sound) { sc.sound = true; await decodeClipSound(sc); soundDirty(); }
           added++;
-        } catch (e) { say((e && e.message) || String(e), 'error'); }
+        } catch (e) { skipped.push(name + ' (' + ((e && e.message) || String(e)) + ')'); }
       }
-      if (added) { selectScene(firstAt); say(''); }
+      if (added) selectScene(firstAt);
+      if (skipped.length) say((added ? added + ' added. ' : '') + 'Not added: ' + skipped.join('; ') + '.', 'warn', drop);
+      else if (added) say('');
+      const heavy = S.scenes.filter((x) => isVideoScene(x) && x.media.mbps > 25);
+      if (heavy.length && !skipped.length) say(heavy.map((x) => x.media.name).join(', ') + ' ' + (heavy.length === 1 ? 'is' : 'are') + ' a high-bitrate clip (' + heavy.map((x) => Math.round(x.media.mbps) + ' Mbps').join(', ') + '): exporting reads it frame by frame, so expect the export to take a while — the Export pane estimates how long.', 'note', drop);
+    }
+    /** A restored scene's picture or clip, added again into that same scene. */
+    async function refillMedia(sc, f) {
+      try {
+        const media = await loadMedia(f);
+        sc.media = media; delete sc.missing;
+        if (media.kind === 'image') sc.motion = sc.motion !== false;
+        scenesChanged(true); renderMediaCtl(); say('');
+      } catch (e) { say(String(f.name || 'That file') + ' was not added: ' + ((e && e.message) || String(e)) + '.', 'warn', mediaCtl); }
     }
 
     /* screen recording */
@@ -3750,7 +4033,7 @@
       if (screen) return;
       let stream;
       try { stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: true }); }
-      catch (e) { if (e && e.name === 'NotAllowedError') say('Screen recording was cancelled or not allowed.', 'warn'); else say((e && e.message) || String(e), 'error'); return; }
+      catch (e) { if (e && e.name === 'NotAllowedError') say('Screen recording was cancelled or not allowed.', 'warn', screenBtn); else say((e && e.message) || String(e), 'error', screenBtn); return; }
       const types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
       const mime = types.find((t) => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } }) || '';
       let rec;
@@ -3768,7 +4051,7 @@
         const secs = (performance.now() - began) / 1000;
         screen = null;
         const blob = new Blob(chunks, { type: 'video/webm' });
-        if (blob.size < 1000) { say('The screen recording was empty.', 'warn'); return; }
+        if (blob.size < 1000) { say('The screen recording was empty.', 'warn', screenBtn); return; }
         const file = new File([blob], 'screen-recording.webm', { type: 'video/webm' });
         await addMediaFiles([file], { fit: 'card', sound: hasAudio, duration: secs });
       };
@@ -3793,8 +4076,13 @@
     const voiceOffset = range('reel-voice-offset', -2, 5, 0.1, 0.3, (v) => v.toFixed(1) + ' s');
     const voiceGain = range('reel-voice-gain', -12, 12, 1, 0, (v) => (v > 0 ? '+' : '') + v + ' dB');
     const voiceCtl = el('div', 'reel-voice-ctl'); voiceCtl.hidden = true;
-    voiceCtl.append(grid(field('Starts at', voiceOffset), field('Volume', voiceGain)));
-    on(voiceOffset, () => { if (!S.voice) return; S.voice.offset = Number(voiceOffset.input.value); applyFit(); S.captions.cues = cuesFor(S); updateCapStatusTail(); soundDirty(); invalidate(); });
+    /* the same switch as in Scenes, where the voice is: the Captions pane points here when the voice runs past the reel */
+    const fitChk2 = on(check('reel-fit-sound', 'Fit scenes to the voice', false), () => { S.fitVoice = fitChk2.input.checked; fitChk.input.checked = S.fitVoice; applyFit(); });
+    voiceCtl.append(field('Starts at', voiceOffset), field('Volume', voiceGain), fitChk2);
+    on(voiceOffset, () => {
+      if (!S.voice) return; S.voice.offset = Number(voiceOffset.input.value);
+      if (!S.voice.generated && S.captions.segments.length) S.voice.plan = planFromWords(S.captions.segments.flatMap((s) => s.words)) || undefined;
+      applyFit(); S.captions.cues = cuesFor(S); updateCapStatusTail(); soundDirty(); invalidate(); });
     on(voiceGain, () => { if (!S.voice) return; S.voice.gainDb = Number(voiceGain.input.value); soundDirty(); });
     const musicFile = hiddenFile('reel-music-file', 'audio/*', 'Upload music');
     const upMusicBtn = button('Upload music', 'btn-ghost', () => musicFile.click());
@@ -3806,22 +4094,42 @@
     const musicFrom = range('reel-music-from', 0, 1, 0.5, 0, (v) => mmss(v) + (S.music ? ' of ' + mmss(S.music.duration) : ''));
     let listen = null;
     const stopListen = () => { if (listen) { try { listen.src.stop(); } catch (e) { /* */ } listen.ctx.close().catch(() => {}); listen = null; } listenBtn.textContent = '▶ Listen'; listenBtn.setAttribute('aria-pressed', 'false'); };
-    const listenBtn = button('▶ Listen', 'btn-ghost', () => {
+    const listenBtn = button('▶ Listen', 'btn-ghost', async () => {
       if (listen || !S.music) { stopListen(); return; }
+      const from = Number(musicFrom.input.value) || 0;
+      try { await windowMusic(from); } catch (e) { say('That part of the track could not be read.', 'warn', listenBtn); return; }
       const ctx = new AudioContext();
       const src = ctx.createBufferSource(); src.buffer = S.music.audioBuffer;
       const g = ctx.createGain(); g.gain.value = dB(S.music.gainDb + 8);
       src.connect(g); g.connect(ctx.destination);
       src.onended = stopListen;
-      src.start(0, Number(musicFrom.input.value) || 0, 8);
+      src.start(0, Math.max(0, from - (S.music.base || 0)), 8);
       listen = { ctx, src };
       listenBtn.textContent = '■ Stop'; listenBtn.setAttribute('aria-pressed', 'true');
     });
     listenBtn.id = 'reel-music-listen'; listenBtn.setAttribute('aria-pressed', 'false');
+    /* the start can be typed as m:ss too — on a long track the slider alone is too coarse */
+    const musicFromText = el('input', 'control reel-music-from-text'); musicFromText.id = 'reel-music-from-text'; musicFromText.inputMode = 'numeric';
+    musicFromText.setAttribute('aria-label', 'Start the track at (minutes:seconds)'); musicFromText.value = '0:00'; musicFromText.size = 7;
+    const parseMmss = (s) => { const m = /^\s*(?:(\d+):)?(\d{1,2}(?:\.\d+)?)\s*$/.exec(String(s)); return m ? Number(m[1] || 0) * 60 + Number(m[2]) : NaN; };
+    musicFromText.addEventListener('change', () => {
+      if (!S.music) return;
+      const v = parseMmss(musicFromText.value);
+      if (!isFinite(v)) { say('Type the start as minutes:seconds, for example 1:25.', 'warn', musicFromText); return; }
+      const c = clamp(v, 0, Math.max(0, S.music.duration - 1));
+      musicFrom.set(c); setMusicFrom(c);
+    });
+    async function setMusicFrom(v) {
+      if (!S.music) return;
+      S.music.from = v; musicFromText.value = mmss(v);
+      if (listen) stopListen();
+      try { await windowMusic(v); } catch (e) { say('That part of the track could not be read.', 'warn', musicFromText); }
+      soundDirty();
+    }
     const musicCtl = el('div', 'reel-music-ctl'); musicCtl.hidden = true;
-    musicCtl.append(field('Start the track at', musicFrom), row(listenBtn), hint('Pick where the music begins, such as its chorus. Listen plays 8 seconds from there; a looped track goes back to this point, not to the start.'),
+    musicCtl.append(field('Start the track at', musicFrom), row(musicFromText, listenBtn), hint('Pick where the music begins, such as its chorus — drag, or type minutes:seconds. Listen plays 8 seconds from there; a looped track goes back to this point, not to the start.'),
       field('Music volume', musicGain), duckChk, loopChk);
-    on(musicFrom, () => { if (!S.music) return; S.music.from = Number(musicFrom.input.value) || 0; if (listen) stopListen(); soundDirty(); });
+    on(musicFrom, () => { if (!S.music) return; setMusicFrom(Number(musicFrom.input.value) || 0); });
     on(musicGain, () => { if (!S.music) return; S.music.gainDb = Number(musicGain.input.value); S.music.touched = true; soundDirty(); });
     on(duckChk, () => { if (S.music) { S.music.duck = duckChk.input.checked; soundDirty(); } });
     on(loopChk, () => { if (S.music) { S.music.loop = loopChk.input.checked; soundDirty(); } });
@@ -3882,15 +4190,21 @@
       if (clips) parts.push(clips + ' clip' + (clips === 1 ? '' : 's') + ' with their own sound');
       soundStatus.textContent = parts.length ? capFirst(parts.join(' · ')) + ' · reel ' + D.toFixed(1) + ' s' : 'No sound yet — the reel will be silent unless you add a voice or music.';
       fitChk.hidden = !S.voice;
+      try { fitChk.input.checked = fitChk2.input.checked = !!S.fitVoice; } catch (e) { /* Sound pane not built yet */ }
       /* a generated voice turns the AI label on (and removing it, off): the layout moves, so beats are laid out again */
       const marks = aiLabelOf(S) + '|' + madeWithOn(S);
       if (marks !== S._marks) { S._marks = marks; for (const sc of S.scenes) sc._plan = null; invalidate(); }
       try { syncMarksUi(); } catch (e) { /* the Export pane is not built yet */ }
       if (S.voice && S.voice.generated && !ttsJob) {
         const stale = scriptKey(spokenScenes()) !== S.voice.generated.script;
-        ttsStatus.textContent = stale ? 'The scene text has changed since the voice was made — press Generate voice again to match it.' : S.voice.generated.note;
+        ttsStatus.textContent = stale ? 'The voice-over script has changed since the voice was made — press Generate voice again to match it.' : S.voice.generated.note;
         ttsStatus.className = 'aiimg-status' + (stale ? ' is-warn' : '');
+        ttsStatus.dataset.state = stale ? 'stale' : 'made';
+      } else if (!ttsJob && /^(stale|made)$/.test(ttsStatus.dataset.state || '')) {
+        /* no generated voice any more (removed, or replaced by a recording): nothing to regenerate */
+        ttsStatus.textContent = ''; ttsStatus.className = 'aiimg-status'; ttsStatus.dataset.state = '';
       }
+      saveDraftSoon();
     }
     function infoRow(rowEl, name, dur, onRemove) {
       rowEl.innerHTML = '';
@@ -3909,8 +4223,8 @@
       soundStatus.textContent = 'Reading ' + (file.name || 'the recording') + '…';
       let dec;
       try { dec = await Wh.decodeAudio(file, { sampleRate: SR }); }
-      catch (e) { say((e && e.message) || String(e), 'error'); updateSoundStatus(); return; }
-      if (dec.duration > MAX_VOICE_SECONDS) { dec = await cutTo(dec, MAX_VOICE_SECONDS); say('Voice recordings are cut at 90 s, the Reels limit.', 'warn'); }
+      catch (e) { say((e && e.message) || String(e), 'error', upVoiceBtn); updateSoundStatus(); return; }
+      if (dec.duration > MAX_VOICE_SECONDS) { dec = await cutTo(dec, MAX_VOICE_SECONDS); say('Voice recordings are cut at 90 s, the Reels limit.', 'warn', upVoiceBtn); }
       if (S.capJob) S.capJob.abort();
       S.captions.segments = []; S.captions.cues = []; S.captions.status = 'idle'; renderSegs();
       S.voice = { file, name: file.name || 'voice', duration: dec.duration, audioBuffer: dec.audioBuffer, samples: dec.samples, offset: Number(voiceOffset.input.value), gainDb: Number(voiceGain.input.value), peak: peakOf(dec.audioBuffer) };
@@ -3932,17 +4246,88 @@
       if (S.music && !S.music.touched) { S.music.gainDb = -8; musicGain.set(-8); }
       soundDirty(); invalidate();
     }
+    /* ---- music of any length ----
+       A compressed track (MP3, M4A, OGG…) has to be decoded whole, into memory, by the browser: past
+       MUSIC_MAX_SECONDS that is refused up front with the real reason. A WAV is plain samples, so only
+       the stretch the reel needs is read from it — from "Start the track at", the reel's length and a
+       minute more — and read again when the start moves outside it. */
+    const MUSIC_MAX_SECONDS = 600;
+    function probeDuration(file) {
+      return new Promise((res) => {
+        const a = new Audio(); const u = URL.createObjectURL(file); let done = false;
+        const fin = (d) => { if (done) return; done = true; URL.revokeObjectURL(u); res(d); };
+        a.preload = 'metadata'; a.onloadedmetadata = () => fin(isFinite(a.duration) ? a.duration : null); a.onerror = () => fin(null);
+        a.src = u; setTimeout(() => fin(null), 8000);
+      });
+    }
+    /** The layout of a PCM WAV from its first 64 KB: format chunk, where the samples start, how long it is. null for anything else. */
+    async function wavInfo(file) {
+      const dv = new DataView(await file.slice(0, Math.min(file.size, 65536)).arrayBuffer());
+      const tag = (o) => String.fromCharCode(dv.getUint8(o), dv.getUint8(o + 1), dv.getUint8(o + 2), dv.getUint8(o + 3));
+      if (dv.byteLength < 44 || tag(0) !== 'RIFF' || tag(8) !== 'WAVE') return null;
+      let o = 12, fmt = null, out = null;
+      while (o + 8 <= dv.byteLength) {
+        const id = tag(o), size = dv.getUint32(o + 4, true);
+        if (id === 'fmt ') fmt = { at: o, size, channels: dv.getUint16(o + 10, true), rate: dv.getUint32(o + 12, true), blockAlign: dv.getUint16(o + 20, true) };
+        if (id === 'data') { const start = o + 8; const avail = file.size - start; out = { dataStart: start, dataSize: size && size !== 0xFFFFFFFF && size <= avail ? size : avail }; break; }
+        o += 8 + size + (size & 1);
+      }
+      if (!fmt || !out || !fmt.blockAlign || !fmt.rate) return null;
+      const fmtBytes = new Uint8Array(await file.slice(fmt.at, fmt.at + 8 + fmt.size).arrayBuffer());
+      return Object.assign(out, fmt, { fmtBytes, duration: out.dataSize / fmt.blockAlign / fmt.rate });
+    }
+    /** A WAV file holding only [from, from + secs) of a long one, for the browser to decode. */
+    function wavSlice(file, info, from, secs) {
+      const a = info.dataStart + Math.floor(from * info.rate) * info.blockAlign;
+      const len = Math.max(info.blockAlign, Math.min(info.dataStart + info.dataSize - a, Math.ceil(secs * info.rate) * info.blockAlign));
+      const head = new Uint8Array(12 + info.fmtBytes.length + 8); const dv = new DataView(head.buffer);
+      const put = (o, s) => { for (let i = 0; i < 4; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+      put(0, 'RIFF'); dv.setUint32(4, head.length - 8 + len, true); put(8, 'WAVE');
+      head.set(info.fmtBytes, 12);
+      put(12 + info.fmtBytes.length, 'data'); dv.setUint32(16 + info.fmtBytes.length, len, true);
+      return new File([head, file.slice(a, a + len)], 'part.wav', { type: 'audio/wav' });
+    }
+    /** (Re)read the stretch of a long WAV the reel needs from `from`; resolves when S.music.audioBuffer covers it. */
+    async function windowMusic(from) {
+      const mu = S.music;
+      if (!mu || !mu.wav) return;
+      const need = Math.max(30, totalSeconds(S)) + 60;
+      if (mu.audioBuffer && from >= mu.base && from + Math.min(need - 60, mu.duration - from) <= mu.base + mu.audioBuffer.duration) return;
+      soundStatus.textContent = 'Reading the track from ' + mmss(from) + '…';
+      const dec = await Wh.decodeAudio(wavSlice(mu.file, mu.wav, from, Math.min(need, mu.duration - from)), { sampleRate: SR });
+      if (S.music !== mu) return;
+      mu.audioBuffer = dec.audioBuffer; mu.base = from;
+      soundDirty();
+    }
     async function setMusic(file) {
       soundStatus.textContent = 'Reading ' + (file.name || 'the music') + '…';
-      let dec;
-      try { dec = await Wh.decodeAudio(file, { sampleRate: SR }); }
-      catch (e) { say((e && e.message) || String(e), 'error'); updateSoundStatus(); return; }
+      const isWav = /\.wav$/i.test(file.name || '') || /wav/.test(file.type || '');
+      const wav = isWav ? await wavInfo(file).catch(() => null) : null;
+      const total = wav ? wav.duration : await probeDuration(file);
+      if (!wav && total && total > MUSIC_MAX_SECONDS) {
+        say(String(file.name || 'That track') + ' is ' + mmss(total) + ' long. A compressed track (MP3, M4A, OGG, WebM) is decoded whole in your browser’s memory, so music can be up to ' + (MUSIC_MAX_SECONDS / 60) +
+          ' minutes long — or a WAV of any length. Cut out the part you want (any audio editor, or your phone’s) and upload that.', 'warn', upMusicBtn);
+        updateSoundStatus(); return;
+      }
+      let dec, base = 0;
+      try {
+        if (wav && wav.duration > MUSIC_MAX_SECONDS) dec = await Wh.decodeAudio(wavSlice(file, wav, 0, Math.min(wav.duration, Math.max(30, totalSeconds(S)) + 60)), { sampleRate: SR });
+        else dec = await Wh.decodeAudio(file, { sampleRate: SR });
+      } catch (e) {
+        say(total ? String(file.name || 'That track') + ' (' + mmss(total) + ') could not be read by this browser — it may be damaged or in a format the browser cannot play. Try an MP3, M4A or WAV copy.' : (e && e.message) || String(e), 'error', upMusicBtn);
+        updateSoundStatus(); return;
+      }
       const g = S.voice ? -16 : -8;
-      S.music = { file, name: file.name || 'music', duration: dec.duration, audioBuffer: dec.audioBuffer, gainDb: g, duck: duckChk.input.checked, loop: loopChk.input.checked, touched: false, from: 0 };
+      const duration = wav && wav.duration > MUSIC_MAX_SECONDS ? wav.duration : dec.duration;
+      S.music = { file, name: file.name || 'music', duration, audioBuffer: dec.audioBuffer, base, wav: wav && wav.duration > MUSIC_MAX_SECONDS ? wav : null,
+        gainDb: g, duck: duckChk.input.checked, loop: loopChk.input.checked, touched: false, from: 0 };
       musicGain.set(g);
       stopListen();
-      musicFrom.input.max = String(Math.max(0, Math.floor((dec.duration - 1) * 2) / 2));
-      musicFrom.set(0);
+      /* on a long track the slider moves in bigger steps, and the time can be typed */
+      const step = duration > 1200 ? 5 : duration > 300 ? 1 : 0.5;
+      musicFrom.input.step = String(step);
+      musicFrom.input.max = String(Math.max(0, Math.floor((duration - 1) / step) * step));
+      musicFrom.set(0); musicFromText.value = '0:00';
       infoRow(musicInfo, S.music.name, S.music.duration, () => { stopListen(); S.music = null; musicInfo.hidden = true; musicCtl.hidden = true; soundDirty(); });
       musicCtl.hidden = false;
       soundDirty();
@@ -3964,6 +4349,30 @@
       }
       renderScenes();
       scenesChanged(false);
+    }
+
+    /**
+     * Scene lengths from a transcript's word times: the voice-over lines are
+     * matched to the words by their share of the word count, and each scene
+     * ends halfway through the pause after its last word. null when some
+     * scene (other than the end card) has no line to match.
+     */
+    function planFromWords(words) {
+      const list = S.scenes.filter((sc) => sc.type !== 'endcard');
+      if (!words.length || !list.length || !S.voice) return null;
+      const counts = list.map((sc) => wordCount(voOf(sc)));
+      if (counts.some((n) => !n)) return null;
+      const total = counts.reduce((a, b) => a + b, 0), o = Math.max(0, S.voice.offset);
+      const plan = {};
+      let cum = 0, prevB = 0;
+      list.forEach((sc, k) => {
+        cum += counts[k];
+        const end = Math.min(words.length - 1, Math.max(0, Math.round(cum / total * words.length) - 1));
+        const b = k === list.length - 1 ? o + words[words.length - 1].end + 0.4 : o + (words[end].end + (words[end + 1] ? words[end + 1].start : words[end].end)) / 2;
+        plan[sc.id] = clamp(Math.ceil((b - prevB) * 10) / 10, 1, 15);
+        prevB += plan[sc.id];
+      });
+      return plan;
     }
 
     /* ---------------- generated voice ---------------- */
@@ -4021,7 +4430,7 @@
         const ref = li.querySelector('.reel-vo-ref'); if (ref) ref.textContent = refOf(sc);
       }
     }
-    function voChanged() { updateSoundStatus(); if (!prompter.hidden) renderPrompter(); }
+    function voChanged() { S.edited = true; updateSoundStatus(); if (!prompter.hidden) renderPrompter(); }
     function ttsBusy(on) {
       genBtn.disabled = on; previewBtn.disabled = on; ttsVoice.disabled = on;
       ttsCancel.hidden = !on;
@@ -4036,8 +4445,10 @@
         else if (p.stage === 'speak') { ttsStatus.textContent = prefix; ttsBarAt(base + span * p.done / Math.max(1, p.of)); }
       };
     }
-    function stopTtsPlay() { if (ttsPlay) { try { ttsPlay.close(); } catch (e) { /* closed */ } ttsPlay = null; } }
+    function stopTtsPlay() { if (ttsPlay) { try { ttsPlay.close(); } catch (e) { /* closed */ } ttsPlay = null; } previewBtn.textContent = '▶ Preview'; previewBtn.setAttribute('aria-pressed', 'false'); }
+    /* Preview plays one sentence; while it plays the same button stops it */
     async function previewVoice() {
+      if (ttsPlay) { stopTtsPlay(); return; }
       if (!TTS || ttsJob) return;
       const v = TTS.voices.find((x) => x.id === ttsVoice.value) || TTS.voices[0];
       const job = ttsJob = new AbortController();
@@ -4055,6 +4466,7 @@
           const src = ac.createBufferSource(); src.buffer = b; src.connect(ac.destination);
           src.onended = () => { if (ttsPlay === ac) stopTtsPlay(); };
           src.start();
+          setTimeout(() => { if (ttsPlay === ac) { previewBtn.textContent = '■ Stop'; previewBtn.setAttribute('aria-pressed', 'true'); } }, 0);
         } catch (e) { /* no audio output: the preview was still made */ }
       } catch (e) {
         if (e && e.name === 'AbortError') ttsStatus.textContent = 'Cancelled.';
@@ -4173,9 +4585,9 @@
       let stream;
       try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
       catch (e) {
-        if (e && e.name === 'NotAllowedError') say('Microphone access was refused — upload a voice file instead.', 'warn');
-        else if (e && e.name === 'NotFoundError') say('No microphone found.', 'warn');
-        else say((e && e.message) || String(e), 'error');
+        if (e && e.name === 'NotAllowedError') say('Microphone access was refused — allow it in the browser’s address bar, or upload a voice file instead.', 'warn', recVoiceBtn);
+        else if (e && e.name === 'NotFoundError') say('No microphone found — plug one in, or upload a voice file instead.', 'warn', recVoiceBtn);
+        else say((e && e.message) || String(e), 'error', recVoiceBtn);
         return;
       }
       const types = ['audio/webm;codecs=opus', 'audio/mp4'];
@@ -4200,7 +4612,7 @@
         mic = null;
         const type = (rec.mimeType || mime || 'audio/webm').split(';')[0];
         const blob = new Blob(chunks, { type });
-        if (blob.size < 500) { say('Nothing was recorded.', 'warn'); updateSoundStatus(); return; }
+        if (blob.size < 500) { say('Nothing was recorded.', 'warn', recVoiceBtn); updateSoundStatus(); return; }
         await setVoice(new File([blob], 'voice-recording.' + (/mp4/.test(type) ? 'm4a' : 'webm'), { type }));
       };
       rec.start(250);
@@ -4292,6 +4704,8 @@
         });
         if (job !== S.capJob || voice !== S.voice) return;
         S.captions.segments = res.segments.map((s) => ({ start: s.start, end: s.end, text: s.text, words: s.words.map((w) => ({ text: w.text, start: w.start, end: w.end })) }));
+        /* a recorded voice: Whisper's word times say where each scene's line ends, so "Fit scenes to the voice" can follow them */
+        if (!voice.generated) { const p = planFromWords(S.captions.segments.flatMap((s) => s.words)); if (p) { voice.plan = p; if (S.fitVoice) applyFit(); } }
         S.captions.cues = cuesFor(S);
         renderSegs();
         const words = S.captions.segments.reduce((n, s) => n + s.words.length, 0);
@@ -4320,7 +4734,7 @@
       if (S.captions.status !== 'ready' || !S.voice) return;
       const D = totalSeconds(S);
       const over = S.voice.duration + S.voice.offset - D;
-      capStatus.textContent = (capStatus.dataset.base || 'Captions') + (over > 0.3 ? ' · the voice runs ' + over.toFixed(1) + ' s past the reel — tick Fit scenes to the voice or shorten it' : '') + ' — captions ready';
+      capStatus.textContent = (capStatus.dataset.base || 'Captions') + (over > 0.3 ? ' · the voice runs ' + over.toFixed(1) + ' s past the reel — tick “Fit scenes to the voice” in Sound (or Scenes), or shorten it' : '') + ' — captions ready';
     }
     function renderSegs() {
       segList.innerHTML = '';
@@ -4372,7 +4786,7 @@
       scenesChanged(true);
     });
     const qrChk = on(check('reel-qr', 'QR code on the end card', false), () => { S.brand.qr = qrChk.input.checked; invalidate(); });
-    const qrHint = hint('Add a URL to put a QR code on the end card.');
+    const qrHint = hint('Add a URL to put a QR code on the end card.'); qrHint.id = 'reel-qr-hint';
     const barChk = on(check('reel-progress', 'Progress bar', true), () => { S.brand.progress = barChk.input.checked; invalidate(); });
     const safeChk = on(check('reel-safe', 'Show safe area in the preview', true), () => { S.brand.safe = safeChk.input.checked; safe.hidden = !S.brand.safe; });
     const logoRow = el('div', 'reel-logo-row');
@@ -4398,7 +4812,13 @@
       grid(field('Handle', handleIn), field('URL', urlIn)), utmField,
       endChk, qrChk, qrHint, barChk, safeChk, h('Logo'), logoRow,
       h('Colours'), grid(field('Accent', lookAccent), field('Text', lookText)), grid(field('Background top', lookBg1), field('Background bottom', lookBg2)));
-    handleIn.addEventListener('input', () => { S.brand.handle = handleIn.value.trim(); invalidate(); refreshCaptionPreview(); ensureEndCard(); });
+    handleIn.addEventListener('input', () => {
+      S.brand.handle = handleIn.value.trim();
+      let moved = false;
+      for (const sc of S.scenes) if (sc.type === 'endcard' && sc._autoTitle && sc.title !== S.brand.handle) { sc.title = S.brand.handle; sc._plan = null; moved = true; }
+      if (moved) { for (const ta of root.querySelectorAll('.reel-scene[data-type=endcard] .reel-scene-text')) ta.value = S.brand.handle; scenesChanged(false); }
+      invalidate(); refreshCaptionPreview(); ensureEndCard();
+    });
     urlIn.addEventListener('input', () => { if (S.promote) return; S.brand.url = urlIn.value.trim(); syncQrUi(); invalidate(); refreshCaptionPreview(); ensureEndCard(); });
     utmIn.addEventListener('input', () => { S.brand.utm = utmIn.value.trim() || 'instagram'; invalidate(); });
     function endCardHasContent() { return !!(S.promote || S.brand.handle || S.brand.url || S.brand.logo); }
@@ -4480,16 +4900,20 @@
 
     /* ---------------- export pane ---------------- */
     const sizeSel = select('reel-size', [['1080x1920', '1080 × 1920 — Reels, Shorts, TikTok'], ['1080x1080', '1080 × 1080 — square post'], ['1920x1080', '1920 × 1080 — landscape']], '1080x1920');
-    const qualSel = select('reel-quality', [['standard', 'Standard — 8 Mbps'], ['high', 'High — 12 Mbps'], ['small', 'Small — 5 Mbps']], 'standard');
+    /* the encoder gets this bitrate as its target; it is variable-rate, so simple text scenes use less and files of plain scenes come out close in size */
+    const qualSel = select('reel-quality', [['standard', 'Standard — up to 8 Mbps'], ['high', 'High — up to 12 Mbps'], ['small', 'Small — up to 5 Mbps']], 'standard');
     sizeSel.addEventListener('change', () => {
       S.sizeKey = sizeSel.value; const z = SIZES[S.sizeKey]; S.size = { w: z.w, h: z.h };
       if (!S.utmTouched) { S.brand.utm = z.utm; utmIn.value = z.utm; }
-      qualSel.options[0].textContent = 'Standard — ' + z.rates.standard / 1e6 + ' Mbps'; qualSel.options[1].textContent = 'High — ' + z.rates.high / 1e6 + ' Mbps'; qualSel.options[2].textContent = 'Small — ' + z.rates.small / 1e6 + ' Mbps';
+      qualSel.options[0].textContent = 'Standard — up to ' + z.rates.standard / 1e6 + ' Mbps'; qualSel.options[1].textContent = 'High — up to ' + z.rates.high / 1e6 + ' Mbps'; qualSel.options[2].textContent = 'Small — up to ' + z.rates.small / 1e6 + ' Mbps';
       S.scenes.forEach((x) => { x._plan = null; });
       sizePreview();
+      drawCoverThumb();
+      invalidate();
     });
     utmIn.addEventListener('input', () => { S.utmTouched = true; });
-    qualSel.addEventListener('change', () => { S.quality = qualSel.value; });
+    qualSel.addEventListener('change', () => { S.quality = qualSel.value; invalidate(); });
+    const qualHint = hint('The bitrate is the most the encoder may use. Photos and clips use it; plain text scenes need far less, so their files differ little between settings.');
     const recorderOnly = typeof VideoEncoder === 'undefined' || typeof AudioEncoder === 'undefined';
     const exHint = hint(recorderOnly
       ? 'This browser has no on-device MP4 encoder. The reel will be recorded in real time as WebM, and the sound is saved as a separate WAV. Chrome, Edge or Safari 16.4+ make the complete MP4.'
@@ -4506,7 +4930,12 @@
     const coverBtn = button('Export cover', 'btn-ghost', () => exportCover()); coverBtn.id = 'reel-cover';
     const openChk = on(check('reel-open-cover', 'Open the video on the cover', S.openOnCover !== false), () => { S.openOnCover = openChk.input.checked; });
     const openHint = hint('Instagram, TikTok and Shorts show a video’s first frame as its preview unless you pick a cover by hand. With this on, the first frame is the cover above: it shows for 0.4 s and dissolves into the reel, which keeps its length and sound.');
-    const capBtn = share.captionButton(() => captionFor(S));
+    /* the box shows exactly what Copy caption copies: the caption, and the page credit line only while the credit switch is on */
+    const capBtn = button('Copy caption', 'btn-ghost', async () => {
+      const ok = await share.copyText(postCaption(S));
+      capBtn.textContent = ok ? 'Copied' : 'Could not copy';
+      setTimeout(() => { capBtn.textContent = 'Copy caption'; }, 1500);
+    });
     capBtn.id = 'reel-copy-caption';
     const linkBtn = button('Copy link for bio', 'btn-ghost', async () => {
       const u = bioLink();
@@ -4520,7 +4949,10 @@
     const shareBox = el('div', 'aiimg-share');
     const aiHint = hint('This reel’s voice is synthetic, and the caption says so. Meta requires its AI label on Instagram and Facebook for “realistic-sounding audio that was digitally created or altered” — switch on “AI info” (or “Add AI label”) when you post. YouTube and TikTok have their own rules for realistic AI content; check them when you upload.');
     aiHint.id = 'reel-ai-hint'; aiHint.hidden = true;
-    shareBox.append(field('Caption for Instagram, TikTok or Shorts', capPreview), row(capBtn, linkBtn), hint('Instagram does not link captions; put the link in your bio and say so.'), aiHint);
+    const linkHint = hint('Copy link for bio needs a link: add a URL in Brand, or promote a 1234Tools tool.'); linkHint.id = 'reel-link-hint'; linkHint.hidden = true;
+    const tplCapHint = el('p', 'aiimg-status is-warn', 'The caption still has template placeholders such as “[Your product]” — replace them in the scenes first.'); tplCapHint.id = 'reel-caption-placeholders'; tplCapHint.hidden = true;
+    shareBox.append(field('Caption for Instagram, TikTok or Shorts', capPreview), tplCapHint, row(capBtn, linkBtn), linkHint,
+      hint('Instagram does not link captions; put the link in your bio and say so. The last line, “Made free, on my device”, credits this page: it is added only while “Show Made with 1234Tools.com” is on in Labels.'), aiHint);
     const batchBox = el('div', 'reel-batch'); batchBox.hidden = true;
     const results = el('div', 'aiimg-results');
     /* the marks: an AI label (forced on while the voice is generated) and the removable credit */
@@ -4529,7 +4961,7 @@
     aiLabelHint.id = 'reel-ai-label-hint';
     const madeChk = on(check('reel-made-with', 'Show “Made with 1234Tools.com”', true), () => { S.brand.madeWith = madeChk.input.checked; marksChanged(); });
     const madeHint = hint('A small line at the bottom of every frame and the cover. Switch it off and the reel carries no credit at all — no watermark is forced on you.');
-    function marksChanged() { syncMarksUi(); for (const sc of S.scenes) sc._plan = null; invalidate(); drawCoverThumb(); }
+    function marksChanged() { syncMarksUi(); for (const sc of S.scenes) sc._plan = null; invalidate(); drawCoverThumb(); refreshCaptionPreview(); saveDraftSoon(); }
     /** The AI switch shows what will be drawn: ticked and locked while the voice is generated. */
     function syncMarksUi() {
       const gen = !!(S.voice && S.voice.generated);
@@ -4537,7 +4969,8 @@
       aiChk.input.disabled = gen;
       madeChk.input.checked = S.brand.madeWith !== false;
     }
-    panes.export.append(grid(field('Size', sizeSel), field('Quality', qualSel)), exHint, row(exportBtn, cancelBtn), exProgress, exStatus,
+    const emptyNote = el('p', 'aiimg-status is-warn reel-empty-note', 'No scenes yet — add a text scene or a picture in Scenes to make a reel.'); emptyNote.id = 'reel-empty-note'; emptyNote.hidden = true;
+    panes.export.append(emptyNote, grid(field('Size', sizeSel), field('Quality', qualSel)), qualHint, exHint, row(exportBtn, cancelBtn), exProgress, exStatus,
       h('Labels'), aiChk, aiLabelHint, madeChk, madeHint,
       h('Cover'), row(coverNow, coverThumb, coverFmt, coverBtn), openChk, openHint, h('Post it'), shareBox, batchBox, results);
 
@@ -4548,9 +4981,11 @@
     }
     function refreshCaptionPreview() {
       if (panes.export.hidden) return;
-      capPreview.value = captionFor(S);
+      capPreview.value = postCaption(S);
       linkBtn.disabled = !bioLink();
+      linkHint.hidden = !linkBtn.disabled;
       aiHint.hidden = !(S.voice && S.voice.generated);
+      tplCapHint.hidden = !hasPlaceholder(capPreview.value);
     }
     function coverTime() {
       if (S.coverT !== null && S.coverT <= totalSeconds(S)) return S.coverT;
@@ -4585,6 +5020,7 @@
       exBar.style.width = '0%'; exProgress.setAttribute('aria-valuenow', '0');
       note(b ? (label || 'Encoding…') : '');
       if (b && S.playing) setPlaying(false);
+      if (!b) syncEmptyUi();
     }
     let lastAria = 0;
     function progressTo(f) {
@@ -4626,9 +5062,22 @@
       const X = exportState(S);
       const D = totalSeconds(X);
       if (D > MAX_SECONDS) { say('The reel is ' + D.toFixed(1) + ' s; Reels are cut at 90 s. Shorten a scene first.', 'error'); return; }
-      if (X.scenes.length < S.scenes.length) say('The end card has nothing on it yet, so it is left out of this export. Add a title, URL, handle or logo to show it.', 'note');
-      else if (PHONE && D > 60) say('Over a minute on a phone can run out of memory; it will try.', 'warn');
+      /* things worth a second look before minutes of encoding: template placeholders, scenes whose file was not restored */
+      const holes = S.scenes.map((sc, i) => ([sc.text, sc.heading, sc.title, voOf(sc)].some(hasPlaceholder) ? i + 1 : 0)).filter(Boolean);
+      if (holes.length && !confirm('Scene' + (holes.length === 1 ? ' ' : 's ') + holes.join(', ') + (holes.length === 1 ? ' still has' : ' still have') + ' template placeholders such as “[Your product]”. Export anyway?')) { say('Replace the [bracketed] words in scene' + (holes.length === 1 ? ' ' : 's ') + holes.join(', ') + ', then export.', 'warn', exportBtn); return; }
+      const lostMedia = S.scenes.map((sc, i) => (sc.type === 'media' && !sc.media ? i + 1 : 0)).filter(Boolean);
+      if (lostMedia.length && !confirm('Scene' + (lostMedia.length === 1 ? ' ' : 's ') + lostMedia.join(', ') + ' still need' + (lostMedia.length === 1 ? 's its' : ' their') + ' picture or clip (not kept with the draft). Export with a placeholder card there?')) { say('Add the picture or clip again in Media (pick the scene first), then export.', 'warn', exportBtn); return; }
+      if (X.scenes.length < S.scenes.length) say('The end card has nothing on it yet, so it is left out of this export. Add a title, URL, handle or logo to show it.', 'note', exportBtn);
+      else if (PHONE && D > 60) say('Over a minute on a phone can run out of memory; it will try.', 'warn', exportBtn);
       else say('');
+      if (S.music && S.music.wav) { try { await windowMusic(S.music.from || 0); } catch (e) { /* the window already held is used */ } }
+      /* high-bitrate clips: measure how slow their frames are to read and say how long the export will take */
+      if (S.scenes.some((sc) => isVideoScene(sc) && (sc.media.mbps > 25 || sc.media.file.size > 100e6))) {
+        exStatus.textContent = 'Measuring how fast the clips can be read…';
+        const secs = await clipCost(S);
+        if (secs > 20) say('A clip in this reel is slow to read frame by frame (high bitrate): the export will take about ' + fmtSec(secs * 1.2) + '. Keep this tab open; a lower-bitrate copy of the clip exports faster.', 'note', exportBtn);
+        S.clipEstimate = secs;
+      }
       const job = S.job = new AbortController();
       busyUI(true, 'Exporting — the preview is paused');
       const started = performance.now();
@@ -4642,14 +5091,15 @@
       try {
         const { r, mix, w, h: hh } = await encodeState(X, job.signal, onProgress);
         const slug = currentSlug();
-        const name = 'reel-' + slug + '.' + r.ext;
+        const when = hhmm();
+        const name = 'reel-' + slug + '-' + when + '.' + r.ext;
         const took = (performance.now() - started) / 1000;
         const label = (r.ext === 'mp4' ? (r.note || 'MP4').split(' — ')[0] : 'WebM recorded in real time') + ' · ' + D.toFixed(1) + ' s · ' + FPS + ' fps · ' + w + '×' + hh + (r.tagged ? ' · AI label in the file' : '');
         const rowEl = addResult(r.blob, name, label, 'video');
         A.download(r.blob, name);
         S.lastExport = { seconds: took, D, name, size: r.blob.size, tagged: !!r.tagged };
         if (mix && !hasAudioNote(r)) {
-          addResult(encodeWAV(mix), 'reel-' + slug + '-sound.wav', 'the mixed voice and music', 'audio');
+          addResult(encodeWAV(mix), 'reel-' + slug + '-' + when + '-sound.wav', 'the mixed voice and music', 'audio');
           say('The clip was recorded as ' + (r.ext === 'mp4' ? 'MP4' : 'WebM') + ' without its sound; the sound is in the WAV beside it. Open this page in Chrome or Edge to get one MP4 with both.', 'warn');
         } else if (r.ext === 'webm') say(r.note, 'warn');
         exStatus.textContent = 'Done in ' + fmtSec(took) + '.';
@@ -4675,7 +5125,7 @@
       const fmt = coverFmt.value;
       try {
         const b = await coverBlob(S, fmt);
-        const name = 'reel-' + currentSlug() + '-cover.' + (fmt === 'image/png' ? 'png' : 'jpg');
+        const name = 'reel-' + currentSlug() + '-' + hhmm() + '-cover.' + (fmt === 'image/png' ? 'png' : 'jpg');
         const z = SIZES[S.sizeKey];
         addResult(b, name, 'Cover · ' + z.w + '×' + z.h + ' · at ' + coverTime().toFixed(1) + ' s', 'image');
         A.download(b, name);
@@ -4756,6 +5206,7 @@
       const job = S.job = new AbortController();
       busyUI(true, 'Making ' + reelsWord(rows.length));
       const n = rows.length;
+      const when = hhmm();
       const texts = [];
       let done = 0;
       const started = performance.now();
@@ -4777,12 +5228,12 @@
             progressTo((i + fr) / n);
             bStatus.textContent = label + ' — encoding ' + Math.round(fr * 100) + '%';
           });
-          const name = 'reel-' + f.slug + '.' + out.ext;
+          const name = 'reel-' + f.slug + '-' + when + '.' + out.ext;
           await saveFile(out.blob, name, dir);
           addResult(out.blob, name, (out.note || '').split(' — ')[0] + ' · ' + totalSeconds(X).toFixed(1) + ' s · ' + r.title + (out.tagged ? ' · AI label in the file' : ''), 'video');
           const cover = await coverBlob(X, 'image/jpeg');
-          await saveFile(cover, 'reel-' + f.slug + '-cover.jpg', dir);
-          texts.push(r.title + '\n' + '-'.repeat(Math.min(60, r.title.length)) + '\n' + captionFor(X) + '\nMade free, on my device: ' + share.pageUrl() + '\n');
+          await saveFile(cover, 'reel-' + f.slug + '-' + when + '-cover.jpg', dir);
+          texts.push(r.title + '\n' + '-'.repeat(Math.min(60, r.title.length)) + '\n' + postCaption(X) + '\n');
           done++;
         }
         let tail = '';
@@ -4815,6 +5266,14 @@
         const fi = await loadFinderIndex();
         S.index = fi.tools.map(rowObj);
         find.placeholder = 'Search ' + S.index.length + ' tools…';
+        /* say which tools these are: the finder's list, and how many come with a ready-made story */
+        loadStories().then(() => {
+          const withStory = S.index.filter((r) => storyFor(r.path)).length;
+          pickCount.textContent = withStory === S.index.length
+            ? S.index.length + ' tools with ready-made stories — each reel’s script, example and end card are written for that tool.'
+            : S.index.length + ' tools; ' + withStory + ' have ready-made stories, the rest get a script written from their description.';
+          pickCount.hidden = false;
+        });
         renderFilters();
         renderPicker();
         return S.index;
@@ -4857,21 +5316,26 @@
       shown = shown.slice(0, 40);
       toolList.innerHTML = '';
       shown.forEach((r, i) => {
-        const li = el('li', 'reel-tool'); li.id = 'reel-opt-' + i; li.setAttribute('role', 'option'); li.dataset.path = r.path;
-        li.setAttribute('aria-selected', S.promote && S.promote.path === r.path ? 'true' : 'false');
+        /* a row is a list item holding two separate controls — a button that opens the tool's reel and its tick box —
+           never one interactive element inside another (axe: nested-interactive) */
+        const li = el('li', 'reel-tool'); li.id = 'reel-opt-' + i; li.dataset.path = r.path;
+        const chosenNow = !!(S.promote && S.promote.path === r.path);
+        li.classList.toggle('is-chosen', chosenNow);
         if (i === active) li.classList.add('is-active');
+        const open = el('button', 'reel-tool-open'); open.type = 'button';
+        if (chosenNow) open.setAttribute('aria-current', 'true');
         const ic = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); ic.setAttribute('class', 'ico'); ic.setAttribute('aria-hidden', 'true');
         const use = document.createElementNS('http://www.w3.org/2000/svg', 'use'); use.setAttribute('href', '/assets/icons.svg#' + r.glyph); ic.appendChild(use);
-        const txt = el('div', 'reel-tool-text'); txt.append(el('strong', null, r.title), el('small', null, r.section + (r.io ? ' · ' + r.io : '')));
+        const txt = el('span', 'reel-tool-text'); txt.append(el('strong', null, r.title), el('small', null, r.section + (r.io ? ' · ' + r.io : '')));
+        open.append(ic, txt);
+        open.addEventListener('click', () => usePromote(r));
         const cb = el('input', 'reel-pick'); cb.type = 'checkbox'; cb.checked = S.picked.has(r.path); cb.setAttribute('aria-label', 'Select ' + r.title);
-        cb.addEventListener('change', () => { if (cb.checked) { if (S.picked.size >= MAX_BATCH) { cb.checked = false; say('A batch is at most 25 tools.', 'warn'); return; } S.picked.set(r.path, r); } else S.picked.delete(r.path); syncBatchBtn(); });
-        li.append(ic, txt, cb);
-        li.addEventListener('click', (e) => { if (e.target === cb) return; usePromote(r); });
+        cb.addEventListener('change', () => { if (cb.checked) { if (S.picked.size >= MAX_BATCH) { cb.checked = false; say('A batch is at most 25 tools.', 'warn', batchBtn); return; } S.picked.set(r.path, r); } else S.picked.delete(r.path); syncBatchBtn(); });
+        li.append(open, cb);
         toolList.appendChild(li);
       });
       pickStatus.textContent = shown.length ? '' : 'No tool matches “' + q + '”.';
       if (active >= shown.length) active = -1;
-      find.setAttribute('aria-activedescendant', active >= 0 ? 'reel-opt-' + active : '');
       syncBatchBtn();
     }
     function syncBatchBtn() {
@@ -4883,15 +5347,18 @@
       clearBtn.disabled = n === 0;
     }
     find.addEventListener('input', () => { active = -1; renderPicker(); });
+    /* Down from the search box goes to the first tool; Up and Down move between tools; Enter opens one (Enter in the box opens the top match) */
+    const openBtns = () => [...toolList.querySelectorAll('.reel-tool-open')];
     find.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (!shown.length) return;
-        active = e.key === 'ArrowDown' ? Math.min(shown.length - 1, active + 1) : Math.max(0, active - 1);
-        for (const li of toolList.children) li.classList.toggle('is-active', li.id === 'reel-opt-' + active);
-        find.setAttribute('aria-activedescendant', 'reel-opt-' + active);
-        const li = document.getElementById('reel-opt-' + active); if (li && li.scrollIntoView) li.scrollIntoView({ block: 'nearest' });
-      } else if (e.key === 'Enter' && active >= 0 && shown[active]) { e.preventDefault(); usePromote(shown[active]); }
+      if (e.key === 'ArrowDown') { const b = openBtns()[0]; if (b) { e.preventDefault(); b.focus(); } }
+      else if (e.key === 'Enter' && shown[0] && find.value.trim()) { e.preventDefault(); usePromote(shown[0]); }
+    });
+    toolList.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      const bs = openBtns(); const i = bs.indexOf(document.activeElement);
+      if (i < 0) return;
+      e.preventDefault();
+      if (e.key === 'ArrowUp' && i === 0) find.focus(); else { const b = bs[clamp(i + (e.key === 'ArrowDown' ? 1 : -1), 0, bs.length - 1)]; b.focus(); }
     });
 
     /* ---------------- making a reel ---------------- */
@@ -4905,6 +5372,10 @@
       prepareFonts(S).then(() => { drawCoverThumb(); invalidate(); });
       prepareAssets(S).then(invalidate);
       const hd = document.getElementById('reel-scenes-h'); if (hd) hd.focus({ preventScroll: true });
+      /* a freshly made reel has no edits yet; the draft offer, if still showing, has been answered */
+      S.edited = false;
+      const db = document.getElementById('reel-draft'); if (db) db.remove();
+      saveDraftSoon();
     }
     function makeFromScript() {
       const text = scriptBox.value.trim();
@@ -4922,8 +5393,16 @@
       S.scenes = scenes;
       freshLook('script:' + (tplSel.value || 'own'));
       if (S.brand.endcard && endCardHasContent()) S.scenes.push(endCardScene());
-      if (scenes.shrunk) say('The script ran over 90 s, so every scene was shortened to fit.', 'warn'); else say('');
       openStudio();
+      S.edited = false;
+      /* say what really happened: shortened and now fitting, or still too long even at the shortest scenes */
+      const D = totalSeconds(S);
+      if (D > MAX_SECONDS) {
+        const per = D / Math.max(1, S.scenes.length);
+        say('The script is ' + S.scenes.length + ' scenes. Even with every scene cut to ' + (scenes.shrunk ? '1.5 s' : 'its shortest') + ' it runs ' + D.toFixed(1) + ' s — ' + (D - MAX_SECONDS).toFixed(1) +
+          ' s over the 90 s Reels limit. Delete about ' + Math.ceil((D - MAX_SECONDS) / per) + ' scenes, or split the script into two reels.', 'warn', totalEl);
+      } else if (scenes.shrunk) say('The script ran over 90 s, so every scene was shortened to fit: it now runs ' + D.toFixed(1) + ' s. Check the longer scenes are still readable.', 'warn', totalEl);
+      else say('');
     }
     async function usePromote(r, rewrite) {
       r = rowObj(r);
@@ -4948,14 +5427,22 @@
       say('');
     }
     handleIn.addEventListener('input', () => { S.brand.handleTouched = true; });
-    function startOver() {
-      if (S.job) return;
+    /** Back to the start. Asks first when an export is running or the reel has edits (they stay in the draft either way). Resolves false when the visitor says no. */
+    function startOver(why) {
+      if (S.job) {
+        if (!confirm('An export is running. Stop it and start over?')) return false;
+        S.job.abort();
+      } else if (S.edited && !confirm((why || 'Start over?') + ' Your edits to this reel will be put aside — they stay in this browser’s draft until you make another reel.')) return false;
       if (S.playing) setPlaying(false);
+      saveDraft();
       clearResults();
       batchBox.hidden = true; S.batchRows = null;
       studio.hidden = true; start.hidden = false;
       say('');
+      return true;
     }
+    /* a page that is encoding asks before it is closed; at any other time the draft keeps the work */
+    window.addEventListener('beforeunload', (e) => { if (S.job) { e.preventDefault(); e.returnValue = ''; } });
 
     /* ---------------- deep links ---------------- */
     let params;
@@ -4970,6 +5457,19 @@
     if (preParam && PAL_ALIAS[preParam]) presets.apply(PAL_ALIAS[preParam]);
     else presets.applyFromUrl();
     scenesLook();
+    /* the last reel, if this browser kept one: offered back, never forced */
+    const draft = readDraft();
+    if (draft && !toolParam) {
+      const bar = el('div', 'reel-draft'); bar.id = 'reel-draft'; bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'Your last reel');
+      const n = draft.scenes.length;
+      const restoreBtn = button('Restore your last reel', 'btn-primary', async () => { bar.remove(); await restoreDraft(draft); });
+      restoreBtn.id = 'reel-draft-restore';
+      const freshBtn = button('Start fresh', 'btn-ghost', () => { bar.remove(); dropDraft(); scriptBox.focus(); });
+      freshBtn.id = 'reel-draft-fresh';
+      bar.append(el('p', 'aiimg-status', 'Your last reel (' + n + ' scene' + (n === 1 ? '' : 's') + ', saved ' + agoText(draft.savedAt) + ') is kept in this browser.'), row(restoreBtn, freshBtn),
+        hint('Pictures, clips, a voice and music are not kept with it — you add those again.'));
+      start.insertBefore(bar, start.firstChild);
+    }
     if (toolParam) {
       let p = toolParam;
       try { p = decodeURIComponent(p); } catch (e) { /* as given */ }
@@ -5001,6 +5501,9 @@
     voOf, suggestedVO, toSpeech,
     /** The two marks: what they say, their colours, the metadata, and where they land on a W×H frame (rects drawn on a scratch canvas). */
     aiLabelOf, madeWithOn, markColours, aiMetadata,
+    /** Test hook: gapProbe(true) starts recording drawn word extents, gapFrame(n) tags the frame, gapProbe(false) returns the records. */
+    gapProbe: (on) => { if (on) { GAPS = []; GAPS.frame = 0; return null; } const g = GAPS; GAPS = null; return g; },
+    gapFrame: (n) => { if (GAPS) GAPS.frame = n; },
     marks: (W, H, S) => {
       S = S || CUR;
       const x = document.createElement('canvas').getContext('2d');

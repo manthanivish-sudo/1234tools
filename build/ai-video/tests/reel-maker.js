@@ -221,6 +221,7 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
     if (cb && cb.writeText) { const orig = cb.writeText.bind(cb); cb.writeText = (t) => { window.__copied.push(String(t)); return orig(t).catch(() => {}); }; }
   }, RECORDER);
   const timings = {};
+  let dialogAnswer = 'accept';
 
   const gotoTool = async (q) => {
     await page.goto(BASE + '/ai-video/reel-maker/' + (q || ''), { waitUntil: 'networkidle0', timeout: 120000 });
@@ -522,7 +523,8 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
     check(paper.mean > 180, 'paper frame mean luminance > 180 (' + paper.mean.toFixed(0) + ')');
 
     /* ---- 4b. the visitor's templates: each makes its own scenes, nothing overflows ---- */
-    page.on('dialog', (d) => d.accept().catch(() => {}));
+    /* dialogs are accepted, except where a check sets dialogAnswer to 'dismiss' for the next one */
+    page.on('dialog', (d) => { const a = dialogAnswer; dialogAnswer = 'accept'; (a === 'dismiss' ? d.dismiss() : d.accept()).catch(() => {}); });
     await gotoTool('');
     const tplOpts = await page.$$eval('#reel-template option', (o) => o.map((x) => x.value).filter(Boolean));
     check(tplOpts.length === 7, 'the template select offers 7 templates (' + tplOpts.join(', ') + ')');
@@ -731,7 +733,7 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
         const magic = await page.evaluate(async (n) => { const a = document.querySelector('.aiimg-result[data-name="' + n + '"] a[download]'); const b = new Uint8Array(await (await fetch(a.href)).arrayBuffer()); return String.fromCharCode(b[0], b[1], b[2], b[3]); }, wav);
         check(magic === 'RIFF', 'the WAV starts with RIFF');
       }
-      const warn = await page.$eval('.aiimg > .io-msg', (e) => ({ cls: e.className, text: e.textContent }));
+      const warn = await page.$eval('.reel .io-msg', (e) => ({ cls: e.className, text: e.textContent }));
       check(/is-warn/.test(warn.cls) && /WAV/.test(warn.text), '.io-msg is a warning that mentions the WAV');
       await page.screenshot({ path: path.join(OUT, 'recorder-export.png') });
     } else {
@@ -786,6 +788,11 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
       const totalTxt = await page.$eval('#reel-total', (e) => e.textContent);
       const expectD = Number((/· ([\d.]+) s/.exec(totalTxt) || [])[1]);
       console.log('  after "Fit scenes to the voice":', totalTxt);
+      /* the fit follows Whisper's word times (each scene ends in the pause after its line), and the same switch is in Sound */
+      const wfit = await page.evaluate(() => { const S = AIImg.tools['reel-maker'].state(); const plan = S.voice.plan || {}; const body = S.scenes.filter((x) => x.type !== 'endcard');
+        return { has: Object.keys(plan).length, same: body.every((x) => plan[x.id] !== undefined && Math.abs(plan[x.id] - x.seconds) < 1e-9), sound: !!document.querySelector('#reel-fit-sound'), synced: document.querySelector('#reel-fit-sound').checked }; });
+      check(wfit.has > 0 && wfit.same, 'Fit scenes to an uploaded voice uses the transcript’s word times: every scene lasts its planned length');
+      check(wfit.sound && wfit.synced, '“Fit scenes to the voice” is also in Sound, ticked with the one in Scenes');
       await page.screenshot({ path: path.join(OUT, '3-studio.png') });
 
       if (!SKIP_VIDEO) {
@@ -849,7 +856,9 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
           });
           const cov = await small({ kind: 'img', url: document.querySelector('.aiimg-result img').src });
           const f0 = await small({ kind: 'video', url: vsrc, t: 0 });
-          const f2 = await small({ kind: 'video', url: vsrc, t: 2.0 });
+          /* a frame well into the second scene (fitted to the voice, the first can run past 2 s) */
+          const sc0 = AIImg.tools['reel-maker'].state().scenes[0].seconds;
+          const f2 = await small({ kind: 'video', url: vsrc, t: sc0 + 1.0 });
           const mad = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]); return s / a.length; };
           const std = (a) => { const m = a.reduce((s, v) => s + v, 0) / a.length; return Math.sqrt(a.reduce((s, v) => s + (v - m) * (v - m), 0) / a.length); };
           return { d0: mad(cov, f0), d2: mad(cov, f2), std0: std(f0), on: document.querySelector('#reel-open-cover').checked };
@@ -907,7 +916,8 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
         const after = await btnNow();
         check(after.text === 'Make 2 reels' && !after.disabled, 'the button is back to "Make 2 reels" when the batch is done ("' + after.text + '")');
         for (const want of ['reel-gst-calculator.mp4', 'reel-merge-pdf.mp4']) {
-          const v = vids.find((x) => x.name === want);
+          /* exports carry the time, HHMM, so the same reel exported twice does not overwrite itself */
+          const v = vids.find((x) => x.name.startsWith(want.replace('.mp4', '-')) && /-\d{4}\.mp4$/.test(x.name));
           if (!v) { check(false, want + ' is in the results'); continue; }
           const p = await probe(page, v.src, [0.1]);
           const b = Buffer.from(p.b64, 'base64');
@@ -1072,7 +1082,7 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
       await sleep(1800);
       await page.screenshot({ path: path.join(OUT, '7-recording.png') });
       await page.click('#reel-rec-voice');
-      await page.waitForFunction(() => /^Voice/.test(document.querySelector('#reel-sound-status').textContent) || /refused|No microphone/.test(document.querySelector('.aiimg > .io-msg').textContent), { timeout: 30000 });
+      await page.waitForFunction(() => /^Voice/.test(document.querySelector('#reel-sound-status').textContent) || /refused|No microphone/.test(document.querySelector('.reel .io-msg').textContent), { timeout: 30000 });
       const micStatus = await page.$eval('#reel-sound-status', (e) => e.textContent);
       check(recState.pressed === 'true' && recState.prompter && recState.items >= 3, 'recording shows the teleprompter (' + recState.items + ' lines)');
       check(/^Voice [\d.]+ s/.test(micStatus), 'a microphone recording becomes the voiceover (' + micStatus + ')');
@@ -1144,6 +1154,361 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
     check(Math.abs(mf.at2 - 880) < 20, 'music from 0:02 starts 2 s into the track (' + mf.at2.toFixed(0) + ' Hz ≈ 880)');
     check(Math.abs(mf.loop - 880) < 20, 'a looped track goes back to 0:02, not to the intro (' + mf.loop.toFixed(0) + ' Hz ≈ 880)');
     check(mf.ui, '"Start the track at" and Listen are in the Sound pane');
+
+    /* ==== 12. the independent audit (2026-10-05): each finding, fixed and held ==== */
+    const dialogs = [];
+    page.on('dialog', (d) => { dialogs.push(d.message()); });
+    const visible = (sel) => page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const cs = getComputedStyle(e); return cs.display !== 'none' && e.offsetParent !== null; }, sel);
+
+    /* P1-1: the hidden attribute always hides (a .field-hint used to show regardless) */
+    await gotoTool('?tool=india/gst-calculator/');
+    await waitStudio();
+    await pane('export');
+    const hid = await page.evaluate(() => {
+      const bad = [...document.querySelectorAll('[hidden]')].filter((e) => getComputedStyle(e).display !== 'none').map((e) => e.tagName + '#' + e.id + '.' + e.className);
+      return { bad, ai: getComputedStyle(document.querySelector('#reel-ai-hint')).display, qr: getComputedStyle(document.querySelector('#reel-qr-hint')).display };
+    });
+    check(hid.bad.length === 0, 'no element with the hidden attribute is displayed anywhere on the page' + (hid.bad.length ? ' (' + hid.bad.slice(0, 4).join(', ') + ')' : ''));
+    check(hid.ai === 'none', 'the synthetic-voice hint stays hidden without a generated voice');
+    check(hid.qr === 'none', 'the “Add a URL to put a QR code” hint hides once there is a URL (a promoted tool)');
+    await gotoTool('');
+    await clickText(page, '.reel-start', /^Try an example$/);
+    await clickText(page, '.reel-start', /^Make my reel$/);
+    await waitStudio();
+    await pane('brand');
+    check(await visible('#reel-qr-hint') === true, 'and shows in script mode with no URL');
+
+    /* P1-3: the end card's title follows every keystroke of the handle, until the visitor writes a title */
+    await page.click('#reel-handle', { clickCount: 3 });
+    await page.type('#reel-handle', '@reelmaker', { delay: 20 });
+    await sleep(200);
+    const endT = await page.evaluate(() => { const S = AIImg.tools['reel-maker'].state(); const e = S.scenes.find((x) => x.type === 'endcard'); return e ? e.title : null; });
+    check(endT === '@reelmaker', 'typing a handle: the end card title follows to the last keystroke ("' + endT + '")');
+    await pane('scenes');
+    await page.evaluate(() => { const ta = document.querySelector('.reel-scene[data-type=endcard] .reel-scene-text'); ta.value = 'My own title'; ta.dispatchEvent(new Event('input', { bubbles: true })); });
+    await pane('brand');
+    await page.type('#reel-handle', 'X', { delay: 20 });
+    const endT2 = await page.evaluate(() => AIImg.tools['reel-maker'].state().scenes.find((x) => x.type === 'endcard').title);
+    check(endT2 === 'My own title', 'a title the visitor wrote wins over later handle typing ("' + endT2 + '")');
+
+    /* P1-2: nothing makes a 390 px phone page scroll sideways — start, picker, studio, every pane, light and dark */
+    await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+    const wides = [];
+    for (const theme of ['dark', 'light']) {
+      await gotoTool('');
+      await setTheme(page, theme);
+      const w0 = await page.evaluate(() => document.documentElement.scrollWidth); if (w0 > 390) wides.push(theme + ' start ' + w0);
+      await page.click('.reel-start [data-mode=promote]');
+      await page.waitForSelector('.reel-tool', { timeout: 20000 });
+      await sleep(300);
+      const w1 = await page.evaluate(() => document.documentElement.scrollWidth); if (w1 > 390) wides.push(theme + ' picker ' + w1);
+      await page.evaluate(() => document.querySelector('.reel-tool-open').click());
+      await waitStudio();
+      for (const k of ['scenes', 'media', 'sound', 'captions', 'brand', 'export']) {
+        await pane(k); await sleep(120);
+        const w = await page.evaluate(() => document.documentElement.scrollWidth); if (w > 390) wides.push(theme + ' ' + k + ' ' + w);
+      }
+      const fab = await page.evaluate(() => { const f = document.querySelector('.side-find-fab'); return f ? getComputedStyle(f).display : 'none'; });
+      if (fab !== 'none') wides.push(theme + ' the Find button shows over the studio');
+    }
+    check(wides.length === 0, 'at 390 px: no sideways scroll in the start screen, the picker, the studio or any pane, light or dark, and the Find button keeps off the studio' + (wides.length ? ' (' + wides.join('; ') + ')' : ''));
+    await page.setViewport({ width: 1400, height: 1000, deviceScaleFactor: 1 });
+
+    /* P2-4: kinetic pop and zoom punch never close the gap between two words */
+    await gotoTool('');
+    await page.$eval('#reel-script', (t) => { t.value = 'STOP GUESSING YOUR TAXES.\nType the amount and pick the rate today.'; });
+    await clickText(page, '.reel-start', /^Make my reel$/);
+    await waitStudio();
+    const gaps = await page.evaluate(async () => {
+      const T = AIImg.tools['reel-maker']; const S = T.state();
+      const out = { min: Infinity, at: '', n: 0 };
+      for (const motion of ['pop', 'punch']) for (const palette of Object.keys(T.palettes)) for (const type of ['caps', 'gradient', 'outline']) {
+        T.current.setLook({ palette, motion, type }); await T.current.prepare();
+        for (const [W, H] of [[1080, 1920], [1080, 1080], [1920, 1080]]) {
+          const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+          T.gapProbe(true);
+          let f = 0;
+          for (let t = 0; t < 1.6; t += 1 / 30) { T.gapFrame(f++); T.renderFrame(x, W, H, t, S); }
+          const g = T.gapProbe(false);
+          const byLine = new Map();
+          for (const r of g) { if (!byLine.has(r.key)) byLine.set(r.key, []); byLine.get(r.key).push(r); }
+          for (const [key, rs] of byLine) {
+            rs.sort((a, b) => a.i - b.i);
+            for (let k = 1; k < rs.length; k++) { if (rs[k].i !== rs[k - 1].i + 1) continue; const ratio = (rs[k].x0 - rs[k - 1].x1) / rs[k].space; out.n++; if (ratio < out.min) { out.min = ratio; out.at = motion + '/' + palette + '/' + type + ' ' + W + '×' + H + ' "' + rs[k - 1].t + ' ' + rs[k].t + '"'; } }
+          }
+        }
+      }
+      return out;
+    });
+    check(gaps.n > 500 && gaps.min >= 0.35, 'kinetic pop and zoom punch keep every word gap open: ' + gaps.n + ' gaps sampled over 2 motions × 8 palettes × 3 type treatments × 3 sizes, narrowest ' + (gaps.min * 100).toFixed(0) + '% of a space (' + gaps.at + ')');
+
+    /* P2-5: "Bottom (safe)" captions stay above the bar and the credit and out of the bands, every size and caption size; middle captions keep clear of the scene's words */
+    const capFit = await page.evaluate(async () => {
+      const T = AIImg.tools['reel-maker']; const S = T.state();
+      const words = 'Stop guessing your GST today friends and family'.split(' ').map((w) => ({ text: w, start: 0, end: 99 }));
+      const cue = (start) => ({ start, end: start + 99, until: start + 99, text: '', words, lines: [words.slice(0, 4), words.slice(4)] });
+      const bad = [];
+      let n = 0;
+      /* everything the frame draws (fonts, glyphs, the logo) is loaded first, on a still background, so the two renders differ only by the caption */
+      T.current.setLook({ bg: 'glow', motion: 'fade' });
+      await T.current.prepare();
+      await new Promise((r) => setTimeout(r, 300));
+      for (const [W, H] of [[1080, 1920], [1080, 1080], [1920, 1080]]) for (const size of [7, 8, 9, 10]) for (const position of ['bottom', 'middle']) {
+        const st = Object.assign({}, S.captions.style, { mode: 'line', size, position });
+        const mk = (c) => Object.assign({}, S, { captions: Object.assign({}, S.captions, { source: 'auto', cues: [c], style: st }) });
+        const draw = (Y) => { const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const x = cv.getContext('2d'); T.renderFrame(x, W, H, S.scenes[0].seconds * 0.9, Y); return x.getImageData(0, 0, W, H).data; };
+        draw(mk(cue(500)));
+        const a = draw(mk(cue(0))), b = draw(mk(cue(500)));
+        let top = -1, low = -1;
+        for (let y = 0; y < H; y++) for (let x2 = 0; x2 < W; x2 += 3) { const i = (y * W + x2) * 4; if (a[i] !== b[i] || a[i + 1] !== b[i + 1]) { if (top < 0) top = y; low = y; break; } }
+        const m = T.marks(W, H, mk(cue(0)));
+        n++;
+        const floor = Math.min(m.bar ? m.bar.y : m.bottom, m.credit ? m.credit.y : m.bottom);
+        if (low < 0 || low >= floor || top < m.top) bad.push(W + '×' + H + ' ' + position + ' ' + size + '%: ' + top + '–' + low + ' (floor ' + Math.round(floor) + ', top band ' + Math.round(m.top) + ')');
+        if (position === 'middle' && top < m.box.y + m.box.h) bad.push(W + '×' + H + ' middle ' + size + '%: caption top ' + top + ' inside the words’ box (ends ' + Math.round(m.box.y + m.box.h) + ')');
+      }
+      return { n, bad };
+    });
+    check(capFit.n === 24 && capFit.bad.length === 0, 'captions at 3 sizes × caption sizes 7–10 % × bottom and middle: inside the safe area, above the bar and the credit, middle ones clear of the scene’s words' + (capFit.bad.length ? ' — ' + capFit.bad.slice(0, 3).join(' | ') : ''));
+
+    /* P2-7: the caption box shows exactly what Copy caption copies, and the credit line follows the credit switch */
+    await pane('export');
+    const cap1 = await page.evaluate(async () => { document.querySelector('#reel-copy-caption').click(); await new Promise((r) => setTimeout(r, 300)); return { box: document.querySelector('#reel-caption-text').value, copied: window.__copied[window.__copied.length - 1] }; });
+    check(cap1.box === cap1.copied && /Made free, on my device:/.test(cap1.box), 'the caption box and the copied caption are the same text, credit line included');
+    await page.click('#reel-made-with');
+    const cap2 = await page.evaluate(async () => { document.querySelector('#reel-copy-caption').click(); await new Promise((r) => setTimeout(r, 300)); return { box: document.querySelector('#reel-caption-text').value, copied: window.__copied[window.__copied.length - 1] }; });
+    check(cap2.box === cap2.copied && !/Made free/.test(cap2.copied), 'with “Show Made with 1234Tools.com” off, neither the box nor the copy has the credit line');
+    await page.click('#reel-made-with');
+    check(await visible('#reel-link-hint') === true, 'Copy link for bio is off without a URL, and a hint says why');
+
+    /* P3: lowercase beat words; script hashtags never template words; placeholders flagged */
+    const tags = await page.evaluate(() => {
+      const T = AIImg.tools['reel-maker'];
+      const lower = T.scenesFromScript('hook: Lower case works\nfix: Name | the fix\nsteps: Title | a | b').map((s) => s.type);
+      const S = T.state();
+      const keep = S.scenes;
+      const out = {};
+      for (const t of T.templates) { S.scenes = T.scenesFromScript(t.script); out[t.id] = (T.captionFor(S).match(/#\w+/g) || []); }
+      S.scenes = keep;
+      return { lower, out };
+    });
+    check(JSON.stringify(tags.lower) === JSON.stringify(['hook', 'fix', 'steps']), 'lower-case "hook:", "fix:", "steps:" make those scenes');
+    const tplTags = Object.entries(tags.out).filter(([, t]) => t.some((x) => !/^#Reels$/.test(x)));
+    check(tplTags.length === 0, 'an unfilled template gets no hashtags from its own scaffolding, only #Reels' + (tplTags.length ? ' (' + tplTags.map(([k, t]) => k + ': ' + t.join(' ')).join('; ') + ')' : ''));
+
+    /* P2-16: template placeholders: flagged in the caption, and export asks first */
+    await gotoTool('');
+    await page.select('#reel-template', 'problem');
+    await clickText(page, '.reel-start', /^Make my reel$/);
+    await waitStudio();
+    await pane('export');
+    check(await visible('#reel-caption-placeholders') === true, 'the caption builder warns about [bracketed] placeholders');
+    const nDlg = dialogs.length;
+    dialogAnswer = 'dismiss';
+    await page.click('#reel-export');
+    await sleep(500);
+    const noJob = await page.evaluate(() => !AIImg.tools['reel-maker'].state().job && document.querySelectorAll('.aiimg-result video').length === 0);
+    check(dialogs.length > nDlg && /placeholders/.test(dialogs[dialogs.length - 1]) && noJob, 'export asks before a reel with placeholders goes out, and stops when told no');
+
+    /* P2-12: an 80-line script says how far over 90 s it is; a 50-line one says it was shortened to fit */
+    const longScript = (n) => Array.from({ length: n }, (_, i) => 'Line ' + (i + 1) + ' of a long script that keeps going').join('\n');
+    await gotoTool('');
+    await page.$eval('#reel-script', (t, s) => { t.value = s; }, longScript(80));
+    await clickText(page, '.reel-start', /^Make my reel$/);
+    await waitStudio();
+    const m80 = await page.evaluate(() => ({ msg: (document.querySelector('.reel .io-msg') || {}).textContent || '', D: AIImg.tools['reel-maker'].state().scenes.reduce((s, x) => s + x.seconds, 0) }));
+    check(m80.D > 90 && /over the 90 s Reels limit/.test(m80.msg) && !/shortened to fit/.test(m80.msg), '80 lines: the message says it is still ' + (m80.D - 90).toFixed(1) + ' s over and what to do ("' + m80.msg.slice(0, 90) + '…")');
+    await clickText(page, '.aiimg-transport', /^Start over$/);
+    await page.$eval('#reel-script', (t, s) => { t.value = s; }, longScript(50));
+    await clickText(page, '.reel-start', /^Make my reel$/);
+    await waitStudio();
+    const m50 = await page.evaluate(() => ({ msg: (document.querySelector('.reel .io-msg') || {}).textContent || '', D: AIImg.tools['reel-maker'].state().scenes.reduce((s, x) => s + x.seconds, 0) }));
+    check(m50.D <= 90 && /shortened to fit: it now runs/.test(m50.msg), '50 lines: shortened, and it says the new length (' + m50.D.toFixed(1) + ' s)');
+
+    /* P2-9 / P3: the 50-line message is beside the scene total, on screen; a pane switch clears it */
+    const near = await page.evaluate(() => { const m = document.querySelector('.reel .io-msg'); const r = m.getBoundingClientRect(); return { next: m.previousElementSibling && m.previousElementSibling.id, inView: r.bottom > 0 && r.top < innerHeight }; });
+    check(near.next === 'reel-total' && near.inView, 'the message sits right under the scene total, in view');
+    await pane('brand');
+    check(await page.evaluate(() => !(document.querySelector('.reel .io-msg') || {}).textContent), 'switching panes clears the old message');
+
+    /* P2-13: a scene whose words cannot fit says so beside it */
+    await clickText(page, '.aiimg-transport', /^Start over$/);
+    await page.$eval('#reel-script', (t) => { t.value = 'HOOK: ' + Array.from({ length: 140 }, (_, i) => 'word' + i).join(' ') + '\nA short second scene.'; });
+    await clickText(page, '.reel-start', /^Make my reel$/);
+    await waitStudio();
+    await sleep(900);
+    const warn13 = await page.evaluate(() => [...document.querySelectorAll('.reel-scene-warn')].map((p) => (p.hidden ? '' : p.textContent)));
+    check(/too long to read/.test(warn13[0]) && !warn13[1], 'the over-long scene shows “too long to read: shorten it or split it”, the short one nothing (' + JSON.stringify(warn13[0].slice(0, 60)) + ')');
+
+    /* P2-14: with no scenes, nothing pretends it can play or export */
+    await page.evaluate(() => { let b; while ((b = document.querySelector('.reel-scene [aria-label^="Delete scene"]'))) b.click(); });
+    await pane('export');
+    const zero = await page.evaluate(() => ({ exp: document.querySelector('#reel-export').disabled, cover: document.querySelector('#reel-cover').disabled, play: document.querySelector('.aiimg-transport .btn-ghost').disabled,
+      clock: document.querySelector('.aiimg-transport .range-val').textContent, cap: document.querySelector('#reel-caption-text').value, note: !document.querySelector('#reel-empty-note').hidden, total: document.querySelector('#reel-total').textContent }));
+    check(zero.exp && zero.cover && zero.play && zero.clock === '0.0 / 0.0 s' && zero.cap === '' && zero.note && /No scenes/.test(zero.total), 'zero scenes: Export, Export cover and Play are off, the clock reads 0.0 / 0.0 s, the caption is empty and a note says to add a scene');
+
+    /* P3: an empty end card is left out of the preview, as of the export, and says so */
+    await gotoTool('');
+    await clickText(page, '.reel-start', /^Try an example$/);
+    await clickText(page, '.reel-start', /^Make my reel$/);
+    await waitStudio();
+    await page.click('#reel-scenes-h');
+    await page.evaluate(() => { const b = document.querySelector('.aiimg-side + * , #reel-pane-scenes'); for (const x of document.querySelectorAll('#reel-pane-scenes button')) if (/^\+ End card$/.test(x.textContent.trim())) { x.click(); break; } });
+    await sleep(200);
+    const emp = await page.evaluate(() => { const T = AIImg.tools['reel-maker']; const S = T.state(); const e = S.scenes.find((x) => x.type === 'endcard'); const li = document.querySelector('.reel-scene[data-type=endcard] .reel-empty-end');
+      const D = S.scenes.filter((x) => x.type !== 'endcard').reduce((s, x) => s + x.seconds, 0); const at = T.sceneAt(1e9, S);
+      return { has: !!e, note: li && !li.hidden, total: document.querySelector('#reel-total').textContent, D, last: at && at.scene.type }; });
+    check(emp.has && emp.note && emp.total.indexOf(emp.D.toFixed(1) + ' s') >= 0 && emp.last !== 'endcard', 'an empty end card takes no time in the preview, the total leaves it out and the scene says why (' + JSON.stringify(emp) + ')');
+
+    /* P3: the moved scene keeps the focus; a new scene takes it */
+    await page.evaluate(() => document.querySelector('.reel-scene [aria-label="Move down"]').click());
+    const foc = await page.evaluate(() => { const li = document.activeElement && document.activeElement.closest('.reel-scene'); return li ? [...li.parentNode.children].indexOf(li) : -1; });
+    check(foc === 1, 'after “Move down” the keyboard is still on the moved scene (now scene 2)');
+
+    /* P2-8: a draft is kept as you edit, offered back on the next visit, and Start over asks first */
+    await page.evaluate(() => { const ta = document.querySelector('.reel-scene-text'); ta.value = 'Draft line one'; ta.dispatchEvent(new Event('input', { bubbles: true })); const vo = document.querySelector('.reel-scene-vo'); vo.value = 'Spoken draft line'; vo.dispatchEvent(new Event('input', { bubbles: true })); });
+    await sleep(1300);
+    const nD = dialogs.length;
+    dialogAnswer = 'dismiss';
+    await clickText(page, '.aiimg-transport', /^Start over$/);
+    await sleep(200);
+    const stayed = await page.evaluate(() => !document.querySelector('.aiimg-studio').hidden);
+    check(dialogs.length > nD && /edits/.test(dialogs[dialogs.length - 1]) && stayed, 'Start over with edits asks first, and “Cancel” keeps the reel');
+    const before8 = await page.evaluate(() => { const ev = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(ev); return ev.defaultPrevented; });
+    check(!before8, 'leaving the page does not nag while no export runs');
+    await gotoTool('');
+    const offer = await page.evaluate(() => { const b = document.querySelector('#reel-draft'); return b ? b.textContent : ''; });
+    check(/Your last reel/.test(offer) && /saved/.test(offer), 'the next visit offers “Restore your last reel” with when it was saved');
+    await page.click('#reel-draft-restore');
+    await waitStudio();
+    await sleep(300);
+    const rest = await page.evaluate(() => { const S = AIImg.tools['reel-maker'].state(); return { t: S.scenes.map((x) => x.text), vo: S.scenes.map((x) => x.vo) }; });
+    check(rest.t.indexOf('Draft line one') >= 0 && rest.vo.indexOf('Spoken draft line') >= 0, 'restoring brings back the scene text and the voice-over line as edited');
+    await gotoTool('');
+    await page.click('#reel-draft-fresh');
+    const gone = await page.evaluate(() => { try { return localStorage.getItem('reel-maker-draft-v1'); } catch (e) { return 'x'; } });
+    check(gone === null && !(await page.$('#reel-draft')), '“Start fresh” clears the draft');
+
+    /* P2-9: a refused microphone says so beside Record; P2-10: past ten pictures, the ones not added are named and the message stays */
+    await clickText(page, '.reel-start', /^Try an example$/);
+    await clickText(page, '.reel-start', /^Make my reel$/);
+    await waitStudio();
+    await pane('sound');
+    await page.evaluate(() => { navigator.mediaDevices.getUserMedia = () => Promise.reject(Object.assign(new Error('denied'), { name: 'NotAllowedError' })); });
+    await page.click('#reel-rec-voice');
+    await sleep(300);
+    const micMsg = await page.evaluate(() => { const m = document.querySelector('.reel .io-msg'); const r = m.getBoundingClientRect(); const prev = m.previousElementSibling; return { text: m.textContent, near: !!(prev && prev.querySelector('#reel-rec-voice')), inView: r.top >= 0 && r.bottom <= innerHeight, role: m.getAttribute('role') }; });
+    check(/refused/.test(micMsg.text) && micMsg.near && micMsg.inView, 'a refused microphone is reported right beside Record, on screen');
+    await pane('media');
+    const twelve = [];
+    for (let i = 0; i < 12; i++) {
+      const f = path.join(OUT, 'pic-' + (i + 1) + '.png');
+      if (!fs.existsSync(f)) fs.writeFileSync(f, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
+      twelve.push(f);
+    }
+    const mIn = await page.$('#reel-media-file');
+    await mIn.uploadFile(...twelve);
+    await page.waitForFunction(() => /Not added/.test((document.querySelector('.reel .io-msg') || {}).textContent || ''), { timeout: 30000 }).catch(() => {});
+    await sleep(500);
+    const media10 = await page.evaluate(() => ({ text: (document.querySelector('.reel .io-msg') || {}).textContent || '', n: AIImg.tools['reel-maker'].state().scenes.filter((x) => x.type === 'media').length }));
+    check(media10.n === 10 && /pic-11\.png/.test(media10.text) && /pic-12\.png/.test(media10.text) && /ten pictures or clips/.test(media10.text), 'past ten pictures: 10 added, and pic-11.png and pic-12.png are named as not added, with why');
+
+    /* P3: a clip's "Start at" ends where the scene would run off the clip */
+    const clipMax = await page.evaluate(async () => {
+      const c = document.createElement('canvas'); c.width = 320; c.height = 180; const x = c.getContext('2d');
+      const rec = new MediaRecorder(c.captureStream(30), { mimeType: 'video/webm;codecs=vp8' }); const chunks = []; rec.ondataavailable = (e) => chunks.push(e.data);
+      const stop = new Promise((r) => { rec.onstop = r; }); rec.start(100);
+      const t0 = performance.now(); while (performance.now() - t0 < 4000) { x.fillStyle = '#123'; x.fillRect(0, 0, 320, 180); x.fillStyle = '#fc0'; x.fillRect((performance.now() - t0) / 20, 60, 40, 40); await new Promise((r) => requestAnimationFrame(r)); }
+      rec.stop(); await stop;
+      return URL.createObjectURL(new Blob(chunks, { type: 'video/webm' }));
+    });
+    const clipPath = path.join(OUT, 'clip-4s.webm');
+    fs.writeFileSync(clipPath, Buffer.from(await page.evaluate(async (u) => { const b = new Uint8Array(await (await fetch(u)).arrayBuffer()); let s = ''; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); }, clipMax), 'base64'));
+    await page.evaluate(() => { const S = AIImg.tools['reel-maker'].state(); S.scenes = S.scenes.filter((x) => x.type !== 'media'); });
+    await mIn.uploadFile(clipPath);
+    await page.waitForFunction(() => AIImg.tools['reel-maker'].state().scenes.some((x) => x.media && x.media.kind === 'video'), { timeout: 30000 });
+    await sleep(300);
+    const sa = await page.evaluate(() => { const S = AIImg.tools['reel-maker'].state(); const sc = S.scenes.find((x) => x.media && x.media.kind === 'video'); sc.seconds = 3; const i = S.scenes.indexOf(sc); document.querySelectorAll('.reel-scene')[i].click(); return { dur: sc.media.duration }; });
+    await sleep(200);
+    const saMax = await page.evaluate(() => { const r = document.querySelector('#reel-media-start'); return r ? Number(r.max) : null; });
+    check(saMax !== null && saMax <= sa.dur - 3 + 0.11, 'a 3 s scene of a ' + sa.dur.toFixed(1) + ' s clip can start no later than ' + (sa.dur - 3).toFixed(1) + ' s (slider max ' + saMax + ')');
+
+    /* P2-11: a long WAV is read only where the reel needs it, and the start can be typed */
+    const wavPath = path.join(OUT, 'music-12min.wav');
+    if (!fs.existsSync(wavPath)) {
+      const sr = 8000, n = sr * 720, b = Buffer.alloc(44 + n * 2);
+      b.write('RIFF', 0); b.writeUInt32LE(36 + n * 2, 4); b.write('WAVE', 8); b.write('fmt ', 12); b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22);
+      b.writeUInt32LE(sr, 24); b.writeUInt32LE(sr * 2, 28); b.writeUInt16LE(2, 32); b.writeUInt16LE(16, 34); b.write('data', 36); b.writeUInt32LE(n * 2, 40);
+      for (let i = 0; i < n; i++) b.writeInt16LE(Math.round(8000 * Math.sin(2 * Math.PI * 220 * i / sr)), 44 + i * 2);
+      fs.writeFileSync(wavPath, b);
+    }
+    await pane('sound');
+    await (await page.$('#reel-music-file')).uploadFile(wavPath);
+    await page.waitForFunction(() => !!AIImg.tools['reel-maker'].state().music || /could not|long/.test((document.querySelector('.reel .io-msg') || {}).textContent || ''), { timeout: 60000 });
+    const lm = await page.evaluate(() => { const m = AIImg.tools['reel-maker'].state().music; return m ? { dur: m.duration, held: m.audioBuffer.duration, max: Number(document.querySelector('#reel-music-from').max) } : null; });
+    check(!!lm && lm.dur > 719 && lm.held < 300 && lm.max > 700, 'a 12-minute WAV loads: the whole length is offered (slider to ' + (lm && lm.max) + ' s), only ' + (lm && lm.held.toFixed(0)) + ' s of it is held in memory');
+    await page.$eval('#reel-music-from-text', (e) => { e.value = '10:00'; e.dispatchEvent(new Event('change', { bubbles: true })); });
+    await page.waitForFunction(() => { const m = AIImg.tools['reel-maker'].state().music; return m && m.base >= 599; }, { timeout: 30000 }).catch(() => {});
+    const lm2 = await page.evaluate(async () => { const T = AIImg.tools['reel-maker']; const m = T.state().music; const mix = await T.mixAudio(T.state()); const d = mix.getChannelData(0); let s = 0; for (let i = 0; i < d.length; i += 7) s += d[i] * d[i]; return { from: m.from, base: m.base, rms: Math.sqrt(s / (d.length / 7)) }; });
+    check(lm2.from === 600 && lm2.base >= 599 && lm2.rms > 0.01, 'typing 10:00 starts the music ten minutes in, reading that part of the file (window from ' + lm2.base + ' s, mix RMS ' + lm2.rms.toFixed(3) + ')');
+    /* a compressed track longer than the limit is refused up front, with the real reason */
+    const longMsg = await page.evaluate(async () => {
+      const desc = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'duration');
+      Object.defineProperty(HTMLMediaElement.prototype, 'duration', { configurable: true, get() { return 7200; } });
+      try {
+        /* a real (short) sound file whose duration the patched getter reports as two hours */
+        const ab = new AudioBuffer({ length: 8000, numberOfChannels: 1, sampleRate: 8000 });
+        const f = new File([AIImg.tools['reel-maker'].encodeWAV(ab)], 'two-hours.mp3', { type: 'audio/mpeg' });
+        const dt = new DataTransfer(); dt.items.add(f);
+        const inp = document.querySelector('#reel-music-file'); inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true }));
+        await new Promise((r) => setTimeout(r, 1500));
+        return (document.querySelector('.reel .io-msg') || {}).textContent || '';
+      } finally { Object.defineProperty(HTMLMediaElement.prototype, 'duration', desc); }
+    });
+    check(/120:00 long/.test(longMsg) && /up to 10 minutes/.test(longMsg) && !/could not be decoded/.test(longMsg), 'a 2-hour MP3 is refused before decoding, saying the real limit ("' + longMsg.slice(0, 80) + '…")');
+
+    /* P3: export file names carry the time; the quality setting is the bitrate the encoder gets */
+    await gotoTool('');
+    await clickText(page, '.reel-start', /^Try an example$/);
+    await clickText(page, '.reel-start', /^Make my reel$/);
+    await waitStudio();
+    await pane('export');
+    await (await page.target().createCDPSession()).send('Page.setDownloadBehavior', { behavior: 'deny' });
+    const sizes = {};
+    for (const q of ['small', 'high']) {
+      await page.select('#reel-quality', q);
+      const n0 = await page.$$eval('.aiimg-result video', (v) => v.length);
+      await page.click('#reel-export');
+      await page.waitForFunction((n) => document.querySelectorAll('.aiimg-result video').length > n, { timeout: 300000 }, n0);
+      sizes[q] = await page.evaluate(() => ({ cfg: AIImg.lastVideoConfig && AIImg.lastVideoConfig.bitrate, name: document.querySelector('.aiimg-result').dataset.name, size: AIImg.tools['reel-maker'].state().lastExport.size }));
+    }
+    check(sizes.small.cfg === 5e6 && sizes.high.cfg === 12e6, 'the encoder is given the chosen bitrate: Small 5 Mbps, High 12 Mbps (' + sizes.small.cfg + ', ' + sizes.high.cfg + ')');
+    check(/^reel-[a-z0-9-]+-\d{4}\.mp4$/.test(sizes.high.name), 'export file names carry the time (' + sizes.high.name + ')');
+    console.log('  quality: small ' + (sizes.small.size / 1e6).toFixed(2) + ' MB, high ' + (sizes.high.size / 1e6).toFixed(2) + ' MB (variable bitrate: plain text scenes need far less than the cap)');
+    /* P3: Start over during an export asks, and leaving the page asks while it runs */
+    await page.click('#reel-export');
+    await page.waitForFunction(() => !!AIImg.tools['reel-maker'].state().job, { timeout: 30000 });
+    const nX = dialogs.length;
+    const bu = await page.evaluate(() => { const ev = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(ev); return ev.defaultPrevented; });
+    dialogAnswer = 'dismiss';
+    await clickText(page, '.aiimg-transport', /^Start over$/);
+    await sleep(300);
+    check(bu && dialogs.length > nX && /export is running/.test(dialogs[dialogs.length - 1]), 'during an export, Start over asks “An export is running…” and leaving the page asks too');
+    await page.evaluate(() => { const S = AIImg.tools['reel-maker'].state(); if (S.job) S.job.abort(); });
+    await sleep(500);
+
+    /* P3: the picker has no control inside another, and says how many tools it holds */
+    await gotoTool('');
+    await page.click('.reel-start [data-mode=promote]');
+    await page.waitForSelector('.reel-tool', { timeout: 20000 });
+    await page.waitForFunction(() => !document.querySelector('#reel-pick-count').hidden, { timeout: 20000 }).catch(() => {});
+    const pk = await page.evaluate(() => {
+      const li = document.querySelector('.reel-tool');
+      const nested = [...document.querySelectorAll('.reel-tools [role], .reel-tools button, .reel-tools input')].filter((e) => e.parentElement.closest('button, [role=option], [role=button], a')).length;
+      return { role: li.getAttribute('role'), parts: [...li.children].map((c) => c.tagName + '.' + c.className).join(' '), nested, count: document.querySelector('#reel-pick-count').textContent };
+    });
+    check(!pk.role && pk.nested === 0 && /BUTTON\.reel-tool-open/.test(pk.parts) && /INPUT\.reel-pick/.test(pk.parts), 'each picker row is a button and a tick box side by side, nothing nested (' + pk.parts + ')');
+    check(/\d+ tools/.test(pk.count) && /ready-made stories/.test(pk.count), 'the picker says which tools it lists ("' + pk.count + '")');
 
     console.log('  third-party requests:', [...new Set(net)].slice(0, 12).join('\n    ') || 'none');
     check(net.length === 0, 'zero requests left 127.0.0.1');

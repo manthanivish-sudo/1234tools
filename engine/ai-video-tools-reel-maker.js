@@ -76,8 +76,10 @@
         a: 'MP4 is encoded on the device with the browser’s WebCodecs API, which Chrome, Edge, Opera, Brave and Safari 16.4+ provide. Firefox does not yet, so there the clip is recorded in real time as WebM, and the mixed sound cannot be attached — it is offered as a separate WAV instead. Open the page in Chrome or Edge for the complete MP4.' },
       { q: 'Can I record my screen?',
         a: 'On a desktop browser, yes: “Record my screen” asks the browser which tab, window or screen to share, records it until you stop, and drops the clip into a scene. Phones do not offer screen capture to web pages; record with the phone’s own screen recorder and upload the file.' },
+      { q: 'Is my reel saved if I close the page?',
+        a: 'The words and settings are: as you edit, the reel — its scenes, voice-over lines, look, brand and switches — is kept as a draft in this browser’s own storage, and the next visit offers “Restore your last reel” or “Start fresh”. Nothing is sent anywhere. Pictures, clips, a voice and music are files, and files are not kept: after a restore the page names the scenes that need theirs again. While an export is running, the page asks before it is closed.' },
       { q: 'What are the limits?',
-        a: 'Ninety seconds per reel, ten media files, 200 MB per video clip, and one export at a time (a batch runs them one after another). The limits exist because everything is held in your browser’s memory. On a phone, keep reels under a minute and use the phone frame rather than full-bleed video.' }
+        a: 'Ninety seconds per reel, ten media files, 200 MB per video clip, music up to 10 minutes long (a WAV can be any length: only the part the reel uses is read), and one export at a time (a batch runs them one after another). The limits exist because everything is held in your browser’s memory. A high-bitrate clip is read frame by frame and can take several minutes to export; the Export pane says how long before it starts. On a phone, keep reels under a minute and use the phone frame rather than full-bleed video.' }
     ],
     related: ['/ai-image/text-behind-image/', '/ai-image/thumbnail-maker/', '/image/social-media-resizer/', '/qr/qr-code-generator/', '/text/word-counter/']
   };

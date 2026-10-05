@@ -86,6 +86,33 @@
   outline-offset: 2px;
 }
 
+/* The version line at the foot of every page (build-site.js writes it empty,
+   assets/version.js fills it). A row of its own under the legal lines, its
+   height reserved so filling it, or adding the reload button, moves nothing;
+   without JavaScript it stays an empty line. */
+.site-ver {
+  flex-basis: 100%;
+  min-height: 24px;
+  line-height: 24px;
+  font-size: 0.78rem;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.site-ver-update {
+  font: inherit;
+  line-height: inherit;
+  color: var(--link);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.site-ver-update:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* Shown in the privacy page so a choice can be changed after the fact. */
 .cc-status { margin-top: 0.75rem; font-size: 0.9rem; color: var(--text-3); }
 .cc-status button {

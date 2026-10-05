@@ -1084,6 +1084,8 @@
           mux = await openMuxer({ video: { width: w, height: h, frameRate: fps }, audio: audio && audio.track });
           encoder = new VideoEncoder({ output: (chunk, meta) => queue(() => mux.addVideo(chunk, meta)), error: (e) => { failure = failure || e; } });
           encoder.configure(config);
+          /* what the encoder was actually given, for the tools' tests (codec, size, bitrate) */
+          AIImg.lastVideoConfig = Object.assign({}, config);
         }
         const tsIn = Number.isFinite(f.timestampUs) ? f.timestampUs : Math.round(count * 1e6 / fps);
         if (t0 < 0) t0 = tsIn;

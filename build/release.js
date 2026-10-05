@@ -25,7 +25,8 @@
  *   --all-generators        all of the second group (showcase only if build-showcase.js
  *                           is in the export)
  *
- *   --sw <n>                set sw.js to 1234tools-v<n> instead of live+1
+ *   --sw <n>                set sw.js to 1234tools-v<n> instead of live+1 (the
+ *                           footer's version record takes the same number)
  *   --no-fetch              never fetch; fail if the live commit is not local
  *
  *   --test                  run the suites against the export (needs --ports)
@@ -45,7 +46,9 @@
  * working tree; reset sw.js's V to HEAD's; generators; the post-processor
  * chain twice (pass 2 must change 0 files); sw.js V = live + 1, where live is
  * the V in origin's main (git ls-remote, fetched only if that commit is not
- * already local); build/split-models.js (no file over 24 MiB: parts the
+ * already local); the footer's version record in assets/version.js set to
+ * that V, today's date and HEAD's short id as built_on (build/version-record.js);
+ * build/split-models.js (no file over 24 MiB: parts the
  * loaders read) and build/cf-redirects.js (Cloudflare's _redirects from the
  * stubs); tree audit through a throwaway index (writes objects, no
  * refs); 0x08 scan of every changed text file; tests (the git-ignored
@@ -62,6 +65,7 @@ const path = require('path');
 const net = require('net');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
+const versionRecord = require('./version-record.js');
 
 const REPO = path.resolve(__dirname, '..');
 const NODE = process.execPath;
@@ -216,7 +220,7 @@ fs.mkdirSync(opt.report, { recursive: true });
 fs.mkdirSync(logsDir());
 const START = git(['rev-parse', 'HEAD']).trim();
 const BRANCH = git(['symbolic-ref', '-q', 'HEAD'], { allowFail: true }).trim();
-let TREE = null, NEWV = null, HEADV = null;
+let TREE = null, NEWV = null, HEADV = null, VERREC = null;
 const t0 = Date.now();
 const testRows = [];
 const copiedSha = new Map();
@@ -227,6 +231,7 @@ function finish() {
   lines.push('HEAD     ' + START + (BRANCH ? ' (' + BRANCH + ')' : ''));
   lines.push('export   ' + opt.out);
   lines.push('sw.js    ' + (NEWV ? '1234tools-v' + HEADV + ' -> 1234tools-v' + NEWV : 'not set'));
+  lines.push('version  ' + (VERREC ? JSON.stringify(VERREC) : 'not written'));
   lines.push('tree     ' + (TREE || 'not built'));
   lines.push('');
   lines.push(...summary);
@@ -368,6 +373,14 @@ try {
   if (NEWV <= HEADV) note('new sw.js V ' + NEWV + ' is not above HEAD\'s ' + HEADV);
   setSw(NEWV);
 
+  /* 5a. the footer's version record, with the same number: v = the cache
+     name just set, the date of this run, and built_on = START, the parent
+     of the commit --commit makes (that commit's id is not known yet) */
+  if (fs.existsSync(path.join(opt.out, versionRecord.FILE))) {
+    VERREC = versionRecord.write(opt.out, { v: NEWV, date: versionRecord.today(), built_on: START.slice(0, 9) });
+    say('version  ' + versionRecord.FILE + ' ' + JSON.stringify(VERREC));
+  } else note(versionRecord.FILE + ' is not in the export; no version record written');
+
   /* 5b. hosting limits: every file over 24 MiB split into parts its loader
      reads (Cloudflare refuses files over 25 MiB), and Cloudflare's
      _redirects rebuilt from the old-URL stubs */
@@ -410,7 +423,7 @@ try {
       return null;
     };
     const suites = [];
-    for (const t of ['share', 'proof', 'depth', 'conversions', 'hubs-nav', 'home-finder', 'dev-fixes', 'pdf-fixes', 'image-fixes', 'claims', 'footer']) {
+    for (const t of ['share', 'proof', 'depth', 'conversions', 'hubs-nav', 'home-finder', 'dev-fixes', 'pdf-fixes', 'image-fixes', 'claims', 'footer', 'version']) {
       if (fs.existsSync(path.join(REPO, 'build/tests', t + '.js'))) suites.push({ suite: t, script: 'build/tests/' + t + '.js', port: true });
     }
     suites.push({ suite: 'engines', script: 'build/tests/engines.js', args: ['--root', opt.out] });

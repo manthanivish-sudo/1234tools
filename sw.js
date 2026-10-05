@@ -2,19 +2,29 @@
    Precaching 900 pages would be a rude thing to do to someone's data plan,
    so we precache only the shell and cache tool pages as they are visited. */
 
-var V = '1234tools-v190';
+var V = '1234tools-v191';
 var SHELL = [
   './', './index.html',
   './assets/app.css', './assets/app.js', './assets/icons.svg',
   './engine/render-core.js', './engine/units.bundle.js', './engine/tools.bundle.js',
   './assets/fonts/sora-latin.woff2', './assets/fonts/inter-latin.woff2',
-  './manifest.webmanifest'
+  './manifest.webmanifest',
+  './assets/version.js'
 ];
+/* The footer's version record (written by build/release.js with this V) is
+   precached so the cache named V holds the record of the same release. It
+   alone skips the HTTP cache: /assets/ is max-age=600, and a record kept from
+   the last release would label this one with the old number until the next. */
+var FRESH = { './assets/version.js': true };
 
 self.addEventListener('install', function (e) {
   e.waitUntil(
     caches.open(V)
-      .then(function (c) { return Promise.allSettled(SHELL.map(function (u) { return c.add(u); })); })
+      .then(function (c) {
+        return Promise.allSettled(SHELL.map(function (u) {
+          return c.add(FRESH[u] ? new Request(u, { cache: 'no-cache' }) : u);
+        }));
+      })
       .then(function () { return self.skipWaiting(); })
   );
 });

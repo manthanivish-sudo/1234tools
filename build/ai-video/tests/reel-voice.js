@@ -60,6 +60,8 @@ const { serve } = require('../../tests/serve.js');
   const logs = [], errors = [];
   page.on('console', (m) => { const t = m.type() + ': ' + m.text(); logs.push(t); if (/error/i.test(m.type())) console.log('  [console]', t.slice(0, 300)); });
   page.on('pageerror', (e) => { errors.push(e.message); console.log('  [pageerror]', e.message); });
+  /* Start over on an edited reel asks first: say yes */
+  page.on('dialog', (d) => d.accept().catch(() => {}));
   /* every request, the page's and the voice worker's, once each (by request id) */
   const seen = new Map();
   const watch = (u, id) => { seen.set(id || ('x' + seen.size), u); };
@@ -119,6 +121,11 @@ const { serve } = require('../../tests/serve.js');
     const prev = await page.evaluate(() => AIImg.tools['reel-maker'].state().ttsPreview);
     console.log(stamp(), 'preview (includes the first download):', ((Date.now() - tp) / 1000).toFixed(1) + ' s', JSON.stringify(prev), '·', await status());
     check(prev && prev.voice === 'bf_emma' && prev.duration > 1 && prev.peak > 0.05, 'Preview speaks a sentence in Emma’s voice (' + (prev ? prev.duration.toFixed(2) + ' s, peak ' + prev.peak.toFixed(2) : 'none') + ')');
+    /* while the sentence plays, the same button stops it */
+    const playing = await page.$eval('#reel-tts-preview', (b) => b.textContent.trim());
+    await page.click('#reel-tts-preview');
+    const stopped = await page.$eval('#reel-tts-preview', (b) => b.textContent.trim());
+    check(playing === '■ Stop' && stopped === '▶ Preview', 'Preview turns into Stop while it plays, and back when pressed ("' + playing + '" → "' + stopped + '")');
     check(kokoro.some((u) => /model_quantized\.onnx/.test(u)) && kokoro.some((u) => /bf_emma\.bin/.test(u)) && kokoro.some((u) => /lexicon-gb\.json/.test(u)), 'Preview fetched the model, the voice and the British dictionary from this site');
     const inputs = await page.evaluate(async () => (await AIVidTTS.load()).inputs);
     check(JSON.stringify(inputs) === JSON.stringify(['input_ids', 'style', 'speed']), 'model inputs are input_ids, style, speed (' + inputs + ')');
@@ -177,6 +184,15 @@ const { serve } = require('../../tests/serve.js');
     check(words(g.segs.map((s) => s.text).join(' ')).join(' ') === words(SCRIPT).join(' '), 'the captions are the script’s own words');
     check(g.rms > 0.01 && g.mixSeconds > 3, 'the mixed sound is not silent (RMS ' + g.rms.toFixed(3) + ', ' + g.mixSeconds.toFixed(1) + ' s)');
     check(gap < 1000, 'the page kept running while the worker spoke (longest main-thread gap ' + Math.round(gap) + ' ms)');
+    /* the stale-voice warning: on as soon as a line the voice reads changes, off again when it is put back */
+    const ttsSt = () => page.$eval('#reel-tts-status', (e) => e.textContent.trim());
+    const setScene0 = (v) => page.evaluate((v) => { const ta = document.querySelector('.reel-scene-text'); ta.value = v; ta.dispatchEvent(new Event('input', { bubbles: true })); }, v);
+    const orig0 = await page.$eval('.reel-scene-text', (t) => t.value);
+    await setScene0('Stop guessing your sales tax.');
+    const stale1 = await ttsSt();
+    await setScene0(orig0);
+    const stale2 = await ttsSt();
+    check(/press Generate voice again/.test(stale1) && /^Generated:/.test(stale2), 'editing a scene the voice reads says “press Generate voice again” at once, and putting it back clears it');
     console.log('  generation took ' + genSecs.toFixed(1) + ' s for ' + g.speech.toFixed(1) + ' s of track (' + (genSecs / g.duration).toFixed(2) + '× the speech, model already loaded)');
     fs.writeFileSync(path.join(OUT, 'timing.json'), JSON.stringify({ genSecs, voiceSeconds: g.duration, ratio: genSecs / g.duration }, null, 1));
 
@@ -325,6 +341,8 @@ const { serve } = require('../../tests/serve.js');
     await page.evaluate(() => { for (const b of document.querySelectorAll('.reel-voice-info button')) if (/^Remove$/.test(b.textContent.trim())) { b.click(); break; } });
     const unlock = await page.evaluate(() => { const c = document.querySelector('#reel-ai-label'); return { checked: c.checked, disabled: c.disabled, label: AIImg.tools['reel-maker'].aiLabelOf(AIImg.tools['reel-maker'].state()) }; });
     check(!unlock.checked && !unlock.disabled && unlock.label === '', 'without the generated voice the label goes and the switch is free again');
+    const ttsAfter = await page.$eval('#reel-tts-status', (e) => e.textContent.trim());
+    check(ttsAfter === '', 'and no “Generate voice again” or “Generated” line is left behind ("' + ttsAfter + '")');
     await page.click('.aiimg-side .aiimg-tabs [data-pane=export]');
     await page.screenshot({ path: path.join(OUT, 'export.png') });
     await page.click('.aiimg-side .aiimg-tabs [data-pane=sound]');
