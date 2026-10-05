@@ -17,21 +17,55 @@ node build/promo/desk.js log [--venue social-x]
 node build/promo/desk.js log add reddit-r-smallbusiness --kind help --url https://...
 node build/promo/desk.js venues [--section pdf] [--audience accountants]
 node build/promo/desk.js lint "Free, 100% private PDF merger"
+node build/promo/desk.js guide                       # vision, process, red lines, channel list, FAQ
+node build/promo/desk.js guide linkedin-document     # one channel's card: format, limits, files, checklist
+node build/promo/desk.js coverage [--days 14]        # calendar targets posted, missing or needing a check
 ```
 
 Tool paths work with or without the leading slash. Git Bash rewrites `/pdf/...` into a Windows path; the desk undoes that, but `pdf/merge-pdf/` avoids the problem.
 
-The web app has seven tabs:
+The web app has nine tabs:
 
-- **Today**: the day's routine as tasks, each with the tool, the venue, the draft, the venue's red lines and a composer link where one exists. **Done…** asks for the post URL and logs it; **Skip** logs a skip. High-risk venues are never suggested here; venues whose rules the register could not confirm carry a **verify rules first** badge.
+- **Today**: the day's routine as tasks, each with the tool, the venue, the draft, the venue's red lines and a composer link where one exists. **Done…** asks for the post URL and logs it; **Skip** logs a skip. High-risk venues are never suggested here; venues whose rules the register could not confirm carry a **verify rules first** badge. Above the tasks, **Today's videos** lists the day's calendar slots and the channels still to post, with "wait" where a channel's cadence is used up.
 - **Draft**: pick any of the 232 finder tools, then a venue (ranked by fit, with risk, self-promotion rule, cadence status, rules link, notes and how the register verified them), a template and a variant. Every part has a live character count against its limit, red lint errors and its own Copy button. While a venue is blocked by the log, Copy and Open composer are disabled until you tick the override (logged as an override).
 - **Opportunities**: open questions for a tool or an audience. Every question found is saved (`opportunities.json`) with its status — new, drafted, answered, dismissed — so a restart loses nothing and a dismissed question stays dismissed when it turns up again. **Draft answer** opens Draft with the question in the answer template; **Mark answered** and **Dismiss** file it.
 - **Drafts survive restarts**: an edited draft is saved as you type (`drafts.json`) and comes back when the same tool, venue, template and variant are opened again, with **Reset to the generated text**.
 - **Kits**: generates a launch kit that tells the tool's story — the pain, the usual way, the fix with a REAL example captured from the live tool, three steps, a QR call to action — as a 5-slide carousel (plus `carousel.pdf` for LinkedIn documents), a square, a story, a Pinterest pin and a link-preview card. Every kit gets a different look (5 layouts × 8 palettes × 5 type styles × 3 copy variants, never repeating the tool's last 3 or the last 2 overall); **Shuffle look**, the Layout / Palette / Type / Copy menus, a seed and six alternative-look thumbnails let you choose.
-- **Calendar**: a 90-day short-video plan, about nine a week in five formats (problem → solution, before / after, 10-second developer tricks, India finance, AI at work), no tool repeated within 21 days. Each slot carries the tool's own hook and the Reel's beats, with **Make the Reel** (opens the Reel Maker on that tool), **Kit**, **Caption**, and **Made / Posted / Skip**; statuses live in `calendar.json` and survive re-planning; **Download CSV** for a shared planner.
+- **Calendar**: a 90-day short-video plan, about nine a week in five formats (problem → solution, before / after, 10-second developer tricks, India finance, AI at work), no tool repeated within 21 days. Each slot carries the tool's own hook and the Reel's beats, with **Make the Reel** (opens the Reel Maker on that tool), **Kit**, **Caption**, and **Made / Posted / Skip**; statuses live in `calendar.json` and survive re-planning; **Download CSV** for a shared planner. See *The per-channel checklist* below.
+- **Guide**: why the desk exists, the process from slot to every channel (with the Today routine, cadence, the 9:1 rule, missed days, removals and skips), the red lines, one card per channel and the FAQ. The same text prints with `desk.js guide`.
 - **Venues**: the register as a filterable table, plus the excluded venues with reasons and the research insights.
 - **Log**: history with filters, a form for help-only replies and removals, and cadence status per venue.
 - **Reels**: the top tools per section with a link to the Reel Maker (`/ai-video/reel-maker/?tool=<path>`), which works once that page is deployed.
+
+## The per-channel checklist and coverage
+
+Every calendar slot has **targets**, one per channel and format it should go to (`FORMATS` in `calendar.js`):
+
+| Format | Targets |
+|---|---|
+| Problem → solution | Instagram Reel, YouTube Shorts, TikTok, Instagram feed carousel (the kit's slides), LinkedIn document (`carousel.pdf`) |
+| Before / after | Instagram Reel, TikTok, Pinterest video pin |
+| 10-second developer trick | YouTube Shorts, X, LinkedIn post |
+| India finance | Instagram Reel, YouTube Shorts, WhatsApp Status, Instagram feed carousel, LinkedIn document |
+| AI at work | LinkedIn post, YouTube Shorts, Instagram Reel |
+
+For each target you paste the post's own link and press **Record**, or press **Posted (tick)** where a post has no lasting link (WhatsApp Status, an Instagram Story, a WhatsApp Channel update), or **Skip…** with a reason. **Add a channel** records a channel the slot did not list. **How to post** opens that channel's card in the Guide.
+
+**Verification is local and honest.** The desk reads the link's text only, never opens it, and never contacts the platform. It flags a link that is not https, belongs to another platform, or has the wrong format for the target (an `instagram.com/p/…` link on a Reel target: "wrong format: this is a feed post (instagram.com/p/…), the slot asked for a Reel (instagram.com/reel/…)"; a `watch?v=` link on a Shorts target), and the same link recorded on two targets. A link recorded before the slot's date only warns. A flagged link does not count until you press **It is right**. Short links (`pin.it`, `vm.tiktok.com`, `fb.watch`, `lnkd.in`) are accepted with a note that the desk cannot see behind them; it also cannot tell a video pin from an image pin, or see that a LinkedIn post carries the PDF.
+
+A slot is **posted** only when every target is posted or skipped with a reason; otherwise **partly posted** with the count ("3 of 5 channels"). The manual Made / Posted / Skip statuses still work; Skip on the slot takes the whole slot out of coverage.
+
+Recording a post (link or tick) on a channel that has a venue in `venues.json` also appends one log entry (`kind: post`, the tool, the link, `note: calendar <slot> · <channel>`), so the cadence rules and Today see it. Recording again after a Clear does not log twice, and Clear never deletes a log entry. WhatsApp Status has no venue, so it is recorded on the calendar only.
+
+**Coverage** (the panel at the top of the Calendar tab, or `desk.js coverage --days 14`): for past and today's slots, every target still missing, every link that fails the check, unassigned links, and per channel what was posted, is due today and was missed in the last 7 and 30 days.
+
+**Old calendars** (v1: one status and one `postedUrl` per slot) load unchanged: the link goes to the target whose rules it matches, or stays on the slot as an unassigned link, the old file is copied to `calendar.v1.json`, and nothing is written to the log. Re-planning keeps every slot with a status or any target record, even outside the new 90 days. Writes stay atomic (temporary file, then rename).
+
+## Channel specs: where they live and how to refresh them
+
+`channels.js` is the one source for the channel cards, the link rules and the Guide's numbers. Each spec row has a `value`, the official page it came from (`src`) and the date it was read (`CHECKED`, 2026-10-04). Figures from a platform's publishing API or ads guide are labelled so, because the app can allow more. Where no official page states a figure, or the page renders only with JavaScript (several Instagram, Facebook, TikTok and WhatsApp help pages), `value` is `null` and the card says **not confirmed — check in the app**, with the page that was tried.
+
+Platforms change their limits and links. To refresh: open each `src`, compare, edit `value`, and set `CHECKED` (or a row's own `checked`) to the day you read it; adjust a channel's `url` rules and its `samples` if the link shape changed, then run `node build/promo/test.js`, which checks every sample link (valid, wrong format, wrong platform) and lints every Guide sentence. The vision, process and FAQ text lives in `guide.js`.
 
 ## The daily routine (spec Part B section 5)
 
@@ -74,6 +108,7 @@ Nothing personal is in the repo (everything committed is published). Your data l
 - `kits\<slug>\`: `kit.md` (every template rendered with counts, the best-fit venues with their rules notes and links, a UTM link per venue) the story and the look used (with the command that reproduces it), `carousel-1.png`…`carousel-5.png` (1080×1350), `carousel.pdf`, `square-1080.png`, `story-1080x1920.png` (QR to the `instagram-story` UTM link, read back by the site's own QR engine), `pin-1000x1500.png` and `wide-1200x630.png`. `kits\history.json` remembers the looks used so the next kit differs.
 - `examples\<tool>\`: real examples captured from the live tools by `node build/promo/examples.js capture-all` (published to the site by `build-examples.js`).
 - `opportunities.json`, `drafts.json`: saved questions with their status, and your edited drafts.
+- `calendar.json`: the 90-day plan with every slot's targets and what you recorded (v2); `calendar.v1.json` is the untouched copy of a calendar made before targets existed.
 - `seo\`: SEO control centre spreadsheets (`node build/seo/control-centre.js`).
 - `cache\`: finder responses, kept 30 minutes.
 - `config.json` (optional): `{"accounts": {"reddit": "yourname", "hn": "yourname"}}` so the finder skips your own posts.
@@ -109,5 +144,8 @@ In GA4: **Reports → Acquisition → Traffic acquisition**, set the primary dim
 | `stories/` | the story for every tool (pain, usual way, fix, steps, proof, example spec); `index.js` merges the shards |
 | `examples.js`, `samples/` | captures real examples by driving the live tools; CC0 sample photos with their licences |
 | `store.js` | saved opportunities and drafts |
+| `calendar.js` | the 90-day video calendar: slots, targets, link verification, coverage, v1 migration |
+| `channels.js` | every channel's format, limits, links, files, checklist and red lines, with sources and check dates; the link rules |
+| `guide.js` | the Guide's vision, process, red lines and FAQ (lint-clean), and the `guide` CLI text |
 | `fixtures/` | one saved response per search API (Reddit JSON is a documented-shape synthetic: Reddit answered 403 from the network the fixtures were captured on) |
-| `test.js`, `test-ui.js`, `test-kit.js`, `test-examples.js` | `node build/promo/test.js` (no browser, no network; includes a real server-restart check); `test-ui.js` (puppeteer on port 8751); `test-kit.js` (kits, looks, overflow matrix); `test-examples.js` (live capture) |
+| `test.js`, `test-ui.js`, `test-kit.js`, `test-examples.js` | `node build/promo/test.js` (no browser, no network; channel link rules, guide lint, calendar targets, coverage and migration; a real server-restart check on port 8753, `PROMO_TEST_PORT` to change, which `serve` accepts only with `PROMO_TEST=1`); `test-ui.js` (puppeteer on port 8751, `PROMO_UI_PORT` to change; includes the Guide, target recording, the wrong-format warning and coverage); `test-kit.js` (kits, looks, overflow matrix); `test-examples.js` (live capture) |

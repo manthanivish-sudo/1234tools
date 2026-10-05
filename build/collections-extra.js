@@ -136,7 +136,7 @@ const COLLECTIONS = [
     ],
     faq: [
       { q: 'Where does the trial balance come from?', a: 'From the bookkeeping tool, which is a real double-entry ledger rather than a spreadsheet with subtotals: every posting has two sides, so the trial balance agrees by construction and a difference means a posting is wrong rather than a sum. The profit and loss and the balance sheet come out of the same book, and any figure on them can be followed back to the entries that made it.' },
-      { q: 'Which depreciation method does it use?', a: 'Straight line, reducing balance, sum of years’ digits or units of production, on the cost, life and residual you give it, with the schedule laid out year by year. It is the accounting charge and nothing more: for UK corporation tax depreciation is added back and replaced by capital allowances, which is a separate computation the page points you at rather than guesses.' },
+      { q: 'Which depreciation method does it use?', a: 'Straight line, reducing balance, double declining or sum of years’ digits, on the cost, life and residual you give it, with the schedule laid out year by year. It is the accounting charge and nothing more: for UK corporation tax depreciation is added back and replaced by capital allowances, which is a separate computation the page points you at rather than guesses.' },
       { q: 'Can I hand this to an accountant?', a: 'That is what the converters are for. The bookkeeping tool writes the whole book to a file you keep, the statements come out as spreadsheets, and the Tally and package converters move a day book between the shapes different software expects. Nothing ends up in a format only this site can read.' }
     ],
     related: ['accountants', 'month-end', 'small-business']

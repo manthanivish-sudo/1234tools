@@ -2,7 +2,7 @@
   "id": "/india/lumpsum-returns.html",
   "name": "Lumpsum Investment Calculator — 1234Tools",
   "short_name": "Lumpsum Investment",
-  "description": "Future value and annualised return on a one-time investment, with inflation-adjusted worth.",
+  "description": "Future value of a one-time investment, with its worth in today’s money and the real return after inflation.",
   "start_url": "/india/lumpsum-returns/?src=pwa",
   "scope": "/india/lumpsum-returns/",
   "display": "standalone",

@@ -248,7 +248,7 @@ module.exports = {
     promise: 'Pick the document. Get the right size, laid out on a 6×4 sheet.',
     steps: ['Drop in a front-facing photo', 'Pick the document type', 'Print the 6×4 sheet'],
     proof: ['Free', 'Nothing uploaded', 'No watermark'],
-    example: { kind: 'image', sample: 'portrait', options: { sheet: 'both' } },
+    example: { kind: 'image', sample: 'passport', options: { bgmode: 'replace', bg: '#ffffff', sheet: 'both' } },
     howTo: 'How to make passport photos at home',
     cta: 'Make passport photos'
   },

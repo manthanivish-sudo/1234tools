@@ -2,7 +2,7 @@
   "id": "/time/week-number.html",
   "name": "Week Number Calculator — 1234Tools",
   "short_name": "Week Number",
-  "description": "Find the ISO-8601 week number for any date, and the dates covered by any week number.",
+  "description": "Find the ISO-8601 week number for any date, and the Monday-to-Sunday dates of its week.",
   "start_url": "/time/week-number/?src=pwa",
   "scope": "/time/week-number/",
   "display": "standalone",

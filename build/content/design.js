@@ -40,7 +40,7 @@ module.exports = {
     ],
     faq: [
       { q: 'What aspect ratio is 1920 × 1080?', a: '16:9, or 1.7778 as a decimal. Dividing both sides by their greatest common divisor, 120, gives 16 and 9; the frame holds 2.0736 megapixels.' },
-      { q: 'How do I find the width for a given height?', a: 'Swap the roles: put the original height in Original Width, the original width in Original Height, and the target height in New Width. The new height shown is then the width you need: a 1080 × 1920 frame cut to 1350 high needs a width of 2400.' },
+      { q: 'How do I find the width for a given height?', a: 'Swap the roles: put the original height in Original Width, the original width in Original Height, and the target height in New Width. The new height shown is then the width you need: a 1920 × 1080 frame scaled to 1350 high needs a width of 2400.' },
       { q: 'Does changing the aspect ratio reduce quality?', a: 'Changing the ratio means cropping or stretching: cropping throws pixels away and stretching distorts them. Scaling at the same ratio only changes the pixel count, which softens detail when a photo is enlarged.' }
     ],
     checks: [

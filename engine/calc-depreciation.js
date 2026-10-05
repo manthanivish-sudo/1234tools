@@ -137,7 +137,7 @@ window.TOOLS["depreciation"] = {
 "currency": "GBP",
 "title": "Depreciation Calculator with Schedule",
 "category": "business",
-"description": "Straight-line, reducing balance, sum-of-years and units of production, with a full year-by-year schedule.",
+"description": "Straight-line, reducing balance, double declining and sum-of-years digits, with a full year-by-year schedule.",
 "keywords": ["depreciation calculator","straight line depreciation","reducing balance","declining balance","asset depreciation","depreciation schedule"],
 "formula": "straight line = (cost − salvage) / life",
 "inputs": [{"key":"method","label":"Method","type":"select","options":[{"value":"sl","label":"Straight line"},{"value":"db","label":"Reducing (declining) balance"},{"value":"ddb","label":"Double declining balance"},{"value":"syd","label":"Sum of years digits"}],"default":"sl"},{"key":"cost","label":"Asset cost","type":"number","unit":"£","default":50000,"min":0},{"key":"salvage","label":"Residual / salvage value","type":"number","unit":"£","default":5000,"min":0},{"key":"life","label":"Useful life","type":"number","unit":"years","default":5,"min":1,"max":200},{"key":"dbRate","label":"Reducing balance rate","type":"number","unit":"%","default":25,"min":0}],

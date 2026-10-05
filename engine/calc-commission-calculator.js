@@ -170,16 +170,22 @@ window.TOOLS["commission-calculator"] = {
         });
       }
 
+      /* On-target earnings: base plus the commission paid at exactly 100% of
+         quota. Flat and tiered pay the base rate on the quota itself; a
+         threshold plan pays nothing until sales pass it. */
+      const ote = base + (structure === 'threshold' ? 0 : threshold * (rate / 100));
+
       return {
         commission,
         total: base + commission,
+        ote,
         effectiveRate: sales ? (commission / sales) * 100 : 0,
         attainment: threshold ? (sales / threshold) * 100 : NaN,
         commissionShare: (base + commission) ? (commission / (base + commission)) * 100 : 0,
         _table: { head: ['Tier', 'Sales', 'Rate', 'Commission'], rows }
       };
     },
-"outputs": [{"key":"commission","label":"Commission earned","format":"currency","primary":true},{"key":"total","label":"Total earnings (base + commission)","format":"currency"},{"key":"effectiveRate","label":"Effective commission rate","format":"percent"},{"key":"attainment","label":"Quota attainment","format":"percent"},{"key":"commissionShare","label":"Variable share of pay","format":"percent"}],
+"outputs": [{"key":"commission","label":"Commission earned","format":"currency","primary":true},{"key":"total","label":"Total earnings (base + commission)","format":"currency"},{"key":"ote","label":"On-target earnings (base + commission at 100% of quota)","format":"currency"},{"key":"effectiveRate","label":"Effective commission rate","format":"percent"},{"key":"attainment","label":"Quota attainment","format":"percent"},{"key":"commissionShare","label":"Variable share of pay","format":"percent"}],
 "tips": ["Accelerators reward over-performance and are usually cheaper than raising the base rate, because they only pay out on the sales you most want.","A common split is 50/50 base to variable for new business roles, and 70/30 or 80/20 for account management.","Commission on revenue can push a team towards discounting. Paying on gross profit removes that incentive."],
 "faq": [{"q":"Should commission be paid on revenue or profit?","a":"Profit aligns the seller with the business, since discounting then costs them directly. Revenue is simpler to administer and easier for sellers to forecast. Many companies compromise by paying on revenue but capping the discount a rep can authorise."}]
 };

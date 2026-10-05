@@ -1270,7 +1270,7 @@ const GUIDES = [
           { formula: 'margin = profit ÷ selling price × 100' },
           { formula: 'markup = profit ÷ cost × 100' },
           { p: 'The margin is 40 ÷ 100 × 100 = 40%: forty pence of every pound taken is profit. The markup is 40 ÷ 60 × 100 = 66.67%: the cost was raised by two thirds to reach the price. Margin can never reach 100%, because that would mean the goods cost nothing; markup has no ceiling.' },
-          { tool: '/business/profit-margin/', why: 'works out margin, markup, cost or selling price from any two of them, with profit per unit and totals for a number of units', fill: 'solve=margin&cost=60&price=100', fillLabel: 'Do it in the calculator with a £60 cost and a £100 price — it shows 40% and 66.667%' }
+          { tool: '/business/profit-margin/', why: 'works out selling price, cost, margin and markup from any two of cost, price and margin, with profit per unit and totals for a number of units', fill: 'solve=margin&cost=60&price=100', fillLabel: 'Do it in the calculator with a £60 cost and a £100 price — it shows 40% and 66.667%' }
         ]
       },
       {

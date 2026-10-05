@@ -2,11 +2,12 @@
 
 `build/promo/examples.js` runs the image tools on these photos so a launch kit shows a real before and after. Every file comes from Wikimedia Commons. On 2026-10-04 each file page said **CC0 1.0 Universal Public Domain Dedication**, so no attribution is required. The authors are still credited here.
 
-Each photo was downloaded at 1600 px wide (`Special:FilePath/<name>?width=1600`) and re-encoded as JPEG in Chrome to stay under 350 KB. Nothing else was changed: no crop, no retouching.
+Each photo was downloaded at 1600 px wide (`Special:FilePath/<name>?width=1600`) and re-encoded as JPEG in Chrome to stay under 350 KB. Nothing else was changed: no crop, no retouching, except `passport.jpg`, a crop described in its row.
 
 | file | what it is | Commons file page | author | licence | saved as |
 |---|---|---|---|---|---|
 | `portrait.jpg` | woman, head and shoulders, against a hedge | [Brunette woman portrait (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Brunette_woman_portrait_(Unsplash).jpg) | Christopher Campbell (Unsplash: chrisjoelcampbell) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 1600×1067, q86, 265 KB |
+| `passport.jpg` | the same photo as `portrait.jpg`, cropped to head and shoulders as a phone portrait would be framed, for the passport photo example (the passport tool centre-crops and has no zoom) | [Brunette woman portrait (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Brunette_woman_portrait_(Unsplash).jpg) | Christopher Campbell (Unsplash: chrisjoelcampbell) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | fetched 2026-10-04 at 3840×2560, cropped to 1200×1296 (the only change), q86, 239 KB |
 | `product.jpg` | a black cup of coffee on a saucer, on a wooden table | [Black coffee cup (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Black_coffee_cup_(Unsplash).jpg) | Ross Parmly (Unsplash: rparmly) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 1600×1067, q86, 215 KB |
 | `street.jpg` | a New York street with people on a crossing | [People crossing street (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:People_crossing_street_(Unsplash).jpg) | Mike Petrucci (Unsplash: mikepetrucci) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 1600×1200, q74, 321 KB |
 | `landscape.jpg` | Lake Pukaki and Aoraki / Mt Cook under a clear sky | [Lake Pukaki and Mt Cook.NZ (15577767068).jpg](https://commons.wikimedia.org/wiki/File:Lake_Pukaki_and_Mt_Cook.NZ_(15577767068).jpg) | Bernard Spragg, Christchurch, New Zealand | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | 1600×1063, q86, 215 KB |

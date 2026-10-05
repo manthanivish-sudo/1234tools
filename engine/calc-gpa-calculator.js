@@ -139,7 +139,7 @@ window.TOOLS["gpa-calculator"] = {
 "description": "Calculate weighted and unweighted grade point average from course grades and credits.",
 "keywords": ["GPA calculator","grade point average","weighted GPA","college GPA","semester GPA","CGPA"],
 "formula": "GPA = Σ(grade points × credits) / Σ credits",
-"inputs": [{"key":"grades","label":"Grades (comma separated: A, B+, 3.7 …)","type":"text","default":"A, B+, A-, B, C+"},{"key":"credits","label":"Credits (optional, same order)","type":"text","default":"3, 4, 3, 3, 2"},{"key":"scale","label":"Scale","type":"select","options":[{"value":"4","label":"4.0 scale (US)"},{"value":"10","label":"10.0 scale (India CGPA)"},{"value":"5","label":"5.0 scale (weighted)"}],"default":"4"}],
+"inputs": [{"key":"grades","label":"Grades (comma separated: A, B+, 3.7 …)","type":"text","default":"A, B+, A-, B, C+"},{"key":"credits","label":"Credits (optional, same order)","type":"text","default":"3, 4, 3, 3, 2"},{"key":"scale","label":"Scale","type":"select","options":[{"value":"4","label":"4.0 scale (US)"},{"value":"10","label":"10.0 scale (India CGPA)"},{"value":"5","label":"5.0 scale (4.0 × 1.25)"}],"default":"4"}],
 "compute": ({ grades, credits, scale }) => {
       const MAP = {
         'A+': 4.0, 'A': 4.0, 'A-': 3.7,
@@ -151,7 +151,7 @@ window.TOOLS["gpa-calculator"] = {
       if (!list.length) return { note: 'Enter some grades.' };
 
       const points = list.map(g => {
-        const up = g.toUpperCase();
+        const up = g.toUpperCase().replace(/[−–]/g, '-');   // A− as printed on a transcript
         if (MAP[up] !== undefined) return MAP[up];
         const n = Number(g);
         return isFinite(n) ? n : null;

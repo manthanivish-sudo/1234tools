@@ -11,6 +11,10 @@ portrait.jpg - woman, head and shoulders, against a hedge
   by Christopher Campbell (Unsplash: chrisjoelcampbell), CC0 1.0
   https://commons.wikimedia.org/wiki/File:Brunette_woman_portrait_(Unsplash
 
+passport.jpg - the same photo as `portrait.jpg`, cropped to head and shoulders as a phone portrait would be framed, for the passport photo example (the passport tool centre-crops and has no zoom)
+  by Christopher Campbell (Unsplash: chrisjoelcampbell), CC0 1.0
+  https://commons.wikimedia.org/wiki/File:Brunette_woman_portrait_(Unsplash
+
 product.jpg - a black cup of coffee on a saucer, on a wooden table
   by Ross Parmly (Unsplash: rparmly), CC0 1.0
   https://commons.wikimedia.org/wiki/File:Black_coffee_cup_(Unsplash

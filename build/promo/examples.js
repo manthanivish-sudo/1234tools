@@ -32,7 +32,7 @@
  *   pdf-make   fields? {controlKey: value}    presses Create PDF, renders page 1 (page1.png)
  *   pdf-edit   sample invoice|letter|report, options?   makes the sample with the site's
  *                                       own generators, runs the tool, renders before/after
- *   image      sample portrait|product|street|landscape|pet|food|document|group, options?
+ *   image      sample portrait|passport|product|street|landscape|pet|food|document|group, options?
  *   video      sample speech            Auto Captions on a clip with real speech
  *   schematic  input, output, sampleIn?, sampleOut?   nothing is run
  *
@@ -61,9 +61,9 @@ const os = require('os');
 const ROOT = path.resolve(__dirname, '..', '..');
 const CHROME = process.env.PROMO_CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const SAMPLES = path.join(__dirname, 'samples');
-const SAMPLE_NAMES = ['portrait', 'product', 'street', 'landscape', 'pet', 'food', 'document', 'group'];
+const SAMPLE_NAMES = ['portrait', 'passport', 'product', 'street', 'landscape', 'pet', 'food', 'document', 'group'];
 const SAMPLE_WORDS = {
-  portrait: 'a portrait', product: 'a product photo of a coffee cup', street: 'a street photo', landscape: 'a landscape',
+  portrait: 'a portrait', passport: 'a head-and-shoulders photo taken outdoors', product: 'a product photo of a coffee cup', street: 'a street photo', landscape: 'a landscape',
   pet: 'a photo of a dog', food: 'a food photo', document: 'a photo of a receipt', group: 'a group photo'
 };
 const PORT_MIN = 8740, PORT_MAX = 8749;
@@ -796,7 +796,7 @@ const AI = {
 };
 
 /* The subject of each sample photo, by layer name, for tools that cut one out. */
-const KEEP = { portrait: '^People$', group: '^People$', pet: '^(Animals?|Dogs?)$' };
+const KEEP = { portrait: '^People$', passport: '^People$', group: '^People$', pet: '^(Animals?|Dogs?)$' };
 
 async function makeBefore(c, sample, max) {
   const file = path.join(SAMPLES, sample + '.jpg');

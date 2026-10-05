@@ -157,14 +157,15 @@ window.TOOLS["prime-factorisation"] = {
       const expanded = Object.keys(grouped).map(Number).sort((a, b) => a - b)
         .map(f => grouped[f] > 1 ? `${f}^${grouped[f]}` : String(f)).join(' × ');
 
-      // divisors, only for values where the list stays manageable
-      let divisors = [];
-      if (original <= 1e7) {
-        for (let d = 1; d * d <= original; d++) {
-          if (original % d === 0) { divisors.push(d); if (d !== original / d) divisors.push(original / d); }
-        }
-        divisors.sort((a, b) => a - b);
-      }
+      /* every divisor, built from the prime powers (at most 6,720 below a
+         trillion), so the list is complete for any number accepted */
+      let divisors = [1];
+      Object.keys(grouped).map(Number).forEach((p) => {
+        const next = [];
+        divisors.forEach((d) => { let m = d; for (let e = 0; e <= grouped[p]; e++) { next.push(m); m *= p; } });
+        divisors = next;
+      });
+      divisors.sort((a, b) => a - b);
       const divisorCount = Object.values(grouped).reduce((p, e) => p * (e + 1), 1);
 
       return {
@@ -173,10 +174,8 @@ window.TOOLS["prime-factorisation"] = {
         factorList: factors.join(' × ') || '—',
         distinctPrimes: Object.keys(grouped).length,
         divisorCount,
-        divisorList: divisors.length ? (divisors.length > 40
-          ? divisors.slice(0, 40).join(', ') + `, … (${divisors.length} in total)`
-          : divisors.join(', ')) : 'too large to list',
-        sumOfDivisors: divisors.length ? divisors.reduce((s, d) => s + d, 0) : NaN,
+        divisorList: divisors.join(', '),
+        sumOfDivisors: divisors.reduce((s, d) => s + d, 0),
         note: ''
       };
     },

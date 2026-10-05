@@ -467,7 +467,8 @@ function otherTests() {
     const v = { gross: int(0, 99000), year, pension: int(0, 10), student: year === '2025/26' ? pick(['none', 'plan1', 'plan2', 'plan4', 'pgl']) : 'none' };
     same('uk-take-home-pay', v, 'below £100k ' + year + ' ' + v.student, ['note']);
     same('employer-cost', { salary: int(0, 300000), year, pension: int(0, 10), allowance: pick(['yes', 'no']), overheads: int(0, 9000), recruitment: int(0, 9000) }, 'employer cost');
-    same('percentage', { mode: 'of', value: int(0, 100), total: int(0, 1e5) }, 'shares the UK table');
+    /* beforeRise / beforeCut (reverse percentages) are new since BASE */
+    same('percentage', { mode: 'of', value: int(0, 100), total: int(0, 1e5) }, 'shares the UK table', ['beforeRise', 'beforeCut']);
   }
 
   /* F. Late payment interest: reference rate + 8% */

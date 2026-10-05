@@ -63,7 +63,9 @@
     /* The homepage's "pick up where you left off" strip is the visitor's own
        history. It never leaves the device and must not reach a replay either. */
     '#recent-tools',
-    '.io-pane', '.io-msg', '.pdf-file-name', '.page-grid', '.stat-val'
+    '.io-pane', '.io-msg', '.pdf-file-name', '.page-grid', '.stat-val',
+    /* a calculator's schedule table: fertile-window dates, loan balances */
+    '.tool-table'
   ].join(',');
 
   function mask(root) {

@@ -137,7 +137,7 @@ window.TOOLS["profit-margin"] = {
 "currency": "GBP",
 "title": "Profit Margin & Markup Calculator",
 "category": "business",
-"description": "Work out margin, markup, cost or selling price from any two of them. Margin and markup are not the same thing.",
+"description": "Work out selling price, cost, margin and markup from any two of cost, price and margin. Margin and markup are not the same thing.",
 "keywords": ["profit margin calculator","markup calculator","gross margin","margin vs markup","selling price calculator"],
 "formula": "margin = (price − cost) / price   ·   markup = (price − cost) / cost",
 "inputs": [{"key":"solve","label":"Solve for","type":"select","options":[{"value":"price","label":"Selling price (from cost + margin)"},{"value":"margin","label":"Margin & markup (from cost + price)"},{"value":"cost","label":"Cost (from price + margin)"}],"default":"price"},{"key":"cost","label":"Unit cost","type":"number","unit":"£","default":60,"min":0},{"key":"price","label":"Selling price","type":"number","unit":"£","default":100,"min":0},{"key":"margin","label":"Target margin","type":"number","unit":"%","default":40,"step":0.01},{"key":"units","label":"Units sold","type":"number","default":1000,"min":0}],

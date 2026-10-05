@@ -165,6 +165,13 @@ window.TOOLS["roman-numerals"] = {
         const v = VAL[raw[i]], nxt = VAL[raw[i + 1]] || 0;
         total += v < nxt ? -v : v;
       }
+      /* past 3999 a numeral needs a fourth M or a non-standard spelling;
+         read it, but say it is outside the standard range */
+      if (total > 3999) {
+        return { result: String(total), decimal: total, direction: 'Roman → Number',
+                 breakdown: `That reads as ${total}, beyond the standard range.`,
+                 note: `"${raw}" reads as ${total}, but standard Roman numerals stop at 3999, MMMCMXCIX; larger values needed an overbar.` };
+      }
       // reject non-canonical spellings such as IIII or IC
       let check = '', n2 = total;
       for (const [v, s] of MAP) while (n2 >= v) { check += s; n2 -= v; }

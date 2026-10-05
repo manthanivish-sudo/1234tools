@@ -136,7 +136,7 @@ window.TOOLS = window.TOOLS || {};
 window.TOOLS["week-number"] = {
 "title": "Week Number Calculator",
 "category": "time",
-"description": "Find the ISO-8601 week number for any date, and the dates covered by any week number.",
+"description": "Find the ISO-8601 week number for any date, and the Monday-to-Sunday dates of its week.",
 "keywords": ["week number","ISO week","what week is it","calendar week","week number calculator"],
 "formula": "ISO-8601: week 1 contains the first Thursday of the year",
 "inputs": [{"key":"date","label":"Date","type":"date","default":"TODAY"}],

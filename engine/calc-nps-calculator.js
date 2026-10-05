@@ -164,8 +164,9 @@ window.TOOLS["nps-calculator"] = {
          https://www.pfrda.org.in/documents/33652/184762/PFRDA+(Exits+and+Withdrawals+under+the+NPS)+Regulations,+2015+%5BLast+amended+on+16+December+2025%5D.pdf
          and PFRDA's press release of 19 December 2025. */
       const minPct = sector === 'govt' ? 40 : 20;
-      const asked = Number(annuityPct);
-      const pctNum = Math.max(minPct, Math.min(100, isFinite(asked) && annuityPct !== null && annuityPct !== '' ? asked : 40));
+      const given = annuityPct !== null && annuityPct !== undefined && annuityPct !== '' && isFinite(Number(annuityPct));
+      const asked = given ? Number(annuityPct) : 40;
+      const pctNum = Math.max(minPct, Math.min(100, asked));
       const pct = pctNum / 100;
       const annuity = corpus * pct;
       const lumpsum = corpus - annuity;

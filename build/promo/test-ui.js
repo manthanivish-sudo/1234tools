@@ -2,8 +2,9 @@
 /**
  * Browser test for the Promotion Desk UI (puppeteer-core + local Chrome).
  *   node build/promo/test-ui.js
- * Serves the desk on 127.0.0.1:8798 with a temporary PROMO_HOME and a pinned
- * Tuesday (PROMO_NOW), drives Draft, Today, Kits, Venues and Log, and checks
+ * Serves the desk on 127.0.0.1:8751 (PROMO_UI_PORT=8752-8759 to change) with a
+ * temporary PROMO_HOME and a pinned Tuesday (PROMO_NOW), drives Draft, Today,
+ * Kits, Venues, Log, Calendar (targets, link checks, coverage) and Guide, and checks
  * the four kit PNGs by their headers. Nothing leaves the machine: composer
  * links are read, never followed.
  */
@@ -30,6 +31,7 @@ async function check(name, fn) {
   try { await fn(); pass++; console.log('  ok   ' + name); } catch (e) { fail++; failures.push(name); console.log('  FAIL ' + name + ': ' + (e && e.message || e)); }
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let S_ch = '';
 
 (async () => {
   const server = desk.createServer(PORT);
@@ -231,6 +233,66 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
       await page.evaluate(() => [...document.querySelectorAll('#cal-weeks .cal-item button')].find((b) => b.textContent === 'Made').click());
       await page.waitForFunction(() => document.querySelector('#cal-weeks .cal-item.is-made'));
       assert.ok((await page.$eval('#cal-stats', (e) => e.textContent)).includes('1 made'));
+    });
+    // ---- per-channel targets, verification and coverage (calendar.js, channels.js)
+    const slotId = await page.$eval('#cal-weeks .cal-item.is-today', (el) => el.dataset.id).catch(() => null);
+    const row = (ch) => '.cal-item[data-id="' + slotId + '"] .tg[data-channel="' + ch + '"]';
+    const prog = () => page.$eval('.cal-item[data-id="' + slotId + '"] .cal-prog', (e) => e.textContent);
+    await check('Calendar: today\'s slot lists its target channels, "0 of N"', async () => {
+      assert.ok(slotId, 'no slot marked today');
+      const n = await page.$$eval('.cal-item[data-id="' + slotId + '"] .tg', (x) => x.length);
+      assert.ok(n >= 3, 'targets ' + n);
+      assert.strictEqual(await prog(), '0 of ' + n + ' channels');
+    });
+    await check('recording a valid link on a target makes the slot "1 of N" and logs it', async () => {
+      const ch = await page.$eval('.cal-item[data-id="' + slotId + '"] .tg', (e) => e.dataset.channel);
+      const C = require('./channels').get(ch);
+      await page.type(row(ch) + ' input.tg-input', C.samples.valid[0]);
+      await page.click(row(ch) + ' .tg-record');
+      await page.waitForFunction((id) => /^1 of \d channels$/.test((document.querySelector('.cal-item[data-id="' + id + '"] .cal-prog') || {}).textContent || ''), { timeout: 10000 }, slotId);
+      await page.waitForSelector(row(ch) + '.is-posted');
+      const log = JSON.parse(fs.readFileSync(path.join(TMP, 'log.json'), 'utf8'));
+      assert.ok(log.entries.some((e) => e.venueId === C.venue && e.url === C.samples.valid[0] && /^calendar /.test(e.note)), 'log entry for ' + C.venue);
+      S_ch = ch;
+    });
+    let wrongCh = '';
+    await check('a wrong-format link shows the warning and does not count', async () => {
+      wrongCh = await page.$$eval('.cal-item[data-id="' + slotId + '"] .tg.is-due', (xs) => xs[0].dataset.channel);
+      const C = require('./channels').get(wrongCh);
+      await page.type(row(wrongCh) + ' input.tg-input', C.samples.wrongFormat[0]);
+      await page.click(row(wrongCh) + ' .tg-record');
+      await page.waitForSelector(row(wrongCh) + ' .tg-issues li.bad[data-code="wrong-format"]', { timeout: 10000 });
+      const msg = await page.$eval(row(wrongCh) + ' .tg-issues li.bad', (e) => e.textContent);
+      assert.ok(/wrong format/.test(msg), msg);
+      assert.ok(/^1 of \d channels$/.test(await prog()));
+      assert.ok(await page.$(row(wrongCh) + ' .tg-accept'), 'offers "It is right"');
+    });
+    await check('the coverage view lists the missing channel and the link to check', async () => {
+      const missing = await page.$$eval('.cal-item[data-id="' + slotId + '"] .tg.is-due', (xs) => xs.map((x) => x.dataset.channel));
+      assert.ok(missing.length >= 1);
+      await page.waitForSelector('#cov-body .cov-slot[data-id="' + slotId + '"] [data-channel="' + missing[0] + '"]', { timeout: 10000 });
+      await page.waitForSelector('#cov-body .cov-check [data-channel="' + wrongCh + '"]', { timeout: 10000 });
+      const rows = await page.$$eval('#cov-body .cov-table tbody tr', (x) => x.length);
+      assert.ok(rows >= 3, 'per-channel rows ' + rows);
+    });
+    await check('Today shows today\'s video slots with the channels still missing', async () => {
+      await page.click('.tabs button[data-tab="today"]');
+      await page.waitForSelector('#plan-cal .tv-slot[data-id="' + slotId + '"] .chip', { timeout: 15000 });
+      const chips = await page.$$eval('#plan-cal .tv-slot[data-id="' + slotId + '"] .chip', (x) => x.map((c) => c.dataset.channel));
+      assert.ok(!chips.includes(S_ch) && chips.includes(wrongCh), JSON.stringify(chips));
+    });
+    await check('Guide tab renders every channel card, the process and the FAQ', async () => {
+      await page.click('.tabs button[data-tab="guide"]');
+      await page.waitForSelector('#g-channels .g-card', { timeout: 10000 });
+      const r = await page.evaluate(() => ({ cards: Array.from(document.querySelectorAll('#g-channels .g-card')).map((c) => c.dataset.channel), faq: document.querySelectorAll('#g-faq details.g-q').length, steps: document.querySelectorAll('#g-process .g-step').length, vision: document.querySelectorAll('#g-vision li').length, specs: document.querySelectorAll('#g-channels .g-specs dt').length, nc: document.querySelectorAll('#g-channels .g-specs .nc').length, src: document.querySelectorAll('#g-channels .g-src').length }));
+      assert.deepStrictEqual(r.cards, require('./channels').list().map((c) => c.id));
+      assert.ok(r.faq >= 12 && r.steps >= 7 && r.vision >= 4 && r.specs >= 100 && r.nc >= 1 && r.src >= 80, JSON.stringify(r));
+    });
+    await check('"How to post" on a target opens that channel\'s card alone', async () => {
+      await page.click('.tabs button[data-tab="calendar"]');
+      await page.waitForSelector(row(wrongCh) + ' button.linkish');
+      await page.click(row(wrongCh) + ' button.linkish');
+      await page.waitForFunction((ch) => { const c = document.getElementById('gc-' + ch); return c && !c.hidden && c.open && document.querySelectorAll('#g-channels .g-card:not([hidden])').length === 1; }, { timeout: 10000 }, wrongCh);
     });
     await check('no external requests and no page errors', async () => {
       assert.deepStrictEqual(external, []);

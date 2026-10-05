@@ -140,10 +140,10 @@ window.TOOLS["tip-calculator"] = {
 "description": "Work out a tip and split a bill between any number of people, with optional rounding.",
 "keywords": ["tip calculator","split bill","gratuity calculator","bill splitter","how much to tip"],
 "formula": "tip = bill × rate  ·  each = (bill + tip) / people",
-"inputs": [{"key":"bill","label":"Bill amount","type":"number","unit":"£","default":85,"min":0},{"key":"tip","label":"Tip","type":"number","unit":"%","default":12.5,"min":0,"step":0.5},{"key":"people","label":"Split between","type":"number","default":4,"min":1,"max":500},{"key":"round","label":"Rounding","type":"select","options":[{"value":"none","label":"Exact"},{"value":"up","label":"Round each share up"},{"value":"total","label":"Round the total up"}],"default":"none"}],
+"inputs": [{"key":"bill","label":"Bill amount","type":"number","unit":"£","default":85,"min":0},{"key":"tip","label":"Tip","type":"number","unit":"%","default":12.5,"min":0,"step":0.5},{"key":"people","label":"Split between","type":"number","default":4,"min":1},{"key":"round","label":"Rounding","type":"select","options":[{"value":"none","label":"Exact"},{"value":"up","label":"Round each share up"},{"value":"total","label":"Round the total up"}],"default":"none"}],
 "compute": ({ bill, tip, people, round }) => {
       const b = Number(bill) || 0;
-      const n = Math.max(1, Math.min(500, Math.round(Number(people) || 1)));
+      const n = Math.max(1, Math.round(Number(people) || 1));
       let tipAmt = b * ((Number(tip) || 0) / 100);
       let total = b + tipAmt;
 

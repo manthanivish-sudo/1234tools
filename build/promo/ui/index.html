@@ -25,6 +25,7 @@
     <button role="tab" data-tab="log">Log</button>
     <button role="tab" data-tab="reels">Reels</button>
     <button role="tab" data-tab="calendar">Calendar</button>
+    <button role="tab" data-tab="guide">Guide</button>
   </nav>
 </header>
 
@@ -33,6 +34,7 @@
   <section id="tab-today" class="tab" data-tab="today">
     <div class="head-row"><h2 id="plan-title">Today</h2><button class="ghost" id="plan-refresh">Refresh</button></div>
     <p class="muted" id="plan-work"></p>
+    <div id="plan-cal"></div>
     <div id="plan-tasks" class="stack"></div>
   </section>
 
@@ -205,14 +207,37 @@
       <div class="row wrap">
         <div class="grow">
           <h3 class="cal-title">90-day short-video calendar</h3>
-          <p class="muted small">One problem, one tool, one result — about nine a week in five formats: problem → solution, before / after, 10-second developer tricks, India finance and AI at work. No tool repeats within 21 days. Each slot opens the Reel Maker with the tool's own story, makes a kit, or drafts the caption. Status is saved on this computer.</p>
+          <p class="muted small">One problem, one tool, one result — about nine a week in five formats: problem → solution, before / after, 10-second developer tricks, India finance and AI at work. No tool repeats within 21 days. Each slot opens the Reel Maker with the tool's own story, makes a kit, or drafts the caption, and lists its target channels: record each post's link (or skip it with a reason) and the slot counts up to "posted". The Guide tab has every channel's format and checklist. Status is saved on this computer.</p>
         </div>
         <div><label class="lbl" for="cal-start">Start</label><input id="cal-start" type="date"></div>
         <div class="end"><button class="ghost" id="cal-replan">Re-plan from this date</button> <a class="ghost" id="cal-csv" href="/api/calendar.csv">Download CSV</a></div>
       </div>
       <div class="cal-stats small" id="cal-stats"></div>
     </div>
+    <details class="card cov" id="cal-cov" open>
+      <summary><span class="cal-title">Coverage</span> <span class="muted small" id="cov-line"></span></summary>
+      <div class="row wrap cov-head">
+        <label class="k-sel"><span class="lbl">Look back</span><select id="cov-days"><option value="7">7 days</option><option value="14" selected>14 days</option><option value="30">30 days</option></select></label>
+        <p class="muted small grow">Past and today's slots. The desk checks each recorded link's shape against its channel and format; it never opens the link, so it cannot see whether the post is live.</p>
+      </div>
+      <div id="cov-body"></div>
+    </details>
     <div id="cal-weeks" class="stack"></div>
+  </section>
+
+  <!-- GUIDE -->
+  <section id="tab-guide" class="tab" data-tab="guide" hidden>
+    <div class="card">
+      <h3 class="cal-title">Guide: how to post, where, and in which format</h3>
+      <p class="muted small" id="g-checked"></p>
+      <nav class="g-nav small"><a href="#g-vision">Vision</a> · <a href="#g-process">Process</a> · <a href="#g-redlines">Red lines</a> · <a href="#g-channels">Channels</a> · <a href="#g-faq">FAQ</a>
+        <label class="g-jump"><span class="muted">Channel</span> <select id="g-channel"><option value="">All channels</option></select></label></nav>
+    </div>
+    <div class="card" id="g-vision"></div>
+    <div class="card" id="g-process"></div>
+    <div class="card" id="g-redlines"></div>
+    <div id="g-channels" class="g-grid"></div>
+    <div class="card" id="g-faq"></div>
   </section>
 </main>
 

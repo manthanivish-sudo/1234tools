@@ -102,7 +102,7 @@ module.exports = {
         'gross = CTC − 12% × PF wage − basic × 15/26 ÷ 12',
         'in-hand = gross − 12% × PF wage − professional tax − income tax'
       ],
-      vars: [['basic %', 'basic pay as a share of CTC'], ['15/26 ÷ 12', 'a year’s gratuity accrual, about 4.81% of annual basic'], ['income tax', 'slab tax on gross less the standard deduction, after the rebate, plus 4% cess']]
+      vars: [['basic %', 'basic pay as a share of CTC'], ['15/26 ÷ 12', 'a year’s gratuity accrual, about 4.81% of annual basic'], ['income tax', 'slab tax on gross less the standard deduction, after rebate and marginal relief, plus 4% cess; surcharge above ₹50 lakh is left out']]
     },
     worked: {
       inputs: { ctc: 1800000, basicPct: 50, regime: 'new', deductions: 0, ptax: 2500 },

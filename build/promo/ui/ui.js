@@ -111,6 +111,7 @@
     if (name === 'reels') loadReels();
     if (name === 'opps') loadSavedOpps();
     if (name === 'calendar') loadCalendar();
+    if (name === 'guide') loadGuide().catch((e) => toast(e.message));
   }
   $$('.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
@@ -156,6 +157,7 @@
     $('#plan-work').textContent = p.routine.work + '  Linked posts today: ' + p.used + ' of ' + p.cap + '.';
     $('#today-line').textContent = p.weekday + ': ' + p.routine.work.split(':')[0] + ' · ' + p.used + '/' + p.cap + ' linked · a human publishes every post';
     clear(box);
+    loadTodayVideos();
     if (!p.tasks.length) box.appendChild(h('p', { class: 'muted', text: 'Nothing planned.' }));
     p.tasks.forEach((t) => box.appendChild(taskCard(t)));
   }
@@ -644,58 +646,253 @@
     } catch (e) { toast(e.message); }
   });
 
-  /* ------------------------------------------------------------- REELS */
   /* ------------------------------------------------------------ CALENDAR */
+  /* Every slot has targets (one per channel and format, calendar.js). The
+     owner records each post's link, ticks a channel with no permanent link,
+     or skips with a reason; the server checks the link's shape locally and
+     never opens it. */
+  const STATE_LABEL = { planned: 'planned', made: 'made', partly: 'partly posted', posted: 'posted', skipped: 'skipped' };
+  function localDay(s) { const p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+  function shortUrl(u) { return String(u).replace(/^https?:\/\/(www\.)?/, '').slice(0, 48) + (String(u).replace(/^https?:\/\/(www\.)?/, '').length > 48 ? '…' : ''); }
+
   async function loadCalendar() {
     const cal = await api('/api/calendar');
+    S.cal = cal;
     $('#cal-start').value = cal.start;
-    const counts = { planned: 0, made: 0, posted: 0, skipped: 0 };
-    for (const it of cal.items) counts[it.status] = (counts[it.status] || 0) + 1;
-    $('#cal-stats').textContent = cal.items.length + ' videos from ' + cal.start + ' · ' + counts.posted + ' posted · ' + counts.made + ' made · ' + counts.planned + ' planned' + (counts.skipped ? ' · ' + counts.skipped + ' skipped' : '');
+    renderCalStats();
     const box = clear($('#cal-weeks'));
-    const today = new Date(); const todayIso = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
     let week = null, list = null, n = 0;
     for (const it of cal.items) {
-      const wk = Math.floor((new Date(it.date) - new Date(cal.start)) / (7 * 864e5));
+      const wk = Math.floor((localDay(it.date) - localDay(cal.start)) / (7 * 864e5));
       if (wk !== week) {
         week = wk;
         list = h('div', { class: 'stack' });
-        box.appendChild(h('details', { class: 'card cal-week', open: n < 2 ? '' : null }, h('summary', { text: 'Week ' + (wk + 1) + ' · from ' + it.date }), list));
+        const hasToday = cal.items.some((x) => x.date === cal.today && Math.floor((localDay(x.date) - localDay(cal.start)) / (7 * 864e5)) === wk);
+        box.appendChild(h('details', { class: 'card cal-week', open: n < 2 || hasToday ? '' : null }, h('summary', { text: wk < 0 ? 'Kept from an earlier plan · ' + it.date : 'Week ' + (wk + 1) + ' · from ' + it.date }), list));
         n++;
       }
-      list.appendChild(calItem(it, todayIso));
+      list.appendChild(calItem(it, cal.today));
     }
+    loadCoverage();
+  }
+  function renderCalStats() {
+    const cal = S.cal;
+    const counts = { planned: 0, made: 0, partly: 0, posted: 0, skipped: 0 };
+    for (const it of cal.items) counts[it.state] = (counts[it.state] || 0) + 1;
+    $('#cal-stats').textContent = cal.items.length + ' videos from ' + cal.start + ' · ' + counts.posted + ' posted · ' + (counts.partly ? counts.partly + ' partly posted · ' : '') + counts.made + ' made · ' + counts.planned + ' planned' + (counts.skipped ? ' · ' + counts.skipped + ' skipped' : '');
+  }
+  function replaceItem(item) {
+    const i = S.cal.items.findIndex((x) => x.id === item.id);
+    if (i >= 0) S.cal.items[i] = item;
+    const old = document.querySelector('.cal-item[data-id="' + item.id + '"]');
+    if (old) old.replaceWith(calItem(item, S.cal.today));
+    renderCalStats();
+    loadCoverage();
+  }
+  async function doTarget(it, channel, action, extra) {
+    let r;
+    try { r = await api('/api/calendar/target', Object.assign({ id: it.id, channel, action }, extra || {})); }
+    catch (e) { toast(e.message); return null; }
+    const t = r.target;
+    toast(r.message || (r.logged ? 'Recorded and added to the posting log' : action === 'post' && t && t.flagged ? 'Recorded: the link needs a check' : 'Saved'));
+    replaceItem(r.item);
+    return r;
+  }
+  function targetRow(it, t) {
+    const state = t.state === 'posted' ? (t.flagged ? 'check' : 'posted') : t.state;
+    const label = { due: 'due', posted: t.accepted ? 'posted · confirmed by you' : t.tick && !t.url ? 'posted (ticked)' : 'posted', check: 'check the link', skipped: t.reason ? 'skipped' : 'skipped, no reason' }[state];
+    const controls = h('div', { class: 'tg-ctl' });
+    if (t.state === 'due') {
+      if (!t.tickOnly) {
+        const inp = h('input', { type: 'url', class: 'tg-input', placeholder: 'Paste the ' + t.name + ' link', 'aria-label': t.name + ' link' });
+        const rec = () => { const v = inp.value.trim(); if (!v) { toast('Paste the post\'s link first'); return; } doTarget(it, t.channel, 'post', { url: v }); };
+        inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); rec(); } });
+        controls.appendChild(inp);
+        controls.appendChild(h('button', { class: 'btn tg-record', onclick: rec }, 'Record'));
+      }
+      if (t.allowsTick) controls.appendChild(h('button', { class: 'ghost tg-tick', onclick: () => { const note = window.prompt('Posted to ' + t.name + '. A note (optional):', ''); if (note === null) return; doTarget(it, t.channel, 'post', { tick: true, note: note.trim() || undefined }); } }, 'Posted (tick)'));
+      controls.appendChild(h('button', { class: 'ghost tg-skip', onclick: () => { const reason = window.prompt('Why skip ' + t.name + '? (cadence, not right for this tool, account not set up…)', ''); if (!reason || !reason.trim()) return; doTarget(it, t.channel, 'skip', { reason: reason.trim() }); } }, 'Skip…'));
+      if (t.extra) controls.appendChild(h('button', { class: 'ghost', onclick: () => doTarget(it, t.channel, 'remove') }, 'Remove'));
+    } else {
+      if (t.flagged) controls.appendChild(h('button', { class: 'ghost tg-accept', title: 'The link is right: count it as posted', onclick: () => doTarget(it, t.channel, 'accept') }, 'It is right'));
+      controls.appendChild(h('button', { class: 'ghost tg-clear', onclick: () => doTarget(it, t.channel, 'clear') }, 'Clear'));
+    }
+    controls.appendChild(h('button', { class: 'linkish small', onclick: () => openGuide(t.channel) }, 'How to post'));
+    return h('div', { class: 'tg is-' + state, 'data-channel': t.channel },
+      h('div', { class: 'tg-head' },
+        h('span', { class: 'tg-name', text: t.name }),
+        h('span', { class: 'badge tg-state st-' + state, text: label }),
+        t.extra ? h('span', { class: 'badge', text: 'added' }) : null,
+        t.url ? h('a', { class: 'tg-url small', href: t.url, target: '_blank', rel: 'noopener noreferrer', text: shortUrl(t.url) }) : null,
+        t.reason ? h('span', { class: 'muted small', text: t.reason }) : null,
+        t.note ? h('span', { class: 'muted small', text: '· ' + t.note }) : null),
+      t.issues && t.issues.length ? h('ul', { class: 'tg-issues small' }, t.issues.map((x) => h('li', { class: x.level, 'data-code': x.code, text: (x.level === 'bad' ? '✖ ' : '! ') + x.msg }))) : null,
+      controls);
+  }
+  function addChannel(it) {
+    const have = it.targets.map((t) => t.channel);
+    const opts = (S.channels || []).filter((c) => !have.includes(c.id));
+    if (!opts.length) return null;
+    const sel = h('select', { class: 'tg-add', 'aria-label': 'Add a channel' }, h('option', { value: '', text: 'Add a channel…' }), opts.map((c) => h('option', { value: c.id, text: c.name })));
+    sel.addEventListener('change', () => { if (sel.value) doTarget(it, sel.value, 'add'); });
+    return sel;
   }
   function calItem(it, todayIso) {
     const set = async (status) => {
       let postedUrl;
-      if (status === 'posted') { postedUrl = prompt('Link to the post (optional):', it.postedUrl || '') || ''; }
-      await api('/api/calendar/status', { id: it.id, status, postedUrl });
-      await loadCalendar();
+      if (status === 'posted') { postedUrl = prompt('Link to the post (optional). Better: record each channel\'s link in its row below.', it.postedUrl || ''); if (postedUrl === null) return; }
+      try { const r = await api('/api/calendar/status', { id: it.id, status, postedUrl }); replaceItem(r.item); } catch (e) { toast(e.message); }
     };
     const fmt = { problem: '#f7c948', before: '#2dd4ff', dev: '#7c5cff', india: '#ff9d2e', ai: '#ff6b9d' }[it.format] || '#f7c948';
-    return h('div', { class: 'cal-item is-' + it.status + (it.date === todayIso ? ' is-today' : '') },
-      h('div', { class: 'cal-when' }, h('b', { text: it.date }), h('span', { class: 'badge', style: 'border-color:' + fmt + ';color:' + fmt, text: it.formatLabel })),
+    const st = it.state || it.status;
+    return h('div', { class: 'cal-item is-' + st + (it.date === todayIso ? ' is-today' : ''), 'data-id': it.id },
+      h('div', { class: 'cal-when' }, h('b', { text: it.date }), h('span', { class: 'badge', style: 'border-color:' + fmt + ';color:' + fmt, text: it.formatLabel }),
+        it.progress ? h('span', { class: 'cal-prog small', text: it.progress.label }) : null,
+        it.progress && it.progress.flagged ? h('span', { class: 'badge wait', text: it.progress.flagged + ' link' + (it.progress.flagged > 1 ? 's' : '') + ' to check' }) : null),
       h('div', { class: 'cal-what' },
         h('div', null, h('b', { text: it.title }), ' — ', h('span', { text: it.hook })),
-        h('div', { class: 'muted small', text: it.platforms.join(' · ') }),
-        h('details', { class: 'small' }, h('summary', { text: 'Beats for the Reel' }), h('ol', null, it.beats.map((b) => h('li', { text: b }))))),
+        h('details', { class: 'small' }, h('summary', { text: 'Beats for the Reel' }), h('ol', null, it.beats.map((b) => h('li', { text: b })))),
+        h('div', { class: 'cal-targets' }, (it.targets || []).map((t) => targetRow(it, t)), addChannel(it)),
+        (it.unassigned || []).length ? h('p', { class: 'small muted' }, 'Unassigned link' + (it.unassigned.length > 1 ? 's' : '') + ' (matched no target): ', it.unassigned.map((u) => h('a', { href: u.url, target: '_blank', rel: 'noopener noreferrer', text: shortUrl(u.url) + ' ' }))) : null),
       h('div', { class: 'cal-actions' },
         h('a', { class: 'btn', href: it.reel, target: '_blank', rel: 'noopener noreferrer' }, 'Make the Reel'),
         h('button', { class: 'ghost', onclick: () => { S.kitTool = it.tool; kPicker.set(it.tool); $('#k-seed').value = ''; showTab('kits'); loadLooks(); } }, 'Kit'),
         h('button', { class: 'ghost', onclick: () => openDraft({ tool: it.tool, template: 'instagram-caption' }) }, 'Caption'),
         it.status === 'planned' ? h('button', { class: 'ghost', onclick: () => set('made') }, 'Made') : null,
-        it.status !== 'posted' ? h('button', { class: 'ghost', onclick: () => set('posted') }, 'Posted') : (it.postedUrl ? h('a', { class: 'ghost', href: it.postedUrl, target: '_blank', rel: 'noopener noreferrer' }, 'View post') : null),
-        it.status !== 'skipped' && it.status !== 'posted' ? h('button', { class: 'ghost', onclick: () => set('skipped') }, 'Skip') : null,
-        it.status !== 'planned' ? h('span', { class: 'badge st-' + it.status, text: it.status }) : null));
+        it.status !== 'posted' && st !== 'posted' ? h('button', { class: 'ghost', onclick: () => set('posted') }, 'Posted') : null,
+        it.status !== 'skipped' && st !== 'posted' ? h('button', { class: 'ghost', onclick: () => set('skipped') }, 'Skip') : null,
+        st !== 'planned' ? h('span', { class: 'badge st-' + st, text: STATE_LABEL[st] || st }) : null));
+  }
+  function goToSlot(id) {
+    showTab('calendar');
+    const tryIt = (n) => {
+      const el = document.querySelector('.cal-item[data-id="' + id + '"]');
+      if (!el) { if (n > 0) setTimeout(() => tryIt(n - 1), 200); return; }
+      const d = el.closest('details'); if (d) d.open = true;
+      el.scrollIntoView({ block: 'center' });
+      el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600);
+    };
+    tryIt(20);
   }
   $('#cal-replan').addEventListener('click', async () => {
     const start = $('#cal-start').value;
     if (!start) { toast('Pick a start date'); return; }
     await api('/api/calendar/plan', { start });
-    toast('Re-planned from ' + start + ' — slots you had made or posted are kept');
+    toast('Re-planned from ' + start + ' — slots with a status or any channel record are kept');
     await loadCalendar();
   });
+
+  /* Coverage: which targets of past and today's slots are missing, which
+     links fail the shape check, and per channel what went out. */
+  let covReq = 0;
+  async function loadCoverage() {
+    const n = ++covReq;
+    let c;
+    try { c = await api('/api/calendar/coverage?' + qs({ days: $('#cov-days').value })); } catch (e) { return; }
+    if (n !== covReq) return;
+    const missing = c.slots.reduce((a, s) => a + s.missing.length, 0);
+    const flagged = c.slots.reduce((a, s) => a + s.flagged.length, 0);
+    $('#cov-line').textContent = c.from + ' to ' + c.today + ': ' + missing + ' target' + (missing === 1 ? '' : 's') + ' missing · ' + flagged + ' link' + (flagged === 1 ? '' : 's') + ' to check';
+    const box = clear($('#cov-body'));
+    const fig = (b) => h('td', null, h('span', { class: 'cov-n ok', title: 'posted', text: String(b.posted) }), ' / ', h('span', { class: 'cov-n', title: 'due today', text: String(b.due) }), ' / ', h('span', { class: 'cov-n' + (b.missed ? ' bad' : ''), title: 'missed', text: String(b.missed) }), b.flagged ? [' / ', h('span', { class: 'cov-n bad', title: 'links to check', text: b.flagged + ' to check' })] : null, b.skipped ? h('span', { class: 'muted', text: ' · ' + b.skipped + ' skipped' }) : null);
+    if (c.channels.length) {
+      box.appendChild(h('div', { class: 'tablewrap' }, h('table', { class: 'tbl cov-table' },
+        h('thead', null, h('tr', null, h('th', { text: 'Channel' }), h('th', { text: 'Last 7 days: posted / due / missed' }), h('th', { text: 'Last 30 days: posted / due / missed' }))),
+        h('tbody', null, c.channels.map((r) => h('tr', { 'data-channel': r.id }, h('td', null, r.name, r.venue ? null : h('span', { class: 'badge', title: 'No venue in venues.json: recorded without a log entry', text: 'no log' })), fig(r.week), fig(r.d30)))))));
+    } else box.appendChild(h('p', { class: 'muted small', text: 'Nothing due yet in this window.' }));
+    const open = c.slots.filter((s) => s.missing.length);
+    const sec = h('div', { class: 'cov-missing' }, h('h4', { text: 'Missing' }));
+    if (!open.length) sec.appendChild(h('p', { class: 'muted small', text: 'Nothing missing: every past and today\'s target is posted or skipped with a reason.' }));
+    for (const s of open) sec.appendChild(h('div', { class: 'cov-slot', 'data-id': s.id },
+      h('b', { text: s.date }), ' ', h('span', { text: s.title }), ' ', h('span', { class: 'muted small', text: s.progress.label }), ' ',
+      s.missing.map((m) => h('span', { class: 'badge chip' + (m.overdue ? ' wait' : ''), 'data-channel': m.channel, text: m.name })),
+      ' ', h('button', { class: 'linkish small', onclick: () => goToSlot(s.id) }, 'Go to slot')));
+    box.appendChild(sec);
+    const bad = c.slots.filter((s) => s.flagged.length || s.warnings.length || s.unassigned.length);
+    if (bad.length) {
+      const sec2 = h('div', { class: 'cov-check' }, h('h4', { text: 'Links to check' }));
+      for (const s of bad) {
+        for (const f of s.flagged) sec2.appendChild(h('p', { class: 'small bad', 'data-channel': f.channel }, h('b', { text: s.date + ' ' + f.name + ': ' }), h('a', { href: f.url, target: '_blank', rel: 'noopener noreferrer', text: shortUrl(f.url) }), ' — ' + f.issues.map((i) => i.msg).join(' '), ' ', h('button', { class: 'linkish', onclick: () => goToSlot(s.id) }, 'Go to slot')));
+        for (const w of s.warnings) sec2.appendChild(h('p', { class: 'small warn' }, h('b', { text: s.date + ' ' + w.name + ': ' }), w.issues.map((i) => i.msg).join(' ')));
+        for (const u of s.unassigned) sec2.appendChild(h('p', { class: 'small warn' }, h('b', { text: s.date + ' unassigned link: ' }), h('a', { href: u.url, target: '_blank', rel: 'noopener noreferrer', text: shortUrl(u.url) })));
+      }
+      box.appendChild(sec2);
+    }
+    if (c.noVenue.length) box.appendChild(h('p', { class: 'muted small', text: 'No venue in venues.json, so recorded without a log entry: ' + c.noVenue.join(', ') + '.' }));
+  }
+  $('#cov-days').addEventListener('change', loadCoverage);
+
+  /* Today: the video slots of the day and the channels still missing. */
+  async function loadTodayVideos() {
+    const box = clear($('#plan-cal'));
+    let c;
+    try { c = await api('/api/calendar/coverage?days=1'); } catch (e) { return; }
+    if (!c.todaySlots.length) return;
+    const card = h('div', { class: 'card today-videos' }, h('h3', { class: 'cal-title', text: 'Today\'s videos' }));
+    for (const s of c.todaySlots) {
+      card.appendChild(h('div', { class: 'tv-slot', 'data-id': s.id },
+        h('div', null, h('b', { text: s.title }), ' ', h('span', { class: 'muted small', text: s.formatLabel + ' · ' + s.progress.label }), ' ', h('button', { class: 'linkish small', onclick: () => goToSlot(s.id) }, 'Open in Calendar')),
+        s.missing.length ? h('div', { class: 'tv-missing' }, h('span', { class: 'muted small', text: 'Still to post: ' }),
+          s.missing.map((m) => h('span', { class: 'badge chip' + (m.flagged ? ' wait' : ''), 'data-channel': m.channel, title: m.cadence && !m.cadence.ok ? 'Wait: ' + m.cadence.reasons.join(' · ') : m.flagged ? 'The recorded link needs a check' : '', text: m.name + (m.cadence && !m.cadence.ok ? ' · wait' : '') + (m.flagged ? ' · check link' : '') })))
+          : h('p', { class: 'small ok-line', text: 'Every channel is done for this slot.' })));
+    }
+    box.appendChild(card);
+  }
+
+  /* -------------------------------------------------------------- GUIDE */
+  async function loadGuide() {
+    if (S.guideRendered) return;
+    const g = S.guide || (S.guide = await api('/api/guide'));
+    S.channels = g.channels;
+    $('#g-checked').textContent = 'Every number on a channel card comes from the platform\'s own help pages, with its source and the date it was read (' + g.checked + '). Where no official page states it, the card says "' + g.notConfirmed + '". Platforms change: the app\'s own upload screen has the final word.';
+    const vis = clear($('#g-vision'));
+    vis.appendChild(h('h3', { class: 'cal-title', text: g.vision.title }));
+    vis.appendChild(h('ul', { class: 'g-list' }, g.vision.points.map((p) => h('li', { text: p }))));
+    const pr = clear($('#g-process'));
+    pr.appendChild(h('h3', { class: 'cal-title', text: g.process.title }));
+    pr.appendChild(h('div', { class: 'g-steps' }, g.process.steps.map((s) => h('div', { class: 'g-step' }, h('b', { text: s.title }), h('p', { text: s.text })))));
+    pr.appendChild(h('h4', { text: 'How it fits the week' }));
+    pr.appendChild(h('div', { class: 'stack' }, g.process.fit.map((s) => h('details', { class: 'g-q' }, h('summary', { text: s.title }), h('p', { text: s.text })))));
+    pr.appendChild(h('h4', { text: 'When things go differently' }));
+    pr.appendChild(h('div', { class: 'stack' }, g.process.cases.map((s) => h('details', { class: 'g-q' }, h('summary', { text: s.title }), h('p', { text: s.text })))));
+    const rl = clear($('#g-redlines'));
+    rl.appendChild(h('h3', { class: 'cal-title', text: 'Red lines (every channel)' }));
+    rl.appendChild(h('ul', { class: 'g-list' }, g.redLines.map((r) => h('li', { text: r }))));
+    const grid = clear($('#g-channels'));
+    for (const c of g.channels) grid.appendChild(channelCard(c, g));
+    const sel = $('#g-channel');
+    if (sel.options.length <= 1) g.channels.forEach((c) => sel.appendChild(h('option', { value: c.id, text: c.name })));
+    const fq = clear($('#g-faq'));
+    fq.appendChild(h('h3', { class: 'cal-title', text: 'Questions' }));
+    fq.appendChild(h('div', { class: 'stack' }, g.faq.map((f) => h('details', { class: 'g-q' }, h('summary', { text: f.q }), h('p', { text: f.a })))));
+    S.guideRendered = true;
+  }
+  function channelCard(c, g) {
+    return h('details', { class: 'card g-card', id: 'gc-' + c.id, 'data-channel': c.id },
+      h('summary', null, h('b', { text: c.name }), ' ', c.venue ? h('span', { class: 'badge kind', title: 'Recorded posts go to the log as ' + c.venue, text: c.venueName || c.venue }) : h('span', { class: 'badge', title: 'No venue in venues.json: recorded on the calendar without a log entry', text: 'no log venue' }),
+        h('div', { class: 'muted small', text: c.summary })),
+      h('dl', { class: 'g-specs' }, c.specs.map((s) => [h('dt', { text: s.label }), h('dd', null, s.value ? h('span', { text: s.value }) : h('span', { class: 'nc', text: g.notConfirmed }),
+        s.src ? h('a', { class: 'g-src', href: s.src, target: '_blank', rel: 'noopener noreferrer', title: 'Checked ' + s.checked, text: (s.value ? 'source · ' : 'official page tried · ') + s.checked }) : null)])),
+      c.cadence ? h('p', { class: 'small' }, h('b', { text: 'Cadence in the desk: ' }), c.cadence) : null,
+      h('h4', { text: 'Upload' }), h('ul', { class: 'g-list small' }, c.upload.map((f) => h('li', { text: f }))),
+      h('p', { class: 'small' }, h('b', { text: 'Caption: ' }), 'in Draft, template ', h('code', { text: c.template })),
+      h('p', { class: 'small' }, h('b', { text: 'A right link looks like: ' }), c.linkExample ? h('code', { text: c.linkExample }) : 'no link — tick it as posted'),
+      h('h4', { text: 'Checklist' }), h('ol', { class: 'g-list small' }, c.steps.map((s) => h('li', { text: s }))),
+      h('h4', { text: 'Red lines here' }), h('ul', { class: 'g-list small' }, c.redLines.map((r) => h('li', { text: r }))));
+  }
+  function filterGuide(id) {
+    $$('#g-channels .g-card').forEach((el) => { el.hidden = !!id && el.dataset.channel !== id; if (id && el.dataset.channel === id) el.open = true; });
+  }
+  $('#g-channel').addEventListener('change', (e) => { filterGuide(e.target.value); if (e.target.value) $('#gc-' + e.target.value).scrollIntoView({ block: 'start' }); });
+  async function openGuide(channel) {
+    showTab('guide');
+    await loadGuide();
+    $('#g-channel').value = channel || '';
+    filterGuide(channel || '');
+    if (channel) { const el = $('#gc-' + channel); if (el) el.scrollIntoView({ block: 'start' }); }
+  }
+
+  /* ------------------------------------------------------------- REELS */
 
   async function loadReels() {
     const r = await api('/api/reels');
@@ -723,7 +920,8 @@
     a.vocabulary.forEach((v) => g2.appendChild(h('option', { value: v, text: v })));
     sel.appendChild(g1); sel.appendChild(g2);
     const tab = (location.hash || '#today').slice(1).split('?')[0];
-    showTab(['today', 'draft', 'opps', 'kits', 'venues', 'log', 'reels', 'calendar'].includes(tab) ? tab : 'today');
+    try { const g = await api('/api/guide'); S.guide = g; S.channels = g.channels; } catch (e) { /* the Guide tab retries */ }
+    showTab(['today', 'draft', 'opps', 'kits', 'venues', 'log', 'reels', 'calendar', 'guide'].includes(tab) ? tab : 'today');
     document.body.setAttribute('data-ready', '1');
   })().catch((e) => { document.body.setAttribute('data-ready', 'error'); toast(e.message); });
 })();

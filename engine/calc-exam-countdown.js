@@ -94,7 +94,7 @@ window.TOOLS["exam-countdown"] = {
 "faq": [
   {"q":"How many hours a day should I study?","a":"The honest answer is: however many the syllabus and the calendar leave you, which is what this works out. If the answer comes back above six or seven hours a day, that is a signal to change the plan rather than to attempt it — sustained study at that level for weeks is rare and usually collapses."},
   {"q":"Why reserve revision days?","a":"Because covering material and being able to recall it under time pressure are different things, and only the second one is examined. The buffer here is taken off the calendar before study days are counted, so it cannot quietly get spent on new chapters."},
-  {"q":"Does it count weekends and holidays?","a":"Days left is every calendar day. Study days are that figure scaled by how many days a week you said you can work, so setting five gives you weekdays only. It does not know your public holidays or your other exam dates."},
+  {"q":"Does it count weekends and holidays?","a":"Days left is every calendar day. Study days are that figure, less the revision days, scaled by how many days a week you said you can work, so setting five gives five study days in every seven, the weekdays of each whole week. It does not know your public holidays or your other exam dates."},
   {"q":"What if I am already behind?","a":"Then the required hours a day will say so, which is the useful part. Cut the topic list to what actually appears on the paper, drop the hours per topic for the ones you half know already, and re-run it. A plan that admits it is not going to work is worth more than one that does not."}
 ]
 };

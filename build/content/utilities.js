@@ -171,7 +171,7 @@ module.exports = {
     },
     uses: [
       ['Applications', 'Graduate schools, scholarships and some employers set a minimum GPA.'],
-      ['Exchange and transfer forms', 'Restate a 4.0-scale GPA on a 10-point scale, or the reverse, as a first estimate.'],
+      ['Exchange and transfer forms', 'Restate a 4.0-scale GPA on a 10-point scale as a first estimate; for the reverse, divide by 2.5.'],
       ['Planning next term', 'Enter the grades you expect to see how far a strong term can lift the figure.'],
       ['Checking a transcript', 'Confirm the GPA a registrar printed from your own grades and credits.']
     ],
@@ -203,7 +203,7 @@ module.exports = {
       'With No duplicates, each number can come out once, like balls from a drum; with duplicates allowed, every draw starts from the full range again.'
     ],
     formula: {
-      text: 'The range holds max − min + 1 whole numbers. Each draw takes a random 32-bit value, rejects it if it falls in the incomplete slice at the top, and keeps the remainder after dividing by the span. Without duplicates, a drawn number leaves the pool.',
+      text: 'The range holds max − min + 1 whole numbers. Each draw takes a random 32-bit value, rejects it if it falls in the incomplete slice at the top, and keeps the remainder after dividing by the span. Spans over 2³², about 4.3 billion, join two values into 53 bits. Without duplicates, a drawn number leaves the pool.',
       expr: [
         'span = max − min + 1',
         'number = min + (v mod span), keeping only v < 2³² − (2³² mod span)',
@@ -213,7 +213,7 @@ module.exports = {
     },
     worked: {
       inputs: { min: 1, max: 59, count: 6, unique: 'no', sort: 'asc' },
-      text: 'To draw six numbers from 1 to 59 the way a lottery machine does, set the range, ask for 6, choose No duplicates and Lowest first. Every press holds 6 numbers in the range 1 to 59, a different set each time. Any particular set of six has a 1 in 45,057,474 chance of being drawn: 59 × 58 × 57 × 56 × 55 × 54 ÷ 720, where 720 counts the orders the same six could come out in.',
+      text: 'To draw six numbers from 1 to 59 like a lottery machine, set the range, ask for 6, choose No duplicates and Lowest first. Every press holds 6 numbers in the range 1 to 59, a different set each time. Any particular set of six has a 1 in 45,057,474 chance of being drawn: 59 × 58 × 57 × 56 × 55 × 54 ÷ 720, the orders six numbers can come in.',
       check: [['count', '6 numbers'], ['range', '1 to 59']]
     },
     uses: [

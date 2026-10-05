@@ -2,7 +2,7 @@
   "id": "/business/depreciation.html",
   "name": "Depreciation Calculator with Schedule — 1234Tools",
   "short_name": "Depreciation",
-  "description": "Straight-line, reducing balance, sum-of-years and units of production, with a full year-by-year schedule.",
+  "description": "Straight-line, reducing balance, double declining and sum-of-years digits, with a full year-by-year schedule.",
   "start_url": "/business/depreciation/?src=pwa",
   "scope": "/business/depreciation/",
   "display": "standalone",

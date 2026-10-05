@@ -141,7 +141,7 @@ window.TOOLS["uk-take-home-pay"] = {
 "category": "business",
 "description": "Estimate income tax, National Insurance and net pay from a gross salary. England, Wales and Northern Ireland.",
 "keywords": ["take home pay calculator","salary calculator UK","net pay","income tax calculator","PAYE calculator","after tax salary"],
-"formula": "net = gross − income tax − National Insurance − pension",
+"formula": "net = gross − income tax − National Insurance − pension − student loan",
 "inputs": [{"key":"gross","label":"Gross annual salary","type":"number","unit":"£","default":45000,"min":0},{"key":"year","label":"Tax year","type":"select","options":[{"value":"2026/27","label":"2026/27"},{"value":"2025/26","label":"2025/26"}],"default":"2026/27"},{"key":"pension","label":"Pension contribution","type":"number","unit":"%","default":5,"min":0,"step":0.1},{"key":"student","label":"Student loan","type":"select","options":[{"value":"none","label":"None"},{"value":"plan1","label":"Plan 1"},{"value":"plan2","label":"Plan 2"},{"value":"plan4","label":"Plan 4 (Scotland)"},{"value":"plan5","label":"Plan 5 (England, courses from August 2023)"},{"value":"pgl","label":"Postgraduate loan"}],"default":"none"}],
 "compute": ({ gross, year, pension, student }) => {
       const T = UK_TAX[year] || UK_TAX['2026/27'];
@@ -194,17 +194,20 @@ window.TOOLS["uk-take-home-pay"] = {
 
       /* Between £100,000 and £125,140 every extra £1 is taxed at 40% and also
          withdraws 50p of allowance, which is then taxed at 40%: 60% in all. */
-      const inTaper = taxable0 > T.taperStart && pa > 0;
+      /* The marginal rate is the one on the next pound, so a salary exactly
+         on a threshold (£12,570, £50,270, £100,000, £125,140 of taxable
+         income) already shows the rate above it. */
+      const inTaper = taxable0 >= T.taperStart && pa > 0;
       const net = g - tax - ni - pensionAmt - loan;
       return {
         net, monthly: net / 12, weekly: net / 52,
         tax, ni, pensionAmt, loan,
         personalAllowance: pa,
         effectiveRate: g ? ((tax + ni + loan) / g) * 100 : 0,
-        marginalRate: (taxable0 - pa) > T.bands[2].from ? 45
+        marginalRate: (taxable0 - pa) >= T.bands[2].from ? 45
                     : inTaper ? 60
-                    : (taxable0 - pa) > T.bands[1].from ? 40
-                    : (taxable0 > pa) ? 20 : 0,
+                    : (taxable0 - pa) >= T.bands[1].from ? 40
+                    : (taxable0 >= pa) ? 20 : 0,
         note
       };
     },

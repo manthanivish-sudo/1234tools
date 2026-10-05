@@ -37,7 +37,7 @@ const iso = (d) => new Date(d).toISOString();
 
 /* ------------------------------------------------------------ modules */
 section('modules are inert on require');
-for (const m of ['tools', 'hashtags', 'hooks', 'lint', 'templates', 'venues', 'log', 'find', 'plan', 'kit', 'desk']) {
+for (const m of ['tools', 'hashtags', 'hooks', 'lint', 'templates', 'venues', 'log', 'find', 'plan', 'kit', 'desk', 'channels', 'guide', 'calendar']) {
   check('require ' + m, () => { const x = require('./' + m); assert.ok(x && typeof x === 'object'); });
 }
 check('log dir is PROMO_HOME', () => assert.strictEqual(L.home(), TMP));
@@ -381,13 +381,231 @@ check('the CSV has a header and a row per slot', () => {
   assert.strictEqual(lines.length, CAL.get().items.length + 1);
   assert.ok(/^"Date","Format","Tool"/.test(lines[0]));
 });
+check('the slot-level Posted link went to the target it matches (an /p/ link is the Instagram feed carousel)', () => {
+  const first = CAL.get().items[0];
+  const t = first.targets.find((x) => x.channel === 'instagram-carousel');
+  assert.ok(t && t.state === 'posted' && t.url === 'https://www.instagram.com/p/example/', JSON.stringify(first.targets));
+});
+
+/* ------------------------------------------------- channels and guide */
+section('channels: specs, sources and link rules');
+const CH = require('./channels');
+const G = require('./guide');
+const WANT = ['instagram-reel', 'instagram-carousel', 'instagram-story', 'facebook-reel', 'facebook-post', 'youtube-shorts', 'tiktok', 'pinterest-video', 'pinterest-image',
+  'linkedin-post', 'linkedin-document', 'x', 'threads', 'bluesky', 'mastodon', 'whatsapp-status', 'whatsapp-channel', 'telegram'];
+check('every channel the brief names has a card', () => assert.deepStrictEqual(WANT.filter((id) => !CH.get(id)), []));
+check('every spec is a sourced value with a check date, or null ("not confirmed")', () => {
+  for (const c of CH.list()) {
+    assert.ok(c.specs.length >= 5, c.id + ' has few specs');
+    for (const sp of c.specs) {
+      assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(sp.checked), c.id + ' ' + sp.label + ' check date');
+      if (sp.value != null) assert.ok(/^https:\/\//.test(sp.src), c.id + ' ' + sp.label + ' has a value but no source');
+    }
+    for (const k of ['summary', 'template', 'upload', 'steps', 'redLines']) assert.ok(c[k] && c[k].length, c.id + ' ' + k);
+    assert.ok(require('./templates').META[c.template], c.id + ' template ' + c.template);
+    if (c.venue) assert.ok(V.get(c.venue), c.id + ' venue ' + c.venue + ' is not in venues.json');
+  }
+});
+check('the files a card asks for are the files kit.js and the Reel Maker make', () => {
+  const kitSrc = fs.readFileSync(path.join(__dirname, 'kit.js'), 'utf8');
+  for (const c of CH.list()) for (const u of c.upload) {
+    for (const m of u.matchAll(/(?:^|[\s(])([a-z0-9][a-z0-9-]*\.(?:png|pdf))\b/g)) assert.ok(kitSrc.includes(m[1]), c.id + ': ' + m[1] + ' is not a kit file');
+  }
+  assert.ok(/carousel\.pdf/.test(CH.get('linkedin-document').upload.join(' ')));
+  assert.ok(/story-1080x1920\.png/.test(CH.get('instagram-story').upload.join(' ')));
+  assert.ok(/pin-1000x1500\.png/.test(CH.get('pinterest-image').upload.join(' ')));
+});
+let samples = 0;
+for (const c of CH.list()) {
+  check(c.id + ': valid links pass', () => {
+    if (c.url.tickOnly) { assert.ok(c.tick && !c.linkShape, 'tick-only channel'); return; }
+    assert.ok(c.samples.valid.length >= 1);
+    for (const u of c.samples.valid) { samples++; const r = CH.check(c.id, u); assert.ok(r.ok, u + ' ' + JSON.stringify(r.issues)); }
+  });
+  check(c.id + ': a wrong-format link is flagged', () => {
+    assert.ok(c.samples.wrongFormat.length >= 1);
+    for (const u of c.samples.wrongFormat) { samples++; const r = CH.check(c.id, u); assert.ok(!r.ok && r.issues.some((x) => x.code === 'wrong-format' || x.code === 'no-link-channel'), u + ' ' + JSON.stringify(r.issues)); }
+  });
+  check(c.id + ': a wrong-platform link is flagged', () => {
+    assert.ok(c.samples.wrongPlatform.length >= 1);
+    for (const u of c.samples.wrongPlatform) { samples++; const r = CH.check(c.id, u); assert.ok(!r.ok && r.issues.some((x) => x.code === 'wrong-platform' || x.code === 'no-link-channel'), u + ' ' + JSON.stringify(r.issues)); }
+  });
+}
+check('the brief\'s examples read as they should', () => {
+  const r = CH.check('instagram-reel', 'https://www.instagram.com/p/C1a2B3c4D5e/');
+  assert.ok(r.issues.some((x) => x.code === 'wrong-format' && /feed post/.test(x.msg) && /Reel/.test(x.msg)), JSON.stringify(r));
+  assert.ok(CH.check('youtube-shorts', 'https://www.youtube.com/watch?v=aBcDeFgHiJk').issues.some((x) => x.code === 'wrong-format'));
+  assert.strictEqual(CH.classify('https://www.pinterest.de/pin/123456789/').kind, 'pin');
+  assert.strictEqual(CH.classify('https://www.threads.com/@you/post/C1a2B3c4D5e').kind, 'threads-post');
+  assert.strictEqual(CH.classify('https://t.me/c/1234567/89').kind, 'tg-private-post');
+});
+check('a link that is not https is flagged; text that is not a link is refused', () => {
+  assert.ok(CH.check('x', 'http://x.com/you/status/1712345678901234567').issues.some((x) => x.code === 'not-https'));
+  assert.ok(CH.check('x', 'my post on x').issues.some((x) => x.code === 'not-a-link'));
+});
+check('short links are accepted with a note that the desk cannot see behind them', () => {
+  const r = CH.check('tiktok', 'https://vm.tiktok.com/ZMabc123/');
+  assert.ok(r.ok && r.issues.some((x) => x.level === 'warn'));
+});
+
+section('guide: vision, process, FAQ');
+check('every guide string passes lint.js', () => {
+  const errs = [];
+  for (const x of G.allText()) { const r = lint(x.text, {}); if (!r.ok) errs.push(x.where + ': ' + r.errors.map((e) => e.rule + ' "' + e.match + '"').join(', ')); }
+  assert.deepStrictEqual(errs, []);
+});
+check('at least 12 FAQ answers, the process covers missed days, removals and skips', () => {
+  assert.ok(G.FAQ.length >= 12, 'faq ' + G.FAQ.length);
+  const titles = G.PROCESS.cases.map((c) => c.title).join(' | ');
+  assert.ok(/missed/.test(titles) && /removed/.test(titles) && /skipped/.test(titles), titles);
+  for (const q of ['Can the desk post for me?', 'Why only one link per post?', 'Where is my data?', 'Does re-planning lose my records?']) assert.ok(G.FAQ.some((f) => f.q === q), q);
+});
+check('the CLI guide prints every channel and a single card', () => {
+  const all = G.text();
+  for (const c of CH.list()) assert.ok(all.includes(c.id), c.id);
+  assert.ok(/instagram\.com\/reel/.test(G.text('instagram-reel')) && G.text('nope') === null);
+});
+
+section('calendar targets, verification, coverage and migration');
+function withNow(at, fn) { process.env.PROMO_NOW = at; try { return fn(); } finally { delete process.env.PROMO_NOW; } }
+const calFile = () => path.join(TMP, 'calendar.json');
+const logCount = () => { try { return JSON.parse(fs.readFileSync(path.join(TMP, 'log.json'), 'utf8')).entries.length; } catch (e) { return 0; } };
+check('every slot gets targets from its format; problem and India finance carry the carousel and the LinkedIn document', () => {
+  fs.rmSync(calFile(), { force: true });
+  const c = CAL.plan('2026-10-05');
+  for (const it of c.items) assert.deepStrictEqual(it.targets.map((t) => t.channel), CAL.FORMATS[it.format].targets, it.id);
+  assert.ok(CAL.FORMATS.problem.targets.includes('linkedin-document') && CAL.FORMATS.india.targets.includes('instagram-carousel'));
+  assert.ok(CAL.get().items.every((it) => it.state === 'planned' && /^0 of \d channels$/.test(it.progress.label)));
+});
+const slot = () => CAL.get().items.find((x) => x.format === 'problem');
+check('a valid link counts: "1 of 5 channels", partly posted, and one log entry on the venue', () => {
+  resetLog();
+  const s0 = slot();
+  const r = withNow('2026-10-05T18:00:00', () => CAL.target(s0.id, 'instagram-reel', 'post', { url: 'https://www.instagram.com/reel/C1a2B3c4D5e/' }));
+  assert.strictEqual(r.item.progress.label, '1 of 5 channels');
+  assert.strictEqual(r.item.state, 'partly');
+  assert.ok(r.logged && r.logged.venueId === 'social-instagram' && r.logged.toolPath === s0.tool && r.logged.kind === 'post', JSON.stringify(r.logged));
+  assert.strictEqual(logCount(), 1);
+});
+check('clearing and recording again does not log twice', () => {
+  const s0 = slot();
+  CAL.target(s0.id, 'instagram-reel', 'clear');
+  const r = withNow('2026-10-05T18:05:00', () => CAL.target(s0.id, 'instagram-reel', 'post', { url: 'https://www.instagram.com/reel/C1a2B3c4D5e/' }));
+  assert.ok(!r.logged && logCount() === 1);
+});
+check('a wrong-format link is recorded but flagged and not counted, until the owner confirms it', () => {
+  const s0 = slot();
+  const r = withNow('2026-10-05T18:10:00', () => CAL.target(s0.id, 'youtube-shorts', 'post', { url: 'https://www.youtube.com/watch?v=aBcDeFgHiJk' }));
+  assert.ok(r.target.flagged && r.target.issues.some((x) => x.code === 'wrong-format'));
+  assert.strictEqual(r.item.progress.label, '1 of 5 channels');
+  const a = CAL.target(s0.id, 'youtube-shorts', 'accept');
+  assert.ok(!a.target.flagged && a.target.done && a.item.progress.label === '2 of 5 channels');
+});
+check('the same link on two targets is flagged on both', () => {
+  const s0 = slot();
+  const r = withNow('2026-10-05T18:20:00', () => CAL.target(s0.id, 'instagram-carousel', 'post', { url: 'https://instagram.com/reel/C1a2B3c4D5e' }));
+  assert.ok(r.target.issues.some((x) => x.code === 'wrong-format'));
+  const it = CAL.get().items.find((x) => x.id === s0.id);
+  assert.ok(it.targets.find((t) => t.channel === 'instagram-reel').issues.some((x) => x.code === 'duplicate'), 'reel row shows the duplicate');
+  CAL.target(s0.id, 'instagram-carousel', 'clear');
+});
+check('a link recorded before the slot\'s date warns only', () => {
+  const later = CAL.get().items.find((x) => x.date > '2026-10-10' && x.targets.some((t) => t.channel === 'youtube-shorts'));
+  const r = withNow('2026-10-06T09:00:00', () => CAL.target(later.id, 'youtube-shorts', 'post', { url: 'https://youtube.com/shorts/zYxWvUtSrQp' }));
+  assert.ok(r.target.done && r.target.issues.some((x) => x.code === 'early' && x.level === 'warn'));
+});
+check('a skip needs a reason; a tick only where a post has no link; WhatsApp Status is recorded without a log entry', () => {
+  const s0 = slot();
+  assert.throws(() => CAL.target(s0.id, 'tiktok', 'skip', { reason: '  ' }), /reason/);
+  assert.throws(() => CAL.target(s0.id, 'tiktok', 'post', { tick: true }), /link/);
+  const india = CAL.get().items.find((x) => x.format === 'india');
+  assert.throws(() => CAL.target(india.id, 'whatsapp-status', 'post', { url: 'https://wa.me/447700900123' }), /tick/);
+  const before = logCount();
+  const r = CAL.target(india.id, 'whatsapp-status', 'post', { tick: true, note: 'family and clients' });
+  assert.ok(r.noVenue && !r.logged && logCount() === before && r.target.done);
+});
+check('every target posted or skipped with a reason makes the slot "posted"', () => {
+  const s0 = slot();
+  withNow('2026-10-05T19:00:00', () => {
+    CAL.target(s0.id, 'tiktok', 'skip', { reason: 'cadence' });
+    CAL.target(s0.id, 'instagram-carousel', 'post', { url: 'https://www.instagram.com/p/Zz9Yy8Xx7Ww/' });
+  });
+  let it = CAL.get().items.find((x) => x.id === s0.id);
+  assert.strictEqual(it.progress.label, '4 of 5 channels');
+  const r = withNow('2026-10-05T19:05:00', () => CAL.target(s0.id, 'linkedin-document', 'post', { url: 'https://www.linkedin.com/feed/update/urn:li:activity:7101234567890123456/' }));
+  assert.strictEqual(r.item.state, 'posted');
+  assert.strictEqual(r.item.progress.label, '5 of 5 channels');
+});
+check('a channel can be added to a slot and removed again while unrecorded', () => {
+  const s0 = slot();
+  const r = CAL.target(s0.id, 'threads', 'add');
+  assert.ok(r.item.targets.some((t) => t.channel === 'threads' && t.extra) && r.item.progress.total === 6);
+  const back = CAL.target(s0.id, 'threads', 'remove');
+  assert.strictEqual(back.item.progress.total, 5);
+  assert.throws(() => CAL.target(s0.id, 'tiktok', 'remove'), /skip/);
+});
+check('re-planning keeps every slot with a target record, untouched', () => {
+  const before = CAL.get().items.filter((x) => x.targets.some((t) => t.state !== 'due')).map((x) => JSON.stringify(x.targets.map((t) => [t.channel, t.state, t.url || '', t.reason || ''])));
+  CAL.plan('2026-10-05');
+  const after = CAL.get().items.filter((x) => x.targets.some((t) => t.state !== 'due')).map((x) => JSON.stringify(x.targets.map((t) => [t.channel, t.state, t.url || '', t.reason || ''])));
+  assert.deepStrictEqual(after, before);
+  assert.ok(before.length >= 3);
+  CAL.plan('2026-10-12');
+  assert.ok(CAL.get().items.some((x) => x.date < '2026-10-12' && x.targets.some((t) => t.state !== 'due')), 'a recorded slot before the new start is kept');
+  CAL.plan('2026-10-05');
+});
+check('coverage: missing targets, flagged links, per-channel counts and today\'s slots', () => {
+  const s0 = slot();
+  CAL.target(s0.id, 'linkedin-document', 'clear');
+  withNow('2026-10-05T19:30:00', () => CAL.target(s0.id, 'linkedin-document', 'post', { url: 'https://www.linkedin.com/pulse/how-merge-pdfs/' }));
+  const c = withNow('2026-10-07T12:00:00', () => CAL.coverage({ days: 14 }));
+  assert.strictEqual(c.today, '2026-10-07');
+  const tue = c.slots.find((x) => x.date === '2026-10-06');
+  assert.ok(tue && tue.missing.length === tue.progress.total, JSON.stringify(tue));
+  const mon = c.slots.find((x) => x.id === s0.id);
+  assert.ok(mon.flagged.some((f) => f.channel === 'linkedin-document' && f.issues.some((i) => i.code === 'wrong-format')));
+  const reel = c.channels.find((r) => r.id === 'instagram-reel');
+  assert.ok(reel.week.posted >= 1 && reel.week.missed >= 1, JSON.stringify(reel));
+  assert.ok(c.todaySlots.length >= 1 && c.todaySlots[0].missing.length >= 1);
+  assert.ok(c.noVenue.includes('WhatsApp Status'));
+  const txt = require('./desk').coverageText(c);
+  assert.ok(/Per channel/.test(txt) && /CHECK LinkedIn document/.test(txt), txt.slice(0, 400));
+});
+check('migration: a v1 calendar loads with nothing lost', () => {
+  const v1 = { v: 1, start: '2026-10-05', made: '2026-10-01T10:00:00.000Z', items: [
+    { id: '2026-10-05:0', date: '2026-10-05', slot: 0, format: 'problem', formatLabel: 'Problem → solution', tool: '/pdf/merge-pdf/', title: 'Merge PDF Files', hook: 'h', pain: '', promise: '', beats: ['b'], platforms: ['Instagram Reels', 'YouTube Shorts', 'TikTok'], reel: 'r', status: 'posted', postedUrl: 'https://www.instagram.com/reel/C9z8Y7x6W5v/', note: 'went well', statusAt: '2026-10-05T20:00:00.000Z' },
+    { id: '2026-10-06:0', date: '2026-10-06', slot: 0, format: 'before', formatLabel: 'Before / after', tool: '/image/image-compressor/', title: 'Image Compressor', hook: 'h', pain: '', promise: '', beats: ['b'], platforms: ['Instagram Reels', 'TikTok', 'Pinterest idea pin'], reel: 'r', status: 'posted', postedUrl: 'https://example.com/somewhere', note: '', statusAt: '2026-10-06T20:00:00.000Z' },
+    { id: '2026-10-07:0', date: '2026-10-07', slot: 0, format: 'india', formatLabel: 'India finance', tool: '/india/gst-calculator/', title: 'GST', hook: 'h', pain: '', promise: '', beats: ['b'], platforms: ['Instagram Reels'], reel: 'r', status: 'made', postedUrl: '', note: 'draft ready' }
+  ] };
+  fs.writeFileSync(calFile(), JSON.stringify(v1));
+  const before = logCount();
+  const c = CAL.get();
+  assert.strictEqual(c.v, 2);
+  const a = c.items.find((x) => x.id === '2026-10-05:0');
+  const t = a.targets.find((x) => x.channel === 'instagram-reel');
+  assert.ok(t.state === 'posted' && t.url === v1.items[0].postedUrl && t.migrated && a.postedUrl === v1.items[0].postedUrl && a.note === 'went well' && a.status === 'posted');
+  assert.strictEqual(a.state, 'partly');
+  const b = c.items.find((x) => x.id === '2026-10-06:0');
+  assert.ok(b.unassigned.length === 1 && b.unassigned[0].url === 'https://example.com/somewhere' && b.targets.every((x) => x.state === 'due'));
+  assert.deepStrictEqual(b.platformsV1, v1.items[1].platforms);
+  assert.ok(c.items.find((x) => x.id === '2026-10-07:0').status === 'made');
+  assert.strictEqual(logCount(), before, 'migration writes no log entries');
+  assert.deepStrictEqual(JSON.parse(fs.readFileSync(path.join(TMP, 'calendar.v1.json'), 'utf8')), v1);
+  assert.strictEqual(JSON.parse(fs.readFileSync(calFile(), 'utf8')).v, 2);
+  assert.ok(!fs.readdirSync(TMP).some((f) => /\.tmp$/.test(f)), 'atomic writes leave no temp file');
+  const cov = withNow('2026-10-07T12:00:00', () => CAL.coverage({ days: 7 }));
+  assert.ok(cov.slots.find((x) => x.id === '2026-10-06:0').unassigned.length === 1);
+});
 
 /* the real thing: data written through one server process is there after
    it is killed and a new one is started on the same PROMO_HOME */
 async function restartCheck() {
   const { spawn } = require('child_process');
   const http = require('http');
-  const port = 8796;
+  /* a test port (8752-8759), which serve() accepts only with PROMO_TEST=1;
+     refuse to run if something already answers there, so a stray desk with
+     the owner's data is never written to */
+  const port = +process.env.PROMO_TEST_PORT || 8753;
   const call = (p, body) => new Promise((resolve, reject) => {
     const data = body ? JSON.stringify(body) : null;
     const req = http.request({ host: '127.0.0.1', port, path: p, method: body ? 'POST' : 'GET', headers: Object.assign({ Host: '127.0.0.1:' + port }, data ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) } : {}) }, (r) => {
@@ -396,14 +614,18 @@ async function restartCheck() {
     req.on('error', reject); if (data) req.write(data); req.end();
   });
   const start = () => new Promise((resolve) => {
-    const c = spawn(process.execPath, [path.join(__dirname, 'desk.js'), 'serve', '--port', String(port)], { env: Object.assign({}, process.env, { PROMO_HOME: TMP }), stdio: 'ignore' });
+    const c = spawn(process.execPath, [path.join(__dirname, 'desk.js'), 'serve', '--port', String(port)], { env: Object.assign({}, process.env, { PROMO_HOME: TMP, PROMO_TEST: '1' }), stdio: 'ignore' });
     const tryIt = (n) => call('/api/health').then(() => resolve(c)).catch(() => (n > 0 ? setTimeout(() => tryIt(n - 1), 200) : resolve(c)));
     setTimeout(() => tryIt(40), 300);
   });
   const stop = (c) => new Promise((resolve) => { c.once('exit', resolve); c.kill(); });
   let ok = false, why = '';
   try {
+    const busy = await call('/api/health').then(() => true, () => false);
+    if (busy) throw new Error('port ' + port + ' is already in use; set PROMO_TEST_PORT to a free port in 8752-8759');
     let srv = await start();
+    const h = await call('/api/health');
+    if (h.home !== TMP) { await stop(srv); throw new Error('the server on ' + port + ' is not ours (home ' + h.home + ')'); }
     await call('/api/opps', { url: oppB.url, status: 'answered' });
     await call('/api/drafts', { tool: '/pdf/merge-pdf/', venue: 'qa-stackexchange-superuser', template: 'stackexchange-answer', variant: 0, parts: { body: 'Kept across restarts' } });
     await stop(srv);
@@ -421,7 +643,7 @@ async function restartCheck() {
 (async () => {
 await restartCheck();
 fs.rmSync(TMP, { recursive: true, force: true });
-console.log('\n' + pass + ' passed, ' + fail + ' failed (' + renders + ' template renders)');
+console.log('\n' + pass + ' passed, ' + fail + ' failed (' + renders + ' template renders, ' + samples + ' channel link samples)');
 for (const f of failures) console.log('  FAIL ' + f);
 process.exitCode = fail ? 1 : 0;
 })();

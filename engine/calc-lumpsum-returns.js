@@ -137,7 +137,7 @@ window.TOOLS["lumpsum-returns"] = {
 "currency": "INR",
 "title": "Lumpsum Investment Calculator",
 "category": "india",
-"description": "Future value and annualised return on a one-time investment, with inflation-adjusted worth.",
+"description": "Future value of a one-time investment, with its worth in today’s money and the real return after inflation.",
 "keywords": ["lumpsum calculator","mutual fund calculator","compound interest India","investment returns","CAGR calculator"],
 "formula": "FV = P × (1 + r)ⁿ",
 "inputs": [{"key":"principal","label":"Investment amount","type":"number","unit":"₹","default":500000,"min":0},{"key":"rate","label":"Expected annual return","type":"number","unit":"%","default":12,"step":0.1},{"key":"years","label":"Investment period","type":"number","unit":"years","default":10,"min":0,"max":100},{"key":"inflation","label":"Assumed inflation","type":"number","unit":"%","default":6,"step":0.1}],

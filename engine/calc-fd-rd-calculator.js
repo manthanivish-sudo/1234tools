@@ -139,7 +139,7 @@ window.TOOLS["fd-rd-calculator"] = {
 "currency": "INR",
 "title": "FD & RD Calculator",
 "category": "india",
-"description": "Fixed and recurring deposit maturity with quarterly compounding, plus the effect of TDS.",
+"description": "Fixed and recurring deposit maturity with quarterly compounding, and what is left after tax at your slab rate.",
 "keywords": ["FD calculator","fixed deposit calculator","RD calculator","recurring deposit","FD interest","FD maturity"],
 "formula": "FD: A = P(1 + r/4)^(4t)   ·   RD compounds each instalment quarterly",
 "inputs": [{"key":"type","label":"Deposit type","type":"select","options":[{"value":"fd","label":"Fixed deposit (lump sum)"},{"value":"rd","label":"Recurring deposit (monthly)"}],"default":"fd"},{"key":"amount","label":"Deposit amount","type":"number","unit":"₹","default":500000,"min":0},{"key":"rate","label":"Interest rate","type":"number","unit":"%","default":7,"step":0.05},{"key":"years","label":"Tenure","type":"number","unit":"years","default":5,"min":0,"max":50,"step":0.25},{"key":"slabRate","label":"Your income tax slab rate","type":"number","unit":"%","default":30,"min":0}],
@@ -173,7 +173,7 @@ window.TOOLS["fd-rd-calculator"] = {
       };
     },
 "outputs": [{"key":"maturity","label":"Maturity amount","format":"currency","primary":true},{"key":"invested","label":"Total deposited","format":"currency"},{"key":"interest","label":"Interest earned","format":"currency"},{"key":"tax","label":"Tax on interest","format":"currency"},{"key":"afterTax","label":"Maturity after tax","format":"currency"},{"key":"effectiveRate","label":"Post-tax annualised return","format":"percent"}],
-"tips": ["FD interest is fully taxable at your slab rate, which is why a 7% FD returns under 5% after tax for someone in the 30% bracket.","Banks deduct TDS once interest exceeds the annual threshold, but TDS is not the final tax — the balance is still due at your slab rate.","Most banks compound quarterly, which is what this uses. Some products pay simple interest or pay out monthly; check before comparing.","Breaking an FD early usually costs a penalty of 0.5% to 1% on the applicable rate."],
+"tips": ["FD interest is fully taxable at your slab rate, which is why a 7% FD returns only about 5% a year after tax for someone in the 30% bracket.","Banks deduct TDS once interest exceeds the annual threshold, but TDS is not the final tax — the balance is still due at your slab rate.","Most banks compound quarterly, which is what this uses. Some products pay simple interest or pay out monthly; check before comparing.","Breaking an FD early usually costs a penalty of 0.5% to 1% on the applicable rate."],
 "faq": [{"q":"Why is my RD maturity lower than an FD of the same total?","a":"Because each RD instalment is invested for a shorter period. The first earns interest for the full term, the last for barely a month, so the average holding period is roughly half the tenure."}]
 };
 })();

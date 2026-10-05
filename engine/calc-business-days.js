@@ -168,18 +168,21 @@ window.TOOLS["business-days"] = {
       if (mode === 'add') {
         const n = Math.max(0, Math.min(10000, Math.round(Number(add) || 0)));
         const cur = new Date(d0);
-        let counted = 0, guard = 0;
+        /* skipped: listed holidays stepped over on weekdays, which is what
+           "Holidays excluded" reports (not every date typed in the box) */
+        let counted = 0, guard = 0, skipped = 0;
         while (counted < n && guard < 100000) {
           cur.setUTCDate(cur.getUTCDate() + 1);
           guard++;
           if (isWork(cur)) counted++;
+          else if (cur.getUTCDay() !== 0 && cur.getUTCDay() !== 6) skipped++;
         }
         return {
           result: cur.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }),
           iso: cur.toISOString().slice(0, 10),
           businessDays: n,
           calendarDays: Math.round((cur - d0) / MS),
-          holidaysUsed: hol.size,
+          holidaysUsed: skipped,
           note: ''
         };
       }
@@ -211,6 +214,6 @@ window.TOOLS["business-days"] = {
     },
 "outputs": [{"key":"result","label":"Result","format":"text","primary":true},{"key":"iso","label":"Resulting date","format":"text"},{"key":"businessDays","label":"Business days","format":"number"},{"key":"calendarDays","label":"Calendar days","format":"number"},{"key":"weekendDays","label":"Weekend days","format":"number"},{"key":"holidaysUsed","label":"Holidays excluded","format":"number"},{"key":"note","label":"","format":"text"}],
 "tips": ["Public holidays vary by country and often by region, so they are yours to supply rather than assumed.","Counting is exclusive of the end date, matching how notice periods and payment terms are usually written.","When adding business days, the start date itself is not counted — day one is the next working day."],
-"faq": [{"q":"Should the start date count?","a":"Conventions differ, which is exactly why disputes happen. This tool excludes it. Contracts saying \"within 10 business days of receipt\" usually mean the same, but check the wording rather than assuming."}]
+"faq": [{"q":"Should the start date count?","a":"Conventions differ, which is exactly why disputes happen. When adding, this tool leaves the start date out: day one is the next working day. When counting between two dates it counts the start date but not the end date, which gives the same total as leaving the start out and counting the end whenever both are working days. Contracts saying \"within 10 business days of receipt\" usually mean the adding reading, but check the wording rather than assuming."}]
 };
 })();

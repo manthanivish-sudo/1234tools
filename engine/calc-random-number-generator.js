@@ -158,10 +158,22 @@ window.TOOLS["random-number-generator"] = {
       const rand = (limit) => {
         if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
           const max32 = 4294967296;
-          const bound = max32 - (max32 % limit);
           const buf = new Uint32Array(1);
           let v;
-          do { crypto.getRandomValues(buf); v = buf[0]; } while (v >= bound);
+          if (limit <= max32) {
+            const bound = max32 - (max32 % limit);
+            do { crypto.getRandomValues(buf); v = buf[0]; } while (v >= bound);
+            return v % limit;
+          }
+          /* a span wider than 2³² needs more bits: 21 + 32 make a whole
+             number below 2⁵³, exact in a double, with the same rejection
+             (a span this wide used to leave the bound at 0 and loop for ever) */
+          const max53 = 9007199254740992;
+          const bound = max53 - (max53 % limit);
+          do {
+            crypto.getRandomValues(buf); const hi = buf[0] >>> 11;
+            crypto.getRandomValues(buf); v = hi * max32 + buf[0];
+          } while (v >= bound);
           return v % limit;
         }
         return Math.floor(Math.random() * limit);

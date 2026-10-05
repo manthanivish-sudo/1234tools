@@ -2,7 +2,7 @@
   "id": "/mathematics/number-base-converter.html",
   "name": "Number Base Converter — 1234Tools",
   "short_name": "Number Base",
-  "description": "Convert between binary, octal, decimal, hexadecimal and any base from 2 to 36.",
+  "description": "Convert between binary, octal, decimal and hexadecimal, plus base 32 and base 36.",
   "start_url": "/mathematics/number-base-converter/?src=pwa",
   "scope": "/mathematics/number-base-converter/",
   "display": "standalone",

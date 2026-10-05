@@ -182,8 +182,9 @@ window.TOOLS["ctc-take-home"] = {
             ['Less: gratuity accrual', fmtR(-gratuityAccrual), fmtR(-gratuityAccrual / 12)],
             ['Gross salary', fmtR(gross), fmtR(gross / 12)],
             ['Less: employee PF', fmtR(-employeePF), fmtR(-employeePF / 12)],
-            ['Less: professional tax', fmtR(-(Number(ptax) || 0)), fmtR(-(Number(ptax) || 0) / 12)],
-            ['Less: income tax', fmtR(-tax), fmtR(-tax / 12)],
+            /* "|| 0": a nil line reads ₹0, not -₹0 */
+            ['Less: professional tax', fmtR(-(Number(ptax) || 0) || 0), fmtR(-(Number(ptax) || 0) / 12 || 0)],
+            ['Less: income tax', fmtR(-tax || 0), fmtR(-tax / 12 || 0)],
             ['In-hand salary', fmtR(annualInHand), fmtR(annualInHand / 12)]
           ]
         }

@@ -39,7 +39,7 @@ module.exports = {
     ],
     faq: [
       { q: 'What is the personal allowance for 2026/27?', a: '£12,570, the amount you can earn before income tax starts. It shrinks by £1 for every £2 of income above £100,000, so on a £110,000 salary with no pension the calculator applies £7,570.' },
-      { q: 'What is the difference between my marginal and effective tax rate?', a: 'The marginal rate is the income tax on your next pound: 20% at basic rate, 40% at higher rate, 60% between £100,000 and £125,140 while the allowance is withdrawn, and 45% above £125,140. The effective rate is all tax and NI divided by gross pay, and is always lower.' },
+      { q: 'What is the difference between my marginal and effective tax rate?', a: 'The marginal rate is the income tax on your next pound: 20% at basic rate, 40% at higher rate, 60% between £100,000 and £125,140 while the allowance is withdrawn, and 45% above £125,140. The effective rate is tax, NI and any student loan divided by gross pay; NI and a loan can lift it above the marginal rate.' },
       { q: 'Does a pension contribution reduce my National Insurance?', a: 'Not as this calculator models it. The pension comes out before income tax, as in a net pay arrangement, but NI is worked out on the whole salary. Only salary sacrifice reduces NI, because your contractual pay itself goes down.' },
       { q: 'How is weekly take-home worked out?', a: 'It is the annual net figure divided by 52. Weekly payslips can differ slightly, because PAYE uses weekly thresholds and some years have 53 paydays.' }
     ],
@@ -290,7 +290,7 @@ module.exports = {
     ],
     mistakes: [
       'Depreciating land. Freehold land does not wear out and is normally not depreciated, so split a property’s cost between land and building first.',
-      'Setting the residual value to zero for assets that clearly sell on, such as vans, which overstates the charge every year.'
+      'Setting a zero residual for assets that sell on, such as vans: all but reducing balance then write off too much.'
     ],
     faq: [
       { q: 'What is the difference between reducing balance and double declining balance?', a: 'Both charge a percentage of the opening book value. Reducing balance uses whatever rate you enter, such as 25%; double declining sets it at twice the straight-line rate, so 40% for a five-year life and 20% for ten.' },

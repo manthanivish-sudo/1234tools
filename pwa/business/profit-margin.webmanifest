@@ -2,7 +2,7 @@
   "id": "/business/profit-margin.html",
   "name": "Profit Margin & Markup Calculator — 1234Tools",
   "short_name": "Profit Margin",
-  "description": "Work out margin, markup, cost or selling price from any two of them. Margin and markup are not the same thing.",
+  "description": "Work out selling price, cost, margin and markup from any two of cost, price and margin. Margin and markup are not the same thing.",
   "start_url": "/business/profit-margin/?src=pwa",
   "scope": "/business/profit-margin/",
   "display": "standalone",

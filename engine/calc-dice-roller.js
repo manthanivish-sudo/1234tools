@@ -136,7 +136,7 @@ window.TOOLS = window.TOOLS || {};
 window.TOOLS["dice-roller"] = {
 "title": "Dice Roller",
 "category": "utilities",
-"description": "Roll any number of dice with any number of sides, with modifiers and standard RPG notation.",
+"description": "Roll up to 200 dice from d4 to d100 with a modifier and a drop rule, shown in standard RPG notation.",
 "keywords": ["dice roller","roll dice online","d20 roller","virtual dice","random dice","D&D dice"],
 "formula": "standard notation: 2d6+3 means two six-sided dice plus three",
 "regenerate": true,

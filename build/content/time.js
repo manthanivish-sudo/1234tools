@@ -14,13 +14,14 @@ module.exports = {
       'Age in years only moves on the birthday itself, so two children born a day apart can sit on opposite sides of a cut-off for a whole year.'
     ],
     formula: {
-      text: 'The tool subtracts year from year, month from month and day from day. Negative days borrow the length of the month before the “age at” date; negative months borrow 12 and take a year off. Total days is the plain count between the dates.',
+      text: 'Whole months are counted from the date of birth to the “age at” date, then the days left over; a birth day missing from a shorter month, such as the 31st, becomes that month’s last day. Adding the answer to the date of birth with the date add calculator lands on the “age at” date. Total days is the plain count between the dates.',
       expr: [
-        'age = (Y₂ − Y₁) years + (M₂ − M₁) months + (D₂ − D₁) days, borrowing where negative',
+        'months = whole months from date of birth to age-at date        years = ⌊months ÷ 12⌋',
+        'days = age-at date − (date of birth + months)',
         'total days = age-at date − date of birth',
         'total weeks = ⌊total days ÷ 7⌋        total hours = total days × 24'
       ],
-      vars: [['Y, M, D', 'year, month and day: 1 is the birth date, 2 the “age at” date'], ['⌊ ⌋', 'round down to a whole number']]
+      vars: [['date of birth + months', 'the birth date moved on by those months'], ['⌊ ⌋', 'round down to a whole number']]
     },
     worked: {
       inputs: { dob: '2012-09-01', on: '2026-08-31' },
@@ -148,7 +149,7 @@ module.exports = {
       'Invoices and contracts usually want one of the two, and sometimes the weekdays too.'
     ],
     formula: {
-      text: 'Total days is the end date minus the start date, so the start day is counted and the end day is not; weeks, hours and minutes are multiples of it. The breakdown subtracts years, months and days separately, borrowing the length of the month before the end date when the days go negative.',
+      text: 'Total days is the end date minus the start date, so the start day is counted and the end day is not. The breakdown counts whole months from the start date, then the days left; a start day missing from a shorter month becomes its last day, so adding the answer back with the date add calculator gives the end date.',
       expr: [
         'total days = end − start',
         'weeks = total days ÷ 7      hours = total days × 24      minutes = total days × 1,440',
@@ -212,7 +213,7 @@ module.exports = {
     uses: [
       ['Production and delivery plans', 'Suppliers across much of Europe quote lead times and delivery slots as week numbers.'],
       ['Rotas and timesheets', 'Shift patterns and weekly timesheets are often filed under the week number.'],
-      ['Sprints and term plans', 'Teams that plan in weeks can check exactly which dates a numbered week covers.']
+      ['Sprints and term plans', 'Teams that plan in weeks can check exactly which dates a week covers, from any day in it.']
     ],
     mistakes: [
       'Filing early-January figures under the calendar year. Sales from 1 to 3 January 2027 belong to week 53 of 2026, and filing them under 2027 breaks the year totals.',

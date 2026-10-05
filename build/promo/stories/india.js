@@ -166,7 +166,7 @@ module.exports = {
   '/india/ctc-take-home/': {
     persona: 'Job seekers weighing an offer',
     hook: 'Offer letter says ₹12 LPA. What lands in your account?',
-    pain: 'CTC ÷ 12 says ₹1 lakh a month. Employer PF, professional tax and income tax have other plans.',
+    pain: 'CTC ÷ 12 says ₹1 lakh a month. Employer PF, gratuity and professional tax have other plans.',
     usual: ['Dividing CTC by twelve', 'Asking HR, then waiting', 'Salary sites that want your email first'],
     promise: 'Enter CTC and basic %. See gross, deductions and monthly in-hand.',
     steps: ['Enter your annual CTC', 'Set basic % and regime', 'Read your monthly in-hand'],

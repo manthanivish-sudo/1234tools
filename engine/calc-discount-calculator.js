@@ -137,7 +137,7 @@ window.TOOLS["discount-calculator"] = {
 "currency": "GBP",
 "title": "Discount & Sale Price Calculator",
 "category": "business",
-"description": "Apply single or stacked discounts, work backwards from a sale price, and see the margin impact.",
+"description": "Apply single or stacked discounts and see the effective discount and the margin impact.",
 "keywords": ["discount calculator","sale price calculator","percentage off","stacked discount","markdown calculator"],
 "formula": "sale price = original × (1 − d₁) × (1 − d₂) …",
 "inputs": [{"key":"original","label":"Original price","type":"number","unit":"£","default":200,"min":0},{"key":"d1","label":"Discount 1","type":"number","unit":"%","default":20,"step":0.01},{"key":"d2","label":"Discount 2 (stacked)","type":"number","unit":"%","default":0,"step":0.01},{"key":"cost","label":"Unit cost (optional)","type":"number","unit":"£","default":100,"min":0}],

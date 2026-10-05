@@ -301,6 +301,110 @@ K.raster = (matrix, px, dark, light, quiet) => {
 };
 
 /* ================================================================== */
+/* calculators: the spec a page mounts, run as build/content/_engine.js */
+/* runs it, with the clock optionally held at a given moment            */
+/* ================================================================== */
+
+/** The engine file and slug a calculator page mounts, read from the page. */
+K.calcEngine = (url) => {
+  const html = fs.readFileSync(path.join(K.ROOT, url.replace(/^\/+/, ''), 'index.html'), 'utf8');
+  const m = /MVRTool\.mount\(window\.TOOLS\[['"]([^'"]+)['"]\]/.exec(html);
+  if (!m) throw new Error(url + ' mounts no calculator');
+  const scripts = [];
+  const re = /<script src="\/engine\/((?:calc|tool)[^"]*\.js)"/g;
+  let s;
+  while ((s = re.exec(html))) scripts.push(s[1]);
+  return { slug: m[1], file: scripts.find((f) => f === 'calc-' + m[1] + '.js') || ('calc-' + m[1] + '.js') };
+};
+/** A Date whose "now" is held at `now` (ISO string or ms); every other use is the real Date. */
+K.heldDate = (now) => {
+  const t = typeof now === 'number' ? now : new Date(now).getTime();
+  class D extends Date {
+    constructor(...a) { if (a.length) super(...a); else super(t); }
+    static now() { return t; }
+  }
+  return D;
+};
+const calcCache = new Map();
+/**
+ * K.calcSpec('/health/bmi/') — the spec (title, inputs, outputs, compute,
+ * formula, tips, faq …). opts.now holds the clock (the examples were
+ * captured on 2026-10-04), each held clock gets its own context.
+ */
+K.calcSpec = (url, opts) => {
+  const now = opts && opts.now;
+  const e = K.calcEngine(url);
+  const key = e.file + '|' + (now || '');
+  if (!calcCache.has(key)) {
+    const window = { TOOLS: {} };
+    const ctx = vm.createContext({ window, console, Intl, Math, Date: now ? K.heldDate(now) : Date, Number, String, Array, Object, JSON, isFinite, isNaN, parseFloat, parseInt });
+    vm.runInContext(fs.readFileSync(path.join(K.ROOT, 'engine', e.file), 'utf8'), ctx, { filename: e.file });
+    calcCache.set(key, window.TOOLS);
+  }
+  const t = calcCache.get(key)[e.slug];
+  if (!t) throw new Error(e.file + ' defines no TOOLS["' + e.slug + '"]');
+  return t;
+};
+/** The spec's defaults, as the page's inputs hold them (numbers as numbers). */
+K.calcDefaults = (spec) => {
+  const v = {};
+  (spec.inputs || []).forEach((i) => {
+    let d = i.default;
+    if (i.type === 'number') d = d === null || d === undefined || d === '' ? null : Number(d);
+    v[i.key] = d;
+  });
+  return v;
+};
+/** compute() on the defaults with `inputs` over them: K.calc('/health/bmi/', { weight: 80 }) */
+K.calc = (url, inputs, opts) => {
+  const spec = K.calcSpec(url, opts);
+  return spec.compute(Object.assign(K.calcDefaults(spec), inputs || {}));
+};
+/** A "#k=v&…" fragment (or "k=v&…") as inputs, numbers for number inputs. */
+K.calcHash = (spec, hash) => {
+  const o = {};
+  new URLSearchParams(String(hash || '').replace(/^#/, '')).forEach((v, k) => {
+    const i = (spec.inputs || []).find((x) => x.key === k);
+    o[k] = i && i.type === 'number' ? (v === '' ? null : Number(v)) : v;
+  });
+  return o;
+};
+/** An output value as render-core shows it, with no preferences set (the page's own currency). */
+K.calcShow = (spec, key, v) => {
+  const o = (spec.outputs || []).find((x) => x.key === key) || {};
+  const code = spec.currency || 'GBP';
+  const loc = code === 'INR' ? 'en-IN' : code === 'USD' ? 'en-US' : code === 'EUR' ? 'de-DE' : 'en-GB';
+  const f = o.format || 'number';
+  if (f === 'text') return v === null || v === undefined ? '' : String(v);
+  if (f === 'auto' && typeof v === 'string') return v;
+  if (f === 'percent') return isFinite(v) ? Number(v.toFixed(4)).toLocaleString(loc) + '%' : '—';
+  if (f === 'currency') {
+    if (!isFinite(v)) return '—';
+    try { return v.toLocaleString(loc, { style: 'currency', currency: code, maximumFractionDigits: 2 }); } catch (e) { return code + ' ' + v.toLocaleString(loc, { maximumFractionDigits: 2 }); }
+  }
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'string') return v;
+  if (!isFinite(v)) return v > 0 ? '∞' : (isNaN(v) ? '—' : '−∞');
+  const abs = Math.abs(v);
+  let s;
+  if (abs !== 0 && (abs < 1e-4 || abs >= 1e12)) s = v.toExponential(6).replace(/\.?0+e/, 'e');
+  else { const dp = abs >= 1000 ? 2 : abs >= 1 ? 4 : 6; s = Number(v.toFixed(dp)).toLocaleString(loc, { maximumFractionDigits: dp }); }
+  return o.unit ? s + ' ' + o.unit : s;
+};
+/** The number in a shown figure: "₹1,23,456.50" → 123456.5, "12.5%" → 12.5, "−3" → -3 */
+K.num = (s) => {
+  const m = String(s).replace(/−/g, '-').replace(/,/g, '').match(/-?\d+(?:\.\d+)?(?:e[-+]?\d+)?/i);
+  return m ? Number(m[0]) : NaN;
+};
+/** true when `shown` is `v` to the decimals `shown` carries (or 1e-9 relative) */
+K.near = (shown, v) => {
+  const n = K.num(shown);
+  if (!isFinite(n) || !isFinite(v)) return false;
+  const dp = ((String(shown).replace(/,/g, '').match(/\.(\d+)/) || [, ''])[1]).length;
+  return Math.abs(n - v) <= 0.5 * Math.pow(10, -dp) + 1e-9 * Math.max(1, Math.abs(v));
+};
+
+/* ================================================================== */
 /* image bytes                                                         */
 /* ================================================================== */
 
@@ -406,7 +510,8 @@ K.stopBrowser = async () => {
   if (K.server) { K.server.close(); K.server = null; }
 };
 
-/** Open a page of the site with downloads recorded, every blob URL kept, and outside requests refused and noted. */
+/** Open a page of the site with downloads recorded, every blob URL kept, and outside requests refused and noted.
+ *  opts.consent: the analytics choice already made ('denied', the default, or 'granted'). */
 K.open = async (url, opts) => {
   const o = opts || {};
   const p = await K.browser.newPage();
@@ -416,13 +521,16 @@ K.open = async (url, opts) => {
   p.on('request', (r) => {
     const u = r.url();
     if (!/^(data|blob):/.test(u)) p.__requests.push({ method: r.method(), url: u });
-    if (!u.startsWith(K.BASE) && !/^(data|blob):/.test(u)) { outside.push(url + ' -> ' + u); return r.abort(); }
+    /* with consent granted the analytics scripts are expected to be asked
+       for: still refused (no test ever reaches Google or Clarity), kept on
+       the page's own list, left out of the run's "outside requests" */
+    if (!u.startsWith(K.BASE) && !/^(data|blob):/.test(u)) { if (o.consent !== 'granted') outside.push(url + ' -> ' + u); return r.abort(); }
     r.continue();
   });
   p.__errors = [];
   p.on('pageerror', (e) => p.__errors.push(String(e && e.message || e)));
-  await p.evaluateOnNewDocument(() => {
-    try { localStorage.setItem('1234tools-consent', 'denied'); } catch (e) { /* */ }
+  await p.evaluateOnNewDocument((consent) => {
+    try { localStorage.setItem('1234tools-consent', consent); } catch (e) { /* */ }
     window.__downloads = [];
     window.__blobs = [];
     const orig = URL.createObjectURL;
@@ -431,7 +539,7 @@ K.open = async (url, opts) => {
       const a = this;
       if (a.download) window.__downloads.push(fetch(a.href).then((r) => r.blob()).then(async (b) => ({ name: a.download, type: b.type, bytes: Array.from(new Uint8Array(await b.arrayBuffer())) })));
     };
-  });
+  }, o.consent || 'denied');
   await p.goto(K.BASE + url, { waitUntil: 'load', timeout: 120000 });
   await p.evaluate(() => { const b = document.querySelector('.cc'); if (b) b.remove(); });
   if (o.wait !== false) await p.waitForSelector(o.wait || '.tool-io > *', { timeout: 30000 });

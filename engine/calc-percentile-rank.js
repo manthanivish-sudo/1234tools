@@ -6,7 +6,7 @@ window.TOOLS["percentile-rank"] = {
 "category": "education",
 "description": "Convert between rank and percentile for any competitive exam, both directions, using either the standard formula or the NTA one.",
 "keywords": ["percentile calculator","rank to percentile","percentile to rank","cat percentile calculator","jee percentile","nta percentile formula","exam rank calculator"],
-"formula": "Percentile = (candidates below you ÷ total candidates) × 100",
+"formula": "Percentile = (total − rank + 1) ÷ total × 100 (NTA) or (total − rank) ÷ total × 100 (standard)",
 "inputs": [
   {"key":"direction","label":"Work out","type":"select","default":"toPercentile","options":[
     {"value":"toPercentile","label":"Percentile, from my rank"},

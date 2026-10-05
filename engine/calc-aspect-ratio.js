@@ -147,13 +147,15 @@ window.TOOLS["aspect-ratio"] = {
       const g = gcd(Math.round(w1), Math.round(h1));
       return {
         newHeight: w2 * (h1 / w1),
+        /* video encoders want even sizes (chroma is stored in 2 × 2 blocks) */
+        evenHeight: w2 ? Math.max(2, 2 * Math.round(w2 * (h1 / w1) / 2)) : NaN,
         ratio: `${Math.round(w1 / g)}:${Math.round(h1 / g)}`,
         decimal: w1 / h1,
         megapixels: (w1 * h1) / 1e6
       };
     },
-"outputs": [{"key":"newHeight","label":"New Height","format":"number","unit":"px","primary":true},{"key":"ratio","label":"Simplified Ratio","format":"text"},{"key":"decimal","label":"Ratio as Decimal","format":"number"},{"key":"megapixels","label":"Original Megapixels","format":"number"}],
-"tips": ["Common ratios: 16:9 widescreen video, 4:3 legacy displays, 1:1 square social posts, 9:16 vertical/stories, 3:2 most DSLR sensors.","Scaling to a non-integer height causes half-pixel rendering. Round to an even number for video encoding."],
+"outputs": [{"key":"newHeight","label":"New Height","format":"number","unit":"px","primary":true},{"key":"ratio","label":"Simplified Ratio","format":"text"},{"key":"decimal","label":"Ratio as Decimal","format":"number"},{"key":"megapixels","label":"Original Megapixels","format":"number"},{"key":"evenHeight","label":"Nearest even height, for video","format":"number","unit":"px"}],
+"tips": ["Common ratios: 16:9 widescreen video, 4:3 legacy displays, 1:1 square social posts, 9:16 vertical/stories, 3:2 most DSLR sensors.","Scaling to a non-integer height causes half-pixel rendering. Round to an even number for video encoding; the nearest even height is shown with the results."],
 "faq": [{"q":"Why does my video need even dimensions?","a":"Most codecs (H.264, H.265) subsample chroma in 2×2 blocks, so both width and height must be divisible by 2 — some encoders require multiples of 4 or 16."}]
 };
 })();

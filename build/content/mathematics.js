@@ -31,7 +31,7 @@ module.exports = {
     uses: [
       ['Discounts and price rises', 'Check whether “was £75, now £60” really is the 20% off the label claims.'],
       ['Exam marks', 'Turn 54 out of 72 into a percentage, or find how many marks 65% of a paper needs.'],
-      ['Pay rises and inflation', 'Set a rise in pounds against the percentage an employer quoted, or against inflation.']
+      ['Pay rises and inflation', 'Compare a rise in pounds with the percentage quoted, or with inflation.']
     ],
     mistakes: [
       'Dividing by the wrong base. Percentage change always divides by the starting value: a rise from 50 to 60 is 20%, not 16.7%.',
@@ -40,13 +40,15 @@ module.exports = {
     faq: [
       { q: 'How do I calculate a percentage of a number?', a: 'Multiply the number by the percentage and divide by 100: 15% of 240 is 240 × 15 ÷ 100 = 36. Here, put 15 in Value A and 240 in Value B and read “A% of B”.' },
       { q: 'How do I work out the percentage increase between two numbers?', a: 'Divide the rise by the old value and multiply by 100: from 80 to 92 is 12 ÷ 80 × 100 = 15%. Enter the old value as A.' },
-      { q: 'How do I find the original price before a discount?', a: 'Divide the sale price by one minus the discount as a decimal. A coat at £68 after 15% off was £68 ÷ 0.85 = £80. Adding 15% back to £68 gives £78.20, which is wrong.' },
-      { q: 'Can a percentage be more than 100%?', a: 'A share cannot, but a change can: sales rising from 40 to 100 units is a 150% increase.' }
+      { q: 'How do I find the original price before a discount?', a: 'Divide the sale price by one minus the discount as a decimal. A coat at £68 after 15% off was £68 ÷ 0.85 = £80; adding 15% back gives the wrong £78.20. Here, enter 15 and 68 and read “B before an A% cut”.' },
+      { q: 'Can a percentage be more than 100%?', a: 'A share cannot, but a change can: sales rising from 40 to 100 is a 150% increase.' }
     ],
     checks: [
       { inputs: { value: 15, total: 240 }, key: 'pctOfB', shown: '= 36' },
       { inputs: { value: 80, total: 92 }, key: 'change', shown: '15%' },
-      { inputs: { value: 40, total: 100 }, key: 'change', shown: '150%' }
+      { inputs: { value: 40, total: 100 }, key: 'change', shown: '150%' },
+      { inputs: { value: 15, total: 68 }, key: 'beforeCut', shown: '= £80' },
+      { inputs: { value: 20, total: 120 }, key: 'beforeRise', shown: 'came from £100' }
     ]
   },
 
@@ -320,7 +322,7 @@ module.exports = {
     ],
     mistakes: [
       'Stopping at a composite factor. 504 = 8 × 63 is a factorisation but not a prime one; both 8 and 63 must be broken down further.',
-      'Expecting a divisor list for every number. Above ten million the tool gives the prime factors and the divisor count but stops listing the divisors.'
+      'Entering a number above a trillion. Trial division stops there: 1,000,000,000,000 is factorised, with all 169 of its divisors listed, but anything larger is refused rather than left running.'
     ],
     faq: [
       { q: 'Is 1001 a prime number?', a: 'No, though it looks like one: 1001 = 7 × 11 × 13. That is why 7, 11 and 13 all divide any six-digit number made of a three-digit block written twice, such as 123123.' },
@@ -330,7 +332,8 @@ module.exports = {
     checks: [
       { inputs: { n: 1001 }, key: 'factorisation', shown: '7 × 11 × 13' },
       { inputs: { n: 97 }, key: 'divisorList', shown: '1, 97' },
-      { inputs: { n: 28 }, key: 'sumOfDivisors', shown: 'add up to 56' }
+      { inputs: { n: 28 }, key: 'sumOfDivisors', shown: 'add up to 56' },
+      { inputs: { n: 1e12 }, key: 'divisorCount', shown: 'all 169' }
     ]
   },
 
@@ -367,7 +370,7 @@ module.exports = {
     faq: [
       { q: 'How should a negative discriminant be read?', a:'The parabola never reaches the x-axis, so there are no real roots, only a complex pair. For x² + 2x + 5 the discriminant is −16 and the roots are −1 ± 2i; the vertex, at (−1, 4), sits above the axis.' },
       { q: 'When does a quadratic have only one root?', a:'The discriminant is 0 and the vertex lies on the x-axis, so the curve just touches it. x² − 6x + 9 = 0 is (x − 3)², with the repeated root 3.' },
-      { q: 'Can the solver give irrational roots?', a: 'Yes, as decimals. x² − 2 = 0 has roots of plus or minus √2, shown as 1.41421 and −1.41421; enter b as 0 when there is no x term.' }
+      { q: 'Can the solver give irrational roots?', a: 'Yes, as decimals. x² − 2 = 0 has roots of plus or minus √2, shown as 1.4142 and −1.4142; enter b as 0 when there is no x term.' }
     ],
     checks: [
       { inputs: { a: 1, b: 3, c: -40 }, key: 'root1', shown: 'width is 5 m' },
@@ -379,8 +382,8 @@ module.exports = {
       { inputs: { a: 1, b: 2, c: 5 }, key: 'vertexY', shown: ', 4)' },
       { inputs: { a: 1, b: -6, c: 9 }, key: 'discriminant', shown: 'is 0' },
       { inputs: { a: 1, b: -6, c: 9 }, key: 'root1', shown: 'root 3' },
-      { inputs: { a: 1, b: 0, c: -2 }, key: 'root1', shown: '1.41421' },
-      { inputs: { a: 1, b: 0, c: -2 }, key: 'root2', shown: '−1.41421' }
+      { inputs: { a: 1, b: 0, c: -2 }, key: 'root1', shown: '1.4142' },
+      { inputs: { a: 1, b: 0, c: -2 }, key: 'root2', shown: '−1.4142' }
     ]
   },
 
@@ -412,7 +415,7 @@ module.exports = {
       ['Dilution', 'A 1 : 4 squash or a 1 : 3 mortar keeps its strength as the batch grows.']
     ],
     mistakes: [
-      'Entering decimal terms. The simplified ratio is built from whole numbers, so scale 1.5 : 2 up to 3 : 4 before entering it; the shares and percentages work either way.',
+      'Rounding decimal terms before entering them. 1.5 : 2 rounded to 2 : 2 becomes 1 : 1; entered as it is, it is scaled to whole numbers and simplified to 3 : 4.',
       'Putting C on the wrong side. C has to correspond to A; if your known amount belongs with B, swap A and B first.'
     ],
     faq: [

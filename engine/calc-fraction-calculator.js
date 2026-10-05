@@ -136,7 +136,7 @@ window.TOOLS = window.TOOLS || {};
 window.TOOLS["fraction-calculator"] = {
 "title": "Fraction Calculator",
 "category": "mathematics",
-"description": "Add, subtract, multiply and divide fractions, simplify them, and convert to and from decimals.",
+"description": "Add, subtract, multiply and divide fractions, with the answer simplified and as a decimal and percentage.",
 "keywords": ["fraction calculator","add fractions","simplify fraction","fraction to decimal","decimal to fraction"],
 "formula": "a/b + c/d = (ad + cb) / bd, then divide by the greatest common divisor",
 "inputs": [{"key":"n1","label":"First numerator","type":"number","default":3},{"key":"d1","label":"First denominator","type":"number","default":4},{"key":"op","label":"Operation","type":"select","options":[{"value":"+","label":"Add"},{"value":"-","label":"Subtract"},{"value":"*","label":"Multiply"},{"value":"/","label":"Divide"}],"default":"+"},{"key":"n2","label":"Second numerator","type":"number","default":5},{"key":"d2","label":"Second denominator","type":"number","default":6}],

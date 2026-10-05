@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 /**
- * Claims against behaviour, for the file and text tools: what each page of
- * /pdf/, /image/, /developer/, /text/ and /qr/ promises, checked against
- * what the tool really does.
+ * Claims against behaviour: what each tool page promises, checked against
+ * what the tool really does. The file and text tools (/pdf/, /image/,
+ * /developer/, /text/, /qr/), the calculators (/india/, /business/,
+ * /finance/, /health/, /time/, /education/, /mathematics/, /utilities/,
+ * /engineering/, /design/) and the unit conversion pages (/conversions/).
  *
  *   node build/tests/claims.js [--root <site>] [--out <dir>] [--port 8860]
- *                              [--only pdf,image,developer,text,qr] [--no-browser]
+ *                              [--only pdf,image,india,conversions,…] [--no-browser]
  *                              [--grep <regex on page, name or quote>] [--json <file>]
  *
  * --root is the site to test (default: the one this file sits in); it is
@@ -55,13 +57,15 @@ kit.init({ ROOT, OUT, PORT });
 
 const claims = [];
 const manuals = [];
-const SECTIONS = ['pdf', 'image', 'developer', 'text', 'qr'];
+const SECTIONS = ['pdf', 'image', 'developer', 'text', 'qr',
+  'india', 'business', 'finance', 'health', 'time', 'education', 'mathematics', 'utilities', 'engineering', 'design', 'conversions'];
 const sectionOf = (page) => page.split('/')[1];
 
 /**
  * claim(page, where, quote, name, env, fn)
  *   page   the tool's path, '/pdf/merge-pdf/'
  *   where  tip | faq | lede | works | point | mistake | dfaq | what | card | why | ui
+ *          | example | formula | worked | use | table | hub
  *   quote  words that must be on the page, as a reader sees them
  *   name   what the check proves, in a few words
  *   env    'node' or 'browser'
@@ -75,7 +79,12 @@ function manual(page, where, quote, why) {
 }
 
 const api = { claim, manual, kit };
-for (const f of ['pdf.js', 'image.js', 'developer.js', 'text.js', 'qr.js']) require('./claims/' + f)(api);
+/* the file and text tools, then the calculators and conversions; a file not
+   written yet is skipped, so sections can be added one at a time */
+for (const f of ['pdf.js', 'image.js', 'developer.js', 'text.js', 'qr.js',
+  'examples.js', 'calc-privacy.js', 'calc-india.js', 'calc-business.js', 'calc-everyday.js', 'calc-maths.js', 'conversions.js']) {
+  if (fs.existsSync(path.join(__dirname, 'claims', f))) require('./claims/' + f)(api);
+}
 
 /* ---------- the page's words ---------- */
 
@@ -164,7 +173,7 @@ async function runOne(c) {
     if (ONLY && ONLY.indexOf(s) < 0) continue;
     const rs = results.filter((r) => r.section === s);
     const tools = new Set(chosen.filter((c) => sectionOf(c.page) === s).map((c) => c.page));
-    console.log('  ' + pad('/' + s + '/', 13) + pad(rs.length + ' checked', 13) + pad(rs.filter((r) => r.status === 'PASS').length + ' pass', 10) +
+    console.log('  ' + pad('/' + s + '/', 15) + pad(rs.length + ' checked', 13) + pad(rs.filter((r) => r.status === 'PASS').length + ' pass', 10) +
       pad(rs.filter((r) => r.status !== 'PASS').length + ' fail', 9) + pad(tools.size + ' tools', 10) + manuals.filter((m) => sectionOf(m.page) === s).length + ' manual');
   }
   const failed = results.filter((r) => r.status !== 'PASS');

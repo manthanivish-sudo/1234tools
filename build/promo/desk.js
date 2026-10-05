@@ -11,6 +11,8 @@
  *   node build/promo/desk.js log [--venue id] | log add <venueId> <toolPath> [--kind post|help|removed] [--url u] [--template t]
  *   node build/promo/desk.js venues [--section s] [--audience a]
  *   node build/promo/desk.js lint "<text>" [--ai] [--section s]
+ *   node build/promo/desk.js guide [channel]                 vision, process, FAQ; or one channel's card
+ *   node build/promo/desk.js coverage [--days 14]            which calendar targets are posted, missing or need a check
  *
  * A human publishes every post. This server binds 127.0.0.1 only, never logs in
  * anywhere, never submits a form and never calls a posting API: "Open composer"
@@ -30,6 +32,8 @@ const { lint } = require('./lint');
 
 const UI_DIR = path.join(__dirname, 'ui');
 const PORTS = [8796, 8797, 8798, 8799];
+/* The tests' own range, accepted only when PROMO_TEST=1 (test.js sets it with a temporary PROMO_HOME). */
+const TEST_PORTS = [8752, 8753, 8754, 8755, 8756, 8757, 8758, 8759];
 const REEL_MAKER = 'https://www.1234tools.com/ai-video/reel-maker/';
 
 /* ------------------------------------------------------------- helpers */
@@ -253,6 +257,15 @@ function createServer(port) {
         try { return send(res, 200, { item: require('./calendar').setStatus(b.id, b.status, b.postedUrl, b.note) }); }
         catch (e) { return send(res, 400, { error: e.message }); }
       }
+      /* one target of a slot: record a link or a tick, skip with a reason, clear, accept, add or remove */
+      if (p === '/api/calendar/target' && req.method === 'POST') {
+        const b = await readBody(req);
+        try { return send(res, 200, require('./calendar').target(b.id, b.channel, b.action, { url: b.url, tick: !!b.tick, note: b.note, reason: b.reason })); }
+        catch (e) { return send(res, 400, { error: e.message }); }
+      }
+      if (p === '/api/calendar/coverage') return send(res, 200, require('./calendar').coverage({ days: q.days }));
+      if (p === '/api/guide') return send(res, 200, require('./guide').payload());
+      if (p === '/api/channels/check') return send(res, 200, require('./channels').check(q.channel, q.url || ''));
       if (p === '/api/reels') return send(res, 200, await reels());
       if (p === '/api/lint') {
         const b = req.method === 'POST' ? await readBody(req) : q;
@@ -268,7 +281,7 @@ function createServer(port) {
 
 function serve(port) {
   port = port || 8797;
-  if (!PORTS.includes(port)) throw new Error('Use a port between 8796 and 8799.');
+  if (!PORTS.includes(port) && !(process.env.PROMO_TEST === '1' && TEST_PORTS.includes(port))) throw new Error('Use a port between 8796 and 8799.');
   const server = createServer(port);
   return new Promise((resolve, reject) => {
     server.once('error', reject);
@@ -310,6 +323,34 @@ function printDraft(d) {
   if (d.composerUrl) out.push('Composer (you finish and post): ' + d.composerUrl);
   else if (d.composerNote) out.push(d.composerNote);
   out.push('Red lines: ' + d.redLines.join(' / '));
+  return out.join('\n');
+}
+
+/** The coverage report for the terminal. */
+function coverageText(c) {
+  const out = [];
+  out.push('Coverage of the video calendar, ' + c.from + ' to ' + c.today + ' (' + c.days + ' days). The desk checks each link\'s shape only; it never opens it.');
+  const n = (b) => b.posted + ' posted, ' + b.due + ' due today, ' + b.missed + ' missed' + (b.flagged ? ', ' + b.flagged + ' to check' : '') + (b.skipped ? ', ' + b.skipped + ' skipped' : '');
+  out.push('\nPer channel (last 7 days | last 30 days):');
+  if (!c.channels.length) out.push('  nothing due yet');
+  for (const r of c.channels) out.push('  ' + r.name.padEnd(34) + n(r.week) + ' | ' + n(r.d30) + (r.venue ? '' : '  [no venue: not in the log]'));
+  out.push('\nToday:');
+  if (!c.todaySlots.length) out.push('  no video slot today');
+  for (const s of c.todaySlots) {
+    out.push('  ' + s.id + ' ' + s.title + ' (' + s.formatLabel + '): ' + s.progress.label);
+    for (const m of s.missing) out.push('    - ' + m.name + (m.flagged ? ': link needs a check' : '') + (m.cadence && !m.cadence.ok ? ': WAIT, ' + m.cadence.reasons[0] : ''));
+  }
+  const open = c.slots.filter((s) => s.missing.length || s.flagged.length || s.warnings.length || s.unassigned.length);
+  out.push('\nSlots with something open:');
+  if (!open.length) out.push('  none: every past and today\'s target is posted or skipped with a reason');
+  for (const s of open) {
+    out.push('  ' + s.id + ' ' + s.title + ': ' + s.progress.label);
+    if (s.missing.length) out.push('    missing: ' + s.missing.map((m) => m.name).join(', '));
+    for (const f of s.flagged) out.push('    CHECK ' + f.name + ' ' + f.url + ': ' + f.issues.map((i) => i.msg).join(' '));
+    for (const w of s.warnings) out.push('    note ' + w.name + ': ' + w.issues.map((i) => i.msg).join(' '));
+    for (const u of s.unassigned) out.push('    unassigned link: ' + u.url);
+  }
+  if (c.noVenue.length) out.push('\nRecorded without a log entry (no venue in venues.json): ' + c.noVenue.join(', ') + '.');
   return out.join('\n');
 }
 
@@ -393,11 +434,22 @@ async function cli(argv) {
     console.log(r.ok ? 'clean (' + r.count + ' chars)' : r.errors.length + ' problem(s)');
     return r.ok ? 0 : 1;
   }
+  if (cmd === 'guide') {
+    const G = require('./guide');
+    const out = G.text(a._[1]);
+    if (out == null) { console.error('No channel ' + a._[1] + '. Channels: ' + require('./channels').list().map((c) => c.id).join(', ')); return 2; }
+    console.log(out);
+    return 0;
+  }
+  if (cmd === 'coverage') {
+    console.log(coverageText(require('./calendar').coverage({ days: a.days })));
+    return 0;
+  }
   console.error('Unknown command: ' + cmd + '. Try: node build/promo/desk.js help');
   return 2;
 }
 
-module.exports = { createServer, serve, draft, reels, venuesPayload, logPayload, cli, kitOpts, PORTS };
+module.exports = { createServer, serve, draft, reels, venuesPayload, logPayload, cli, kitOpts, coverageText, PORTS, TEST_PORTS };
 
 if (require.main === module) {
   cli(process.argv.slice(2)).then((code) => { if (code != null) process.exitCode = code; }).catch((e) => { console.error(e.message || e); process.exitCode = 1; });

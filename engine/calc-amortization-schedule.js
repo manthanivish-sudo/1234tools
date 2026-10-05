@@ -137,7 +137,7 @@ window.TOOLS["amortization-schedule"] = {
 "currency": "GBP",
 "title": "Loan Amortisation Schedule",
 "category": "business",
-"description": "Full payment-by-payment breakdown of principal, interest and remaining balance, with optional overpayments.",
+"description": "Principal, interest and balance month by month for five years or year by year to the end, with overpayments.",
 "keywords": ["amortization schedule","amortisation calculator","loan schedule","mortgage schedule","principal and interest breakdown"],
 "formula": "M = P · [r(1+r)ⁿ] / [(1+r)ⁿ − 1]",
 "inputs": [{"key":"amount","label":"Loan amount","type":"number","unit":"£","default":200000,"min":0},{"key":"rate","label":"Annual interest rate","type":"number","unit":"%","default":5.5,"step":0.01},{"key":"years","label":"Term","type":"number","unit":"years","default":25,"min":0,"max":100},{"key":"overpay","label":"Extra payment each month","type":"number","unit":"£","default":0,"min":0},{"key":"view","label":"Schedule detail","type":"select","options":[{"value":"annual","label":"Annual summary"},{"value":"monthly","label":"Monthly (first 5 years)"}],"default":"annual"}],

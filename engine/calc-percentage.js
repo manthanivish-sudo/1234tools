@@ -147,9 +147,13 @@ window.TOOLS["percentage"] = {
       change: value === 0 ? NaN : ((total - value) / value) * 100,
       increased: total * (1 + value / 100),
       decreased: total * (1 - value / 100),
-      difference: (value + total) === 0 ? NaN : (Math.abs(value - total) / ((value + total) / 2)) * 100
+      difference: (value + total) === 0 ? NaN : (Math.abs(value - total) / ((value + total) / 2)) * 100,
+      /* reverse percentages: B is the figure after an A% rise or cut, and
+         these are the amounts it started from */
+      beforeRise: value === -100 ? NaN : total / (1 + value / 100),
+      beforeCut: value === 100 ? NaN : total / (1 - value / 100)
     }),
-"outputs": [{"key":"aOfB","label":"A is what % of B","format":"percent","primary":true},{"key":"pctOfB","label":"A% of B","format":"number"},{"key":"change","label":"% change from A to B","format":"percent"},{"key":"increased","label":"B increased by A%","format":"number"},{"key":"decreased","label":"B decreased by A%","format":"number"},{"key":"difference","label":"% difference (symmetric)","format":"percent"}],
+"outputs": [{"key":"aOfB","label":"A is what % of B","format":"percent","primary":true},{"key":"pctOfB","label":"A% of B","format":"number"},{"key":"change","label":"% change from A to B","format":"percent"},{"key":"increased","label":"B increased by A%","format":"number"},{"key":"decreased","label":"B decreased by A%","format":"number"},{"key":"difference","label":"% difference (symmetric)","format":"percent"},{"key":"beforeRise","label":"B before an A% rise","format":"number"},{"key":"beforeCut","label":"B before an A% cut","format":"number"}],
 "tips": ["Percentage change is directional: going 100 → 50 is −50%, but 50 → 100 is +100%. The same absolute move gives different percentages.","A 20% drop followed by a 20% rise does not return you to the start — it leaves you 4% down.","Percentage difference (symmetric) compares two values without treating either as the baseline."],
 "faq": [{"q":"What is the difference between percentage points and percent?","a":"If a rate moves from 5% to 7%, that is a rise of 2 percentage points, but a 40% increase in relative terms. Mixing the two is a common source of misleading statistics."}]
 };

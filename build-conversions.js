@@ -133,6 +133,14 @@ function frac(x) {
   }
   return null;
 }
+/** p/q with q <= 1000 that x is to float precision (1e-12), or null. */
+function fracExact(x) {
+  for (let q = 1; q <= 1000; q++) {
+    const p = Math.round(x * q);
+    if (p !== 0 && Math.abs(p / q - x) <= 1e-12 * Math.max(1, Math.abs(x))) return { p, q };
+  }
+  return null;
+}
 /** Decimals an offset needs (up to 6), or -1 when it is not a short decimal. */
 function decimals(x) {
   for (let d = 0; d <= 6; d++) {
@@ -255,7 +263,11 @@ function formula(fam, a, b) {
   if (kc !== null && (k >= 1 || ic === null)) return { rhs: '{X} × ' + factorStr(kc), op: 'mul', num: factorStr(kc), approx: false, exact };
   if (ic !== null) return { rhs: '{X} ÷ ' + factorStr(ic), op: 'div', num: factorStr(ic), approx: false, exact };
   if (fam === 'angle') {
-    const over = frac(k / Math.PI), under = frac(k * Math.PI);
+    /* Only a fraction that holds to float precision, and the simpler of the
+       two forms: the loose frac() once matched 10800/π² by 1,034,084/945 and
+       printed rad → arcmin as "× 1,034,084π/945" (right to 1e-9, but false). */
+    let over = fracExact(k / Math.PI), under = fracExact(k * Math.PI);
+    if (over && under) { if (over.q * Math.abs(over.p) <= under.q * Math.abs(under.p)) under = null; else over = null; }
     if (over) return { rhs: '{X} × ' + (over.p === 1 ? '' : group(String(over.p))) + 'π' + (over.q === 1 ? '' : '/' + over.q), op: 'pi', approx: false, exact };
     if (under) return { rhs: under.p === 1 ? '{X} ÷ ' + (under.q === 1 ? '' : under.q) + 'π' : '{X} × ' + group(String(under.p)) + '/' + (under.q === 1 ? 'π' : '(' + under.q + 'π)'), op: 'pi', approx: false, exact };
   }
@@ -396,7 +408,8 @@ function noteFor(fam, a, b) {
       if (has('gal') && has('galuk')) return 'An imperial gallon is ' + h.c(1, 'galuk', 'gal') + ', so check which gallon a figure means.';
       if (has('galuk')) return 'This is the imperial (UK) gallon, ' + h.c(1, 'galuk', 'l') + '; the US gallon is smaller.';
       if (has('gal')) return 'This is the US gallon, ' + h.c(1, 'gal', 'l') + '; the imperial (UK) gallon is larger.';
-      if (['tsp', 'tbsp', 'floz', 'cup', 'pt', 'qt'].some(has)) return 'Cup, spoon, pint and fluid-ounce sizes here are the US customary ones; other countries’ measures differ slightly.';
+      /* "differ slightly" was false: an imperial pint is a fifth larger than a US pint */
+      if (['tsp', 'tbsp', 'floz', 'cup', 'pt', 'qt'].some(has)) return 'Cup, spoon, pint and fluid-ounce sizes here are the US customary ones; other countries’ measures differ: the imperial (UK) pint is ' + h.n(h.x(1, 'galuk', 'ml') / 8) + ' mL and the imperial fluid ounce ' + h.n(h.x(1, 'galuk', 'ml') / 160) + ' mL.';
       return '';
     }
     case 'data': {
@@ -467,7 +480,10 @@ function pairBlock(fam, a, b) {
   const [ha, hb] = headingNames(fam, a, b);
   const eq = fm.approx ? ' ≈ ' : ' = ';
   const ftext = esc(B.sym + eq + fm.rhs.replace('{X}', A.sym));
-  const extext = esc(fm.rhs.replace('{X}', val(fam, x0, a)) + ' = ' + val(fam, y0, b));
+  /* the result is the converter's, from the full factor; with a rounded
+     factor the sum as written can miss it in the last place shown
+     (0.005 AU × 490,806,662,400 is 2,454,033,312.00, the converter 2,454,033,312.01) */
+  const extext = esc(fm.rhs.replace('{X}', val(fam, x0, a)) + eq + val(fam, y0, b));
   const back = 'In the other direction, ' + val(fam, 1, b) + ' = ' + conv(fam, 1, b, a) + '.';
   const words = [howSentence(fam, a, b, fm, variant), exactSentence(fm, variant), back].filter(Boolean).join(' ');
   const note = noteFor(fam, a, b);
