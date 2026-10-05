@@ -37,7 +37,7 @@ const iso = (d) => new Date(d).toISOString();
 
 /* ------------------------------------------------------------ modules */
 section('modules are inert on require');
-for (const m of ['tools', 'hashtags', 'hooks', 'lint', 'templates', 'venues', 'log', 'find', 'plan', 'kit', 'desk', 'channels', 'guide', 'calendar', 'site', 'site-templates']) {
+for (const m of ['tools', 'hashtags', 'hooks', 'lint', 'templates', 'venues', 'log', 'find', 'plan', 'kit', 'desk', 'channels', 'guide', 'calendar', 'site', 'site-templates', 'testimonials']) {
   check('require ' + m, () => { const x = require('./' + m); assert.ok(x && typeof x === 'object'); });
 }
 check('log dir is PROMO_HOME', () => assert.strictEqual(L.home(), TMP));
@@ -864,6 +864,163 @@ check('venues: Google Business Profile is offered to shops only; shop copy discl
   for (const id of ['1234tools', 'xleshop', 'mvr-it']) SITE.run(id, () => assert.ok(!V.postVenues().some((v) => v.id === gbp.id), id + ' has no Business Profile venue'));
 });
 
+/* --------------------------------------------------------- testimonials */
+section('testimonials: permission gate, withdraw, isolation, request emails');
+const TM = require('./testimonials');
+const TM_OK = { name: 'Asha Rao', role: 'Owner', business: 'Test Shop One', contact: 'asha@example.com', quote: 'Setting up the shop took an afternoon and I answer orders from my phone.', uses: ['site-pages', 'social'],
+  permission: { given: 'yes', how: 'email-reply', date: '2026-10-01', evidence: 'email of 1 Oct 2026 in Clients/Quotes' } };
+const tmIn = (id, fn) => SITE.run(id, fn);
+check('a received quote without written permission cannot be approved, published or exported', () => tmIn('xleshop', () => {
+  const r = TM.add({ name: 'No Permission', business: 'Shop Two', quote: 'Fine.', contact: 'x@example.com' });
+  assert.strictEqual(r.status, 'received');
+  assert.throws(() => TM.setStatus(r.id, 'approved'), /Not approved: .*no written permission/);
+  assert.throws(() => TM.setStatus(r.id, 'published', { url: 'https://xleshop.com/customers.html' }), /cannot go to published/);
+  assert.throws(() => TM.add(Object.assign({}, TM_OK, { permission: { given: '', how: '', date: '', evidence: '' }, status: 'approved' })), /Not approved/);
+  assert.strictEqual(TM.exportFor('site-pages').items.length, 0);
+}));
+check('the gate: permission "yes" with a real, past date, how, evidence, contact, name, business, a use and no incentive', () => tmIn('xleshop', () => {
+  const variants = [
+    [{ permission: Object.assign({}, TM_OK.permission, { given: 'no' }) }, /client said no/],
+    [{ permission: Object.assign({}, TM_OK.permission, { date: '' }) }, /no date/],
+    [{ permission: Object.assign({}, TM_OK.permission, { date: '2099-01-01' }) }, /in the future/],
+    [{ permission: Object.assign({}, TM_OK.permission, { how: '' }) }, /how the permission/],
+    [{ permission: Object.assign({}, TM_OK.permission, { evidence: '' }) }, /no evidence/],
+    [{ contact: '' }, /no contact details/],
+    [{ name: '' }, /no name/],
+    [{ business: '' }, /no business/],
+    [{ uses: [] }, /no place it may be used/],
+    [{ incentive: true }, /incentive/],
+    [{ rating: { value: 5, evidence: '' } }, /rating is stored without/]
+  ];
+  for (const [patch, re] of variants) assert.throws(() => TM.add(Object.assign({}, TM_OK, patch, { status: 'approved' })), re, JSON.stringify(patch));
+  assert.throws(() => TM.add(Object.assign({}, TM_OK, { permission: Object.assign({}, TM_OK.permission, { date: '2026-02-30' }) })), /real date/);
+  assert.throws(() => TM.add(Object.assign({}, TM_OK, { uses: ['billboards'] })), /Unknown use/);
+  assert.strictEqual(TM.exportFor('site-pages').items.length, 0, 'nothing refused reached the export');
+}));
+let tmId = '';
+check('with full permission: approve, publish (URL required), export JSON + HTML with exactly the brief\'s fields, no stars', () => tmIn('xleshop', () => {
+  const r = TM.add(Object.assign({}, TM_OK, { key: 'gajanan' }));
+  tmId = r.id;
+  assert.deepStrictEqual(r.blocked, []);
+  assert.strictEqual(TM.setStatus(r.id, 'approved').status, 'approved');
+  assert.throws(() => TM.setStatus(r.id, 'published', {}), /URL/);
+  const p = TM.setStatus(r.id, 'published', { url: 'https://xleshop.com/customers.html' });
+  assert.strictEqual(p.status, 'published');
+  const x = TM.exportFor('site-pages');
+  assert.deepStrictEqual(x.items, [{ name: 'Asha Rao', role: 'Owner', business: 'Test Shop One', quote: TM_OK.quote, date: '2026-10-01', key: 'gajanan' }]);
+  assert.deepStrictEqual(JSON.parse(x.json), x.items);
+  assert.ok(x.html.includes('“' + TM_OK.quote + '”') && x.html.includes('<span class="t-name">Asha Rao</span>') && x.html.includes('Test Shop One') && !/[★☆]|rating/i.test(x.html), x.html);
+  assert.ok(/"gajanan": \{/.test(x.js) && /"name": "Asha Rao"/.test(x.js), x.js);
+  assert.strictEqual(TM.exportFor('kits').items.length, 0, 'not cleared for kits');
+}));
+check('approved words are frozen; a published quote cannot lose its permission', () => tmIn('xleshop', () => {
+  assert.throws(() => TM.update(tmId, { quote: 'Something nicer.' }), /approved these words/);
+  assert.throws(() => TM.update(tmId, { uses: ['site-pages', 'social', 'kits'] }), /approved these words/);
+  assert.throws(() => TM.update(tmId, { permission: { given: 'no' } }), /Withdraw it instead/);
+  assert.throws(() => TM.setStatus(tmId, 'received'), /cannot go to received/);
+  assert.strictEqual(TM.update(tmId, { note: 'kept in the CRM' }).note, 'kept in the CRM');
+}));
+check('a rating appears only when the client gave one in writing, stored with its evidence', () => tmIn('xleshop', () => {
+  const r = TM.add(Object.assign({}, TM_OK, { name: 'Ben Cole', business: 'Shop Three', rating: { value: 4, evidence: 'their email of 2 Oct: "4 out of 5"' } }));
+  TM.setStatus(r.id, 'approved');
+  const x = TM.exportFor('site-pages');
+  const b = x.items.find((o) => o.name === 'Ben Cole');
+  assert.deepStrictEqual(b.rating, { value: 4, outOf: 5 });
+  assert.ok(x.html.includes('★★★★☆') && x.html.includes('Rated 4 out of 5 by Ben Cole'));
+  assert.ok(!('rating' in x.items.find((o) => o.name === 'Asha Rao')));
+  assert.throws(() => TM.add(Object.assign({}, TM_OK, { rating: { value: 7 } })), /whole number/);
+}));
+check('withdraw: out of every export at once, and the published URL is listed to take down until ticked', () => tmIn('xleshop', () => {
+  TM.setStatus(tmId, 'published', { url: 'https://www.instagram.com/p/C1a2B3c4D5e/' });
+  const w = TM.setStatus(tmId, 'withdrawn', { note: 'client asked by email' });
+  assert.strictEqual(w.status, 'withdrawn');
+  assert.deepStrictEqual(w.takeDown.map((x) => x.url), ['https://xleshop.com/customers.html', 'https://www.instagram.com/p/C1a2B3c4D5e/']);
+  for (const use of TM.USES) assert.ok(!TM.exportFor(use).items.some((o) => o.name === 'Asha Rao'), use);
+  const x = TM.exportFor('site-pages');
+  assert.deepStrictEqual(x.takeDown.map((t) => t.url), w.takeDown.map((t) => t.url));
+  assert.throws(() => TM.setStatus(tmId, 'approved'), /withdrawn; it cannot come back/);
+  assert.throws(() => TM.update(tmId, { quote: 'x' }), /withdrawn/);
+  const t = TM.markTakenDown(tmId, 'https://xleshop.com/customers.html');
+  assert.deepStrictEqual(t.takeDown.map((x) => x.url), ['https://www.instagram.com/p/C1a2B3c4D5e/']);
+  assert.throws(() => TM.markTakenDown(tmId, 'https://xleshop.com/customers.html'), /not listed/);
+}));
+check('per site: each site has its own testimonials.json; nothing crosses', () => {
+  const xle = tmIn('xleshop', () => TM.list().items.length);
+  assert.ok(xle >= 3);
+  assert.strictEqual(tmIn('xleshop', () => TM.file()), path.join(TMP, 'sites', 'xleshop', 'testimonials.json'));
+  assert.strictEqual(tmIn('1234tools', () => TM.file()), path.join(TMP, 'testimonials.json'));
+  for (const id of ['1234tools', 'mvr-it', 'gajanan-home-foods']) assert.strictEqual(tmIn(id, () => TM.list().items.length), 0, id);
+  const m = tmIn('mvr-it', () => TM.add(Object.assign({}, TM_OK, { name: 'Mo Patel', business: 'PESTNEST', status: 'approved' })));
+  assert.strictEqual(tmIn('mvr-it', () => TM.exportFor('site-pages').items.length), 1);
+  assert.ok(!tmIn('xleshop', () => TM.exportFor('site-pages').items.some((o) => o.name === 'Mo Patel')));
+  assert.throws(() => tmIn('xleshop', () => TM.setStatus(m.id, 'withdrawn')), /No testimonial/);
+  // a record that names another site is ignored even if it lands in this site's file
+  const f = tmIn('xleshop', () => TM.file());
+  const db = JSON.parse(fs.readFileSync(f, 'utf8'));
+  db.items.push(Object.assign({}, db.items[0], { id: 't-stray', site: 'mvr-it', status: 'approved' }));
+  fs.writeFileSync(f, JSON.stringify(db));
+  assert.ok(!tmIn('xleshop', () => TM.list().items.some((r) => r.id === 't-stray')));
+  assert.strictEqual(tmIn('xleshop', () => TM.list().items.length), xle);
+});
+check('HTML export escapes the client\'s words; a quote is never cut', () => tmIn('fixourtime', () => {
+  TM.add(Object.assign({}, TM_OK, { quote: 'Bookings <b>just</b> work & "my" clients turn up.', status: 'approved' }));
+  const h = TM.exportFor('site-pages').html;
+  assert.ok(h.includes('Bookings &lt;b&gt;just&lt;/b&gt; work &amp; &quot;my&quot; clients turn up.') && !h.includes('<b>just'), h);
+  assert.throws(() => TM.add(Object.assign({}, TM_OK, { quote: 'x'.repeat(700) })), /does not cut their words/);
+}));
+check('a shop\'s customer may be shown without a business; everyone else needs one', () => {
+  assert.deepStrictEqual(tmIn('gajanan-home-foods', () => TM.gate(Object.assign({}, TM_OK, { business: '' }))), []);
+  assert.ok(tmIn('mvr-it', () => TM.gate(Object.assign({}, TM_OK, { business: '' }))).some((x) => /no business/.test(x)));
+});
+let tmEmails = 0;
+check('request email and WhatsApp text: lint-clean (no errors, no warnings) for every site, every use, with and without a name', () => {
+  const bad = [];
+  for (const s of SITE.list()) tmIn(s.id, () => {
+    const p = SITE.get(s.id);
+    const host = new URL(p.baseUrl).host;
+    const cases = [{}, { name: 'Priya Shah', business: 'Shah & Sons', uses: 'site-pages,social,kits' }, { uses: 'social' }, { uses: 'kits' }].concat(TM.suggestions());
+    for (const o of cases) {
+      const e = TM.requestEmail(o);
+      tmEmails++;
+      const probs = e.lint.email.errors.concat(e.lint.email.warnings, e.lint.whatsapp.errors, e.lint.whatsapp.warnings);
+      if (probs.length) bad.push(s.id + ' ' + JSON.stringify(o).slice(0, 60) + ': ' + probs.map((x) => x.rule + ' "' + x.match + '"').join(', '));
+      for (const t of [e.body, e.whatsapp]) {
+        const why = [];
+        if (!t.includes('"Yes, you may publish this"')) why.push('the reply phrase');
+        if (!/own words/.test(t)) why.push('own words');
+        if (!/Nothing is offered in return/.test(t)) why.push('no incentive');
+        if (!/saying no is completely fine|no is a fine answer/.test(t)) why.push('can say no');
+        if (!/take (the quote|it) down at any time/.test(t) || !/repl(y|ying)/.test(t)) why.push('withdraw by replying');
+        if (!/your name/i.test(t)) why.push('name shown');
+        if (p.kind !== 'shop' && !/business name/.test(t)) why.push('business shown');
+        if (o.business && !t.includes(o.business)) why.push('their business by name');
+        const uses = String(o.uses || 'site-pages');
+        if (/site-pages/.test(uses) && !t.includes(host)) why.push('the website');
+        if (/social/.test(uses) && !/social media posts/.test(t)) why.push('social');
+        if (/kits/.test(uses) && !/promotion images/.test(t)) why.push('kits');
+        if (!/site-pages/.test(uses) && t.includes('(' + host + ')')) why.push('names a place it will not appear');
+        /* no incentives and no words put in the client's mouth (CMA208 2.10, 3.6) */
+        if (/\b(discount|voucher|gift|prize|reward|free|in exchange)\b/i.test(t.replace(/Nothing is offered in return/g, ''))) why.push('an incentive word');
+        if (/for example|e\.g\.|such as|something like|\b(great|amazing|excellent|love|recommend|happy with|best)\b/i.test(t.replace(/If you are happy for us to publish it/g, ''))) why.push('suggested praise');
+        if (why.length) bad.push(s.id + ' ' + JSON.stringify(o).slice(0, 60) + ' missing/wrong: ' + why.join(', '));
+      }
+      if (!/^May we quote you/.test(e.subject)) bad.push(s.id + ' subject ' + e.subject);
+    }
+  });
+  assert.deepStrictEqual(bad, []);
+  assert.ok(tmEmails >= 14 * 4 + 16, 'emails ' + tmEmails);
+});
+check('suggested first requests: XLeShop lists its nine client shops with their store keys; MVR IT Services its seven named clients; others none', () => {
+  const x = tmIn('xleshop', () => TM.suggestions());
+  assert.deepStrictEqual(x.map((s) => s.business).sort(), SHOPS.map((id) => SITE.get(id).name).sort());
+  assert.ok(x.every((s) => s.key && Object.values(TM.XLESHOP_SHOT).includes(s.key) && s.role === 'Owner' && !s.name), JSON.stringify(x.map((s) => s.key)));
+  assert.ok(x.find((s) => s.business === 'RAP CLUB').notes.some((n) => /prototype/.test(n)));
+  const m = tmIn('mvr-it', () => TM.suggestions());
+  assert.deepStrictEqual(m.map((s) => s.business), ['PESTNEST', 'Gajanana Foods', 'South Basket', 'Sri Balaji Stores', 'KBK Dairy Products', 'Natural Cure Ayurveda', 'Swara Vikasa Yoga']);
+  assert.ok(!m.some((s) => /XLeShop|Attend Now/.test(s.business)), 'MVR\'s own platforms are not clients');
+  for (const id of ['1234tools', 'attend-now', 'fixourtime'].concat(SHOPS)) assert.deepStrictEqual(tmIn(id, () => TM.suggestions()), [], id);
+});
+
 /* the real thing: data written through one server process is there after
    it is killed and a new one is started on the same PROMO_HOME */
 async function restartCheck() {
@@ -914,6 +1071,19 @@ async function restartCheck() {
       const siteOk = a.site.id === 'fixourtime' && a.home === path.join(TMP, 'sites', 'fixourtime') && b.tools.every((t) => !t.path.startsWith('/pdf/')) && b.tools.length === SITE.get('xleshop').items.length
         && c.tools.length > 200 && /Unknown site/.test(bad.error) && cov.site === 'attend-now';
       if (siteOk) pass++; else { fail++; failures.push('server per site: ' + JSON.stringify({ a: a.site && a.site.id, home: a.home, b: b.tools && b.tools.length, c: c.tools && c.tools.length, bad, cov: cov.site }).slice(0, 300)); }
+      // testimonials over HTTP: the gate answers 400 with its reasons; the data stays in its site
+      srv = await start();
+      const t1 = await call('/api/testimonials?site=attend-now', { name: 'Http Person', business: 'Http Ltd', quote: 'Check-in was quick.', contact: 'h@example.com' });
+      const t2 = await call('/api/testimonials/status?site=attend-now', { id: t1.item && t1.item.id, status: 'approved' });
+      const t3 = await call('/api/testimonials?site=attend-now', { id: t1.item && t1.item.id, permission: { given: 'yes', how: 'signed-form', date: '2026-10-02', evidence: 'form in Drive' } });
+      const t4 = await call('/api/testimonials/status?site=attend-now', { id: t1.item && t1.item.id, status: 'approved' });
+      const t5 = await call('/api/testimonials/export?site=attend-now&use=site-pages');
+      const t6 = await call('/api/testimonials?site=fixourtime');
+      const t7 = await call('/api/testimonials/email?site=attend-now&name=Ann%20Lee&business=Lee%20Events&uses=site-pages');
+      await stop(srv);
+      const tmOk = t1.item && t1.item.status === 'received' && /Not approved/.test(t2.error || '') && t3.item.blocked.length === 0 && t4.item.status === 'approved'
+        && t5.items.length === 1 && t5.items[0].name === 'Http Person' && !t6.items.some((r) => r.name === 'Http Person') && t7.lint.ok && /Lee Events/.test(t7.body);
+      if (tmOk) pass++; else { fail++; failures.push('testimonials over HTTP: ' + JSON.stringify({ t1, t2, t4: t4.item && t4.item.status, t5: t5.items, t7: t7.lint && t7.lint.ok }).slice(0, 400)); }
     }
   } catch (e) { why = e.message; }
   if (ok) pass++; else { fail++; failures.push('opportunities and drafts survive a server restart: ' + why); }
@@ -925,6 +1095,14 @@ async function restartCheck() {
   const s4 = run(['draft', '/features.html#storefront', 'social-x', '--site', 'xleshop']);
   const cliOk = s1.status === 0 && /xleshop/.test(s1.stdout) && /fixourtime/.test(s1.stdout) && s2.status === 0 && /Site: XLeShop/.test(s2.stdout)
     && s3.status === 2 && /Unknown site/.test(s3.stderr) && /xleshop\.com/.test(s4.stdout) && !/1234tools\.com/.test(s4.stdout);
+  const s5 = run(['testimonials', 'email', '--site', 'mvr-it', '--business', 'PESTNEST', '--uses', 'site-pages,social']);
+  const s6 = run(['testimonials', 'add', '--site', 'kbk-mart', '--name', 'Cli Person', '--quote', 'Orders arrive as I place them.', '--approve']);
+  const s7 = run(['testimonials', 'suggest', '--site', 'xleshop']);
+  const s8 = run(['testimonials', 'export', '--site', 'mvr-it', '--format', 'json']);
+  const tmCli = s5.status === 0 && /"Yes, you may publish this"/.test(s5.stdout) && /mvritservices\.com/.test(s5.stdout) && /Lint: clean/.test(s5.stdout)
+    && s6.status === 1 && /Not approved/.test(s6.stderr) && s7.status === 0 && /Gajanan Home Foods/.test(s7.stdout) && /key gajanan/.test(s7.stdout)
+    && s8.status === 0 && Array.isArray(JSON.parse(s8.stdout)) && JSON.parse(s8.stdout).some((o) => o.name === 'Mo Patel');
+  if (tmCli) pass++; else { fail++; failures.push('CLI testimonials: ' + JSON.stringify([s5.status, s5.stdout.slice(-200), s6.status, s6.stderr.slice(0, 200), s7.status, s7.stdout.slice(0, 120), s8.status, s8.stdout.slice(0, 200), s8.stderr.slice(0, 200)])); }
   if (cliOk) pass++; else { fail++; failures.push('CLI --site: ' + JSON.stringify([s1.status, s2.status, s2.stdout.slice(0, 80), s3.status, s3.stderr.slice(0, 80), s4.status, s4.stdout.slice(0, 200), s4.stderr.slice(0, 200)])); }
 }
 

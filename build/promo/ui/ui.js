@@ -119,6 +119,7 @@
     if (name === 'opps') loadSavedOpps();
     if (name === 'calendar') loadCalendar();
     if (name === 'guide') loadGuide().catch((e) => toast(e.message));
+    if (name === 'testimonials') loadTestimonials().catch((e) => toast(e.message));
   }
   $$('.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
@@ -909,6 +910,144 @@
     if (channel) { const el = $('#gc-' + channel); if (el) el.scrollIntoView({ block: 'start' }); }
   }
 
+  /* ------------------------------------------------------ TESTIMONIALS */
+  /* Named client quotes for the current site (testimonials.js). The server holds the
+     rules: a quote is approved, published or exported only with the client's written
+     permission and its date; this page shows its reasons and never works round them. */
+  S.tmFilter = 'all';
+  const TM_STATUS = { requested: 'requested', received: 'received', approved: 'approved', published: 'published', withdrawn: 'withdrawn' };
+  function usesOf(box) { return $$('input[data-use]', box).filter((i) => i.checked).map((i) => i.dataset.use); }
+  function setUses(box, uses) { $$('input[data-use]', box).forEach((i) => { i.checked = (uses || []).includes(i.dataset.use); }); }
+  function tmMsg(text, ok) { const box = clear($('#tm-form-msg')); if (text) box.appendChild(h('p', { class: 'banner ' + (ok ? 'ok' : 'wait'), text })); }
+
+  async function loadTestimonials() {
+    const r = await api('/api/testimonials?' + qs({ status: S.tmFilter }));
+    S.tm = r;
+    $('#tm-file').textContent = r.file;
+    $('#tm-evidence').placeholder = r.evidenceHint;
+    const how = $('#tm-how');
+    if (how.options.length <= 1) r.hows.forEach((x) => how.appendChild(h('option', { value: x.id, text: x.label })));
+    if (!$('#tm-e-from').value) $('#tm-e-from').value = S.siteInfo ? S.siteInfo.name : '';
+    for (const [k, n] of Object.entries(r.counts)) { const el = document.querySelector('#tm-filters [data-n="' + k + '"]'); if (el) el.textContent = String(n); }
+    for (const b of $$('#tm-filters button')) b.classList.toggle('is-on', b.dataset.status === S.tmFilter);
+    renderSuggestions(r.suggestions);
+    const box = clear($('#tm-list'));
+    if (!r.items.length) box.appendChild(h('p', { class: 'muted', text: S.tmFilter === 'all' ? 'No quotes or requests for this site yet.' : 'Nothing here.' }));
+    for (const it of r.items) box.appendChild(tmCard(it));
+    if (!$('#tm-e-body').value) await writeEmail();
+  }
+
+  function renderSuggestions(list) {
+    $('#tm-suggest').hidden = !list.length;
+    $('#tm-suggest-n').textContent = list.length ? list.length + ' to send yourself' : '';
+    const box = clear($('#tm-suggest-list'));
+    for (const s of list) {
+      box.appendChild(h('div', { class: 'tm-sug', 'data-business': s.business },
+        h('b', { text: s.business }), h('a', { href: s.url, target: '_blank', rel: 'noopener noreferrer', class: 'small', text: s.url.replace(/^https?:\/\//, '') }),
+        s.key ? h('span', { class: 'badge', text: 'key ' + s.key }) : null,
+        h('button', { class: 'btn tm-sug-email', onclick: () => { $('#tm-e-name').value = s.name || ''; $('#tm-e-business').value = s.business; writeEmail(); $('#tm-email-card').scrollIntoView({ block: 'start' }); } }, 'Write request'),
+        h('button', { class: 'ghost tm-sug-add', onclick: () => fillForm({ name: s.name || '', role: s.role || '', business: s.business, key: s.key || '', note: 'request sent ' + new Date().toISOString().slice(0, 10) }) }, 'Record as requested…'),
+        h('p', { class: 'notes', text: s.notes.join(' ') })));
+    }
+  }
+
+  function tmCard(it) {
+    const act = (label, fn, cls) => h('button', { class: cls || 'ghost', 'data-act': label, onclick: fn }, label);
+    const setStatus = async (status, extra) => {
+      try { await api('/api/testimonials/status', Object.assign({ id: it.id, status }, extra || {})); toast('Now ' + status); await loadTestimonials(); }
+      catch (e) { toast(e.message); const card = document.querySelector('.tm-item[data-id="' + it.id + '"]'); if (card) card.appendChild(h('p', { class: 'banner wait tm-err', text: e.message })); }
+    };
+    const actions = h('div', { class: 'actions' });
+    if (it.status !== 'withdrawn') {
+      if (!['approved', 'published'].includes(it.status)) actions.appendChild(act('Edit', () => fillForm(it)));
+      actions.appendChild(act('Write request', () => { $('#tm-e-name').value = it.name || ''; $('#tm-e-business').value = it.business || ''; setUses($('#tm-e-uses'), it.uses); writeEmail(); $('#tm-email-card').scrollIntoView({ block: 'start' }); }));
+      if (it.status === 'received') actions.appendChild(act('Approve', () => setStatus('approved'), 'btn'));
+      if (it.status === 'approved') actions.appendChild(act('Back to received', () => setStatus('received')));
+      if (it.status === 'approved' || it.status === 'published') actions.appendChild(act(it.status === 'published' ? 'Published elsewhere too…' : 'Mark published…', () => {
+        const url = window.prompt('The URL of the page or post where the quote now appears:', '');
+        if (url) setStatus('published', { url: url.trim() });
+      }, 'btn'));
+      actions.appendChild(act('Withdraw…', () => {
+        if (window.confirm('Withdraw this quote? It leaves every export now, and the desk lists each place it was published so you can take it down.')) setStatus('withdrawn', { note: 'withdrawn in the desk' });
+      }));
+    }
+    const take = it.status === 'withdrawn' && it.takeDown.length ? h('div', { class: 'banner wait tm-take' }, h('b', { text: 'Withdrawn: take it down from ' + it.takeDown.length + ' place' + (it.takeDown.length === 1 ? '' : 's') + '.' }),
+      h('ul', null, it.takeDown.map((x) => h('li', { 'data-url': x.url }, h('a', { href: x.url, target: '_blank', rel: 'noopener noreferrer', text: x.url }), ' ',
+        h('button', { class: 'ghost tm-taken', onclick: async () => { await api('/api/testimonials/takedown', { id: it.id, url: x.url }); toast('Recorded as taken down'); loadTestimonials(); } }, 'Taken down'))))) : null;
+    const p = it.permission || {};
+    return h('div', { class: 'tm-item is-' + it.status, 'data-id': it.id, 'data-status': it.status },
+      h('div', { class: 'task-head' }, h('span', { class: 'badge st-' + it.status, text: TM_STATUS[it.status] || it.status }), h('b', { text: [it.name, it.role, it.business].filter(Boolean).join(', ') || '(no name yet)' }),
+        it.rating ? h('span', { class: 'badge', text: 'rating ' + it.rating.value + '/' + it.rating.outOf + ' in writing' }) : null),
+      it.quote ? h('p', { class: 'tm-quote', text: '“' + it.quote + '”' }) : h('p', { class: 'tm-meta', text: 'Waiting for their reply.' }),
+      h('p', { class: 'tm-meta', text: 'Uses: ' + ((it.uses || []).join(', ') || '-') + ' · permission: ' + (p.given || 'not yet') + (p.date ? ', ' + p.date : '') + (p.how ? ', by ' + p.how.replace(/-/g, ' ') : '') + (it.about ? ' · about: ' + it.about : '') }),
+      (it.published || []).length ? h('p', { class: 'tm-meta' }, 'Published: ', it.published.map((x, i) => [i ? ', ' : '', h('a', { href: x.url, target: '_blank', rel: 'noopener noreferrer', text: x.url }), x.removedAt ? ' (taken down)' : ''])) : null,
+      it.status !== 'withdrawn' && it.blocked.length ? h('ul', { class: 'tm-why' }, it.blocked.map((x) => h('li', { text: x }))) : null,
+      it.notes.length ? h('ul', { class: 'tm-notes' }, it.notes.map((x) => h('li', { text: 'Check before publishing: ' + x }))) : null,
+      take, actions);
+  }
+
+  function fillForm(it, quiet) {
+    $('#tm-id').value = it.id || '';
+    $('#tm-form-title').textContent = it.id ? 'Edit ' + (it.name || it.business || it.id) : 'Add a quote or a request';
+    for (const k of ['name', 'role', 'business', 'contact', 'quote', 'about', 'key', 'note']) $('#tm-' + k).value = it[k] || '';
+    const p = it.permission || {};
+    $('#tm-perm').value = p.given || ''; $('#tm-how').value = p.how || ''; $('#tm-date').value = p.date || ''; $('#tm-evidence').value = p.evidence || '';
+    $('#tm-rating').value = it.rating ? String(it.rating.value) : ''; $('#tm-rating-ev').value = it.rating ? it.rating.evidence || '' : '';
+    $('#tm-incentive').checked = !!it.incentive;
+    setUses($('#tm-uses'), it.uses || ['site-pages']);
+    tmMsg('');
+    if (!quiet) $('#tm-form-card').scrollIntoView({ block: 'start' });
+  }
+
+  $('#tm-save').addEventListener('click', async () => {
+    const id = $('#tm-id').value;
+    const body = {
+      name: $('#tm-name').value, role: $('#tm-role').value, business: $('#tm-business').value, contact: $('#tm-contact').value,
+      quote: $('#tm-quote').value, about: $('#tm-about').value, key: $('#tm-key').value, note: $('#tm-note').value, uses: usesOf($('#tm-uses')),
+      permission: { given: $('#tm-perm').value, how: $('#tm-how').value, date: $('#tm-date').value, evidence: $('#tm-evidence').value },
+      rating: $('#tm-rating').value ? { value: $('#tm-rating').value, evidence: $('#tm-rating-ev').value } : null,
+      incentive: $('#tm-incentive').checked
+    };
+    if (id) body.id = id;
+    try {
+      const r = await api('/api/testimonials', body);
+      $('#tm-id').value = r.item.id;
+      await loadTestimonials();
+      tmMsg('Saved as ' + r.item.status + (r.item.blocked.length ? '. Before it can be approved: ' + r.item.blocked.join('; ') + '.' : '. It can be approved.'), !r.item.blocked.length);
+    } catch (e) { tmMsg(e.message, false); }
+  });
+  $('#tm-clear').addEventListener('click', () => fillForm({}));
+  for (const b of $$('#tm-filters button')) b.addEventListener('click', () => { S.tmFilter = b.dataset.status; loadTestimonials(); });
+
+  let tmEmailT = 0;
+  async function writeEmail() {
+    let r;
+    try { r = await api('/api/testimonials/email?' + qs({ name: $('#tm-e-name').value.trim(), business: $('#tm-e-business').value.trim(), uses: usesOf($('#tm-e-uses')).join(','), from: $('#tm-e-from').value.trim() })); }
+    catch (e) { clear($('#tm-e-lint')).appendChild(h('span', { class: 'err', text: e.message })); return; }
+    $('#tm-e-subject').value = r.subject; $('#tm-e-body').value = r.body; $('#tm-e-wa').value = r.whatsapp;
+    const errs = r.lint.email.errors.concat(r.lint.whatsapp.errors);
+    const lintBox = clear($('#tm-e-lint'));
+    if (r.lint.ok) lintBox.appendChild(h('span', { class: 'ok-line', text: 'Lint: clean for ' + (S.siteInfo ? S.siteInfo.name : 'this site') + '. You send it yourself.' }));
+    else lintBox.appendChild(h('ul', { class: 'lint' }, errs.map((e) => h('li', { class: 'err', text: '✖ ' + e.msg + (e.match ? ' — "' + e.match + '"' : '') }))));
+  }
+  ['#tm-e-name', '#tm-e-business', '#tm-e-from'].forEach((s) => $(s).addEventListener('input', () => { clearTimeout(tmEmailT); tmEmailT = setTimeout(writeEmail, 300); }));
+  $$('#tm-e-uses input').forEach((i) => i.addEventListener('change', writeEmail));
+  $('#tm-e-copy-subject').addEventListener('click', () => copyText($('#tm-e-subject').value));
+  $('#tm-e-copy-body').addEventListener('click', () => copyText($('#tm-e-body').value));
+  $('#tm-e-copy-wa').addEventListener('click', () => copyText($('#tm-e-wa').value));
+
+  $('#tm-x-go').addEventListener('click', async () => {
+    const box = clear($('#tm-x-out'));
+    let r;
+    try { r = await api('/api/testimonials/export?' + qs({ use: $('#tm-x-use').value })); } catch (e) { box.appendChild(h('p', { class: 'banner wait', text: e.message })); return; }
+    const part = (label, text, key) => h('div', { class: 'part tm-out', 'data-out': key }, h('div', { class: 'part-head' }, h('span', { class: 'lab', text: label }), h('button', { class: 'ghost copy', onclick: () => copyText(text) }, 'Copy')),
+      h('textarea', { rows: Math.min(18, Math.max(3, text.split('\n').length)), readonly: true }, text));
+    box.appendChild(h('p', { class: 'small', id: 'tm-x-count', text: r.items.length + ' quote' + (r.items.length === 1 ? '' : 's') + ' ready for ' + r.use.replace('-', ' ') + '.' }));
+    if (r.items.length) { box.appendChild(part('HTML snippet', r.html, 'html')); box.appendChild(part('JSON (name, role, business, quote, date)', r.json, 'json')); if (r.js) box.appendChild(part('QUOTES, keyed by the site key', r.js, 'js')); }
+    for (const x of r.refused) box.appendChild(h('p', { class: 'banner wait small', text: 'Refused ' + (x.name || x.id) + ': ' + x.why.join('; ') }));
+    for (const x of r.takeDown) box.appendChild(h('p', { class: 'banner wait small', text: 'Withdrawn, still to take down: ' + x.name + ' at ' + x.url }));
+  });
+
   /* ------------------------------------------------------------- REELS */
 
   async function loadReels() {
@@ -944,6 +1083,10 @@
     Object.assign(S.draft, { tool: '', venue: '', template: '', variant: 0, question: '', qurl: '', result: '' });
     S.lastDraft = null; S.oppTool = ''; S.kitTool = ''; S.cal = null; S.guide = null; S.guideRendered = false; S.venues = null;
     clear($('#d-parts')); clear($('#d-status')); clear($('#d-tool-chosen')); clear($('#k-result')); clear($('#k-looks'));
+    /* testimonials belong to one site: nothing typed for one site carries over to another */
+    S.tm = null; S.tmFilter = 'all'; fillForm({}, true);
+    for (const id of ['#tm-e-name', '#tm-e-business', '#tm-e-subject', '#tm-e-body', '#tm-e-wa']) $(id).value = '';
+    $('#tm-e-from').value = info.site.name; setUses($('#tm-e-uses'), ['site-pages']); clear($('#tm-x-out')); clear($('#tm-e-lint'));
     const a = await api('/api/audiences');
     const sel = clear($('#o-aud'));
     sel.appendChild(h('option', { value: '', text: '(none)' }));
@@ -983,7 +1126,7 @@
     });
     await loadSite();
     const tab = (location.hash || '#today').slice(1).split('?')[0];
-    showTab(['today', 'draft', 'opps', 'kits', 'venues', 'log', 'reels', 'calendar', 'guide'].includes(tab) ? tab : 'today');
+    showTab(['today', 'draft', 'opps', 'kits', 'venues', 'log', 'reels', 'calendar', 'testimonials', 'guide'].includes(tab) ? tab : 'today');
     document.body.setAttribute('data-ready', '1');
   })().catch((e) => { document.body.setAttribute('data-ready', 'error'); toast(e.message); });
 })();

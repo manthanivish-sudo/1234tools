@@ -22,11 +22,12 @@ node build/promo/desk.js guide linkedin-document     # one channel's card: forma
 node build/promo/desk.js coverage [--days 14]        # calendar targets posted, missing or needing a check
 node build/promo/desk.js sites                       # the site profiles; add --site <id> to any command
 node build/promo/desk.js coverage --site xleshop
+node build/promo/desk.js testimonials --site xleshop [list|add|email|export|status|set|takedown|suggest]
 ```
 
 Tool paths work with or without the leading slash. Git Bash rewrites `/pdf/...` into a Windows path; the desk undoes that, but `pdf/merge-pdf/` avoids the problem.
 
-The web app has nine tabs:
+The web app has ten tabs:
 
 - **Today**: the day's routine as tasks, each with the tool, the venue, the draft, the venue's red lines and a composer link where one exists. **Done…** asks for the post URL and logs it; **Skip** logs a skip. High-risk venues are never suggested here; venues whose rules the register could not confirm carry a **verify rules first** badge. Above the tasks, **Today's videos** lists the day's calendar slots and the channels still to post, with "wait" where a channel's cadence is used up.
 - **Draft**: pick any of the 232 finder tools, then a venue (ranked by fit, with risk, self-promotion rule, cadence status, rules link, notes and how the register verified them), a template and a variant. Every part has a live character count against its limit, red lint errors and its own Copy button. While a venue is blocked by the log, Copy and Open composer are disabled until you tick the override (logged as an override).
@@ -34,6 +35,7 @@ The web app has nine tabs:
 - **Drafts survive restarts**: an edited draft is saved as you type (`drafts.json`) and comes back when the same tool, venue, template and variant are opened again, with **Reset to the generated text**.
 - **Kits**: generates a launch kit that tells the tool's story — the pain, the usual way, the fix with a REAL example captured from the live tool, three steps, a QR call to action — as a 5-slide carousel (plus `carousel.pdf` for LinkedIn documents), a square, a story, a Pinterest pin and a link-preview card. Every kit gets a different look (5 layouts × 8 palettes × 5 type styles × 3 copy variants, never repeating the tool's last 3 or the last 2 overall); **Shuffle look**, the Layout / Palette / Type / Copy menus, a seed and six alternative-look thumbnails let you choose.
 - **Calendar**: a 90-day short-video plan, about nine a week in five formats (problem → solution, before / after, 10-second developer tricks, India finance, AI at work), no tool repeated within 21 days. Each slot carries the tool's own hook and the Reel's beats, with **Make the Reel** (opens the Reel Maker on that tool), **Kit**, **Caption**, and **Made / Posted / Skip**; statuses live in `calendar.json` and survive re-planning; **Download CSV** for a shared planner. See *The per-channel checklist* below.
+- **Testimonials**: named client quotes for the site in the picker, each published only with the client's written permission. See *Testimonials* below.
 - **Guide**: why the desk exists, the process from slot to every channel (with the Today routine, cadence, the 9:1 rule, missed days, removals and skips), the red lines, one card per channel and the FAQ. The same text prints with `desk.js guide`.
 - **Venues**: the register as a filterable table, plus the excluded venues with reasons and the research insights.
 - **Log**: history with filters, a form for help-only replies and removals, and cadence status per venue.
@@ -98,6 +100,20 @@ The desk promotes fourteen sites, one at a time. Under **Sites**: **1234Tools** 
 
 To add a site: write `sites/<id>.js` in the same shape (only things the site itself shows), then run `node build/promo/test.js`, which renders every template for every item and fails on any claim the site's rules refuse.
 
+## Testimonials
+
+Owner decision, 2026-10-05: testimonials may come back on any MVR site only as **named quotes given with each client's written permission**. The **Testimonials** tab (or `desk.js testimonials --site <id>`) holds them, per site, in that site's `testimonials.json`; one site never sees another's.
+
+- **A record**: name, role, business, the client's contact details (kept, never shown), the quote in their exact words, what it is about, where it may be used (site pages, social posts, kits), the permission (given yes or no, how: email reply, signed form or message; the date; where you keep the evidence), an optional rating, an optional site key (XLeShop's store key), and the status: **requested → received → approved → published → withdrawn**, with every published URL.
+- **The gate.** A quote is approved, published or exported only when permission is "yes" with a real date that is not in the future, how it was given, the evidence you keep and the client's contact details (CAP Code 3.47), a name and a business (a shop's customers: the business only if they give one), at least one use, and no incentive. The desk refuses otherwise and says why. Approved words, names and uses are frozen: a change needs the client's OK again (set it back to received before it is published, or withdraw it). Publishing needs the URL where it went up.
+- **Withdrawn** is final. The quote leaves every export at once, and the desk lists each URL it was published at until you press **Taken down** on each.
+- **Request email.** One short email and a WhatsApp version per site, in plain British English, for you to send yourself: one or two sentences in the client's own words, "whatever is true for you, good or bad"; exactly where it will appear (the site's address, its social posts, its promotion images, as chosen); that their name and business are shown; nothing offered in return; no is a fine answer; they can have it taken down at any time by replying; and the reply "Yes, you may publish this" with their final wording. No suggested wording, so no praise is put in their mouth. Every version is linted with `lint.js` and the site's own rules (the recipient's own name and business are not promotion copy, so they are left out of that check); `test.js` checks every site.
+- **Export** (approved and published quotes for one use): an HTML snippet (`<figure>` per quote, the name, role and business in the caption, "Quoted with each person's permission"), a JSON array of `{ name, role, business, quote, date }` (the date is the permission date) for a site's quotes list, and, where records carry a site key, a keyed `QUOTES` object. Stars appear only when the client gave a rating in writing (stored with where that is). XLeShop's `js/site.js` renders `QUOTES[shot]` as a bare string today; it needs the name, role and business shown beside each quote before these go in.
+- **Suggested first requests** (you send them; the desk contacts nobody): for XLeShop, the owners of its nine client shops (from `sites/*.js`, with each store's key); for MVR IT Services, the seven clients on its products page's client list (XLeShop and Attend Now there are MVR's own platforms). Other sites: none.
+- **Words in a quote** that the site's rules would refuse in promotion copy show as "check before publishing" notes; the desk never edits the client's words, so ask the client if a claim in them cannot be shown to be true.
+
+Sources, read 2026-10-05 and cited in `testimonials.js`: the CAP Code section 3, rules 3.45–3.48 (<https://www.asa.org.uk/type/non_broadcast/code_section/03.html>); the Digital Markets, Competition and Consumers Act 2024, Schedule 20 paragraph 13, in force 6 April 2025 (<https://www.legislation.gov.uk/ukpga/2024/13/schedule/20>); the CMA's Fake reviews guidance CMA208, 4 April 2025 (<https://assets.publishing.service.gov.uk/media/67eeb64fe9c76fa33048c790/CMA208_-_Fake_reviews_guidance.pdf>), which the CMA's unfair commercial practices guidance CMA207 points to for banned practice 13.
+
 ## The daily routine (spec Part B section 5)
 
 | Day | Work | Linked posts |
@@ -117,7 +133,7 @@ To add a site: write `sites/<id>.js` in the same shape (only things the site its
 - Disclose ownership wherever the author voice is not obvious. Stack Exchange answers must be complete without the link.
 - No URLs in YouTube comments; no unsolicited DMs; broadcast only to people who opted in.
 - r/privacy, r/PrivacyGuides and r/degoogle are off limits (see the excluded list in `venues.json`).
-- Truthfulness, enforced by `lint.js`: never "100% private", never "no tracking" or "no third-party requests" without the consent qualifier ("nothing contacts a third party on page load; analytics only after you opt in"), never "nothing is sent anywhere". For browser tools the claim is "nothing you type is uploaded". AI for Business tools (`/ai/`) need an account, send text to a model and are free only for 10 runs a month, so the words "free", "offline", "on your device", "no account" and "no upload" are errors there unless the allowance is stated. No "best", "#1", "unlimited", scarcity, testimonials, invented user counts or disparaged competitors. "No watermark" is only for media tools (pdf, image, ai-image, ai-video).
+- Truthfulness, enforced by `lint.js`: never "100% private", never "no tracking" or "no third-party requests" without the consent qualifier ("nothing contacts a third party on page load; analytics only after you opt in"), never "nothing is sent anywhere". For browser tools the claim is "nothing you type is uploaded". AI for Business tools (`/ai/`) need an account, send text to a model and are free only for 10 runs a month, so the words "free", "offline", "on your device", "no account" and "no upload" are errors there unless the allowance is stated. No "best", "#1", "unlimited", scarcity, social-proof claims ("trusted by", star ratings), invented user counts or disparaged competitors. Testimonials only as named quotes with the client's written permission, through the Testimonials tab (below), never written into promotion copy. "No watermark" is only for media tools (pdf, image, ai-image, ai-video).
 
 ## How cadence is enforced
 
@@ -139,6 +155,7 @@ Nothing personal is in the repo (everything committed is published). Your data l
 - `kits\<slug>\`: `kit.md` (every template rendered with counts, the best-fit venues with their rules notes and links, a UTM link per venue) the story and the look used (with the command that reproduces it), `carousel-1.png`…`carousel-5.png` (1080×1350), `carousel.pdf`, `square-1080.png`, `story-1080x1920.png` (QR to the `instagram-story` UTM link, read back by the site's own QR engine), `pin-1000x1500.png` and `wide-1200x630.png`. `kits\history.json` remembers the looks used so the next kit differs.
 - `examples\<tool>\`: real examples captured from the live tools by `node build/promo/examples.js capture-all` (published to the site by `build-examples.js`).
 - `opportunities.json`, `drafts.json`: saved questions with their status, and your edited drafts.
+- `testimonials.json`: the site's named client quotes, with each client's permission record, status and where each quote was published.
 - `calendar.json`: the 90-day plan with every slot's targets and what you recorded (v2); `calendar.v1.json` is the untouched copy of a calendar made before targets existed.
 - `seo\`: SEO control centre spreadsheets (`node build/seo/control-centre.js`).
 - `cache\`: finder responses, kept 30 minutes.
@@ -176,6 +193,7 @@ In GA4: **Reports → Acquisition → Traffic acquisition**, set the primary dim
 | `stories/` | the story for every tool (pain, usual way, fix, steps, proof, example spec); `index.js` merges the shards |
 | `examples.js`, `samples/` | captures real examples by driving the live tools; CC0 sample photos with their licences |
 | `store.js` | saved opportunities and drafts |
+| `testimonials.js` | named client quotes per site: the permission gate, statuses, withdrawals, the request email and WhatsApp text, the export, suggested first requests; its sources are cited at the top |
 | `calendar.js` | the 90-day video calendar: slots, targets, link verification, coverage, v1 migration |
 | `channels.js` | every channel's format, limits, links, files, checklist and red lines, with sources and check dates; the link rules |
 | `guide.js` | the Guide's vision, process, red lines and FAQ (lint-clean), and the `guide` CLI text |

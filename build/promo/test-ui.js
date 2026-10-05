@@ -347,6 +347,75 @@ let S_ch = '';
       await page.select('#site', '1234tools');
       await page.waitForFunction(() => document.body.dataset.site === '1234tools' && document.body.dataset.ready === '1', { timeout: 20000 });
     });
+    // ---- Testimonials (testimonials.js): XLeShop, then another site sees none of it
+    const tmSite = async (id) => { await page.select('#site', id); await page.waitForFunction((x) => document.body.dataset.site === x && document.body.dataset.ready === '1', { timeout: 20000 }, id); };
+    const tmItem = '#tm-list .tm-item';
+    await check('Testimonials: XLeShop\'s nine suggested shops; the request email names the shop, the places and the reply phrase, lint-clean', async () => {
+      await tmSite('xleshop');
+      await page.click('.tabs button[data-tab="testimonials"]');
+      await page.waitForFunction(() => document.querySelectorAll('#tm-suggest-list .tm-sug').length === 9, { timeout: 15000 });
+      await page.evaluate(() => document.querySelector('#tm-suggest-list .tm-sug[data-business="Gajanan Home Foods"] .tm-sug-email').click());
+      await page.waitForFunction(() => /Gajanan Home Foods/.test(document.getElementById('tm-e-body').value) && /clean/.test(document.getElementById('tm-e-lint').textContent), { timeout: 10000 });
+      const e = await page.evaluate(() => ({ s: document.getElementById('tm-e-subject').value, b: document.getElementById('tm-e-body').value, w: document.getElementById('tm-e-wa').value }));
+      assert.ok(/^May we quote you on the XLeShop website\?$/.test(e.s), e.s);
+      for (const t of [e.b, e.w]) assert.ok(t.includes('"Yes, you may publish this"') && t.includes('xleshop.com') && /Nothing is offered in return/.test(t) && /take (the quote|it) down at any time/.test(t), t);
+      await page.click('#tm-e-uses input[data-use="social"]');
+      await page.waitForFunction(() => /social media posts/.test(document.getElementById('tm-e-body').value), { timeout: 10000 });
+      await page.click('#tm-e-copy-body');
+      assert.ok(/social media posts/.test(await page.evaluate(() => window.__clip)));
+    });
+    await check('Testimonials: a quote without written permission is saved as received and cannot be approved', async () => {
+      await page.type('#tm-name', 'Asha Rao');
+      await page.type('#tm-role', 'Owner');
+      await page.type('#tm-business', 'Gajanan Home Foods');
+      await page.type('#tm-contact', 'asha@example.com');
+      await page.type('#tm-quote', 'Orders reach my phone the moment they are placed.');
+      await page.click('#tm-save');
+      await page.waitForFunction(() => /no written permission/.test(document.getElementById('tm-form-msg').textContent), { timeout: 10000 });
+      await page.waitForSelector(tmItem + '[data-status="received"]', { timeout: 10000 });
+      await page.click(tmItem + '[data-status="received"] [data-act="Approve"]');
+      await page.waitForSelector(tmItem + ' .tm-err', { timeout: 10000 });
+      assert.ok(/Not approved/.test(await page.$eval(tmItem + ' .tm-err', (e) => e.textContent)));
+      assert.strictEqual(await page.$eval(tmItem, (e) => e.dataset.status), 'received');
+    });
+    await check('Testimonials: with permission it is approved, published at a URL and exported as HTML and JSON', async () => {
+      await page.select('#tm-perm', 'yes');
+      await page.select('#tm-how', 'email-reply');
+      await page.$eval('#tm-date', (el) => { el.value = '2026-10-01'; });
+      await page.type('#tm-evidence', 'Outlook Clients/Quotes, 1 Oct 2026');
+      await page.click('#tm-save');
+      await page.waitForFunction(() => /can be approved/.test(document.getElementById('tm-form-msg').textContent), { timeout: 10000 });
+      await page.waitForFunction(() => { const it = document.querySelector('#tm-list .tm-item[data-status="received"]'); return it && !it.querySelector('.tm-why'); }, { timeout: 10000 });
+      await page.click(tmItem + '[data-status="received"] [data-act="Approve"]');
+      await page.waitForSelector(tmItem + '[data-status="approved"]', { timeout: 10000 });
+      page.once('dialog', (d) => d.accept('https://xleshop.com/customers.html'));
+      await page.click(tmItem + '[data-status="approved"] [data-act="Mark published…"]');
+      await page.waitForSelector(tmItem + '[data-status="published"]', { timeout: 10000 });
+      await page.click('#tm-x-go');
+      await page.waitForSelector('#tm-x-out [data-out="json"] textarea', { timeout: 10000 });
+      const out = await page.evaluate(() => ({ html: document.querySelector('#tm-x-out [data-out="html"] textarea').value, json: document.querySelector('#tm-x-out [data-out="json"] textarea').value }));
+      assert.deepStrictEqual(JSON.parse(out.json), [{ name: 'Asha Rao', role: 'Owner', business: 'Gajanan Home Foods', quote: 'Orders reach my phone the moment they are placed.', date: '2026-10-01' }]);
+      assert.ok(out.html.includes('“Orders reach my phone the moment they are placed.”') && !/★/.test(out.html), out.html);
+    });
+    await check('Testimonials: Withdraw takes it out of the export and lists where it was published', async () => {
+      page.once('dialog', (d) => d.accept());
+      await page.click(tmItem + '[data-status="published"] [data-act="Withdraw…"]');
+      await page.waitForSelector(tmItem + '[data-status="withdrawn"] .tm-take li[data-url="https://xleshop.com/customers.html"]', { timeout: 10000 });
+      await page.click('#tm-x-go');
+      await page.waitForFunction(() => /^0 quotes/.test((document.getElementById('tm-x-count') || {}).textContent || '') && /still to take down: Asha Rao at https:\/\/xleshop\.com\/customers\.html/.test(document.getElementById('tm-x-out').textContent), { timeout: 10000 });
+      await page.click(tmItem + '[data-status="withdrawn"] .tm-taken');
+      await page.waitForFunction(() => !document.querySelector('#tm-list .tm-item[data-status="withdrawn"] .tm-take'), { timeout: 10000 });
+      const f = JSON.parse(fs.readFileSync(path.join(TMP, 'sites', 'xleshop', 'testimonials.json'), 'utf8'));
+      assert.ok(f.items.length === 1 && f.items[0].status === 'withdrawn' && f.items[0].published[0].removedAt, JSON.stringify(f.items[0]).slice(0, 200));
+    });
+    await check('Testimonials: another site starts empty with its own suggestions; 1234Tools has none', async () => {
+      await tmSite('mvr-it');
+      await page.waitForFunction(() => document.querySelectorAll('#tm-suggest-list .tm-sug').length === 7 && /No quotes or requests/.test(document.getElementById('tm-list').textContent) && !document.getElementById('tm-e-name').value, { timeout: 15000 });
+      assert.ok(!fs.existsSync(path.join(TMP, 'sites', 'mvr-it', 'testimonials.json')) || JSON.parse(fs.readFileSync(path.join(TMP, 'sites', 'mvr-it', 'testimonials.json'), 'utf8')).items.length === 0);
+      await tmSite('1234tools');
+      await page.waitForFunction(() => document.getElementById('tm-suggest').hidden && /clean/.test(document.getElementById('tm-e-lint').textContent) && /1234tools\.com/.test(document.getElementById('tm-e-body').value), { timeout: 15000 });
+    });
+
     await check('no external requests and no page errors', async () => {
       assert.deepStrictEqual(external, []);
       assert.deepStrictEqual(pageErrors, []);

@@ -14,6 +14,16 @@
  *   node build/promo/desk.js guide [channel]                 vision, process, FAQ; or one channel's card
  *   node build/promo/desk.js coverage [--days 14]            which calendar targets are posted, missing or need a check
  *   node build/promo/desk.js sites                           the site profiles (1234tools, xleshop, mvr-it, attend-now, fixourtime)
+ *   node build/promo/desk.js testimonials [--site id] [list|add|export|email|suggest|status|set|takedown]
+ *        list [--status s]                                   named client quotes and where each stands
+ *        add --name N --business B [--role R] [--contact C] [--quote Q] [--about A] [--uses site-pages,social,kits]
+ *            [--permission yes|no --how email-reply|signed-form|message --date YYYY-MM-DD --evidence E]
+ *            [--rating 1-5 --rating-evidence E] [--key k] [--approve]
+ *        email [--id x | --name N --business B] [--uses ...] [--from F]   the request email and WhatsApp text
+ *        export [--use site-pages|social|kits] [--format all|json|html|js]
+ *        status <id> received|approved|published|withdrawn [--url U] [--note N]
+ *        set <id> [any add flag]     takedown <id> <url>     suggest
+ *      A quote is approved, published or exported only with the client's written permission and its date.
  *
  * Every command takes --site <id> (default 1234tools): each site has its own items,
  * claim rules, log, calendar, drafts and kits (PROMO_HOME/sites/<id>/; 1234Tools
@@ -296,6 +306,25 @@ async function route(req, res, u, q, p) {
         const b = req.method === 'POST' ? await readBody(req) : q;
         return send(res, 200, lint(b.text || '', { pricing: b.pricing || undefined, section: b.section || undefined, limit: b.limit ? +b.limit : undefined }));
       }
+      /* named client quotes (testimonials.js): kept per site, published only with written permission */
+      if (p.startsWith('/api/testimonials')) {
+        const TM = require('./testimonials');
+        try {
+          if (p === '/api/testimonials' && req.method === 'GET') {
+            const r = TM.list({ status: q.status });
+            return send(res, 200, Object.assign(r, { site: SITE.currentId(), file: TM.file(), statuses: TM.STATUSES, hows: TM.HOWS.map((id) => ({ id, label: TM.HOW_LABEL[id] })), uses: TM.USES, phrase: TM.PHRASE, evidenceHint: TM.EVIDENCE_HINT, suggestions: TM.suggestions() }));
+          }
+          if (p === '/api/testimonials/email') return send(res, 200, TM.requestEmail({ id: q.id || undefined, name: q.name, business: q.business, uses: q.uses, from: q.from }));
+          if (p === '/api/testimonials/export') return send(res, 200, TM.exportFor(q.use || 'site-pages'));
+          if (req.method === 'POST') {
+            const b = await readBody(req);
+            if (p === '/api/testimonials') return send(res, 200, { item: b.id ? TM.update(b.id, b) : TM.add(b) });
+            if (p === '/api/testimonials/status') return send(res, 200, { item: TM.setStatus(b.id, b.status, { url: b.url, note: b.note }) });
+            if (p === '/api/testimonials/takedown') return send(res, 200, { item: TM.markTakenDown(b.id, b.url) });
+          }
+        } catch (e) { return send(res, 400, { error: e.message }); }
+        return send(res, 404, { error: 'not found' });
+      }
       if (p === '/api/health') return send(res, 200, { ok: true, home: L.home(), venues: V.file() });
       return send(res, 404, { error: 'not found' });
   }
@@ -485,8 +514,87 @@ async function cliInSite(a) {
     console.log(coverageText(require('./calendar').coverage({ days: a.days })));
     return 0;
   }
+  if (cmd === 'testimonials') return testimonialsCli(a);
   console.error('Unknown command: ' + cmd + '. Try: node build/promo/desk.js help');
   return 2;
+}
+
+/** `testimonials` on the command line: the same rules as the tab. Exit 1 when the desk refuses. */
+function testimonialsCli(a) {
+  const TM = require('./testimonials');
+  const sub = a._[1] || 'list';
+  const val = (k) => (a[k] != null && a[k] !== true ? String(a[k]) : undefined);
+  const fields = () => {
+    const f = {};
+    for (const k of ['name', 'role', 'business', 'contact', 'quote', 'about', 'uses', 'key', 'note']) if (val(k) !== undefined) f[k] = val(k);
+    const perm = {};
+    if (val('permission') !== undefined) perm.given = val('permission');
+    if (val('how') !== undefined) perm.how = val('how');
+    if (val('date') !== undefined) perm.date = val('date');
+    if (val('evidence') !== undefined) perm.evidence = val('evidence');
+    if (Object.keys(perm).length) f.permission = perm;
+    if (val('rating') !== undefined) f.rating = val('rating') === 'none' ? null : { value: val('rating'), evidence: val('rating-evidence') };
+    if (val('incentive') !== undefined) f.incentive = val('incentive');
+    return f;
+  };
+  const line = (r) => r.id + '  ' + r.status.padEnd(10) + ' ' + [r.name, r.role, r.business].filter(Boolean).join(', ') + (r.quote ? '\n    "' + r.quote + '"' : '')
+    + '\n    uses: ' + (r.uses || []).join(', ') + ' · permission: ' + (r.permission.given || '-') + (r.permission.date ? ' ' + r.permission.date : '') + (r.permission.how ? ' by ' + r.permission.how : '') + (r.rating ? ' · rating ' + r.rating.value + '/' + r.rating.outOf + ' (in writing)' : '')
+    + (r.blocked.length && r.status !== 'withdrawn' ? '\n    cannot be approved or published yet: ' + r.blocked.join('; ') : '')
+    + (r.notes.length ? '\n    check before publishing: ' + r.notes.join(' | ') : '')
+    + ((r.published || []).length ? '\n    published: ' + r.published.map((x) => x.url + (x.removedAt ? ' (taken down)' : '')).join(', ') : '')
+    + (r.status === 'withdrawn' && r.takeDown.length ? '\n    WITHDRAWN: take it down from ' + r.takeDown.map((x) => x.url).join(', ') : '');
+  try {
+    if (sub === 'list') {
+      const r = TM.list({ status: val('status') });
+      console.log('Testimonials for ' + SITE.current().name + ' (' + TM.file() + '): ' + TM.STATUSES.map((s) => r.counts[s] + ' ' + s).join(', '));
+      for (const x of r.items) console.log('\n' + line(x));
+      if (!r.items.length) console.log('None yet. `testimonials suggest` lists who to ask; `testimonials email` writes the request.');
+      return 0;
+    }
+    if (sub === 'add') {
+      const f = fields();
+      if (a.approve) f.status = 'approved';
+      const r = TM.add(f);
+      console.log('Added:\n' + line(r));
+      return 0;
+    }
+    if (sub === 'set') { console.log('Updated:\n' + line(TM.update(a._[2], fields()))); return 0; }
+    if (sub === 'status') {
+      const r = TM.setStatus(a._[2], a._[3], { url: val('url'), note: val('note') });
+      console.log('Now ' + r.status + ':\n' + line(r));
+      return 0;
+    }
+    if (sub === 'takedown') { console.log(line(TM.markTakenDown(a._[2], a._[3]))); return 0; }
+    if (sub === 'email') {
+      const e = TM.requestEmail({ id: val('id'), name: val('name'), business: val('business'), uses: val('uses'), from: val('from') });
+      console.log('Subject: ' + e.subject + '\n\n' + e.body + '\n\n--- WhatsApp\n' + e.whatsapp + '\n');
+      for (const x of e.lint.email.errors.concat(e.lint.whatsapp.errors)) console.log('LINT ERROR ' + x.rule + ': ' + x.msg);
+      console.log(e.lint.ok ? 'Lint: clean. You send it yourself; the desk contacts nobody.' : 'Lint found problems.');
+      return e.lint.ok ? 0 : 1;
+    }
+    if (sub === 'export') {
+      const x = TM.exportFor(val('use') || 'site-pages');
+      const fmt = val('format') || 'all';
+      if (fmt === 'json') console.log(x.json);
+      else if (fmt === 'html') console.log(x.html);
+      else if (fmt === 'js') console.log(x.js);
+      else {
+        console.log('# ' + x.items.length + ' quote(s) for ' + x.use + ' on ' + SITE.current().name + '\n\n## JSON\n' + x.json + '\n\n## HTML\n' + (x.html || '(none)') + (x.js ? '\n\n## QUOTES (keyed)\n' + x.js : ''));
+        for (const r of x.refused) console.log('REFUSED ' + r.id + ' ' + r.name + ': ' + r.why.join('; '));
+        for (const t of x.takeDown) console.log('TAKE DOWN (withdrawn) ' + t.name + ': ' + t.url);
+      }
+      return 0;
+    }
+    if (sub === 'suggest') {
+      const s = TM.suggestions();
+      if (!s.length) { console.log('No suggested requests for ' + SITE.current().name + '.'); return 0; }
+      console.log('Suggested first requests for ' + SITE.current().name + ' (you send them; the desk contacts nobody):');
+      for (const x of s) console.log('  ' + x.business.padEnd(24) + x.url.padEnd(36) + (x.key ? 'key ' + x.key + '  ' : '') + x.notes.join(' '));
+      return 0;
+    }
+    console.error('Unknown testimonials command: ' + sub + '. Try list, add, set, status, takedown, email, export or suggest.');
+    return 2;
+  } catch (e) { console.error(e.message); return 1; }
 }
 
 module.exports = { createServer, serve, draft, reels, venuesPayload, logPayload, cli, kitOpts, coverageText, PORTS, TEST_PORTS };

@@ -26,6 +26,7 @@
     <button role="tab" data-tab="log">Log</button>
     <button role="tab" data-tab="reels">Reels</button>
     <button role="tab" data-tab="calendar">Calendar</button>
+    <button role="tab" data-tab="testimonials">Testimonials</button>
     <button role="tab" data-tab="guide">Guide</button>
   </nav>
 </header>
@@ -226,6 +227,107 @@
       <div id="cov-body"></div>
     </details>
     <div id="cal-weeks" class="stack"></div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section id="tab-testimonials" class="tab" data-tab="testimonials" hidden>
+    <div class="card notice small">
+      <strong>Named quotes only, each with the client's written permission.</strong>
+      Ask every client the same way, with no suggested wording and nothing in return; paste their words exactly as they sent them.
+      A quote can be approved, published or exported only once you record that they said yes, how, on what date, where you keep their reply, and how to contact them.
+      A withdrawn quote leaves every export at once and lists each page or post it is still on. The desk sends nothing: you send the request yourself.
+      <span class="muted">Data: <code id="tm-file"></code></span>
+    </div>
+    <div class="grid2">
+      <div class="card" id="tm-form-card">
+        <h3 class="cal-title" id="tm-form-title">Add a quote or a request</h3>
+        <input type="hidden" id="tm-id">
+        <div class="row wrap">
+          <div class="grow"><label class="lbl" for="tm-name">Name</label><input id="tm-name" type="text" autocomplete="off"></div>
+          <div class="grow"><label class="lbl" for="tm-role">Role</label><input id="tm-role" type="text" autocomplete="off" placeholder="e.g. Owner"></div>
+        </div>
+        <div class="row wrap">
+          <div class="grow"><label class="lbl" for="tm-business">Business</label><input id="tm-business" type="text" autocomplete="off"></div>
+          <div class="grow"><label class="lbl" for="tm-contact">Contact (kept, never shown)</label><input id="tm-contact" type="text" autocomplete="off" placeholder="email or phone"></div>
+        </div>
+        <label class="lbl" for="tm-quote">Quote: the client's exact words</label>
+        <textarea id="tm-quote" rows="3" placeholder="Paste their final wording, unchanged"></textarea>
+        <label class="lbl" for="tm-about">What it is about</label>
+        <input id="tm-about" type="text" autocomplete="off" placeholder="the product or service the quote relates to">
+        <span class="lbl">May be used on</span>
+        <div class="row wrap tm-uses" id="tm-uses">
+          <label class="chk"><input type="checkbox" data-use="site-pages" checked> site pages</label>
+          <label class="chk"><input type="checkbox" data-use="social"> social posts</label>
+          <label class="chk"><input type="checkbox" data-use="kits"> kits</label>
+        </div>
+        <fieldset class="tm-perm">
+          <legend>Written permission</legend>
+          <div class="row wrap">
+            <label class="k-sel"><span class="lbl">Given</span><select id="tm-perm"><option value="">not yet</option><option value="yes">yes</option><option value="no">no</option></select></label>
+            <label class="k-sel"><span class="lbl">How</span><select id="tm-how"><option value="">-</option></select></label>
+            <label class="k-sel"><span class="lbl">Date</span><input id="tm-date" type="date"></label>
+          </div>
+          <label class="lbl" for="tm-evidence">Evidence you keep</label>
+          <input id="tm-evidence" type="text" autocomplete="off">
+        </fieldset>
+        <div class="row wrap">
+          <label class="k-sel"><span class="lbl">Rating (only if they gave one in writing)</span><select id="tm-rating"><option value="">none</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+          <div class="grow"><label class="lbl" for="tm-rating-ev">Where their written rating is</label><input id="tm-rating-ev" type="text" autocomplete="off"></div>
+        </div>
+        <div class="row wrap">
+          <div class="grow"><label class="lbl" for="tm-key">Site key (optional, e.g. XLeShop's store key)</label><input id="tm-key" type="text" autocomplete="off"></div>
+          <div class="grow"><label class="lbl" for="tm-note">Note</label><input id="tm-note" type="text" autocomplete="off"></div>
+        </div>
+        <label class="chk tm-inc"><input type="checkbox" id="tm-incentive"> Something was offered or given for this quote (the desk will not publish it)</label>
+        <div id="tm-form-msg"></div>
+        <div class="actions"><button class="btn gold" id="tm-save">Save</button><button class="ghost" id="tm-clear">New</button></div>
+      </div>
+
+      <div class="card" id="tm-email-card">
+        <h3 class="cal-title">Request email</h3>
+        <p class="muted small">Plain words, no suggested wording, nothing offered. Says exactly where the quote will appear, that the name and business are shown, that no is fine and that they can withdraw by replying. Checked by the desk's lint for this site.</p>
+        <div class="row wrap">
+          <div class="grow"><label class="lbl" for="tm-e-name">Client's name</label><input id="tm-e-name" type="text" autocomplete="off"></div>
+          <div class="grow"><label class="lbl" for="tm-e-business">Business</label><input id="tm-e-business" type="text" autocomplete="off"></div>
+        </div>
+        <div class="row wrap tm-uses" id="tm-e-uses">
+          <label class="chk"><input type="checkbox" data-use="site-pages" checked> site pages</label>
+          <label class="chk"><input type="checkbox" data-use="social"> social posts</label>
+          <label class="chk"><input type="checkbox" data-use="kits"> kits</label>
+        </div>
+        <label class="lbl" for="tm-e-from">Signed</label>
+        <input id="tm-e-from" type="text" autocomplete="off">
+        <div class="part"><div class="part-head"><span class="lab">Subject</span><button class="ghost copy" id="tm-e-copy-subject">Copy</button></div><input id="tm-e-subject" type="text" readonly></div>
+        <div class="part"><div class="part-head"><span class="lab">Email</span><button class="ghost copy" id="tm-e-copy-body">Copy</button></div><textarea id="tm-e-body" rows="14" readonly></textarea></div>
+        <div class="part"><div class="part-head"><span class="lab">WhatsApp</span><button class="ghost copy" id="tm-e-copy-wa">Copy</button></div><textarea id="tm-e-wa" rows="7" readonly></textarea></div>
+        <p class="small" id="tm-e-lint"></p>
+      </div>
+    </div>
+
+    <details class="card" id="tm-suggest" open><summary class="cal-title">Suggested first requests <span class="muted small" id="tm-suggest-n"></span></summary><div id="tm-suggest-list" class="stack"></div></details>
+
+    <div class="row wrap o-saved-head">
+      <h3 class="grow">Quotes <span class="muted small">this site only</span></h3>
+      <div class="o-filters" id="tm-filters" role="group" aria-label="Show">
+        <button class="ghost is-on" data-status="all">All <span class="n" data-n="all">0</span></button>
+        <button class="ghost" data-status="requested">Requested <span class="n" data-n="requested">0</span></button>
+        <button class="ghost" data-status="received">Received <span class="n" data-n="received">0</span></button>
+        <button class="ghost" data-status="approved">Approved <span class="n" data-n="approved">0</span></button>
+        <button class="ghost" data-status="published">Published <span class="n" data-n="published">0</span></button>
+        <button class="ghost" data-status="withdrawn">Withdrawn <span class="n" data-n="withdrawn">0</span></button>
+      </div>
+    </div>
+    <div id="tm-list" class="stack"></div>
+
+    <div class="card" id="tm-export">
+      <div class="row wrap">
+        <h3 class="cal-title grow">Export approved quotes</h3>
+        <label class="k-sel"><span class="lbl">For</span><select id="tm-x-use"><option value="site-pages">site pages</option><option value="social">social posts</option><option value="kits">kits</option></select></label>
+        <div class="end"><button class="btn" id="tm-x-go">Export</button></div>
+      </div>
+      <p class="muted small">Approved and published quotes whose permission is complete, as an HTML snippet and a JSON array (name, role, business, quote, date) for a site's quotes list or testimonials section. Stars only where the client gave a rating in writing.</p>
+      <div id="tm-x-out"></div>
+    </div>
   </section>
 
   <!-- GUIDE -->
