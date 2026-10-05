@@ -64,17 +64,27 @@ function fetchStatus(target) {
       target
     ];
     execFile('curl', args, { timeout: (TIMEOUT_S + 10) * 1000 }, function (err, stdout, stderr) {
-      if (err && !stdout) {
-        resolve({ ok: false, status: 0, note: (String(stderr).trim().split('\n').pop() || err.message).slice(0, 80) });
-        return;
-      }
       const parts = String(stdout).trim().split(/\s+/);
       const status = Number(parts[0]) || 0;
       const finalUrl = parts[1] || target;
+      /* No HTTP answer at all. curl still prints "000" through -w, so this
+         is decided by its exit code. 6 is "could not resolve host": the
+         domain is gone, which is dead. Anything else (a timeout, a refused
+         or reset connection) is what a host that drops foreign datacenter
+         traffic looks like from a GitHub runner. CBIC does exactly that
+         while answering 200 from the UK, so it is reported, not failed. */
+      if (!status) {
+        const code = err && typeof err.code === 'number' ? err.code : 0;
+        const note = (String(stderr).trim().split('\n').pop() || (err && err.message) || 'no answer').slice(0, 80);
+        resolve({ ok: false, status: 0, blocked: code !== 6, note: note });
+        return;
+      }
       resolve({
         ok: status >= 200 && status < 400,
         status: status,
-        blocked: status === 401 || status === 403 || status === 429,
+        /* 402 too: Investopedia answers a datacenter with "payment
+           required" and a browser at home with the page. */
+        blocked: status === 401 || status === 402 || status === 403 || status === 429,
         movedTo: status >= 200 && status < 300 && !sameAddress(finalUrl, target) ? finalUrl : null
       });
     });
@@ -167,7 +177,7 @@ async function pool(items, size, worker) {
   /* Second opinion for everything that refused a script. */
   const refused = results.filter(function (r) { return !r.ok && r.blocked; });
   if (refused.length && !JSON_OUT) {
-    console.log('\n  ' + refused.length + ' refused a script; asking a browser…');
+    console.log('\n  ' + refused.length + ' refused a script' + (NO_BROWSER ? ' (no browser asked: --no-browser)' : '; asking a browser…'));
   }
   const second = await viaBrowser(refused);
   for (const r of results) {
@@ -202,8 +212,9 @@ async function pool(items, size, worker) {
       console.log('');
     }
     if (unverified.length) {
-      console.log('  could not verify (' + unverified.length + ') — the host refused both a script');
-      console.log('  and a browser, so check these by hand rather than assuming the worst:');
+      console.log('  could not verify (' + unverified.length + ') — the host refused or ignored a script' +
+        (NO_BROWSER ? '' : ' and a browser') + ',');
+      console.log('  so check these by hand rather than assuming the worst:');
       unverified.forEach(function (u) {
         console.log('    ' + u.title + ' [' + u.slug + ']  ' + (u.status || u.note));
         console.log('        ' + u.url);
