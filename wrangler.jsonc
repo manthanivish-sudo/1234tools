@@ -28,5 +28,12 @@
   },
   /* the preview address, <name>.<account>.workers.dev; _headers marks it noindex */
   "workers_dev": true,
-  "preview_urls": false
+  "preview_urls": false,
+  /* the live site (since 2026-10-05). Listed here so every deploy keeps
+     them attached; Cloudflare makes and owns their DNS records. The apex
+     serves the same files; its canonical tags point at www. */
+  "routes": [
+    { "pattern": "www.1234tools.com", "custom_domain": true },
+    { "pattern": "1234tools.com", "custom_domain": true }
+  ]
 }
