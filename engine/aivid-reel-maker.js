@@ -339,6 +339,7 @@
   const fmtSec = (s) => s < 60 ? (Math.round(s * 10) / 10) + ' s' : Math.floor(s / 60) + ' min ' + String(Math.round(s % 60)).padStart(2, '0') + ' s';
   const oneLine = (s) => String(s || '').replace(/\s*\n\s*/g, ' ').replace(/\s+/g, ' ').trim();
   const capFirst = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  const reelsWord = (n) => n + ' reel' + (n === 1 ? '' : 's');
   const slugify = (s) => (String(s || '').toLowerCase().match(/[a-z0-9]+/g) || []).join('-').slice(0, 40).replace(/-+$/, '');
   function fnv(s) { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h >>> 0; }
   const pickBy = (key, list) => list[fnv(key) % list.length];
@@ -398,6 +399,130 @@
       default: return oneLine(sc.text || '');
     }
   }
+  /* ------------------------------------------------------------------ */
+  /* the voice-over script: what is said, apart from what is shown      */
+  /* ------------------------------------------------------------------ */
+  /* British spellings for words a script may carry in American form (the captions show the voice-over text) */
+  const UK_SPELL = { color: 'colour', colors: 'colours', favorite: 'favourite', favorites: 'favourites', center: 'centre', organize: 'organise',
+    organized: 'organised', organizing: 'organising', optimize: 'optimise', optimized: 'optimised', analyze: 'analyse', analyzed: 'analysed',
+    customize: 'customise', customized: 'customised', recognize: 'recognise', realize: 'realise', behavior: 'behaviour', license: 'licence',
+    catalog: 'catalogue', gray: 'grey', canceled: 'cancelled', traveling: 'travelling', labeled: 'labelled', meter: 'metre', meters: 'metres',
+    liter: 'litre', liters: 'litres', percent: 'per cent', summarize: 'summarise', personalize: 'personalise', prioritize: 'prioritise' };
+  const SPELL_RE = new RegExp('\\b(' + Object.keys(UK_SPELL).join('|') + ')\\b', 'gi');
+  /**
+   * Screen text → words to say. Things that only make sense on screen are
+   * dropped or described: Wi-Fi and other QR payloads, links (our own site is
+   * said as its name, anything else becomes "the link in our bio"), e-mail
+   * addresses, JSON, base64, hex, file names, hashtags, @handles and emoji.
+   * Symbols are said: × times (or "by" between sizes), % per cent, ₹/£/$/€
+   * as rupees, pounds, dollars, euros after the figure; arrows, ticks, bars
+   * and bullets become pauses. Line breaks become sentence ends; spelling is
+   * British.
+   */
+  function toSpeech(s) {
+    let t = String(s || '');
+    if (!t.trim()) return '';
+    t = t.replace(/\[([^\]]*)\]/g, '$1')
+      .replace(/\bWIFI:(?:[^;]*;)*;?/gi, ' ')                                  /* WIFI:T:WPA;S:…;P:…;; */
+      .replace(/\b(?:MECARD|BEGIN:VCARD|MATMSG|SMSTO|geo):\S*/gi, ' ')
+      .replace(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, ' ')                          /* e-mail addresses */
+      .replace(/(?:https?:\/\/)?(?:www\.)?1234tools\.com(?:\/[^\s)]*)?/gi, '1234Tools')
+      .replace(/\bhttps?:\/\/\S+|\bwww\.\S+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|in|org|net|co\.uk|co|io|ai|app|dev|me|ly)(?:\/\S*)?/gi, 'the link in our bio')
+      .replace(/\{\{\s*([\w ]+?)\s*\}\}/g, '$1')                               /* {{Name}} merge fields: the field's name */
+      .replace(/[{[]\s*"[\s\S]*?[}\]]/g, ' ')                                  /* JSON */
+      .replace(/\b[A-Za-z0-9+/]{24,}={0,2}(?=\s|$)/g, ' ')                     /* base64 and long tokens */
+      .replace(/#[0-9a-f]{3,8}\b|\b0x[0-9a-f]+\b|\b[0-9a-f]{16,}\b/gi, ' ')    /* hex colours, hashes */
+      /* file names: a few are the subject and are said ("robots dot TXT"); any other says only its type ("a PDF"), never its name */
+      .replace(/(^|[^\w.])(robots\.txt|sitemap\.xml|\.htaccess|package\.json|\.env)\b/gi, (m, pre, n) => pre + n.replace(/^\./, 'dot ').replace(/\.(\w+)$/, (x, e) => ' dot ' + e.toUpperCase()))
+      .replace(/(^|[^\w])[\w-]*\.(pdf|png|jpe?g|webp|gif|svg|csv|xlsx?|docx?|pptx?|txt|json|zip|mp4|mov|webm|mp3|wav|heic|html?)\b/gi, (m, pre, e) => pre + e.toUpperCase())
+      .replace(/(^|\s)[#@][A-Za-z_][\w.]*/g, '$1')                             /* hashtags, handles (#1 stays a number) */
+      .replace(/(^|\s)#(\d)/g, '$1number $2')
+      .replace(/\p{Extended_Pictographic}|[\u{FE0F}\u{200D}\u{20E3}]/gu, ' ')
+      .replace(/(\d)\s*[×x]\s*(\d)/g, '$1 by $2').replace(/×/g, ' times ')
+      .replace(/\s*(?:→|⇒|->|➜|➔|›|»)\s*/g, ', ').replace(/[✓✔✗✘•·|]+/g, ', ')
+      .replace(/(\d)\.00\b/g, '$1')
+      .replace(/\bUS\$/g, '$').replace(/±\s?/g, 'plus or minus ').replace(/(\d)\s?[–-]\s?(\d)/g, '$1 to $2').replace(/\s=\s?$|\s=\s/g, ' is ')
+      .replace(/([₹£$€])(?!\s?\d)/g, (m, c) => ' the ' + ({ '₹': 'rupee', '£': 'pound', $: 'dollar', '€': 'euro' })[c] + ' sign ')
+      /* a figure ends on a digit, so "₹1,50,000, then" keeps its comma outside */
+      .replace(/₹\s?(\d(?:[\d,]*\d)?(?:\.\d+)?)(\s?(?:lakh|crore|k|cr)\b)?/gi, (m, n, u) => n + (u || '') + ' rupees')
+      .replace(/£\s?(\d(?:[\d,]*\d)?(?:\.\d+)?)(\s?(?:k|m|million|bn|billion)\b)?/gi, (m, n, u) => n + (u || '') + ' pounds')
+      .replace(/\$\s?(\d(?:[\d,]*\d)?(?:\.\d+)?)(\s?(?:k|m|million|bn|billion)\b)?/gi, (m, n, u) => n + (u || '') + ' dollars')
+      .replace(/€\s?(\d(?:[\d,]*\d)?(?:\.\d+)?)/g, '$1 euros')
+      .replace(/\s?%/g, ' per cent')
+      .replace(/\s&\s/g, ' and ').replace(/(\w)\s?\+\s?(\w)/g, '$1 plus $2')
+      .replace(/([A-Za-z]{2,})\/([A-Za-z]{2,})/g, '$1 or $2')
+      .replace(/\s*\(([^)]*)\)/g, (m, x) => (x.trim() ? ', ' + x.trim() + ',' : ''))
+      .replace(SPELL_RE, (w) => { const r = UK_SPELL[w.toLowerCase()]; return w[0] === w[0].toUpperCase() ? r[0].toUpperCase() + r.slice(1) : r; });
+    t = t.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => (/[.!?…:;,]$/.test(l) ? l : l + '.')).join(' ');
+    return t.replace(/\s+/g, ' ').replace(/\s+([,.!?;:])/g, '$1').replace(/([,;:])(?:\s*[,;:])+/g, '$1')
+      .replace(/,\s*([.!?])/g, '$1').replace(/([.!?])\s*[,;:]\s*/g, '$1 ').replace(/^[\s,.;:—-]+/, '').replace(/\s+—\s*([.!?])/g, '$1')
+      .replace(/(the link in our bio)(?:\s*(?:,|or|and)\s*the link in our bio)+/g, '$1')
+      .replace(/\s(?:or|and)([.!?])/g, '$1').replace(/[\s,;:—-]+$/, '').trim()
+      .replace(/([\p{L}\p{N}])$/u, '$1.');
+  }
+  const lowerFirst = (s) => (/^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s);
+  const sentence = (s) => { const t = String(s || '').trim().replace(/[\s,;:—-]+$/, ''); return !t ? '' : /[.!?…]["”’)]?$/.test(t) ? t : t + '.'; };
+  /** "First, … Then, … Last, …" from step lines. */
+  function stepsSpeech(items) {
+    const lead = ['First, ', 'Then, ', 'Then, ', 'Then, ', 'Last, '];
+    const xs = items.map((x) => toSpeech(x).replace(/[.!?]+$/, '')).filter(Boolean);
+    return xs.map((x, i) => (i === xs.length - 1 && i > 0 ? 'Last, ' : lead[i]) + lowerFirst(x) + '.').join(' ');
+  }
+  /** A tool's name as said: no "(India)", no trailing "Online". */
+  const toolName = (f) => toSpeech(f.title.replace(/\s*\(.*?\)\s*/g, ' ').replace(/\s+online$/i, '').trim()).replace(/[.!?]+$/, '');
+  /** "So try the GST Calculator" for a thing, "So open Merge PDF Files" for an action. */
+  const tryLine = (name) => (/(?:er|or|maker|tool|kit|planner|guide)s?$/i.test(name) ? 'So try the ' + name + ', free on 1234Tools.' : 'So open ' + name + ' on 1234Tools. It’s free.');
+  /** What the example scene says: the result in words, never its data. */
+  function exampleSpeech(ex, f) {
+    if (!ex) return '';
+    const cap = String(ex.caption || '');
+    if (/qr/i.test(f.path) && /WIFI:/i.test(cap)) return 'Point your phone camera at the code and it joins the Wi-Fi. No typing, no spelling out the password.';
+    if (/qr/i.test(f.path)) return /scan/i.test(f.path) ? 'Show it a code and it reads it straight away, and tells you what is inside before you open anything.' : 'Point your phone camera at the code and it opens straight away. Every code is scanned back before you download it.';
+    if (ex.kind === 'calc') {
+      const short = (r) => r && r.value.length <= 22 && /\d/.test(r.value);
+      const p = ex.results.find((r) => r.primary) || ex.results[0];
+      const other = ex.results.find((r) => r !== p && short(r) && !/^0(\.0+)?$|[₹£$€]0(\.0+)?$/.test(r.value.replace(/\s/g, '')));
+      const say = (r) => lowerFirst(toSpeech(r.label).replace(/\s*(?:is|[=:])$/, '').replace(/\.$/, '')) + ', ' + toSpeech(r.value).replace(/\s*(?:is|[=:])$/, '').replace(/\.$/, '');
+      return 'Here it is with real numbers: ' + [p, other].filter(short).map(say).join('; ') + '.';
+    }
+    if (ex.kind === 'flow') return ex.input && ex.output ? 'In goes ' + lowerFirst(toSpeech(ex.input).replace(/\.$/, '')) + '. Out comes ' + lowerFirst(toSpeech(ex.output).replace(/\.$/, '')) + '.' : '';
+    if (/^pdf\//.test(f.path || '')) return 'Here it is on real files, start to finish.';
+    if (ex.kind === 'beforeAfter') return 'Here is a real before and after, made with it.';
+    if (ex.kind === 'document') return 'Here is a real page it made.';
+    if (ex.kind === 'text') return 'Here is a real example: what goes in, and what comes out.';
+    return 'Here is a real result, made with it.';
+  }
+  /** The suggested voice-over for a scene from its own fields (a visitor's script, or a beat whose text was edited). */
+  function voFromScreen(sc) {
+    if (!sc) return '';
+    const items = itemsOf(sc);
+    switch (sc.type) {
+      case 'usual': return toSpeech((sc.heading ? sentence(sc.heading.replace(/[?]$/, '')) + ' ' : '') + items.map(sentence).join(' '));
+      case 'steps': return toSpeech(sc.heading ? sentence(sc.heading) : '') + (sc.heading ? ' ' : '') + stepsSpeech(items);
+      case 'fix': return toSpeech([sc.heading, sc.text].filter(Boolean).map(sentence).join(' '));
+      case 'versus': {
+        const lab = String(sc.heading || 'Myth | Fact').split('|').map((x) => x.trim());
+        return items.map((x, i) => (lab[i] ? lab[i] + ': ' : '') + sentence(toSpeech(x).replace(/[.!?]+$/, ''))).join(' ');
+      }
+      case 'point': return (sc.heading ? (sc.bad ? 'Mistake ' : 'Number ') + sc.heading + ': ' : '') + toSpeech(sc.text);
+      case 'quote': return toSpeech(sc.text) + (sc.heading ? ' That’s ' + toSpeech(sc.heading).replace(/\.$/, '') + '.' : '');
+      case 'example': return exampleSpeech(sc.ex, { path: sc.path || '', title: sc.title || '' }) || toSpeech(sc.text);
+      case 'endcard': return sc.voEnd || '';
+      default: return toSpeech(sc.text);
+    }
+  }
+  /** The suggestion: the line written for the ear when the scene was built (while its screen text is unchanged), else one made from the screen. */
+  function suggestedVO(sc) {
+    if (!sc) return '';
+    if (sc._vo !== undefined && sc._voKey === voKeyOf(sc)) return sc._vo;
+    return voFromScreen(sc);
+  }
+  const voKeyOf = (sc) => [sc.type, sc.heading || '', sc.text || '', sc.title || ''].join('\u0001');
+  /** What is said in a scene: the visitor's own line if they wrote one (even an empty one: silence), else the suggestion. */
+  const voOf = (sc) => (sc && sc.vo !== undefined ? sc.vo : suggestedVO(sc));
+  /** Fix the beat's spoken line at build time; it stays the suggestion until the screen text changes. */
+  const setVO = (sc, line) => { sc._vo = String(line || '').replace(/\s+/g, ' ').trim(); sc._voKey = voKeyOf(sc); return sc; };
+
   /** Seconds a scene stays: ≈2.6 words a second, at least 1.6 s, at most 4 s; the example and end card need time to play. */
   function beatSeconds(sc) {
     let words = wordCount(spoken(sc));
@@ -845,6 +970,22 @@
         text: f.isAI ? '10 free runs a month at 1234tools.com' : 'Free at 1234tools.com', qr: brand.qr !== false }));
     }
     for (const sc of out) for (const k of ['eyebrow', 'heading', 'hl', 'foot']) sc['_auto_' + k] = sc[k];
+    /* the voice-over, written for the ear from the story rather than read off the screen */
+    const name = toolName(f);
+    const byType = {
+      hook: toSpeech(story.hook),
+      pain: toSpeech(story.pain),
+      usual: 'The usual way? ' + story.usual.slice(0, 3).map((u) => sentence(toSpeech(u).replace(/[.!?]+$/, ''))).join(' '),
+      fix: tryLine(name) + ' ' + toSpeech(story.promise),
+      example: '',
+      steps: stepsSpeech(story.steps.slice(0, 3)),
+      endcard: sentence(toSpeech(story.cta || (f.isAI ? 'Try ten free runs a month' : 'Try it free'))) + (f.isAI ? ' Ten free runs a month on 1234Tools.' : ' It’s free on 1234Tools.') + ' The link is in our bio.'
+    };
+    for (const sc of out) {
+      if (sc.type === 'example') { sc.path = f.path; setVO(sc, exampleSpeech(sc.ex, f)); }
+      else setVO(sc, byType[sc.type] || toSpeech(sc.text));
+      if (sc.type === 'endcard') sc.voEnd = sc._vo;
+    }
     out.story = true;
     return trimTo(out, 22);
   }
@@ -865,6 +1006,14 @@
     trust.seconds = r1(clamp(trust.seconds, 3, 4.5));
     out.push(trust);
     if (brand.endcard !== false) out.push(beat('endcard', { title: f.title, cta: f.isAI ? 'Try 10 free runs' : 'Try it free', proof: [], text: f.isAI ? '10 free runs a month at 1234tools.com' : 'Free at 1234tools.com', qr: brand.qr !== false }));
+    const name = toolName(f);
+    for (const sc of out) {
+      if (sc.type === 'hook') setVO(sc, toSpeech(sc.text));
+      else if (sc.type === 'example') { sc.path = f.path; setVO(sc, exampleSpeech(sc.ex, f)); }
+      else if (sc.type === 'endcard') { setVO(sc, 'Try ' + name + (f.isAI ? '. Ten free runs a month on 1234Tools.' : ', free on 1234Tools.') + ' The link is in our bio.'); sc.voEnd = sc._vo; }
+      else if (sc === out[1]) setVO(sc, name + '. ' + toSpeech(f.first));
+      else setVO(sc, toSpeech(sc.text));
+    }
     return out;
   }
 
@@ -1468,22 +1617,100 @@
   /* ------------------------------------------------------------------ */
   /* the frame's chrome: header, footer, progress                       */
   /* ------------------------------------------------------------------ */
+  /**
+   * The AI label at the top: "AI voice" while the voice is generated (it is
+   * then always on), "AI-generated" when the visitor labels the reel. ''
+   * when neither. The same switch writes the machine-readable note into the
+   * MP4 (see aiMetadata).
+   */
+  function aiLabelOf(S) {
+    if (!S || !S.brand) return '';
+    if (S.brand.aiLabel) return 'AI-generated';
+    return S.voice && S.voice.generated ? 'AI voice' : '';
+  }
+  /**
+   * The machine-readable mark written into the MP4 when the reel is labelled
+   * (aiimg-core tagMP4: moov/udta/meta/ilst ©cmt, ©too, desc). EU AI Act
+   * Art. 50(2) asks providers of systems that generate synthetic audio or
+   * video to mark the output "in a machine-readable format and detectable
+   * as artificially generated or manipulated", from 2 August 2026
+   * (https://artificialintelligenceact.eu/article/50/). A plain tag, not C2PA.
+   * null when the reel is not labelled: then nothing is written.
+   */
+  const REEL_URL = 'https://www.1234tools.com/ai-video/reel-maker/';
+  function aiMetadata(S) {
+    const label = aiLabelOf(S);
+    if (!label) return null;
+    const what = S.voice && S.voice.generated
+      ? 'Contains AI-generated audio (synthetic voice, Kokoro-82M).' + (S.brand.aiLabel ? ' Labelled by its maker as AI-generated.' : '')
+      : 'Labelled by its maker as containing AI-generated content.';
+    const text = what + ' Made with 1234Tools Reel Maker, ' + REEL_URL;
+    return { comment: text, description: text, tool: '1234Tools Reel Maker (' + REEL_URL + ')' };
+  }
+  /** "Made with 1234Tools.com" at the bottom: on unless switched off in Export. */
+  const madeWithOn = (S) => !!(S && S.brand && S.brand.madeWith !== false);
+  const MADE_WITH = 'Made with 1234Tools.com';
+  /* both marks sit on a plate in the look's own light or dark, 90% opaque, so the
+     text keeps AA contrast whatever is underneath (a photo, a clip, a gradient) */
+  const markColours = (L) => (L && L.light ? { plate: 'rgba(255,255,255,0.9)', ink: '#111522', edge: 'rgba(17,21,34,0.22)' } : { plate: 'rgba(6,8,15,0.9)', ink: '#ffffff', edge: 'rgba(255,255,255,0.32)' });
   function chromeOf(W, H, S) {
     const sf = safeOf(W, H), U = Math.min(W, H) / 1080;
     const promo = !!S.promote;
     const hasHead = promo || !!S.brand.logo || !!String(S.brand.handle || '').trim();
     const mx = W > H * 1.3 ? W * 0.15 : W * 0.065;
-    const headY = sf.top * H + 10 * U, headH = 58 * U;
+    /* the top: the AI label just below the app's own band, then the brand row */
+    const ai = aiLabelOf(S);
+    const pillY = sf.top * H + 10 * U, pillH = 44 * U;
+    const headY = ai ? pillY + pillH + 14 * U : sf.top * H + 10 * U, headH = 58 * U;
+    /* the bottom: the credit just above the app's band, then the progress bar, then the URL line */
+    const bandTop = (1 - sf.bottom) * H;
+    const credit = madeWithOn(S);
+    const credH = 34 * U, credY = bandTop - 8 * U - credH;
     const barH = Math.max(4, 7 * U);
-    const barY = (1 - sf.bottom) * H - 12 * U - barH;
+    const barY = (credit ? credY - 12 * U : bandTop - 12 * U) - barH;
     const footY = barY - 30 * U;
     const showFoot = promo || !!String(S.brand.url || '').trim();
-    return { sf, U, mx, headY, headH, hasHead, barY, barH, footY, showFoot, promo };
+    return { sf, U, mx, headY, headH, hasHead, barY, barH, footY, showFoot, promo, ai, pillY, pillH, credit, credY, credH, bandTop };
+  }
+  /** The AI label: a small pill, left-aligned with the content, just below the top band. */
+  function drawAiLabel(ctx, W, H, L, S) {
+    const c = chromeOf(W, H, S);
+    if (!c.ai) return null;
+    const U = c.U, col = markColours(L);
+    ctx.save();
+    ctx.font = fontCss(700, 24 * U, HEAD);
+    const tw = ctx.measureText(c.ai).width;
+    const dot = 10 * U, padX = 18 * U;
+    const w = padX + dot + 10 * U + tw + padX, x = c.mx, y = c.pillY, h = c.pillH;
+    ctx.fillStyle = col.plate; roundRect(ctx, x, y, w, h, h / 2); ctx.fill();
+    ctx.strokeStyle = col.edge; ctx.lineWidth = 1.5 * U; ctx.stroke();
+    /* a small sparkle-like dot in the look's accent marks it as a label, not content */
+    ctx.fillStyle = L.light ? '#111522' : (L.accent || '#f7c948');
+    ctx.beginPath(); ctx.arc(x + padX + dot / 2, y + h / 2, dot / 2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = col.ink; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    ctx.fillText(c.ai, x + padX + dot + 10 * U, y + h / 2 + 1 * U);
+    ctx.restore();
+    return { x, y, w, h };
+  }
+  /** "Made with 1234Tools.com": small, centred, on its plate, just above the bottom band. */
+  function drawMadeWith(ctx, W, H, L, S) {
+    const c = chromeOf(W, H, S);
+    if (!c.credit) return null;
+    const U = c.U, col = markColours(L);
+    ctx.save();
+    ctx.font = fontCss(600, 20 * U, BODY);
+    const tw = ctx.measureText(MADE_WITH).width;
+    const w = tw + 32 * U, h = c.credH, x = (W - w) / 2, y = c.credY;
+    ctx.fillStyle = col.plate; roundRect(ctx, x, y, w, h, h / 2); ctx.fill();
+    ctx.fillStyle = col.ink; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+    ctx.fillText(MADE_WITH, W / 2, y + h / 2 + 1 * U);
+    ctx.restore();
+    return { x, y, w, h };
   }
   /** The content box every beat is fitted into: below the header, above the footer, clear of the caption band when captions run. */
   function contentBox(W, H, S) {
     const c = chromeOf(W, H, S);
-    const top = c.hasHead ? c.headY + c.headH + 34 * c.U : c.sf.top * H + 40 * c.U;
+    const top = c.hasHead ? c.headY + c.headH + 34 * c.U : c.ai ? c.pillY + c.pillH + 30 * c.U : c.sf.top * H + 40 * c.U;
     let bottom = (c.showFoot ? c.footY - 22 * c.U : c.barY - 26 * c.U);
     if (S.captions && S.captions.source === 'auto' && S.captions.cues && S.captions.cues.length) bottom = Math.min(bottom, 0.69 * H);
     return { x: c.mx, y: top, w: W - 2 * c.mx, h: bottom - top, U: c.U };
@@ -2717,13 +2944,18 @@
         const AC = A.tools['auto-captions'];
         const U = Math.min(W, H);
         const st = Object.assign({}, S.captions.style, { size: (Number(S.captions.style.size) || 7) * U / W });
+        /* captions sit above the credit line and the progress bar, never on them */
+        const ch = chromeOf(W, H, S);
+        st.maxBottom = (S.brand.progress ? ch.barY : ch.credit ? ch.credY : ch.bandTop) - 10 * ch.U;
         if (AC) AC.drawCaptions(ctx, W, H, t, S.captions.cues, st);
       }
       drawHeader(ctx, W, H, look, S, at);
       if (o.progress !== false) drawFooter(ctx, W, H, t, at.D, look, S, at);
     }
+    /* the two marks, on every frame, the cover and the preview alike (o.credit concerns only the old corner credit, no longer drawn here) */
+    drawAiLabel(ctx, W, H, look, S);
+    drawMadeWith(ctx, W, H, look, S);
     ctx.restore();
-    if (o.credit !== false && A.share) A.share.drawCredit(ctx, W, H);
   }
   /* ------------------------------------------------------------------ */
   /* sound                                                              */
@@ -2989,7 +3221,7 @@
       mode: 'script', promote: null, slug: 'reel', scenes: [],
       look: lookFrom({ palette: 'midnight', type: 'gradient', motion: 'pop', bg: 'glow', layout: 'classic', copy: 0 }),
       lookLock: {}, lookOver: {}, lookTool: 'custom',
-      brand: { handle: '', url: '', endcard: true, qr: false, progress: true, safe: true, logo: null, logoKind: 'none', utm: 'instagram' },
+      brand: { handle: '', url: '', endcard: true, qr: false, progress: true, safe: true, logo: null, logoKind: 'none', utm: 'instagram', aiLabel: false, madeWith: true },
       voice: null, music: null,
       captions: { source: 'scene', chosen: false, segments: [], cues: [], status: 'idle',
         style: { preset: 'karaoke', mode: '2', position: 'bottom', size: 7, font: 'Sora', fill: '#ffffff', accent: '#f7c948', stroke: '#000000', box: '#0b1020', uppercase: false } },
@@ -3054,10 +3286,14 @@
     const filterRow = el('div', 'reel-filter'); filterRow.setAttribute('role', 'group'); filterRow.setAttribute('aria-label', 'Filter by section');
     const toolList = el('ul', 'reel-tools'); toolList.id = 'reel-tools'; toolList.setAttribute('role', 'listbox'); toolList.setAttribute('aria-label', 'Tools');
     const pickStatus = el('p', 'aiimg-status', 'Loading the tool list…');
-    const batchBtn = button('Make 2 reels', 'btn-primary', () => openBatch()); batchBtn.id = 'reel-batch'; batchBtn.disabled = true;
+    /* one click makes every ticked tool's reel: the button says how many, changes at once, and the run starts without a second "Start" */
+    const batchBtn = button('Make reels', 'btn-primary', () => openBatch()); batchBtn.id = 'reel-batch'; batchBtn.disabled = true;
     const clearBtn = button('Clear', 'btn-ghost', () => { S.picked.clear(); renderPicker(); });
-    const pickFoot = el('div', 'aiimg-row reel-picker-foot'); pickFoot.append(batchBtn, clearBtn, hint('Click a tool to make its reel; tick several to make one reel each.'));
-    picker.append(field('Find a tool', find), filterRow, pickStatus, toolList, pickFoot);
+    const batchFolder = check('reel-batch-folder', 'Save into a folder (asks once)', false); batchFolder.hidden = typeof window.showDirectoryPicker !== 'function';
+    const batchCaps = check('reel-batch-captions', 'Also save reel-captions.txt', true);
+    const batchLine = el('p', 'aiimg-status reel-batch-line'); batchLine.id = 'reel-batch-line'; batchLine.setAttribute('aria-live', 'polite');
+    const pickFoot = el('div', 'aiimg-row reel-picker-foot'); pickFoot.append(batchBtn, clearBtn, hint('Click a tool to open its reel; tick one or more and press Make to export one reel each.'));
+    picker.append(field('Find a tool', find), filterRow, pickStatus, toolList, pickFoot, row(batchFolder, batchCaps), batchLine);
     promotePane.appendChild(picker);
     start.append(modeTabs.bar, scriptPane, promotePane);
 
@@ -3132,7 +3368,6 @@
       pctx.scale(canvas.width / w, canvas.height / hh);
       renderFrame(pctx, w, hh, S.t, S, { credit: false });
       pctx.restore();
-      share.drawCredit(pctx, canvas.width, canvas.height);
       dirty = false;
     }
     let mounted = true, t0 = 0;
@@ -3357,7 +3592,7 @@
         if (HEADING_LABEL[sc.type]) {
           const hi = el('input', 'control reel-scene-heading'); hi.value = sc.heading || ''; hi.placeholder = HEADING_LABEL[sc.type];
           hi.setAttribute('aria-label', HEADING_LABEL[sc.type] + ' for scene ' + (i + 1));
-          hi.addEventListener('input', () => { sc.heading = hi.value; sc._plan = null; refreshCaptionPreview(); invalidate(); });
+          hi.addEventListener('input', () => { sc.heading = hi.value; sc._plan = null; syncVO(sc); refreshCaptionPreview(); invalidate(); });
           hi.addEventListener('focus', () => { if (S.live !== i) selectScene(i); });
           li.appendChild(hi);
         }
@@ -3376,11 +3611,20 @@
             if (sc.type === 'hook' && !sc._userEm && was !== sc.text) sc.emphasis = [keyWordOf(sc.text)];
           }
           sc._plan = null;
+          syncVO(sc);
           refreshCaptionPreview();
           invalidate();
         });
         ta.addEventListener('focus', () => { if (S.live !== i) selectScene(i); });
         li.appendChild(ta);
+        /* what the voice says in this scene (the same line as in Sound) */
+        const vo = el('textarea', 'control reel-scene-vo'); vo.rows = 1; vo.value = voOf(sc); vo.dataset.id = sc.id;
+        vo.placeholder = 'Voice-over: silent';
+        vo.setAttribute('aria-label', 'Voice-over for scene ' + (i + 1));
+        vo.title = 'What the voice says in this scene';
+        vo.addEventListener('input', () => { sc.vo = vo.value; syncVO(sc, vo); voChanged(); });
+        vo.addEventListener('focus', () => { if (S.live !== i) selectScene(i); });
+        li.appendChild(vo);
         if (isWordy(sc)) {
           const an = select('reel-anim-' + sc.id, ANIMS, OLD_ANIM[sc.anim] || sc.anim || 'auto');
           an.setAttribute('aria-label', 'Animation for scene ' + (i + 1));
@@ -3393,6 +3637,7 @@
         sceneList.appendChild(li);
       });
       S.live = -2; markLive();
+      renderVO();
     }
 
     /* ---------------- media pane ---------------- */
@@ -3606,8 +3851,22 @@
     ttsBox.append(field('Voice', ttsVoice), field('Speed', ttsSpeed), field('Pause after each scene', ttsPause), row(genBtn, previewBtn, ttsCancel), ttsProgress, ttsStatus,
       hint('A synthetic voice reads each scene’s text aloud, made on your device by Kokoro-82M (Apache-2.0 licence). The first use downloads about 94 MB from this site — the 92 MB model, a 1.5 MB pronunciation dictionary and 0.5 MB for each voice you try, plus the 14 MB AI runtime if the captions have not already fetched it — and your browser keeps them. The script never leaves your device. English only for now.'));
     if (!TTS) ttsBox.hidden = true;
-    panes.sound.append(h('Voiceover'), row(recVoiceBtn, upVoiceBtn), voiceFile, level, prompter, voiceInfo, voiceCtl,
-      hint('Recording asks for the microphone only when you press the button. The script is shown as a teleprompter while you read.'),
+    /* the voice-over script: one line per scene, what is SAID — written for the ear, apart from the screen text */
+    const voList = el('ol', 'reel-vo'); voList.id = 'reel-vo';
+    const voResetAll = button('Reset all to suggested', 'btn-ghost', () => { for (const sc of S.scenes) delete sc.vo; renderVO(); voChanged(); });
+    voResetAll.id = 'reel-vo-reset-all';
+    const PRON_STORE = 'reel-maker-pronunciation';
+    const pronBox = el('textarea', 'control reel-pron'); pronBox.id = 'reel-pron'; pronBox.rows = 3; pronBox.spellcheck = false;
+    pronBox.placeholder = 'Zerodha = zeh-roh-dah\nNiamh = neeve';
+    try { pronBox.value = localStorage.getItem(PRON_STORE) || ''; } catch (e) { /* storage blocked: the box still works for this visit */ }
+    pronBox.addEventListener('input', () => { try { localStorage.setItem(PRON_STORE, pronBox.value); } catch (e) { /* not kept */ } updateSoundStatus(); });
+    const voBox = el('div', 'reel-vo-box');
+    voBox.append(hint('What the voice says in each scene. It starts as a suggestion written to be heard — links, codes and symbols on the screen are left out or said in words — and you can change any line. An empty line is a silent scene. Generate voice reads these lines, the teleprompter shows them, and the captions of a generated voice are these words.'),
+      voList, row(voResetAll),
+      field('Pronunciation', pronBox, 'One per line: word = how it sounds. Used for this reel’s generated voice and kept in this browser only; the captions still show the word as written.'));
+    panes.sound.append(h('Voice-over script'), voBox,
+      h('Voiceover'), row(recVoiceBtn, upVoiceBtn), voiceFile, level, prompter, voiceInfo, voiceCtl,
+      hint('Recording asks for the microphone only when you press the button. The voice-over script is shown as a teleprompter while you read.'),
       h('Or generate a voice'), ttsBox,
       h('Music'), row(upMusicBtn), musicFile, musicInfo, musicCtl, hint('Use a track you have the rights to; the file never leaves your device.'),
       prevSoundChk, soundStatus);
@@ -3623,6 +3882,10 @@
       if (clips) parts.push(clips + ' clip' + (clips === 1 ? '' : 's') + ' with their own sound');
       soundStatus.textContent = parts.length ? capFirst(parts.join(' · ')) + ' · reel ' + D.toFixed(1) + ' s' : 'No sound yet — the reel will be silent unless you add a voice or music.';
       fitChk.hidden = !S.voice;
+      /* a generated voice turns the AI label on (and removing it, off): the layout moves, so beats are laid out again */
+      const marks = aiLabelOf(S) + '|' + madeWithOn(S);
+      if (marks !== S._marks) { S._marks = marks; for (const sc of S.scenes) sc._plan = null; invalidate(); }
+      try { syncMarksUi(); } catch (e) { /* the Export pane is not built yet */ }
       if (S.voice && S.voice.generated && !ttsJob) {
         const stale = scriptKey(spokenScenes()) !== S.voice.generated.script;
         ttsStatus.textContent = stale ? 'The scene text has changed since the voice was made — press Generate voice again to match it.' : S.voice.generated.note;
@@ -3704,11 +3967,61 @@
     }
 
     /* ---------------- generated voice ---------------- */
-    /** The scenes the voice reads, in order: every scene with words except the end card (the teleprompter's list). */
+    /** The scenes the voice reads, in order, with their voice-over lines; a scene with an empty line is silent and keeps its length. */
     function spokenScenes() {
-      return S.scenes.filter((sc) => sc.type !== 'endcard').map((sc) => ({ sc, text: spoken(sc) })).filter((x) => /[\p{L}\p{N}]/u.test(x.text || ''));
+      return S.scenes.map((sc) => ({ sc, text: voOf(sc) })).filter((x) => /[\p{L}\p{N}]/u.test(x.text || ''));
     }
-    function scriptKey(list) { return list.map((x) => x.sc.id + '\u0001' + x.text).join('\u0002'); }
+    function scriptKey(list) { return list.map((x) => x.sc.id + '\u0001' + x.text).join('\u0002') + '\u0003' + pronBox.value.trim(); }
+    /** The visitor's "word = sounds like" lines. */
+    function pronRules() {
+      const out = [];
+      for (const line of pronBox.value.split('\n')) {
+        const m = /^\s*([^=]+?)\s*=\s*(.+?)\s*$/.exec(line);
+        if (m && m[1] && m[2]) out.push([new RegExp('(^|[^\\p{L}\\p{N}])' + m[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\p{L}\\p{N}])', 'giu'), m[2]]);
+      }
+      return out;
+    }
+    /** The line the voice is given: the voice-over with the visitor's pronunciations swapped in (the captions keep the words as written). */
+    function pronApply(text) {
+      let t = String(text || '');
+      for (const [re, to] of pronRules()) t = t.replace(re, (m, pre) => pre + to);
+      return t;
+    }
+    const sentencesOf = (text) => String(text || '').split(/(?<=[.!?…]["”')\]]*)\s+/).map((s) => s.trim()).filter(Boolean);
+    /** What the scene shows, in a line, beside its voice-over box. */
+    function refOf(sc) {
+      const t = sc.type === 'endcard' ? 'End card: ' + [sc.cta, sc.title].filter(Boolean).join(' · ')
+        : sc.type === 'media' ? (sc.media ? sc.media.name : 'Picture') + (sc.text ? ' — ' + oneLine(sc.text) : '')
+        : oneLine([sc.heading, sc.text].filter(Boolean).join(' · '));
+      return 'On screen: ' + (t.length > 110 ? t.slice(0, 108) + '…' : t || '(nothing)');
+    }
+    /** The voice-over list in Sound: one box per scene, in order. */
+    function renderVO() {
+      voList.innerHTML = '';
+      S.scenes.forEach((sc, i) => {
+        const li = el('li', 'reel-vo-item'); li.dataset.id = sc.id;
+        const head = el('div', 'reel-vo-head');
+        head.append(el('span', 'reel-badge', String(i + 1)), el('small', 'reel-vo-ref', refOf(sc)));
+        const ta = el('textarea', 'control reel-vo-text'); ta.rows = 2; ta.value = voOf(sc); ta.dataset.id = sc.id;
+        ta.placeholder = 'Silent — nothing is said in this scene';
+        ta.setAttribute('aria-label', 'Voice-over for scene ' + (i + 1));
+        const reset = button('Reset to suggested', 'btn-ghost reel-vo-reset', () => { delete sc.vo; syncVO(sc); voChanged(); });
+        reset.disabled = sc.vo === undefined;
+        ta.addEventListener('input', () => { sc.vo = ta.value; reset.disabled = false; syncVO(sc, ta); voChanged(); });
+        ta.addEventListener('focus', () => { if (S.live !== i) selectScene(i); });
+        li.append(head, ta, reset);
+        voList.appendChild(li);
+      });
+    }
+    /** Put a scene's voice-over into every box that shows it (the one being typed in stays as it is). */
+    function syncVO(sc, except) {
+      for (const ta of root.querySelectorAll('textarea[data-id="' + sc.id + '"]')) if (ta !== except) ta.value = voOf(sc);
+      for (const li of voList.children) if (li.dataset.id === sc.id) {
+        const r = li.querySelector('.reel-vo-reset'); if (r) r.disabled = sc.vo === undefined;
+        const ref = li.querySelector('.reel-vo-ref'); if (ref) ref.textContent = refOf(sc);
+      }
+    }
+    function voChanged() { updateSoundStatus(); if (!prompter.hidden) renderPrompter(); }
     function ttsBusy(on) {
       genBtn.disabled = on; previewBtn.disabled = on; ttsVoice.disabled = on;
       ttsCancel.hidden = !on;
@@ -3751,7 +4064,7 @@
     async function generateVoice() {
       if (!TTS || ttsJob) return;
       const list = spokenScenes();
-      if (!list.length) { ttsStatus.textContent = 'There is no scene text to read yet — write a script first.'; return; }
+      if (!list.length) { ttsStatus.textContent = 'The voice-over script is empty — write a line for at least one scene first.'; return; }
       if (mic) stopMic();
       stopTtsPlay();
       const v = TTS.voices.find((x) => x.id === ttsVoice.value) || TTS.voices[0];
@@ -3767,7 +4080,7 @@
         for (let i = 0; i < list.length; i++) {
           const msg = 'Speaking scene ' + (i + 1) + ' of ' + list.length + '…';
           ttsStatus.textContent = TTS.ready ? msg : ttsStatus.textContent;
-          const r = await TTS.speak(list[i].text, { voice: v.id, speed, signal: job.signal, onProgress: ttsProgressFn(msg, i / list.length, 1 / list.length) });
+          const r = await TTS.speak(pronApply(list[i].text), { voice: v.id, speed, signal: job.signal, onProgress: ttsProgressFn(msg, i / list.length, 1 / list.length) });
           if (job.signal.aborted) throw abortError();
           parts.push({ sc: list[i].sc, text: list[i].text, r });
           total += r.duration + pause;
@@ -3819,8 +4132,11 @@
       const samples = await Wh.toMono16k(audioBuffer);
       const segments = [];
       for (const { p, pos } of placed) {
+        /* the captions are the voice-over as written: the worker's sentences, unless a pronunciation swap changed them */
+        const own = sentencesOf(p.text);
+        p.r.sentences.forEach((s, k) => { s.caption = own.length === p.r.sentences.length ? own[k] : s.text; });
         for (const s of p.r.sentences) {
-          const seg = { start: pos + s.start, end: Math.min(dur, pos + s.end), text: s.text };
+          const seg = { start: pos + s.start, end: Math.min(dur, pos + s.end), text: s.caption };
           if (seg.start >= dur || seg.end <= seg.start) continue;
           seg.words = Wh.wordsFor(seg);
           segments.push(seg);
@@ -3903,7 +4219,8 @@
     function stopMic() { if (mic && mic.rec.state !== 'inactive') mic.rec.stop(); }
     function renderPrompter() {
       prompter.innerHTML = '';
-      S.scenes.forEach((sc) => { if (sc.type === 'endcard') return; const li = el('li', null, spoken(sc) || '(' + (sc.media ? sc.media.name : 'picture') + ')'); li.dataset.id = sc.id; prompter.appendChild(li); });
+      /* the voice-over script, scene by scene; a silent scene shows as a pause */
+      S.scenes.forEach((sc) => { const li = el('li', null, voOf(sc).trim() || '(pause)'); li.dataset.id = sc.id; prompter.appendChild(li); });
     }
     function highlightPrompter(s) {
       if (prompter.hidden) return;
@@ -4079,12 +4396,11 @@
     panes.brand.append(h('Look'), lookName, looksBox, grid(field('Headline type', typeSel), field('Motion', motionSel)), grid(field('Background', bgSel), field('Layout', layoutSel)),
       row(shuffle2), hint('Each new reel gets a look of its own — not one of the last three for this tool. Pick a palette or a style to keep it; Shuffle look lets it vary again.'),
       grid(field('Handle', handleIn), field('URL', urlIn)), utmField,
-      endChk, qrChk, qrHint, barChk, safeChk, h('Logo'), logoRow, share.creditControl(),
+      endChk, qrChk, qrHint, barChk, safeChk, h('Logo'), logoRow,
       h('Colours'), grid(field('Accent', lookAccent), field('Text', lookText)), grid(field('Background top', lookBg1), field('Background bottom', lookBg2)));
     handleIn.addEventListener('input', () => { S.brand.handle = handleIn.value.trim(); invalidate(); refreshCaptionPreview(); ensureEndCard(); });
     urlIn.addEventListener('input', () => { if (S.promote) return; S.brand.url = urlIn.value.trim(); syncQrUi(); invalidate(); refreshCaptionPreview(); ensureEndCard(); });
     utmIn.addEventListener('input', () => { S.brand.utm = utmIn.value.trim() || 'instagram'; invalidate(); });
-    document.getElementById('aiimg-credit') && document.getElementById('aiimg-credit').addEventListener('change', invalidate);
     function endCardHasContent() { return !!(S.promote || S.brand.handle || S.brand.url || S.brand.logo); }
     function ensureEndCard() {
       if (!S.brand.endcard || !S.scenes.length || S.scenes.some((x) => x.type === 'endcard') || !endCardHasContent()) return;
@@ -4207,7 +4523,22 @@
     shareBox.append(field('Caption for Instagram, TikTok or Shorts', capPreview), row(capBtn, linkBtn), hint('Instagram does not link captions; put the link in your bio and say so.'), aiHint);
     const batchBox = el('div', 'reel-batch'); batchBox.hidden = true;
     const results = el('div', 'aiimg-results');
+    /* the marks: an AI label (forced on while the voice is generated) and the removable credit */
+    const aiChk = on(check('reel-ai-label', 'Label this reel as AI-generated', false), () => { S.brand.aiLabel = aiChk.input.checked; marksChanged(); });
+    const aiLabelHint = hint('Adds an “AI-generated” label at the top of every frame and the cover, and a note inside the MP4 file that says so. Use it when pictures, clips, words or a voice in the reel were made by AI. While the voice is generated it is on and cannot be switched off: the label then reads “AI voice”, because some laws and most platforms expect synthetic voices to be marked.');
+    aiLabelHint.id = 'reel-ai-label-hint';
+    const madeChk = on(check('reel-made-with', 'Show “Made with 1234Tools.com”', true), () => { S.brand.madeWith = madeChk.input.checked; marksChanged(); });
+    const madeHint = hint('A small line at the bottom of every frame and the cover. Switch it off and the reel carries no credit at all — no watermark is forced on you.');
+    function marksChanged() { syncMarksUi(); for (const sc of S.scenes) sc._plan = null; invalidate(); drawCoverThumb(); }
+    /** The AI switch shows what will be drawn: ticked and locked while the voice is generated. */
+    function syncMarksUi() {
+      const gen = !!(S.voice && S.voice.generated);
+      aiChk.input.checked = gen || !!S.brand.aiLabel;
+      aiChk.input.disabled = gen;
+      madeChk.input.checked = S.brand.madeWith !== false;
+    }
     panes.export.append(grid(field('Size', sizeSel), field('Quality', qualSel)), exHint, row(exportBtn, cancelBtn), exProgress, exStatus,
+      h('Labels'), aiChk, aiLabelHint, madeChk, madeHint,
       h('Cover'), row(coverNow, coverThumb, coverFmt, coverBtn), openChk, openHint, h('Post it'), shareBox, batchBox, results);
 
     function bioLink() {
@@ -4280,11 +4611,11 @@
       const opening = await openingFor(X, w, hh);
       let r;
       if (hasVideo && webcodecs && A.__forceRecorder !== true) {
-        r = await A.encodeVideoFrames(framesOf(X, w, hh, D, signal, opening), { width: w, height: hh, fps: FPS, total: Math.round(D * FPS), audio, bitrate, onProgress, signal });
+        r = await A.encodeVideoFrames(framesOf(X, w, hh, D, signal, opening), { width: w, height: hh, fps: FPS, total: Math.round(D * FPS), audio, bitrate, onProgress, signal, metadata: aiMetadata(X) });
       } else {
         const live = hasVideo && !webcodecs;
         const render = (ctx, Wd, Ht, t) => { if (live) liveMedia(X, t); renderFrame(ctx, Wd, Ht, t, X); if (opening) opening(ctx, Wd, Ht, t); };
-        try { r = await A.encodeVideo(render, { width: w, height: hh, fps: FPS, duration: D, bitrate, audio, onProgress, signal }); }
+        try { r = await A.encodeVideo(render, { width: w, height: hh, fps: FPS, duration: D, bitrate, audio, onProgress, signal, metadata: aiMetadata(X) }); }
         finally { if (live) pauseAll(X); }
       }
       return { r, mix, D, w, h: hh };
@@ -4313,10 +4644,10 @@
         const slug = currentSlug();
         const name = 'reel-' + slug + '.' + r.ext;
         const took = (performance.now() - started) / 1000;
-        const label = (r.ext === 'mp4' ? (r.note || 'MP4').split(' — ')[0] : 'WebM recorded in real time') + ' · ' + D.toFixed(1) + ' s · ' + FPS + ' fps · ' + w + '×' + hh;
+        const label = (r.ext === 'mp4' ? (r.note || 'MP4').split(' — ')[0] : 'WebM recorded in real time') + ' · ' + D.toFixed(1) + ' s · ' + FPS + ' fps · ' + w + '×' + hh + (r.tagged ? ' · AI label in the file' : '');
         const rowEl = addResult(r.blob, name, label, 'video');
         A.download(r.blob, name);
-        S.lastExport = { seconds: took, D, name, size: r.blob.size };
+        S.lastExport = { seconds: took, D, name, size: r.blob.size, tagged: !!r.tagged };
         if (mix && !hasAudioNote(r)) {
           addResult(encodeWAV(mix), 'reel-' + slug + '-sound.wav', 'the mixed voice and music', 'audio');
           say('The clip was recorded as ' + (r.ext === 'mp4' ? 'MP4' : 'WebM') + ' without its sound; the sound is in the WAV beside it. Open this page in Chrome or Edge to get one MP4 with both.', 'warn');
@@ -4373,40 +4704,57 @@
       });
       return out;
     }
+    /**
+     * Make one reel per ticked tool, in one click. The button changes in the
+     * same tick as the click (disabled, "Making 2 reels…", a status line), the
+     * first tool's studio opens, and the run starts at once in Export with a
+     * progress bar and Cancel. (It used to read "Make 2 reels" with one tool
+     * ticked, stay disabled until two were, wait for the story files with no
+     * sign of life, then wait again for a second "Start" click in Export.)
+     */
     async function openBatch() {
+      if (S.job || S.batchBusy) return;
       const rows = [...S.picked.values()].slice(0, MAX_BATCH);
-      if (rows.length < 2) return;
+      if (!rows.length) return;
+      S.batchBusy = true;
+      batchBtn.disabled = true; batchBtn.textContent = 'Making ' + reelsWord(rows.length) + '…';
+      batchLine.textContent = 'Starting: writing the script for ' + rows[0].title + '…';
       S.batchRows = rows;
-      await usePromote(rows[0]);
-      batchBox.innerHTML = '';
-      const list = el('ol', 'reel-batch-list');
-      rows.forEach((r) => list.appendChild(el('li', null, r.title)));
-      const folderChk = check('reel-batch-folder', 'Save into a folder (asks once)', false); folderChk.hidden = !folderOk;
-      const capsChk = check('reel-batch-captions', 'Also save reel-captions.txt', true);
-      const bStatus = el('p', 'aiimg-status reel-batch-status'); bStatus.setAttribute('aria-live', 'polite');
-      bStatus.textContent = rows.length + ' tools. The look, brand, size and music you set apply to all; voice and pictures are not used in a batch.';
-      const startBtn = button('Start', 'btn-primary', () => runBatch(folderChk.input.checked, capsChk.input.checked, bStatus, startBtn));
-      const stopBtn = button('Cancel', 'btn-ghost', () => { if (S.job) S.job.abort(); else { batchBox.hidden = true; S.batchRows = null; } });
-      batchBox.append(h('Make ' + rows.length + ' reels'), list, folderChk, capsChk, row(startBtn, stopBtn), bStatus);
-      batchBox.hidden = false;
-      showPane('export');
-      batchBox.scrollIntoView && batchBox.scrollIntoView({ block: 'nearest' });
+      try {
+        /* the folder is asked for first, while the click still counts as the visitor's */
+        let dir = null;
+        if (batchFolder.input.checked && folderOk) {
+          try { dir = await window.showDirectoryPicker({ mode: 'readwrite' }); }
+          catch (e) { if (e && e.name === 'AbortError') { batchLine.textContent = 'No folder chosen, so nothing was made.'; return; } say('The folder could not be opened; the files will be downloaded instead.', 'warn'); dir = null; }
+        }
+        await usePromote(rows[0]);
+        batchBox.innerHTML = '';
+        const list = el('ol', 'reel-batch-list');
+        rows.forEach((r) => list.appendChild(el('li', null, r.title)));
+        const bStatus = el('p', 'aiimg-status reel-batch-status'); bStatus.setAttribute('aria-live', 'polite');
+        bStatus.textContent = 'Making ' + reelsWord(rows.length) + '. The look, brand, size and music you set apply to all; voice and pictures are not used in a batch.';
+        const stopBtn = button('Cancel', 'btn-ghost', () => { if (S.job) S.job.abort(); else { batchBox.hidden = true; S.batchRows = null; } });
+        stopBtn.id = 'reel-batch-cancel';
+        batchBox.append(h('Making ' + reelsWord(rows.length)), list, row(stopBtn), bStatus);
+        batchBox.hidden = false;
+        showPane('export');
+        batchBox.scrollIntoView && batchBox.scrollIntoView({ block: 'nearest' });
+        batchLine.textContent = '';
+        await runBatch(dir, batchCaps.input.checked, bStatus);
+      } finally {
+        S.batchBusy = false;
+        syncBatchBtn();
+      }
     }
     async function saveFile(blob, name, dir) {
       if (dir) { const fh = await dir.getFileHandle(name, { create: true }); const wr = await fh.createWritable(); await wr.write(blob); await wr.close(); }
       else A.download(blob, name);
     }
-    async function runBatch(useFolder, withCaptions, bStatus, startBtn) {
+    async function runBatch(dir, withCaptions, bStatus) {
       const rows = S.batchRows;
       if (!rows || S.job) return;
-      let dir = null;
-      if (useFolder && folderOk) {
-        try { dir = await window.showDirectoryPicker({ mode: 'readwrite' }); }
-        catch (e) { if (e && e.name === 'AbortError') return; say('The folder could not be opened; the files will be downloaded instead.', 'warn'); dir = null; }
-      }
       const job = S.job = new AbortController();
-      startBtn.disabled = true;
-      busyUI(true, 'Making ' + rows.length + ' reels');
+      busyUI(true, 'Making ' + reelsWord(rows.length));
       const n = rows.length;
       const texts = [];
       let done = 0;
@@ -4431,7 +4779,7 @@
           });
           const name = 'reel-' + f.slug + '.' + out.ext;
           await saveFile(out.blob, name, dir);
-          addResult(out.blob, name, (out.note || '').split(' — ')[0] + ' · ' + totalSeconds(X).toFixed(1) + ' s · ' + r.title, 'video');
+          addResult(out.blob, name, (out.note || '').split(' — ')[0] + ' · ' + totalSeconds(X).toFixed(1) + ' s · ' + r.title + (out.tagged ? ' · AI label in the file' : ''), 'video');
           const cover = await coverBlob(X, 'image/jpeg');
           await saveFile(cover, 'reel-' + f.slug + '-cover.jpg', dir);
           texts.push(r.title + '\n' + '-'.repeat(Math.min(60, r.title.length)) + '\n' + captionFor(X) + '\nMade free, on my device: ' + share.pageUrl() + '\n');
@@ -4445,13 +4793,12 @@
           rr.appendChild(el('pre', 'reel-captions-pre', texts.join('\n')));
           tail = ' and reel-captions.txt';
         }
-        bStatus.textContent = done + ' reels, ' + done + ' covers' + tail + ' ' + (dir ? 'saved to ' + dir.name : 'downloaded') + ' in ' + fmtSec((performance.now() - started) / 1000) + '.';
+        bStatus.textContent = reelsWord(done) + ', ' + done + ' cover' + (done === 1 ? '' : 's') + tail + ' ' + (dir ? 'saved to ' + dir.name : 'downloaded') + ' in ' + fmtSec((performance.now() - started) / 1000) + '.';
       } catch (e) {
         if (e && e.name === 'AbortError') bStatus.textContent = 'Cancelled after ' + done + ' reel' + (done === 1 ? '' : 's') + '; the finished files stay.';
         else { bStatus.textContent = 'The batch stopped at reel ' + (done + 1) + ' of ' + n + '.'; say((e && e.message) || String(e), 'error'); console.error(e); }
       } finally {
         if (job === S.job) S.job = null;
-        startBtn.disabled = false;
         busyUI(false);
         invalidate();
       }
@@ -4528,9 +4875,11 @@
       syncBatchBtn();
     }
     function syncBatchBtn() {
-      const n = S.picked.size;
-      batchBtn.textContent = 'Make ' + Math.max(2, n) + ' reels';
-      batchBtn.disabled = n < 2;
+      const n = Math.min(S.picked.size, MAX_BATCH);
+      if (S.batchBusy) return;
+      /* the number on the button is exactly how many reels a click makes */
+      batchBtn.textContent = n ? 'Make ' + reelsWord(n) : 'Make reels';
+      batchBtn.disabled = n === 0 || !!S.job;
       clearBtn.disabled = n === 0;
     }
     find.addEventListener('input', () => { active = -1; renderPicker(); });
@@ -4648,6 +4997,17 @@
 
   A.tools['reel-maker'] = {
     mount, buildScript, captionFor, mixAudio, sceneAt, scenesFromScript, tagsFor, qrUrlFor, encodeWAV, factsOf,
+    /** The voice-over: what a scene says (voOf), the suggestion (suggestedVO), and the screen-to-speech rules (toSpeech). */
+    voOf, suggestedVO, toSpeech,
+    /** The two marks: what they say, their colours, the metadata, and where they land on a W×H frame (rects drawn on a scratch canvas). */
+    aiLabelOf, madeWithOn, markColours, aiMetadata,
+    marks: (W, H, S) => {
+      S = S || CUR;
+      const x = document.createElement('canvas').getContext('2d');
+      const c = chromeOf(W, H, S), box = contentBox(W, H, S);
+      return { ai: drawAiLabel(x, W, H, S.look, S), credit: drawMadeWith(x, W, H, S.look, S), head: c.hasHead ? { y: c.headY, h: c.headH } : null,
+        box: { y: box.y, h: box.h }, bar: S.brand.progress ? { y: c.barY, h: c.barH } : null, foot: c.showFoot ? c.footY : null, top: c.sf.top * H, bottom: (1 - c.sf.bottom) * H };
+    },
     templates: TEMPLATES.map((t) => ({ id: t[0], label: t[1], about: t[2], script: t[3], types: TEMPLATE_TYPES[t[0]] })),
     palettes: PALETTES, types: TYPES, motions: MOTIONS, backgrounds: BGS, layouts: LAYOUTS, paletteAudit, chooseLook, pickLook, lookFrom, keyWordOf, contrast,
     overflow: () => OVER.slice(), clearOverflow: () => { OVER.length = 0; overSeen.clear(); MIN_PX = Infinity; }, minPx: () => MIN_PX,

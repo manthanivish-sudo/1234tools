@@ -3535,6 +3535,15 @@ html.is-embed .embed-credit { display: flex; justify-content: space-between; gap
 .reel-prompter[hidden] { display: none; }
 .reel-prompter li { font: 600 1.05rem/1.35 var(--font-head); color: var(--text-3); }
 .reel-prompter li.is-now { color: var(--text-1); }
+/* the voice-over script: one box per scene, the screen text small above it */
+.reel-vo { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 10px; }
+.reel-vo-item { display: grid; gap: 6px; padding: 10px; background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); min-width: 0; }
+.reel-vo-head { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+.reel-vo-ref { color: var(--text-3); font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; min-width: 0; }
+.reel-vo-text { font-size: 14px; line-height: 1.45; resize: vertical; }
+.reel .reel-vo-reset { justify-self: start; font-size: 12px; padding: 4px 10px; }
+.reel-scene-vo { font-size: 13px; color: var(--text-2); resize: vertical; }
+.reel-pron { font-family: var(--font-mono); font-size: 13px; }
 .reel-voice-info { margin-bottom: 8px; }
 .reel-voice-info[hidden], .reel-voice-ctl[hidden], .reel-music-ctl[hidden] { display: none; }
 .reel-file-name { flex: 1; min-width: 0; font-size: .85rem; color: var(--text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

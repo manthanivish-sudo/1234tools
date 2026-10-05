@@ -871,6 +871,117 @@
     };
   }
 
+  /* ------------------------------------------------------------------ */
+  /* metadata inside the MP4                                            */
+  /* ------------------------------------------------------------------ */
+  /* mp4-muxer has no metadata API, so the finished file gets its tags here:
+     a moov/udta/meta box (handler 'mdir') with an 'ilst' of iTunes-style
+     items — ©cmt (comment), ©too (encoding tool), desc (description) —
+     each a 'data' box of UTF-8 text (type 1). That is the layout ffmpeg,
+     QuickTime and ExifTool read and write. The box goes at the end of moov;
+     because the muxer puts moov before mdat ("fast start"), every chunk
+     offset in stco/co64 moves by the bytes added, and is fixed up here.
+     This is how the Reel Maker meets EU AI Act Article 50(2) for its
+     synthetic voice: "Providers of AI systems … generating synthetic audio,
+     image, video or text content, shall ensure that the outputs of the AI
+     system are marked in a machine-readable format and detectable as
+     artificially generated or manipulated" (applies from 2 August 2026;
+     https://artificialintelligenceact.eu/article/50/). It is a plain text
+     tag, not a signed C2PA manifest. */
+  const MP4_TAGS = { comment: '©cmt', tool: '©too', description: 'desc', title: '©nam' };
+  function mp4Box(type, ...parts) {
+    const body = parts.reduce((n, p) => n + p.length, 0);
+    const out = new Uint8Array(8 + body);
+    new DataView(out.buffer).setUint32(0, 8 + body);
+    for (let i = 0; i < 4; i++) out[4 + i] = type.charCodeAt(i) & 0xff;   /* ©: 0xA9 in Mac Roman, as the format has it */
+    let o = 8;
+    for (const p of parts) { out.set(p, o); o += p.length; }
+    return out;
+  }
+  function udtaFor(tags) {
+    const enc = new TextEncoder();
+    const items = [];
+    for (const k of Object.keys(MP4_TAGS)) {
+      if (!tags[k]) continue;
+      const head = new Uint8Array(8); new DataView(head.buffer).setUint32(0, 1);   /* type 1 = UTF-8; locale 0 */
+      items.push(mp4Box(MP4_TAGS[k], mp4Box('data', head, enc.encode(String(tags[k])))));
+    }
+    const hdlr = mp4Box('hdlr', new Uint8Array(8), enc.encode('mdir'), enc.encode('appl'), new Uint8Array(9));
+    return mp4Box('udta', mp4Box('meta', new Uint8Array(4), hdlr, mp4Box('ilst', ...items)));
+  }
+  /** Children of the box at [start, end) whose body starts at `start + skip`. */
+  function* mp4Children(dv, start, end) {
+    let p = start;
+    while (p + 8 <= end) {
+      let size = dv.getUint32(p), hdr = 8;
+      const type = String.fromCharCode(dv.getUint8(p + 4), dv.getUint8(p + 5), dv.getUint8(p + 6), dv.getUint8(p + 7));
+      if (size === 1) { size = Number(dv.getBigUint64(p + 8)); hdr = 16; } else if (size === 0) size = end - p;
+      if (size < hdr || p + size > end) return;
+      yield { type, start: p, end: p + size, body: p + hdr };
+      p += size;
+    }
+  }
+  function shiftChunkOffsets(dv, start, end, delta) {
+    for (const b of mp4Children(dv, start, end)) {
+      if (b.type === 'trak' || b.type === 'mdia' || b.type === 'minf' || b.type === 'stbl') shiftChunkOffsets(dv, b.body, b.end, delta);
+      else if (b.type === 'stco') { const n = dv.getUint32(b.body + 4); for (let i = 0; i < n; i++) { const at = b.body + 8 + i * 4; dv.setUint32(at, dv.getUint32(at) + delta); } }
+      else if (b.type === 'co64') { const n = dv.getUint32(b.body + 4); for (let i = 0; i < n; i++) { const at = b.body + 8 + i * 8; dv.setBigUint64(at, dv.getBigUint64(at) + BigInt(delta)); } }
+    }
+  }
+  /**
+   * Tag a finished (non-fragmented) MP4: buffer in, a new ArrayBuffer out with
+   * moov/udta/meta/ilst holding tags { comment, tool, description, title }.
+   * Throws when the file has no moov, already has a udta, or uses a 64-bit moov size.
+   */
+  function tagMP4(buffer, tags) {
+    const src = new Uint8Array(buffer);
+    const dv = new DataView(src.buffer, src.byteOffset, src.byteLength);
+    let moov = null, mdat = null;
+    for (const b of mp4Children(dv, 0, src.length)) {
+      if (b.type === 'moov' && !moov) moov = b;
+      if (b.type === 'mdat' && !mdat) mdat = b;
+      if (b.type === 'moof') throw new Error('fragmented MP4: not tagged');
+    }
+    if (!moov || moov.body !== moov.start + 8) throw new Error('no moov box to tag');
+    for (const b of mp4Children(dv, moov.body, moov.end)) if (b.type === 'udta') throw new Error('the MP4 already has user data');
+    const add = udtaFor(tags);
+    const out = new Uint8Array(src.length + add.length);
+    out.set(src.subarray(0, moov.end), 0);
+    out.set(add, moov.end);
+    out.set(src.subarray(moov.end), moov.end + add.length);
+    const odv = new DataView(out.buffer);
+    odv.setUint32(moov.start, moov.end - moov.start + add.length);
+    if (mdat && mdat.start > moov.start) shiftChunkOffsets(odv, moov.body, moov.end, add.length);
+    return out.buffer;
+  }
+  /** Read the ilst text items back: { '©cmt': '…', … } (for tests and checks). */
+  function readMP4Tags(buffer) {
+    const u = new Uint8Array(buffer);
+    const dv = new DataView(u.buffer, u.byteOffset, u.byteLength);
+    const out = {};
+    const dec = new TextDecoder();
+    const find = (start, end, path) => {
+      for (const b of mp4Children(dv, start, end)) {
+        if (b.type !== path[0]) continue;
+        if (path.length === 1) return b;
+        return find(b.type === 'meta' ? b.body + 4 : b.body, b.end, path.slice(1));
+      }
+      return null;
+    };
+    const ilst = find(0, u.length, ['moov', 'udta', 'meta', 'ilst']);
+    if (!ilst) return null;
+    for (const it of mp4Children(dv, ilst.body, ilst.end)) {
+      for (const d of mp4Children(dv, it.body, it.end)) if (d.type === 'data') out[it.type.replace('©', '©')] = dec.decode(u.subarray(d.body + 8, d.end));
+    }
+    return out;
+  }
+  /** Tag a muxed MP4 when o.metadata asks; a file that cannot be tagged is returned as it was, with tagged: false. */
+  function withTags(buf, o) {
+    if (!o || !o.metadata) return { buffer: buf, tagged: false };
+    try { return { buffer: tagMP4(buf, o.metadata), tagged: true }; }
+    catch (e) { console.warn('MP4 metadata not written: ' + (e && e.message)); return { buffer: buf, tagged: false }; }
+  }
+
   /* Which audio codec this browser can encode into an MP4: AAC where the
      platform has an encoder (Chrome and Edge on Windows and macOS, Safari),
      else Opus, which the boxer writes and Chrome, Firefox and Safari 17+
@@ -1029,7 +1140,9 @@
       }
     })();
     const r = await muxFrames(frames, { width: w, height: h, fps, total, onProgress: o.onProgress, signal: o.signal, audio: o.audio, bitrate: o.bitrate });
-    return r ? { blob: new Blob([r.buffer], { type: 'video/mp4' }), audio: r.audio } : null;
+    if (!r) return null;
+    const t = withTags(r.buffer, o);
+    return { blob: new Blob([t.buffer], { type: 'video/mp4' }), audio: r.audio, tagged: t.tagged };
   }
   /** An H.264 MP4 Blob of the rendered clip, or null where the browser cannot encode one. */
   async function encodeMP4(render, o) {
@@ -1057,8 +1170,9 @@
     o = o || {};
     const r = await muxFrames(frames, o);
     if (!r) throw new Error('This browser cannot encode H.264 video on the device. Chrome, Edge or Safari 16.4+ can.');
-    return { blob: new Blob([r.buffer], { type: 'video/mp4' }), ext: 'mp4', note: 'H.264 MP4' + audioNote(r.audio, !!(o.audio && o.audio.buffer)),
-      frames: r.frames, width: r.width, height: r.height, audio: r.audio };
+    const t = withTags(r.buffer, o);
+    return { blob: new Blob([t.buffer], { type: 'video/mp4' }), ext: 'mp4', note: 'H.264 MP4' + audioNote(r.audio, !!(o.audio && o.audio.buffer)),
+      frames: r.frames, width: r.width, height: r.height, audio: r.audio, tagged: t.tagged };
   }
 
   /* Where WebCodecs is missing (Firefox), MediaRecorder captures the canvas
@@ -1109,7 +1223,8 @@
     let mp4 = null;
     try { mp4 = await encodeMP4Full(render, o); }
     catch (e) { if (e && e.name === 'AbortError') throw e; mp4 = null; }
-    if (mp4 && mp4.blob) return { blob: mp4.blob, ext: 'mp4', note: 'H.264 MP4' + audioNote(mp4.audio, !!(o.audio && o.audio.buffer)) };
+    if (mp4 && mp4.blob) return { blob: mp4.blob, ext: 'mp4', note: 'H.264 MP4' + audioNote(mp4.audio, !!(o.audio && o.audio.buffer)), tagged: !!mp4.tagged };
+    /* a clip recorded in real time (MediaRecorder: fragmented MP4 or WebM) is not tagged: the visible label is all it carries */
     let blob = await encodeRecorded(render, o);
     if (!blob) throw new Error('This browser cannot encode video on the device. Chrome, Edge or Safari 16.4+ can; or export a GIF instead.');
     const isMp4 = blob.type === 'video/mp4';
@@ -1123,7 +1238,7 @@
     loadImageFile, runtime, fetchModel, loadSession, segment, segmenter, prettyName,
     guideOf, refine, maskCanvas, cutOut,
     fontString, ensureFont, layout, motion, drawText, textBox, pointInBox,
-    exportStill, encodeGIF, encodeMP4, encodeVideo, encodeVideoFrames,
+    exportStill, encodeGIF, encodeMP4, encodeVideo, encodeVideoFrames, tagMP4, readMP4Tags,
     MAX_WORK, MODEL_URL, ORT_DIR
   });
 

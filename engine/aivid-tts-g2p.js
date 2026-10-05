@@ -70,11 +70,27 @@
   /* always spelt out, even where a lower-case word exists (SIP is not "sip", US is not "us") */
   const ACRONYMS = new Set(('GST CGST SGST IGST UTGST GSTIN TDS TCS PDF CSV QR UPI EMI SIP PPF EPF NPS HRA CTC ITR HSN SAC IFSC KYC OTP ' +
     'FD RD ROI SEO API URL PNG JPG SVG GIF MP3 MP4 HTML CSS XML SQL SHA NPV IRR CAGR BMI GPA CGPA VAT PAYE NI HMRC UK US USA EU ' +
-    'UAE CA CS CFO CEO HR FAQ SMS PC TV ID DIY CV EPS ESI UAN MRP LLP GPS AI ATM EV').split(' '));
+    'UAE CA CS CFO CEO HR FAQ SMS PC TV ID DIY CV EPS ESI UAN MRP LLP GPS AI ATM EV QR UTM').split(' '));
   /* text read as other text before anything else */
+  const MONTHS = 'January|February|March|April|May|June|July|August|September|October|November|December';
+  const MONTH_LIST = MONTHS.split('|');
+  const dayWords = (d) => 'the ' + ordinal(Number(d)) + ' of ';
   const ALIASES = [
-    [/\b1234tools\.com\b/gi, 'one two three four tools dot com'],
-    [/\b1234 ?tools\b/gi, 'one two three four tools'],
+    /* the site's own name, as the owner says it */
+    [/\b1234tools\.com\b/gi, 'twelve thirty-four tools dot com'],
+    [/\b1234 ?tools\b/gi, 'twelve thirty-four tools'],
+    [/\bwi-?fi\b/gi, 'wifi'],
+    /* "1,250.50 pounds" as a voice-over writes money: back to £1,250.50 so pence and paise are said as such */
+    [/(\d[\d,]*(?:\.\d+)?)(\s?(?:lakh|crore|k|million|billion))?\s(rupees|pounds|dollars|euros)\b/gi, (m, n, sc, cur) => ({ rupees: '₹', pounds: '£', dollars: '$', euros: '€' })[cur.toLowerCase()] + n + (sc ? sc.trim() : '')],
+    /* dates, British order: 4 October 2026, 4th October, 04/10/2026; October 4 */
+    [/\b(\d{1,2})\/(\d{1,2})\/((?:19|20)\d\d)\b/g, (m, d, mo, y) => (Number(mo) >= 1 && Number(mo) <= 12 && Number(d) >= 1 && Number(d) <= 31 ? dayWords(d) + MONTH_LIST[Number(mo) - 1] + ' ' + y : m)],
+    [new RegExp('\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(' + MONTHS + ')\\b', 'g'), (m, d, mo) => dayWords(d) + mo],
+    [new RegExp('\\b(' + MONTHS + ')\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b(?![\\d,]*\\d{3})', 'g'), (m, mo, d) => mo + ' ' + dayWords(d).replace(/ of $/, '')],
+    /* units after a number */
+    [/(\d)\s?km\/h\b/gi, '$1 kilometres an hour'], [/(\d)\s?kmph\b/gi, '$1 kilometres an hour'],
+    [/(\d)\s?cm\b/g, '$1 centimetres'], [/(\d)\s?mm\b/g, '$1 millimetres'], [/(\d)\s?ml\b/g, '$1 millilitres'],
+    [/\bkcal\b/g, 'kilocalories'], [/±\s?/g, 'plus or minus '],
+    [/(\d)\s?kg\b/g, '$1 kilograms'], [/(\d)\s?km\b/g, '$1 kilometres'], [/(\d)\s?g\b(?!\w)/g, '$1 grams'],
     [/\be\.g\.(?=\s|$)/gi, 'for example'], [/\bi\.e\.(?=\s|$)/gi, 'that is'],
     [/\betc\.(?=\s|$)/gi, 'etcetera'], [/\bvs\.?(?=\s)/gi, 'versus'],
     [/\b(?:Rs\.?|INR)\s?(?=\d)/g, '₹'], [/\bw\/(?=\s)/gi, 'with'],
@@ -85,6 +101,7 @@
   ];
   /* pronounced from this table, in American then British phonemes */
   const CUSTOM = {
+    wifi: ['wˈIfˌI', 'wˈIfI'],
     challan: ['ʧˈɑlən', 'ʧˈʌlən'], challans: ['ʧˈɑlənz', 'ʧˈʌlənz'],
     whatsapp: ['wˈʌtsˌæp', 'wˈɒtsap'], tiktok: ['tˈɪktˌɑk', 'tˈɪktɒk'], aadhaar: ['ˈɑdɑɹ', 'ˈɑːdɑː'], aadhar: ['ˈɑdɑɹ', 'ˈɑːdɑː'],
     json: ['ʤˈAsən', 'ʤˈAsən'], gstr: ['ʤˌiˌɛstˌiˈɑɹ', 'ʤˌiːˌɛstˌiːˈɑː'], tally: ['tˈæli', 'tˈali'], zerodha: ['zəɹˈOdə', 'zəɹˈQdə'],

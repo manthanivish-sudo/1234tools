@@ -31,10 +31,10 @@ const COLLECTIONS = [
     slug: 'creators', kind: 'role', glyph: 'i-ai-captions',
     name: 'Creators and influencers',
     title: 'Free tools for creators and influencers',
-    lede: 'Captions, thumbnails, cut-outs, hooks and the brand-deal paperwork, for Instagram, YouTube, TikTok and podcasts. No watermark, no app, no upload.',
+    lede: 'Captions, thumbnails, cut-outs, hooks and the brand-deal paperwork, for Instagram, YouTube, TikTok and podcasts. No forced watermark, no app, no upload.',
     intro: [
       'Most of the work behind a post is not the idea. It is the captions that take an hour by hand, the thumbnail that needs the face cut out and the background punched up, the same photo at four sizes for four apps, and the invoice for the brand that finally paid. The apps that do it want a subscription, put a watermark on the free version, or want your video on their server first.',
-      'These run in your browser. The AI models for captions, cut-outs, upscaling and the rest are downloaded once and run on your own device, so an unreleased video or a client’s product shot never leaves it, and nothing you export carries a watermark. The writing tools for hooks, scripts and titles are the exception: they send what you type to a language model, say so on the page, and give you ten free a month.'
+      'These run in your browser. The AI models for captions, cut-outs, upscaling and the rest are downloaded once and run on your own device, so an unreleased video or a client’s product shot never leaves it, and nothing you export carries a watermark you cannot switch off. The writing tools for hooks, scripts and titles are the exception: they send what you type to a language model, say so on the page, and give you ten free a month.'
     ],
     groups: [
       { name: 'Video', blurb: 'Reels from a script, captions burned in word by word, and clips made out of stills.', tools: ['/ai-video/reel-maker/', '/ai-video/auto-captions/', '/ai-image/3d-photo-parallax/', '/ai-image/text-behind-image/', '/ai-image/face-blur/'] },
@@ -44,7 +44,7 @@ const COLLECTIONS = [
       { name: 'The business of it', blurb: 'Brand deals, invoices in another currency, and the tax on what came in.', tools: ['/pdf/invoice-pdf/', '/pdf/quotation-pdf/', '/ai/contract-generator/', '/business/currency-converter/', '/qr/qr-code-generator/', '/india/india-income-tax/', '/business/uk-take-home-pay/'] }
     ],
     faq: [
-      { q: 'Is there really no watermark?', a: 'None, on anything. The captioned video, the thumbnail, the cut-out and the clip are drawn and encoded by your own browser, and nothing we make adds a mark. There is an optional small “1234tools.com” credit you can switch on in the video tools if you want to; it is off unless you turn it on.' },
+      { q: 'Is there really no watermark?', a: 'None is forced on anything. The captioned video, the thumbnail, the cut-out and the clip are drawn and encoded by your own browser. The one mark on by default is a small “Made with 1234Tools.com” line at the bottom of a Reel Maker reel, and it switches off in Export. A reel whose voice is generated also says “AI voice” at the top, because synthetic voices are expected to be labelled.' },
       { q: 'Do my videos get uploaded?', a: 'No. Auto Captions downloads a 41 MB speech model into your browser once and transcribes on your device; the image tools do the same with their own models. Your clip is decoded, captioned and re-encoded on your own machine. The AI writing tools are different and say so on their pages: they send the text you type to a language model.' },
       { q: 'Will it work on my phone?', a: 'Yes, in current Chrome and Safari. Phones are slower than laptops at the AI steps, so the pages warn you before a long job; a one-minute clip is comfortable on a recent phone, ten minutes is a laptop job.' },
       { q: 'Can I use what I make commercially?', a: 'Yes. The output is yours, sponsored posts and client work included. The models are under licences that allow commercial use, and each tool’s page names its licence.' }

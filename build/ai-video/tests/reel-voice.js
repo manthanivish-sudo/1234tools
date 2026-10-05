@@ -216,6 +216,70 @@ const { serve } = require('../../tests/serve.js');
     check(/\bGST\b|G\.?\s?S\.?\s?T/i.test(story.heard), 'the acronym GST is heard as G-S-T');
     fs.writeFileSync(path.join(OUT, 'story.json'), JSON.stringify(Object.assign(story, { recall: rec }), null, 1));
 
+    /* ---- 7c. the words people asked about, said and heard back ---- */
+    const PRON = [
+      ['Connect to the Wi-Fi in the lobby.', /wi-?\s?fi/i, 'Wi-Fi'],
+      ['Save the photo as a JPEG.', /jpe?g|jay\s?peg/i, 'JPEG'],
+      ['Paste the JSON here.', /json|jason/i, 'JSON'],
+      ['Made with 1234Tools, for free.', /1234|12\s?34|twelve[ -]thirty|1,234/i, '1234Tools'],
+      ['Check your GST before you file.', /\bGST\b|G\.?\s?S\.?\s?T\b/i, 'GST'],
+      ['The flat costs ₹1,50,000 a year.', /lakh|lac\b|lak\b|lock|150,?000|1,50,000|1\.5/i, '₹1,50,000']
+    ];
+    const pron = await page.evaluate(async (lines) => {
+      const out = [];
+      for (const t of lines) {
+        const r = await AIVidTTS.speak(t, { voice: 'af_heart' });
+        const ab = new AudioBuffer({ length: r.samples.length, numberOfChannels: 1, sampleRate: r.sampleRate }); ab.copyToChannel(r.samples, 0);
+        const w = await AIVidWhisper.transcribe(await AIVidWhisper.toMono16k(ab), {});
+        out.push({ text: t, phonemes: r.phonemes, heard: w.segments.map((s) => s.text).join(' ').trim() });
+      }
+      return out;
+    }, PRON.map((p) => p[0]));
+    pron.forEach((p, i) => check(PRON[i][1].test(p.heard), PRON[i][2] + ' is said so Whisper hears it: "' + p.heard + '" (' + p.phonemes + ')'));
+    fs.writeFileSync(path.join(OUT, 'pronunciation.json'), JSON.stringify(pron, null, 1));
+
+    /* ---- 7d. Generate voice reads the voice-over script only, captions follow it, a pronunciation override applies ---- */
+    const SCREEN = 'Join our Wi-Fi: WIFI:T:WPA;S:Harbour Cafe;P:flatwhite2026;;\nMenu at https://example.com/menu today.\nTwelve tables, one code.';
+    await page.evaluate(() => { for (const b of document.querySelectorAll('.aiimg-transport button')) if (/^Start over$/.test(b.textContent.trim())) { b.click(); break; } });
+    await page.$eval('#reel-script', (t, s) => { t.value = s; t.dispatchEvent(new Event('input', { bubbles: true })); }, SCREEN);
+    await page.evaluate(() => { for (const b of document.querySelectorAll('.reel-start button')) if (/^Make my reel$/.test(b.textContent.trim())) { b.click(); break; } });
+    await page.waitForFunction(() => document.querySelectorAll('#reel-vo .reel-vo-text').length >= 3, { timeout: 30000 });
+    await page.click('.aiimg-side .aiimg-tabs [data-pane=sound]');
+    const sugg = await page.$$eval('#reel-vo .reel-vo-text', (t) => t.map((x) => x.value));
+    console.log('  suggested voice-over: ' + JSON.stringify(sugg));
+    check(!/WIFI:|flatwhite|https|example/.test(sugg.join(' ')) && /Wi-Fi/.test(sugg[0]) && /link in our bio/.test(sugg[1]), 'the suggested voice-over leaves out the Wi-Fi payload and the URL');
+    const CUSTOM = 'Welcome to Harbour. Scan the code and you are online.';
+    await page.evaluate((c) => {
+      const boxes = document.querySelectorAll('#reel-vo .reel-vo-text');
+      const set = (ta, v) => { ta.value = v; ta.dispatchEvent(new Event('input', { bubbles: true })); };
+      set(boxes[0], c); set(boxes[1], '');
+      const pb = document.querySelector('#reel-pron'); pb.value = 'Harbour = Zanzibar'; pb.dispatchEvent(new Event('input', { bubbles: true }));
+    }, CUSTOM);
+    await page.click('#reel-tts-generate');
+    await waitStatus(/^Generated:|could not/);
+    const vd = await page.evaluate(async () => {
+      const S = AIImg.tools['reel-maker'].state();
+      const w = await AIVidWhisper.transcribe(S.voice.samples, {});
+      let stored = null; try { stored = localStorage.getItem('reel-maker-pronunciation'); } catch (e) { /* */ }
+      /* sound in each scene's stretch of the voice track (voice time = reel time − offset) */
+      const sm = S.voice.samples, o = S.voice.offset;
+      let st = 0;
+      const rms = S.scenes.map((x) => { const a = Math.max(0, Math.round((st - o + 0.1) * 16000)), b = Math.min(sm.length, Math.round((st + x.seconds - o - 0.1) * 16000)); st += x.seconds; let s2 = 0; for (let i = a; i < b; i++) s2 += sm[i] * sm[i]; return b > a ? Math.sqrt(s2 / (b - a)) : 0; });
+      return { plan: S.voice.plan, ids: S.scenes.map((x) => x.id), secs: S.scenes.map((x) => x.seconds), base: S.scenes.map((x) => x.base), rms,
+        caps: S.captions.segments.map((s) => s.text), heard: w.segments.map((s) => s.text).join(' '), stored };
+    });
+    console.log('  voice-over reel: captions ' + JSON.stringify(vd.caps) + ' | heard "' + vd.heard + '"');
+    check(vd.plan[vd.ids[0]] !== undefined && vd.plan[vd.ids[1]] === undefined, 'only scenes with a voice-over line are spoken; the emptied scene is silent');
+    check(Math.abs(vd.secs[1] - vd.base[1]) < 1e-9, 'the silent scene keeps its own length (' + vd.secs[1] + ' s)');
+    check(vd.rms[0] > 0.02 && vd.rms[1] < 0.002 && vd.rms[2] > 0.02, 'sound in scenes 1 and 3, silence in scene 2 (RMS ' + vd.rms.map((x) => x.toFixed(4)).join(', ') + ')');
+    check(vd.caps.join(' ') === CUSTOM + ' ' + sugg[2], 'the captions are the voice-over lines as written (' + JSON.stringify(vd.caps) + ')');
+    check(/zanz[ai]bar/i.test(vd.heard) && !/harbour|harbor/i.test(vd.heard), 'the pronunciation override "Harbour = Zanzibar" is what the voice says ("' + vd.heard + '")');
+    /* Whisper tiny may drop a line that follows a long silence, so the third scene is proved by its sound above, not its words */
+    check(!/menu|example|flatwhite|bio/i.test(vd.heard) && /online/i.test(vd.heard), 'the voice says the voice-over, not the screen text');
+    check(vd.stored === 'Harbour = Zanzibar', 'the pronunciation list is kept in this browser');
+    const prom = await page.$$eval('.reel-prompter li', (l) => l.map((x) => x.textContent));
+    check(prom.length === 0 || prom[0] === CUSTOM, 'the teleprompter lists the voice-over lines');
+
     /* ---- 8. disclosure ---- */
     await page.click('.aiimg-side .aiimg-tabs [data-pane=export]');
     await new Promise((r) => setTimeout(r, 300));
@@ -223,8 +287,49 @@ const { serve } = require('../../tests/serve.js');
     const hintShown = await page.$eval('#reel-ai-hint', (e) => !e.hidden && /AI info/.test(e.textContent));
     check(/AI-generated voice/.test(cap) && /#\w+/.test(cap.split('\n').pop()), 'the post caption says the voice is AI-generated and still ends with the hashtags');
     check(hintShown, 'the labelling hint shows in Export');
+
+    /* ---- 8b. the AI label: on and locked with a generated voice, drawn in the frames and written into the MP4 ---- */
+    const lock = await page.evaluate(() => { const c = document.querySelector('#reel-ai-label'); return { checked: c.checked, disabled: c.disabled, label: AIImg.tools['reel-maker'].aiLabelOf(AIImg.tools['reel-maker'].state()) }; });
+    check(lock.checked && lock.disabled && lock.label === 'AI voice', 'with a generated voice the AI label is on and cannot be switched off, and reads “AI voice”');
+    await (await page.target().createCDPSession()).send('Page.setDownloadBehavior', { behavior: 'deny' });
+    await page.click('#reel-export');
+    await page.waitForFunction(() => document.querySelectorAll('.aiimg-result video').length > 0 || /failed|Cancelled/.test((document.querySelector('.reel-exstatus') || {}).textContent || ''), { timeout: 600000, polling: 300 });
+    const vsrc = await page.$eval('.aiimg-result video', (v) => v.src);
+    const vm = await page.evaluate(async (src) => {
+      const T = AIImg.tools['reel-maker']; const S = T.state();
+      const buf = await (await fetch(src)).arrayBuffer();
+      const tags = AIImg.readMP4Tags(buf);
+      const v = document.createElement('video'); v.muted = true; v.src = src;
+      await new Promise((r) => { v.onloadeddata = r; setTimeout(r, 8000); });
+      const t = Math.min(2.0, v.duration / 2);
+      await new Promise((r) => { v.onseeked = () => setTimeout(r, 250); v.currentTime = t; setTimeout(r, 8000); });
+      const W = v.videoWidth, H = v.videoHeight;
+      const grab = (draw) => { const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, W, H); draw(x); return x; };
+      const fr = grab((x) => x.drawImage(v, 0, 0, W, H));
+      const off = Object.assign({}, S, { voice: null, brand: Object.assign({}, S.brand, { aiLabel: false }) });
+      const r = T.marks(W, H, S).ai, rc = T.marks(W, H, S).credit;
+      const mad = (a, b, q) => { const x0 = Math.floor(q.x), y0 = Math.floor(q.y), w = Math.ceil(q.w), h = Math.ceil(q.h); const d1 = a.getImageData(x0, y0, w, h).data, d2 = b.getImageData(x0, y0, w, h).data; let s = 0; for (let i = 0; i < d1.length; i += 4) s += (Math.abs(d1[i] - d2[i]) + Math.abs(d1[i + 1] - d2[i + 1]) + Math.abs(d1[i + 2] - d2[i + 2])) / 3; return s / (d1.length / 4); };
+      const on = grab((x) => T.renderFrame(x, W, H, t, S)), noLabel = grab((x) => T.renderFrame(x, W, H, t, off));
+      const noCredit = grab((x) => T.renderFrame(x, W, H, t, Object.assign({}, S, { brand: Object.assign({}, S.brand, { madeWith: false }) })));
+      return { tags, duration: v.duration, D: S.scenes.reduce((s, x) => s + x.seconds, 0), W, H, ai: { as: mad(fr, on, r), flip: mad(fr, noLabel, r) }, credit: { as: mad(fr, on, rc), flip: mad(fr, noCredit, rc) }, png: fr.canvas.toDataURL('image/png') };
+    }, vsrc);
+    fs.writeFileSync(path.join(OUT, 'marks-frame-1080x1920.png'), Buffer.from(vm.png.split(',')[1], 'base64'));
+    fs.writeFileSync(path.join(OUT, 'mp4-tags.json'), JSON.stringify(vm.tags, null, 1));
+    console.log('  MP4 metadata read back: ' + JSON.stringify(vm.tags));
+    check(vm.W === 1080 && vm.H === 1920 && vm.ai.as < vm.ai.flip * 0.5, 'the exported 1080×1920 frames carry the “AI voice” label (as/flip ' + vm.ai.as.toFixed(1) + '/' + vm.ai.flip.toFixed(1) + ')');
+    check(vm.credit.as < vm.credit.flip * 0.5, 'and “Made with 1234Tools.com” (as/flip ' + vm.credit.as.toFixed(1) + '/' + vm.credit.flip.toFixed(1) + ')');
+    check(!!vm.tags && /Contains AI-generated audio \(synthetic voice, Kokoro-82M\)/.test(vm.tags['©cmt'] || '') && /https:\/\/www\.1234tools\.com\/ai-video\/reel-maker\//.test(vm.tags.desc || '') && /1234Tools Reel Maker/.test(vm.tags['©too'] || ''), 'the MP4 carries ©cmt, desc and ©too saying the audio is AI-generated');
+    check(Math.abs(vm.duration - vm.D) <= 0.5, 'the tagged MP4 plays to its full length (' + vm.duration.toFixed(2) + ' s of ' + vm.D.toFixed(2) + ')');
+    /* removing the generated voice frees the switch and takes the label away */
+    await page.click('.aiimg-side .aiimg-tabs [data-pane=sound]');
+    await page.evaluate(() => { for (const b of document.querySelectorAll('.reel-voice-info button')) if (/^Remove$/.test(b.textContent.trim())) { b.click(); break; } });
+    const unlock = await page.evaluate(() => { const c = document.querySelector('#reel-ai-label'); return { checked: c.checked, disabled: c.disabled, label: AIImg.tools['reel-maker'].aiLabelOf(AIImg.tools['reel-maker'].state()) }; });
+    check(!unlock.checked && !unlock.disabled && unlock.label === '', 'without the generated voice the label goes and the switch is free again');
+    await page.click('.aiimg-side .aiimg-tabs [data-pane=export]');
     await page.screenshot({ path: path.join(OUT, 'export.png') });
     await page.click('.aiimg-side .aiimg-tabs [data-pane=sound]');
+    await page.evaluate(() => document.querySelector('#reel-vo').scrollIntoView({ block: 'start' }));
+    await page.screenshot({ path: path.join(OUT, 'voice-over.png') });
     await page.evaluate(() => document.querySelector('#reel-tts-voice').scrollIntoView({ block: 'start' }));
     await page.screenshot({ path: path.join(OUT, 'sound.png') });
     await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });

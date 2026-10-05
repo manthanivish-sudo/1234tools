@@ -2,7 +2,7 @@
   "id": "/ai-video/reel-maker/",
   "name": "Reel Maker — 1234Tools",
   "short_name": "Reel Maker",
-  "description": "Turn a script into a 9:16 Reel in your browser: animated text scenes, screenshots or screen recording, your voice or a generated one, music and auto-captions. MP4 with sound, no upload, no watermark, no account.",
+  "description": "Turn a script into a 9:16 Reel in your browser: animated text scenes, screenshots or screen recording, your voice or a generated one, music and auto-captions. MP4 with sound, no upload, no account, no forced watermark.",
   "start_url": "/ai-video/reel-maker/?src=pwa",
   "scope": "/ai-video/reel-maker/",
   "display": "standalone",

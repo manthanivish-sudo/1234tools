@@ -132,7 +132,9 @@
     ctx.font = fontFor(st, px);
     const lineH = px * 1.22;
     const blockH = lineH * lines.length;
-    const cy = st.position === 'top' ? H * (portrait ? 0.16 : 0.13) : st.position === 'middle' ? H * 0.5 : H * (portrait ? 0.78 : 0.86);
+    let cy = st.position === 'top' ? H * (portrait ? 0.16 : 0.13) : st.position === 'middle' ? H * 0.5 : H * (portrait ? 0.78 : 0.86);
+    /* a caller may reserve the strip below the captions (the Reel Maker's credit line): the block's bottom, outline included, stays above maxBottom */
+    if (st.maxBottom && st.position !== 'top' && st.position !== 'middle') cy = Math.min(cy, st.maxBottom - blockH / 2 - px * 0.3);
     const y0 = cy - blockH / 2 + lineH / 2;
     const strokeW = px * (st.preset === 'outline' ? 0.17 : st.preset === 'minimal' ? 0 : 0.11);
     lines.forEach((line, li) => {

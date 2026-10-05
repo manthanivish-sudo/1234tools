@@ -840,10 +840,16 @@
   $('#cov-days').addEventListener('change', loadCoverage);
 
   /* Today: the video slots of the day and the channels still missing. */
+  let todaySeq = 0;
   async function loadTodayVideos() {
-    const box = clear($('#plan-cal'));
+    /* two quick calls (opening the tab, then a refresh) must not leave the
+       box half-drawn: only the latest call may draw it */
+    const seq = ++todaySeq;
+    clear($('#plan-cal'));   /* never show the last visit's list while the new one loads */
     let c;
     try { c = await api('/api/calendar/coverage?days=1'); } catch (e) { return; }
+    if (seq !== todaySeq) return;
+    const box = clear($('#plan-cal'));
     if (!c.todaySlots.length) return;
     const card = h('div', { class: 'card today-videos' }, h('h3', { class: 'cal-title', text: 'Today\'s videos' }));
     for (const s of c.todaySlots) {

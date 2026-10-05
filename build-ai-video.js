@@ -178,13 +178,13 @@ function hubPage(parts, all) {
   const sec = SECTIONS['/' + SECTION + '/'];
   const n = all.length;
   const title = 'AI Video Tools — Free, Private, Run in Your Browser | 1234Tools';
-  const description = 'Free AI video tools that run on your own device: a reel maker that turns a script into a 9:16 MP4 with text, your voice or a generated one, music and captions, and automatic word-by-word captions with SRT and VTT. No upload, no account, no watermark.';
+  const description = 'Free AI video tools that run on your own device: a reel maker that turns a script into a 9:16 MP4 with text, your voice or a generated one, music and captions, and automatic word-by-word captions with SRT and VTT. No upload, no account, no forced watermark.';
   const cards = all.map((t) => '<a class="card" href="/' + SECTION + '/' + t.slug + '/"><span class="card-icon">' + icon(t.spec.glyph) + '</span><strong>' + esc(t.spec.title) + '</strong><span class="card-desc">' + esc(t.spec.description) + '</span></a>').join('');
   const body =
     crumbs.render([], sec.hub || sec.name) + '\n' +
     '<p class="eyebrow">' + esc(sec.name) + '</p>\n' +
     '<h1>' + icon('i-ai-video', 'ico ico-title') + esc(sec.name) + '</h1>\n' +
-    '<p class="lede">Video making and editing that happens on your own device: turn a script into a Reel, or caption a clip with a speech model that is downloaded into your browser once. Your video never leaves it. ' + n + ' tool' + (n === 1 ? '' : 's') + ' so far, free, with no account and no watermark.</p>\n' +
+    '<p class="lede">Video making and editing that happens on your own device: turn a script into a Reel, or caption a clip with a speech model that is downloaded into your browser once. Your video never leaves it. ' + n + ' tool' + (n === 1 ? '' : 's') + ' so far, free, with no account and no forced watermark.</p>\n' +
     '<div class="grid">' + cards + '</div>\n' +
     '<section class="panel ai-how"><h2>How these differ from the AI for Business tools</h2>' +
     '<p>The <a href="/ai/">AI for Business</a> tools send your text to a language model on a server, say so on every page, and count calls against a monthly allowance. These do not. The models here are small enough to run inside a browser — the speech recogniser is 41 MB, the voice that reads a script aloud 92 MB — so they are served from this site, kept by your browser after the first visit, and run on your own processor through WebAssembly. The video is decoded, redrawn and re-encoded by the browser’s own media engine. No third-party server is contacted.</p>' +
@@ -199,7 +199,7 @@ function hubPage(parts, all) {
     '<details><summary>Is anything uploaded?</summary><p>No. Two downloads happen on first use — the model and the runtime, both from this site — and your browser keeps both. Your video is opened, transcribed, drawn and re-encoded on your device. We never receive it and could not look at it if we wanted to.</p></details>' +
     '<details><summary>Why is the first run slow?</summary><p>The model has to be downloaded once and the runtime warmed up. After that both come from your browser’s cache, and the time that remains is the work itself: speech recognition at about real time on a laptop, and re-encoding the frames.</p></details>' +
     '<details><summary>Which browsers work?</summary><p>Current Chrome, Edge, Safari and Firefox, on desktop and on phones. MP4 export uses on-device video encoding, which Firefox does not yet provide; there a clip is saved as WebM instead, with its sound.</p></details>' +
-    '<details><summary>Can I use the results commercially?</summary><p>Yes. The output is yours. The speech recogniser is OpenAI’s Whisper, published under the MIT licence; the generated voices are Kokoro-82M’s, published by hexgrad under the Apache-2.0 licence, with pronunciation dictionaries from misaki (Apache-2.0); and nothing we make adds a watermark or a credit. A generated voice is synthetic: some platforms ask you to label realistic AI-generated audio when you post, and the Reel Maker’s caption says so for you.</p></details></section>\n';
+    '<details><summary>Can I use the results commercially?</summary><p>Yes. The output is yours. The speech recogniser is OpenAI’s Whisper, published under the MIT licence; the generated voices are Kokoro-82M’s, published by hexgrad under the Apache-2.0 licence, with pronunciation dictionaries from misaki (Apache-2.0); and no watermark is forced on you: the Reel Maker’s small “Made with 1234Tools.com” line switches off in Export, and Auto Captions adds nothing. A generated voice is synthetic, so a reel that uses one is labelled “AI voice” on screen and in the file’s metadata; some platforms also ask you to label realistic AI-generated audio when you post, and the Reel Maker’s caption says so for you.</p></details></section>\n';
   const ld = '<script type="application/ld+json">' + JSON.stringify({
     '@context': 'https://schema.org',
     '@graph': [

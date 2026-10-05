@@ -120,6 +120,39 @@ async function probe(page, src, fractions, band) {
     return { type: b.type, size: b.size, b64: btoa(bin), duration, width: v.videoWidth, height: v.videoHeight, frames };
   }, src, fractions, band || null);
 }
+/*
+ * In the page: does an exported video show each mark as the state says? At time t the
+ * frame is compared, inside the mark's rectangle, with the page's own render of the
+ * state (as) and of the state with that mark flipped (flip): the mark is as it should
+ * be when `as` is well under `flip`. Also reads the MP4's metadata back.
+ */
+const marksInVideo = (page, src, t) => page.evaluate(async (src, t) => {
+  const T = AIImg.tools['reel-maker']; const S = T.state();
+  const buf = await (await fetch(src)).arrayBuffer();
+  const tags = AIImg.readMP4Tags(buf);
+  const v = document.createElement('video'); v.muted = true; v.src = src;
+  await new Promise((r) => { v.onloadeddata = r; setTimeout(r, 8000); });
+  await new Promise((r) => { v.onseeked = () => setTimeout(r, 250); v.currentTime = t; setTimeout(r, 8000); });
+  const W = v.videoWidth, H = v.videoHeight;
+  const grab = (draw) => { const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, W, H); draw(x); return x; };
+  const fr = grab((x) => x.drawImage(v, 0, 0, W, H));
+  const X = Object.assign({}, S, { scenes: S.scenes.filter((sc) => sc.type !== 'endcard' || sc.title || S.brand.logo || S.brand.url || S.brand.handle) });
+  const render = (Y) => grab((x) => T.renderFrame(x, W, H, t, Y));
+  const flipAi = Object.assign({}, X, T.aiLabelOf(X) ? { voice: null, brand: Object.assign({}, X.brand, { aiLabel: false }) } : { brand: Object.assign({}, X.brand, { aiLabel: true }) });
+  const flipCr = Object.assign({}, X, { brand: Object.assign({}, X.brand, { madeWith: !T.madeWithOn(X) }) });
+  const rAi = T.marks(W, H, T.aiLabelOf(X) ? X : flipAi).ai, rCr = T.marks(W, H, T.madeWithOn(X) ? X : flipCr).credit;
+  const mad = (a, b, r) => {
+    const x0 = Math.floor(r.x), y0 = Math.floor(r.y), w = Math.ceil(r.w), h = Math.ceil(r.h);
+    const d1 = a.getImageData(x0, y0, w, h).data, d2 = b.getImageData(x0, y0, w, h).data;
+    let s = 0; for (let i = 0; i < d1.length; i += 4) s += (Math.abs(d1[i] - d2[i]) + Math.abs(d1[i + 1] - d2[i + 1]) + Math.abs(d1[i + 2] - d2[i + 2])) / 3;
+    return s / (d1.length / 4);
+  };
+  const as = render(X);
+  return { tags, W, H, duration: v.duration,
+    ai: { on: !!T.aiLabelOf(X), as: mad(fr, as, rAi), flip: mad(fr, render(flipAi), rAi), rect: rAi },
+    credit: { on: T.madeWithOn(X), as: mad(fr, as, rCr), flip: mad(fr, render(flipCr), rCr), rect: rCr } };
+}, src, t);
+const markOk = (m) => m.as < m.flip * 0.5;
 const savePng = (dataUrl, name) => fs.writeFileSync(path.join(OUT, name), Buffer.from(dataUrl.split(',')[1], 'base64'));
 /* The kits' looks, pinned, for the checks that need a known one. */
 const MIDNIGHT = { palette: 'midnight', type: 'gradient', motion: 'pop', bg: 'glow', layout: 'classic' };
@@ -523,6 +556,147 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
     check(after.spec.palette !== before.palette && after.name.indexOf(after.spec.palette === 'block' ? 'Bold Block' : '') >= 0, 'Shuffle look changes the palette (' + before.palette + ' → ' + after.spec.palette + '; "' + after.name + '")');
     await clickText(page, '.aiimg-transport', /^Start over$/);
 
+    /* ---- 4c. the voice-over script: written for the ear, never a payload, editable, resettable ---- */
+    const vo = await page.evaluate(async (tplIds) => {
+      const T = AIImg.tools['reel-maker'];
+      await T.loadStories(); await T.loadExamples();
+      await new Promise((res) => { if (window.FINDER_INDEX) return res(); const s = document.createElement('script'); s.src = '/assets/finder-index.js'; s.onload = res; s.onerror = res; document.head.appendChild(s); });
+      const BAD = /WIFI:|https?:|www\.|\.(com|in|org|net)\b|(^|\s)[#@][A-Za-z]|utm_|[{}]|\.(pdf|png|jpe?g|csv|json|svg|zip|txt)\b|[₹£$€%×→✓✗•|]|\p{Extended_Pictographic}/u;
+      const bad = [];
+      const tpl = {};
+      for (const t of T.templates) { const lines = T.scenesFromScript(t.script).map((sc) => T.voOf(sc)); tpl[t.id] = lines; lines.forEach((l) => { if (BAD.test(l)) bad.push(t.id + ': ' + l); }); }
+      const rows = (window.FINDER_INDEX && window.FINDER_INDEX.tools) || [];
+      let tools = 0, lines = 0, emptyVO = 0;
+      const sample = {};
+      for (const row of rows) {
+        const scenes = T.buildScript(row, { endcard: true, qr: true });
+        tools++;
+        for (const sc of scenes) {
+          const v = T.voOf(sc); lines++;
+          if (!v.trim()) emptyVO++;
+          if (BAD.test(v)) bad.push(row[1] + ' [' + sc.type + ']: ' + v);
+        }
+        if (/qr\/qr-code-generator\/|india\/gst-calculator\/|pdf\/merge-pdf\//.test(row[1])) sample[row[1]] = scenes.map((sc) => ({ type: sc.type, screen: sc.type === 'endcard' ? sc.cta : sc.text, vo: T.voOf(sc) }));
+      }
+      const rules = {
+        wifi: T.toSpeech('Scan to join: WIFI:T:WPA;S:Harbour Cafe;P:flatwhite2026;;'),
+        url: T.toSpeech('Menu at https://example.com/menu?x=1 or www.example.org'),
+        ours: T.toSpeech('Free at 1234tools.com/qr/qr-code-generator/?utm_source=instagram'),
+        sym: T.toSpeech('₹1,50,000 → 18% GST × 2 ✓ #tax @me 😀'),
+        json: T.toSpeech('Paste {"a": 1} and get report.pdf back'),
+        uk: T.toSpeech('Pick a color and organize your favorite files')
+      };
+      return { bad, tools, lines, emptyVO, tpl, sample, rules };
+    }, Object.keys(TEMPLATE_TYPES));
+    fs.writeFileSync(path.join(OUT, 'voice-over.json'), JSON.stringify(vo, null, 1));
+    check(vo.tools >= 20 && vo.bad.length === 0, 'voice-over suggestions for ' + vo.tools + ' tools (' + vo.lines + ' lines) and all 7 templates hold no Wi-Fi payload, URL, hashtag, handle, UTM link, file name, emoji or symbol' + (vo.bad.length ? ': ' + vo.bad.slice(0, 3).join(' | ') : ''));
+    const qrS = vo.sample['/qr/qr-code-generator/'] || vo.sample['qr/qr-code-generator/'] || [];
+    const qrEx = qrS.find((x) => x.type === 'example');
+    check(!!qrEx && /WIFI:/.test(qrEx.screen) && /joins the Wi-Fi/.test(qrEx.vo) && !/WIFI:|flatwhite/.test(qrEx.vo), 'QR Code Generator: the screen shows the Wi-Fi payload, the voice-over says "' + (qrEx ? qrEx.vo : '?') + '"');
+    check(!/WIFI|flatwhite|Harbour/.test(vo.rules.wifi) && /the link in our bio/.test(vo.rules.url) && !/example\.|https/.test(vo.rules.url), 'toSpeech drops a Wi-Fi payload ("' + vo.rules.wifi + '") and says links as "the link in our bio" ("' + vo.rules.url + '")');
+    check(/^Free at 1234Tools\.?$/.test(vo.rules.ours), 'our own link is said as the site’s name ("' + vo.rules.ours + '")');
+    check(/1,50,000 rupees/.test(vo.rules.sym) && /18 per cent/.test(vo.rules.sym) && !/[#@→✓×😀]/u.test(vo.rules.sym), 'symbols said in words, tags and emoji dropped ("' + vo.rules.sym + '")');
+    check(!/[{}"]|report/.test(vo.rules.json) && /PDF/.test(vo.rules.json), 'JSON dropped and a file name said only as its type ("' + vo.rules.json + '")');
+    check(vo.rules.uk === 'Pick a colour and organise your favourite files.', 'British spelling ("' + vo.rules.uk + '")');
+    /* editing, resetting, the Scenes pane and the Sound pane showing the same line */
+    await gotoTool('?tool=qr/qr-code-generator/');
+    await waitStudio();
+    await pane('sound');
+    const ed = await page.evaluate(async () => {
+      const T = AIImg.tools['reel-maker']; const S = T.state();
+      const boxes = [...document.querySelectorAll('#reel-vo .reel-vo-text')];
+      const refs = [...document.querySelectorAll('#reel-vo .reel-vo-ref')].map((x) => x.textContent);
+      const sugg = boxes.map((b) => b.value);
+      const set = (ta, v) => { ta.value = v; ta.dispatchEvent(new Event('input', { bubbles: true })); };
+      set(boxes[0], 'My own opening line.');
+      const sceneBox = document.querySelector('.reel-scene-vo[data-id="' + S.scenes[0].id + '"]');
+      const mirrored = sceneBox ? sceneBox.value : null;
+      set(boxes[1], '');
+      const silent = T.voOf(S.scenes[1]) === '';
+      const resetBtn = boxes[0].closest('li').querySelector('.reel-vo-reset');
+      resetBtn.click();
+      const afterReset = T.voOf(S.scenes[0]) === sugg[0] && document.querySelectorAll('#reel-vo .reel-vo-text')[0].value === sugg[0];
+      document.querySelector('#reel-vo-reset-all').click();
+      const afterAll = T.voOf(S.scenes[1]) === sugg[1] && S.scenes.every((sc) => sc.vo === undefined);
+      return { n: boxes.length, scenes: S.scenes.length, refs: refs.slice(0, 2), mirrored, silent, afterReset, afterAll };
+    });
+    check(ed.n === ed.scenes && ed.refs.every((r) => /^On screen: /.test(r)), 'Sound lists one voice-over box per scene (' + ed.n + '), each with the screen text beside it');
+    check(ed.mirrored === 'My own opening line.', 'an edit in Sound shows in the Scenes pane’s voice-over box too');
+    check(ed.silent, 'an emptied line makes that scene silent');
+    check(ed.afterReset && ed.afterAll, '“Reset to suggested” restores one line, “Reset all to suggested” every line');
+    await clickText(page, '.aiimg-transport', /^Start over$/);
+
+    /* ---- 4d. the AI label and the "Made with 1234Tools.com" credit: defaults, places, contrast, no overflow, nothing in the bands, captions above ---- */
+    await gotoTool('?tool=india/gst-calculator/');
+    await waitStudio();
+    await pane('export');
+    const ui0 = await page.evaluate(() => ({ ai: document.querySelector('#reel-ai-label').checked, aiOff: !document.querySelector('#reel-ai-label').disabled, made: document.querySelector('#reel-made-with').checked,
+      aiText: document.querySelector('#reel-ai-label').closest('label, .field-check').textContent, madeText: document.querySelector('#reel-made-with').closest('label, .field-check').textContent }));
+    check(!ui0.ai && ui0.aiOff && ui0.made, 'Export: “Label this reel as AI-generated” is off and free to tick, “Show Made with 1234Tools.com” is on, without a generated voice');
+    check(/Label this reel as AI-generated/.test(ui0.aiText) && /Made with 1234Tools\.com/.test(ui0.madeText), 'the two switches say what they do');
+    const mk = await page.evaluate(async () => {
+      const T = AIImg.tools['reel-maker']; const S = T.state();
+      await T.current.prepare();
+      const out = { def: { ai: T.aiLabelOf(S), credit: T.madeWithOn(S), meta: T.aiMetadata(S) }, geo: [], contrast: [], over: [], bands: [], caps: null };
+      S.brand.aiLabel = true;
+      out.on = { ai: T.aiLabelOf(S), meta: T.aiMetadata(S) };
+      for (const [W, H] of [[1080, 1920], [1080, 1080], [1920, 1080]]) out.geo.push(Object.assign({ W, H }, T.marks(W, H, S)));
+      /* contrast: each palette's plate, 90% opaque, over pure white and pure black, against its text */
+      const hex = (r, g, b) => '#' + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+      const blend = (rgba, under) => { const m = /rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/.exec(rgba); const a = Number(m[4]); return hex(...[1, 2, 3].map((i) => a * Number(m[i]) + (1 - a) * under)); };
+      for (const id of Object.keys(T.palettes)) {
+        const col = T.markColours(T.palettes[id]);
+        out.contrast.push({ id, light: !!T.palettes[id].light, white: T.contrast(col.ink, blend(col.plate, 255)), black: T.contrast(col.ink, blend(col.plate, 0)) });
+      }
+      /* every beat, every palette, three sizes, both marks on: nothing overflows */
+      T.clearOverflow();
+      for (const id of Object.keys(T.palettes)) {
+        T.current.setLook({ palette: id });
+        await T.current.prepare();
+        for (const [W, H] of [[1080, 1920], [1080, 1080], [1920, 1080]]) {
+          const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+          let st = 0;
+          for (const sc of S.scenes) { for (const f of [0.3, 0.95]) T.renderFrame(x, W, H, st + sc.seconds * f, S); st += sc.seconds; }
+        }
+      }
+      out.over = T.overflow();
+      /* the bands: the frame with both marks and without them is identical in the top 250 and bottom 340 px */
+      const W = 1080, H = 1920;
+      const draw = (Y, t) => { const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); T.renderFrame(x, W, H, t, Y); return x; };
+      const same = (a, b, y0, y1) => { const d1 = a.getImageData(0, y0, W, y1 - y0).data, d2 = b.getImageData(0, y0, W, y1 - y0).data; let n = 0; for (let i = 0; i < d1.length; i++) if (d1[i] !== d2[i]) n++; return n; };
+      const none = Object.assign({}, S, { voice: null, brand: Object.assign({}, S.brand, { aiLabel: false, madeWith: false }) });
+      for (const t of [S.scenes[0].seconds * 0.9, S.scenes[0].seconds + S.scenes[1].seconds * 0.8]) {
+        const a = draw(S, t), b = draw(none, t);
+        out.bands.push({ t, top: same(a, b, 0, 250), bottom: same(a, b, 1580, 1920), middle: same(a, b, 250, 1580) });
+      }
+      /* captions sit above the credit and the bar: the lowest caption pixel, from a frame with a cue on screen against one with it off-screen */
+      const words = 'Stop guessing your GST today friends and family'.split(' ').map((w) => ({ text: w, start: 0, end: 99 }));
+      const cue = (start) => ({ start, end: start + 99, until: start + 99, text: words.map((w) => w.text).join(' '), words, lines: [words.slice(0, 4), words.slice(4)] });
+      const withCap = (c) => Object.assign({}, S, { captions: Object.assign({}, S.captions, { source: 'auto', cues: [c], style: Object.assign({}, S.captions.style, { mode: 'line', size: 9 }) }) });
+      const t = S.scenes[0].seconds * 0.9;
+      const a = draw(withCap(cue(0)), t), b = draw(withCap(cue(500)), t);
+      const d1 = a.getImageData(0, 0, W, H).data, d2 = b.getImageData(0, 0, W, H).data;
+      let low = -1, high = -1;
+      for (let y = 0; y < H; y++) { for (let x = 0; x < W; x += 2) { const i = (y * W + x) * 4; if (d1[i] !== d2[i] || d1[i + 1] !== d2[i + 1]) { if (high < 0) high = y; low = y; break; } } }
+      out.caps = { top: high, bottom: low, credit: T.marks(W, H, S).credit, bar: T.marks(W, H, S).bar };
+      S.brand.aiLabel = false;
+      return out;
+    });
+    fs.writeFileSync(path.join(OUT, 'marks.json'), JSON.stringify(mk, null, 1));
+    check(mk.def.ai === '' && mk.def.credit === true && mk.def.meta === null, 'by default (no generated voice): no AI label, no metadata, the credit on');
+    check(mk.on.ai === 'AI-generated' && /Labelled by its maker/.test(mk.on.meta.comment) && /1234tools\.com\/ai-video\/reel-maker\//.test(mk.on.meta.comment), 'ticking the switch: the label reads “AI-generated” and the metadata says so');
+    for (const g of mk.geo) {
+      const ok = g.ai.y >= g.top - 0.5 && g.ai.y + g.ai.h <= (g.head ? g.head.y : g.box.y) && g.box.y >= g.ai.y + g.ai.h
+        && g.credit.y + g.credit.h <= g.bottom + 0.5 && (!g.bar || g.bar.y + g.bar.h <= g.credit.y) && g.box.y + g.box.h <= g.credit.y;
+      check(ok, g.W + '×' + g.H + ': the label (' + Math.round(g.ai.y) + '–' + Math.round(g.ai.y + g.ai.h) + ') sits under the top band (' + Math.round(g.top) + ') and above the brand row and content; the credit (' + Math.round(g.credit.y) + '–' + Math.round(g.credit.y + g.credit.h) + ') above the bottom band (' + Math.round(g.bottom) + ') and below the bar and content');
+    }
+    const lowC = mk.contrast.filter((c) => c.white < 4.5 || c.black < 4.5);
+    check(mk.contrast.length === 8 && !lowC.length, 'both marks keep AA contrast on all 8 palettes (light and dark), over white or black (lowest ' + Math.min(...mk.contrast.map((c) => Math.min(c.white, c.black))).toFixed(1) + ':1)');
+    check(mk.over.length === 0, 'with both marks on, no text overflows: 8 palettes × every beat × 3 sizes' + (mk.over.length ? ' — ' + mk.over.slice(0, 3).join(' | ') : ''));
+    check(mk.bands.every((b) => b.top === 0 && b.bottom === 0 && b.middle > 0), 'the marks change the frame only between the bands: top 250 px and bottom 340 px untouched (' + mk.bands.map((b) => b.top + '/' + b.bottom).join(', ') + ')');
+    check(mk.caps.bottom > 0 && mk.caps.bottom < mk.caps.credit.y && (!mk.caps.bar || mk.caps.bottom < mk.caps.bar.y), 'a two-line caption ends at ' + mk.caps.bottom + ' px, above the bar (' + (mk.caps.bar ? Math.round(mk.caps.bar.y) : '-') + ') and the credit (' + Math.round(mk.caps.credit.y) + ')');
+    await clickText(page, '.aiimg-transport', /^Start over$/);
+
     if (RECORDER) {
       /* ---- recorder path ---- */
       await gotoTool('?tool=india/gst-calculator/');
@@ -642,6 +816,12 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
         check(p.width === 1080 && p.height === 1920, 'export is 1080×1920');
         if (speechOk) check(p.frames[1].std > 12, 'frame at 45% has captions in [0.70H, 0.86H] (std ' + p.frames[1].std.toFixed(1) + ')');
         check(/AAC|Opus/.test(head), 'result head names the audio codec');
+        /* a recorded voice: no AI label in the frames and no note in the file; the credit is drawn */
+        const mv = await marksInVideo(page, src, 2.0);
+        console.log('  marks in the export at 2 s: label as/flip ' + mv.ai.as.toFixed(1) + '/' + mv.ai.flip.toFixed(1) + ', credit as/flip ' + mv.credit.as.toFixed(1) + '/' + mv.credit.flip.toFixed(1));
+        check(!mv.ai.on && markOk(mv.ai), 'a reel with a recorded voice has no AI label in its frames');
+        check(mv.credit.on && markOk(mv.credit), '“Made with 1234Tools.com” is in the exported frames by default');
+        check(mv.tags === null && !/AI label in the file/.test(head), 'and its MP4 carries no AI metadata');
         await page.screenshot({ path: path.join(OUT, '4-export-done.png') });
 
         /* ---- 8. cover ---- */
@@ -686,24 +866,46 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
         await page.click('.reel-start [data-mode=promote]');
         await page.waitForSelector('.reel-tool', { timeout: 20000 });
         await page.screenshot({ path: path.join(OUT, '2-promote.png') });
-        for (const label of ['Select GST Calculator (India)', 'Select Merge PDF Files']) {
-          const ok = await page.evaluate((l) => { const c = document.querySelector('.reel-pick[aria-label="' + l + '"]'); if (!c) return false; c.click(); return c.checked; }, label);
-          check(ok, 'ticked "' + label + '"');
-        }
-        const btn = await page.$eval('#reel-batch', (b) => ({ text: b.textContent, disabled: b.disabled }));
+        const tick = (l) => page.evaluate((l) => { const c = document.querySelector('.reel-pick[aria-label="' + l + '"]'); if (!c) return null; c.click(); return c.checked; }, l);
+        const btnNow = () => page.$eval('#reel-batch', (b) => ({ text: b.textContent, disabled: b.disabled }));
+        const b0 = await btnNow();
+        check(b0.disabled && b0.text === 'Make reels', 'with nothing ticked the batch button is off and names no number ("' + b0.text + '")');
+        check(await tick('Select GST Calculator (India)') === true, 'ticked GST Calculator (India)');
+        const b1 = await btnNow();
+        check(b1.text === 'Make 1 reel' && !b1.disabled, 'one tool ticked: "Make 1 reel", singular and enabled ("' + b1.text + '")');
+        check(await tick('Select Merge PDF Files') === true && await tick('Select QR Code Generator') === true, 'ticked Merge PDF Files and QR Code Generator');
+        const b3 = await btnNow();
+        check(b3.text === 'Make 3 reels', 'three tools ticked: "Make 3 reels" ("' + b3.text + '")');
+        check(await tick('Select QR Code Generator') === false, 'unticked QR Code Generator');
+        const btn = await btnNow();
         check(btn.text === 'Make 2 reels' && !btn.disabled, 'batch button reads "Make 2 reels"');
-        await page.click('#reel-batch');
-        await page.waitForSelector('.reel-batch:not([hidden])', { timeout: 20000 });
         const before = await page.$$eval('.aiimg-result video', (v) => v.length);
+        /* the batch is labelled by hand: every reel in it must carry the label and the note */
+        await page.evaluate(() => { const c = document.querySelector("#reel-ai-label"); if (!c.checked) c.click(); });
         const tb = Date.now();
-        await clickText(page, '.reel-batch', /^Start$/);
-        await page.waitForFunction(() => { const s = document.querySelector('.reel-batch-status'); return s && /\d+ reels,|stopped|Cancelled/.test(s.textContent); }, { timeout: 900000, polling: 500 });
+        /* one click: the button changes in the same task, and a status line says what is happening, within 100 ms */
+        const fb = await page.evaluate(async () => {
+          const b = document.querySelector('#reel-batch');
+          const t0 = performance.now();
+          b.click();
+          const now = { text: b.textContent, disabled: b.disabled, line: document.querySelector('#reel-batch-line').textContent, ms: performance.now() - t0 };
+          await new Promise((r) => setTimeout(r, 100));
+          return Object.assign(now, { after100: document.querySelector('#reel-batch-line').textContent || (document.querySelector('.reel-batch-status') || {}).textContent || '' });
+        });
+        check(fb.disabled && /^Making 2 reels…$/.test(fb.text) && fb.line.length > 0 && fb.ms < 100, 'one click: at once the button is disabled, reads "Making 2 reels…", and a status line shows (' + JSON.stringify(fb.text) + ', ' + JSON.stringify(fb.line) + ', ' + fb.ms.toFixed(1) + ' ms)');
+        await page.waitForSelector('.reel-batch:not([hidden])', { timeout: 20000 });
+        const started = await page.evaluate(() => !!AIImg.tools['reel-maker'].state().job || /\d+ reels?,/.test((document.querySelector('.reel-batch-status') || {}).textContent || ''));
+        check(started, 'the batch starts on that one click — no second "Start" click');
+        check(!(await page.evaluate(() => [...document.querySelectorAll('.reel-batch button')].some((b) => /^Start$/.test(b.textContent.trim())))), 'there is no separate Start button any more');
+        await page.waitForFunction(() => { const s = document.querySelector('.reel-batch-status'); return s && /\d+ reels?,|stopped|Cancelled/.test(s.textContent); }, { timeout: 900000, polling: 500 });
         const bs = await page.$eval('.reel-batch-status', (e) => e.textContent);
         console.log(stamp(), 'batch:', bs, '| took', ((Date.now() - tb) / 1000).toFixed(1) + 's');
         timings.batch2 = (Date.now() - tb) / 1000;
         check(/^2 reels, 2 covers and reel-captions\.txt/.test(bs), 'batch finished: "' + bs + '"');
         const vids = await page.$$eval('.aiimg-result', (r) => r.filter((x) => x.querySelector('video')).map((x) => ({ name: x.dataset.name, src: x.querySelector('video').src })));
         check(vids.length - before === 2, 'batch of 2 tools gave 2 clips (' + vids.map((v) => v.name).join(', ') + ')');
+        const after = await btnNow();
+        check(after.text === 'Make 2 reels' && !after.disabled, 'the button is back to "Make 2 reels" when the batch is done ("' + after.text + '")');
         for (const want of ['reel-gst-calculator.mp4', 'reel-merge-pdf.mp4']) {
           const v = vids.find((x) => x.name === want);
           if (!v) { check(false, want + ' is in the results'); continue; }
@@ -711,7 +913,10 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
           const b = Buffer.from(p.b64, 'base64');
           fs.writeFileSync(path.join(OUT, 'batch-' + want), b);
           check(b.subarray(4, 8).toString('latin1') === 'ftyp' && p.duration >= 12 && p.duration <= 30, want + ': ftyp, ' + p.duration.toFixed(1) + ' s (12–30)');
+          const bt = await page.evaluate(async (s) => AIImg.readMP4Tags(await (await fetch(s)).arrayBuffer()), v.src);
+          check(!!bt && /AI-generated content/.test(bt['©cmt'] || ''), want + ': the batch reel carries the AI note too');
         }
+        await page.evaluate(() => { const c = document.querySelector('#reel-ai-label'); if (c.checked && !c.disabled) c.click(); });
         const caps = await page.evaluate(async () => { const a = document.querySelector('a[download="reel-captions.txt"]'); return a ? (await (await fetch(a.href)).text()) : ''; });
         fs.writeFileSync(path.join(OUT, 'reel-captions.txt'), caps);
         check(/GST Calculator \(India\)/.test(caps) && /Merge PDF Files/.test(caps), 'reel-captions.txt names both tools');
@@ -802,6 +1007,8 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
             await page.waitForFunction(() => /music/i.test(document.querySelector('#reel-sound-status').textContent), { timeout: 60000 });
           }
           await pane('export');
+          /* the text-only reel goes out with the credit switched off, and labelled as AI-generated by hand */
+          if (!withMusic) await page.evaluate(() => { for (const id of ['#reel-made-with', '#reel-ai-label']) document.querySelector(id).click(); });
           const client = await page.target().createCDPSession();
           await client.send('Page.setDownloadBehavior', { behavior: 'deny' });
           const te = Date.now();
@@ -812,6 +1019,16 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
           const src = await page.$eval('.aiimg-result video', (v) => v.src);
           const p = await probe(page, src, [0.5]);
           const traks = countTraks(Buffer.from(p.b64, 'base64'));
+          const mm = await marksInVideo(page, src, 7.5);
+          if (!withMusic) {
+            check(!mm.credit.on && markOk(mm.credit), 'with “Show Made with 1234Tools.com” off, the exported frames carry no credit (as/flip ' + mm.credit.as.toFixed(1) + '/' + mm.credit.flip.toFixed(1) + ')');
+            check(mm.ai.on && markOk(mm.ai), 'labelled by hand, the exported frames carry the “AI-generated” label (as/flip ' + mm.ai.as.toFixed(1) + '/' + mm.ai.flip.toFixed(1) + ')');
+            check(!!mm.tags && /Labelled by its maker as containing AI-generated content/.test(mm.tags['©cmt'] || '') && /1234Tools Reel Maker/.test(mm.tags['©too'] || '') && /AI label in the file/.test(head), 'its MP4 carries the AI note in moov/udta/meta (' + JSON.stringify(mm.tags) + ')');
+            check(Math.abs(mm.duration - 15) <= 0.5, 'the tagged MP4 still plays, 15 s (' + mm.duration.toFixed(2) + ')');
+            await page.evaluate(() => { for (const id of ['#reel-made-with', '#reel-ai-label']) document.querySelector(id).click(); });
+          } else {
+            check(mm.credit.on && markOk(mm.credit) && !mm.ai.on && markOk(mm.ai) && mm.tags === null, 'switched back: the credit is drawn again, no label, no metadata');
+          }
           console.log(stamp(), '15 s timing' + (withMusic ? ' with music' : '') + ':', tt, '→', took.toFixed(1) + 's |', head, '| duration', p.duration.toFixed(2), '| trak', traks);
           timings[withMusic ? 'reel15music' : 'reel15'] = took;
           check(Math.abs(p.duration - 15) <= 0.5 && traks === (withMusic ? 2 : 1), '15 s reel' + (withMusic ? ' with music' : '') + ' exports at 15 s with ' + (withMusic ? 'two tracks' : 'one track'));
@@ -847,9 +1064,11 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
       await pane('captions');
       await page.select('#reel-cap-source', 'none');
       await pane('sound');
+      await page.evaluate(() => { const ta = document.querySelector('#reel-vo .reel-vo-text'); ta.value = 'Teleprompter line from the voice-over.'; ta.dispatchEvent(new Event('input', { bubbles: true })); });
       await page.click('#reel-rec-voice');
       await sleep(600);
-      const recState = await page.evaluate(() => ({ pressed: document.querySelector('#reel-rec-voice').getAttribute('aria-pressed'), prompter: !document.querySelector('.reel-prompter').hidden, items: document.querySelectorAll('.reel-prompter li').length }));
+      const recState = await page.evaluate(() => ({ pressed: document.querySelector('#reel-rec-voice').getAttribute('aria-pressed'), prompter: !document.querySelector('.reel-prompter').hidden, items: document.querySelectorAll('.reel-prompter li').length, first: (document.querySelector('.reel-prompter li') || {}).textContent }));
+      check(recState.first === 'Teleprompter line from the voice-over.', 'the teleprompter shows the voice-over script, not the screen text ("' + recState.first + '")');
       await sleep(1800);
       await page.screenshot({ path: path.join(OUT, '7-recording.png') });
       await page.click('#reel-rec-voice');

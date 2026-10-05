@@ -277,9 +277,10 @@ let S_ch = '';
     });
     await check('Today shows today\'s video slots with the channels still missing', async () => {
       await page.click('.tabs button[data-tab="today"]');
-      await page.waitForSelector('#plan-cal .tv-slot[data-id="' + slotId + '"] .chip', { timeout: 15000 });
+      /* wait for the drawn state, not just the first chip: the tab may redraw */
+      await page.waitForFunction((id, w, done) => { const ch = Array.from(document.querySelectorAll('#plan-cal .tv-slot[data-id="' + id + '"] .chip')).map((c) => c.dataset.channel); return ch.includes(w) && !ch.includes(done); }, { timeout: 20000 }, slotId, wrongCh, S_ch).catch(() => {});
       const chips = await page.$$eval('#plan-cal .tv-slot[data-id="' + slotId + '"] .chip', (x) => x.map((c) => c.dataset.channel));
-      assert.ok(!chips.includes(S_ch) && chips.includes(wrongCh), JSON.stringify(chips));
+      assert.ok(!chips.includes(S_ch) && chips.includes(wrongCh), JSON.stringify({ chips, recorded: S_ch, wrongFormat: wrongCh }));
     });
     await check('Guide tab renders every channel card, the process and the FAQ', async () => {
       await page.click('.tabs button[data-tab="guide"]');

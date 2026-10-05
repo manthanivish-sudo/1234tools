@@ -180,6 +180,8 @@ function symbols() {
 const MEDIA = new Set(['image', 'pdf', 'ai-image', 'ai-video']);
 function pillsFor(sec) {
   if (sec === 'ai') return ['Free to try', '10 calls a month', 'Says what it sends'];
+  /* the Reel Maker adds an optional "Made with 1234Tools.com" credit (on by default, one click off) */
+  if (sec === 'ai-video') return ['Free', 'No forced watermark', 'Runs in your browser'];
   if (MEDIA.has(sec)) return ['Free', 'No watermark', 'Runs in your browser'];
   return ['Free', 'No account', 'Runs in your browser'];
 }
