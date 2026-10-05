@@ -250,8 +250,26 @@ function collections() { return load().collections.slice(); }
 
 function sectionNames() { return Object.assign({}, load().sectionNames); }
 
+/* Another site (site.js) answers with its own items: products, services or app
+   features from build/promo/sites/<id>.js, shaped like tool records. 1234Tools,
+   the default, is untouched. */
+function other() { const S = require('./site'); return S.isDefault() ? null : S; }
+const forSite = {
+  record: (p) => { const S = other(); return S ? S.record(p) : record(p); },
+  listTools: () => { const S = other(); return S ? S.listItems() : listTools(); },
+  listAll: () => { const S = other(); return S ? S.listItems().map((r) => ({ title: r.title, path: r.path })) : listAll(); },
+  collections: () => (other() ? [] : collections()),
+  toolCount: () => { const S = other(); return S ? S.listItems().length : toolCount(); },
+  toolCountText: () => { const S = other(); return S ? String(S.listItems().length) : toolCountText(); },
+  cleanUrl: (p) => { const S = other(); return S ? S.current().baseUrl + S.normPath(p) : cleanUrl(p); },
+  utmUrl: (p, venueId, medium, extra) => { const S = other(); return S ? S.utmUrl(p, venueId, medium) : utmUrl(p, venueId, medium, extra); },
+  normPath: (p) => { const S = other(); return S ? S.normPath(p) : normPath(p); },
+};
+
 module.exports = {
   ROOT, ORIGIN, HOST, AUDIENCE_TAGS, SECTION_TAGS, MEDIA_SECTIONS,
-  normPath, slugOf, sectionSlugOf, pricingOf, cleanUrl, utmUrl,
-  record, listTools, listAll, collections, sectionNames, toolCount, toolCountText,
+  slugOf, sectionSlugOf, pricingOf, sectionNames,
+  normPath: forSite.normPath, cleanUrl: forSite.cleanUrl, utmUrl: forSite.utmUrl,
+  record: forSite.record, listTools: forSite.listTools, listAll: forSite.listAll, collections: forSite.collections,
+  toolCount: forSite.toolCount, toolCountText: forSite.toolCountText,
 };

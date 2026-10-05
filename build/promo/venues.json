@@ -3461,6 +3461,41 @@
       ]
     },
     {
+      "id": "social-whatsapp-status",
+      "name": "WhatsApp Status (owned, contacts only)",
+      "kind": "social",
+      "roles": [
+        "post"
+      ],
+      "url": "https://www.whatsapp.com/",
+      "rulesUrl": "https://www.whatsapp.com/legal/terms-of-service",
+      "audiences": [
+        "india",
+        "smallbiz",
+        "uk",
+        "general"
+      ],
+      "sections": [],
+      "cadenceDays": 1,
+      "maxPerWeek": 7,
+      "maxChars": 0,
+      "risk": "low",
+      "linkPolicy": "inline",
+      "selfPromo": "owned",
+      "submitUrl": "",
+      "searchUrl": "",
+      "apiSearch": "",
+      "template": "whatsapp-broadcast",
+      "titleMax": 0,
+      "markdown": false,
+      "hashtags": false,
+      "estimatedReach": "your saved contacts only",
+      "tone": "personal, one line and one picture",
+      "notes": "A status is seen only by your contacts and disappears after 24 hours (blog.whatsapp.com/new-ways-to-enjoy-whatsapp-status); a link in it shows a preview. It has no public link, so the calendar records it with a tick. Desk cadence: at most one a day. Never add people to your contacts to reach more.",
+      "verifiedHow": "added 2026-10-05 by the desk for the calendar's WhatsApp Status target; lifetime and link preview from WhatsApp's own blog, the cadence is the owner's rule (one a day)",
+      "source": "desk"
+    },
+    {
       "id": "social-whatsapp",
       "name": "WhatsApp Channel (owned broadcast) + share link",
       "kind": "social",

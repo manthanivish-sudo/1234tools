@@ -10,6 +10,9 @@
  *         'help'    a contribution with no link (counts toward the 9:1 ratio)
  *         'skip'    the owner skipped a Today task (counts toward nothing)
  *         'removed' a moderator removed a post: the venue cools down for 90 days
+ *   linked: false with profileLink: true marks a calendar post whose link lives in the
+ *         profile (Instagram, TikTok, Shorts, a native Facebook Reel): it is kept in the
+ *         history but counts toward no linked-post cap and not the day's routine cap.
  *
  * canPost(venueId, {toolPath, template, text, thread, now}) -> { ok, reasons[], warnings[], nextAt }
  * The desk never posts; this only tells the human whether it is a good idea today.
@@ -20,7 +23,11 @@ const path = require('path');
 
 const DAY = 86400000;
 
-function home() { return process.env.PROMO_HOME || path.join(os.homedir(), '.1234tools-promo'); }
+/* PROMO_HOME is the desk's folder. 1234Tools keeps its data there as it always has;
+   every other site (site.js) has its own folder, PROMO_HOME/sites/<id>/. */
+function baseHome() { return process.env.PROMO_HOME || path.join(os.homedir(), '.1234tools-promo'); }
+function siteMod() { try { return require('./site'); } catch (e) { return null; } }
+function home() { const S = siteMod(); return S ? S.dataDir(baseHome()) : baseHome(); }
 function logFile() { return path.join(home(), 'log.json'); }
 function ensureHome() { fs.mkdirSync(home(), { recursive: true }); return home(); }
 
@@ -52,13 +59,43 @@ const PER_TOOL_WEEK = 4;
 const DUP_DAYS = 90;
 const COOLDOWN_DAYS = 90;
 
-function read() {
+function readFile(f) {
   try {
-    const j = JSON.parse(fs.readFileSync(logFile(), 'utf8'));
+    const j = JSON.parse(fs.readFileSync(f, 'utf8'));
     return Array.isArray(j) ? { version: 1, entries: j } : Object.assign({ version: 1, entries: [] }, j);
   } catch (e) {
     return { version: 1, entries: [] };
   }
+}
+function read() { return readFile(logFile()); }
+
+/* Other people's spaces (Reddit, forums, Q&A, communities) are posted to from the
+   owner's one personal account whichever site it is for, so their rules read every
+   site's log; owned channels (each site's own accounts) read only the site's. */
+function readAllSites() {
+  const out = readFile(path.join(baseHome(), 'log.json')).entries.map((e) => Object.assign({ site: '1234tools' }, e));
+  let ids = [];
+  try { ids = fs.readdirSync(path.join(baseHome(), 'sites')); } catch (e) { ids = []; }
+  for (const id of ids) for (const e of readFile(path.join(baseHome(), 'sites', id, 'log.json')).entries) out.push(Object.assign({ site: id }, e));
+  return out;
+}
+
+/** The site's config.json (optional): { accounts: {...}, facebook: { linkPostsPerMonth: 2 } }. */
+function config() { try { return JSON.parse(fs.readFileSync(path.join(home(), 'config.json'), 'utf8')) || {}; } catch (e) { return {}; } }
+
+/* Facebook Page link posts: Meta has been testing a cap on link posts for Pages and
+   professional-mode profiles without Meta Verified (reported as 2 a calendar month;
+   over it the post goes out but the link shows as plain text). The desk keeps a
+   budget so the few link posts go where they matter. config.json facebook.linkPostsPerMonth. */
+const FB_VENUE = 'social-facebook';
+function fbBudget(at) {
+  const t = at ? new Date(at) : now();
+  const cfg = config().facebook || {};
+  const limit = Number.isFinite(+cfg.linkPostsPerMonth) && cfg.linkPostsPerMonth !== '' && cfg.linkPostsPerMonth != null ? Math.max(0, Math.floor(+cfg.linkPostsPerMonth)) : 2;
+  const start = new Date(t.getFullYear(), t.getMonth(), 1);
+  const next = new Date(t.getFullYear(), t.getMonth() + 1, 1);
+  const used = read().entries.filter((e) => e.venueId === FB_VENUE && isLinkedPost(e) && new Date(e.at) >= start && new Date(e.at) < next).length;
+  return { venueId: FB_VENUE, used, limit, left: Math.max(0, limit - used), month: start.getFullYear() + '-' + String(start.getMonth() + 1).padStart(2, '0'), nextAt: next.toISOString(), label: used + ' of ' + limit + ' used this month' };
 }
 function write(data) {
   ensureHome();
@@ -103,6 +140,9 @@ function append(e) {
   if (e.text) entry.hash = hash32(e.text);
   else if (e.hash) entry.hash = String(e.hash);
   if (e.override) entry.override = true;
+  // calendar posts: which channel, and whether the post itself carried no link (counted toward no linked-post cap)
+  if (e.channel) entry.channel = String(e.channel);
+  if (e.profileLink) entry.profileLink = true;
   const data = read();
   data.entries.push(entry);
   write(data);
@@ -129,7 +169,10 @@ function canPost(venueId, opts) {
   const t = opts.now ? new Date(opts.now) : now();
   const venue = opts.venue || venueById(venueId) || { id: venueId, cadenceDays: 0, maxPerWeek: 999, kind: 'social' };
   // opts.before: judge from a snapshot (Today picks its tasks from the log as it stood at midnight)
-  const all = read().entries.filter((e) => !opts.before || new Date(e.at) < new Date(opts.before));
+  const shared = RATIO_KINDS.includes(venue.kind);
+  const site = (siteMod() && siteMod().currentId()) || '1234tools';
+  const source = shared ? readAllSites().filter((e) => e.venueId === venueId || e.site === site) : read().entries;
+  const all = source.filter((e) => !opts.before || new Date(e.at) < new Date(opts.before));
   const reasons = [];
   const warnings = [];
   let nextAt = 0;
@@ -189,13 +232,20 @@ function canPost(venueId, opts) {
 
   if (opts.thread && all.some((e) => e.thread === opts.thread && isLinkedPost(e))) block('You already left a linked reply in this thread.');
 
+  // Facebook Page link-post budget (only for a post that carries a link)
+  if (venueId === FB_VENUE && opts.linked !== false) {
+    const b = fbBudget(t);
+    if (b.used >= b.limit) block('Facebook link budget: ' + b.label + '. Over it the link shows as plain text: post natively (a Reel or image, no link) or wait for next month.', new Date(b.nextAt).getTime());
+    else warnings.push('Facebook link budget: ' + b.label + '. Spend link posts on the tools that do best; native posts without a link do not use it.');
+  }
+
   if (opts.text) {
     const h = hash32(opts.text);
     const dup = all.find((e) => e.hash === h && t - new Date(e.at) < DUP_DAYS * DAY);
     if (dup) block('Identical text was posted on ' + dup.venueId + ' on ' + dup.at.slice(0, 10) + ': change the template or variant.');
   }
 
-  if (!shareOnly) {
+  if (!shareOnly && opts.linked !== false) {
     const r = routineFor(t);
     const today = all.filter((e) => isLinkedPost(e) && dayKey(e.at) === dayKey(t));
     if (today.length >= r.cap) {
@@ -224,5 +274,6 @@ function status(venue, opts) {
 }
 
 module.exports = {
-  ROUTINE, TEMPLATE_CAPS, RATIO_KINDS, home, logFile, ensureHome, now, read, entries, append, canPost, status, routineFor, dayKey, hash32,
+  ROUTINE, TEMPLATE_CAPS, RATIO_KINDS, FB_VENUE, home, baseHome, logFile, ensureHome, now, read, readAllSites, entries, append, canPost, status, routineFor, dayKey, hash32,
+  config, fbBudget, isLinkedPost,
 };

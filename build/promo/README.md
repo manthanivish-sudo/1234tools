@@ -20,6 +20,8 @@ node build/promo/desk.js lint "Free, 100% private PDF merger"
 node build/promo/desk.js guide                       # vision, process, red lines, channel list, FAQ
 node build/promo/desk.js guide linkedin-document     # one channel's card: format, limits, files, checklist
 node build/promo/desk.js coverage [--days 14]        # calendar targets posted, missing or needing a check
+node build/promo/desk.js sites                       # the site profiles; add --site <id> to any command
+node build/promo/desk.js coverage --site xleshop
 ```
 
 Tool paths work with or without the leading slash. Git Bash rewrites `/pdf/...` into a Windows path; the desk undoes that, but `pdf/merge-pdf/` avoids the problem.
@@ -43,10 +45,10 @@ Every calendar slot has **targets**, one per channel and format it should go to 
 
 | Format | Targets |
 |---|---|
-| Problem → solution | Instagram Reel, YouTube Shorts, TikTok, Instagram feed carousel (the kit's slides), LinkedIn document (`carousel.pdf`) |
-| Before / after | Instagram Reel, TikTok, Pinterest video pin |
+| Problem → solution | Instagram Reel, YouTube Shorts, TikTok, Facebook Reel (native, no link), Instagram feed carousel (the kit's slides), LinkedIn document (`carousel.pdf`) |
+| Before / after | Instagram Reel, TikTok, Facebook Reel (native), Pinterest video pin |
 | 10-second developer trick | YouTube Shorts, X, LinkedIn post |
-| India finance | Instagram Reel, YouTube Shorts, WhatsApp Status, Instagram feed carousel, LinkedIn document |
+| India finance | Instagram Reel, YouTube Shorts, Facebook Reel (native), WhatsApp Status, Instagram feed carousel, LinkedIn document |
 | AI at work | LinkedIn post, YouTube Shorts, Instagram Reel |
 
 For each target you paste the post's own link and press **Record**, or press **Posted (tick)** where a post has no lasting link (WhatsApp Status, an Instagram Story, a WhatsApp Channel update), or **Skip…** with a reason. **Add a channel** records a channel the slot did not list. **How to post** opens that channel's card in the Guide.
@@ -55,7 +57,11 @@ For each target you paste the post's own link and press **Record**, or press **P
 
 A slot is **posted** only when every target is posted or skipped with a reason; otherwise **partly posted** with the count ("3 of 5 channels"). The manual Made / Posted / Skip statuses still work; Skip on the slot takes the whole slot out of coverage.
 
-Recording a post (link or tick) on a channel that has a venue in `venues.json` also appends one log entry (`kind: post`, the tool, the link, `note: calendar <slot> · <channel>`), so the cadence rules and Today see it. Recording again after a Clear does not log twice, and Clear never deletes a log entry. WhatsApp Status has no venue, so it is recorded on the calendar only.
+Recording a post (link or tick) on a channel that has a venue in `venues.json` also appends one log entry (`kind: post`, the tool, the link, `note: calendar <slot> · <channel>`), so the cadence rules and Today see it. Recording again after a Clear does not log twice, and Clear never deletes a log entry. WhatsApp Status logs to its own venue, `social-whatsapp-status` (at most one a day).
+
+**Linked posts and profile-link posts.** Only a post that itself carries a clickable link counts toward the linked-post caps and the day's routine cap: LinkedIn, X, a Facebook link post, Threads, Bluesky, Mastodon, Telegram, the WhatsApp Channel and Status, a Pinterest pin with its destination link, an Instagram Story with a link sticker. An Instagram Reel or feed post, a TikTok, a YouTube Short (YouTube's help says Shorts links are not clickable) and a native Facebook Reel are logged with `linked: false, profileLink: true`: kept in the history, counted toward no linked-post cap. For them the desk shows advice, never a block: at most 2 a day per account (`ADVICE` in `channels.js`). A pin or a Facebook Page post recorded with **no link** ticked is logged the same way. `LINK_IN_POST` in `channels.js` holds the split.
+
+**Facebook Page link budget.** Meta confirmed a "limited test" of a cap on link posts for Pages and professional-mode profiles (TechCrunch, 17 December 2025); reports put it at 2 a calendar month without a paid plan (Meta One since 15 September 2026). The desk counts linked posts on `social-facebook` this calendar month and shows "x of 2 used this month" in Coverage, on the Facebook card and in Draft; a third linked Page post waits until the 1st (overridable in Draft). Set the number in the site's `config.json`: `{"facebook": {"linkPostsPerMonth": 2}}`. The guidance: Facebook native by default (Reels and images, no link, "search 1234Tools"), link posts only for the tools that bring the most visits, a first-comment link as a fallback only (reports disagree on whether it counts), Story link stickers, groups by their own rules. A paid Meta plan is listed as an option with its published US price, never as the default.
 
 **Coverage** (the panel at the top of the Calendar tab, or `desk.js coverage --days 14`): for past and today's slots, every target still missing, every link that fails the check, unassigned links, and per channel what was posted, is due today and was missed in the last 7 and 30 days.
 
@@ -66,6 +72,20 @@ Recording a post (link or tick) on a channel that has a venue in `venues.json` a
 `channels.js` is the one source for the channel cards, the link rules and the Guide's numbers. Each spec row has a `value`, the official page it came from (`src`) and the date it was read (`CHECKED`, 2026-10-04). Figures from a platform's publishing API or ads guide are labelled so, because the app can allow more. Where no official page states a figure, or the page renders only with JavaScript (several Instagram, Facebook, TikTok and WhatsApp help pages), `value` is `null` and the card says **not confirmed — check in the app**, with the page that was tried.
 
 Platforms change their limits and links. To refresh: open each `src`, compare, edit `value`, and set `CHECKED` (or a row's own `checked`) to the day you read it; adjust a channel's `url` rules and its `samples` if the link shape changed, then run `node build/promo/test.js`, which checks every sample link (valid, wrong format, wrong platform) and lints every Guide sentence. The vision, process and FAQ text lives in `guide.js`.
+
+## Several sites
+
+The desk promotes five sites, one at a time: **1234Tools** (the default), **XLeShop**, **MVR IT Services**, **Attend Now** and **FixOurTime**. Pick one in the header (each browser tab keeps its own), or pass `--site <id>` to any command (`node build/promo/desk.js sites` lists them).
+
+- `site.js` holds the switch. Each request and each command runs in one site (Node's AsyncLocalStorage), so two tabs on two sites never mix.
+- `sites/<id>.js` is a site's profile: base URL (and how it was confirmed), UTM medium, brand words, colours and logo from its repo, audiences, the items it promotes (products, services or app features, each with hook, pain, the usual way, promise, steps, call to action, the facts the site states and the file that shows it), what was seen but left out (`notConfirmed`), and its claim rules: `free` and `freePhrases` (a site is never called free unless it says so), `browserClaims` (the 1234Tools "nothing you type is uploaded" claims are refused elsewhere), `allowClaims`, and `forbid` regexes for that kind of site. Every profile was read from the site's own repo, read-only, on 2026-10-05.
+- `lint.js` applies the common honesty rules everywhere (no absolute privacy, superlatives, scarcity, testimonials, user counts, disparaged competitors) and then the active site's own rules; the 1234Tools rules (AI allowance, media-only "no watermark") are unchanged for 1234Tools.
+- `site-templates.js` writes all 31 templates for another site from its stories; `templates.js` hands over to it. `tools.js` answers with the site's items, so Draft, Today, the finder, venue fit and the calendar work unchanged.
+- Data: 1234Tools keeps `PROMO_HOME` as it always was; each other site has `PROMO_HOME\sites\<id>\` with its own `log.json`, `calendar.json`, `drafts.json`, `opportunities.json`, `config.json`, `cache\` and `kits\`. Community venues (Reddit, forums, Q&A, communities) are posted from one personal account, so their rules read every site's log; owned channels read only the site's own.
+- Calendar for another site: three slots a week (Monday, Wednesday, Friday), the profile's items, targets `instagram-reel, facebook-reel, youtube-shorts, linkedin-post, instagram-carousel` unless the profile sets `calendarTargets`.
+- Kits for another site use the item's story, the site's name, host and logo, and the palette whose accent is nearest the brand colour; the live example capture drives 1234Tools pages only, so they draw the "how it works" schematic. The Reel Maker opens without a tool: paste the slot's beats.
+
+To add a site: write `sites/<id>.js` in the same shape (only things the site itself shows), then run `node build/promo/test.js`, which renders every template for every item and fails on any claim the site's rules refuse.
 
 ## The daily routine (spec Part B section 5)
 
@@ -111,7 +131,8 @@ Nothing personal is in the repo (everything committed is published). Your data l
 - `calendar.json`: the 90-day plan with every slot's targets and what you recorded (v2); `calendar.v1.json` is the untouched copy of a calendar made before targets existed.
 - `seo\`: SEO control centre spreadsheets (`node build/seo/control-centre.js`).
 - `cache\`: finder responses, kept 30 minutes.
-- `config.json` (optional): `{"accounts": {"reddit": "yourname", "hn": "yourname"}}` so the finder skips your own posts.
+- `config.json` (optional): `{"accounts": {"reddit": "yourname", "hn": "yourname"}, "facebook": {"linkPostsPerMonth": 2}}`: the finder skips your own posts; the Facebook Page link budget (default 2).
+- `sites\<id>\`: the same files for each other site (XLeShop, MVR IT Services, Attend Now, FixOurTime); 1234Tools keeps the folder itself.
 
 Set `PROMO_HOME` to use another folder (the tests do). `PROMO_NOW` pins the clock, for planning ahead.
 
@@ -147,5 +168,7 @@ In GA4: **Reports → Acquisition → Traffic acquisition**, set the primary dim
 | `calendar.js` | the 90-day video calendar: slots, targets, link verification, coverage, v1 migration |
 | `channels.js` | every channel's format, limits, links, files, checklist and red lines, with sources and check dates; the link rules |
 | `guide.js` | the Guide's vision, process, red lines and FAQ (lint-clean), and the `guide` CLI text |
+| `site.js`, `sites/` | the site switch and the four other sites' profiles |
+| `site-templates.js` | promotion copy for the other sites, from their stories, linted with their rules |
 | `fixtures/` | one saved response per search API (Reddit JSON is a documented-shape synthetic: Reddit answered 403 from the network the fixtures were captured on) |
 | `test.js`, `test-ui.js`, `test-kit.js`, `test-examples.js` | `node build/promo/test.js` (no browser, no network; channel link rules, guide lint, calendar targets, coverage and migration; a real server-restart check on port 8753, `PROMO_TEST_PORT` to change, which `serve` accepts only with `PROMO_TEST=1`); `test-ui.js` (puppeteer on port 8751, `PROMO_UI_PORT` to change; includes the Guide, target recording, the wrong-format warning and coverage); `test-kit.js` (kits, looks, overflow matrix); `test-examples.js` (live capture) |

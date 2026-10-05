@@ -15,6 +15,7 @@
       <h1>Promotion Desk</h1>
       <p class="sub" id="today-line">A human publishes every post.</p>
     </div>
+    <label class="site-pick" title="Each site has its own items, claim rules, calendar, log, drafts and kits"><span class="lbl">Site</span><select id="site" aria-label="Site"></select></label>
   </div>
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="today" aria-selected="true">Today</button>
@@ -30,6 +31,8 @@
 </header>
 
 <main>
+  <p class="card notice small" id="site-note" hidden></p>
+  <p class="muted small site-home">Data folder: <code id="site-home"></code></p>
   <!-- TODAY -->
   <section id="tab-today" class="tab" data-tab="today">
     <div class="head-row"><h2 id="plan-title">Today</h2><button class="ghost" id="plan-refresh">Refresh</button></div>
@@ -44,7 +47,7 @@
       <div class="card">
         <label class="lbl" for="d-tool">Tool</label>
         <div class="picker" id="d-picker">
-          <input id="d-tool" type="search" autocomplete="off" placeholder="Search the 232 tools… e.g. merge pdf">
+          <input id="d-tool" type="search" autocomplete="off" placeholder="Search the tools… e.g. merge pdf">
           <ul class="picker-list" id="d-tool-list" hidden></ul>
         </div>
         <p class="chosen" id="d-tool-chosen"></p>

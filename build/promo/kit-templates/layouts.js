@@ -48,16 +48,16 @@ function wm(ctx) { return '<div class="wm">' + glyph(ctx.rec.glyph, 'i-' + ctx.r
 function bigNum(n) { return '<div class="bignum">0' + n + '</div>'; }
 
 function bar(ctx, counter) {
-  return '<div class="bar"><div class="logo">' + P.logo() + '<span>1234Tools</span></div>'
+  return '<div class="bar"><div class="logo">' + P.brandLogo() + '<span>' + esc(P.brandName()) + '</span></div>'
     + '<div class="sec">' + esc(ctx.rec.sectionName) + '</div>'
     + (counter ? '<div class="count">' + counter + '<span>/5</span></div>' : '') + '</div>';
 }
 function runhead(ctx, label, page) {
-  return '<div class="runhead"><b>1234TOOLS</b><span>' + esc(label) + '</span><em>p. ' + page + '</em></div>';
+  return '<div class="runhead"><b>' + esc(P.brandName().toUpperCase()) + '</b><span>' + esc(label) + '</span><em>p. ' + page + '</em></div>';
 }
 function masthead(ctx, compact) {
-  return '<div class="mast' + (compact ? ' compact' : '') + '"><div class="mast-name" data-fit="' + (compact ? '120,60' : '196,90') + '" data-mode="line" data-order="1">1234TOOLS</div>'
-    + '<div class="mast-line"><span>Issue No. ' + (ctx.n || 1) + '</span><span>' + esc(ctx.rec.sectionName) + '</span><span>' + (ctx.rec.pricing === 'freemium' ? 'AI edition' : 'Free tools') + '</span></div></div>';
+  return '<div class="mast' + (compact ? ' compact' : '') + '"><div class="mast-name" data-fit="' + (compact ? '120,60' : '196,90') + '" data-mode="line" data-order="1">' + esc(P.brandName().toUpperCase()) + '</div>'
+    + '<div class="mast-line"><span>Issue No. ' + (ctx.n || 1) + '</span><span>' + esc(ctx.rec.sectionName) + '</span><span>' + (P.siteOf() ? esc(P.siteOf().promotes || '') : ctx.rec.pricing === 'freemium' ? 'AI edition' : 'Free tools') + '</span></div></div>';
 }
 /** A fitted headline. o: { tag, cls, box, fit, order, phrase, coral } */
 function head(text, o) {
@@ -78,8 +78,8 @@ function phone(ctx, o) {
 function pills(list, cls) { return '<div class="pills ' + (cls || '') + '" data-chk="1">' + list.slice(0, 3).map((p) => '<span class="pill"><i></i>' + esc(p) + '</span>').join('') + '</div>'; }
 /* breaks only after a slash: each path segment stays whole */
 function urlHtml(ctx) {
-  const segs = String(ctx.rec.path).split('/').filter(Boolean);
-  return '<span class="nw">1234tools.com/</span><wbr><b>' + segs.map((s) => '<span class="nw">' + esc(s) + '/</span>').join('<wbr>') + '</b>';
+  const segs = String(ctx.rec.path).replace(/#.*$/, '').split('/').filter(Boolean);
+  return '<span class="nw">' + esc(P.hostOf(P.siteOf())) + '/</span><wbr><b>' + segs.map((s) => '<span class="nw">' + esc(s) + '/</span>').join('<wbr>') + '</b>';
 }
 function qrTile(svg, cap) { return '<div class="qrtile">' + svg + '<div class="qrcap">' + esc(cap || 'Scan to open') + '</div></div>'; }
 function sticker(ctx) { return '<div class="sticker">' + ctx.qr.story + '<div class="lab"><i></i>' + esc(ctx.c.cta) + '</div></div>'; }

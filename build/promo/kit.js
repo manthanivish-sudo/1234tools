@@ -363,7 +363,10 @@ function mdEsc(s) { return String(s || '').replace(/\|/g, '\\|').replace(/\n/g, 
 function captions(rec, story) {
   const { lint } = require('./lint');
   let tags = [];
-  try { tags = require('./hashtags').tagsFor(rec, { n: 5, brand: 1 }); } catch (e) { tags = []; }
+  const other = !require('./site').isDefault();
+  // the 1234Tools hashtag table fits its tools only; another site gets its brand and the item's group
+  if (other) tags = [require('./site').current().name, rec.section].map((t) => '#' + String(t).replace(/[^A-Za-z0-9]+(.)?/g, (m, c) => (c ? c.toUpperCase() : '')).replace(/^./, (c) => c.toUpperCase()));
+  else try { tags = require('./hashtags').tagsFor(rec, { n: 5, brand: 1 }); } catch (e) { tags = []; }
   const x = story.usual.map((u) => '✗ ' + u).join('\n');
   const steps = story.steps.map((s, i) => (i + 1) + '. ' + s).join('\n');
   const proof = story.proof.join(' · ');
@@ -377,7 +380,7 @@ function captions(rec, story) {
       text: story.hook + '\n\n' + story.pain + '\n\nThe usual way:\n' + x + '\n\n' + rec.title + ': ' + story.promise + '\n\n' + steps + '\n\n' + proof + '\n' + li },
     { id: 'instagram-carousel', label: 'Instagram carousel / feed caption', limit: 2200,
       text: story.hook + '\n\n' + story.pain + '\n\n' + x + '\n\nThe fix: ' + rec.title + '. ' + story.promise + '\n\n' + steps + '\n\n' + proof + '. Link in bio: ' + P.cleanHost(rec.path) + '\n\nSave this for later.\n\n' + tags.join(' ') },
-    { id: 'pinterest-title', label: 'Pinterest pin title', limit: 100, text: story.howTo },
+    { id: 'pinterest-title', label: 'Pinterest pin title', limit: 100, text: story.howTo || (rec.title + ': ' + story.hook).slice(0, 100) },
     { id: 'pinterest-description', label: 'Pinterest pin description', limit: 500,
       text: story.pain + ' ' + story.promise + ' ' + story.steps.map((s, i) => (i + 1) + ') ' + s + '.').join(' ') + ' ' + proof + '.' },
     { id: 'pinterest-link', label: 'Pinterest destination link', text: pin },
@@ -400,7 +403,7 @@ function buildMarkdown(rec, story, exInfo, fitList, dir, qrs, fit, caps, look) {
   const push = (s) => lines.push(s == null ? '' : s);
   push('# Launch kit: ' + rec.title);
   push('');
-  push('Generated ' + new Date().toISOString().slice(0, 16).replace('T', ' ') + ' by the 1234Tools Promotion Desk. Nothing here has been posted: a human reads, edits and publishes every piece.');
+  push('Generated ' + new Date().toISOString().slice(0, 16).replace('T', ' ') + ' by the Promotion Desk for ' + P.brandName() + '. Nothing here has been posted: a human reads, edits and publishes every piece.');
   push('');
   push('- Tool: ' + rec.cleanUrl);
   push('- Section: ' + rec.sectionName + ' (`' + rec.section + '`) · Verb: ' + rec.verb + ' · ' + rec.io);
@@ -553,9 +556,42 @@ function themeOpts(opts) {
  * browser (a puppeteer Browser to reuse), story (override), example (a
  * normalised example to draw instead of capturing; tests and previews).
  */
+/* Another site (site.js): the profile's story, no live capture (the example
+   capture drives 1234Tools pages only, so the kit draws its "how it works"
+   schematic), and the palette whose accent is nearest the brand's colour. */
+function hueOf(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16); const r = (n >> 16) / 255; const g = ((n >> 8) & 255) / 255; const b = (n & 255) / 255;
+  const max = Math.max(r, g, b); const min = Math.min(r, g, b); const d = max - min;
+  if (!d) return null;
+  const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return (h * 60 + 360) % 360;
+}
+function brandPalette(site) {
+  const want = hueOf(site && site.colours && site.colours.primary);
+  if (want == null) return undefined;
+  let best = null;
+  for (const id of PAL.IDS) {
+    const h = hueOf(PAL.PALETTES[id].accent);
+    if (h == null) continue;
+    const dist = Math.min(Math.abs(h - want), 360 - Math.abs(h - want));
+    if (!best || dist < best.dist) best = { id, dist };
+  }
+  return best ? best.id : undefined;
+}
+function forSite(opts, rec) {
+  const S = require('./site');
+  if (S.isDefault()) return opts;
+  const o = Object.assign({ capture: false }, opts);
+  if (!o.story) o.story = rec.story;
+  if (!o.palette && !o.theme) o.palette = brandPalette(S.current());
+  return o;
+}
+
 async function kit(toolPath, opts) {
-  opts = opts || {};
   const rec = T.record(toolPath);
+  opts = forSite(opts || {}, rec);
   const story = Object.assign({}, opts.story || require('./stories').storyFor(rec.path));
   const th = themeOpts(opts);
   const dir = path.join(kitsDir(), kitSlug(rec));
@@ -606,8 +642,8 @@ async function kit(toolPath, opts) {
  * example already on disk, else the schematic).
  */
 async function looks(toolPath, opts) {
-  opts = opts || {};
   const rec = T.record(toolPath);
+  opts = require('./site').isDefault() ? (opts || {}) : Object.assign({ capture: false, story: rec.story }, opts || {});
   const story = Object.assign({}, opts.story || require('./stories').storyFor(rec.path));
   const exInfo = opts.example ? { ex: opts.example, how: 'supplied' } : await getExample(rec, story, Object.assign({ capture: false }, opts));
   const seed = opts.seed != null && opts.seed !== '' ? +opts.seed >>> 0 : (Math.random() * 4294967295) >>> 0;

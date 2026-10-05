@@ -13,6 +13,11 @@
  *   node build/promo/desk.js lint "<text>" [--ai] [--section s]
  *   node build/promo/desk.js guide [channel]                 vision, process, FAQ; or one channel's card
  *   node build/promo/desk.js coverage [--days 14]            which calendar targets are posted, missing or need a check
+ *   node build/promo/desk.js sites                           the site profiles (1234tools, xleshop, mvr-it, attend-now, fixourtime)
+ *
+ * Every command takes --site <id> (default 1234tools): each site has its own items,
+ * claim rules, log, calendar, drafts and kits (PROMO_HOME/sites/<id>/; 1234Tools
+ * keeps PROMO_HOME itself). Kits for other sites use the profile's stories.
  *
  * A human publishes every post. This server binds 127.0.0.1 only, never logs in
  * anywhere, never submits a form and never calls a posting API: "Open composer"
@@ -29,6 +34,7 @@ const TPL = require('./templates');
 const V = require('./venues');
 const L = require('./log');
 const { lint } = require('./lint');
+const SITE = require('./site');
 
 const UI_DIR = path.join(__dirname, 'ui');
 const PORTS = [8796, 8797, 8798, 8799];
@@ -94,6 +100,11 @@ function reelMakerLive() {
 }
 
 async function reels() {
+  if (!SITE.isDefault()) {
+    // the Reel Maker writes its script from a 1234Tools tool page; another site uses it with its own text
+    return { available: true, live: null, base: REEL_MAKER, sections: [],
+      note: 'The Reel Maker\'s ready-made scripts come from 1234Tools tool pages. For ' + SITE.current().name + ', open ' + REEL_MAKER + ' and paste the beats from the calendar slot (Calendar tab, "Beats for the Reel").' };
+  }
   const bySection = {};
   for (const r of T.listTools()) {
     if (!bySection[r.section]) bySection[r.section] = { section: r.section, name: r.sectionName, tools: [] };
@@ -183,8 +194,22 @@ function createServer(port) {
         if (origin && !allowedHosts.has(origin.replace(/^https?:\/\//, ''))) return send(res, 403, { error: 'cross-origin' });
         if (!/application\/json/.test(String(req.headers['content-type'] || ''))) return send(res, 415, { error: 'JSON only' });
       }
+      /* every request runs in one site (site.js): its items, rules, log, calendar and kits */
+      const site = String(req.headers['x-promo-site'] || q.site || SITE.DEFAULT);
+      if (!SITE.exists(site)) return send(res, 400, { error: 'Unknown site: ' + site });
+      return await SITE.run(site, () => route(req, res, u, q, p));
+    } catch (e) {
+      return send(res, 500, { error: String(e && e.message || e) });
+    }
+  });
+}
 
-      if (p === '/' || p === '/index.html') return sendFile(res, path.join(UI_DIR, 'index.html'));
+/* The routes, run inside the request's site. (Indented as they were inside createServer.) */
+async function route(req, res, u, q, p) {
+  /* eslint-disable-next-line no-lone-blocks */ {
+      if (p === '/'|| p === '/index.html') return sendFile(res, path.join(UI_DIR, 'index.html'));
+      if (p === '/api/sites') return send(res, 200, { current: SITE.currentId(), sites: SITE.list() });
+      if (p === '/api/site') { const s = SITE.current(); return send(res, 200, { site: Object.assign({}, s, { items: s.builtin ? null : s.items }), home: L.home(), facebook: L.fbBudget() }); }
       if (p === '/ui.js' || p === '/ui.css') return sendFile(res, path.join(UI_DIR, p.slice(1)));
       if (p.startsWith('/fonts/')) { const f = inside(path.join(T.ROOT, 'assets', 'fonts'), p.slice(7)); return f ? sendFile(res, f) : send(res, 404, {}); }
       if (p === '/icons.svg') return sendFile(res, path.join(T.ROOT, 'assets', 'icons.svg'));
@@ -260,7 +285,7 @@ function createServer(port) {
       /* one target of a slot: record a link or a tick, skip with a reason, clear, accept, add or remove */
       if (p === '/api/calendar/target' && req.method === 'POST') {
         const b = await readBody(req);
-        try { return send(res, 200, require('./calendar').target(b.id, b.channel, b.action, { url: b.url, tick: !!b.tick, note: b.note, reason: b.reason })); }
+        try { return send(res, 200, require('./calendar').target(b.id, b.channel, b.action, { url: b.url, tick: !!b.tick, note: b.note, reason: b.reason, noLink: !!b.noLink })); }
         catch (e) { return send(res, 400, { error: e.message }); }
       }
       if (p === '/api/calendar/coverage') return send(res, 200, require('./calendar').coverage({ days: q.days }));
@@ -273,10 +298,7 @@ function createServer(port) {
       }
       if (p === '/api/health') return send(res, 200, { ok: true, home: L.home(), venues: V.file() });
       return send(res, 404, { error: 'not found' });
-    } catch (e) {
-      return send(res, 500, { error: String(e && e.message || e) });
-    }
-  });
+  }
 }
 
 function serve(port) {
@@ -329,7 +351,7 @@ function printDraft(d) {
 /** The coverage report for the terminal. */
 function coverageText(c) {
   const out = [];
-  out.push('Coverage of the video calendar, ' + c.from + ' to ' + c.today + ' (' + c.days + ' days). The desk checks each link\'s shape only; it never opens it.');
+  out.push('Site: ' + SITE.current().name + '. Coverage of the video calendar, ' + c.from + ' to ' + c.today + ' (' + c.days + ' days). The desk checks each link\'s shape only; it never opens it.');
   const n = (b) => b.posted + ' posted, ' + b.due + ' due today, ' + b.missed + ' missed' + (b.flagged ? ', ' + b.flagged + ' to check' : '') + (b.skipped ? ', ' + b.skipped + ' skipped' : '');
   out.push('\nPer channel (last 7 days | last 30 days):');
   if (!c.channels.length) out.push('  nothing due yet');
@@ -338,7 +360,7 @@ function coverageText(c) {
   if (!c.todaySlots.length) out.push('  no video slot today');
   for (const s of c.todaySlots) {
     out.push('  ' + s.id + ' ' + s.title + ' (' + s.formatLabel + '): ' + s.progress.label);
-    for (const m of s.missing) out.push('    - ' + m.name + (m.flagged ? ': link needs a check' : '') + (m.cadence && !m.cadence.ok ? ': WAIT, ' + m.cadence.reasons[0] : ''));
+    for (const m of s.missing) out.push('    - ' + m.name + (m.flagged ? ': link needs a check' : '') + (m.cadence && !m.cadence.ok ? ': WAIT, ' + m.cadence.reasons[0] : '') + (m.linkInPost === false ? ' (profile-link post: not counted toward linked caps' + (m.advice ? '; ' + m.advice.text : '') + ')' : ''));
   }
   const open = c.slots.filter((s) => s.missing.length || s.flagged.length || s.warnings.length || s.unassigned.length);
   out.push('\nSlots with something open:');
@@ -351,12 +373,26 @@ function coverageText(c) {
     for (const u of s.unassigned) out.push('    unassigned link: ' + u.url);
   }
   if (c.noVenue.length) out.push('\nRecorded without a log entry (no venue in venues.json): ' + c.noVenue.join(', ') + '.');
+  if (c.facebook) out.push('\nFacebook Page link posts: ' + c.facebook.label + ' (config.json facebook.linkPostsPerMonth). Native posts without a link do not use it.');
   return out.join('\n');
 }
 
+/** Every command takes --site <id> (default 1234tools, or PROMO_SITE); `sites` lists them. */
 async function cli(argv) {
   const a = args(argv);
+  const site = a.site && a.site !== true ? String(a.site) : (process.env.PROMO_SITE || SITE.DEFAULT);
+  if (!SITE.exists(site)) { console.error('Unknown site: ' + site + '. Sites: ' + SITE.list().map((s) => s.id).join(', ')); return 2; }
+  if (a._[0] === 'serve') process.env.PROMO_SITE = site; // the web app opens on this site; the header picker switches per tab
+  return SITE.run(site, () => cliInSite(a));
+}
+
+async function cliInSite(a) {
   const cmd = a._[0];
+  if (cmd === 'sites') {
+    for (const s of SITE.list()) console.log((s.id === SITE.currentId() ? '* ' : '  ') + s.id.padEnd(12) + s.name.padEnd(18) + (s.baseUrl || '(no URL)').padEnd(32) + (s.items == null ? 'the 1234Tools catalogue' : s.items + ' ' + (s.promotes || 'items')) + (s.todo ? '  TODO: ' + s.todo : '') + (s.error ? '  ERROR: ' + s.error : ''));
+    console.log('Data folder for ' + SITE.currentId() + ': ' + L.home());
+    return 0;
+  }
   if (!cmd || cmd === 'help' || a.help) {
     console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^[\s\S]*?\/\*\*/, '').replace(/^ \* ?/gm, ''));
     return 0;

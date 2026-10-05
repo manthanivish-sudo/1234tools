@@ -52,8 +52,40 @@ function count(text, mode) {
 
 function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
+/* The site whose rules apply: ctx.site, or the site of the call in progress (site.js).
+   1234Tools (the default) keeps exactly the rules above; another site gets the
+   common honesty rules plus its own profile's rules instead of the 1234Tools ones. */
+function siteFor(ctx) {
+  if (ctx.site !== undefined) return ctx.site && ctx.site.id !== '1234tools' ? ctx.site : null;
+  try { const S = require('./site'); return S.isDefault() ? null : S.current(); } catch (e) { return null; }
+}
+
+function siteRules(t, site, err) {
+  const r = site.rules || {};
+  const phrases = (r.freePhrases || []).map((p) => String(p).toLowerCase());
+  if (!r.free) {
+    let rest = t.toLowerCase();
+    for (const p of phrases) rest = rest.split(p).join(' ');
+    const m = rest.replace(/#\w+/g, (h) => (/free/i.test(h) ? ' free ' : ' ')).match(/\bfree\b/);
+    if (m) err('site-free', site.name + ' does not offer this for free' + (phrases.length ? ': only "' + r.freePhrases.join('", "') + '" may be called free' : '') + '.', 'free');
+  }
+  if (!r.browserClaims) {
+    const m = t.match(/\bruns? (entirely )?in (your|the) browser\b|\bnothing (you type |you enter |you drop in )?(is |gets )?uploaded\b|\bno uploads?\b|\bon your device\b|\bworks offline\b|\bclient-side\b|\bno sign-?ups?\b|\bno account\b|\bno login\b/i);
+    const allowed = (r.allowClaims || []).map((x) => String(x).toLowerCase());
+    if (m && !allowed.includes(m[0].toLowerCase())) err('site-claim', 'That is a 1234Tools claim; ' + site.name + ' cannot make it' + ' (allowClaims in the site profile lists any the site itself states).', m[0]);
+  }
+  for (const f of r.forbid || []) {
+    let re;
+    try { re = new RegExp(f.re, 'i'); } catch (e) { continue; }
+    const m = t.match(re);
+    if (m) err(f.rule || 'site-rule', f.msg || ('Not for ' + site.name + '.'), m[0]);
+  }
+}
+
 function lint(text, ctx) {
   ctx = ctx || {};
+  const site = siteFor(ctx);
+  if (site) ctx = Object.assign({}, ctx, { pricing: undefined, section: undefined });
   const t = String(text || '');
   const errors = [];
   const warnings = [];
@@ -120,6 +152,9 @@ function lint(text, ctx) {
     if (m) err('watermark', '"No watermark" only for media tools (pdf, image, ai-image, ai-video).', m[0]);
   }
 
+  // 10b. another site's own rules
+  if (site) siteRules(t, site, err);
+
   // 11. disclosure next to a link
   if (ctx.requireDisclosure && /(https?:\/\/|1234tools\.com|1234tools dot com)/i.test(t) && !DISCLOSURE.test(t)) {
     err('disclosure', 'This venue needs ownership disclosed where the tool is mentioned.', '');
@@ -139,7 +174,7 @@ function lint(text, ctx) {
   return { ok: errors.length === 0, errors, warnings, count: n, limit: ctx.limit || 0 };
 }
 
-module.exports = { lint, count, COMPETITORS };
+module.exports = { lint, count, COMPETITORS, siteRules };
 
 if (require.main === module) {
   const text = process.argv.slice(2).join(' ');

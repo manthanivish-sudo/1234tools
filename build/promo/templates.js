@@ -922,6 +922,8 @@ function fits(id, built, venue) {
 function render(templateId, rec, opts) {
   opts = opts || {};
   if (!META[templateId]) throw new Error('Unknown template: ' + templateId);
+  // another site (site.js) has its own stories and claim rules: none of the 1234Tools wording applies
+  if (!require('./site').isDefault()) return require('./site-templates').render(templateId, rec, opts);
   if (typeof rec === 'string') rec = T.record(rec);
   const venue = opts.venue || null;
   let built = null;

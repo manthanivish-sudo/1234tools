@@ -76,6 +76,11 @@ const SRC = {
   liUrl: 'https://www.linkedin.com/help/linkedin/answer/a1340792/finding-the-url-for-shared-content?lang=en',
   liPostsApi: 'https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api',
   liDocument: 'https://www.linkedin.com/help/linkedin/answer/a518909',
+  fbLinkTest: 'https://techcrunch.com/2025/12/17/facebook-is-testing-a-link-posting-limit-for-professional-accounts-and-pages',
+  fbLinkSme: 'https://www.socialmediaexaminer.com/what-facebooks-new-link-rules-mean-for-your-2026-strategy/',
+  fbLinkHelp: 'https://www.facebook.com/help/1929252614431792',
+  metaOne: 'https://about.fb.com/news/2026/09/introducing-meta-one-subscription-service-more-features-ai/',
+  metaOneBiz: 'https://www.facebook.com/business/news/introducing-meta-one-plans-for-businesses',
   xCount: 'https://docs.x.com/resources/fundamentals/counting-characters',
   xLink: 'https://help.x.com/en/using-x/how-to-post-a-link',
   xPremium: 'https://help.x.com/en/using-x/x-premium',
@@ -208,7 +213,7 @@ const CHANNELS = [
   },
   {
     id: 'facebook-reel', name: 'Facebook Reel', short: 'FB Reel', platform: 'facebook', venue: 'social-facebook', template: 'instagram-caption', linkShape: true,
-    summary: 'The same vertical video on your Facebook Page; every Facebook video is now a reel.',
+    summary: 'The same vertical video on your Facebook Page, posted natively with no link: it does not touch the Page\'s link-post budget.',
     specs: [
       s('Length', 'Any length or orientation: since June 2025 every video posted to Facebook is shared as a reel', SRC.fbReelsHelp),
       s('Length (API)', '3 to 90 seconds through the Reels publishing API', SRC.fbReelsApi),
@@ -224,7 +229,8 @@ const CHANNELS = [
     steps: [
       'Post from the Page, not your personal profile.',
       'Create, Reel, pick reel-<tool>.mp4. It is 1080×1920 and inside the publishing API\'s 90 seconds.',
-      'Paste the caption from Draft. Facebook\'s own pages do not say whether caption links are clickable on reels; keep the address readable in the video as well.',
+      'Paste the caption from Draft and take the link out: say "search 1234Tools" (or the site\'s name) or "link on our Page" instead. A native post without a link does not use the link budget; Meta reports put clickable Reel links behind its paid plans.',
+      'Keep the address readable in the video itself (the call-to-action beat).',
       'Publish. Open the reel, Share, Copy link, and record it. Expect facebook.com/reel/…; a fb.watch short link is accepted with a note.'
     ],
     redLines: RL.video.concat(RL.facebook, RL.common),
@@ -234,8 +240,12 @@ const CHANNELS = [
   },
   {
     id: 'facebook-post', name: 'Facebook Page post', short: 'FB post', platform: 'facebook', venue: 'social-facebook', template: 'threads-post', linkShape: true,
-    summary: 'A photo or link post on your Page: lead with a result image, link in the text.',
+    summary: 'A Page post. Native (image or carousel, no link) by default; a link post spends the monthly link budget.',
     specs: [
+      s('Link posts (reported test)', 'Meta has been testing a limit of 2 link posts a month for Pages and professional-mode profiles without a paid plan; Meta confirmed a "limited test" (December 2025); the number comes from reports, not from Meta', SRC.fbLinkTest, '2026-10-05'),
+      s('Paid plans (official)', 'Meta One (15 September 2026): the Advanced plan, from $49.99 a month, includes links in organic posts and Reels; plans, prices and availability vary by region', SRC.metaOne, '2026-10-05'),
+      s('Over the limit (reported)', null, SRC.fbLinkHelp, '2026-10-05'),
+      s('Links in comments (reported)', null, SRC.fbLinkHelp, '2026-10-05'),
       s('Photo file type (API)', 'JPEG, BMP, PNG, GIF or TIFF', SRC.fbPhotosApi),
       s('Photo file size (API)', '10 MB maximum; PNG over 1 MB may look pixelated', SRC.fbPhotosApi),
       s('Aspect ratio (ads guide)', '4:5, 1440×1800 pixels, for feed images', SRC.fbFeedAds),
@@ -245,9 +255,12 @@ const CHANNELS = [
     ],
     upload: [FILE.square, FILE.carousel + ' (as a multi-photo post)', FILE.wide + ' (the preview shape when the post is a link)'],
     steps: [
-      'Post as the Page. Lead with the result image (square-1080.png or the carousel slides).',
-      'Write the text in Draft (template threads-post works as a short Page post) and put the one link in it.',
-      'Publish. Open the post (its time stamp), copy the address, and record it.'
+      'Post as the Page. By default post natively: the result image (square-1080.png) or the carousel slides, with "search 1234Tools" or "link on our Page" in the text and no link. That costs nothing from the link budget.',
+      'Spend a link post (the desk shows "x of 2 used this month") only on the tools that bring the most visits: check GA4 first.',
+      'If the link budget is used up, the post still goes out but reports say the link can show as plain text. A link in the first comment is a fallback only: reports disagree on whether it counts too.',
+      'A Story with a link sticker, and groups by their own rules, are other ways to share a link.',
+      'Write the text in Draft (template threads-post works as a short Page post).',
+      'Publish. Open the post (its time stamp), copy the address, and record it. Tick "no link" when you record a native post, so the budget stays right.'
     ],
     redLines: RL.facebook.concat(RL.social, RL.common),
     url: { accept: ['fb-post'], soft: { 'fb-short': 'short link: the desk cannot see what fb.watch leads to' }, near: { 'fb-reel': 'wrong format: this is a Reel, the slot asked for a Page post', 'fb-video': 'wrong format: this is a video link, the slot asked for a Page post', 'fb-group-post': 'wrong format: this is a group post, the slot asked for a post on your Page', 'fb-other': 'wrong format: this is a page or profile link, not a post' } },
@@ -532,7 +545,7 @@ const CHANNELS = [
     samples: { valid: ['https://www.threads.net/@you/post/C1a2B3c4D5e', 'https://www.threads.com/@you/post/C1a2B3c4D5e?xmt=abc'], wrongFormat: ['https://www.threads.net/@you'], wrongPlatform: ['https://www.instagram.com/p/C1a2B3c4D5e/'] }
   },
   {
-    id: 'whatsapp-status', name: 'WhatsApp Status', short: 'WA Status', platform: 'whatsapp', venue: '', template: 'whatsapp-broadcast', linkShape: false, tick: true,
+    id: 'whatsapp-status', name: 'WhatsApp Status', short: 'WA Status', platform: 'whatsapp', venue: 'social-whatsapp-status', template: 'whatsapp-broadcast', linkShape: false, tick: true,
     summary: 'A 24-hour status for your contacts; it has no public link, so it is ticked, not linked.',
     specs: [
       s('Aspect ratio', '9:16 recommended for Status', SRC.metaAspect),
@@ -577,6 +590,32 @@ const CHANNELS = [
     samples: { valid: ['https://whatsapp.com/channel/0029VaAbCdEfGhIjKlMn0a/123', 'https://www.whatsapp.com/channel/0029VaAbCdEfGhIjKlMn0a'], wrongFormat: ['https://wa.me/447700900123', 'https://chat.whatsapp.com/AbCdEfGhIjK'], wrongPlatform: ['https://t.me/yourchannel/42'] }
   }
 ];
+
+/* Does the post itself carry a clickable link? Where it does not (the link lives
+   in the profile: Instagram feed and Reels, TikTok, YouTube Shorts per SRC.ytLinks,
+   a native Facebook Reel), the desk logs the post as a profile-link post: it does
+   NOT count toward the linked-post caps or the day's routine cap, and the channel
+   gets frequency ADVICE instead (shown, never a block). A Pinterest pin carries
+   its destination link unless you record it with "no link". */
+const LINK_IN_POST = {
+  'instagram-reel': false, 'instagram-carousel': false, 'instagram-story': true, 'facebook-reel': false, 'facebook-post': true,
+  'youtube-shorts': false, tiktok: false, 'pinterest-video': true, 'pinterest-image': true, 'linkedin-post': true, 'linkedin-document': true,
+  x: true, threads: true, bluesky: true, mastodon: true, telegram: true, 'whatsapp-status': true, 'whatsapp-channel': true
+};
+/* The desk's own advice (not a platform rule): how many profile-link posts of a
+   kind one account should put out in a day. `group` shares the count. */
+const ADVICE = {
+  'instagram-reel': { perDay: 2, group: ['instagram-reel'], what: 'Reels' },
+  'instagram-carousel': { perDay: 2, group: ['instagram-carousel'], what: 'feed posts' },
+  'facebook-reel': { perDay: 2, group: ['facebook-reel'], what: 'Facebook Reels' },
+  'youtube-shorts': { perDay: 2, group: ['youtube-shorts'], what: 'Shorts' },
+  tiktok: { perDay: 2, group: ['tiktok'], what: 'TikTok videos' }
+};
+for (const c of CHANNELS) {
+  c.linkInPost = LINK_IN_POST[c.id] !== false;
+  c.noLinkOption = c.id === 'pinterest-video' || c.id === 'pinterest-image' || c.id === 'facebook-post';
+  if (ADVICE[c.id]) c.advice = ADVICE[c.id];
+}
 
 /* ---------------------------------------------------------- link rules */
 
@@ -714,14 +753,19 @@ function cards() {
         const tc = (L && L.TEMPLATE_CAPS[c.template]) || {};
         const days = Math.max(v.cadenceDays || 0, tc.days || 0);
         const week = Math.min(v.maxPerWeek > 0 ? v.maxPerWeek : 999, tc.perWeek || 999);
-        cadence = 'at most one linked post every ' + days + ' day' + (days === 1 ? '' : 's') + ' and ' + week + ' a week on ' + v.name + ' (venue register and the ' + c.template + ' template), shared with the Today routine.';
+        cadence = c.linkInPost
+          ? 'Counts as a linked post: at most one every ' + days + ' day' + (days === 1 ? '' : 's') + ' and ' + week + ' a week on ' + v.name + ' (venue register and the ' + c.template + ' template), shared with the Today routine' + (c.noLinkOption ? '; record it with "no link" when the post carries none' : '') + '.'
+          : 'A profile-link post (the post itself has no clickable link): logged, but not counted toward the linked-post caps or the day\'s routine cap.' + (c.advice ? ' The desk\'s advice, not a platform rule: at most ' + c.advice.perDay + ' ' + c.advice.what + ' a day per account.' : '');
       }
     }
+    let budget = null;
+    if (c.platform === 'facebook' && L) { try { budget = L.fbBudget(); } catch (e) { budget = null; } }
     return {
       id: c.id, name: c.name, short: c.short, platform: c.platform, summary: c.summary, venue: c.venue, venueName, cadence, template: c.template,
-      specs: c.specs, upload: c.upload, steps: c.steps, redLines: c.redLines, linkExample: c.linkExample, tick: !!c.tick, linkShape: !!c.linkShape
+      specs: c.specs, upload: c.upload, steps: c.steps, redLines: c.redLines, linkExample: c.linkExample, tick: !!c.tick, linkShape: !!c.linkShape,
+      linkInPost: c.linkInPost, noLinkOption: !!c.noLinkOption, advice: c.advice || null, budget
     };
   });
 }
 
-module.exports = { CHECKED, NC, SRC, list, get, classify, check, cards, PLATFORM_NAME };
+module.exports = { CHECKED, NC, SRC, list, get, classify, check, cards, PLATFORM_NAME, LINK_IN_POST, ADVICE };

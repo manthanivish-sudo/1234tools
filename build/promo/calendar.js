@@ -51,13 +51,25 @@ const DAY = 86400000;
    document where a step-by-step story suits (problem → solution, India
    finance). Add or skip a channel per slot in the Calendar tab. */
 const FORMATS = {
-  problem: { label: 'Problem → solution', targets: ['instagram-reel', 'youtube-shorts', 'tiktok', 'instagram-carousel', 'linkedin-document'] },
-  before: { label: 'Before / after', targets: ['instagram-reel', 'tiktok', 'pinterest-video'] },
+  problem: { label: 'Problem → solution', targets: ['instagram-reel', 'youtube-shorts', 'tiktok', 'facebook-reel', 'instagram-carousel', 'linkedin-document'] },
+  before: { label: 'Before / after', targets: ['instagram-reel', 'tiktok', 'facebook-reel', 'pinterest-video'] },
   dev: { label: '10-second developer trick', targets: ['youtube-shorts', 'x', 'linkedin-post'] },
-  india: { label: 'India finance', targets: ['instagram-reel', 'youtube-shorts', 'whatsapp-status', 'instagram-carousel', 'linkedin-document'] },
+  india: { label: 'India finance', targets: ['instagram-reel', 'youtube-shorts', 'facebook-reel', 'whatsapp-status', 'instagram-carousel', 'linkedin-document'] },
   ai: { label: 'AI at work', targets: ['linkedin-post', 'youtube-shorts', 'instagram-reel'] }
 };
 for (const f of Object.values(FORMATS)) f.platforms = f.targets.map((id) => CH.get(id).name);
+
+/* Other sites (site.js): one format, three slots a week (Monday, Wednesday, Friday),
+   each item's own story, and the targets a profile names (calendarTargets) or these. */
+const SITE_TARGETS = ['instagram-reel', 'facebook-reel', 'youtube-shorts', 'linkedin-post', 'instagram-carousel'];
+const SITE_WEEK = [[], ['problem'], [], ['problem'], [], ['problem'], []];
+function siteTargets() {
+  const S = require('./site');
+  if (S.isDefault()) return null;
+  const p = S.current();
+  return (Array.isArray(p.calendarTargets) && p.calendarTargets.length ? p.calendarTargets : SITE_TARGETS).filter((id) => CH.get(id));
+}
+function targetsFor(fmt) { return siteTargets() || (FORMATS[fmt] ? FORMATS[fmt].targets : []); }
 
 /* Which slots each weekday fills (0 = Sunday). Nine a week: one a day,
    and a second on Tuesday and Thursday, the two days short video does best
@@ -76,6 +88,10 @@ function examples() {
 }
 
 function pools() {
+  if (!require('./site').isDefault()) {
+    const items = T.listTools();
+    return { problem: items, before: [], dev: [], india: [], ai: [] };
+  }
   const ex = examples();
   const tools = T.listTools();
   const visual = (t) => { const e = ex[t.path]; return !!(e && (e.before || e.after || e.page)); };
@@ -130,7 +146,7 @@ function save(cal) {
 /* What is stored for a target: the record only. Names, issues and states
    are worked out on every read (decorate), so a change in channels.js
    reaches old records too. */
-const TARGET_FIELDS = ['channel', 'state', 'url', 'tick', 'note', 'reason', 'at', 'logAt', 'accepted', 'extra', 'migrated'];
+const TARGET_FIELDS = ['channel', 'state', 'url', 'tick', 'note', 'reason', 'at', 'logAt', 'accepted', 'extra', 'migrated', 'noLink'];
 function strip(it) {
   const out = {};
   for (const [k, v] of Object.entries(it)) if (!/^(view|progress|state)$/.test(k)) out[k] = v;
@@ -141,7 +157,7 @@ function strip(it) {
 /** Give a slot its targets if it has none (v1 slots, slots of an older plan). */
 function normalise(it) {
   if (!Array.isArray(it.targets)) it.targets = [];
-  if (!it.targets.length && FORMATS[it.format]) it.targets = FORMATS[it.format].targets.map((channel) => ({ channel }));
+  if (!it.targets.length && FORMATS[it.format]) it.targets = targetsFor(it.format).map((channel) => ({ channel }));
   for (const t of it.targets) if (!t.state) t.state = 'due';
   it.targets = it.targets.filter((t) => CH.get(t.channel));
   if (FORMATS[it.format]) it.platforms = it.targets.map((t) => CH.get(t.channel).name);
@@ -183,7 +199,11 @@ function hasRecord(it) {
 
 /** A fresh plan from `start` (YYYY-MM-DD), keeping every slot that has a status or a target record. */
 function plan(start) {
-  const S = require('./stories/index.js');
+  const SITE = require('./site');
+  const own = SITE.isDefault();
+  const S = own ? require('./stories/index.js') : { storyFor: (p) => T.record(p).story };
+  const week = own ? WEEK : SITE_WEEK;
+  const reelBase = own ? REEL : REEL.replace(/\?tool=$/, '');
   const old = load();
   const kept = {};
   if (old) for (const it of old.items) if (hasRecord(it)) kept[it.id] = it;
@@ -195,7 +215,7 @@ function plan(start) {
   for (let i = 0; i < DAYS; i++) {
     const day = new Date(s.getFullYear(), s.getMonth(), s.getDate() + i);
     const date = iso(day);
-    WEEK[day.getDay()].forEach((fmt, slot) => {
+    week[day.getDay()].forEach((fmt, slot) => {
       const id = date + ':' + slot;
       if (kept[id]) { items.push(kept[id]); lastUsed[kept[id].tool] = i; delete kept[id]; return; }
       const pool = by[fmt];
@@ -212,18 +232,19 @@ function plan(start) {
         id, date, slot, format: fmt, formatLabel: FORMATS[fmt].label, tool: pick.path, title: pick.title,
         hook: st.hook || pick.description, pain: st.pain || '', promise: st.promise || '',
         beats: ['Hook: ' + (st.hook || pick.title), 'Pain: ' + (st.pain || ''), 'The usual way: ' + (st.usual || []).join(' · '),
-          'The fix: ' + (st.promise || pick.description), 'Show the real result', 'Steps: ' + (st.steps || []).join(' → '), 'CTA: ' + (st.cta || 'Try it free') + ' — link in bio'],
-        platforms: FORMATS[fmt].platforms.slice(), reel: REEL + encodeURIComponent(pick.path),
+          'The fix: ' + (st.promise || pick.description), own ? 'Show the real result' : 'Show it on screen, as the site shows it', 'Steps: ' + (st.steps || []).join(' → '), 'CTA: ' + (st.cta || (own ? 'Try it free' : 'See it on ' + SITE.current().name)) + ' — link in bio'],
+        platforms: targetsFor(fmt).map((id) => CH.get(id).name), reel: own ? reelBase + encodeURIComponent(pick.path) : reelBase,
         status: 'planned', postedUrl: '', note: '',
-        targets: FORMATS[fmt].targets.map((channel) => ({ channel, state: 'due' }))
+        targets: targetsFor(fmt).map((channel) => ({ channel, state: 'due' }))
       });
+      if (!own) items[items.length - 1].formatLabel = SITE.current().promotes === 'products' ? 'Product story' : SITE.current().promotes === 'app features' ? 'Feature story' : 'Service story';
     });
   }
   // a recorded slot outside the new window is kept too, never dropped
   const outside = Object.values(kept);
   items.push(...outside);
   items.sort((a, b) => a.date.localeCompare(b.date) || a.slot - b.slot);
-  const cal = { v: 2, start: iso(s), made: nowIso(), items };
+  const cal = { v: 2, site: SITE.currentId(), start: iso(s), made: nowIso(), items };
   save(cal);
   return cal;
 }
@@ -267,7 +288,8 @@ function viewTarget(it, t, idx) {
   if (t.state === 'posted' && !t.url && t.tick && !ch.tick) issues.push({ code: 'no-link', level: 'bad', msg: 'Ticked without a link, but ' + ch.name + ' gives every post a link: record it.' });
   const bad = issues.some((x) => x.level === 'bad');
   const done = t.state === 'skipped' ? !!t.reason : t.state === 'posted' && (!bad || !!t.accepted);
-  return Object.assign({}, t, { name: ch.name, short: ch.short, platform: ch.platform, tickOnly: !!ch.tick && !ch.linkShape, tick: t.tick, allowsTick: !!ch.tick, venue: ch.venue || '', issues, flagged: bad && !t.accepted, done });
+  return Object.assign({}, t, { name: ch.name, short: ch.short, platform: ch.platform, tickOnly: !!ch.tick && !ch.linkShape, tick: t.tick, allowsTick: !!ch.tick, venue: ch.venue || '', issues, flagged: bad && !t.accepted, done,
+    linkInPost: ch.linkInPost && !t.noLink, noLinkOption: !!ch.noLinkOption });
 }
 
 function viewItem(it, idx) {
@@ -345,12 +367,18 @@ function target(id, channel, action, o) {
     if (!url && !o.tick) throw new Error('Paste the post\'s link' + (ch.tick ? ', or tick it as posted' : ''));
     if (url && !ch.linkShape) throw new Error(ch.name + ' gives a post no public link: tick it as posted instead (add a note if you like).');
     if (!url && !ch.tick) throw new Error(ch.name + ' gives every post its own link: paste it, so the desk can check the format.');
-    Object.assign(t, { state: 'posted', url: url || undefined, tick: url ? undefined : true, at: nowIso(), accepted: undefined, reason: undefined });
+    if (o.noLink && !ch.noLinkOption) throw new Error(ch.name + (ch.linkInPost ? ' always carries its link' : ' never carries a link in the post') + ': "no link" does not apply.');
+    Object.assign(t, { state: 'posted', url: url || undefined, tick: url ? undefined : true, at: nowIso(), accepted: undefined, reason: undefined, noLink: o.noLink ? true : undefined });
     if (o.note !== undefined) t.note = String(o.note).slice(0, 500);
+    /* a post whose link lives in the profile (Instagram, TikTok, Shorts, a native
+       Facebook Reel, or a pin or Page post recorded with "no link") is logged as a
+       profile-link post: kept in the history, counted toward no linked-post cap */
+    const linked = ch.linkInPost && !o.noLink;
     if (ch.venue && !t.logAt) {
-      const entry = L.append({ venueId: ch.venue, toolPath: it.tool, template: ch.template, url: url || undefined, kind: 'post', note: 'calendar ' + it.id + ' · ' + ch.name + (url ? '' : ' (ticked, no link)') });
+      const entry = L.append({ venueId: ch.venue, toolPath: it.tool, template: ch.template, url: url || undefined, kind: 'post', linked, profileLink: !linked, channel: ch.id, note: 'calendar ' + it.id + ' · ' + ch.name + (url ? '' : ' (ticked, no link)') });
       t.logAt = entry.at;
       out.logged = entry;
+      out.message = linked ? '' : 'Recorded as a profile-link post: in the log, but not counted toward the linked-post caps.';
     } else if (!ch.venue) {
       out.noVenue = true;
       out.message = ch.name + ' has no venue in venues.json, so this is recorded here without a log entry.';
@@ -360,7 +388,7 @@ function target(id, channel, action, o) {
     if (!reason) throw new Error('A skip needs a reason (for example: cadence, not right for this tool, account not set up).');
     Object.assign(t, { state: 'skipped', reason, at: nowIso(), url: undefined, tick: undefined, accepted: undefined });
   } else if (action === 'clear') {
-    Object.assign(t, { state: 'due', url: undefined, tick: undefined, reason: undefined, at: undefined, accepted: undefined, note: undefined });
+    Object.assign(t, { state: 'due', url: undefined, tick: undefined, reason: undefined, at: undefined, accepted: undefined, note: undefined, noLink: undefined });
   } else if (action === 'accept') {
     if (t.state !== 'posted' || !t.url) throw new Error('Nothing to accept: no link recorded.');
     t.accepted = true;
@@ -426,12 +454,24 @@ function coverage(opts) {
     missing: it.targets.filter((t) => !t.done).map((t) => {
       const ch = CH.get(t.channel);
       let cadence = null;
-      if (ch.venue && !t.flagged) { try { const c = L.canPost(ch.venue, { toolPath: it.tool, template: ch.template }); cadence = { ok: c.ok, reasons: c.reasons }; } catch (e) { /* no register: say nothing */ } }
-      return { channel: t.channel, name: t.name, flagged: t.flagged, issues: t.issues, cadence };
+      let advice = null;
+      if (ch.venue && !t.flagged && ch.linkInPost) { try { const c = L.canPost(ch.venue, { toolPath: it.tool, template: ch.template }); cadence = { ok: c.ok, reasons: c.reasons, warnings: c.warnings }; } catch (e) { /* no register: say nothing */ } }
+      if (!ch.linkInPost) advice = adviceFor(ch);
+      return { channel: t.channel, name: t.name, flagged: t.flagged, issues: t.issues, cadence, advice, linkInPost: ch.linkInPost };
     })
   }));
   const noVenue = CH.list().filter((c) => !c.venue).map((c) => c.name);
-  return { today, from, days, slots, channels, todaySlots, noVenue };
+  let facebook = null;
+  try { facebook = L.fbBudget(); } catch (e) { facebook = null; }
+  return { today, from, days, slots, channels, todaySlots, noVenue, facebook, site: require('./site').currentId() };
+}
+
+/** The desk's frequency advice for a profile-link channel today (never a block). */
+function adviceFor(ch) {
+  if (!ch.advice || !ch.venue) return null;
+  const key = L.dayKey(L.now());
+  const n = L.entries({ venue: ch.venue }).filter((e) => e.kind === 'post' && ch.advice.group.includes(e.channel) && L.dayKey(e.at) === key).length;
+  return { today: n, perDay: ch.advice.perDay, over: n >= ch.advice.perDay, text: n + ' ' + ch.advice.what + ' today on this account; the desk\'s advice is at most ' + ch.advice.perDay + ' a day (not a platform rule).' };
 }
 
 /** The calendar as CSV, for a spreadsheet or a shared planner. */

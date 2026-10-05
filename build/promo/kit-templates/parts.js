@@ -146,7 +146,39 @@ function looksLikeCode(s) {
   return /^[[{<]/.test(t) || /[;{}]\s*$/m.test(t) || /^\s*(const|let|var|function|def|SELECT|import)\b/m.test(t) || /=>|\b\w+\(\)/.test(t);
 }
 
-/** "1234tools.com/india/gst-calculator/" */
-function cleanHost(p) { return '1234tools.com' + p; }
+/* The site the kit is for (build/promo/site.js): 1234Tools unless another profile is active. */
+function siteOf() { try { const S = require('../site'); return S.isDefault() ? null : S.current(); } catch (e) { return null; } }
+function hostOf(site) { return site ? String(site.baseUrl || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/+$/, '') : '1234tools.com'; }
 
-module.exports = { ROOT, esc, logo, icon, glyph, splitHighlight, hlHtml, codeHtml, colourLine, looksLikeCode, cleanHost };
+/** "1234tools.com/india/gst-calculator/" (or the active site's host and path, without its #anchor) */
+function cleanHost(p) { return hostOf(siteOf()) + String(p).replace(/#.*$/, ''); }
+
+/** The brand name as the kit prints it. */
+function brandName() { const s = siteOf(); return s ? s.name : '1234Tools'; }
+
+/** The active site's logo from its repo (data URI), else a monogram in its colour; 1234Tools keeps its own mark. */
+const logoCache = {};
+function brandLogo() {
+  const s = siteOf();
+  if (!s) return logo();
+  if (logoCache[s.id] !== undefined) return logoCache[s.id];
+  let html = '';
+  try {
+    const f = s.logo && require('fs').existsSync(s.logo) ? s.logo : '';
+    if (f) {
+      const ext = require('path').extname(f).toLowerCase();
+      const type = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml', '.webp': 'image/webp' }[ext];
+      const buf = require('fs').readFileSync(f);
+      // inside an <svg> so the layouts' ".logo svg" sizing applies exactly as to the 1234Tools mark
+      if (type && buf.length < 600000) html = '<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><image width="512" height="512" preserveAspectRatio="xMidYMid meet" href="data:' + type + ';base64,' + buf.toString('base64') + '"/></svg>';
+    }
+  } catch (e) { html = ''; }
+  if (!html) {
+    const c = (s.colours && s.colours.primary) || '#f7c948';
+    html = '<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><rect x="32" y="32" width="448" height="448" rx="96" fill="' + esc(c) + '"/><text x="256" y="330" text-anchor="middle" font-family="Sora,sans-serif" font-weight="800" font-size="260" fill="#ffffff">' + esc(String(s.name || '?').charAt(0).toUpperCase()) + '</text></svg>';
+  }
+  logoCache[s.id] = html;
+  return html;
+}
+
+module.exports = { ROOT, esc, logo, icon, glyph, splitHighlight, hlHtml, codeHtml, colourLine, looksLikeCode, cleanHost, brandName, brandLogo, hostOf, siteOf };

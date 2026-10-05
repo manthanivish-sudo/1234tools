@@ -40,8 +40,15 @@
   }
   function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
 
+  /* The site this tab works on (site.js on the server): every API call carries it,
+     and links the browser opens directly (kit files, the CSV) carry it as ?site=. */
+  let SITE_ID = '';
+  try { SITE_ID = localStorage.getItem('promo-site') || ''; } catch (e) { SITE_ID = ''; }
+  function siteUrl(u) { return SITE_ID ? u + (u.indexOf('?') < 0 ? '?' : '&') + 'site=' + encodeURIComponent(SITE_ID) : u; }
+
   async function api(path, body) {
-    const opt = body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {};
+    const headers = SITE_ID ? { 'X-Promo-Site': SITE_ID } : {};
+    const opt = body ? { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, headers), body: JSON.stringify(body) } : { headers };
     const res = await fetch(path, opt);
     const j = await res.json().catch(() => ({ error: 'Bad response' }));
     if (!res.ok || j.error) throw new Error(j.error || ('HTTP ' + res.status));
@@ -488,7 +495,7 @@
   const kPicker = makePicker($('#k-tool'), $('#k-tool-list'), (t) => { S.kitTool = t.path; $('#k-seed').value = ''; loadLooks(); });
   function kitImages(slug, files, stamp) {
     return h('div', { class: 'kitimgs' }, files.filter((f) => /\.png$/.test(f)).map((f) => h('figure', null,
-      h('a', { href: '/kits/' + encodeURIComponent(slug) + '/' + f, target: '_blank', rel: 'noopener' }, h('img', { src: '/kits/' + encodeURIComponent(slug) + '/' + f + '?t=' + stamp, alt: f, loading: 'lazy' })),
+      h('a', { href: siteUrl('/kits/' + encodeURIComponent(slug) + '/' + f), target: '_blank', rel: 'noopener' }, h('img', { src: siteUrl('/kits/' + encodeURIComponent(slug) + '/' + f + '?t=' + stamp), alt: f, loading: 'lazy' })),
       h('figcaption', { text: f }))));
   }
   function kitCard(k) {
@@ -499,8 +506,8 @@
       h('p', { class: 'small' }, h('code', { text: k.dir })),
       h('div', { class: 'actions' },
         h('button', { class: 'btn', onclick: async () => { try { await api('/api/reveal', { slug: k.slug }); toast('Opened in Explorer'); } catch (e) { toast(e.message); } } }, 'Open folder'),
-        h('a', { class: 'btn', href: '/kits/' + encodeURIComponent(k.slug) + '/kit.md', target: '_blank', rel: 'noopener' }, 'kit.md'),
-        pdf.map((f) => h('a', { class: 'btn', href: '/kits/' + encodeURIComponent(k.slug) + '/' + f, target: '_blank', rel: 'noopener' }, f)),
+        h('a', { class: 'btn', href: siteUrl('/kits/' + encodeURIComponent(k.slug) + '/kit.md'), target: '_blank', rel: 'noopener' }, 'kit.md'),
+        pdf.map((f) => h('a', { class: 'btn', href: siteUrl('/kits/' + encodeURIComponent(k.slug) + '/' + f), target: '_blank', rel: 'noopener' }, f)),
         h('button', { class: 'ghost', onclick: () => copyText(k.dir) }, 'Copy path')),
       kitImages(k.slug, k.files, Date.now()));
   }
@@ -705,9 +712,11 @@
     if (t.state === 'due') {
       if (!t.tickOnly) {
         const inp = h('input', { type: 'url', class: 'tg-input', placeholder: 'Paste the ' + t.name + ' link', 'aria-label': t.name + ' link' });
-        const rec = () => { const v = inp.value.trim(); if (!v) { toast('Paste the post\'s link first'); return; } doTarget(it, t.channel, 'post', { url: v }); };
+        const noLink = t.noLinkOption ? h('input', { type: 'checkbox', class: 'tg-nolink-box' }) : null;
+        const rec = () => { const v = inp.value.trim(); if (!v) { toast('Paste the post\'s link first'); return; } doTarget(it, t.channel, 'post', { url: v, noLink: noLink ? noLink.checked : undefined }); };
         inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); rec(); } });
         controls.appendChild(inp);
+        if (noLink) controls.appendChild(h('label', { class: 'tg-nolink', title: 'The post carries no link (a native post): it does not count toward linked-post caps' + (t.platform === 'facebook' ? ' or the Facebook link budget' : '') }, noLink, 'no link'));
         controls.appendChild(h('button', { class: 'btn tg-record', onclick: rec }, 'Record'));
       }
       if (t.allowsTick) controls.appendChild(h('button', { class: 'ghost tg-tick', onclick: () => { const note = window.prompt('Posted to ' + t.name + '. A note (optional):', ''); if (note === null) return; doTarget(it, t.channel, 'post', { tick: true, note: note.trim() || undefined }); } }, 'Posted (tick)'));
@@ -723,6 +732,7 @@
         h('span', { class: 'tg-name', text: t.name }),
         h('span', { class: 'badge tg-state st-' + state, text: label }),
         t.extra ? h('span', { class: 'badge', text: 'added' }) : null,
+        t.linkInPost === false ? h('span', { class: 'badge plink', title: 'The post carries no clickable link (it lives in the profile): logged, but not counted toward linked-post caps', text: 'profile link' }) : null,
         t.url ? h('a', { class: 'tg-url small', href: t.url, target: '_blank', rel: 'noopener noreferrer', text: shortUrl(t.url) }) : null,
         t.reason ? h('span', { class: 'muted small', text: t.reason }) : null,
         t.note ? h('span', { class: 'muted small', text: '· ' + t.note }) : null),
@@ -819,6 +829,11 @@
       box.appendChild(sec2);
     }
     if (c.noVenue.length) box.appendChild(h('p', { class: 'muted small', text: 'No venue in venues.json, so recorded without a log entry: ' + c.noVenue.join(', ') + '.' }));
+    if (c.facebook) box.appendChild(fbBudgetLine(c.facebook));
+  }
+  function fbBudgetLine(b) {
+    return h('p', { class: 'small fb-budget' + (b.left ? '' : ' used') },h('b', { text: 'Facebook Page link posts: ' + b.label + '. ' }),
+      b.left ? 'Native posts (no link) do not use it; spend the link posts on the tools that bring the most visits.' : 'Used up: post natively (no link) until the 1st, or a link in a Story sticker.');
   }
   $('#cov-days').addEventListener('change', loadCoverage);
 
@@ -833,7 +848,7 @@
       card.appendChild(h('div', { class: 'tv-slot', 'data-id': s.id },
         h('div', null, h('b', { text: s.title }), ' ', h('span', { class: 'muted small', text: s.formatLabel + ' · ' + s.progress.label }), ' ', h('button', { class: 'linkish small', onclick: () => goToSlot(s.id) }, 'Open in Calendar')),
         s.missing.length ? h('div', { class: 'tv-missing' }, h('span', { class: 'muted small', text: 'Still to post: ' }),
-          s.missing.map((m) => h('span', { class: 'badge chip' + (m.flagged ? ' wait' : ''), 'data-channel': m.channel, title: m.cadence && !m.cadence.ok ? 'Wait: ' + m.cadence.reasons.join(' · ') : m.flagged ? 'The recorded link needs a check' : '', text: m.name + (m.cadence && !m.cadence.ok ? ' · wait' : '') + (m.flagged ? ' · check link' : '') })))
+          s.missing.map((m) => h('span', { class: 'badge chip' + (m.flagged ? ' wait' : ''), 'data-channel': m.channel, title: m.cadence && !m.cadence.ok ? 'Wait: ' + m.cadence.reasons.join(' · ') : m.flagged ? 'The recorded link needs a check' : m.advice ? m.advice.text : '', text: m.name + (m.cadence && !m.cadence.ok ? ' · wait' : '') + (m.flagged ? ' · check link' : '') + (m.advice && m.advice.over ? ' · ' + m.advice.today + ' today (advice: ' + m.advice.perDay + ')' : '') })))
           : h('p', { class: 'small ok-line', text: 'Every channel is done for this slot.' })));
     }
     box.appendChild(card);
@@ -874,6 +889,7 @@
       h('dl', { class: 'g-specs' }, c.specs.map((s) => [h('dt', { text: s.label }), h('dd', null, s.value ? h('span', { text: s.value }) : h('span', { class: 'nc', text: g.notConfirmed }),
         s.src ? h('a', { class: 'g-src', href: s.src, target: '_blank', rel: 'noopener noreferrer', title: 'Checked ' + s.checked, text: (s.value ? 'source · ' : 'official page tried · ') + s.checked }) : null)])),
       c.cadence ? h('p', { class: 'small' }, h('b', { text: 'Cadence in the desk: ' }), c.cadence) : null,
+      c.budget && c.id === 'facebook-post' ? fbBudgetLine(c.budget) : null,
       h('h4', { text: 'Upload' }), h('ul', { class: 'g-list small' }, c.upload.map((f) => h('li', { text: f }))),
       h('p', { class: 'small' }, h('b', { text: 'Caption: ' }), 'in Draft, template ', h('code', { text: c.template })),
       h('p', { class: 'small' }, h('b', { text: 'A right link looks like: ' }), c.linkExample ? h('code', { text: c.linkExample }) : 'no link — tick it as posted'),
@@ -908,19 +924,58 @@
   }
 
   /* -------------------------------------------------------------- boot */
-  (async function boot() {
+  /* Everything that belongs to one site: its items, audiences, guide cards (the
+     Facebook budget), calendar. Called at boot and when the site picker changes. */
+  async function loadSite() {
+    const info = await api('/api/site');
+    S.siteInfo = info.site;
+    const own = info.site.id === '1234tools';
+    document.title = 'Promotion Desk · ' + info.site.name;
+    document.body.setAttribute('data-site', info.site.id);
+    $('#site-home').textContent = info.home;
     const r = await api('/api/tools');
     S.tools = r.tools;
+    S.byPath = {};
     r.tools.forEach((t) => { S.byPath[t.path] = t; });
+    const noun = own ? 'tools' : (info.site.promotes || 'items');
+    for (const id of ['#d-tool', '#o-tool', '#k-tool']) $(id).placeholder = 'Search the ' + r.tools.length + ' ' + noun + '…';
+    $('#d-tool').value = ''; $('#o-tool').value = ''; $('#k-tool').value = '';
+    Object.assign(S.draft, { tool: '', venue: '', template: '', variant: 0, question: '', qurl: '', result: '' });
+    S.lastDraft = null; S.oppTool = ''; S.kitTool = ''; S.cal = null; S.guide = null; S.guideRendered = false; S.venues = null;
+    clear($('#d-parts')); clear($('#d-status')); clear($('#d-tool-chosen')); clear($('#k-result')); clear($('#k-looks'));
     const a = await api('/api/audiences');
-    const sel = $('#o-aud');
+    const sel = clear($('#o-aud'));
+    sel.appendChild(h('option', { value: '', text: '(none)' }));
     const g1 = h('optgroup', { label: 'Collections' });
     a.collections.forEach((c) => g1.appendChild(h('option', { value: c.slug, text: c.name })));
     const g2 = h('optgroup', { label: 'Venue audiences' });
     a.vocabulary.forEach((v) => g2.appendChild(h('option', { value: v, text: v })));
-    sel.appendChild(g1); sel.appendChild(g2);
-    const tab = (location.hash || '#today').slice(1).split('?')[0];
+    if (g1.children.length) sel.appendChild(g1);
+    sel.appendChild(g2);
+    $('#cal-csv').href = siteUrl('/api/calendar.csv');
+    $('#site-note').hidden = own;
+    if (!own) $('#site-note').textContent = info.site.name + ': ' + r.tools.length + ' ' + noun + ' from build/promo/sites/' + info.site.id + '.js. Copy follows this site\'s own claim rules; kits draw a "how it works" picture (no live capture); the Reel Maker opens without a tool, so paste the slot\'s beats.';
     try { const g = await api('/api/guide'); S.guide = g; S.channels = g.channels; } catch (e) { /* the Guide tab retries */ }
+  }
+
+  (async function boot() {
+    const sites = await api('/api/sites');
+    const pick = $('#site');
+    sites.sites.forEach((s) => pick.appendChild(h('option', { value: s.id, text: s.name + (s.error ? ' (profile error)' : '') })));
+    if (!sites.sites.some((s) => s.id === SITE_ID)) SITE_ID = sites.current;
+    pick.value = SITE_ID;
+    pick.addEventListener('change', async () => {
+      SITE_ID = pick.value;
+      try { localStorage.setItem('promo-site', SITE_ID); } catch (e) { /* the choice lasts for this tab only */ }
+      document.body.setAttribute('data-ready', '0');
+      try { await loadSite(); } catch (e) { toast(e.message); }
+      const cur = (location.hash || '#today').slice(1).split('?')[0];
+      showTab(cur || 'today');
+      document.body.setAttribute('data-ready', '1');
+      toast('Now working on ' + pick.options[pick.selectedIndex].text);
+    });
+    await loadSite();
+    const tab = (location.hash || '#today').slice(1).split('?')[0];
     showTab(['today', 'draft', 'opps', 'kits', 'venues', 'log', 'reels', 'calendar', 'guide'].includes(tab) ? tab : 'today');
     document.body.setAttribute('data-ready', '1');
   })().catch((e) => { document.body.setAttribute('data-ready', 'error'); toast(e.message); });
