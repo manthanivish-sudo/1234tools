@@ -2045,12 +2045,13 @@ module.exports = function ({ claim, manual, kit: K }) {
       } finally { await p.close(); }
     });
     const byW = (pics, w) => pics.find((x) => x.w === w);
-    claim(WC, 'tip', 'A picture already at or near the resolution you choose is not touched.',
-      'pictures printed at, or within 13% of, 150 DPI come out with their original bytes', B, async () => {
+    claim(WC, 'tip', 'A picture already at or near the resolution you choose is not scaled down; it is re-encoded only when that makes it smaller.',
+      'pictures printed at, or within 13% of, 150 DPI keep their pixel size, and any re-encoded one is smaller', B, async () => {
         const { exact, small, near, pics } = await resRun();
         const e = byW(pics, 1200), s = byW(pics, 300), n = byW(pics, 330);
         const same = (x, b) => !!x && x.raw.equals(b);
-        return [same(e, exact) && same(s, small) && same(n, near),
+        const notBigger = (x, b) => !!x && x.raw.length <= b.length;
+        return [notBigger(e, exact) && same(s, small) && notBigger(n, near),
           'at 150 DPI, 1200 px: ' + (e ? exact.length + ' → ' + e.raw.length + ' bytes' : 'missing') + '; under 24 KB, 300 px: ' + (s ? small.length + ' → ' + s.raw.length : 'missing') + '; 330 px (9% over): ' + (n ? near.length + ' → ' + n.raw.length + ' bytes' : 'missing')];
       });
     claim(WC, 'point', 'Scaling is skipped when it would remove less than 13% of the width, and a picture under 24 KB that needs no scaling is left alone.',

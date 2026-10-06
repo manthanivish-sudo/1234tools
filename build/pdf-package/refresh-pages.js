@@ -11,7 +11,7 @@
  * the release (build/totals.js and build-sidebar.js recount them from the
  * search index), and the "learn more" block belongs to build-depth.js. This
  * puts the depth block on every PDF page from build/content/pdf.js (with
- * build-depth.js's own pure apply()), and sets the total and the PDF count
+ * build-depth.js's own pure apply(), and the hub through build-hubs.js's), and sets the total and the PDF count
  * on the PDF pages back to the figure the rest of the branch still shows,
  * and the PDF count to the hub card count, until the release recounts.
  * It writes only pdf/<slug>/index.html and pdf/index.html.
@@ -34,6 +34,8 @@ const PDFN = arg('--pdf-count') || String((hub.match(/<a class="card" href="\/pd
 if (!TOTAL || !PDFN) throw new Error('could not read the site total or the PDF count from index.html');
 
 const depth = require(path.join(ROOT, 'build-depth.js'));
+/* the hub's intro, starters and card decorations are build-hubs.js's, also a pure apply() */
+const hubs = require(path.join(ROOT, 'build-hubs.js'));
 
 const pages = [path.join(ROOT, 'pdf', 'index.html')];
 for (const d of fs.readdirSync(path.join(ROOT, 'pdf'), { withFileTypes: true })) {
@@ -52,6 +54,7 @@ for (const abs of pages) {
     .replace(/(<span class="side-name">All tools<\/span><span class="side-count">)[\d,]+(<\/span>)/g, '$1' + TOTAL + '$2')
     .replace(/(<span class="side-name">PDF Tools<\/span><span class="side-count">)\d+(<\/span>)/g, '$1' + PDFN + '$2');
   html = depth.apply(html, rel);
+  if (rel === 'pdf/index.html') html = hubs.apply(html, rel);
   if (html !== before) {
     changed++;
     if (!CHECK) fs.writeFileSync(abs, html);

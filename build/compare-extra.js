@@ -40,21 +40,21 @@ const COMPARISONS = [
     name: 'Free PDF editor',
     crumb: 'Free PDF editor',
     title: 'Free PDF editor: what a browser can honestly do to a PDF, and what it cannot',
-    lede: 'Add text, a signature, a watermark or page numbers; merge, split, reorder, rotate and delete pages; turn pages into images and images into a PDF — free, with nothing uploaded. What these tools cannot do is change the words already on the page, and that is the first thing a desktop PDF editor is bought for.',
+    lede: 'Add text in any of four scripts, a signature, a picture, a watermark or page numbers; merge, split, reorder, rotate, crop and delete pages; compress, protect, unlock, flatten and OCR; turn a PDF into text or a Word file — free, with nothing uploaded. What these tools cannot do is change the words already on the page, and that is the first thing a desktop PDF editor is bought for.',
     honest: [
-      'Most people searching for a free PDF editor want one of two things. Either they need to put something onto a PDF — a line of text in a form that has no boxes, a signature, a date, a DRAFT stamp — or they need to rearrange its pages. Both are here, free, with no account and no watermark of ours on the result, and the file is read and rewritten by your own browser rather than sent anywhere.',
+      'Most people searching for a free PDF editor want one of three things: to put something onto a PDF (a line of text in a form that has no boxes, a signature, a date, a logo, a DRAFT stamp), to rearrange or shrink it, or to get it past a password or a scanner. All of that is here, free, with no account and no watermark of ours on the result, and the file is read and rewritten by your own browser rather than sent anywhere.',
       'The other thing people mean by “edit a PDF” is changing the text that is already there: a typo in a contract, a price, a paragraph. None of these tools can do that, and the Add Text tool says so on its own page. Changing existing words means re-flowing the original text with the fonts and the layout it was made from, which is the core job of a desktop PDF editor. If that is what you need, this page will save you finding out the slow way.'
     ],
     gap: {
       heading: 'What a desktop PDF editor does that we do not',
-      intro: 'We compare against the category, not a product: we have not tested any particular editor and will not describe one from memory. These are the jobs the category exists for.',
+      intro: 'We compare against the category, not a product: we have not tested any particular editor and will not describe one from memory. These are the jobs the category exists for that this site still does not do.',
       points: [
         { h: 'It changes the text that is already there.', p: 'Click into a paragraph, retype it, and the line re-flows. Our Add Text tool draws new text on top of the page and leaves what is underneath exactly as it was. The honest workaround is to correct the source document and export it again.' },
-        { h: 'It reads scanned pages.', p: 'Character recognition turns a scanned or photographed page into text you can select and search. Nothing here makes a scanned PDF searchable. The AI readers on this site pull the fields out of invoices and receipts, which is a different job.' },
-        { h: 'It fills and builds forms.', p: 'Interactive fields — text boxes, tick boxes, drop-downs — can be filled, created and flattened. Ours do not fill form fields: Add Text places text where you click, which suits a form that is only a printed page, but it is not a field anything can read back. Merging and the page tools keep the fields a file already has, still fillable; they do not fill, create or flatten any.' },
+        { h: 'It fills and builds interactive forms.', p: 'Fields — text boxes, tick boxes, drop-downs — can be filled in, created and edited. Flatten PDF fixes the answers a form already has into the page, and the page tools keep fields fillable, but nothing here fills in or creates a field. Add Text places text where you click, which suits a form that is only a printed page.' },
         { h: 'It signs with a certificate.', p: 'A certificate-based digital signature makes any later change detectable. Our signature tool draws a visible signature — the same as signing a printout and scanning it — and its own page explains the difference and when it matters.' },
-        { h: 'It redacts, protects and compresses.', p: 'Permanently removing what sits under a black box, adding or removing a password, and making a PDF smaller are all common editor features. None of the three is here. A watermark added here sits on top of the page and can be removed by anyone with an editor; the watermark tool says that too.' },
-        { h: 'It writes in any script, and places pictures.', p: 'Text added with the Add Text tool is drawn in the standard Helvetica font, which has no characters outside Latin-1, so Hindi, Greek, Cyrillic and Chinese will not render. Placing a logo or an image onto an existing page is not offered either.' }
+        { h: 'It redacts.', p: 'Permanently removing what sits under a black box needs the text and pictures underneath taken out of the file, not covered. Nothing here does that, and Crop PDF hides the area outside its box rather than deleting it; its page says so.' },
+        { h: 'It keeps the layout when it converts.', p: 'PDF to Word here rebuilds headings, paragraphs and lists from the text, in reading order; tables come out as lines and pictures, fonts and positions are not kept. A desktop editor’s export aims to keep the page as it looks.' },
+        { h: 'It reads more scripts, and more languages from scans.', p: 'Text added here can be Latin, Greek, Cyrillic or Devanagari (Hindi shaped properly); Chinese, Japanese, Korean and Arabic are not covered. OCR here reads English and Hindi only, and works best on clean scans.' }
       ]
     },
     table: {
@@ -62,15 +62,17 @@ const COMPARISONS = [
       them: 'A desktop PDF editor',
       rows: [
         { edge: 'them', need: 'Changing words already on the page', us: 'No. New text can be drawn on top; what is there is untouched.', them: 'The core feature of the category.' },
-        { edge: 'them', need: 'Scanned pages to searchable text', us: 'No.', them: 'Common in the category; check the edition you are looking at.' },
-        { edge: 'them', need: 'Filling interactive form fields', us: 'No. Text goes where you click, which suits a form with no fields; merging keeps existing fields fillable but fills none.', them: 'Filled, created and flattened.' },
+        { edge: 'them', need: 'Filling in or creating interactive form fields', us: 'No. Existing answers can be flattened into the page; fields are kept fillable through the page tools, but none is filled or created.', them: 'Filled, created and edited.' },
         { edge: 'them', need: 'A certificate-based digital signature', us: 'No. A drawn or typed signature, visible and removable.', them: 'Usually offered, with a certificate you obtain from a provider.' },
-        { edge: 'them', need: 'Redaction, passwords and making a PDF smaller', us: 'None of the three.', them: 'Commonly included.' },
-        { edge: 'them', need: 'Text in Hindi, Greek, Cyrillic or Chinese', us: 'Not with Add Text: Helvetica has no characters for them.', them: 'Embeds fonts, so any script the font covers.' },
-        { edge: 'them', need: 'Bookmarks and annotations', us: 'Kept through a merge, with each file’s bookmarks under its name and links still landing on the right page, but not editable here.', them: 'Kept, and editable.' },
-        { edge: 'us', need: 'Putting a line of text, a date or a signature on a PDF', us: 'Click where it goes, type, download. As many pieces as you like on any pages, previewed before you commit.', them: 'Also does it, after an install or a sign-in.' },
-        { edge: 'us', need: 'Merging, splitting, reordering, rotating, deleting or extracting pages', us: 'One page per job, and an organiser with page thumbnails you drag into order. Merging takes a page range per file — “1-3 | all | 2,5”.', them: 'Also does it.' },
-        { edge: 'us', need: 'Where the contract goes', us: 'Nowhere. It is parsed and rewritten by your own browser; nothing is uploaded, queued or logged.', them: 'A desktop editor works locally too. An online editor may take the file onto its server; check before you send a contract to one.' },
+        { edge: 'them', need: 'True redaction', us: 'No. Cropping hides the outside of the box but keeps it in the file.', them: 'Commonly included.' },
+        { edge: 'them', need: 'Word export that keeps tables, pictures and layout', us: 'Text, headings, paragraphs and lists only, in reading order.', them: 'The aim of the category’s converters.' },
+        { edge: 'them', need: 'Chinese, Japanese, Korean or Arabic text; OCR beyond English and Hindi', us: 'Not covered: the embedded fonts and the OCR data are Latin, Greek, Cyrillic and Devanagari, and English and Hindi.', them: 'Depends on the fonts and languages the edition includes.' },
+        { edge: 'them', need: 'Editing bookmarks and annotations', us: 'Kept through merges and page edits, flattened on request, but not editable here.', them: 'Kept, and editable.' },
+        { edge: 'us', need: 'Putting text, a picture, a date or a signature on a PDF', us: 'Drag it where it goes, pull its corner to resize it, as many pieces as you like on any pages, previewed before you commit. Hindi, Greek and Cyrillic included.', them: 'Also does it, after an install or a sign-in.' },
+        { edge: 'us', need: 'Merging, splitting, reordering, rotating, cropping, deleting or extracting pages', us: 'One page per job, with page thumbnails to click, shift-click or drag, and an organiser you drag into order.', them: 'Also does it.' },
+        { edge: 'us', need: 'Making a PDF smaller, adding or removing a password, flattening', us: 'Compress PDF (before and after shown, never a promised ratio), Protect PDF with AES-256, Unlock PDF with the password you have, Flatten PDF.', them: 'Also does it.' },
+        { edge: 'us', need: 'A scanned PDF made searchable', us: 'OCR PDF adds an invisible text layer, English and Hindi, recognised on your device.', them: 'Also does it, in the editions that include OCR.' },
+        { edge: 'us', need: 'Where the contract goes', us: 'Nowhere. It is parsed and rewritten by your own browser; nothing you add is uploaded, queued or logged.', them: 'A desktop editor works locally too. An online editor may take the file onto its server; check before you send a contract to one.' },
         { edge: 'us', need: 'A machine you cannot install anything on', us: 'Nothing to install: a browser tab on a work laptop, a library computer or a phone.', them: 'An install, and often an administrator to approve it.' },
         { edge: 'us', need: 'Cost', us: 'Free, no account, no limit, and no watermark of ours on the output.', them: 'A licence or a subscription. The vendor has the current figure; we will not guess at it.' }
       ]
@@ -80,25 +82,26 @@ const COMPARISONS = [
       intro: 'If your work is changing documents rather than adding to them, the answer is yes, and soon.',
       points: [
         'You need to change existing wording, and often. Correcting the source and exporting again stops being a workaround after the third contract.',
-        'You handle scanned paperwork that has to be searchable, or you need the text out of it.',
         'You build or fill forms that a system reads back, or you send documents that must carry a certificate-based signature.',
-        'You redact. Covering text with a box is not removing it, and getting that wrong discloses exactly what you meant to hide.',
-        'You write in a script other than Latin, or you need logos and images placed onto existing pages.'
+        'You redact. Covering text with a box, or cropping it out of view, is not removing it, and getting that wrong discloses exactly what you meant to hide.',
+        'You need Word files that look like the PDF, tables and pictures included.',
+        'You work in Chinese, Japanese, Korean or Arabic, or need OCR in languages other than English and Hindi.'
       ]
     },
     groups: [
-      { name: 'Put something onto a PDF', blurb: 'Text, a signature, a stamp, page numbers — drawn on top and previewed first.', tools: ['/pdf/pdf-editor/', '/pdf/pdf-signature/', '/pdf/watermark-pdf/', '/pdf/pdf-page-numbers/'] },
-      { name: 'Rearrange the pages', blurb: 'Visually, or by page number when you already know which.', tools: ['/pdf/pdf-organise/', '/pdf/merge-pdf/', '/pdf/split-pdf/', '/pdf/rotate-pdf/', '/pdf/delete-pdf-pages/', '/pdf/extract-pdf-pages/'] },
-      { name: 'Convert in and out', blurb: 'Pages to pictures, pictures to pages, plain text to a paginated document.', tools: ['/pdf/pdf-to-images/', '/image/image-to-pdf/', '/pdf/text-to-pdf/'] },
+      { name: 'Put something onto a PDF', blurb: 'Text, a signature, a picture, a stamp, page numbers — dragged into place and previewed first.', tools: ['/pdf/pdf-editor/', '/pdf/pdf-signature/', '/pdf/add-image-to-pdf/', '/pdf/watermark-pdf/', '/pdf/pdf-page-numbers/'] },
+      { name: 'Rearrange the pages', blurb: 'Visually, or by page number when you already know which.', tools: ['/pdf/pdf-organise/', '/pdf/merge-pdf/', '/pdf/split-pdf/', '/pdf/rotate-pdf/', '/pdf/crop-pdf/', '/pdf/delete-pdf-pages/', '/pdf/extract-pdf-pages/'] },
+      { name: 'Shrink, lock, unlock, flatten', blurb: 'The file itself: its size, its password and its form.', tools: ['/pdf/compress-pdf/', '/pdf/protect-pdf/', '/pdf/unlock-pdf/', '/pdf/flatten-pdf/'] },
+      { name: 'Convert in and out', blurb: 'Pages to pictures, text or Word; pictures, scans and plain text to PDF.', tools: ['/pdf/pdf-to-text/', '/pdf/pdf-to-word/', '/pdf/ocr-pdf/', '/pdf/pdf-to-images/', '/image/image-to-pdf/', '/pdf/scan-to-pdf/', '/pdf/text-to-pdf/'] },
       { name: 'Look inside before you send it', blurb: 'What the file says about itself, and what it says about you.', tools: ['/pdf/pdf-inspector/', '/pdf/pdf-metadata/'] }
     ],
     faq: [
       { q: 'Can I edit the existing text in a PDF here?', a: 'No. The Add Text tool draws new text on top of the page and does not touch what is already there. Editing existing words means re-flowing the original text, which needs the fonts and the layout the PDF was made from, and most PDFs do not carry enough of either. If you need to change the wording, edit the source document and export it again, or use a desktop PDF editor.' },
-      { q: 'How do I fill in a PDF form that has no boxes?', a: 'Open Add Text, click the page where the first answer goes, type it, then press “Add as another item” and do the next one. Each piece keeps its own page, position and size, and a wrap width stops a long answer running off the page. The preview shows every piece before anything is written.' },
-      { q: 'Is my PDF uploaded?', a: 'No. Each tool parses and rewrites the file in your own browser, so nothing is transmitted, queued or logged — which is why they work offline and why they are safe for contracts. The page organiser downloads a rendering engine from this site the first time you use it, to draw the thumbnails; your file still never leaves the device.' },
+      { q: 'How do I fill in a PDF form that has no boxes?', a: 'Open Add Text, click the page where the first answer goes, type it, then press “Add as another item” and do the next one. Each piece can be dragged and resized, keeps its own page, and a wrap width stops a long answer running off the page. The preview shows every piece before anything is written.' },
+      { q: 'Is my PDF uploaded?', a: 'No. Each tool parses and rewrites the file in your own browser, so nothing you add is uploaded, queued or logged — which is why they work offline and why they are safe for contracts. The tools that draw pages or read scans download their engine from this site the first time you use them; your file still never leaves the device.' },
       { q: 'Is a signature added here legally binding?', a: 'It is a visible signature, the same as signing a printout and scanning it. A digital signature in the legal sense is a cryptographic operation with a certificate from a trust service provider. If a contract, a court or a regulator asks for one, this is not it. For a form, an invoice or an internal approval that needs to look signed, it is exactly right.' },
       { q: 'Will there be a watermark on my file?', a: 'Not one of ours. The only watermark that ends up on your PDF is one you add yourself with the watermark tool.' },
-      { q: 'Can it make a PDF smaller, or remove a password?', a: 'No. There is no compression tool and no password tool for PDFs on this site. A desktop PDF editor is the right tool for both.' }
+      { q: 'Can it make a PDF smaller, or remove a password?', a: 'Yes. Compress PDF shrinks pictures to the resolution you choose and shows the size before and after; how much it saves depends on the file. Unlock PDF removes a password you know, and Protect PDF adds one with AES-256. Neither guesses or cracks a password.' }
     ],
     collections: ['small-business', 'going-paperless', 'freelancers'],
     sources: null

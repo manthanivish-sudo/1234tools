@@ -299,5 +299,45 @@ module.exports = {
     example: { kind: 'pdf-make' },
     howTo: 'How to make a delivery challan PDF',
     cta: 'Make a challan'
+  },
+  /* Compress runs on the desk's text "report" sample (a real run: Email gave 6.3 KB → 2.2 KB,
+     the text streams deflated; the pages look the same before and after). Protect and Remove a
+     Password are schematic: an encrypted output cannot be rendered without its password, and the
+     desk's samples have no password to remove. */
+  '/pdf/compress-pdf/': {
+    persona: 'Anyone emailing photo-heavy PDFs',
+    hook: 'Attachment too large. Again.',
+    pain: 'The inspection report has a phone photo on every page, and the mail server sends it straight back.',
+    usual: ['Uploading the report to shrink it', 'Squashing it until the text blurs', 'Splitting one report into five emails'],
+    promise: 'Pick a preset. Photos shrink to the size they are printed at; the text stays sharp.',
+    steps: ['Open the PDF', 'Pick Email, Screen or Print', 'Download the smaller copy'],
+    proof: ['Free', 'Nothing uploaded', 'Size shown before and after'],
+    example: { kind: 'pdf-edit', sample: 'report' },
+    howTo: 'How to make a PDF smaller for email',
+    cta: 'Compress a PDF'
+  },
+  '/pdf/protect-pdf/': {
+    persona: 'Anyone emailing personal documents',
+    hook: 'Your tax return is about to go out as a plain attachment.',
+    pain: 'The accountant wants last year’s return by email. Anyone who gets into that inbox can open it.',
+    usual: ['Zipping it with a password nobody remembers', 'Uploading the file to encrypt it', 'Hoping the email is never forwarded'],
+    promise: 'Set a password and every page is encrypted with AES-256. Choose whether it may be printed or copied.',
+    steps: ['Open the PDF', 'Type the password twice', 'Download the protected copy'],
+    proof: ['Free', 'Nothing uploaded', 'Password never stored'],
+    example: { kind: 'schematic', input: 'A PDF and a password you choose', output: 'An AES-256 copy that asks for the password', sampleIn: 'tax-return-2025.pdf · password typed twice', sampleOut: 'tax-return-2025-protected.pdf · opens only with the password' },
+    howTo: 'How to password-protect a PDF',
+    cta: 'Protect a PDF'
+  },
+  '/pdf/unlock-pdf/': {
+    persona: 'Anyone sent password-protected statements',
+    hook: 'Every statement asks for your date of birth.',
+    pain: 'The bank protects each statement with a password, and your bookkeeping software will not open them.',
+    usual: ['Printing each one and scanning it back', 'Uploading bank statements to a site you do not know', 'Typing the password every time you look'],
+    promise: 'Type the password once, here. Save a copy that opens without it.',
+    steps: ['Open the protected PDF', 'Type its password', 'Download the plain copy'],
+    proof: ['Free', 'Nothing uploaded', 'Password never stored'],
+    example: { kind: 'schematic', input: 'A PDF you have the password for', output: 'The same document with no password', sampleIn: 'statement-sep-2026.pdf · RC4 128-bit · password needed', sampleOut: 'statement-sep-2026-unlocked.pdf · opens anywhere, no limits' },
+    howTo: 'How to remove a password from a PDF you can open',
+    cta: 'Remove a password'
   }
 };

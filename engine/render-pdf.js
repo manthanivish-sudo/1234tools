@@ -92,6 +92,8 @@
     const url = URL.createObjectURL(blob);
     const a = el('a');
     a.href = url; a.download = nameFor(name, blob.type);
+    /* a tool that numbers its documents (the invoice) moves on when one is saved */
+    try { document.dispatchEvent(new CustomEvent('pdf:downloaded', { detail: { name: a.download, type: blob.type, size: blob.size } })); } catch (e) { /* old browsers */ }
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
   }
@@ -953,7 +955,7 @@
         row.appendChild(el('span', 'file-idx', String(i + 1)));
         row.appendChild(el('span', 'file-name', d.name));
         const meta = d.state === 'ready'
-          ? (d.pages ? d.pages + ' page' + (d.pages === 1 ? '' : 's') + ' · ' : '') + fmtBytes(d.size) + (d.security ? ' · opened with its password' : '')
+          ? (d.pages ? d.pages + ' page' + (d.pages === 1 ? '' : 's') + ' · ' : '') + fmtBytes(d.size) + (d.security ? (d.security.openedWith === 'empty' ? ' · restricted, opened without a password' : ' · opened with its password') : '')
           : d.state === 'loading' ? 'Reading…'
           : d.state === 'locked' ? 'Password-protected'
           : 'Not opened';
@@ -980,6 +982,7 @@
         rm.setAttribute('aria-label', 'Remove ' + d.name);
         rm.addEventListener('click', () => {
           engine.drop(d);
+          if (d.pdfjs) d.pdfjs.then((x) => x.destroy && x.destroy()).catch(() => {});
           entries.splice(i, 1);
           syncRangesFromEntries();
           renderFileList();
@@ -2427,6 +2430,10 @@
     async function run() {
       if (busy) return;
       clearOutputs();
+      if (needsFiles && !ready().length && entries.some((e) => e.state === 'loading')) {
+        say('Wait a moment: ' + entries.filter((e) => e.state === 'loading').map((e) => e.name).join(', ') + ' is still being read.', 'note');
+        return;
+      }
       if (needsFiles && !ready().length) {
         const locked = entries.find((e) => e.state === 'locked');
         say(locked ? 'Enter the password for ' + locked.name + ' first, or remove it.' : (spec.needFile || 'Choose a PDF first.'), 'note');

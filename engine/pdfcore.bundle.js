@@ -4057,8 +4057,13 @@ async function imageToBitmap(doc, stm) {
   let filters = await doc.resolve(d.Filter);
   if (filters && !Array.isArray(filters)) filters = [filters];
   const names = (filters || []).map((f) => f && f.name);
-  if (names.length === 1 && (names[0] === 'DCTDecode' || names[0] === 'DCT')) {
-    return createImageBitmap(new Blob([stm.raw], { type: 'image/jpeg' }));
+  if (names.length && /^(DCTDecode|DCT)$/.test(names[names.length - 1]) &&
+      names.slice(0, -1).every((n) => /^(FlateDecode|Fl|ASCII85Decode|A85|ASCIIHexDecode|AHx)$/.test(n))) {
+    /* a JPEG, possibly wrapped in ASCII85 or Flate (reportlab writes
+       [/ASCII85Decode /DCTDecode]): decodeStream undoes the wrappers and
+       stops at the JPEG */
+    const jpeg = names.length === 1 ? stm.raw : await doc.decodeStream(stm);
+    return createImageBitmap(new Blob([jpeg], { type: 'image/jpeg' }));
   }
   if (names.some((n) => !/^(FlateDecode|Fl|ASCII85Decode|A85|ASCIIHexDecode|AHx)$/.test(n))) return null;
   const W = Number(await doc.resolve(d.Width)), H = Number(await doc.resolve(d.Height));

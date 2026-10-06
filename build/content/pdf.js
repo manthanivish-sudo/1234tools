@@ -918,6 +918,119 @@ module.exports = {
     ]
   },
 
+  /* PDF to Text and PDF to Word. The input files are written by
+     build/tests/pdf-to-text-word.js (reportlab and PyMuPDF; the prose is
+     seeded, so every run makes the same files): newsletter.pdf, 2 A4 pages,
+     3,618 bytes, a running header "Riverside Allotments · Spring 2026", a
+     22 pt title over two columns, four 14 pt section headings, the bold
+     10 pt subheading "Water butts", three bulleted and three numbered items,
+     a sentence carried from column 1 into column 2, a page number on each
+     page, Info Title "Riverside Allotments Newsletter, Spring 2026";
+     report.pdf, 3 pages, 3,485 bytes, a running header and "Page n of 3"
+     footers; scrambled.pdf, 1 page, two justified columns drawn word by word
+     in shuffled order; long.pdf, 200 pages (PyMuPDF). Each was added to the
+     tool's page in headless Chrome and the button pressed; the figures are
+     the page's stat rows and summary. */
+  '/pdf/pdf-to-text/': {
+    whatTitle: 'What text a PDF actually stores',
+    whatIs: [
+      'A PDF keeps no paragraphs. Each page is a list of drawing instructions: these characters, in this font and size, at this point, in whatever order the program that wrote it chose.',
+      'Getting the text out means rebuilding what a reader sees: lines, columns, paragraphs and headings.'
+    ],
+    howItWorks: {
+      text: 'pdf.js runs on this page and lists each piece of text with its position, size and font; the site’s own layout code puts the pieces in order.',
+      points: [
+        'Pieces on one baseline join into a line, with a space where the gap is wider than about a sixth of the font size.',
+        'The page is cut at wide horizontal gaps and at gutters that run the full height of the text; each column is read top to bottom.',
+        'A change of spacing, indent, size or boldness starts a paragraph, and a sentence cut by a column break is joined again.',
+        'A line clearly larger than the body text, or a short line wholly in a bold font, counts as a heading.'
+      ]
+    },
+    worked: {
+      text: 'A two-page allotment newsletter of 3.5 KB had a running header, a title over two columns, a sentence running from one column into the next, and page numbers. The .txt held 367 words in 47 lines, 2,112 characters (2.1 KB), each column in turn and the broken sentence whole. Six headings were found, one only by its bold font; the columns row read “2 columns: page 1; 1 column: page 2”. Leaving out the header and page numbers removed 4 blocks and left 355 words. An article of 186 words drawn in shuffled order came out jumbled as stored, and right in reading order.'
+    },
+    uses: [
+      ['Quoting from reports', 'Lift a section of a council report into an email without the page’s line breaks.'],
+      ['Search and scripts', 'Plain text for a script, a word count or a search across many documents.'],
+      ['Listening', 'A clean text for a text-to-speech app that stumbles over two-column pages.']
+    ],
+    mistakes: [
+      'Pasting figures from a statement straight into a spreadsheet. A table comes out as running text, row by row, so its columns must be split again.',
+      'Keeping page numbers in text meant for listening or counting. “Leave them out” drops them.'
+    ],
+    faq: [
+      { q: 'Does the .txt keep bold or italics?', a: 'No. Plain text has no formatting; bold only helps to find headings.' },
+      { q: 'Can it read a password-protected PDF?', a: 'Yes. The page asks for the password when you add the file and uses it only on this device.' },
+      { q: 'How long a PDF can it handle?', a: 'Up to 10,000 pages; above 300, font names are skipped. A 200-page file gave 90,800 words, 425.1 KB; the box showed the first 20,000 characters.' }
+    ],
+    runs: [
+      /* newsletter.pdf (top of this pair), every default: Pages all, Order "Reading order (columns
+         rebuilt)", headers and footers "Keep them", Between pages "A line: --- Page 2 ---"; "Get the
+         text" pressed. Stats: Pages read 2, Words 367, Lines 47, Headings 6, Columns found "2 columns:
+         page 1; 1 column: page 2", Running headers and footers "Kept: 4 blocks", Characters 2,112,
+         Output size 2.1 KB; summary "newsletter.txt 2.1 KB". The download equals the generator's text
+         block by block (build/tests/pdf-to-text-word.js). */
+      { browser: { tool: '/pdf/pdf-to-text/', file: 'newsletter.pdf, 2 A4 pages, 3,618 bytes (3.5 KB)', controls: { pages: 'all', order: 'reading', furniture: 'keep', separator: 'marker' }, pressed: 'Get the text', result: 'newsletter.txt, 2,112 characters' },
+        shown: ['3.5 KB', '367 words', '47 lines', '2,112 characters', '2.1 KB', '2 columns: page 1; 1 column: page 2'] },
+      /* the same, headers and footers "Leave them out": Words 355, Lines 43, "Left out: 4 blocks", 2.0 KB */
+      { browser: { tool: '/pdf/pdf-to-text/', file: 'newsletter.pdf', controls: { furniture: 'drop' } }, shown: ['4 blocks', '355 words'] },
+      /* scrambled.pdf: Order "As stored in the file" -> Words 186, Lines 183, the sentences out of order;
+         "Reading order" -> Words 186, Lines 26, the text as written */
+      { browser: { tool: '/pdf/pdf-to-text/', file: 'scrambled.pdf, 1 page, 186 words drawn one by one in shuffled order', controls: { order: 'stream' } }, shown: ['186 words'] },
+      /* long.pdf, 200 pages: Words 90,800, Lines 6,200, Characters 435,327, Output size 425.1 KB; the
+         report box ends "[The first 20,000 of 435,327 characters are shown here. …]" */
+      { browser: { tool: '/pdf/pdf-to-text/', file: 'long.pdf, 200 pages', controls: { pages: 'all' } }, shown: ['90,800 words', '425.1 KB', '20,000 characters'] }
+    ]
+  },
+
+  '/pdf/pdf-to-word/': {
+    whatTitle: 'What a PDF to Word conversion can bring across',
+    whatIs: [
+      'A Word document is text with structure: paragraphs, each in a style such as Heading 1 or List Paragraph, flowing onto as many pages as they need. A PDF is a fixed picture of every page, each letter at an exact point.',
+      'Converting means deciding what each piece of a page was for. The aim here is a document you can edit, not a copy that looks the same.'
+    ],
+    howItWorks: {
+      text: 'pdf.js reads the pages in this tab, the layout code of PDF to Text puts them in order, and the .docx is written here, with no server.',
+      points: [
+        'Heading sizes are ranked across the document: the three sizes used by most headings become Heading 1, 2 and 3.',
+        'A short bold line at body size takes the next level down, so with one heading size, bold subheadings become Heading 2.',
+        'A line starting with a bullet glyph or a dash becomes a bulleted List Paragraph.',
+        'Short lines kept apart, such as an address, stay on separate lines within one paragraph.',
+        'The file is a standard Office Open XML package, stored uncompressed in a ZIP.'
+      ]
+    },
+    worked: {
+      text: 'The allotment newsletter from PDF to Text became a 10.7 KB .docx with six headings: the title as Heading 1, four sections as Heading 2, and “Water butts”, bold at body size, as Heading 3. The tips became bulleted items, the dates kept their typed numbers, and a page break separated the pages. The PDF’s title, “Riverside Allotments Newsletter, Spring 2026”, became the document title. A three-page report with “Page 1 of 3” footers gave 225 words and 6 header and footer blocks; leaving them out gave 201 words and an 8.6 KB file.'
+    },
+    uses: [
+      ['Updating an old policy', 'Revise a handbook that now exists only as a PDF.'],
+      ['Correcting minutes', 'Fix minutes sent round as a PDF and return them as a document.'],
+      ['Building a contents page', 'Word can make a table of contents from the heading styles.']
+    ],
+    mistakes: [
+      'Expecting the Word file to look like the PDF. Fonts, pictures and positions stay behind; PDF to Images keeps the look, as pictures.',
+      'Converting a scanned contract. With no text layer there is nothing to convert; OCR PDF must recognise the words first.'
+    ],
+    faq: [
+      { q: 'Are tables turned into Word tables?', a: 'No. The cells come out as text, row by row, without the grid.' },
+      { q: 'Will a password-protected PDF convert?', a: 'Yes, once its password is typed into the box shown when the file is added. The Word file has no password.' },
+      { q: 'What page size does the Word file use?', a: 'The size of the PDF’s first page, landscape when that page is wider than tall, with 2.54 cm margins.' }
+    ],
+    runs: [
+      /* newsletter.pdf (see /pdf/pdf-to-text/ above), every default: Pages all, reading order, headers
+         and footers kept; "Make the Word file" pressed. Stats: Words 367, Headings "6 (1 Heading 1, 4
+         Heading 2, 1 Heading 3)", Paragraphs 11, List items 6, Page breaks 1, Document title "Riverside
+         Allotments Newsletter, Spring 2026", Output size 10.7 KB. python-docx on the download: the
+         headings listed in that order, 3 bulleted List Paragraphs, "1." "2." "3." kept as text, one
+         page break, core title as above. */
+      { browser: { tool: '/pdf/pdf-to-word/', file: 'newsletter.pdf, 2 A4 pages, 3,618 bytes', controls: { pages: 'all', order: 'reading', furniture: 'keep' }, pressed: 'Make the Word file', result: 'newsletter.docx, 10.7 KB' },
+        shown: ['10.7 KB', 'Riverside Allotments Newsletter, Spring 2026'] },
+      /* report.pdf, kept: Words 225, "Kept: 6 blocks", 9.1 KB; "Leave them out": Words 201, "Left out: 6 blocks", 8.6 KB */
+      { browser: { tool: '/pdf/pdf-to-word/', file: 'report.pdf, 3 pages, 3,485 bytes, footers "Page 1 of 3" to "Page 3 of 3"', controls: { furniture: 'keep' } }, shown: ['225 words', '6 header and footer blocks'] },
+      { browser: { tool: '/pdf/pdf-to-word/', file: 'report.pdf', controls: { furniture: 'drop' } }, shown: ['201 words', '8.6 KB'] }
+    ]
+  },
+
   '/pdf/purchase-order-pdf/': {
     term: 'a purchase order',
     whatIs: [
@@ -1166,6 +1279,105 @@ module.exports = {
       /* Re-measured on 2026-10-04 with the fixed writer, which keeps the Title (before: 20.7 KB and 58.1 KB). */
       { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, 200 numbered lines', text: 'DRAFT', size: 60, angle: '45', opacity: 15, position: 'center', pages: 'all', pressed: 'Add watermark' }, shown: ['5 copies', '20.9 KB'] },
       { browser: { input: 'numbered-test-document.pdf', text: 'DRAFT', size: 60, angle: '45', opacity: 15, position: 'tile', pages: 'all' }, shown: ['58.3 KB', '385', '77 a page'] }
+    ]
+  },
+
+  /*
+   * OCR PDF and Image to Text (wave 2). Every figure comes from a run of the
+   * page in headless Chrome against a local server of the site. The inputs are
+   * the fixtures build/tests/pdf-ocr-tools.js writes: text drawn on canvases in
+   * the page (Arial; Nirmala UI for Hindi) and wrapped into PDFs by PyMuPDF.
+   *
+   *   scan.pdf   2 pages, A4, each one 200 DPI picture, 87,805 bytes (85.7 KB).
+   *              Page 1: four lines of English at 42 px ("Scanned letter for
+   *              the OCR test" …). Page 2: stored landscape with /Rotate 90 so
+   *              it shows upright: "Rotated page with a line in Hindi", "भारत
+   *              एक विशाल देश है" (56 px), "Thank you for reading".
+   *   small-print.pdf   1 page, a 300 DPI picture drawn by Pillow in Arial: two
+   *              pangram lines at each of 5, 6, 7 and 8 pt.
+   *   receipt.png (3 lines, 40 px), notice.jpg (2 lines, 44 px, JPEG 0.92),
+   *   hindi.png ("आज मौसम बहुत अच्छा है", 60 px), broken.png (56 bytes of text).
+   */
+  '/pdf/ocr-pdf/': {
+    whatTitle: 'What OCR does to a scanned PDF',
+    whatIs: [
+      'A scanner or phone app saves each page as a photograph inside a PDF. To the file it is only pixels: search finds nothing, and a drag selects the whole picture.',
+      'Optical character recognition (OCR) turns the letters in those pixels back into text. A searchable PDF keeps the picture as it was and lays the text over it, invisibly, word by word.'
+    ],
+    howItWorks: {
+      text: 'pdf.js draws each page, Tesseract reads it, and the site’s own PDF writer adds the words, all in your browser.',
+      points: [
+        'Pages are drawn at 200 or 300 DPI as a viewer shows them, turned by their /Rotate entry, and capped at 16 megapixels.',
+        'Tesseract’s LSTM model returns every word with its box, its line’s baseline and a confidence from 0 to 100.',
+        'Each word is written in text render mode 3 (`3 Tr`), which paints nothing, on the baseline at its box’s left edge, stretched with `Tz` to the box’s width. Between words goes a real space, so extractors read whole lines.',
+        'Hindi is shaped by HarfBuzz and embedded as a Noto Sans Devanagari subset with a ToUnicode map; English uses Helvetica, which embeds nothing.'
+      ]
+    },
+    worked: {
+      text: 'A two-page test scan at 200 DPI (85.7 KB), its second page stored sideways with a 90° rotation flag and holding the Hindi line भारत एक विशाल देश है, was read in English and Hindi at 300 DPI: 45 words at a mean confidence of 96%, and the file grew to 90.9 KB. pdf.js and MuPDF both read every line back as drawn, and MuPDF placed each English word within 0.7 pt of the drawn one. On a page of 5 to 8 pt print, 200 DPI added a stray quotation mark; 300 DPI read every character.'
+    },
+    uses: [
+      ['Old paperwork', 'Find scanned letters by a name or reference number.'],
+      ['Quoting a clause', 'Copy a paragraph from a scanned contract instead of retyping it.'],
+      ['Hindi documents', 'Search a scanned Hindi notice or certificate by its words.']
+    ],
+    mistakes: [
+      'Leaving the language on English for a Hindi page: the test’s Hindi line came back as “URd Up faxna ere”.',
+      'Choosing “Recognise them too” for a page with real text: its text is then extracted twice.'
+    ],
+    faq: [
+      { q: 'Why was a page skipped?', a: 'A page counts as having text when pdf.js finds any on it, even a stamped page number. The result lists skipped pages; “Recognise them too” reads them.' },
+      { q: 'Can I edit the recognised words in the PDF?', a: 'Not in place: they are an invisible layer for searching and copying. Save the text as a .txt file to work with it.' },
+      { q: 'Does it straighten or clean up the scan?', a: 'No. Each page’s picture is carried over byte for byte; only the text layer is added.' }
+    ],
+    runs: [
+      /* Open /pdf/ocr-pdf/, choose scan.pdf (top of this entry), Language "English and Hindi", Pages all, Pages that already have text "Skip them", Resolution 300 DPI, press "Make it searchable". Read the stats and the summary; download and read with pdf.js and MuPDF (build/tests/pdf-ocr-tools.js section 1, which also measures the word boxes: worst 0.66 pt on page 1, 0.60 pt on page 2). */
+      { browser: { input: 'scan.pdf, 2 pages, 85.7 KB, page 2 /Rotate 90', lang: 'both', pages: 'all', existing: 'skip', dpi: '300', pressed: 'Make it searchable' }, shown: ['45 words', '96%', '90.9 KB', '0.7 pt'] },
+      /* The same file with Language English (section 4 of the test, the run after Cancel): the report's page 2 reads "URd Up faxna ere" for the Hindi line; 44 words, 91%. */
+      { browser: { input: 'scan.pdf', lang: 'eng', pages: 'all', existing: 'skip', dpi: '300' }, shown: ['URd Up faxna ere'] },
+      /* small-print.pdf at 200 DPI: the report's second line starts with a stray "‘" ("‘Sphinx of black quartz…"); at 300 DPI every line matches. 96 words, 96% both times. */
+      { browser: { input: 'small-print.pdf, 1 page, Arial 5, 6, 7 and 8 pt at 300 DPI', lang: 'eng', dpi: '200' }, shown: ['stray quotation mark'] },
+      { browser: { input: 'small-print.pdf', lang: 'eng', dpi: '300' }, shown: ['every character'] }
+    ]
+  },
+
+  '/pdf/image-to-text/': {
+    whatTitle: 'What reading text from a picture involves',
+    whatIs: [
+      'A photo of a page, a screenshot or a scan stores colours, not letters. The words in it cannot be copied, searched or pasted into a document until something recognises them.',
+      'That is optical character recognition: finding the shapes of letters and turning them back into characters. What comes out is plain text, the words and their line breaks, without the fonts, sizes or pictures of the original.'
+    ],
+    howItWorks: {
+      text: 'The picture is read by Tesseract, the open-source OCR engine, compiled to WebAssembly and run in a Web Worker in your browser.',
+      points: [
+        'The browser decodes the file and turns it by its EXIF orientation; transparent areas are read as white paper.',
+        'A picture over 16 megapixels is scaled down to 16 first.',
+        'Tesseract’s LSTM model reads it line by line and scores every word from 0 to 100; the result shows each picture’s word count and the mean score.',
+        'One engine reads every picture in the run and is closed when the run ends, or at once when you press Cancel.'
+      ]
+    },
+    worked: {
+      text: 'Two pictures were read as English. receipt.png, three lines of a shop receipt, gave 17 words at a mean confidence of 96%; notice.jpg, a two-line notice saved as JPEG, gave 12 words at 96%. Every character matched what was drawn, and both came back in one image-text.txt with each file’s name above its text. A third file, broken.png, was text renamed as a picture: the run named it and carried on. A Hindi line, आज मौसम बहुत अच्छा है, read as Hindi gave 5 words at 95%, letter for letter.'
+    },
+    uses: [
+      ['Screenshots', 'Copy an error message or a block of figures out of a screenshot.'],
+      ['Receipts and notices', 'Turn a photo of a receipt or a notice board into text you can paste.'],
+      ['Devanagari text', 'Get Hindi out of a picture without typing it in.']
+    ],
+    mistakes: [
+      'Adding a PDF. This page takes pictures only; OCR PDF reads the pages of a scanned PDF and gives the file back searchable.',
+      'Reading Hindi with the language set to English. The same Hindi picture came back as “Sst AA Fed Ba eS” at 47% mean confidence, against 95% when read as Hindi.'
+    ],
+    faq: [
+      { q: 'What does the confidence figure mean?', a: 'It is Tesseract’s own score, from 0 to 100, of how sure it is of each word, averaged over the picture. It is an estimate rather than a measured error rate, but a low figure is a good sign to check the text against the picture.' },
+      { q: 'Does it keep bold, sizes or fonts?', a: 'No. The result is plain text: the words and line breaks only.' },
+      { q: 'What about an animated GIF?', a: 'Only its first frame is read, the frame a browser shows before the animation starts.' }
+    ],
+    runs: [
+      /* Open /pdf/image-to-text/, Language English, choose receipt.png, notice.jpg and broken.png (top of the OCR PDF entry), press "Read the text"; read the stats, the warning and the download (build/tests/pdf-ocr-tools.js section 3). */
+      { browser: { input: 'receipt.png, notice.jpg, broken.png', lang: 'eng', pressed: 'Read the text' }, shown: ['17 words', '12 words', '96%', 'image-text.txt', 'broken.png'] },
+      { browser: { input: 'hindi.png', lang: 'hin' }, shown: ['5 words', '95%'] },
+      { browser: { input: 'hindi.png', lang: 'eng' }, shown: ['Sst AA Fed Ba eS', '47%'] }
     ]
   }
 };

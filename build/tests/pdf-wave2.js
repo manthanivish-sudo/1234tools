@@ -8,6 +8,7 @@
  * --root defaults to the site this file sits in; it is served on --port by
  * build/tests/serve.js for the browser part. Groups (for --only):
  *
+ *   meta      the bundle, pdftools.js and the hand-kept pages in step with their sources
  *   crypt     opening encrypted files (RC4 40/128, AES-128/256, object
  *             streams, wrong and missing passwords); Protect and Unlock
  *   compress  Compress PDF: structure in Node; pictures in the browser
@@ -478,6 +479,33 @@ async function unicodePart() {
   } else check(false, 'the invoice spec loads with its worker scripts');
 }
 
+/* ---------- the generated files are in step with their sources ---------- */
+async function metaPart() {
+  group('meta  generated files in step with their sources');
+  const bundle = require(path.join(ROOT, 'build/pdf-package/bundle.js'));
+  const now = fs.readFileSync(path.join(ROOT, 'engine/pdfcore.bundle.js'), 'utf8');
+  check(bundle.build() === now, 'engine/pdfcore.bundle.js is what build/pdf-package/bundle.js makes from pdfcore.js, pdfcrypt.js and pdffont.js');
+  const w = {};
+  let loads = true;
+  try { new Function('window', now)(w); } catch (e) { loads = false; }
+  check(loads && w.MVRPdfCore && typeof w.MVRPdfCore.TextFonts === 'function' && typeof w.MVRPdfCore.compressDocument === 'function', 'the bundle loads as a page loads it, with the wave-2 functions');
+  const run = (script) => spawnSync(process.execPath, [path.join(ROOT, script), '--check'], { encoding: 'utf8', cwd: ROOT });
+  const pk = run('build/pdf-package/sync-pdftools.js');
+  check(pk.status === 0, 'build/pdf-package/engine/pdftools.js copies match the shipped specs', (pk.stdout || '').trim());
+  const st = run('build/pdf-package/sync-static.js');
+  check(st.status === 0, 'every hand-kept PDF page shows its spec\'s description, tips and FAQ', (st.stdout || '').trim());
+  const worker = fs.readFileSync(path.join(ROOT, 'engine/pdf-worker.js'), 'utf8');
+  check(!/document\.|localStorage/.test(worker), 'the worker touches no DOM and no storage');
+  const specs = fs.readdirSync(path.join(ROOT, 'engine')).filter((f) => /^pdf-.+\.js$/.test(f) && !/^pdf-(worker|text|shaper|textlayout|ocr-engine|scan-vision|scan-worker)\.js$/.test(f));
+  const domInRun = specs.filter((f) => {
+    const s = fs.readFileSync(path.join(ROOT, 'engine', f), 'utf8');
+    const box = {};
+    try { new Function('window', s)(box); } catch (e) { return true; }
+    return Object.values(box.PDF_TOOLS || {}).some((t) => typeof t.run === 'function' && /\bdocument\.|\blocalStorage\b|\bwindow\.(?!PDF_TOOLS)/.test(String(t.run)));
+  });
+  check(!domInRun.length, 'no spec\'s run() (which runs in the worker) reaches for the DOM: ' + specs.length + ' spec files', domInRun.join(', '));
+}
+
 /* ================================================================== */
 /* the browser part                                                    */
 
@@ -744,6 +772,7 @@ async function browserPart() {
 (async () => {
   console.log('pdf-wave2: ' + ROOT + (BROWSER ? ' on ' + BASE : ' (node only)'));
   try {
+    if (want('meta')) await metaPart();
     if (want('crypt')) await cryptPart();
     if (want('compress')) await compressPart();
     if (want('tools2')) await tools2Part();

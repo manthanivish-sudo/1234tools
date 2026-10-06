@@ -8,3 +8,8 @@ efficientvit-seg-b1-ade20k.onnx
   mean/std; output "logits" 1x150xH/8xW/8). ONNX and PyTorch agree to 1e-4.
   Chosen over SegFormer because NVIDIA's SegFormer weights are licensed for
   non-commercial use only.
+
+tessdata/
+  eng.traineddata.gz and hin.traineddata.gz from tessdata_fast (Apache-2.0, see
+  tessdata/LICENSE and tessdata/README.md), gzipped; read by Tesseract.js for
+  OCR PDF and Image to Text, fetched only when one of them is used.
