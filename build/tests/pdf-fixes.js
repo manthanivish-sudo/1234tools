@@ -522,7 +522,7 @@ async function upload(page, files) {
 }
 async function press(page) {
   await page.click('.pdf-run .btn-primary');
-  await page.waitForFunction(() => { const s = document.querySelector('.pdf-summary'); const m = document.querySelector('.tool-io > .io-msg'); return (s && !s.hidden) || (m && m.classList.contains('is-error')); }, { timeout: 120000 });
+  await page.waitForFunction(() => { const s = document.querySelector('.pdf-summary'); const m = document.querySelector('.tool-io > .io-msg'); return (s && !s.hidden) || (m && m.classList.contains('is-error')); }, { timeout: 180000, polling: 250 });
   return page.evaluate(() => { const m = document.querySelector('.tool-io > .io-msg'); return { cls: m.className, msg: m.textContent }; });
 }
 async function download(page) {
@@ -591,7 +591,7 @@ async function browserPart() {
   const puppeteer = loadPuppeteer();
   const { serve } = require('./serve.js');
   server = await serve(ROOT, PORT);
-  browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox'], protocolTimeout: 90000 });
+  browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox'], protocolTimeout: 300000 });
   const requests = new Set();
 
   const probe = await open('/pdf/merge-pdf/');
@@ -856,27 +856,29 @@ async function browserPart() {
 
   /* 11f: a long merge shows progress, leaves the page responsive, and Cancel stops it */
   const big = path.join(OUT, 'big.pdf');
-  fs.writeFileSync(big, plain(5000));
+  fs.writeFileSync(big, plain(9999));
   const cx = await open('/pdf/merge-pdf/');
-  await upload(cx, [big, big, big]);
+  /* six files of 9,999 pages: long enough on a fast machine to catch the bar
+     and press Cancel while the writer is still going */
+  await upload(cx, [big, big, big, big, big, big]);
   await cx.evaluate(() => {
     window.__gap = 0; let last = performance.now();
     const tick = () => { const t = performance.now(); window.__gap = Math.max(window.__gap, t - last); last = t; if (!window.__stopTick) requestAnimationFrame(tick); };
     requestAnimationFrame(tick);
   });
   await cx.click('.pdf-run .btn-primary');
-  await cx.waitForFunction(() => { const p = document.querySelector('.pdf-progress'); return p && !p.hidden && /Writing page \d+ of 15000/.test(p.textContent); }, { timeout: 60000 });
+  await cx.waitForFunction(() => { const p = document.querySelector('.pdf-progress'); return p && !p.hidden && /Writing page \d+ of 59994/.test(p.textContent); }, { timeout: 120000, polling: 'raf' });
   const label1 = await cx.$eval('.pdf-progress-label', (e) => e.textContent);
   const gap = await cx.evaluate(() => window.__gap);
   await cx.click('.pdf-progress-cancel');
   await cx.waitForFunction(() => /Cancelled/.test(document.querySelector('.tool-io > .io-msg').textContent), { timeout: 20000 });
   const after = await cx.evaluate(() => ({ summary: !document.querySelector('.pdf-summary').hidden, prog: !document.querySelector('.pdf-progress').hidden, btn: document.querySelector('.pdf-run .btn-primary').disabled }));
-  check(/Writing page \d+ of 15000/.test(label1) && gap < 250, 'a 15,000-page merge reports "Writing page n of 15000" and the page keeps drawing (longest frame gap ' + Math.round(gap) + ' ms)', label1);
+  check(/Writing page \d+ of 59994/.test(label1) && gap < 250, 'a 59,994-page merge reports "Writing page n of 59994" and the page keeps drawing (longest frame gap ' + Math.round(gap) + ' ms)', label1);
   check(!after.summary && !after.prog && !after.btn, 'Cancel stops it: no result, the bar gone, the button back', JSON.stringify(after));
   await cx.evaluate(() => { window.__stopTick = true; });
-  await setControls(cx, { ranges: '1-3 | 1 | 2' });
+  await setControls(cx, { ranges: '1-3 | 1 | 2 | 1 | 1 | 1' });
   const again = await press(cx);
-  check(!/is-error/.test(again.cls) && /5 pages/.test(await cx.$eval('.pdf-summary', (e) => e.textContent)), 'after a Cancel the next run works (the files are sent to a new worker)', again.msg);
+  check(!/is-error/.test(again.cls) && /8 pages/.test(await cx.$eval('.pdf-summary', (e) => e.textContent)), 'after a Cancel the next run works (the files are sent to a new worker)', again.msg);
   await cx.close();
 
   /* 11g: the watermark preview is the real output, and follows the controls */

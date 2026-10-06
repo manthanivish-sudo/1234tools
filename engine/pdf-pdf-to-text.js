@@ -130,9 +130,10 @@ async function readText(api) {
 /** The message for pages that gave no text: a scan, or blank. */
 function noTextMessage(r, what) {
   if (r.empty.length === r.numbers.length) {
-    return (r.numbers.length === 1 ? 'That page has' : r.numbers.length === r.total ? 'This PDF has' : 'Those pages have') +
-      ' no text to take out: no words are stored on ' + (r.numbers.length === 1 ? 'it' : 'them') +
-      ', only pictures of pages, as in a scan (or the pages are blank). Run the file through OCR PDF (' + OCR_URL +
+    var one = r.numbers.length === 1;
+    return (r.numbers.length === r.total ? 'This PDF has no text to take out: its ' + (one ? 'page holds' : 'pages hold')
+      : (one ? 'That page has' : 'Those pages have') + ' no text to take out: ' + (one ? 'it holds' : 'they hold')) +
+      ' only ' + (one ? 'a picture' : 'pictures') + ' of the paper, as a scan does, or nothing at all. Run the file through OCR PDF (' + OCR_URL +
       ') first: it recognises the words and adds them as text, and the result can then be turned into ' + what + ' here.';
   }
   return 'No text on ' + pagesText(r.empty) + ': ' + (r.empty.length === 1 ? 'it is' : 'they are') +
@@ -211,7 +212,7 @@ window.PDF_TOOLS["pdf-to-text"] = {
   "Between pages you can have a “--- Page 2 ---” line, a form feed (the character printers and some text tools treat as a new page) or just a blank line. With a page selection, the line gives the page’s real number.",
   "The file is UTF-8 with no byte-order mark and plain line feeds, so current editors open it as it is and scripts see no stray character at the start.",
   "A scanned PDF holds pictures of pages, not text. Run it through OCR PDF first, then bring the result here.",
-  "Limits: tables come out row by row as plain lines, without their grid; pictures, charts, fonts, colours and positions are not kept; right-to-left scripts such as Arabic and Hebrew have not been tested."
+  "Limits: a table comes out as text, row by row, without its grid, and short rows can run together into one paragraph; pictures, charts, fonts, colours and positions are not kept; right-to-left scripts such as Arabic and Hebrew have not been tested."
 ],
 "faq": [
   {"q":"Why did a block of code come out as two columns?","a":"When a clear vertical gap runs the full height of the text, the two sides are read as columns. Code with its comments lined up on the right can look like that, so the code is read first and the comments after. Choose “As stored in the file” for pages like that."},

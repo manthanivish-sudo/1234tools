@@ -130,9 +130,10 @@ async function readText(api) {
 /** The message for pages that gave no text: a scan, or blank. */
 function noTextMessage(r, what) {
   if (r.empty.length === r.numbers.length) {
-    return (r.numbers.length === 1 ? 'That page has' : r.numbers.length === r.total ? 'This PDF has' : 'Those pages have') +
-      ' no text to take out: no words are stored on ' + (r.numbers.length === 1 ? 'it' : 'them') +
-      ', only pictures of pages, as in a scan (or the pages are blank). Run the file through OCR PDF (' + OCR_URL +
+    var one = r.numbers.length === 1;
+    return (r.numbers.length === r.total ? 'This PDF has no text to take out: its ' + (one ? 'page holds' : 'pages hold')
+      : (one ? 'That page has' : 'Those pages have') + ' no text to take out: ' + (one ? 'it holds' : 'they hold')) +
+      ' only ' + (one ? 'a picture' : 'pictures') + ' of the paper, as a scan does, or nothing at all. Run the file through OCR PDF (' + OCR_URL +
       ') first: it recognises the words and adds them as text, and the result can then be turned into ' + what + ' here.';
   }
   return 'No text on ' + pagesText(r.empty) + ': ' + (r.empty.length === 1 ? 'it is' : 'they are') +
@@ -207,7 +208,7 @@ window.PDF_TOOLS["pdf-to-word"] = {
   "Bulleted lines become bulleted items in the List Paragraph style. Numbered lines keep their numbers (“1.”, “a)”) as typed text, in the same style.",
   "Each PDF page starts a new page in Word. The paper size comes from the PDF’s first page, with 2.54 cm margins, and the text is set in Calibri 11 pt.",
   "When the PDF has a title in its document properties, the Word file gets the same title.",
-  "This is the text, not the look: pictures, charts, fonts, colours and exact positions are not kept, and a table comes out as plain lines, one row after another.",
+  "This is the text, not the look: pictures, charts, fonts, colours and exact positions are not kept, and a table comes out as text, row by row, with no grid; short rows can run together in one paragraph.",
   "A scanned PDF holds pictures of pages, not text. Run it through OCR PDF first, then bring the result here.",
   "Right-to-left scripts such as Arabic and Hebrew have not been tested."
 ],

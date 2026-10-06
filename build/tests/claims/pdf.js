@@ -1620,6 +1620,238 @@ module.exports = function ({ claim, manual, kit: K }) {
   });
 
   /* ================================================================ */
+  /* scan to PDF                                                       */
+  /* ================================================================ */
+  /* The photos are drawn in the page by build/tests/pdf-scan-to-pdf.js's own scene code (a pinhole
+     camera over an A4 page with a checkerboard), the same seeds as that test, so the figures match. */
+  const SC = '/pdf/scan-to-pdf/';
+  const SF = require('../pdf-scan-to-pdf.js');
+  const scOpen = async () => {
+    const p = await K.pdf.open(SC);
+    await p.evaluate((css) => {
+      const has = [...document.styleSheets].some((s) => { try { return [...s.cssRules].some((r) => r.selectorText && r.selectorText.indexOf('.docscan-card') >= 0); } catch (e) { return false; } });
+      if (!has) { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
+    }, SF.CSS);
+    return p;
+  };
+  const scPhoto = (p, k) => K.once('pdf:scan:photo:' + k, async () => {
+    const sc = SF.SCENES[k];
+    const r = await p.evaluate(SF.drawScene, sc);
+    let buf = Buffer.from(r.b64, 'base64');
+    if (sc.storeSideways) buf = SF.withOrientation(buf, 6);
+    return K.write('claims-' + sc.name, buf);
+  });
+  const scSettle = (p, n) => p.waitForFunction((k) => {
+    const c = [...document.querySelectorAll('.docscan-card')];
+    return c.length === k && c.every((x) => x.querySelector('.docscan-busy').hidden || x.classList.contains('is-error'));
+  }, { timeout: 120000, polling: 100 }, n);
+  const scUpload = async (p, files, n) => { await (await p.$('.tool-io .dropzone input[type=file]')).uploadFile(...files); await scSettle(p, n); };
+  const scStats = (p) => p.$$eval('.stat-row', (l) => Object.fromEntries(l.map((r) => [r.querySelector('.stat-key').textContent, r.querySelector('.stat-val').textContent])));
+  const scRun = async (p, controls) => {
+    if (controls) await K.pdf.set(p, controls);
+    await K.pdf.press(p);
+    const d = await K.pdf.download(p);
+    const stats = await scStats(p);
+    const L = SF.layout(0);
+    const m = await SF.measure(p, d.bytes, [L]);
+    const raw = Buffer.from(d.bytes).toString('latin1');
+    return { bytes: d.bytes, stats, pages: m.pages.map((pg) => Object.assign(SF.judge(pg, L), { w: pg.w, h: pg.h })), dct: (raw.match(/\/DCTDecode/g) || []).length, flate: (raw.match(/\/FlateDecode/g) || []).length };
+  };
+  const scCards = (p) => p.$$eval('.docscan-card', (l) => l.map((c) => ({ name: c.querySelector('.docscan-name').textContent, status: c.querySelector('.docscan-status').textContent, flag: !c.querySelector('.docscan-flag').hidden, handles: [...c.querySelectorAll('.docscan-handle')].map((h) => [parseFloat(h.style.left), parseFloat(h.style.top)]) })));
+  const scMain = () => K.once('pdf:scan:main', async () => {
+    const p = await scOpen();
+    const o = {};
+    try {
+      const files = [await scPhoto(p, 'wood'), await scPhoto(p, 'grey'), await scPhoto(p, 'carpet')];
+      await scUpload(p, files, 3);
+      o.worker = p.__requests.some((r) => /\/engine\/pdf-scan-worker\.js$/.test(r.url));
+      o.colour = await scRun(p, { pageSize: 'a4', enhance: 'colour', quality: '0.85' });
+      o.text = (await K.pdfjs(p, o.colour.bytes)).pages.map((x) => x.items.length);
+      o.none = await scRun(p, { enhance: 'none' });
+      o.grey = await scRun(p, { enhance: 'grey' });
+      o.bw = await scRun(p, { enhance: 'bw' });
+      o.fit = await scRun(p, { enhance: 'colour', pageSize: 'fit' });
+      /* keyboard: the bottom-right corner of page 2 */
+      await p.evaluate(() => document.querySelectorAll('.docscan-card')[1].querySelector('.docscan-handle[data-corner="2"]').focus());
+      const k0 = (await scCards(p))[1].handles[2];
+      await p.keyboard.press('ArrowLeft'); await p.keyboard.press('ArrowLeft');
+      const c1 = (await scCards(p))[1];
+      o.keys = { before: k0, after: c1.handles[2], status: c1.status };
+      await p.evaluate(() => document.querySelectorAll('.docscan-card')[1].querySelector('.docscan-reset').click());
+      /* the arrows: page 1 down */
+      await p.evaluate(() => document.querySelector('.docscan-card .docscan-down').click());
+      await K.sleep(200);
+      o.reordered = await scRun(p, { pageSize: 'a4' });
+      o.bad = p.__requests.filter((r) => r.method !== 'GET' || !r.url.startsWith(K.BASE)).map((r) => r.method + ' ' + r.url);
+      o.stored = await p.evaluate(async () => {
+        let n = 0; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); n += k.length + (localStorage.getItem(k) || '').length; }
+        const dbs = indexedDB.databases ? (await indexedDB.databases()).map((d) => d.name) : [];
+        const names = window.caches ? await window.caches.keys() : [];
+        let cached = 0; for (const c of names) cached += (await (await window.caches.open(c)).keys()).filter((r) => /\.jpe?g$/i.test(r.url)).length;
+        return { localChars: n, dbs, cachedJpegs: cached };
+      });
+    } finally { await p.close(); }
+    return o;
+  });
+  const scFlags = () => K.once('pdf:scan:flags', async () => {
+    const p = await scOpen();
+    try {
+      await scUpload(p, [await scPhoto(p, 'empty'), await scPhoto(p, 'cut')], 2);
+      return await scCards(p);
+    } finally { await p.close(); }
+  });
+  const scBig = () => K.once('pdf:scan:big', async () => {
+    const p = await scOpen();
+    try {
+      await scUpload(p, [await scPhoto(p, 'big')], 1);
+      return await scRun(p, { pageSize: 'a4', enhance: 'colour', quality: '0.85' });
+    } finally { await p.close(); }
+  });
+  /* the camera, faked in the page: getUserMedia answers with a canvas stream (allow) or a refusal (deny) */
+  const scCamera = (mode) => K.once('pdf:scan:camera:' + mode, async () => {
+    const p = await K.browser.newPage();
+    await p.setViewport({ width: 1280, height: 1000 });
+    await p.setRequestInterception(true);
+    p.on('request', (r) => { const u = r.url(); if (!u.startsWith(K.BASE) && !/^(data|blob):/.test(u)) return r.abort(); r.continue(); });
+    await p.evaluateOnNewDocument((mode) => {
+      try { localStorage.setItem('1234tools-consent', 'denied'); } catch (e) { /* */ }
+      window.__gum = 0; window.__streams = [];
+      if (!navigator.mediaDevices) return;
+      navigator.mediaDevices.getUserMedia = async () => {
+        window.__gum++;
+        if (mode === 'deny') throw new DOMException('Permission denied', 'NotAllowedError');
+        const c = document.createElement('canvas'); c.width = 1280; c.height = 720;
+        const x = c.getContext('2d');
+        const draw = () => { x.fillStyle = '#5a4a3a'; x.fillRect(0, 0, 1280, 720); x.fillStyle = '#f2f0ea'; x.fillRect(420, 80, 440, 560); };
+        draw(); setInterval(draw, 100);
+        const s = c.captureStream(10); window.__streams.push(s); return s;
+      };
+    }, mode);
+    const o = {};
+    try {
+      await p.goto(K.BASE + SC, { waitUntil: 'load', timeout: 120000 });
+      await p.evaluate(() => { const b = document.querySelector('.cc'); if (b) b.remove(); });
+      await p.waitForSelector('.docscan-cam-start', { timeout: 30000 });
+      await K.sleep(500);
+      o.onLoad = await p.evaluate(() => window.__gum);
+      await p.$eval('.docscan-cam-start', (b) => b.click());
+      if (mode === 'deny') {
+        await p.waitForFunction(() => !document.querySelector('.docscan-camera-fallback').hidden, { timeout: 10000 });
+        o.fallback = await p.evaluate(() => ({ msg: document.querySelector('.docscan-camera-msg').textContent, capture: document.querySelector('.docscan-camera-fallback input[type=file]').getAttribute('capture') }));
+      } else {
+        await p.waitForFunction(() => { const v = document.querySelector('.docscan-camera-video'); return v && v.videoWidth > 0; }, { timeout: 20000 });
+        o.afterStart = await p.evaluate(() => window.__gum);
+        await p.$eval('.docscan-cam-shoot', (b) => b.click());
+        await scSettle(p, 1);
+        await p.$eval('.docscan-cam-shoot', (b) => b.click());
+        await scSettle(p, 2);
+        o.cards = (await scCards(p)).map((c) => c.name);
+        await p.$eval('.docscan-cam-done', (b) => b.click());
+        o.done = await p.evaluate(() => ({ tracks: window.__streams.map((s) => s.getTracks().map((t) => t.readyState).join()).join('|'), src: document.querySelector('.docscan-camera-video').srcObject, hidden: document.querySelector('.docscan-camera-live').hidden }));
+      }
+    } finally { await p.close(); }
+    return o;
+  });
+
+  claim(SC, 'worked', 'Edges were found with confidence 0.92 to 0.96, and out came three upright A4 pages, 316.7 KB',
+    'three photos: Edges found "3 of 3 (confidence 0.92 to 0.96)", 316.7 KB, three upright A4 pages in pdf.js', B, async () => {
+      const o = await scMain(), c = o.colour;
+      const a4 = c.pages.every((x) => Math.abs(x.w - 595.28) < 0.5 && Math.abs(x.h - 841.89) < 0.5);
+      return [/0\.92 to 0\.96/.test(c.stats['Edges found'] || '') && c.stats['File size'] === '316.7 KB' && c.pages.length === 3 && a4 && c.pages.every((x) => x.upright),
+        c.stats['Edges found'] + ', ' + c.stats['File size'] + ', ' + c.pages.length + ' pages, upright ' + c.pages.map((x) => x.upright).join()];
+    });
+  claim(SC, 'worked', 'with 48 of 48 test checkerboard squares in place on each', 'pdf.js render: every checkerboard cell dark or light where it should be, on every page', B, async () => {
+    const c = (await scMain()).colour; return [c.pages.every((x) => x.cells === 48), c.pages.map((x) => x.cells + '/48').join(', ')];
+  });
+  claim(SC, 'worked', 'Paper in the shadow measured 205 out of 255 untouched and 254.5 after Colour document',
+    'the paper right of the header bar on the shadowed photo: Enhancement None vs Colour document', B, async () => {
+      const o = await scMain(), a = o.none.pages[0].paper[0], b = o.colour.pages[0].paper[0];
+      return [Math.round(a) === 205 && b.toFixed(1) === '254.5', 'none ' + a.toFixed(1) + ', colour ' + b.toFixed(1)];
+    });
+  claim(SC, 'worked', 'Black and white: 28.4 KB.', 'the same three photos in black and white: File size 28.4 KB', B, async () => {
+    const s = (await scMain()).bw.stats['File size']; return [s === '28.4 KB', s];
+  });
+  claim(SC, 'point', 'Colour and greyscale pages are stored as JPEG; black and white as lossless Flate.', 'DCTDecode pictures for colour and greyscale, FlateDecode and no DCTDecode for black and white', B, async () => {
+    const o = await scMain();
+    return [o.colour.dct === 3 && o.grey.dct === 3 && o.bw.dct === 0 && o.bw.flate === 3 && /DeviceGray/.test(Buffer.from(o.bw.bytes).toString('latin1')),
+      'colour ' + o.colour.dct + ' DCT, grey ' + o.grey.dct + ' DCT, bw ' + o.bw.dct + ' DCT / ' + o.bw.flate + ' Flate'];
+  });
+  claim(SC, 'tip', 'Black and white suits plain text and is stored without JPEG blur.', 'black and white pages are Flate, not JPEG, and the paper is pure white', B, async () => {
+    const o = await scMain(); return [o.bw.dct === 0 && o.bw.pages.every((x) => Math.min(...x.paper) > 254), 'DCT ' + o.bw.dct + ', paper ' + o.bw.pages.map((x) => Math.min(...x.paper).toFixed(1)).join('/')];
+  });
+  claim(SC, 'point', 'The photo is decoded upright (EXIF orientation applied)', 'the photo stored on its side with EXIF Orientation 6 comes out upright, every cell right', B, async () => {
+    const x = (await scMain()).colour.pages[2]; return [x.upright && x.cells === 48 && x.id === 3, K.j(x)];
+  });
+  claim(SC, 'point', 'at most 2,500 pixels long', 'a 4032 x 3024 photo: the page picture is 2500 px on its long side', B, async () => {
+    const s = (await scBig()).stats.Pictures || ''; return [/1768 × 2500 px/.test(s), s];
+  });
+  claim(SC, 'dfaq', 'A 12-megapixel photo of an A4 page became a 338.3 KB page, its picture 1768 × 2500 pixels at quality 85.',
+    '4032 x 3024 photo, A4, quality 85: 1 page, 338.3 KB, 1768 × 2500 px', B, async () => {
+      const b = await scBig();
+      return [b.stats.Pages === '1' && b.stats['File size'] === '338.3 KB' && /JPEG quality 85, up to 1768 × 2500 px/.test(b.stats.Pictures || '') && b.pages[0].upright, K.j(b.stats)];
+    });
+  claim(SC, 'dfaq', 'a page measured as A4 or Letter gets that size', 'Fit to the photo: three A4 pages photographed at angles are given A4 pages', B, async () => {
+    const f = (await scMain()).fit;
+    return [f.pages.every((x) => Math.abs(x.w - 595.28) < 0.5 && Math.abs(x.h - 841.89) < 0.5) && /A4 \(matched\) × 3/.test(f.stats['Page size'] || ''), f.stats['Page size']];
+  });
+  claim(SC, 'tip', 'an A4 sheet photographed at an angle comes out A4-shaped', 'tilted and turned A4 photos: the straightened page is matched as A4 (Fit to the photo)', B, async () => {
+    const f = (await scMain()).fit; return [/A4 \(matched\) × 3/.test(f.stats['Page size'] || '') && f.pages.every((x) => x.cells === 48), f.stats['Page size']];
+  });
+  claim(SC, 'dfaq', 'the arrows on each card set the order', 'Move down on page 1: the PDF has photo 2 first', B, async () => {
+    const ids = (await scMain()).reordered.pages.map((x) => x.id).join(); return [ids === '2,1,3', 'ID blocks per page ' + ids];
+  });
+  claim(SC, 'mistake', 'Each page is a picture; OCR PDF adds searchable text.', 'pdf.js finds no text on any page of the output', B, async () => {
+    const t = (await scMain()).text; return [t.length === 3 && t.every((n) => n === 0), 'text items per page ' + t.join(', ')];
+  });
+  claim(SC, 'faq', 'Each page is a picture of the paper.', 'pdf.js finds no text, one picture per page', B, async () => {
+    const o = await scMain(); return [o.text.every((n) => n === 0) && o.colour.dct === 3, 'text items ' + o.text.join(', ') + ', JPEG pictures ' + o.colour.dct];
+  });
+  claim(SC, 'works', 'It runs in a background worker on this page', 'the page loads engine/pdf-scan-worker.js', B, async () => {
+    const o = await scMain(); return [o.worker, o.worker ? 'pdf-scan-worker.js requested' : 'no worker script requested'];
+  });
+  claim(SC, 'tip', 'If one is wrong, drag it, or focus it and use the arrow keys', 'a focused corner moves with the arrow keys and the card says the corners were set by hand', B, async () => {
+    const k = (await scMain()).keys;
+    return [Math.abs(k.before[0] - k.after[0] - 0.8) < 0.01 && /set by hand/.test(k.status), K.j(k)];
+  });
+  claim(SC, 'tip', 'a page the edge finder is unsure of says Check the corners', 'a photo with no page in it: the card is flagged and says so', B, async () => {
+    const c = (await scFlags())[0]; return [c.flag && /No page edge found/.test(c.status), c.status];
+  });
+  claim(SC, 'tip', 'a page that runs off the photo is closed with the photo\'s own edge', 'a page cut by the right of the photo: the right corners sit on the photo\'s edge and the card says so', B, async () => {
+    const c = (await scFlags())[1];
+    return [c.flag && /runs off the photo/.test(c.status) && c.handles[1][0] > 99.5 && c.handles[2][0] > 99.5, c.status + ' ' + K.j(c.handles)];
+  });
+  claim(SC, 'tip', 'the camera runs only after you press Use the camera', 'getUserMedia: not called on load, called once on the button', B, async () => {
+    const o = await scCamera('allow'); return [o.onLoad === 0 && o.afterStart === 1, 'on load ' + o.onLoad + ', after the button ' + o.afterStart];
+  });
+  claim(SC, 'faq', 'Press Use the camera for a live view in the page, take one photo per page, and press Done, which turns the camera off.',
+    'two shots make page-1.jpg and page-2.jpg; Done ends the track and clears the view', B, async () => {
+      const o = await scCamera('allow');
+      return [o.cards.join() === 'page-1.jpg,page-2.jpg' && o.done.tracks === 'ended' && o.done.src === null && o.done.hidden, K.j(o)];
+    });
+  claim(SC, 'faq', 'If the browser will not share the camera, the page offers your phone\'s own camera app instead.', 'a refused camera: the page says so and offers an input with capture="environment"', B, async () => {
+    const o = await scCamera('deny'); return [/not allowed/.test(o.fallback.msg) && o.fallback.capture === 'environment', K.j(o.fallback)];
+  });
+  claim(SC, 'faq', 'Nothing you add is uploaded, and no photo is kept after you close the page.', 'only GETs to the site; nothing the size of a photo in localStorage, IndexedDB or the cache', B, async () => {
+    const o = await scMain();
+    return [!o.bad.length && o.stored.localChars < 4000 && !o.stored.dbs.length && o.stored.cachedJpegs === 0, (o.bad.join(', ') || 'no upload') + '; ' + K.j(o.stored)];
+  });
+  claim(SC, 'tip', 'Colour document evens out shadows and makes the paper white while keeping coloured ink.', 'pdf-scan-vision enhance("colour") on a shadowed page with a red stamp: paper white, the stamp still red', N, async () => {
+    const V = require(require('path').join(K.ROOT, 'engine', 'pdf-scan-vision.js'));
+    const W = 400, H = 300, img = { width: W, height: H, data: new Uint8ClampedArray(W * H * 4) };
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4, shade = 1 - 0.4 * x / W, stamp = x >= 250 && x < 330 && y >= 60 && y < 120;
+      const c = stamp ? [190, 40, 40] : [236, 232, 220];
+      img.data[i] = c[0] * shade; img.data[i + 1] = c[1] * shade; img.data[i + 2] = c[2] * shade; img.data[i + 3] = 255;
+    }
+    const e = V.enhance(img, 'colour');
+    const at = (x, y) => Array.from(e.data.slice((y * W + x) * 4, (y * W + x) * 4 + 3));
+    const paper = at(380, 250), stamp = at(290, 90);
+    return [paper.every((v) => v > 240) && stamp[0] > 150 && stamp[0] - stamp[1] > 80, 'paper in the shadow ' + paper.join(',') + ', stamp ' + stamp.join(',')];
+  });
+  manual(SC, 'faq', 'The page is fitted with four straight edges, so the corners land in place but a curl in a book page or a crease in a receipt stays.',
+    'No curled-page fixture: the warp (engine/pdf-scan-vision.js warp) is one projective map from four corners, which by construction cannot straighten a curve; checked by reading the code.');
+
+  /* ================================================================ */
   /* claims that need a person                                         */
   /* ================================================================ */
   manual(I, 'faq', 'Whether it is compliant depends on your jurisdiction and what you include', 'Legal advice; nothing to run.');
@@ -1638,6 +1870,295 @@ module.exports = function ({ claim, manual, kit: K }) {
   manual(OG, 'tip', 'On a touch screen, drag by the grip in a card\'s corner', 'Touch dragging needs a touch device (pdf-fixes.js covers mouse dragging).');
   manual(M, 'faq', 'Nothing is transmitted, which is why this works offline', 'Offline use needs the service worker and a network switch; the browser check above only shows no upload happened.');
   manual(Q, 'what', 'It applies the single rate you enter; the rate pages it was checked against are under Sources.', 'Sources list on the page; editorial.');
+
+  /* ================================================================ */
+  /* PDF to Text and PDF to Word (wave 2)                              */
+  /* ================================================================ */
+  /* Both tools run on the page (mainRun on pdf.js). In Node the spec's mainRun
+     is driven with a stand-in for the page's api: pdf.js from
+     engine/vendor/pdfjs, pdfcore.bundle.js for page ranges. The fixtures are
+     drawn here with pdfcore's createPDF in standard fonts (one form field
+     with PyMuPDF), so every word and its place is known; the .docx is read
+     by unzipping it here, never with the tool's own code. */
+  {
+    const fs = require('fs');
+    const path = require('path');
+    const { pathToFileURL } = require('url');
+    const { spawnSync } = require('child_process');
+    const TX = '/pdf/pdf-to-text/', WD = '/pdf/pdf-to-word/';
+    let lib = null;
+    const pdfjsLib = async () => {
+      if (!lib) {
+        lib = await import(pathToFileURL(path.join(K.ROOT, 'engine/vendor/pdfjs/pdf.min.mjs')).href);
+        lib.GlobalWorkerOptions.workerSrc = pathToFileURL(path.join(K.ROOT, 'engine/vendor/pdfjs/pdf.worker.min.mjs')).href;
+      }
+      return lib;
+    };
+    const TLmod = () => require(path.join(K.ROOT, 'engine/pdf-textlayout.js'));
+    /** mainRun with the page's api stood in for; never throws (an AbortError or a crash comes back as res.thrown) */
+    const tw = async (id, bytes, opts, password) => {
+      const w = {};
+      new Function('window', fs.readFileSync(path.join(K.ROOT, 'engine/pdf-' + id + '.js'), 'utf8'))(w);
+      const spec = w.PDF_TOOLS[id];
+      const L = await pdfjsLib();
+      const o = {};
+      (spec.controls || []).forEach((c) => { o[c.key] = c.default; });
+      Object.assign(o, opts || {});
+      let doc = null;
+      const api = {
+        spec, core: K.core(), opts: o, entries: [{ name: 'in.pdf', bytes, password: password || '' }],
+        loadScript: async () => { w.MVRTextLayout = TLmod(); },
+        pdfjs: async () => L,
+        openPdf: async (e) => { const c = new Uint8Array(e.bytes.length); c.set(e.bytes); doc = await L.getDocument({ data: c, password: e.password || undefined, standardFontDataUrl: path.join(K.ROOT, 'engine/vendor/pdfjs/standard_fonts/').replace(/\\/g, '/') + '/', verbosity: 0 }).promise; return doc; },
+        progress: () => {}, signal: { aborted: false }, cancelled: () => false
+      };
+      let res;
+      try { res = await spec.mainRun(api); } catch (e) { res = { thrown: e.name + ': ' + e.message }; }
+      if (doc) await doc.destroy();
+      return res || {};
+    };
+    const txt = (res) => res.files ? Buffer.from(res.files[0].bytes).toString('utf8') : '';
+    /** the parts of a .docx: the tool stores them uncompressed, so they are read from the local headers */
+    const unzip = (b) => {
+      const buf = Buffer.from(b), out = {};
+      let p = 0;
+      while (p + 30 <= buf.length && buf.readUInt32LE(p) === 0x04034b50) {
+        const method = buf.readUInt16LE(p + 8), size = buf.readUInt32LE(p + 18), nl = buf.readUInt16LE(p + 26), xl = buf.readUInt16LE(p + 28);
+        const name = buf.slice(p + 30, p + 30 + nl).toString('utf8');
+        out[name] = { method, text: buf.slice(p + 30 + nl + xl, p + 30 + nl + xl + size).toString('utf8') };
+        p += 30 + nl + xl + size;
+      }
+      return out;
+    };
+    const paras = (docXml) => (docXml.match(/<w:p>[\s\S]*?<\/w:p>/g) || []).map((p) => ({
+      style: (/<w:pStyle w:val="([^"]+)"/.exec(p) || [])[1] || 'Normal',
+      bullet: /<w:numPr>/.test(p),
+      text: (p.match(/<w:t[^>]*>[^<]*<\/w:t>|<w:br\/>/g) || []).map((t) => t === '<w:br/>' ? '\n' : t.replace(/<[^>]+>/g, '')).join('')
+        .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&')
+    }));
+    const docx = (res) => res.files ? unzip(res.files[0].bytes) : {};
+
+    /* ---------- fixtures (createPDF: standard fonts, every line placed) ---------- */
+    const T = (text, x, y, size, font, align) => ({ text, x, y, size: size || 10, font: font || 'Helvetica', align });
+    const S = (tag, n) => Array.from({ length: n }, (_, i) => 'The ' + tag + ' note number ' + (i + 1) + ' records a small change to the plan.').join(' ');
+    const col = (text, x, yTop, w, size, font) => K.core().wrapText(text, font || 'Helvetica', size || 10, w).map((l, i) => T(l, x, yTop - i * 1.2 * (size || 10), size, font));
+    const make = (pages, info) => K.core().createPDF(pages.map((ops) => (Array.isArray(ops) ? { ops } : ops)), info ? { info } : {});
+    const twoCol = (shuffle) => {
+      const left = [T('Moorings', 50, 735, 14, 'Helvetica-Bold')].concat(col(S('left', 6), 50, 715, 230));
+      const right = [T('Repairs', 315, 735, 14, 'Helvetica-Bold')].concat(col(S('right', 6), 315, 715, 230));
+      let body = left.concat(right);
+      if (shuffle) { body = []; for (let i = 0; i < Math.max(left.length, right.length); i++) { if (right[i]) body.push(right[i]); if (left[i]) body.push(left[i]); } }
+      return make([[T('Harbour Notes', 50, 780, 22, 'Helvetica-Bold')].concat(body, [T('1', 297.5, 40, 9, 'Helvetica', 'center')])], { Title: 'Harbour Notes 2026' });
+    };
+    const reportPages = (n) => Array.from({ length: n }, (_, k) => [T('Harbour Trust report', 60, 805, 9), T('Section ' + (k + 1), 60, 740, 14, 'Helvetica-Bold')]
+      .concat(col(S('p' + (k + 1), 4), 60, 715, 470), [T((k + 1) + ' of ' + n, 297.5, 40, 9, 'Helvetica', 'center')]));
+    const report = (n) => make(reportPages(n));
+    const fixture = (k, fn) => K.once('tw:' + k, fn);
+
+    /* ---------- PDF to Text ---------- */
+    claim(TX, 'tip', 'Reading order rebuilds columns: a two-column article comes out as the whole left column, then the right, with a title that spans both first.',
+      'two columns under a title: title, every left line, then the right column', N, async () => {
+        const t = txt(await tw('pdf-to-text', await fixture('two', () => twoCol(false)), {}));
+        const at = [t.indexOf('Harbour Notes'), t.indexOf('left note number 1 '), t.indexOf('left note number 6 '), t.indexOf('Repairs'), t.indexOf('right note number 1 ')];
+        return [at.every((v, i) => v >= 0 && (!i || v > at[i - 1])), K.j(at)];
+      });
+    claim(TX, 'tip', '“As stored in the file” gives the text in the order the PDF draws it, which some programs scramble.',
+      'lines drawn right, left, right, left…: "as stored" follows the drawing order, reading order does not', N, async () => {
+        const bytes = await fixture('shuf', () => twoCol(true));
+        const s = txt(await tw('pdf-to-text', bytes, { order: 'stream' })), r = txt(await tw('pdf-to-text', bytes, { order: 'reading' }));
+        const a = s.indexOf('right note number 1 '), b = s.indexOf('left note number 2 '), c = s.indexOf('left note number 6 ');
+        return [a >= 0 && b > a && c > s.indexOf('right note number 3 ') && r.indexOf('left note number 6 ') < r.indexOf('right note number 1 '), 'as stored: right 1 at ' + a + ', left 2 at ' + b + '; reading: left 6 before right 1'];
+      });
+    claim(TX, 'tip', 'A word broken with a hyphen at a line end is joined again when the next line starts in lower case, so “exam-” and “ple” become “example”; a real “well-known” broken there loses its hyphen too.',
+      '"exam-|ple" gives "example", "well-|known" gives "wellknown"', N, async () => {
+        const t = txt(await tw('pdf-to-text', make([[T('This line ends with an exam-', 72, 700), T('ple of joining and a well-', 72, 688), T('known phrase that ends here.', 72, 676)]]), {}));
+        return [t === 'This line ends with an example of joining and a wellknown phrase that ends here.\n', K.j(t)];
+      });
+    claim(TX, 'tip', 'page numbers such as “7”, “Page 7” or “7 of 12”. Choose “Leave them out” to drop them.',
+      'three pages with a running header and "n of 3": kept by default, all six gone with "Leave them out"', N, async () => {
+        const bytes = await fixture('rep3', () => report(3));
+        const keep = await tw('pdf-to-text', bytes, {}), drop = await tw('pdf-to-text', bytes, { furniture: 'drop' });
+        const k = txt(keep), d = txt(drop);
+        return [(k.match(/Harbour Trust report/g) || []).length === 3 && /\n3 of 3\n$/.test(k) && !/Harbour Trust report|\d of 3/.test(d) && /Section 3/.test(d),
+          K.stat(keep, 'Running headers and footers') + ' / ' + K.stat(drop, 'Running headers and footers')];
+      });
+    claim(TX, 'tip', 'With a page selection, the line gives the page’s real number.', 'pages "2-3" of 3: one separator, "--- Page 3 ---"', N, async () => {
+      const t = txt(await tw('pdf-to-text', await fixture('rep3', () => report(3)), { pages: '2-3' }));
+      return [/^Harbour Trust report\n\nSection 2/.test(t) && (t.match(/--- Page \d+ ---/g) || []).join() === '--- Page 3 ---', K.j((t.match(/--- Page \d+ ---/g) || []))];
+    });
+    claim(TX, 'tip', 'Between pages you can have a “--- Page 2 ---” line, a form feed (the character printers and some text tools treat as a new page) or just a blank line.',
+      'the three separators on a three-page file', N, async () => {
+        const bytes = await fixture('rep3', () => report(3));
+        const m = txt(await tw('pdf-to-text', bytes, { separator: 'marker' })), f = txt(await tw('pdf-to-text', bytes, { separator: 'formfeed' })), n = txt(await tw('pdf-to-text', bytes, { separator: 'none' }));
+        return [(m.match(/\n--- Page [23] ---\n/g) || []).length === 2 && (f.match(/\f/g) || []).length === 2 && !/\f|--- Page/.test(n) && /1 of 3\n\nHarbour Trust report\n\nSection 2/.test(n),
+          'markers ' + (m.match(/--- Page \d ---/g) || []).length + ', form feeds ' + (f.match(/\f/g) || []).length];
+      });
+    claim(TX, 'tip', 'The file is UTF-8 with no byte-order mark and plain line feeds', '£ is C2 A3, no EF BB BF at the start, no carriage return', N, async () => {
+      const r = await tw('pdf-to-text', make([[T('Plot rent rises to £24 – from April.', 72, 700)]]), {});
+      const b = Buffer.from(r.files[0].bytes);
+      return [b[0] !== 0xEF && b.indexOf(Buffer.from([0xC2, 0xA3])) > 0 && b.indexOf(13) < 0 && r.files[0].type === 'text/plain; charset=utf-8' && b.toString('utf8') === 'Plot rent rises to £24 – from April.\n', K.j(b.slice(0, 4)) + ' ' + r.files[0].type];
+    });
+    claim(TX, 'tip', 'A scanned PDF holds pictures of pages, not text. Run it through OCR PDF first, then bring the result here.',
+      'a page with no text gives no file and a warning naming OCR PDF', N, async () => {
+        const r = await tw('pdf-to-text', make([[{ rect: [50, 50, 495, 742], fill: '#cccccc' }]]), {});
+        return [!r.files && /OCR PDF \(\/pdf\/ocr-pdf\/\)/.test(r.warn || ''), r.warn || K.j(r)];
+      });
+    claim(TX, 'faq', 'Code with its comments lined up on the right can look like that, so the code is read first and the comments after. Choose “As stored in the file” for pages like that.',
+      'Courier code with aligned comments: reading order gives all code then all comments; as stored, each comment follows its line', N, async () => {
+        const rows = [['total = 0', '# start the count'], ['for row in rows:', '# every line read'], ['    total += row.n', '# add this row'], ['    seen.add(row.id)', '# remember the id'], ['print(total, n)', '# show the result'], ['save(seen, path)', '# keep it on disk']];
+        const bytes = make([[].concat(...rows.map((r, i) => [T(r[0], 72, 760 - i * 11, 9, 'Courier'), T(r[1], 200, 760 - i * 11, 9, 'Courier')]))]);
+        const rd = txt(await tw('pdf-to-text', bytes, {})), st = txt(await tw('pdf-to-text', bytes, { order: 'stream' }));
+        const rowWise = rows.every((r, i) => st.indexOf(r[1]) > st.indexOf(r[0].trim()) && (!i || st.indexOf(r[0].trim()) > st.indexOf(rows[i - 1][1])));
+        return [rd.indexOf('save(seen, path)') < rd.indexOf('# start the count') && rowWise, K.j(rd.slice(0, 120))];
+      });
+    claim(TX, 'faq', 'A sidebar beside the main text is read as a column of its own; footnotes at the foot of a page come after that page’s text, before the page number.',
+      'main column, then the sidebar, then the footnote, then the page number', N, async () => {
+        const bytes = make([col(S('main', 8), 50, 770, 320).concat(col('In brief: ' + S('side', 3), 400, 770, 145), [T('1 Figures are for the year to March.', 50, 120, 8), T('4', 297.5, 40, 9, 'Helvetica', 'center')])]);
+        const t = txt(await tw('pdf-to-text', bytes, {}));
+        const at = [t.indexOf('main note number 8'), t.indexOf('In brief:'), t.indexOf('side note number 3'), t.indexOf('1 Figures are'), t.lastIndexOf('\n4\n')];
+        return [at.every((v, i) => v >= 0 && (!i || v > at[i - 1])), K.j(at)];
+      });
+    claim(TX, 'faq', 'No, it stays two paragraphs, one ending its page and one starting the next.', 'a sentence carried over a page break stays in two blocks either side of the separator', N, async () => {
+      const bytes = make([col(S('first', 3) + ' After the vote the board agreed to', 60, 740, 470), [T('spend the reserve on repairs to the slipway.', 60, 740)]]);
+      const t = txt(await tw('pdf-to-text', bytes, {}));
+      return [/agreed to\n\n--- Page 2 ---\n\nspend the reserve/.test(t), K.j(t.slice(-120))];
+    });
+    claim(TX, 'faq', 'Answers in form fields and comments are not part of the page’s own text, so they are left out. Flatten PDF draws them into the page first; the flattened copy’s answers are then read like any other text.',
+      'a filled-in field (PyMuPDF): its answer is missing, and present once flattened with pdfcore', N, async () => {
+        const f = K.out('tw-form.pdf');
+        const code = ['import pymupdf, sys', 'd = pymupdf.open()', 'p = d.new_page(width=595, height=842)', "p.insert_text((72, 100), 'Applicant name:', fontname='helv', fontsize=12)",
+          'w = pymupdf.Widget()', 'w.field_type = pymupdf.PDF_WIDGET_TYPE_TEXT', "w.field_name = 'fullname'", "w.field_value = 'Jane Doe'", 'w.rect = pymupdf.Rect(180, 85, 400, 105)', 'p.add_widget(w)', 'd.save(sys.argv[1])'].join('\n');
+        const pr = spawnSync('python', ['-c', code, f], { encoding: 'utf8' });
+        if (pr.status !== 0) return [false, 'PyMuPDF: ' + (pr.stderr || '').slice(-200)];
+        const bytes = new Uint8Array(fs.readFileSync(f));
+        const before = txt(await tw('pdf-to-text', bytes, {}));
+        const flat = (await K.core().flattenDocument(await K.core().PDFDocument.load(bytes), { forms: true, comments: true })).bytes;
+        const after = txt(await tw('pdf-to-text', flat, {}));
+        return [/Applicant name:/.test(before) && !/Jane Doe/.test(before) && /Jane Doe/.test(after), K.j(before) + ' → ' + K.j(after)];
+      });
+    claim(TX, 'point', 'A line clearly larger than the body text, or a short line wholly in a bold font, counts as a heading.', 'a 14 pt line and a bold 10 pt line are headings; a regular 10 pt line is not', N, async () => {
+      const bytes = make([[T('Large heading', 72, 760, 14), T('Bold subheading', 72, 730, 10, 'Helvetica-Bold')].concat(col(S('body', 4), 72, 710, 450), [T('Plain short line', 72, 600)])]);
+      const r = await tw('pdf-to-word', bytes, {});
+      const ps = paras(docx(r)['word/document.xml'].text);
+      const h = ps.filter((p) => /^Heading/.test(p.style)).map((p) => p.text);
+      return [h.join('|') === 'Large heading|Bold subheading', h.join('|')];
+    });
+    claim(TX, 'faq', 'Up to 10,000 pages; above 300, font names are skipped.', '301 pages: the stats say the fonts were not read; 300 pages: no such row', N, async () => {
+      const mk = (n) => make(Array.from({ length: n }, (_, k) => [T('Body line on page ' + (k + 1) + ' of the long file, set in regular type.', 72, 700)]));
+      const a = await tw('pdf-to-text', await fixture('p301', () => mk(301)), {}), b = await tw('pdf-to-text', await fixture('p300', () => mk(300)), {});
+      return [/^Not read: over 300 pages/.test(K.stat(a, 'Bold fonts') || '') && !K.stat(b, 'Bold fonts') && /page 301 of the long file/.test(txt(a)), K.stat(a, 'Bold fonts') + ' / ' + K.stat(b, 'Bold fonts')];
+    });
+    claim(TX, 'faq', 'Yes. The page asks for the password when you add the file and uses it only on this device.', 'an AES-256 file opened with its password gives its text', N, async () => {
+      const enc = await K.core().protectDocument(await K.core().PDFDocument.load(await fixture('rep3', () => report(3))), { userPassword: 'tw-pass', method: 'AES-256' });
+      const r = await tw('pdf-to-text', enc, {}, 'tw-pass');
+      return [/Section 3/.test(txt(r)) && /p3 note number 4/.test(txt(r)), r.error || r.thrown || 'text of 3 pages'];
+    });
+    claim(TX, 'lede', 'Nothing you add is uploaded.', 'a run on the page sends no request except GETs to the site, and shows the text with a copy button', B, async () => {
+      const p = await K.pdf.open(TX);
+      try {
+        await K.pdf.upload(p, [K.write('tw-two.pdf', await fixture('two', () => twoCol(false)))]);
+        await K.pdf.press(p);
+        const d = await K.pdf.download(p);
+        const shown = await p.evaluate(() => ({ box: document.querySelector('.tool-io > pre.code-out').textContent, copy: [...document.querySelectorAll('.pdf-actions button')].some((b) => b.textContent === 'Copy the text') }));
+        const bad = p.__requests.filter((r) => r.method !== 'GET' || !r.url.startsWith(K.BASE));
+        const t = d.bytes.toString('utf8');
+        return [!bad.length && /Harbour Notes/.test(t) && shown.box === t && shown.copy, bad.length ? bad.map((r) => r.method + ' ' + r.url).join(', ') : p.__requests.length + ' requests, all GET to the site; ' + d.name];
+      } finally { await p.close(); }
+    });
+    claim(TX, 'faq', 'the box showed the first 20,000 characters.', 'a 200-page file: the box holds the first 20,000 characters and says so', B, async () => {
+      const p = await K.pdf.open(TX);
+      try {
+        await K.pdf.upload(p, [K.write('tw-200.pdf', make(Array.from({ length: 200 }, (_, k) => col(S('page' + (k + 1), 3), 72, 760, 450))))]);
+        await K.pdf.press(p);
+        const box = await p.evaluate(() => document.querySelector('.tool-io > pre.code-out').textContent);
+        const head = box.split('\n\n[The first ')[0];
+        return [Array.from(head).length === 20000 && /\[The first 20,000 of [\d,]+ characters are shown here\. The download and Copy the text hold all of it\.\]$/.test(box), Array.from(head).length + ' characters, then ' + K.j(box.slice(-110))];
+      } finally { await p.close(); }
+    });
+
+    /* ---------- PDF to Word ---------- */
+    claim(WD, 'tip', 'Headings take Word’s Heading 1, 2 and 3 styles', 'a 22 pt title, 14 pt sections and a bold body-size subheading: Heading1, Heading2, Heading3, outline levels 0–2', N, async () => {
+      const bytes = make([[T('Harbour Notes', 50, 780, 22, 'Helvetica-Bold'), T('Moorings', 50, 740, 14, 'Helvetica-Bold'), T('Visitors', 50, 690, 10, 'Helvetica-Bold')]
+        .concat(col(S('a', 3), 50, 720, 480), col(S('b', 3), 50, 670, 480), [T('Repairs', 50, 600, 14, 'Helvetica-Bold')], col(S('c', 3), 50, 580, 480))]);
+      const z = docx(await tw('pdf-to-word', bytes, {}));
+      const h = paras(z['word/document.xml'].text).filter((p) => /^Heading/.test(p.style)).map((p) => p.style + ':' + p.text);
+      const lv = ['Heading1', 'Heading2', 'Heading3'].map((s) => (new RegExp('w:styleId="' + s + '"[\\s\\S]*?<w:outlineLvl w:val="(\\d)"').exec(z['word/styles.xml'].text) || [])[1]).join();
+      return [h.join('|') === 'Heading1:Harbour Notes|Heading2:Moorings|Heading3:Visitors|Heading2:Repairs' && lv === '0,1,2', h.join('|') + '; outline levels ' + lv];
+    });
+    claim(WD, 'tip', 'Bulleted lines become bulleted items in the List Paragraph style. Numbered lines keep their numbers (“1.”, “a)”) as typed text, in the same style.',
+      'bullets: ListParagraph with numbering, marker removed; "1." items: ListParagraph, number kept', N, async () => {
+        const items = ['check the tap washers', 'clear the gutters', 'share spare water'];
+        const ops = [T('Before the frost:', 72, 760)].concat(...items.map((t, i) => [T('•', 72, 744 - i * 12), T(t, 86, 744 - i * 12)]),
+          [T('Then, in order:', 72, 690)], ...['Open the gate.', 'Lock the shed.', 'Leave the key.'].map((t, i) => [T((i + 1) + '.', 72, 674 - i * 12), T(t, 86, 674 - i * 12)]));
+        const ps = paras(docx(await tw('pdf-to-word', make([ops]), {}))['word/document.xml'].text).filter((p) => p.style === 'ListParagraph');
+        const ok = ps.length === 6 && ps.slice(0, 3).every((p, i) => p.bullet && p.text === items[i]) && ps.slice(3).every((p, i) => !p.bullet && p.text.indexOf((i + 1) + '. ') === 0);
+        return [ok, K.j(ps.map((p) => (p.bullet ? '• ' : '') + p.text))];
+      });
+    claim(WD, 'tip', 'The paper size comes from the PDF’s first page, with 2.54 cm margins, and the text is set in Calibri 11 pt.', 'A4 (595.28 × 841.89 pt): pgSz 11906 × 16838 twips, margins 1440 twips, Calibri at 22 half-points', N, async () => {
+      const z = docx(await tw('pdf-to-word', await fixture('two', () => twoCol(false)), {}));
+      const d = z['word/document.xml'].text, s = z['word/styles.xml'].text;
+      const ok = /<w:pgSz w:w="11906" w:h="16838"\/>/.test(d) && /<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/.test(d) && /<w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri"[^>]*\/><w:sz w:val="22"\/>/.test(s);
+      return [ok, (/<w:pgSz[^>]*>/.exec(d) || [''])[0] + ' ' + (/<w:pgMar[^>]*>/.exec(d) || [''])[0]];
+    });
+    claim(WD, 'tip', 'When the PDF has a title in its document properties, the Word file gets the same title.', 'Info Title "Harbour Notes 2026" becomes dc:title', N, async () => {
+      const z = docx(await tw('pdf-to-word', await fixture('two', () => twoCol(false)), {}));
+      const t = (/<dc:title>([^<]*)<\/dc:title>/.exec(z['docProps/core.xml'].text) || [])[1];
+      return [t === 'Harbour Notes 2026', t];
+    });
+    claim(WD, 'faq', 'Each PDF page starts a new Word page, so the two halves stay apart', 'three pages: two page breaks, one before each later page', N, async () => {
+      const d = docx(await tw('pdf-to-word', await fixture('rep3', () => report(3)), {}))['word/document.xml'].text;
+      return [(d.match(/<w:br w:type="page"\/>/g) || []).length === 2 && d.indexOf('<w:br w:type="page"/>') < d.indexOf('Section 2'), (d.match(/<w:br w:type="page"\/>/g) || []).length + ' page breaks'];
+    });
+    claim(WD, 'faq', 'A block in the top or bottom tenth of the page that repeats on at least half the pages, or a page number such as “Page 7”, is then dropped.',
+      '"Leave them out": the running header and "n of 3" footers leave the Word file; the sections stay', N, async () => {
+        const d = docx(await tw('pdf-to-word', await fixture('rep3', () => report(3)), { furniture: 'drop' }))['word/document.xml'].text;
+        const ps = paras(d).map((p) => p.text).filter(Boolean);
+        return [!ps.some((t) => /Harbour Trust report|^\d of 3$/.test(t)) && ps.filter((t) => /^Section \d$/.test(t)).length === 3, K.j(ps.filter((t) => t.length < 30))];
+      });
+    claim(WD, 'faq', 'Type them in Pages, such as 2-4 or 1, 6; the Word file then holds just those pages, in that order, each starting a new page.', 'pages "6, 1" of 6: Section 6 then Section 1, one page break', N, async () => {
+      const d = docx(await tw('pdf-to-word', await fixture('rep6', () => report(6)), { pages: '6, 1' }))['word/document.xml'].text;
+      const secs = paras(d).map((p) => p.text).filter((t) => /^Section \d$/.test(t));
+      return [secs.join() === 'Section 6,Section 1' && (d.match(/<w:br w:type="page"\/>/g) || []).length === 1, secs.join()];
+    });
+    claim(WD, 'point', 'Short lines kept apart, such as an address, stay on separate lines within one paragraph.', 'a four-line address is one paragraph with three line breaks', N, async () => {
+      const addr = ['Plot 14', 'Riverside Allotments', 'Mill Lane', 'Kendal LA9 4QT'];
+      const bytes = make([col(S('letter', 4), 72, 760, 450).concat(addr.map((l, i) => T(l, 72, 600 - i * 13)))]);
+      const ps = paras(docx(await tw('pdf-to-word', bytes, {}))['word/document.xml'].text);
+      return [ps.some((p) => p.text === addr.join('\n')), K.j(ps.slice(-2).map((p) => p.text))];
+    });
+    claim(WD, 'point', 'The file is a standard Office Open XML package, stored uncompressed in a ZIP.', 'every part stored (method 0), [Content_Types].xml first, the main document typed as WordprocessingML', N, async () => {
+      const z = docx(await tw('pdf-to-word', await fixture('two', () => twoCol(false)), {}));
+      const names = Object.keys(z);
+      return [names[0] === '[Content_Types].xml' && names.every((n) => z[n].method === 0) && /PartName="\/word\/document\.xml" ContentType="application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document\.main\+xml"/.test(z['[Content_Types].xml'].text),
+        names.join(', ')];
+    });
+    claim(WD, 'faq', 'The size of the PDF’s first page, landscape when that page is wider than tall', 'an 842 × 595 page gives pgSz 16840 × 11900 with orient="landscape"', N, async () => {
+      const d = docx(await tw('pdf-to-word', make([{ size: [842, 595], ops: col(S('wide', 4), 60, 540, 720) }]), {}))['word/document.xml'].text;
+      return [/<w:pgSz w:w="16840" w:h="11900" w:orient="landscape"\/>/.test(d), (/<w:pgSz[^>]*>/.exec(d) || [''])[0]];
+    });
+    claim(WD, 'faq', 'The Word file has no password.', 'an AES-256 PDF opened with its password gives a plain .docx with its text', N, async () => {
+      const enc = await K.core().protectDocument(await K.core().PDFDocument.load(await fixture('rep3', () => report(3))), { userPassword: 'tw-pass', method: 'AES-256' });
+      const r = await tw('pdf-to-word', enc, {}, 'tw-pass');
+      const z = docx(r);
+      return [!!z['word/document.xml'] && /Section 3/.test(z['word/document.xml'].text) && !Object.keys(z).some((n) => /Encrypt/i.test(n)), Object.keys(z).join(', ') || r.error || r.thrown];
+    });
+    claim(WD, 'lede', 'Turn a PDF’s text into an editable Word document (.docx) with its headings, paragraphs and lists, in your browser.',
+      'on the page: a .docx with the Word type, no PDF viewer, and no request except GETs to the site', B, async () => {
+        const p = await K.pdf.open(WD);
+        try {
+          await K.pdf.upload(p, [K.write('tw-two.pdf', await fixture('two', () => twoCol(false)))]);
+          await K.pdf.press(p);
+          const d = await K.pdf.download(p);
+          const viewer = await p.evaluate(() => { const v = document.querySelector('.pdf-view'); return !!v && !v.hidden; });
+          const bad = p.__requests.filter((r) => r.method !== 'GET' || !r.url.startsWith(K.BASE));
+          const z = unzip(d.bytes);
+          return [!bad.length && !viewer && /\.docx$/.test(d.name) && d.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' && /Harbour Notes/.test((z['word/document.xml'] || {}).text || ''),
+            d.name + ' ' + d.type + '; viewer ' + viewer + '; ' + (bad.length ? bad.map((r) => r.method + ' ' + r.url).join(', ') : p.__requests.length + ' requests, all GET to the site')];
+        } finally { await p.close(); }
+      });
+    manual(TX, 'tip', 'right-to-left scripts such as Arabic and Hebrew have not been tested', 'A statement that something was not tested; nothing to run.');
+    manual(WD, 'tip', 'so they show in the Navigation pane and a table of contents can be built from them', 'Microsoft Word behaviour for Heading styles with outline levels (the outline levels are checked above); needs Word.');
+  }
 
   /* ================================================================ */
   /* compress, protect, remove a password (wave 2)                     */
@@ -2457,5 +2978,575 @@ module.exports = function ({ claim, manual, kit: K }) {
           return [/certificate rather than a password/.test(t) && !/needs its password/.test(t), t.replace(/\s+/g, ' ').slice(0, 220)];
         } finally { await p.close(); }
       });
+  }
+
+  /* ================================================================ */
+  /* OCR PDF and Image to Text (wave 2)                                */
+  /* ================================================================ */
+  /* In a block of its own. Fixtures: text drawn on canvases in the page (Arial;
+     Nirmala UI for Hindi), each word's ink box kept as the ground truth, and the
+     pictures wrapped into PDFs by MuPDF (PyMuPDF, through python); small print and
+     the GIF by Pillow. The full proof is build/tests/pdf-ocr-tools.js; these checks
+     tie each sentence on the two pages to a run. */
+  {
+    const fs = require('fs');
+    const { spawnSync } = require('child_process');
+    const O = '/pdf/ocr-pdf/', I2 = '/pdf/image-to-text/';
+    const EN = ['Scanned letter for the OCR test', 'The quick brown fox jumps over the lazy dog', 'Invoice 2026-10 total 4,512.75 due 31 October', 'Please keep this copy for your records'];
+    const P2 = ['Rotated page with a line in Hindi', 'भारत एक विशाल देश है', 'Thank you for reading'];
+    const RECEIPT = ['Receipt 0417 from the corner shop', 'Two loaves 3.10 and milk 1.45', 'Total 4.55 paid by card'];
+    const NOTICE = ['Meeting moved to Thursday at 10:30', 'Room 4B on the second floor'];
+    const HI2 = 'आज मौसम बहुत अच्छा है';
+    const SMALL = ['The quick brown fox jumps over the lazy dog 0123456789', 'Sphinx of black quartz, judge my vow; pack my box with five dozen jugs'];
+    const lines = (s) => String(s).split('\n').map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    const lat = (b) => Buffer.from(b).toString('latin1');
+    const py = (code, args) => {
+      const r = spawnSync('python', ['-c', code].concat(args || []), { encoding: 'utf8', maxBuffer: 64 * 1048576 });
+      if (r.status !== 0) throw new Error('python: ' + (r.stderr || '').slice(-400));
+      return r.stdout;
+    };
+    const cer = (ref, hyp) => {
+      const a = [...ref], b = [...hyp];
+      let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+      for (let i = 1; i <= a.length; i++) {
+        const cur = [i];
+        for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        prev = cur;
+      }
+      return prev[b.length] / a.length;
+    };
+    /* MuPDF: per page the text, the words in the shown frame, the raw content and the image hashes */
+    const mu = (file) => JSON.parse(py([
+      'import json, sys, hashlib, pymupdf',
+      'd = pymupdf.open(sys.argv[1])',
+      'out = []',
+      'for p in d:',
+      '    m = p.rotation_matrix',
+      '    ws = [[*(pymupdf.Rect(w[:4]) * m), w[4]] for w in p.get_text("words", sort=False)]',
+      '    c = b"".join(d.xref_stream(x) or b"" for x in p.get_contents())',
+      '    out.append({"text": p.get_text(), "words": ws, "content": c.decode("latin1"), "fonts": [x[3] for x in p.get_fonts()], "images": [hashlib.sha256(d.xref_stream_raw(i[0])).hexdigest() for i in p.get_images(full=True)]})',
+      'print(json.dumps(out))'
+    ].join('\n'), [file]).trim().split('\n').pop());
+
+    /* text on white canvases, in the page; words' ink boxes as drawn */
+    function drawAll(specs) {
+      const out = {};
+      for (const [name, spec] of Object.entries(specs)) {
+        const c = document.createElement('canvas');
+        c.width = spec.w; c.height = spec.h;
+        const g = c.getContext('2d');
+        if (!spec.transparent) { g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); }
+        g.fillStyle = '#111'; g.textBaseline = 'alphabetic';
+        const words = [];
+        for (const ln of spec.lines) {
+          g.font = ln.size + 'px ' + ln.font;
+          g.fillText(ln.text, ln.x, ln.y);
+          let at = 0;
+          for (const w of ln.text.split(' ')) {
+            const i = ln.text.indexOf(w, at);
+            const start = g.measureText(ln.text.slice(0, i)).width, mt = g.measureText(w);
+            words.push({ text: w, base: ln.y, x0: ln.x + start - mt.actualBoundingBoxLeft, x1: ln.x + start + mt.actualBoundingBoxRight });
+            at = i + w.length;
+          }
+        }
+        let o = c;
+        if (spec.ccw) {
+          o = document.createElement('canvas'); o.width = c.height; o.height = c.width;
+          const x = o.getContext('2d'); x.translate(0, c.width); x.rotate(-Math.PI / 2); x.drawImage(c, 0, 0);
+        }
+        out[name] = { b64: o.toDataURL(spec.type || 'image/png', 0.92).split(',')[1], words };
+      }
+      return out;
+    }
+    const ENF = 'Arial, Helvetica, sans-serif', HIF = '"Nirmala UI", Mangal, "Noto Sans Devanagari", sans-serif';
+    const A4 = { w: 1654, h: 2339 };
+    const fx = () => K.once('pdf:ocr:fx', async () => {
+      const p = await K.open(O, { wait: '.pdf-run .btn-primary' });
+      let d;
+      try {
+        d = await p.evaluate(drawAll, {
+          p1: { w: A4.w, h: A4.h, lines: EN.map((t, i) => ({ text: t, x: 180, y: 300 + i * 110, size: 42, font: ENF })) },
+          p2: { w: A4.w, h: A4.h, ccw: true, lines: P2.map((t, i) => ({ text: t, x: 180, y: 320 + i * 140, size: i === 1 ? 56 : 42, font: i === 1 ? HIF : ENF })) },
+          p3: { w: A4.w, h: A4.h, lines: EN.slice(1, 3).map((t, i) => ({ text: t, x: 180, y: 400 + i * 110, size: 42, font: ENF })) },
+          receipt: { w: 1100, h: 330, lines: RECEIPT.map((t, i) => ({ text: t, x: 60, y: 90 + i * 80, size: 40, font: ENF })) },
+          notice: { w: 1000, h: 260, type: 'image/jpeg', lines: NOTICE.map((t, i) => ({ text: t, x: 60, y: 100 + i * 90, size: 44, font: ENF })) },
+          hindi: { w: 1000, h: 200, lines: [{ text: HI2, x: 60, y: 120, size: 60, font: HIF }] },
+          sideways: { w: 1100, h: 330, ccw: true, type: 'image/jpeg', lines: RECEIPT.map((t, i) => ({ text: t, x: 60, y: 90 + i * 80, size: 40, font: ENF })) },
+          mix: { w: 1400, h: 640, lines: P2.map((t, i) => ({ text: t, x: 120, y: 140 + i * 160, size: i === 1 ? 56 : 42, font: i === 1 ? HIF : ENF })) },
+          clear: { w: 1000, h: 260, transparent: true, lines: NOTICE.map((t, i) => ({ text: t, x: 60, y: 100 + i * 90, size: 44, font: ENF })) },
+          huge: { w: 5600, h: 3600, lines: ['A photo far larger than it needs', 'to be still reads at sixteen megapixels'].map((t, i) => ({ text: t, x: 300, y: 900 + i * 500, size: 220, font: ENF })) }
+        });
+      } finally { await p.close(); }
+      const f = {};
+      fs.mkdirSync(K.out('ocr-fx'), { recursive: true });
+      for (const [k, ext] of [['p1', 'png'], ['p2', 'png'], ['p3', 'png'], ['receipt', 'png'], ['notice', 'jpg'], ['hindi', 'png'], ['mix', 'png'], ['clear', 'png'], ['huge', 'png']]) {
+        f[k] = K.write('ocr-fx/' + k + '.' + ext, Buffer.from(d[k].b64, 'base64'));
+      }
+      /* a phone photo stored sideways, turned upright by EXIF orientation 6 */
+      f.sideways = K.write('ocr-fx/sideways.jpg', K.withExif(Buffer.from(d.sideways.b64, 'base64'), 6));
+      f.broken = K.write('ocr-fx/broken.png', Buffer.from('this is not a picture at all, only text with a .png name'));
+      py([
+        'import sys, pymupdf',
+        'from PIL import Image, ImageDraw, ImageFont',
+        'o, p1, p2, p3, rc, nt = sys.argv[1:7]',
+        'def scan(d, img, w=595.28, h=841.89, rot=0):',
+        '    p = d.new_page(width=w, height=h); p.insert_image(p.rect, filename=img)',
+        '    if rot: p.set_rotation(rot)',
+        '    return p',
+        'd = pymupdf.open(); scan(d, p1); scan(d, p2, 841.89, 595.28, 90); d.save(o + "/ocr-scan.pdf", deflate=True)',
+        'd = pymupdf.open(); p = d.new_page(width=595.28, height=841.89); p.insert_text((72, 120), "This page was typed, not scanned", fontname="helv", fontsize=14); scan(d, p3); d.save(o + "/ocr-mixed.pdf", deflate=True)',
+        'd = pymupdf.open(); p = scan(d, p3); p.insert_text((540, 820), "Page 1", fontname="helv", fontsize=9); d.save(o + "/ocr-stamped.pdf", deflate=True)',
+        'd = pymupdf.open(); scan(d, p1, 841.89, 1190.55); d.save(o + "/ocr-a3.pdf", deflate=True)',
+        'W, H = 2480, 3508',
+        'im = Image.new("L", (W, H), 255); g = ImageDraw.Draw(im); y = 300',
+        'for pt in (5, 6, 7, 8):',
+        '    px = round(pt * 300 / 72); f = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", px)',
+        '    for t in ' + JSON.stringify(SMALL) + ':',
+        '        g.text((250, y), t, font=f, fill=0); y += int(px * 1.6)',
+        '    y += px',
+        'im.save(o + "/ocr-small.png")',
+        'd = pymupdf.open(); scan(d, o + "/ocr-small.png"); d.save(o + "/ocr-small-print.pdf", deflate=True)',
+        'a = Image.open(rc).convert("RGB").convert("P", palette=Image.ADAPTIVE); b = Image.open(nt).convert("RGB").resize(a.size).convert("P", palette=Image.ADAPTIVE)',
+        'a.save(o + "/ocr-anim.gif", save_all=True, append_images=[b], duration=800, loop=0)',
+        'print("ok")'
+      ].join('\n'), [K.OUT, f.p1, f.p2, f.p3, f.receipt, f.notice]);
+      for (const k of ['scan', 'mixed', 'stamped', 'a3', 'small-print']) f[k] = K.out('ocr-' + k + '.pdf');
+      f.anim = K.out('ocr-anim.gif');
+      f.truth1 = d.p1.words.map((w) => ({ text: w.text, x0: w.x0 * 72 / 200, x1: w.x1 * 72 / 200, base: w.base * 72 / 200 }));
+      return f;
+    });
+
+    /* one run of a tool page: what it showed, its downloads, the sizes Tesseract was handed, Tesseract workers seen */
+    const tessWorkers = () => K.browser.targets().filter((t) => /vendor\/tesseract\/worker\.min\.js/.test(t.url())).length;
+    const go = async (tool, files, set, o) => {
+      o = o || {};
+      const p = await K.pdf.open(tool);
+      try {
+        await p.addScriptTag({ url: K.BASE + '/engine/pdf-ocr-engine.js' });
+        await p.evaluate(() => {
+          const c = window.MVROcr.create;
+          window.__sizes = []; window.__peak = 0; window.__labels = [];
+          window.MVROcr.create = async (opts) => {
+            const e = await c(opts);
+            const r = e.recognize;
+            e.recognize = (img, ro) => { window.__sizes.push([img.width, img.height]); return r.call(e, img, ro); };
+            return e;
+          };
+          const l = document.querySelector('.pdf-progress-label');
+          new MutationObserver(() => { const t = l.textContent; if (t && window.__labels[window.__labels.length - 1] !== t) window.__labels.push(t); }).observe(l, { childList: true, characterData: true, subtree: true });
+        });
+        if (o.password) {
+          const input = await p.$('.tool-io .dropzone input[type=file]');
+          await input.uploadFile(...files);
+          await p.waitForSelector('.file-pass input', { timeout: 30000 });
+          await p.type('.file-pass input', o.password);
+          await p.click('.file-pass .btn-primary');
+          await p.waitForFunction(() => !document.querySelector('.file-pass'), { timeout: 30000 });
+        } else if (tool === I2) {
+          const input = await p.$('.tool-io .dropzone input[type=file]');
+          await input.uploadFile(...files);
+          await p.waitForFunction(() => document.querySelector('.file-list .file-row') && !document.querySelector('.file-list .file-row.is-loading'), { timeout: 30000 });
+        } else await K.pdf.upload(p, files);
+        if (set) await K.pdf.set(p, set);
+        let peak = 0;
+        await p.evaluate(() => document.querySelector('.pdf-run .btn-primary').click());
+        if (o.cancelAt) {
+          await p.waitForFunction((re) => new RegExp(re).test((document.querySelector('.pdf-progress-label') || {}).textContent || ''), { timeout: 120000, polling: 10 }, o.cancelAt);
+          peak = tessWorkers();
+          await p.evaluate(() => document.querySelector('.pdf-progress-cancel').click());
+        }
+        const watch = setInterval(() => { peak = Math.max(peak, tessWorkers()); }, 50);
+        try {
+          await p.waitForFunction(() => { const b = document.querySelector('.pdf-run .btn-primary'); return b && !b.disabled && b.textContent !== 'Working…'; }, { timeout: 280000, polling: 100 });
+        } finally { clearInterval(watch); }
+        for (let i = 0; i < 40 && tessWorkers(); i++) await K.sleep(100);
+        const res = await p.evaluate(() => {
+          const m = document.querySelector('.tool-io > .io-msg');
+          const s = document.querySelector('.pdf-summary');
+          const rep = document.querySelector('.tool-io pre.code-out');
+          return { msg: m ? m.textContent : '', cls: m ? m.className : '', done: !!(s && !s.hidden), name: s && !s.hidden ? (s.querySelector('.pdf-summary-name') || {}).textContent : '',
+            meta: s && !s.hidden ? (s.querySelector('.pdf-summary-meta') || {}).textContent : '', report: rep && !rep.hidden ? rep.textContent : '',
+            stats: Object.fromEntries([...document.querySelectorAll('.stat-row')].map((r) => [r.querySelector('.stat-key').textContent, r.querySelector('.stat-val').textContent])),
+            buttons: [...document.querySelectorAll('.pdf-actions button')].map((b) => b.textContent), sizes: window.__sizes, labels: window.__labels };
+        });
+        res.peak = peak;
+        res.after = tessWorkers();
+        res.requests = p.__requests.slice();
+        if (res.done) res.out = await K.pdf.download(p);
+        if (o.txt && res.done) {
+          await K.clearDownloads(p);
+          await p.evaluate(() => [...document.querySelectorAll('.pdf-actions button')].find((b) => /Save the text/.test(b.textContent)).click());
+          await p.waitForFunction(() => window.__downloads.length > 0, { timeout: 30000 });
+          res.txt = (await K.downloads(p))[0];
+        }
+        if (o.render && res.out) {
+          const render = (bytes) => p.evaluate(async (b64) => {
+            const lib = await import('/engine/vendor/pdfjs/pdf.min.mjs');
+            lib.GlobalWorkerOptions.workerSrc = '/engine/vendor/pdfjs/pdf.worker.min.mjs';
+            const bin = atob(b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+            const pdf = await lib.getDocument({ data: u }).promise;
+            const out = [];
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const pg = await pdf.getPage(i); const vp = pg.getViewport({ scale: 1.5 });
+              const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+              const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+              await pg.render({ canvasContext: x, viewport: vp }).promise;
+              const d = x.getImageData(0, 0, c.width, c.height).data;
+              let h = 0; for (let k = 0; k < d.length; k += 4) h = (h * 31 + d[k] + 7 * d[k + 1] + 13 * d[k + 2]) >>> 0;
+              out.push(h + ':' + c.width + 'x' + c.height);
+            }
+            await pdf.destroy();
+            return out;
+          }, Buffer.from(bytes).toString('base64'));
+          res.renders = [await render(fs.readFileSync(files[0])), await render(res.out.bytes)];
+        }
+        return res;
+      } finally { await p.close(); }
+    };
+    /* pdf.js (the site's vendored copy) in Node: each page's text, lines joined by one space */
+    let pdfjsLib = null;
+    const pageLines = async (bytes) => {
+      const path = require('path');
+      if (!pdfjsLib) {
+        const { pathToFileURL } = require('url');
+        pdfjsLib = await import(pathToFileURL(path.join(K.ROOT, 'engine/vendor/pdfjs/pdf.min.mjs')).href);
+        pdfjsLib.GlobalWorkerOptions.workerSrc = pathToFileURL(path.join(K.ROOT, 'engine/vendor/pdfjs/pdf.worker.min.mjs')).href;
+      }
+      const doc = await pdfjsLib.getDocument({ data: new Uint8Array(bytes), standardFontDataUrl: path.join(K.ROOT, 'engine/vendor/pdfjs/standard_fonts') + path.sep, verbosity: 0 }).promise;
+      const out = [];
+      for (let i = 1; i <= doc.numPages; i++) {
+        const tc = await (await doc.getPage(i)).getTextContent();
+        out.push(tc.items.map((t) => (t.str || '') + (t.hasEOL ? '\n' : '')).join('').replace(/\s+/g, ' ').trim());
+      }
+      await doc.destroy();
+      return out;
+    };
+    const scanBoth = () => K.once('pdf:ocr:scan-both', async () => go(O, [(await fx()).scan], { lang: 'both', pages: 'all', existing: 'skip', dpi: '300' }, { render: true, txt: true }));
+    const scanEng = () => K.once('pdf:ocr:scan-eng', async () => go(O, [(await fx()).scan], { lang: 'eng', pages: 'all', existing: 'skip', dpi: '300' }));
+    const mixed = (existing) => K.once('pdf:ocr:mixed-' + existing, async () => go(O, [(await fx()).mixed], { lang: 'eng', pages: 'all', existing, dpi: '200' }));
+    const small = (dpi) => K.once('pdf:ocr:small-' + dpi, async () => go(O, [(await fx())['small-print']], { lang: 'eng', pages: 'all', existing: 'skip', dpi }));
+    const imgs = () => K.once('pdf:ocr:imgs', async () => { const f = await fx(); return go(I2, [f.receipt, f.notice, f.broken], { lang: 'eng' }); });
+    const hindi = (lang) => K.once('pdf:ocr:hindi-' + lang, async () => go(I2, [(await fx()).hindi], { lang }));
+    const mufile = (res, name) => mu(K.write(name, res.out.bytes));
+
+    /* ---------------- OCR PDF ---------------- */
+    claim(O, 'tip', 'The page looks exactly as it did; search, select and copy now work on it.',
+      'scan.pdf: both pages render pixel for pixel as before, and pdf.js reads the text', B, async () => {
+        const r = await scanBoth();
+        const t = r.out ? await pageLines(r.out.bytes) : [];
+        const same = r.renders && r.renders[0].join() === r.renders[1].join();
+        return [same && t[0] === EN.join(' '), 'renders ' + (same ? 'identical' : JSON.stringify(r.renders)) + '; page 1 text ' + JSON.stringify(t[0])];
+      });
+    claim(O, 'faq', 'The words are added in text render mode 3, which draws nothing, so every page prints and displays exactly as before.',
+      'the added layer is 3 Tr only, and both pages render unchanged', B, async () => {
+        const r = await scanBoth();
+        const m = mufile(r, 'ocr-scan-ocr.pdf');
+        const modes = m.map((pg) => (pg.content.match(/\b\d+\s+Tr\b/g) || []).join());
+        const same = r.renders && r.renders[0].join() === r.renders[1].join();
+        return [same && m.every((pg) => /\b3\s+Tr\b/.test(pg.content) && !/\b[0-24-7]\s+Tr\b/.test(pg.content)), 'Tr operators per page: ' + modes.join(' | ') + '; renders ' + (same ? 'identical' : 'differ')];
+      });
+    claim(O, 'dfaq', 'Each page’s picture is carried over byte for byte; only the text layer is added.',
+      'the image streams of the output hash the same as the source\'s', B, async () => {
+        const r = await scanBoth();
+        const a = mu((await fx()).scan), b = mufile(r, 'ocr-scan-ocr.pdf');
+        return [a.length === b.length && a.every((pg, i) => pg.images.length === 1 && pg.images.join() === b[i].images.join()), b.map((pg) => pg.images.length + ' image(s)').join(', ')];
+      });
+    claim(O, 'tip', 'The first run downloads the OCR engine (about 3 MB) and the language data (English 1.9 MB, Hindi 0.9 MB) from this site. Your browser keeps them, so later runs download nothing.',
+      'the engine files and the data are those sizes; under the site\'s service worker a second run fetches none of them from the server', B, async () => {
+        const size = (rel) => fs.statSync(require('path').join(K.ROOT, rel)).size;
+        const engine = ['tesseract.min.js', 'worker.min.js', 'tesseract-core-simd-lstm.js', 'tesseract-core-simd-lstm.wasm'].reduce((s, n) => s + size('engine/vendor/tesseract/' + n), 0);
+        const eng = size('engine/models/tessdata/eng.traineddata.gz'), hin = size('engine/models/tessdata/hin.traineddata.gz');
+        if (!K.server) return [false, 'the site was served by another process on ' + K.PORT + '; its requests cannot be counted'];
+        const hits = [];
+        const log = (req) => { if (/tesseract|tessdata/.test(req.url)) hits.push(req.url.split('?')[0]); };
+        K.server.on('request', log);
+        /* a context of its own: the other checks' pages have filled the default one's service worker cache */
+        const ctx = await K.browser.createBrowserContext();
+        const p = await ctx.newPage();
+        try {
+          await p.evaluateOnNewDocument(() => { try { localStorage.setItem('1234tools-consent', 'denied'); } catch (e) { /* */ } });
+          await p.goto(K.BASE + O, { waitUntil: 'load' });
+          await p.evaluate(() => navigator.serviceWorker && navigator.serviceWorker.ready.then(() => null));
+          if (!(await p.evaluate(() => !!navigator.serviceWorker.controller))) await p.reload({ waitUntil: 'load' });
+          const controlled = await p.evaluate(() => !!navigator.serviceWorker.controller);
+          await p.waitForSelector('.pdf-run .btn-primary', { timeout: 30000 });
+          await K.pdf.upload(p, [(await fx()).mixed]);
+          await K.pdf.set(p, { lang: 'eng', existing: 'skip', dpi: '200' });
+          const runOnce = async () => {
+            await p.evaluate(() => document.querySelector('.pdf-run .btn-primary').click());
+            await K.sleep(300);
+            await p.waitForFunction(() => !document.querySelector('.pdf-run .btn-primary').disabled, { timeout: 120000 });
+            return p.evaluate(() => !document.querySelector('.pdf-summary').hidden);
+          };
+          const ok1 = await runOnce();
+          const first = hits.length;
+          const ok2 = await runOnce();
+          const second = hits.length - first;
+          const mb = (n) => (n / 1048576).toFixed(2) + ' MB';
+          return [controlled && ok1 && ok2 && first >= 5 && second === 0 && engine > 2.9e6 && engine < 3.4e6 && eng > 1.85e6 && eng < 2.0e6 && hin > 0.85e6 && hin < 0.97e6,
+            'engine ' + mb(engine) + ', English ' + mb(eng) + ', Hindi ' + mb(hin) + '; first run ' + first + ' engine/data requests, second run ' + second + (controlled ? '' : '; the service worker did not take control')];
+        } finally { K.server.removeListener('request', log); await p.close(); await ctx.close(); }
+      });
+    claim(O, 'tip', 'Pages that already have text, such as a typed page in a mostly scanned file, are skipped by default and copied unchanged.',
+      'mixed.pdf, defaults: page 1 (typed) skipped, its content stream byte for byte the same; page 2 read', B, async () => {
+        const r = await mixed('skip');
+        const a = mu((await fx()).mixed), b = mufile(r, 'ocr-mixed-ocr.pdf');
+        return [r.stats['Pages recognised'] === '1 of 2' && /\(page 1\)/.test(r.stats['Pages skipped (already text)'] || '') && a[0].content === b[0].content && lines(b[1].text).join('|') === EN.slice(1, 3).join('|'),
+          JSON.stringify(r.stats) + '; page 1 content ' + (a[0].content === b[0].content ? 'unchanged' : 'changed')];
+      });
+    claim(O, 'tip', 'Choose "Recognise them too" to read every page you picked.', '"Recognise them too": both pages of mixed.pdf read', B, async () => {
+      const r = await mixed('ocr');
+      return [r.stats['Pages recognised'] === '2 of 2', JSON.stringify(r.stats)];
+    });
+    claim(O, 'mistake', 'Choosing “Recognise them too” for a page with real text: its text is then extracted twice.',
+      'the typed page of mixed.pdf, recognised too, extracts its sentence twice', B, async () => {
+        const r = await mixed('ocr');
+        const t = (await pageLines(r.out.bytes))[0] || '';
+        const n = (t.match(/typed, not scanned/g) || []).length;
+        return [n === 2, n + ' copies in "' + t + '"'];
+      });
+    claim(O, 'dfaq', 'A page counts as having text when pdf.js finds any on it, even a stamped page number. The result lists skipped pages',
+      'a scan with a typed "Page 1" in its corner is skipped by default, and the message says so', B, async () => {
+        const r = await go(O, [(await fx()).stamped], { lang: 'eng', pages: 'all', existing: 'skip', dpi: '200' });
+        return [!r.done && /Page 1 already has text, so there was nothing to recognise/.test(r.msg), r.msg];
+      });
+    claim(O, 'tip', 'An A4 page is drawn at 2480 × 3508 pixels at 300 DPI and 1654 × 2339 at 200.',
+      'the picture handed to Tesseract for an A4 page, at each resolution', B, async () => {
+        const a = await small('300'), b = await small('200');
+        return [JSON.stringify(a.sizes) === '[[2480,3508]]' && JSON.stringify(b.sizes) === '[[1654,2339]]', JSON.stringify(a.sizes) + ' at 300, ' + JSON.stringify(b.sizes) + ' at 200'];
+      });
+    claim(O, 'tip', '300 DPI suits small print and is the default; 200 DPI reads faster.',
+      'small-print.pdf (5–8 pt): 300 reads every line, 200 does not; 300 is the default; 200 takes less time', B, async () => {
+        const a = await small('300'), b = await small('200');
+        const def = K.pdfSpec('ocr-pdf').controls.find((c) => c.key === 'dpi').default;
+        const ta = parseFloat(a.stats.Time), tb = parseFloat(b.stats.Time);
+        const want = [].concat(SMALL, SMALL, SMALL, SMALL).join('|');
+        return [lines(a.report).join('|') === want && lines(b.report).join('|') !== want && def === '300' && tb < ta,
+          '300: ' + (lines(a.report).join('|') === want ? 'exact' : 'differs') + ' in ' + a.stats.Time + '; 200: ' + (lines(b.report).join('|') === want ? 'exact' : 'differs') + ' in ' + b.stats.Time];
+      });
+    claim(O, 'worked', 'On a page of 5 to 8 pt print, 200 DPI added a stray quotation mark; 300 DPI read every character.',
+      'small-print.pdf: one stray quotation mark at 200 DPI, an exact read at 300', B, async () => {
+        const a = await small('300'), b = await small('200');
+        const want = [].concat(SMALL, SMALL, SMALL, SMALL);
+        const got = lines(b.report);
+        const diff = got.map((l, i) => l === want[i] ? null : l).filter(Boolean);
+        return [lines(a.report).join('|') === want.join('|') && diff.length === 1 && diff[0].replace(/^[‘'"“]/, '') === want[got.indexOf(diff[0])], '200 DPI lines that differ: ' + JSON.stringify(diff)];
+      });
+    claim(O, 'point', 'capped at 16 megapixels', 'an A3 page at 300 DPI (17.4 MP) is read at no more than 16 MP, and the page says so', B, async () => {
+      const r = await go(O, [(await fx()).a3], { lang: 'eng', pages: 'all', existing: 'skip', dpi: '300' });
+      const s = r.sizes[0] || [0, 0];
+      return [s[0] * s[1] <= 16000000 && s[0] * s[1] > 15900000 && /read at about 16 megapixels/.test(r.msg), s.join('x') + ' = ' + (s[0] * s[1] / 1e6).toFixed(2) + ' MP; ' + r.msg];
+    });
+    claim(O, 'tip', 'Hindi words are written into the file in an embedded Noto Sans Devanagari subset, so they copy and search as Hindi text.',
+      'scan.pdf, English and Hindi: a NotoSansDevanagari font file is embedded and both readers return the Hindi line', B, async () => {
+        const r = await scanBoth();
+        const pj = (await pageLines(r.out.bytes))[1] || '';
+        const mp = mufile(r, 'ocr-scan-ocr.pdf')[1];
+        const m = lines(mp.text);
+        const font = mp.fonts.some((n) => /^[A-Z]{6}\+NotoSansDevanagari/.test(n));
+        return [font && /FontFile2/.test(lat(r.out.bytes)) && pj.indexOf(P2[1]) >= 0 && m[1] === P2[1], 'page 2 fonts ' + mp.fonts.join(', ') + '; pdf.js "' + pj + '"; MuPDF ' + JSON.stringify(m[1])];
+      });
+    claim(O, 'tip', 'The recognised text is shown under the result: copy it, or save it as a .txt file.',
+      'the report box holds the text; "Copy the text" and "Save the text (.txt)" are offered and the .txt matches', B, async () => {
+        const r = await scanBoth();
+        const txt = r.txt ? r.txt.bytes.toString('utf8') : '';
+        return [r.buttons.includes('Copy the text') && r.buttons.includes('Save the text (.txt)') && txt.trim() === r.report.trim() && EN.every((l) => txt.indexOf(l) >= 0) && r.txt.name === 'ocr-scan-ocr.txt',
+          r.buttons.join(' / ') + '; ' + (r.txt ? r.txt.name + ', ' + txt.length + ' characters' : 'no .txt')];
+      });
+    claim(O, 'faq', 'English and Hindi (Devanagari), separately or together on the same page.',
+      'the language options, and one page holding both read with both', B, async () => {
+        const opts = K.pdfSpec('ocr-pdf').controls.find((c) => c.key === 'lang').options.map((x) => x.label).join(', ');
+        const r = await scanBoth();
+        const m = lines(mufile(r, 'ocr-scan-ocr.pdf')[1].text);
+        return [opts === 'English, Hindi, English and Hindi' && m.join('|') === P2.join('|'), opts + '; page 2 ' + JSON.stringify(m)];
+      });
+    claim(O, 'faq', 'On a clean scan at 300 DPI, printed English comes back word for word, and the mean confidence Tesseract reports is shown with the result.',
+      'scan.pdf page 1 at 300 DPI: every word as drawn; the stats show a mean confidence', B, async () => {
+        const r = await scanEng();
+        const t = (await pageLines(r.out.bytes))[0];
+        return [t === EN.join(' ') && /^\d+%$/.test(r.stats['Mean confidence'] || ''), JSON.stringify(t) + '; mean confidence ' + r.stats['Mean confidence']];
+      });
+    claim(O, 'mistake', 'the test’s Hindi line came back as “URd Up faxna ere”', 'scan.pdf read as English: the Hindi line', B, async () => {
+      const r = await scanEng();
+      return [r.report.indexOf('URd Up faxna ere') >= 0, JSON.stringify(lines(r.report)[6] || r.report.slice(-80))];
+    });
+    claim(O, 'worked', '45 words at a mean confidence of 96%, and the file grew to 90.9 KB', 'scan.pdf, English and Hindi, 300 DPI: the stats and the summary', B, async () => {
+      const r = await scanBoth();
+      return [r.stats.Words === '45' && r.stats['Mean confidence'] === '96%' && /90\.9 KB/.test(r.meta), r.stats.Words + ' words, ' + r.stats['Mean confidence'] + ', ' + r.meta];
+    });
+    claim(O, 'worked', 'pdf.js and MuPDF both read every line back as drawn, and MuPDF placed each English word within 0.7 pt of the drawn one.',
+      'both readers return each line as drawn; MuPDF\'s English word boxes against the drawn ink boxes', B, async () => {
+        const r = await scanBoth();
+        const f = await fx();
+        const m = mufile(r, 'ocr-scan-ocr.pdf');
+        const pjl = await pageLines(r.out.bytes);
+        const words = m[0].words.filter((w) => String(w[4]).trim());
+        let worst = 0;
+        f.truth1.forEach((t, i) => { const w = words[i]; worst = Math.max(worst, w && w[4] === t.text ? Math.max(Math.abs(w[0] - t.x0), Math.abs(w[2] - t.x1)) : 99); });
+        const ok = lines(m[0].text).join('|') === EN.join('|') && lines(m[1].text).join('|') === P2.join('|') && pjl[0] === EN.join(' ') && pjl[1] === P2.join(' ');
+        return [ok && words.length === f.truth1.length && worst <= 0.7, 'worst word edge ' + worst.toFixed(2) + ' pt; MuPDF ' + JSON.stringify(m.map((pg) => lines(pg.text)))];
+      });
+    claim(O, 'point', 'Between words goes a real space, so extractors read whole lines.', 'the layer holds "( ) Tj" between words, and pdf.js returns one item per line', B, async () => {
+      const r = await scanEng();
+      const m = mufile(r, 'ocr-scan-eng.pdf');
+      const spaces = (m[0].content.match(/\( \) Tj/g) || []).length;
+      const words = EN.join(' ').split(' ').length;
+      return [spaces === words - EN.length && lines(m[0].text).join('|') === EN.join('|'), spaces + ' spaces drawn for ' + words + ' words on ' + EN.length + ' lines'];
+    });
+    claim(O, 'point', 'Pages are drawn at 200 or 300 DPI as a viewer shows them, turned by their /Rotate entry',
+      'the /Rotate 90 page is handed to Tesseract upright (portrait) and read as drawn', B, async () => {
+        const r = await scanBoth();
+        const s = r.sizes[1] || [0, 0];
+        return [s[0] < s[1] && lines(r.report).indexOf(P2[0]) >= 0, 'page 2 picture ' + s.join('x')];
+      });
+    claim(O, 'privacy', 'the recognition runs in your browser and nothing you add is uploaded',
+      'a run sends no request that is not a GET to the site', B, async () => {
+        const r = await scanBoth();
+        const bad = r.requests.filter((q) => q.method !== 'GET' || !q.url.startsWith(K.BASE));
+        return [!bad.length && r.done, bad.length ? bad.map((q) => q.method + ' ' + q.url).join(', ') : r.requests.length + ' requests, all GET to the site'];
+      });
+    claim(O, 'faq', 'The page is drawn and read in your browser; only the engine and the language data are downloaded, from this site, the first time.',
+      'what the run fetched: the engine, the data, pdf.js and the fonts, all from the site', B, async () => {
+        const r = await scanBoth();
+        const bad = r.requests.filter((q) => q.method !== 'GET' || !q.url.startsWith(K.BASE));
+        /* the worker's own fetches (engine, data) are not seen by the page's request log; the
+           first-run check above counts them at the server, and the host recorder of
+           build/tests/pdf-ocr-tools.js proves nothing leaves 127.0.0.1 */
+        const got = r.requests.filter((q) => /tesseract/.test(q.url)).length;
+        return [!bad.length && got >= 1 && r.done, r.requests.length + ' page requests, all GET to the site (' + got + ' of them engine files)'];
+      });
+    manual(O, 'faq', 'Handwriting, very small print, heavy shadows and photographs of curved pages read much less well.', 'General behaviour of printed-text OCR; the 5 pt run above shows small print degrading, the rest needs real photographs.');
+
+    /* ---------------- Image to Text ---------------- */
+    claim(I2, 'tip', 'Each is read in the order listed, and the text of several comes as one .txt file with the name of each picture above its text.',
+      'receipt.png then notice.jpg: one image-text.txt, a heading per picture, in that order', B, async () => {
+        const r = await imgs();
+        const s = r.out ? r.out.bytes.toString('utf8') : '';
+        return [r.out && r.out.name === 'image-text.txt' && s === '=== receipt.png ===\n' + RECEIPT.join('\n') + '\n\n=== notice.jpg ===\n' + NOTICE.join('\n') + '\n', JSON.stringify(s)];
+      });
+    claim(I2, 'tip', 'Add one picture or several: PNG, JPEG, WebP, GIF or BMP.',
+      'the picker\'s accept list, and a WebP, a GIF and a BMP (by Pillow) read exactly', B, async () => {
+        const f = await fx();
+        const webp = K.out('ocr-fx/receipt.webp'), bmp = K.out('ocr-fx/receipt.bmp'), gif1 = K.out('ocr-fx/receipt.gif');
+        py(['import sys', 'from PIL import Image', 'im = Image.open(sys.argv[1]).convert("RGB")', 'im.save(sys.argv[2], lossless=True)', 'im.save(sys.argv[3])', 'im.convert("P", palette=Image.ADAPTIVE).save(sys.argv[4])', 'print("ok")'].join('\n'), [f.receipt, webp, bmp, gif1]);
+        const r = await go(I2, [webp, gif1, bmp], { lang: 'eng' });
+        const s = r.out ? r.out.bytes.toString('utf8') : '';
+        const want = ['receipt.webp', 'receipt.gif', 'receipt.bmp'].map((n) => '=== ' + n + ' ===\n' + RECEIPT.join('\n')).join('\n\n') + '\n';
+        return [K.pdfSpec('image-to-text').accept === 'image/png,image/jpeg,image/webp,image/gif,image/bmp' && s === want, JSON.stringify(s).slice(0, 300)];
+      });
+    claim(I2, 'tip', 'Read as English, a Hindi line comes back as Latin letters that mean nothing.',
+      'hindi.png with Language English: no Devanagari in the result', B, async () => {
+        const r = await hindi('eng');
+        const s = r.out ? r.out.bytes.toString('utf8').trim() : '';
+        return [!!s && !/[\u0900-\u097F]/.test(s) && /[A-Za-z]/.test(s), JSON.stringify(s)];
+      });
+    claim(I2, 'mistake', 'The same Hindi picture came back as “Sst AA Fed Ba eS” at 47% mean confidence, against 95% when read as Hindi.',
+      'hindi.png as English, then as Hindi', B, async () => {
+        const a = await hindi('eng'), b = await hindi('hin');
+        const s = a.out.bytes.toString('utf8').trim(), t = b.out.bytes.toString('utf8').trim();
+        return [s === 'Sst AA Fed Ba eS' && /47% mean confidence/.test(a.stats['hindi.png'] || '') && /95% mean confidence/.test(b.stats['hindi.png'] || '') && t === HI2,
+          JSON.stringify(s) + ' ' + a.stats['hindi.png'] + '; as Hindi ' + JSON.stringify(t) + ' ' + b.stats['hindi.png']];
+      });
+    claim(I2, 'worked', 'A Hindi line, आज मौसम बहुत अच्छा है, read as Hindi gave 5 words at 95%, letter for letter.',
+      'hindi.png as Hindi', B, async () => {
+        const b = await hindi('hin');
+        const t = b.out.bytes.toString('utf8').trim();
+        return [t === HI2 && /^5 words, 95% mean confidence$/.test(b.stats['hindi.png'] || '') && cer(HI2, t) === 0, JSON.stringify(t) + ' ' + b.stats['hindi.png']];
+      });
+    claim(I2, 'worked', 'receipt.png, three lines of a shop receipt, gave 17 words at a mean confidence of 96%; notice.jpg, a two-line notice saved as JPEG, gave 12 words at 96%.',
+      'the per-picture stats', B, async () => {
+        const r = await imgs();
+        return [/^17 words, 96% mean confidence$/.test(r.stats['receipt.png'] || '') && /^12 words, 96% mean confidence$/.test(r.stats['notice.jpg'] || ''), JSON.stringify(r.stats)];
+      });
+    claim(I2, 'worked', 'A third file, broken.png, was text renamed as a picture: the run named it and carried on.',
+      'a text file named .png: named in the warning; the others read', B, async () => {
+        const r = await imgs();
+        return [/broken\.png: it could not be read as an image/.test(r.msg) && r.done, r.msg];
+      });
+    claim(I2, 'tip', 'For each picture the result lists the words found and the mean confidence Tesseract reports',
+      'a stat row per picture: "N words, P% mean confidence"', B, async () => {
+        const r = await imgs();
+        return [/^\d+ words, \d+% mean confidence$/.test(r.stats['receipt.png'] || '') && /^\d+ words, \d+% mean confidence$/.test(r.stats['notice.jpg'] || ''), JSON.stringify(r.stats)];
+      });
+    claim(I2, 'tip', 'Photos are read the right way up, as your browser shows them: a phone\'s EXIF orientation is applied first.',
+      'a JPEG stored sideways with EXIF orientation 6 reads as the receipt', B, async () => {
+        const r = await go(I2, [(await fx()).sideways], { lang: 'eng' });
+        const s = r.out ? r.out.bytes.toString('utf8').trim() : '';
+        return [s === RECEIPT.join('\n'), JSON.stringify(s) + ' ' + JSON.stringify(r.sizes)];
+      });
+    claim(I2, 'point', 'transparent areas are read as white paper', 'black text on a transparent PNG reads exactly', B, async () => {
+      const r = await go(I2, [(await fx()).clear], { lang: 'eng' });
+      const s = r.out ? r.out.bytes.toString('utf8').trim() : '';
+      return [s === NOTICE.join('\n'), JSON.stringify(s)];
+    });
+    claim(I2, 'tip', 'A picture larger than 16 megapixels is scaled down to that size before it is read, and the result says so.',
+      'a 5600 × 3600 PNG (20.2 MP) is handed to Tesseract at 16 MP or less, read, and the warning names it', B, async () => {
+        const r = await go(I2, [(await fx()).huge], { lang: 'eng' });
+        const s = r.sizes[0] || [0, 0];
+        return [s[0] * s[1] <= 16000000 && s[0] * s[1] > 15900000 && /huge\.png was larger than 16 megapixels and read at that size/.test(r.msg) && /sixteen megapixels/.test(r.out ? r.out.bytes.toString('utf8') : ''),
+          s.join('x') + '; ' + r.msg];
+      });
+    claim(I2, 'dfaq', 'Only its first frame is read, the frame a browser shows before the animation starts.',
+      'a two-frame GIF (receipt, then notice) reads as the receipt', B, async () => {
+        const r = await go(I2, [(await fx()).anim], { lang: 'eng' });
+        const s = r.out ? r.out.bytes.toString('utf8').trim() : '';
+        return [s === RECEIPT.join('\n'), JSON.stringify(s)];
+      });
+    claim(I2, 'mistake', 'Adding a PDF. This page takes pictures only', 'a PDF dropped on the page is refused with the page\'s message', B, async () => {
+      const p = await K.pdf.open(I2);
+      try {
+        const input = await p.$('.tool-io .dropzone input[type=file]');
+        await input.uploadFile((await fx()).scan);
+        await K.sleep(500);
+        const m = await p.evaluate(() => ({ msg: document.querySelector('.tool-io > .io-msg').textContent, rows: document.querySelectorAll('.file-list .file-row').length }));
+        return [m.rows === 0 && /Those are not images this tool reads/.test(m.msg), m.rows + ' rows; ' + m.msg];
+      } finally { await p.close(); }
+    });
+    claim(I2, 'point', 'One engine reads every picture in the run and is closed when the run ends, or at once when you press Cancel.',
+      'one Tesseract worker for three pictures, none after; Cancel closes it', B, async () => {
+        const r = await imgs();
+        const f = await fx();
+        const c = await go(I2, [f.receipt, f.notice], { lang: 'eng' }, { cancelAt: '^Reading receipt' });
+        return [r.peak === 1 && r.after === 0 && /^Cancelled\./.test(c.msg) && c.after === 0, 'run: ' + r.peak + ' worker, ' + r.after + ' after; cancel: ' + c.msg + ' ' + c.after + ' after'];
+      });
+    claim(I2, 'faq', 'English and Hindi (Devanagari), separately or together in the same picture.', 'the language options, and a mixed picture read with both', B, async () => {
+      const opts = K.pdfSpec('image-to-text').controls.find((c) => c.key === 'lang').options.map((x) => x.label).join(', ');
+      const r = await go(I2, [(await fx()).mix], { lang: 'both' });
+      const s = r.out ? lines(r.out.bytes.toString('utf8')) : [];
+      return [opts === 'English, Hindi, English and Hindi' && s.join('|') === P2.join('|'), opts + '; read ' + JSON.stringify(s)];
+    });
+    claim(I2, 'faq', 'They are decoded and read in your browser; only the engine and the language data are downloaded, from this site, the first time.',
+      'a run sends no request that is not a GET to the site', B, async () => {
+        const r = await imgs();
+        const bad = r.requests.filter((q) => q.method !== 'GET' || !q.url.startsWith(K.BASE));
+        return [!bad.length && r.done, bad.length ? bad.map((q) => q.method + ' ' + q.url).join(', ') : r.requests.length + ' requests, all GET to the site'];
+      });
+    claim(I2, 'privacy', 'the recognition runs in your browser and nothing you add is uploaded', 'as above: no upload', B, async () => {
+      const r = await imgs();
+      const bad = r.requests.filter((q) => q.method !== 'GET' || !q.url.startsWith(K.BASE));
+      return [!bad.length, r.requests.length + ' requests, ' + bad.length + ' not GET to the site'];
+    });
+    claim(I2, 'faq', 'Use OCR PDF, which reads each page and also gives you back the PDF with the text searchable and selectable.',
+      'OCR PDF exists and its output carries the text over the unchanged page', B, async () => {
+        const r = await scanBoth();
+        return [fs.existsSync(require('path').join(K.ROOT, 'pdf/ocr-pdf/index.html')) && r.done && r.renders[0].join() === r.renders[1].join(), 'OCR PDF output ' + (r.done ? r.out.bytes.length + ' bytes, renders unchanged' : 'none')];
+      });
+    claim(I2, 'dfaq', 'It is Tesseract’s own score, from 0 to 100, of how sure it is of each word, averaged over the picture.',
+      'the stat equals the mean of the word confidences Tesseract returns for the same picture', B, async () => {
+        const r = await hindi('eng');
+        const p = await K.pdf.open(I2);
+        try {
+          const mean = await p.evaluate(async (b64) => {
+            const s = document.createElement('script'); s.src = '/engine/pdf-ocr-engine.js'; document.head.appendChild(s);
+            await new Promise((res) => { s.onload = res; });
+            const bin = atob(b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+            const o = await window.MVROcr.create({ langs: ['eng'] });
+            try { const x = await o.recognize(new Blob([u], { type: 'image/png' })); const w = x.words.filter((y) => y.text.trim()); return w.reduce((a, y) => a + y.confidence, 0) / w.length; }
+            finally { o.terminate(); }
+          }, fs.readFileSync((await fx()).hindi).toString('base64'));
+          return [(r.stats['hindi.png'] || '').indexOf(Math.round(mean) + '% mean confidence') >= 0 && mean >= 0 && mean <= 100, 'mean of word confidences ' + mean.toFixed(1) + '; stat ' + r.stats['hindi.png']];
+        } finally { await p.close(); }
+      });
+    manual(I2, 'faq', 'Not reliably. Tesseract is trained on printed text; neat block capitals sometimes read, joined-up handwriting rarely does.', 'Handwriting needs real handwritten samples; general OCR behaviour.');
   }
 };

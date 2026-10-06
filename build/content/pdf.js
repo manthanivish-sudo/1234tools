@@ -1117,6 +1117,71 @@ module.exports = {
     ]
   },
 
+  /* Scan to PDF (wave 2). Runs made on 2026-10-06 in headless Chrome against a local server of
+     the wave-2 branch, by build/tests/pdf-scan-to-pdf.js, which draws its own photos in the page
+     (an A4 page with a header bar, word blocks, an 8 x 6 checkerboard of 10 mm squares and 1-3 ID
+     blocks, put in 3-D and photographed by a pinhole camera, 26 mm-equivalent lens, with sensor
+     noise; saved as JPEG at quality 92) and reads the output with pdf.js and MuPDF:
+       scan-wood.jpg   1600 x 1200, wood table, page turned 6 degrees and tilted 18, a shadow
+                       darkening the right of the frame by up to 42%; 514,134 bytes
+       scan-grey.jpg   1600 x 1200, grey table, page turned 18 degrees; 500,544 bytes
+       scan-carpet-exif6.jpg   1200 x 1600 shown, stored 1600 x 1200 on its side with EXIF
+                       Orientation 6; carpet; 565,796 bytes
+       scan-12mp.jpg   4032 x 3024, wood table; 2,904,744 bytes */
+  '/pdf/scan-to-pdf/': {
+    whatTitle: 'What a phone photo of a page gets wrong',
+    whatIs: [
+      'A photo of a page is not a scan: the sheet arrives as a slanted four-sided shape, the paper turns grey where the light falls off, and the table shows round the edges.',
+      'Scanning undoes all three: find the four corners, map that shape back to a rectangle of the page’s true proportions, and even out the paper.'
+    ],
+    howItWorks: {
+      text: 'It runs in a background worker on this page, in plain JavaScript written for the site.',
+      points: [
+        'The photo is decoded upright (EXIF orientation applied) and shrunk to 1,280 pixels; its edges vote for straight lines, and each set of four is scored on how much of each side is real edge and whether the inside is lighter.',
+        'The winning corners are drawn on the page’s card, where you can drag them.',
+        'The page’s proportions are worked out from how its sides converge, and snapped to A4 or Letter when within 3%.',
+        'The full photo is warped to that rectangle, at most 2,500 pixels long, turned if asked, and its shading divided out.',
+        'Colour and greyscale pages are stored as JPEG; black and white as lossless Flate.'
+      ]
+    },
+    worked: {
+      text: 'Three 1600 × 1200 photos of A4 pages went in: one on wood with a shadow across it, one on a grey table turned 18°, one on carpet stored on its side with an EXIF tag, as phones save them. Edges were found with confidence 0.92 to 0.96, and out came three upright A4 pages, 316.7 KB, with 48 of 48 test checkerboard squares in place on each. Paper in the shadow measured 205 out of 255 untouched and 254.5 after Colour document. Black and white: 28.4 KB.'
+    },
+    uses: [
+      ['Expense receipts', 'Photograph each receipt and send finance one file.'],
+      ['Signed forms', 'Return a signed page with no scanner nearby.'],
+      ['Handouts', 'Turn a stack of printouts into one file for a tablet.']
+    ],
+    mistakes: [
+      'Shooting a white page on a white desk. There is little edge to find; use a darker surface, or set the corners by hand.',
+      'Expecting to search the words. Each page is a picture; OCR PDF adds searchable text.'
+    ],
+    faq: [
+      { q: 'Which page size should I choose?', a: 'A4 or US Letter fits every picture on that paper. Fit to the photo keeps each straightened picture’s own shape; a page measured as A4 or Letter gets that size.' },
+      { q: 'How large will the PDF be?', a: 'A 12-megapixel photo of an A4 page became a 338.3 KB page, its picture 1768 × 2500 pixels at quality 85.' },
+      { q: 'Can I add pages later?', a: 'Yes, from the file picker or the camera at any time; the arrows on each card set the order.' }
+    ],
+    runs: [
+      /* Scan to PDF, the three 1600 x 1200 photos above in that order, Page size A4, Enhancement
+         Colour document, Picture quality Standard (85), Make the PDF pressed. Stats: Pages 3, File size
+         316.7 KB, Page size "A4 × 3", Edges found "3 of 3 (confidence 0.92 to 0.96)", Pictures "JPEG
+         quality 85, up to 886 × 1253 px". pdf.js render at 2x: checkerboard 48/48 on every page,
+         header bar top left on every page; mean of the paper right of the header (in the shadow on
+         the wood photo) 254.5. MuPDF: 3 pages, one picture each (811x1147, 712x1007, 886x1253). */
+      {
+        browser: { tool: '/pdf/scan-to-pdf/', files: ['scan-wood.jpg', 'scan-grey.jpg', 'scan-carpet-exif6.jpg'], scenes: 'wood with a shadow; grey table, page turned 18°; carpet, stored on its side with EXIF Orientation 6', controls: { pageSize: 'a4', enhance: 'colour', quality: '0.85' }, pressed: 'Make the PDF', result: 'scan-2026-10-06.pdf, 3 A4 pages, 324,276 bytes' },
+        shown: ['1600 × 1200', '0.92 to 0.96', '316.7 KB', '48 of 48', '254.5']
+      },
+      /* the same photos, Enhancement "None (as photographed)": 449.8 KB; the same paper area 205.3 */
+      { browser: { tool: '/pdf/scan-to-pdf/', files: ['the same three'], controls: { enhance: 'none' } }, shown: ['205 out of 255'] },
+      /* the same photos, Enhancement "Black and white": 29,079 bytes, shown 28.4 KB; FlateDecode DeviceGray pictures */
+      { browser: { tool: '/pdf/scan-to-pdf/', files: ['the same three'], controls: { enhance: 'bw' } }, shown: ['28.4 KB'] },
+      /* scan-12mp.jpg alone, A4, Colour document, quality 85: Pages 1, File size 338.3 KB, Pictures
+         "JPEG quality 85, up to 1768 × 2500 px"; MuPDF: one 1768x2500 picture */
+      { browser: { tool: '/pdf/scan-to-pdf/', files: ['scan-12mp.jpg'], controls: { pageSize: 'a4', enhance: 'colour', quality: '0.85' } }, shown: ['338.3 KB', '1768 × 2500'] }
+    ]
+  },
+
   '/pdf/rotate-pdf/': {
     term: 'page rotation in a PDF',
     whatIs: [

@@ -631,8 +631,6 @@ async function browserPart() {
     const cp = await open('/pdf/compress-pdf/');
     await upload(cp, [ph]);
     await setControls(cp, { preset: 'screen' });
-    /* the fixture's page 2 is turned on its side: those margins would leave nothing of it */
-    await setControls(cp, { pages: '1' });
     await press(cp);
     const cb = await download(cp);
     const cs = await stats(cp);

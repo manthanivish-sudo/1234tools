@@ -216,6 +216,30 @@ module.exports = {
     howTo: 'How to convert PDF pages to images',
     cta: 'Convert to images'
   },
+  '/pdf/pdf-to-text/': {
+    persona: 'Anyone quoting from a PDF report',
+    hook: 'You copied one paragraph. You got both columns, mixed.',
+    pain: 'The report is set in two columns. Copy and paste brings the lines across in the wrong order, broken at every line end.',
+    usual: ['Retyping the paragraph by hand', 'Fixing line breaks one by one', 'Uploading the report to a converter'],
+    promise: 'Get the text in reading order: columns, headings and paragraphs kept apart.',
+    steps: ['Open the PDF', 'Choose reading order and pages', 'Copy the text or save the .txt'],
+    proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
+    example: { kind: 'schematic', input: 'A two-column PDF newsletter with a title, headings and page numbers', output: 'A plain .txt in reading order', sampleIn: 'Two columns under one title, a page number at the foot', sampleOut: 'The title, then the left column, then the right; the page numbers left out if you choose' },
+    howTo: 'How to get the text out of a PDF in reading order',
+    cta: 'Get the text'
+  },
+  '/pdf/pdf-to-word/': {
+    persona: 'Anyone who has to edit a PDF',
+    hook: 'They sent the policy as a PDF. You need to change two clauses.',
+    pain: 'The only copy of the handbook is a PDF. Retyping forty pages to fix a few lines is out of the question.',
+    usual: ['Retyping the document from scratch', 'Uploading it to a converter site', 'Editing a screenshot of the page'],
+    promise: 'Turn the text into a Word file with real headings and lists, ready to edit.',
+    steps: ['Open the PDF', 'Choose the pages', 'Download the .docx'],
+    proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
+    example: { kind: 'schematic', input: 'A PDF with a title, section headings and a bulleted list', output: 'An editable .docx with Heading 1–3 styles and bulleted items', sampleIn: 'A two-page newsletter in two columns', sampleOut: 'Six headings in Word heading styles, three bulleted items, one page break' },
+    howTo: 'How to convert a PDF to an editable Word document',
+    cta: 'Convert to Word'
+  },
   '/pdf/pdf-organise/': {
     persona: 'Anyone assembling a document pack',
     hook: 'The appendix ended up first. Page 6 is upside down.',

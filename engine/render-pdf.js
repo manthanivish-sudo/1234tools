@@ -663,16 +663,20 @@
       opts.appendChild(note);
     })();
     let saveTimer = null;
+    const saveSettings = () => {
+      clearTimeout(saveTimer);
+      const o = {};
+      remembered.forEach((r) => { o[r.key] = r.read(); });
+      store.set(KEY, o);
+    };
+    /* typing is saved a moment after it stops; a choice (a select, a box
+       ticked, a value committed) at once */
     opts.addEventListener('input', () => {
       if (!remembered.length) return;
       clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => {
-        const o = {};
-        remembered.forEach((r) => { o[r.key] = r.read(); });
-        store.set(KEY, o);
-      }, 300);
+      saveTimer = setTimeout(saveSettings, 300);
     });
-    opts.addEventListener('change', () => opts.dispatchEvent(new Event('input')));
+    opts.addEventListener('change', () => { if (remembered.length) saveSettings(); });
 
     /* ---------- banked items ---------- */
     const P = spec.placePreview || null;

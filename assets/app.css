@@ -4471,4 +4471,8 @@ html.is-embed .tool > .depth { display: none !important; }
   .crop-n, .crop-ne, .crop-nw { top: -12px; } .crop-s, .crop-se, .crop-sw { bottom: -12px; }
   .crop-e, .crop-ne, .crop-se { right: -12px; } .crop-w, .crop-nw, .crop-sw { left: -12px; }
 }
+/* ---------- text read out of a PDF or a picture: wrap, do not scroll sideways ---------- */
+article.tool[data-tool="pdf-to-text"] .code-out,
+article.tool[data-tool="ocr-pdf"] .code-out,
+article.tool[data-tool="image-to-text"] .code-out { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 60vh; overflow: auto; }
 /* WAVE-2 end */
