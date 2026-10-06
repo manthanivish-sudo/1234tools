@@ -18,3 +18,10 @@ mp4-muxer.mjs            mp4-muxer 5.2.2 (MIT, LICENSE-mp4-muxer.txt)
 ort/                     ONNX Runtime Web 1.30.0 (MIT) — see ort/README.txt.
 
 pdfjs/                   pdf.js (Apache-2.0) — see the licence file in that folder.
+
+noto-emoji/              336 of Google's Noto Emoji (Apache-2.0, noto-emoji/LICENSE), as SVG bodies
+                         in one JSON file (noto-subset.json, 1.0 MB), cut from @iconify-json/noto 1.2.9
+                         (https://registry.npmjs.org/@iconify-json/noto/-/noto-1.2.9.tgz) by
+                         build/ai-image/make-noto-subset.js. Not byte-for-byte: a subset, with each
+                         icon's SVG ids prefixed so several can be inlined together. Fetched only
+                         when a sticker picker is opened (Thumbnail Maker, Reel Maker).

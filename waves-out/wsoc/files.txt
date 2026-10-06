@@ -17,3 +17,7 @@ engine/ai-video-tools-reel-maker.js
 build/ai-video/tests/reel-fx.js
 build/ai-video/tests/reel-maker.js
 ai-video/reel-maker/index.html
+engine/vendor/noto-emoji/noto-subset.json
+engine/vendor/noto-emoji/LICENSE
+engine/vendor/README.txt
+build/ai-image/make-noto-subset.js
