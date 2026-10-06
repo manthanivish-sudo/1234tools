@@ -13,6 +13,24 @@ module.exports = function ({ claim, manual, kit: K }) {
   const S = async (k) => ({ name: 'secrets-' + k + '.pdf', bytes: await sec(k) });
   const P = async (n, name) => ({ name: name || ('plain-' + n + '.pdf'), bytes: await plainN(n) });
   const pagesOf = async (bytes) => (await K.pdfText(bytes)).pages.map((p) => p.join(' '));
+  /** pdf.js in Node, for text in embedded fonts (the kit's reader sees only literal strings) */
+  const pdfjsPages = async (bytes) => {
+    const { pathToFileURL } = require('url');
+    const path = require('path');
+    const lib = await import(pathToFileURL(path.join(K.ROOT, 'engine/vendor/pdfjs/pdf.min.mjs')).href);
+    lib.GlobalWorkerOptions.workerSrc = pathToFileURL(path.join(K.ROOT, 'engine/vendor/pdfjs/pdf.worker.min.mjs')).href;
+    const doc = await lib.getDocument({ data: new Uint8Array(bytes), verbosity: 0, standardFontDataUrl: path.join(K.ROOT, 'engine/vendor/pdfjs/standard_fonts') + path.sep }).promise;
+    const out = [];
+    for (let i = 1; i <= doc.numPages; i++) {
+      const tc = await (await doc.getPage(i)).getTextContent();
+      let line = ''; const lines = [];
+      for (const it of tc.items) { line += it.str; if (it.hasEOL) { if (line.trim()) lines.push(line.replace(/\s+/g, ' ').trim()); line = ''; } }
+      if (line.trim()) lines.push(line.replace(/\s+/g, ' ').trim());
+      out.push(lines.join(' | '));
+    }
+    await doc.destroy();
+    return out;
+  };
   /** the text runs a content stream draws: font, size, position (Td or Tm), string */
   const runs = (content) => {
     const out = [];
@@ -740,17 +758,19 @@ module.exports = function ({ claim, manual, kit: K }) {
       const steps = rr.slice(1).map((x, i) => rr[i].y - x.y);
       return [rr.length > 2 && widths.every((w) => w <= 150.01) && steps.every((s) => near(s, 20, 0.01)), rr.length + ' lines, widths ' + widths.map((w) => w.toFixed(1)).join('/') + ', steps ' + steps.join('/')];
     });
-  claim(ED, 'point', 'Each chosen page gets a new content stream and a font entry, MVRedit, for Helvetica: one of the standard 14 fonts readers supply, so nothing is embedded.',
+  claim(ED, 'point', 'Each chosen page gets a new content stream and a font entry, MVRedit, for Helvetica: one of the standard 14 fonts readers supply, so nothing is embedded for it.',
     'MVRedit is Helvetica, no font file', N, async () => {
       const { a } = await edit(await P(1), { text: 'X', x: 50, y: 50 });
       const res = await a.doc.resolve(a.pages[0].dict.Resources); const f = await a.doc.resolve((await a.doc.resolve(res.Font)).MVRedit);
       return [f && f.BaseFont && f.BaseFont.name === 'Helvetica' && !hasFontFile(a), f ? 'MVRedit → ' + (f.BaseFont && f.BaseFont.name) : 'no MVRedit'];
     });
-  claim(ED, 'point', 'Text is mapped to WinAnsi, which covers Western European letters, curly quotes, dashes and €; most characters outside it become question marks.',
-    '“ ” – € keep WinAnsi codes, Ω becomes ?', N, async () => {
-      const { a } = await edit(await P(1), { text: '“a” – € Ω', x: 50, y: 50 });
-      const c = await a.content(0);
-      return [/\(\\223a\\224 \\226 \\200 \?\) Tj/.test(c), (c.match(/\([^)]*\) Tj/g) || []).pop()];
+  claim(ED, 'point', 'A line WinAnsi cannot hold (Hindi, Greek, Cyrillic, ₹) is drawn instead from a subset of Noto Sans or Noto Sans Devanagari, MVRu0, embedded with a map back to the characters.',
+    'a Greek, rupee and Hindi line comes back exactly from pdf.js; the font is an embedded Type0 subset named MVRu0', N, async () => {
+      const { r, a } = await edit(await P(1), { text: 'Ωμέγα ₹500', x: 50, y: 500, items: [{ text: 'हिन्दी में', size: 14, colour: '#000000', x: 50, y: 400, width: 0, pages: '1' }] });
+      const got = (await pdfjsPages(K.pdfOut(r)))[0];
+      const res = await a.doc.resolve(a.pages[0].dict.Resources); const fonts = await a.doc.resolve(res.Font);
+      const u = await a.doc.resolve(fonts.MVRu0);
+      return [/Ωμέγα ₹500/.test(got) && /हिन्दी में/.test(got) && !!u && !!u.Subtype && u.Subtype.name === 'Type0' && hasFontFile(a), got + '; MVRu0 ' + (u && u.Subtype && u.Subtype.name)];
     });
   claim(ED, 'point', 'The file is rebuilt by the assembler merge uses, which keeps the bookmarks, the form fields, the title and the author.', 'outline, fields, Title, Author kept', N, async () => {
     const { a } = await edit(await S('A'), { text: 'X', x: 50, y: 50, pages: '1' });
@@ -1395,16 +1415,18 @@ module.exports = function ({ claim, manual, kit: K }) {
     const tight = rr.slice(0, -1).every((x, i) => w[i] <= maxW + 0.01 && core.textWidth(x.str + ' ' + rr[i + 1].str.split(' ')[0], 'Helvetica', 11) > maxW);
     return [tight, rr.length + ' lines, widths ' + w.map((x) => x.toFixed(0)).join('/') + ' of ' + maxW.toFixed(0)];
   });
-  claim(TP, 'tip', 'Only the standard PDF fonts are used — Helvetica, Times and Courier — which means no font file is embedded', 'each font choice is a standard Type1 without a font file', N, async () => {
+  claim(TP, 'tip', 'Text the standard fonts can hold stays in Helvetica, Times or Courier, with nothing embedded, so the file stays tiny.', 'each font choice is a standard Type1 without a font file', N, async () => {
     const out = [];
     for (const f of ['Helvetica', 'Times-Roman', 'Courier']) { const { a } = await t2p('Hello', { font: f }); out.push(f + ':' + (/\/BaseFont\s*\/[A-Za-z-]+/.exec(a.text) || [''])[0] + (hasFontFile(a) ? ' EMBEDDED' : '')); }
     return [out.every((x) => !/EMBEDDED/.test(x)) && /Times-Roman/.test(out.join()) && /Courier/.test(out.join()), out.join(', ')];
   });
-  claim(TP, 'tip', 'Characters outside Western European ranges cannot be represented without embedding a font, and appear as "?".', 'Greek and Cyrillic become ?', N, async () => {
-    const { a } = await t2p('Ab Ωж é', { numbers: 'no' });
-    const s = runs(await a.content(0))[0].str;
-    return [s === 'Ab ?? é', K.j(s)];
-  });
+  claim(TP, 'tip', 'Any other script (Hindi, Greek, Cyrillic, Polish, the rupee sign) is set in Noto Sans, and then the whole document is, so it reads as one typeface; only the characters used are embedded.',
+    'Greek, Cyrillic and Hindi lines come back exactly; every font in the file is a Noto subset', N, async () => {
+      const { a, r } = await t2p('Ab Ωж é\nदूसरी पंक्ति\nPlain line', { numbers: 'no' });
+      const got = (await pdfjsPages(K.pdfOut(r)))[0];
+      const bases = (a.text.match(/\/BaseFont\s*\/[A-Za-z+-]+/g) || []);
+      return [/Ab Ωж é/.test(got) && /दूसरी पंक्ति/.test(got) && /Plain line/.test(got) && bases.length > 0 && bases.every((b) => /[A-Z]{6}\+NotoSans/.test(b)), got + ' | ' + bases.join(' ')];
+    });
   claim(TP, 'tip', 'Blank lines in your text are preserved as blank lines in the output.', 'a blank line leaves one empty line of space', N, async () => {
     const { a } = await t2p('First\n\nThird', { numbers: 'no', size: 10, leading: 1.5 });
     const rr = runs(await a.content(0));
@@ -1415,12 +1437,17 @@ module.exports = function ({ claim, manual, kit: K }) {
     const drawn = /My Report/.test(await a.content(0));
     return [a.info.Title === 'My Report' && r.files[0].name === 'my-report.pdf' && !drawn, K.j(a.info) + ', ' + r.files[0].name + ', on page ' + drawn];
   });
-  claim(TP, 'point', 'curly quotes, dashes, € and ½ have their own codes; anything else becomes "?"', 'WinAnsi codes for “ – € ½', N, async () => {
-    const { a } = await t2p('“q” – € ½ →', { numbers: 'no' });
+  claim(TP, 'point', 'curly quotes, dashes, € and ½ have their own codes.', 'WinAnsi codes for “ – € ½, nothing embedded', N, async () => {
+    const { a } = await t2p('“q” – € ½', { numbers: 'no' });
     const c = await a.content(0);
-    return [/\(\\223q\\224 \\226 \\200 \\275 \?\) Tj|\(\x93q\x94 \x96 \x80 \xbd \?\) Tj/.test(c), (c.match(/\([^)]*\) Tj/) || [''])[0]];
+    return [/\(\\223q\\224 \\226 \\200 \\275\) Tj|\(\x93q\x94 \x96 \x80 \xbd\) Tj/.test(c) && !hasFontFile(a), (c.match(/\([^)]*\) Tj/) || [''])[0]];
   });
-  claim(TP, 'mistake', 'Runs of spaces and tabs shrink to one space when lines are wrapped, so code, tables and verse lose their layout, even in Courier.', 'Courier "a    b\\tc" comes out "a b c"', N, async () => {
+  claim(TP, 'point', 'Text with anything else is set in Noto Sans, glyph by glyph, Hindi shaped by HarfBuzz.', 'a conjunct and an i-matra come back in logical order', N, async () => {
+    const { r } = await t2p('क्षत्रिय कि', { numbers: 'no' });
+    const got = (await pdfjsPages(K.pdfOut(r)))[0];
+    return [got === 'क्षत्रिय कि', K.j(got)];
+  });
+  claim(TP, 'mistake', 'Runs of spaces and tabs shrink to one space when lines wrap, so code and tables lose their layout.', 'Courier "a    b\\tc" comes out "a b c"', N, async () => {
     const { a } = await t2p('a    b\tc', { numbers: 'no', font: 'Courier' });
     const s = runs(await a.content(0))[0].str;
     return [s === 'a b c', K.j(s)];
@@ -1664,7 +1691,8 @@ module.exports = function ({ claim, manual, kit: K }) {
     try {
       const files = [await scPhoto(p, 'wood'), await scPhoto(p, 'grey'), await scPhoto(p, 'carpet')];
       await scUpload(p, files, 3);
-      o.worker = p.__requests.some((r) => /\/engine\/pdf-scan-worker\.js$/.test(r.url));
+      /* the in-page fallback would define MVRScanJobs on the page; in a worker it never does */
+      o.worker = await p.evaluate(() => ({ resource: performance.getEntriesByType('resource').some((e) => /pdf-scan-worker\.js$/.test(e.name)), pageJobs: typeof window.MVRScanJobs !== 'undefined' }));
       o.colour = await scRun(p, { pageSize: 'a4', enhance: 'colour', quality: '0.85' });
       o.text = (await K.pdfjs(p, o.colour.bytes)).pages.map((x) => x.items.length);
       o.none = await scRun(p, { enhance: 'none' });
@@ -1806,8 +1834,8 @@ module.exports = function ({ claim, manual, kit: K }) {
   claim(SC, 'faq', 'Each page is a picture of the paper.', 'pdf.js finds no text, one picture per page', B, async () => {
     const o = await scMain(); return [o.text.every((n) => n === 0) && o.colour.dct === 3, 'text items ' + o.text.join(', ') + ', JPEG pictures ' + o.colour.dct];
   });
-  claim(SC, 'works', 'It runs in a background worker on this page', 'the page loads engine/pdf-scan-worker.js', B, async () => {
-    const o = await scMain(); return [o.worker, o.worker ? 'pdf-scan-worker.js requested' : 'no worker script requested'];
+  claim(SC, 'works', 'It runs in a background worker on this page', 'engine/pdf-scan-worker.js is fetched and the in-page fallback is never loaded', B, async () => {
+    const w = (await scMain()).worker; return [w.resource && !w.pageJobs, K.j(w)];
   });
   claim(SC, 'tip', 'If one is wrong, drag it, or focus it and use the arrow keys', 'a focused corner moves with the arrow keys and the card says the corners were set by hand', B, async () => {
     const k = (await scMain()).keys;
@@ -3122,6 +3150,11 @@ module.exports = function ({ claim, manual, kit: K }) {
       o = o || {};
       const p = await K.pdf.open(tool);
       try {
+        /* once an earlier check's page has installed the site's service worker, the page's
+           requests go to it and the request log sees none: load the page again past it */
+        await p.setBypassServiceWorker(true);
+        await p.reload({ waitUntil: 'load' });
+        await p.waitForSelector('.pdf-run .btn-primary', { timeout: 30000 });
         await p.addScriptTag({ url: K.BASE + '/engine/pdf-ocr-engine.js' });
         await p.evaluate(() => {
           const c = window.MVROcr.create;
@@ -3370,9 +3403,9 @@ module.exports = function ({ claim, manual, kit: K }) {
       const r = await scanEng();
       return [r.report.indexOf('URd Up faxna ere') >= 0, JSON.stringify(lines(r.report)[6] || r.report.slice(-80))];
     });
-    claim(O, 'worked', '45 words at a mean confidence of 96%, and the file grew to 90.9 KB', 'scan.pdf, English and Hindi, 300 DPI: the stats and the summary', B, async () => {
+    claim(O, 'worked', '45 words at a mean confidence of 96%, and the file grew to 90.8 KB', 'scan.pdf, English and Hindi, 300 DPI: the stats and the summary', B, async () => {
       const r = await scanBoth();
-      return [r.stats.Words === '45' && r.stats['Mean confidence'] === '96%' && /90\.9 KB/.test(r.meta), r.stats.Words + ' words, ' + r.stats['Mean confidence'] + ', ' + r.meta];
+      return [r.stats.Words === '45' && r.stats['Mean confidence'] === '96%' && /90\.8 KB/.test(r.meta), r.stats.Words + ' words, ' + r.stats['Mean confidence'] + ', ' + r.meta];
     });
     claim(O, 'worked', 'pdf.js and MuPDF both read every line back as drawn, and MuPDF placed each English word within 0.7 pt of the drawn one.',
       'both readers return each line as drawn; MuPDF\'s English word boxes against the drawn ink boxes', B, async () => {
@@ -3403,7 +3436,7 @@ module.exports = function ({ claim, manual, kit: K }) {
       'a run sends no request that is not a GET to the site', B, async () => {
         const r = await scanBoth();
         const bad = r.requests.filter((q) => q.method !== 'GET' || !q.url.startsWith(K.BASE));
-        return [!bad.length && r.done, bad.length ? bad.map((q) => q.method + ' ' + q.url).join(', ') : r.requests.length + ' requests, all GET to the site'];
+        return [!bad.length && r.done && r.requests.some((q) => /tessdata\/eng/.test(q.url)), bad.length ? bad.map((q) => q.method + ' ' + q.url).join(', ') : r.requests.length + ' requests, all GET to the site'];
       });
     claim(O, 'faq', 'The page is drawn and read in your browser; only the engine and the language data are downloaded, from this site, the first time.',
       'what the run fetched: the engine, the data, pdf.js and the fonts, all from the site', B, async () => {
@@ -3413,7 +3446,8 @@ module.exports = function ({ claim, manual, kit: K }) {
            first-run check above counts them at the server, and the host recorder of
            build/tests/pdf-ocr-tools.js proves nothing leaves 127.0.0.1 */
         const got = r.requests.filter((q) => /tesseract/.test(q.url)).length;
-        return [!bad.length && got >= 1 && r.done, r.requests.length + ' page requests, all GET to the site (' + got + ' of them engine files)'];
+        const data = r.requests.filter((q) => /tessdata/.test(q.url)).map((q) => q.url.split('/').pop());
+        return [!bad.length && got >= 4 && data.join() === 'eng.traineddata.gz,hin.traineddata.gz' && r.done, r.requests.length + ' requests, all GET to the site; ' + got + ' engine files; data ' + data.join(', ')];
       });
     manual(O, 'faq', 'Handwriting, very small print, heavy shadows and photographs of curved pages read much less well.', 'General behaviour of printed-text OCR; the 5 pt run above shows small print degrading, the rest needs real photographs.');
 
@@ -3440,18 +3474,18 @@ module.exports = function ({ claim, manual, kit: K }) {
         const s = r.out ? r.out.bytes.toString('utf8').trim() : '';
         return [!!s && !/[\u0900-\u097F]/.test(s) && /[A-Za-z]/.test(s), JSON.stringify(s)];
       });
-    claim(I2, 'mistake', 'The same Hindi picture came back as “Sst AA Fed Ba eS” at 47% mean confidence, against 95% when read as Hindi.',
+    claim(I2, 'mistake', 'The same Hindi picture came back as “Sst AA Fed BTS” at 50% mean confidence, against 96% when read as Hindi.',
       'hindi.png as English, then as Hindi', B, async () => {
         const a = await hindi('eng'), b = await hindi('hin');
         const s = a.out.bytes.toString('utf8').trim(), t = b.out.bytes.toString('utf8').trim();
-        return [s === 'Sst AA Fed Ba eS' && /47% mean confidence/.test(a.stats['hindi.png'] || '') && /95% mean confidence/.test(b.stats['hindi.png'] || '') && t === HI2,
+        return [s === 'Sst AA Fed BTS' && /50% mean confidence/.test(a.stats['hindi.png'] || '') && /96% mean confidence/.test(b.stats['hindi.png'] || '') && t === HI2,
           JSON.stringify(s) + ' ' + a.stats['hindi.png'] + '; as Hindi ' + JSON.stringify(t) + ' ' + b.stats['hindi.png']];
       });
-    claim(I2, 'worked', 'A Hindi line, आज मौसम बहुत अच्छा है, read as Hindi gave 5 words at 95%, letter for letter.',
+    claim(I2, 'worked', 'A Hindi line, आज मौसम बहुत अच्छा है, read as Hindi gave 5 words at 96%, letter for letter.',
       'hindi.png as Hindi', B, async () => {
         const b = await hindi('hin');
         const t = b.out.bytes.toString('utf8').trim();
-        return [t === HI2 && /^5 words, 95% mean confidence$/.test(b.stats['hindi.png'] || '') && cer(HI2, t) === 0, JSON.stringify(t) + ' ' + b.stats['hindi.png']];
+        return [t === HI2 && /^5 words, 96% mean confidence$/.test(b.stats['hindi.png'] || '') && cer(HI2, t) === 0, JSON.stringify(t) + ' ' + b.stats['hindi.png']];
       });
     claim(I2, 'worked', 'receipt.png, three lines of a shop receipt, gave 17 words at a mean confidence of 96%; notice.jpg, a two-line notice saved as JPEG, gave 12 words at 96%.',
       'the per-picture stats', B, async () => {
@@ -3519,12 +3553,12 @@ module.exports = function ({ claim, manual, kit: K }) {
       'a run sends no request that is not a GET to the site', B, async () => {
         const r = await imgs();
         const bad = r.requests.filter((q) => q.method !== 'GET' || !q.url.startsWith(K.BASE));
-        return [!bad.length && r.done, bad.length ? bad.map((q) => q.method + ' ' + q.url).join(', ') : r.requests.length + ' requests, all GET to the site'];
+        return [!bad.length && r.done && r.requests.some((q) => /tessdata\/eng/.test(q.url)), bad.length ? bad.map((q) => q.method + ' ' + q.url).join(', ') : r.requests.length + ' requests, all GET to the site'];
       });
     claim(I2, 'privacy', 'the recognition runs in your browser and nothing you add is uploaded', 'as above: no upload', B, async () => {
       const r = await imgs();
       const bad = r.requests.filter((q) => q.method !== 'GET' || !q.url.startsWith(K.BASE));
-      return [!bad.length, r.requests.length + ' requests, ' + bad.length + ' not GET to the site'];
+      return [!bad.length && r.requests.length > 0, r.requests.length + ' requests, ' + bad.length + ' not GET to the site'];
     });
     claim(I2, 'faq', 'Use OCR PDF, which reads each page and also gives you back the PDF with the text searchable and selectable.',
       'OCR PDF exists and its output carries the text over the unchanged page', B, async () => {

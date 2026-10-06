@@ -72,6 +72,12 @@ K.core = () => {
     const w = {};
     new Function('window', fs.readFileSync(path.join(K.ROOT, 'engine/pdfcore.bundle.js'), 'utf8'))(w);
     K._core = w.MVRPdfCore;
+    /* the worker fetches the Noto fonts and the shaper from /engine/; in Node
+       they are read from the site's own copies */
+    if (K._core.unicodeFonts) {
+      K._core.unicodeFonts.setFontLoader(async (rel) => new Uint8Array(fs.readFileSync(path.join(K.ROOT, 'engine', rel))),
+        async () => require(path.join(K.ROOT, 'engine/pdf-shaper.js')));
+    }
   }
   return K._core;
 };

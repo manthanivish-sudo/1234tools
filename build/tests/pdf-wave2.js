@@ -14,6 +14,7 @@
  *   compress  Compress PDF: structure in Node; pictures in the browser
  *   unicode   Hindi, Polish, Greek, Cyrillic and ₹ in Add text, Signature, Text to PDF, the invoice
  *   tools2    Flatten, Crop, Add an image: the engine, read back by MuPDF and pdf.js
+ *   phone     the new tools at 390 px, light and dark, with a file loaded
  *   pages     the password prompt, Protect, Unlock and Compress on their pages
  *
  * Fixtures are written by this test (pdfcore's writer, or PyMuPDF for the
@@ -763,6 +764,30 @@ async function browserPart() {
     await ue.close();
   }
 
+  if (want('phone')) {
+    group('phone  390 px with a file loaded: nothing wider than the screen, in either theme');
+    const one = write('phone-one.pdf', plain(2, 'PHONE'));
+    for (const theme of ['dark', 'light']) {
+      for (const tool of ['/pdf/compress-pdf/', '/pdf/protect-pdf/', '/pdf/unlock-pdf/', '/pdf/flatten-pdf/', '/pdf/crop-pdf/', '/pdf/add-image-to-pdf/', '/pdf/watermark-pdf/', '/pdf/pdf-organise/']) {
+        const ph = await browser.newPage();
+        await ph.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+        await ph.evaluateOnNewDocument(hook);
+        await ph.evaluateOnNewDocument((t) => { try { localStorage.setItem('1234tools-theme', t); } catch (e) { /* */ } }, theme);
+        await ph.goto(BASE + tool, { waitUntil: 'load' });
+        await ph.evaluate(() => { const b = document.querySelector('.cc'); if (b) b.remove(); });
+        await ph.waitForSelector('.pdf-run .btn-primary');
+        await upload(ph, [one]);
+        await new Promise((r) => setTimeout(r, 1500));
+        const w = await ph.evaluate(() => {
+          const wide = [...document.querySelectorAll('.tool-io *')].filter((n) => { const r = n.getBoundingClientRect(); return r.width && r.right > window.innerWidth + 1 && !n.closest('.page-grid'); }).map((n) => n.className || n.tagName).slice(0, 4);
+          return { sw: document.documentElement.scrollWidth, wide, theme: document.documentElement.getAttribute('data-theme') };
+        });
+        check(w.sw <= 390 && !w.wide.length && w.theme === theme, tool + ' (' + theme + '): no horizontal scroll at 390 px', JSON.stringify(w));
+        await ph.close();
+      }
+    }
+  }
+
   const foreign = [...requests].filter((h) => !/^127\.0\.0\.1(:\d+)?$/.test(h));
   check(!foreign.length, 'no request left 127.0.0.1', foreign.join(', '));
 }
@@ -775,7 +800,7 @@ async function browserPart() {
     if (want('compress')) await compressPart();
     if (want('tools2')) await tools2Part();
     if (want('unicode')) await unicodePart();
-    if (BROWSER && (want('pages') || want('compress') || want('tools2') || want('unicode'))) await browserPart();
+    if (BROWSER && (want('pages') || want('compress') || want('tools2') || want('unicode') || want('phone'))) await browserPart();
   } catch (e) {
     console.error('\nthe run broke: ' + (e && e.stack || e));
     if (browser) await browser.close();
