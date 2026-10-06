@@ -613,8 +613,12 @@ async function browserPart() {
     const phone = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, tl: document.getElementById('reel-timeline').getBoundingClientRect().width }));
     check(phone.sw <= 390 && phone.tl > 200, 'at 390 px the page does not scroll sideways (' + phone.sw + ' px) and the timeline is ' + Math.round(phone.tl) + ' px wide');
     await page.screenshot({ path: path.join(OUT, 'phone-effects.png'), fullPage: false });
-    await page.setViewport({ width: 1400, height: 1000 });
-    await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
+    await page.setViewport({ width: 1400, height: 1000, isMobile: false, hasTouch: false, deviceScaleFactor: 1 });
+    await page.waitForSelector('#reel-draft-restore', { timeout: 15000 }).catch(() => {});
+    await page.evaluate(() => { const c = document.querySelector('.cc'); if (c) c.remove(); const r = document.getElementById('reel-draft-restore'); if (r) r.click(); });
+    await sleep(800);
+    await pane('fx');
+    await page.evaluate(() => { document.documentElement.setAttribute('data-theme', 'light'); document.querySelector('.aiimg-studio').scrollIntoView(); });
     await page.screenshot({ path: path.join(OUT, 'desktop-light.png'), fullPage: false });
 
     check(net.length === 0, 'no request left 127.0.0.1' + (net.length ? ': ' + net.slice(0, 3).join(' | ') : ''));
