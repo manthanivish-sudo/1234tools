@@ -127,7 +127,7 @@ window.PDF_TOOLS["ocr-pdf"] = {
   {"q":"Will the PDF look different afterwards?","a":"No. The words are added in text render mode 3, which draws nothing, so every page prints and displays exactly as before. Only search, selection and copying change."},
   {"q":"Which languages can it read?","a":"English and Hindi (Devanagari), separately or together on the same page."},
   {"q":"How accurate is it?","a":"On a clean scan at 300 DPI, printed English comes back word for word, and the mean confidence Tesseract reports is shown with the result. Handwriting, very small print, heavy shadows and photographs of curved pages read much less well."},
-  {"q":"Is my scan uploaded?","a":"No. The page is drawn and read in your browser; only the engine and the language data are downloaded, from this site, the first time."}
+  {"q":"How long does it take?","a":"It depends on the device and on how much text each page holds. On the desktop computer it was tested on, a two-page scan took 2 to 3 seconds at 300 DPI once the engine had loaded, and a dense page of 40 lines about 2.5 seconds; a phone or an older laptop takes longer. 200 DPI is quicker than 300, and the first run also waits for the engine and the language data to download."},{"q":"Is my scan uploaded?","a":"No. The page is drawn and read in your browser; only the engine and the language data are downloaded, from this site, the first time."}
 ],
 "mainRun": async (api) => {
   const entry = api.entries[0];

@@ -5,7 +5,7 @@
 #   build-hubs.js             the /pdf/ hub intro names the new tools (compress, password, crop, picture, OCR, Word, text)
 #   build/compare-extra.js    item G: /compare/free-pdf-editor gap list, table, groups and FAQ made true for the new tools (gap first, no product claims)
 #   build/jobs.js             finder rows and card lines for the 11 new PDF tools
-#   build/tests/claims/kit.js runPdf passes a password; specs with workerScripts load as their worker does; pdfcore gets the font loader in Node; upload waits for rows to finish loading
+#   build/tests/claims/kit.js runPdf passes a password; specs with workerScripts load as their worker does; pdfcore gets the font loader in Node; upload waits for rows to finish loading; K.open(url, { intercept: false }) for pages whose workers interception would stall (OCR)
 #   privacy/index.html        two lines: PDF tool settings and the invoice kept in local storage; Scan to PDF's camera only on request
 
 diff --git a/.gitattributes b/.gitattributes
@@ -400,7 +400,7 @@ index 69bb250c9..79b7931a9 100644
    '/pdf/quotation-pdf/': 'A quotation, proforma invoice or estimate as a clean PDF, with GST or VAT worked out and terms included.',
    '/pdf/purchase-order-pdf/': 'A purchase order PDF from the buyer’s side: supplier, line items with HSN/SAC, charges, tax and terms.',
 diff --git a/build/tests/claims/kit.js b/build/tests/claims/kit.js
-index ee7a755b5..e8193dd0e 100644
+index ee7a755b5..60af95a02 100644
 --- a/build/tests/claims/kit.js
 +++ b/build/tests/claims/kit.js
 @@ -72,6 +72,12 @@ K.core = () => {
@@ -443,7 +443,47 @@ index ee7a755b5..e8193dd0e 100644
    return (await K.pdfSpec(id).run({ docs, text, opts: Object.assign(K.pdfDefaults(id), opts || {}), core })) || {};
  };
  K.pdfOut = (res, i) => (res.files && res.files[i || 0] ? res.files[i || 0].bytes : null);
-@@ -629,6 +643,8 @@ K.pdf.upload = async (p, files) => {
+@@ -511,12 +525,17 @@ K.stopBrowser = async () => {
+ };
+ 
+ /** Open a page of the site with downloads recorded, every blob URL kept, and outside requests refused and noted.
+- *  opts.consent: the analytics choice already made ('denied', the default, or 'granted'). */
++ *  opts.consent: the analytics choice already made ('denied', the default, or 'granted').
++ *  opts.intercept: false records requests without intercepting them. Interception pauses a
++ *  dedicated worker's own requests (Tesseract's core and language data) and never releases
++ *  them, so the OCR pages hang under it; there, an outside request is still recorded and
++ *  fails the run, it is only not refused. */
+ K.open = async (url, opts) => {
+   const o = opts || {};
+   const p = await K.browser.newPage();
+   await p.setViewport({ width: 1280, height: 1000 });
+-  await p.setRequestInterception(true);
++  const icpt = o.intercept !== false;
++  if (icpt) await p.setRequestInterception(true);
+   p.__requests = [];
+   p.on('request', (r) => {
+     const u = r.url();
+@@ -524,8 +543,8 @@ K.open = async (url, opts) => {
+     /* with consent granted the analytics scripts are expected to be asked
+        for: still refused (no test ever reaches Google or Clarity), kept on
+        the page's own list, left out of the run's "outside requests" */
+-    if (!u.startsWith(K.BASE) && !/^(data|blob):/.test(u)) { if (o.consent !== 'granted') outside.push(url + ' -> ' + u); return r.abort(); }
+-    r.continue();
++    if (!u.startsWith(K.BASE) && !/^(data|blob):/.test(u)) { if (o.consent !== 'granted') outside.push(url + ' -> ' + u); return icpt ? r.abort() : undefined; }
++    if (icpt) r.continue();
+   });
+   p.__errors = [];
+   p.on('pageerror', (e) => p.__errors.push(String(e && e.message || e)));
+@@ -610,7 +629,7 @@ K.img.makePng = async (p, w, h, draw) => Buffer.from(await p.evaluate((w, h, src
+ 
+ /* ---------- PDF pages ---------- */
+ K.pdf = {};
+-K.pdf.open = (url) => K.open(url, { wait: '.pdf-run .btn-primary' });
++K.pdf.open = (url, opts) => K.open(url, Object.assign({ wait: '.pdf-run .btn-primary' }, opts || {}));
+ K.pdf.set = async (p, c) => {
+   const missing = await p.evaluate((c) => Object.keys(c).filter((k) => {
+     const el = document.getElementById('pc-' + k);
+@@ -629,6 +648,8 @@ K.pdf.upload = async (p, files) => {
      await input.uploadFile(f);
      await p.waitForFunction((k) => document.querySelectorAll('.file-list .file-row').length > k, { timeout: 30000 }, n);
    }

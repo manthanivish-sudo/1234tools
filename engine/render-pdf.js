@@ -2186,9 +2186,13 @@
         Object.keys(vals).forEach((k) => { const rd = reader(CROP[k]); if (rd) rd.set(vals[k]); });
         place2();
       };
+      /* one render at a time on the shared canvas: a newer one cancels the
+         one in flight (pdf.js refuses two renders into one canvas) */
+      let cropTask = null;
       const show = async (i) => {
         cropPage = Math.max(0, Math.min(total - 1, i));
         const page = await pdf.getPage(cropPage + 1);
+        if (cropTask) { cropTask.cancel(); cropTask = null; }
         const base = page.getViewport({ scale: 1 });
         const wide = Math.min(620, Math.max(260, (crop.clientWidth || 560) - 30));
         const scale = Math.min(1.6, wide / base.width);
@@ -2199,7 +2203,10 @@
         cv.style.height = Math.round(vp.height / dpr) + 'px';
         const ctx = cv.getContext('2d');
         ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
-        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        const task = cropTask = page.render({ canvasContext: ctx, viewport: vp });
+        try { await task.promise; }
+        catch (e) { if (e && e.name === 'RenderingCancelledException') return; throw e; }
+        finally { if (cropTask === task) cropTask = null; }
         cropState = { scale, dpr, w: base.width, h: base.height };
         lab.textContent = 'Page ' + (cropPage + 1) + ' of ' + total;
         prev.disabled = cropPage === 0; next.disabled = cropPage >= total - 1;
@@ -2637,6 +2644,7 @@
     }
 
     let viewState = null;
+    let viewResize = null;   /* the viewer's one resize listener, replaced on each new result */
     function clearResult() {
       summary.hidden = true; summary.innerHTML = '';
       viewer.hidden = true; viewer.innerHTML = '';
@@ -2756,10 +2764,15 @@
         viewState.pdf = await lib.getDocument({ data: copy, cMapUrl: PDFJS_BASE + 'cmaps/', cMapPacked: true, standardFontDataUrl: PDFJS_BASE + 'standard_fonts/', isEvalSupported: false }).promise;
         await paint();
       };
+      /* a resize, a key and a click can each ask for a paint while one is
+         still drawing: the newer cancels the older (pdf.js refuses two
+         renders into one canvas) */
+      let paintTask = null;
       const paint = async () => {
         const st = viewState;
         if (!st || !st.pdf) return;
         const page = await st.pdf.getPage(st.page + 1);
+        if (paintTask) { paintTask.cancel(); paintTask = null; }
         const base = page.getViewport({ scale: 1 });
         const avail = Math.max(240, stage.clientWidth - 2);
         const fit = avail / base.width;
@@ -2774,7 +2787,10 @@
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        const task = paintTask = page.render({ canvasContext: ctx, viewport: vp });
+        try { await task.promise; }
+        catch (e) { if (e && e.name === 'RenderingCancelledException') return; throw e; }
+        finally { if (paintTask === task) paintTask = null; }
         num.textContent = 'Page ' + (st.page + 1) + ' of ' + st.pdf.numPages;
         prev.disabled = st.page === 0;
         next.disabled = st.page >= st.pdf.numPages - 1;
@@ -2808,11 +2824,13 @@
       });
       stage.addEventListener('dblclick', () => { viewState.zoom = viewState.zoom === 'fit' ? 2 : 'fit'; paint(); });
       let resizeTimer = null;
-      window.addEventListener('resize', () => {
+      if (viewResize) window.removeEventListener('resize', viewResize);
+      viewResize = () => {
         if (!viewState || viewState.zoom !== 'fit') return;
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(paint, 150);
-      });
+      };
+      window.addEventListener('resize', viewResize);
       try { await open(0); }
       catch (e) {
         viewer.innerHTML = '';

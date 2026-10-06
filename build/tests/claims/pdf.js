@@ -3148,7 +3148,7 @@ module.exports = function ({ claim, manual, kit: K }) {
     const tessWorkers = () => K.browser.targets().filter((t) => /vendor\/tesseract\/worker\.min\.js/.test(t.url())).length;
     const go = async (tool, files, set, o) => {
       o = o || {};
-      const p = await K.pdf.open(tool);
+      const p = await K.pdf.open(tool, { intercept: false });
       try {
         /* once an earlier check's page has installed the site's service worker, the page's
            requests go to it and the request log sees none: load the page again past it */
@@ -3568,7 +3568,7 @@ module.exports = function ({ claim, manual, kit: K }) {
     claim(I2, 'dfaq', 'It is Tesseract’s own score, from 0 to 100, of how sure it is of each word, averaged over the picture.',
       'the stat equals the mean of the word confidences Tesseract returns for the same picture', B, async () => {
         const r = await hindi('eng');
-        const p = await K.pdf.open(I2);
+        const p = await K.pdf.open(I2, { intercept: false });
         try {
           const mean = await p.evaluate(async (b64) => {
             const s = document.createElement('script'); s.src = '/engine/pdf-ocr-engine.js'; document.head.appendChild(s);
@@ -3582,6 +3582,12 @@ module.exports = function ({ claim, manual, kit: K }) {
         } finally { await p.close(); }
       });
     manual(I2, 'faq', 'Not reliably. Tesseract is trained on printed text; neat block capitals sometimes read, joined-up handwriting rarely does.', 'Handwriting needs real handwritten samples; general OCR behaviour.');
+    manual(O, 'faq', 'a two-page scan took 2 to 3 seconds at 300 DPI once the engine had loaded, and a dense page of 40 lines about 2.5 seconds',
+      'Timing depends on the machine. Measured on 2026-10-06 on the owner\'s desktop: build/tests/pdf-ocr-tools.js "Time" stat 2.0 to 2.6 s for scan.pdf at 300 DPI over three runs; build/tests/pdf-ocr-engine.js a 40-line page 2517 ms.');
+    manual(I2, 'faq', 'came back character for character at 96% mean confidence, both in under a second on a desktop computer',
+      'The text and the 96% are checked by the receipt/notice claims above; the time (0.4 s for both, build/tests/pdf-ocr-tools.js, 2026-10-06) depends on the machine.');
+    manual(I2, 'faq', 'Photos read less well when the page is slanted, curved, in shadow or small in the frame',
+      'General behaviour of printed-text OCR; needs real photographs to measure.');
   }
 
   /* ================================================================ */

@@ -525,12 +525,17 @@ K.stopBrowser = async () => {
 };
 
 /** Open a page of the site with downloads recorded, every blob URL kept, and outside requests refused and noted.
- *  opts.consent: the analytics choice already made ('denied', the default, or 'granted'). */
+ *  opts.consent: the analytics choice already made ('denied', the default, or 'granted').
+ *  opts.intercept: false records requests without intercepting them. Interception pauses a
+ *  dedicated worker's own requests (Tesseract's core and language data) and never releases
+ *  them, so the OCR pages hang under it; there, an outside request is still recorded and
+ *  fails the run, it is only not refused. */
 K.open = async (url, opts) => {
   const o = opts || {};
   const p = await K.browser.newPage();
   await p.setViewport({ width: 1280, height: 1000 });
-  await p.setRequestInterception(true);
+  const icpt = o.intercept !== false;
+  if (icpt) await p.setRequestInterception(true);
   p.__requests = [];
   p.on('request', (r) => {
     const u = r.url();
@@ -538,8 +543,8 @@ K.open = async (url, opts) => {
     /* with consent granted the analytics scripts are expected to be asked
        for: still refused (no test ever reaches Google or Clarity), kept on
        the page's own list, left out of the run's "outside requests" */
-    if (!u.startsWith(K.BASE) && !/^(data|blob):/.test(u)) { if (o.consent !== 'granted') outside.push(url + ' -> ' + u); return r.abort(); }
-    r.continue();
+    if (!u.startsWith(K.BASE) && !/^(data|blob):/.test(u)) { if (o.consent !== 'granted') outside.push(url + ' -> ' + u); return icpt ? r.abort() : undefined; }
+    if (icpt) r.continue();
   });
   p.__errors = [];
   p.on('pageerror', (e) => p.__errors.push(String(e && e.message || e)));
@@ -624,7 +629,7 @@ K.img.makePng = async (p, w, h, draw) => Buffer.from(await p.evaluate((w, h, src
 
 /* ---------- PDF pages ---------- */
 K.pdf = {};
-K.pdf.open = (url) => K.open(url, { wait: '.pdf-run .btn-primary' });
+K.pdf.open = (url, opts) => K.open(url, Object.assign({ wait: '.pdf-run .btn-primary' }, opts || {}));
 K.pdf.set = async (p, c) => {
   const missing = await p.evaluate((c) => Object.keys(c).filter((k) => {
     const el = document.getElementById('pc-' + k);

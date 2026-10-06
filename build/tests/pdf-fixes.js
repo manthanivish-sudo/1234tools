@@ -1011,6 +1011,33 @@ async function browserPart() {
     await ph.close();
   }
 
+  /* 11m: the result viewer asked to paint while it is still painting (three
+     quick page turns, then resizes): pdf.js refuses two renders into one
+     canvas, so the newer must cancel the older; no error, and the last page
+     asked for is the one drawn */
+  {
+    const rv = await open('/pdf/rotate-pdf/');
+    const errs = [];
+    rv.on('pageerror', (e) => errs.push(String(e && e.message || e)));
+    await rv.evaluate(() => { window.__rej = []; window.addEventListener('unhandledrejection', (e) => window.__rej.push(String(e.reason && e.reason.message || e.reason))); });
+    await upload(rv, [five]);
+    await press(rv);
+    await rv.waitForFunction(() => /Page 1 of 5/.test((document.querySelector('.pdf-view .place-page-num') || {}).textContent || ''), { timeout: 60000 });
+    await rv.evaluate(() => { const n = document.querySelector('.pdf-view button[aria-label="Next page"]'); n.click(); n.click(); n.click(); });
+    for (const w of [900, 1280, 700, 1280]) { await rv.setViewport({ width: w, height: 1000 }); await new Promise((r) => setTimeout(r, 170)); }
+    await rv.waitForFunction(() => /Page 4 of 5/.test((document.querySelector('.pdf-view .place-page-num') || {}).textContent || ''), { timeout: 30000 }).catch(() => {});
+    await new Promise((r) => setTimeout(r, 600));
+    const st = await rv.evaluate(() => {
+      const c = document.querySelector('.pdf-view canvas');
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      let ink = 0; for (let i = 0; i < d.length; i += 4) if (d[i] < 128) ink++;
+      return { label: document.querySelector('.pdf-view .place-page-num').textContent, ink, rej: window.__rej };
+    });
+    const all = errs.concat(st.rej).filter((m) => /canvas|render/i.test(m));
+    check(!all.length && st.label === 'Page 4 of 5' && st.ink > 0, 'the result viewer turned three pages at once and resized: no render error, page 4 drawn', JSON.stringify({ label: st.label, ink: st.ink, errors: all }));
+    await rv.close();
+  }
+
   const foreign = [...requests].filter((h) => !/^127\.0\.0\.1(:\d+)?$/.test(h));
   check(!foreign.length, 'no request left 127.0.0.1', foreign.join(', '));
 }
