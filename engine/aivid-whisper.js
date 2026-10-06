@@ -10,17 +10,30 @@
  * against a Python reference, build/ai-video/prepare-whisper.py
  * --transcribe, on the same samples:
  *   decode the file → mono 16 kHz float → 30 s windows → 80-bin log-mel →
- *   encoder → merged decoder with KV cache, greedy, Whisper's timestamp
- *   rules → segments with absolute times → words, by proportional split.
+ *   encoder → (Auto-detect: the language token the decoder rates likeliest
+ *   on the first window) → merged decoder with KV cache, greedy, Whisper's
+ *   timestamp rules, prompted in the chosen language → segments with
+ *   absolute times → words, timed by dynamic time warping over the
+ *   decoder's cross-attention (openai/whisper timing.py), or by a
+ *   proportional split when that is not available.
+ *
+ * The same file is also the Web Worker that computes the log-mel windows
+ * and the word alignment, so neither holds the page's main thread: loaded
+ * with `new Worker(this file)`, it answers 'mel' and 'align' messages and
+ * does nothing else. When a worker cannot be started the same functions
+ * run on the page.
  *
  * Exposed as window.AIVidWhisper and as AIImg.whisper when the shared
  * runtime is on the page.
  */
 (function () {
   'use strict';
-  const A = window.AIImg || null;
-  const W = window.AIVidWhisper = window.AIVidWhisper || {};
+  const IS_WORKER = typeof window === 'undefined' && typeof self !== 'undefined' && typeof importScripts === 'function';
+  const A = IS_WORKER ? null : (window.AIImg || null);
+  const W = IS_WORKER ? {} : (window.AIVidWhisper = window.AIVidWhisper || {});
   if (A) A.whisper = W;
+  /* this script's own URL, for starting it again as a worker */
+  const SELF_URL = (!IS_WORKER && typeof document !== 'undefined' && document.currentScript && document.currentScript.src) || '/engine/aivid-whisper.js';
 
   const DIR = '/engine/models/whisper-tiny/';
   const ORT_DIR = '/engine/vendor/ort/';
@@ -157,6 +170,14 @@
       };
       model.pastNames = model.decIn.filter((n) => /^past_key_values\./.test(n));
       model.presentOf = (n) => 'present.' + n.slice('past_key_values.'.length);
+      /* the language tokens, code → id ('en' → 50259) */
+      model.langIds = {};
+      for (const k in (m.lang_to_id || {})) model.langIds[k.replace(/^<\|/, '').replace(/\|>$/, '')] = m.lang_to_id[k];
+      if (!model.langIds.en) model.langIds.en = m.tokens.en;
+      /* the cross-attention outputs prepare-whisper.py adds, and the heads
+         that follow the audio: without them words fall back to the split */
+      const heads = (m.alignment_heads || []).filter((h) => model.decOut.indexOf('cross_attentions.' + h[0]) >= 0);
+      model.alignHeads = heads.length && heads.length === (m.alignment_heads || []).length ? heads : null;
       report({ stage: 'ready', fraction: 1, loaded: total, total });
       return model;
     })().catch((e) => { modelPromise = null; throw e; });
@@ -367,8 +388,9 @@
     return byteOf;
   }
   const utf8 = new TextDecoder('utf-8');
-  /** The text of a run of token ids; special tokens (≥ n_text) are skipped. */
-  function decodeTokens(model, ids) {
+  const utf8Strict = new TextDecoder('utf-8', { fatal: true });
+  /** The UTF-8 bytes of a run of token ids; special tokens (≥ n_text) are skipped. */
+  function tokenBytes(model, ids) {
     const map = byteMap();
     const bytes = [];
     const nText = model.T.n_text;
@@ -378,8 +400,10 @@
       if (!s) continue;
       for (const ch of s) { const b = map.get(ch); bytes.push(b === undefined ? 63 : b); }
     }
-    return utf8.decode(new Uint8Array(bytes));
+    return new Uint8Array(bytes);
   }
+  /** The text of a run of token ids; special tokens (≥ n_text) are skipped. */
+  function decodeTokens(model, ids) { return utf8.decode(tokenBytes(model, ids)); }
 
   /* ------------------------------------------------------------------ */
   /* decoding one window                                                */
@@ -423,17 +447,54 @@
     return best;
   }
 
-  /** Greedy decoding of one encoded window. Returns the sampled token ids (prompt and <|endoftext|> excluded). */
-  async function decodeWindow(model, encoderOut, o) {
-    const { ort, decoder, T, dims } = model;
-    const heads = dims.heads, hd = dims.head_dim;
+  /** The language token id for a code ('en', 'hi', …); English for anything unknown or missing. */
+  function langToken(model, code) { return (code && model.langIds[code]) || model.T.en; }
+
+  /** An empty KV cache and the first-step feed for a prompt. */
+  function firstFeed(model, encoderOut, prompt) {
+    const { ort, dims } = model;
     const feed = {};
-    for (const name of model.pastNames) feed[name] = new ort.Tensor('float32', new Float32Array(0), [1, heads, 0, hd]);
+    for (const name of model.pastNames) feed[name] = new ort.Tensor('float32', new Float32Array(0), [1, dims.heads, 0, dims.head_dim]);
     feed.encoder_hidden_states = encoderOut;
-    feed.input_ids = new ort.Tensor('int64', BigInt64Array.from([T.sot, T.en, T.transcribe].map(BigInt)), [1, 3]);
+    feed.input_ids = new ort.Tensor('int64', BigInt64Array.from(prompt.map(BigInt)), [1, prompt.length]);
     feed.use_cache_branch = new ort.Tensor('bool', new Uint8Array([0]), [1]);
+    return feed;
+  }
+
+  /**
+   * Which language is spoken in this window: openai/whisper's
+   * detect_language. One decoder step on <|startoftranscript|> alone; the
+   * logits of every token but the 99 language tokens are dropped and the
+   * rest soft-maxed. Returns { code, probability, ranked: [[code, p], …] }.
+   */
+  async function detectLanguage(model, encoderOut) {
+    const out = await model.decoder.run(firstFeed(model, encoderOut, [model.T.sot]));
+    const L = out.logits, vocab = L.dims[L.dims.length - 1], seq = L.dims[1];
+    const row = L.data.subarray((seq - 1) * vocab, seq * vocab);
+    const codes = Object.keys(model.langIds);
+    let mx = -Infinity;
+    for (const c of codes) mx = Math.max(mx, row[model.langIds[c]]);
+    let sum = 0;
+    const ex = codes.map((c) => { const e = Math.exp(row[model.langIds[c]] - mx); sum += e; return e; });
+    const ranked = codes.map((c, i) => [c, ex[i] / sum]).sort((a, b) => b[1] - a[1]);
+    return { code: ranked[0][0], probability: ranked[0][1], ranked: ranked.slice(0, 5) };
+  }
+
+  /**
+   * Greedy decoding of one encoded window. Returns the sampled token ids
+   * (prompt and <|endoftext|> excluded). o.language picks the language token
+   * of the prompt (English when absent, as before). When o.attention is an
+   * array and the decoder exposes its cross-attention, one Float32Array of
+   * heads × 1500 is pushed for every token sampled and one more for the
+   * <|endoftext|> step: the attention of the alignment heads at the query
+   * that predicted that token.
+   */
+  async function decodeWindow(model, encoderOut, o) {
+    const { ort, decoder, T } = model;
+    const feed = firstFeed(model, encoderOut, [T.sot, langToken(model, o && o.language), T.transcribe]);
     const sampled = [];
     const maxTokens = o && o.maxTokens || MAX_TOKENS;
+    const att = o && Array.isArray(o.attention) && model.alignHeads ? o.attention : null;
     let step = 0;
     for (;;) {
       if (o && o.signal && o.signal.aborted) throw abortError();
@@ -442,6 +503,16 @@
       const vocab = L.dims[L.dims.length - 1];
       const seq = L.dims[1];
       const logits = Float32Array.from(L.data.subarray((seq - 1) * vocab, seq * vocab));
+      if (att) {
+        const H = model.alignHeads.length, row = new Float32Array(H * N_FRAMES / 2);
+        model.alignHeads.forEach(([layer, head], k) => {
+          const X = out['cross_attentions.' + layer];
+          const n = X.dims[X.dims.length - 2], F = X.dims[X.dims.length - 1];
+          const at = (head * n + (n - 1)) * F;
+          row.set(X.data.subarray(at, at + Math.min(F, N_FRAMES / 2)), k * N_FRAMES / 2);
+        });
+        att.push(row);
+      }
       for (const name of model.pastNames) {
         const pres = out[model.presentOf(name)];
         if (/\.decoder\./.test(name) || step === 0) {
@@ -497,17 +568,75 @@
   /* ------------------------------------------------------------------ */
   /* words                                                              */
   /* ------------------------------------------------------------------ */
+  /* Languages written without spaces between words: the ones openai/whisper
+     itself splits by character rather than by space (zh, ja, th, lo, my,
+     yue), plus Khmer and Tibetan. */
+  const NO_SPACE = new Set(['zh', 'ja', 'th', 'lo', 'my', 'yue', 'km', 'bo']);
+  const NO_SPACE_SCRIPT = /[\u0E00-\u0EFF\u1000-\u109F\u1780-\u17FF\u0F00-\u0FFF\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/;
+  /** Is this text written without spaces between words? By language when it
+      is one of those, otherwise by script: CJK, Thai, Lao, Burmese, Khmer or
+      Tibetan letters with no space anywhere in the line. */
+  function noSpace(lang, text) {
+    if (lang && NO_SPACE.has(lang)) return true;
+    const t = String(text || '').trim();
+    return !!t && NO_SPACE_SCRIPT.test(t) && !/\s/.test(t);
+  }
+
+  /**
+   * The words of a line, each { text, index } with index its offset in the
+   * text. Spaced scripts split on white space, exactly as before. Chinese,
+   * Japanese, Thai and the like have no spaces, so they are split by the
+   * browser's own word segmenter (Intl.Segmenter, which uses a dictionary
+   * for these languages); punctuation joins the word before it. A browser
+   * without Intl.Segmenter gets one character per word.
+   */
+  function splitWords(text, lang) {
+    text = String(text || '');
+    const out = [];
+    if (!noSpace(lang, text)) {
+      const re = /\S+/g;
+      let m;
+      while ((m = re.exec(text))) out.push({ text: m[0], index: m.index });
+      return out;
+    }
+    let pieces;
+    const Seg = typeof Intl !== 'undefined' && Intl.Segmenter;
+    if (Seg) {
+      let sg;
+      try { sg = new Seg(lang || undefined, { granularity: 'word' }); } catch (e) { sg = new Seg(undefined, { granularity: 'word' }); }
+      pieces = Array.from(sg.segment(text), (s) => ({ text: s.segment, index: s.index, word: !!s.isWordLike }));
+    } else {
+      pieces = [];
+      let i = 0;
+      for (const ch of text) { pieces.push({ text: ch, index: i, word: /[\p{L}\p{N}]/u.test(ch) }); i += ch.length; }
+    }
+    const spans = [];
+    let lead = -1;
+    for (const p of pieces) {
+      if (/^\s+$/.test(p.text)) continue;
+      const end = p.index + p.text.length;
+      if (p.word || !spans.length) {
+        if (!p.word) { if (lead < 0) lead = p.index; continue; }
+        spans.push({ index: lead >= 0 ? lead : p.index, end });
+        lead = -1;
+      } else spans[spans.length - 1].end = end;
+    }
+    if (lead >= 0) spans.push({ index: lead, end: text.trimEnd().length });
+    for (const s of spans) out.push({ text: text.slice(s.index, s.end), index: s.index });
+    return out;
+  }
+
   /**
    * Split a segment into words and share its time out in proportion to
-   * character length. Approximate — Whisper tiny does not give word
-   * timings directly, and this version does not run the cross-attention
-   * alignment — but for karaoke-style captions, where a word is on
-   * screen for a few hundred milliseconds, it lands close enough.
+   * character length. The fallback when the aligned timings are not
+   * available (an older model file) or a line has been edited into a
+   * different number of words. o.lang (or seg.lang) picks the word
+   * splitting for languages written without spaces.
    */
-  function wordsFor(seg) {
+  function wordsFor(seg, o) {
     const text = String(seg.text || '').trim();
     if (!text) return [];
-    const parts = text.split(/\s+/).filter(Boolean);
+    const parts = splitWords(text, (o && o.lang) || seg.lang).map((w) => w.text);
     const weights = parts.map((p) => p.replace(/[^\p{L}\p{N}]/gu, '').length + 1);
     const total = weights.reduce((s, w) => s + w, 0) || 1;
     const dur = Math.max(0.05, seg.end - seg.start);
@@ -522,14 +651,227 @@
     return words;
   }
 
+  /**
+   * Word alignment, as openai/whisper timing.py find_alignment does it.
+   * rows holds N rows of H × 1500 attention weights (row r, alignment head
+   * h, audio frame of 20 ms); nFrames is how many frames hold audio. Each
+   * row is renormalised over those frames (the softmax restricted to them),
+   * z-normalised across rows for each head and frame, median-filtered along
+   * time (width 7, reflected at the edges), averaged over the heads; dynamic
+   * time warping then finds the cheapest monotonic path through −matrix.
+   * Returns, for every row, the first frame the path reaches it at.
+   */
+  function alignRows(rows, N, H, nFrames) {
+    const S = N_FRAMES / 2;
+    const F = Math.max(1, Math.min(S, nFrames | 0));
+    const X = new Float32Array(H * N * F);
+    for (let r = 0; r < N; r++) for (let h = 0; h < H; h++) {
+      const src = (r * H + h) * S;
+      let sum = 0;
+      for (let f = 0; f < F; f++) sum += rows[src + f];
+      const inv = sum > 0 ? 1 / sum : 0, dst = (h * N + r) * F;
+      for (let f = 0; f < F; f++) X[dst + f] = rows[src + f] * inv;
+    }
+    for (let h = 0; h < H; h++) for (let f = 0; f < F; f++) {
+      let m = 0;
+      for (let r = 0; r < N; r++) m += X[(h * N + r) * F + f];
+      m /= N;
+      let v = 0;
+      for (let r = 0; r < N; r++) { const d = X[(h * N + r) * F + f] - m; v += d * d; }
+      const sd = Math.sqrt(v / N);
+      for (let r = 0; r < N; r++) { const i = (h * N + r) * F + f; X[i] = sd > 0 ? (X[i] - m) / sd : 0; }
+    }
+    const M = new Float32Array(N * F);
+    const PAD = 3, win = new Float32Array(7);
+    for (let h = 0; h < H; h++) for (let r = 0; r < N; r++) {
+      const base = (h * N + r) * F;
+      for (let f = 0; f < F; f++) {
+        let v;
+        if (F <= PAD) v = X[base + f];
+        else {
+          for (let k = -PAD; k <= PAD; k++) { let i = f + k; if (i < 0) i = -i; else if (i >= F) i = 2 * (F - 1) - i; win[k + PAD] = X[base + i]; }
+          for (let a = 1; a < 7; a++) { const x = win[a]; let b = a - 1; while (b >= 0 && win[b] > x) { win[b + 1] = win[b]; b--; } win[b + 1] = x; }
+          v = win[PAD];
+        }
+        M[r * F + f] += v / H;
+      }
+    }
+    /* dtw_cpu, with its strict comparisons and its trace edges */
+    const W1 = F + 1;
+    const C = new Float64Array((N + 1) * W1).fill(Infinity);
+    const T = new Int8Array((N + 1) * W1);
+    C[0] = 0;
+    for (let j = 1; j <= F; j++) for (let i = 1; i <= N; i++) {
+      const c0 = C[(i - 1) * W1 + j - 1], c1 = C[(i - 1) * W1 + j], c2 = C[i * W1 + j - 1];
+      let c, t;
+      if (c0 < c1 && c0 < c2) { c = c0; t = 0; } else if (c1 < c0 && c1 < c2) { c = c1; t = 1; } else { c = c2; t = 2; }
+      C[i * W1 + j] = -M[(i - 1) * F + j - 1] + c;
+      T[i * W1 + j] = t;
+    }
+    for (let j = 0; j <= F; j++) T[j] = 2;
+    for (let i = 0; i <= N; i++) T[i * W1] = 1;
+    const path = [];
+    let i = N, j = F;
+    while (i > 0 || j > 0) {
+      path.push(i - 1, j - 1);
+      const t = T[i * W1 + j];
+      if (t === 0) { i--; j--; } else if (t === 1) i--; else j--;
+    }
+    const first = new Int32Array(N).fill(-1);
+    for (let k = path.length - 2; k >= 0; k -= 2) { const r = path[k], f = path[k + 1]; if (r >= 0 && first[r] < 0) first[r] = Math.max(0, f); }
+    for (let r = 0; r < N; r++) if (first[r] < 0) first[r] = r ? first[r - 1] : 0;
+    return first;
+  }
+
+  /**
+   * The words of one segment from its tokens' aligned start times. Tokens
+   * are grouped into whole UTF-8 characters first (a CJK character or a
+   * Devanagari conjunct can span two tokens), the text is split into words
+   * as splitWords does, and each word starts where its first character's
+   * token starts and ends where the token after its last character starts
+   * (endTime for the last).
+   */
+  function timedWords(model, tokens, starts, endTime, lang) {
+    const units = [];
+    let cur = [], k0 = 0;
+    for (let k = 0; k < tokens.length; k++) {
+      if (!cur.length) k0 = k;
+      cur.push(tokens[k]);
+      const b = tokenBytes(model, cur);
+      let s;
+      try { s = utf8Strict.decode(b); } catch (e) { if (cur.length < 6 && k < tokens.length - 1) continue; s = utf8.decode(b); }
+      units.push({ text: s, start: starts[k0], end: k + 1 < tokens.length ? starts[k + 1] : endTime });
+      cur = [];
+    }
+    const full = units.map((u) => u.text).join('');
+    if (!full.trim()) return [];
+    const unitAt = new Int32Array(full.length);
+    let p = 0;
+    units.forEach((u, n) => { for (let c = 0; c < u.text.length; c++) unitAt[p++] = n; });
+    const lead = full.length - full.replace(/^\s+/, '').length;
+    return splitWords(full.trim(), lang).map((w) => {
+      const a = lead + w.index, b = lead + w.index + w.text.length - 1;
+      return { text: w.text, start: units[unitAt[a]].start, end: units[unitAt[Math.max(a, b)]].end };
+    });
+  }
+
+  /** openai/whisper's clean-ups of aligned words: a word longer than twice
+      the median word (median at most 0.7 s) is cut back when it ends a
+      sentence, starts one, or opens or closes the segment — that time is a
+      pause, not the word; then no word starts before the one before it ends,
+      and none is shorter than 20 ms. */
+  function tidyWords(words) {
+    const SENT = /[.。!！?？]["”’)」』]?$/;
+    const d = words.map((w) => w.end - w.start).filter((x) => x > 0).sort((a, b) => a - b);
+    if (d.length) {
+      const max = 2 * Math.min(0.7, d[d.length >> 1]);
+      words.forEach((w, i) => {
+        if (w.end - w.start <= max) return;
+        if (SENT.test(w.text) || i === words.length - 1) w.end = w.start + max;
+        else if (i === 0 || SENT.test(words[i - 1].text)) w.start = w.end - max;
+      });
+    }
+    let prev = -Infinity;
+    for (const w of words) {
+      if (w.start < prev) w.start = prev;
+      if (w.end < w.start + 0.02) w.end = w.start + 0.02;
+      prev = w.end;
+    }
+    return words;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* telling when the model has failed                                  */
+  /* ------------------------------------------------------------------ */
+  /* The script a language is written in, for the languages whose script is
+     not Latin: a window of text mostly outside it was not written in that
+     language (Whisper tiny writes Hindi speech in English, for instance). */
+  const SCRIPTS = {
+    hi: /\p{Script=Devanagari}/u, mr: /\p{Script=Devanagari}/u, ne: /\p{Script=Devanagari}/u, bn: /\p{Script=Bengali}/u, as: /\p{Script=Bengali}/u,
+    ar: /\p{Script=Arabic}/u, ur: /\p{Script=Arabic}/u, fa: /\p{Script=Arabic}/u, ps: /\p{Script=Arabic}/u, sd: /\p{Script=Arabic}/u,
+    he: /\p{Script=Hebrew}/u, yi: /\p{Script=Hebrew}/u, zh: /\p{Script=Han}/u, yue: /\p{Script=Han}/u, ja: /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u,
+    ko: /\p{Script=Hangul}/u, ru: /\p{Script=Cyrillic}/u, uk: /\p{Script=Cyrillic}/u, be: /\p{Script=Cyrillic}/u, bg: /\p{Script=Cyrillic}/u,
+    sr: /\p{Script=Cyrillic}/u, mk: /\p{Script=Cyrillic}/u, kk: /\p{Script=Cyrillic}/u, el: /\p{Script=Greek}/u, th: /\p{Script=Thai}/u,
+    ta: /\p{Script=Tamil}/u, te: /\p{Script=Telugu}/u, kn: /\p{Script=Kannada}/u, ml: /\p{Script=Malayalam}/u, gu: /\p{Script=Gujarati}/u,
+    pa: /\p{Script=Gurmukhi}/u, si: /\p{Script=Sinhala}/u, my: /\p{Script=Myanmar}/u, km: /\p{Script=Khmer}/u, lo: /\p{Script=Lao}/u,
+    ka: /\p{Script=Georgian}/u, hy: /\p{Script=Armenian}/u, am: /\p{Script=Ethiopic}/u, bo: /\p{Script=Tibetan}/u
+  };
+  /** The share of a text's letters written in the language's own script (1 for Latin-script languages and unknown codes). */
+  function scriptShare(text, lang) {
+    const re = SCRIPTS[lang];
+    if (!re) return 1;
+    const letters = Array.from(String(text || '')).filter((c) => /\p{L}/u.test(c));
+    return letters.length ? letters.filter((c) => re.test(c)).length / letters.length : 1;
+  }
+  /** openai/whisper's compression-ratio test for a decoder stuck in a loop: UTF-8 length over deflated length (above 2.4 is a loop). 0 when the browser cannot compress. */
+  async function compressionRatio(text) {
+    if (typeof CompressionStream === 'undefined' || !text) return 0;
+    try {
+      const bytes = new TextEncoder().encode(text);
+      const out = await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer();
+      return bytes.length / Math.max(1, out.byteLength);
+    } catch (e) { return 0; }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* the worker: log-mel and alignment off the main thread              */
+  /* ------------------------------------------------------------------ */
+  let worker = null, workerBroken = false, seq = 0;
+  const pending = new Map();
+  function getWorker() {
+    if (IS_WORKER || workerBroken || typeof Worker === 'undefined') return null;
+    if (worker) return worker;
+    try { worker = new Worker(SELF_URL); } catch (e) { workerBroken = true; return null; }
+    worker.onmessage = (e) => {
+      const d = e.data || {}, p = pending.get(d.id);
+      if (!p) return;
+      pending.delete(d.id);
+      if (d.error) p.reject(new Error(d.error)); else p.resolve(d);
+    };
+    /* a worker that cannot start (or dies) hands its jobs back to the page */
+    worker.onerror = (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      workerBroken = true;
+      try { worker.terminate(); } catch (x) { /* gone */ }
+      worker = null;
+      const jobs = [...pending.values()]; pending.clear();
+      for (const p of jobs) p.fallback();
+    };
+    return worker;
+  }
+  /** Run msg in the worker; `local` computes the same thing here when there is no worker. */
+  function inWorker(msg, local) {
+    const w = getWorker();
+    if (!w) return sleep(0).then(local);
+    return new Promise((resolve, reject) => {
+      const id = ++seq;
+      pending.set(id, { resolve, reject, fallback: () => { try { resolve(local()); } catch (e) { reject(e); } } });
+      w.postMessage(Object.assign({ id }, msg));
+    });
+  }
+  /** The log-mel of the window at `offset`, computed in the worker. */
+  function melOf(samples, offset) {
+    return inWorker({ op: 'mel', samples: samples.slice(offset, Math.min(samples.length, offset + N_SAMPLES)) }, () => ({ mel: logMel(samples, offset) })).then((r) => r.mel);
+  }
+  /** alignRows in the worker. */
+  function alignOf(rows, N, H, nFrames) {
+    return inWorker({ op: 'align', rows, n: N, h: H, frames: nFrames }, () => ({ first: alignRows(rows, N, H, nFrames) })).then((r) => r.first);
+  }
+
   /* ------------------------------------------------------------------ */
   /* the whole thing                                                    */
   /* ------------------------------------------------------------------ */
   /**
    * Transcribe 16 kHz mono samples. o.onProgress({ fraction, seconds,
    * total, eta, window }) as windows finish; o.onSegment(seg) as each
-   * segment arrives; o.signal to cancel. Returns { segments, words,
-   * windows, seconds, elapsed }.
+   * segment arrives; o.signal to cancel. o.language is a Whisper language
+   * code ('en', 'hi', 'zh', …), 'auto' to detect it on the first 30 s, or
+   * absent for English (as before); o.onLanguage(detection) reports what
+   * was detected. o.wordTimestamps: false skips the alignment. Returns
+   * { segments, words, windows, seconds, elapsed, language, detection,
+   * timing } — timing 'aligned' when the words were placed by the
+   * cross-attention alignment, 'proportional' when split by length.
+   * Each segment carries lang and timing too.
    */
   async function transcribe(samples, o) {
     o = o || {};
@@ -539,6 +881,11 @@
     const report = o.onProgress || (() => {});
     const t0 = performance.now();
     const segments = [];
+    const align = o.wordTimestamps !== false && !!model.alignHeads;
+    const EOT = model.T.eot;
+    let language = o.language === 'auto' ? null : (o.language && model.langIds[o.language] ? o.language : 'en');
+    let detection = null;
+    const issues = [];
     let seek = 0, windows = 0;
     while (seek < total - 0.05) {
       if (o.signal && o.signal.aborted) throw abortError();
@@ -546,22 +893,63 @@
       const avail = Math.min(N_SAMPLES, samples.length - offset);
       const segDur = Math.min(30, avail / SR);
       report({ fraction: seek / total, seconds: seek, total, window: windows, stage: 'mel' });
-      await sleep(0);
-      const mel = logMel(samples, offset);
+      const mel = await melOf(samples, offset);
       if (o.signal && o.signal.aborted) throw abortError();
       report({ fraction: seek / total, seconds: seek, total, window: windows, stage: 'encode' });
       await sleep(0);
       const encOut = await model.encoder.run({ input_features: new ort.Tensor('float32', mel, [1, N_MELS, N_FRAMES]) });
       const hidden = encOut[model.encoder.outputNames[0]];
+      if (!language) {
+        report({ fraction: seek / total, seconds: seek, total, window: windows, stage: 'detect' });
+        detection = await detectLanguage(model, hidden);
+        language = detection.code;
+        if (o.onLanguage) o.onLanguage(detection);
+      }
       report({ fraction: seek / total, seconds: seek, total, window: windows, stage: 'decode' });
-      const tokens = await decodeWindow(model, hidden, { signal: o.signal, onToken: (k) => report({ fraction: seek / total, seconds: seek, total, window: windows, stage: 'decode', tokens: k }) });
+      const attention = align ? [] : null;
+      const tokens = await decodeWindow(model, hidden, { signal: o.signal, language, attention, onToken: (k) => report({ fraction: seek / total, seconds: seek, total, window: windows, stage: 'decode', tokens: k }) });
       try { hidden.dispose && hidden.dispose(); } catch (e) { /* fine */ }
       const { segs, adv } = segmentsFrom(model, tokens, seek, segDur);
+      /* one alignment for all the text tokens of the window, plus the row
+         that predicted whatever followed the last of them */
+      let times = null;
+      const textIdx = [];
+      tokens.forEach((t, k) => { if (t < EOT) textIdx.push(k); });
+      if (attention && textIdx.length && textIdx[textIdx.length - 1] + 1 < attention.length) {
+        const H = model.alignHeads.length, S = N_FRAMES / 2, N = textIdx.length + 1;
+        const rows = new Float32Array(N * H * S);
+        textIdx.concat([textIdx[textIdx.length - 1] + 1]).forEach((k, r) => rows.set(attention[k], r * H * S));
+        report({ fraction: seek / total, seconds: seek, total, window: windows, stage: 'align' });
+        const first = await alignOf(rows, N, H, Math.ceil(segDur * 50));
+        times = Array.from(first, (f) => seek + f * TIME_PRECISION);
+      }
+      /* say so when the model has visibly failed on this window: bytes that
+         are not text, a loop, or the wrong script for the language */
+      const winText = decodeTokens(model, textIdx.map((k) => tokens[k]));
+      if (winText.trim()) {
+        const kind = /\uFFFD/.test(winText) ? 'garbled' : (await compressionRatio(winText)) > 2.4 ? 'repetitive' : scriptShare(winText, language) < 0.5 ? 'script' : null;
+        if (kind) issues.push({ start: seek, end: Math.min(total, seek + segDur), kind });
+      }
+      let c = 0;
       for (const s of segs) {
-        s.text = decodeTokens(model, s.tokens).trim();
+        const n = s.tokens.length, from = c;
+        c += n;
+        /* a token that is half a character decodes to U+FFFD: never show it */
+        s.text = decodeTokens(model, s.tokens).replace(/\uFFFD+/g, ' ').replace(/\s{2,}/g, ' ').trim();
         s.end = Math.min(s.end, total);
+        s.lang = language;
         if (!s.text || s.end <= s.start) continue;
-        s.words = wordsFor(s);
+        let words = null;
+        if (times) {
+          words = tidyWords(timedWords(model, s.tokens, times.slice(from, from + n), times[from + n], language));
+          for (const w of words) { w.start = Math.min(w.start, total); w.end = Math.min(w.end, total); }
+          for (const w of words) w.text = w.text.replace(/\uFFFD+/g, '');
+          words = words.filter((w) => w.text && w.end > w.start);
+        }
+        if (words && words.length) {
+          s.words = words; s.timing = 'aligned';
+          s.start = words[0].start; s.end = words[words.length - 1].end;
+        } else { s.words = wordsFor(s); s.timing = 'proportional'; }
         segments.push(s);
         if (o.onSegment) o.onSegment(s);
       }
@@ -571,12 +959,28 @@
       const done = Math.min(seek, total);
       report({ fraction: done / total, seconds: done, total, window: windows, elapsed, eta: done > 0 ? elapsed * (total - done) / done : null, stage: 'window' });
     }
-    return { segments, words: segments.flatMap((s) => s.words), windows, seconds: total, elapsed: (performance.now() - t0) / 1000 };
+    return {
+      segments, words: segments.flatMap((s) => s.words), windows, seconds: total, elapsed: (performance.now() - t0) / 1000,
+      language: language || 'en', detection, timing: align ? 'aligned' : 'proportional', issues
+    };
+  }
+
+  if (IS_WORKER) {
+    self.onmessage = (e) => {
+      const d = e.data || {};
+      try {
+        if (d.op === 'mel') { const mel = logMel(d.samples, 0); self.postMessage({ id: d.id, mel }, [mel.buffer]); }
+        else if (d.op === 'align') { const first = alignRows(d.rows, d.n, d.h, d.frames); self.postMessage({ id: d.id, first }, [first.buffer]); }
+        else self.postMessage({ id: d.id, error: 'unknown request' });
+      } catch (err) { self.postMessage({ id: d.id, error: String((err && err.message) || err) }); }
+    };
+    return;
   }
 
   Object.assign(W, {
     SR, N_FFT, HOP, N_MELS, N_SAMPLES, N_FRAMES, DIR,
     runtime, session, fetchBytes, load, decodeAudio, toMono16k, resampleLinear,
-    melFilters, logMel, decodeTokens, decodeWindow, segmentsFrom, wordsFor, transcribe
+    melFilters, logMel, decodeTokens, decodeWindow, segmentsFrom, wordsFor, transcribe,
+    detectLanguage, alignRows, timedWords, tidyWords, splitWords, noSpace, NO_SPACE, scriptShare, compressionRatio
   });
 })();

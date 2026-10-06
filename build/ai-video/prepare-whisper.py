@@ -3,6 +3,9 @@ Whisper tiny for /ai-video/auto-captions/: download, verify, shard, describe.
 
   python build/ai-video/prepare-whisper.py                 fetch + verify + write engine/models/whisper-tiny/
   python build/ai-video/prepare-whisper.py --check         verify what is in engine/models/whisper-tiny/ against the pins
+  python build/ai-video/prepare-whisper.py --xattn        re-derive the shipped decoder (from its own parts, which
+                                                           must join to the pinned upstream file) with the
+                                                           cross-attention outputs added; downloads nothing
   python build/ai-video/prepare-whisper.py --transcribe x.wav [--dump dir]
                                                            run the Python reference pipeline (the one the browser
                                                            code in engine/aivid-whisper.js mirrors) on a WAV
@@ -14,7 +17,9 @@ written into the site.
 What ships (engine/models/whisper-tiny/):
   encoder_model_quantized.onnx         the audio encoder, uint8 dynamic quantisation, ~10.1 MB
   decoder_model_merged_quantized.onnx  the text decoder with KV cache (one graph for the first and
-                                       later steps, switched by use_cache_branch), uint8, ~30.7 MB
+                                       later steps, switched by use_cache_branch), uint8, ~30.7 MB,
+                                       with two graph outputs added here: the cross-attention
+                                       weights of decoder layers 2 and 3 (expose_cross_attention)
   tokens.json                          the 50,257 text tokens of the GPT-2-style byte-level BPE
                                        vocabulary, indexed by id (decoding needs nothing else; the
                                        1,608 special tokens are ranges of ids above 50256)
@@ -26,7 +31,7 @@ session; the manifest lists the parts. The decoder (30.7 MB) is over
 SHARD_OVER, which matches build/split-models.js (24 MiB, parts of 20 MiB),
 so a re-run writes the same two parts that script does.
 
-Needs: huggingface_hub, numpy, onnxruntime (for --check/--transcribe). No
+Needs: huggingface_hub, numpy, onnx, onnxruntime (for --check/--transcribe). No
 torch, no transformers, no librosa: the mel filterbank is computed here
 from the Slaney formula and matches openai/whisper's mel_filters.npz to
 2e-9 (checked with --transcribe when that file is beside the WAV).
@@ -60,6 +65,12 @@ PINNED = {
 # the same rule as build/split-models.js: the static hosts cap a file at 25 MiB
 SHARD_OVER = 24 * 1024 * 1024
 PART_BYTES = 20 * 1024 * 1024
+
+# The decoder layers whose cross-attention is exposed: every layer named in
+# generation_config.alignment_heads for whisper-tiny ([2,2] [3,0] [3,2] [3,3]
+# [3,4] [3,5]). openai/whisper's timing.py aligns words to the audio with
+# dynamic time warping over exactly these heads.
+XATTN_LAYERS = (2, 3)
 
 SR = 16000; N_FFT = 400; HOP = 160; N_MELS = 80; N_SAMPLES = 480000; N_FRAMES = 3000
 
@@ -119,6 +130,92 @@ def write_shards(src, dst_base):
             parts.append(os.path.basename(p)); i += 1
     return parts
 
+# ---------------- the decoder with its cross-attention exposed ----------------
+def expose_cross_attention(src_path, dst_path):
+    """The ONNX export computes every cross-attention softmax but returns only
+    logits and the KV cache. Add, for each layer in XATTN_LAYERS, an Identity
+    of that layer's encoder_attn Softmax output to both branches of the merged
+    graph's If node (the first step and the cached steps), and route it out as
+    cross_attentions.<layer>, float32 [heads, n, 1500]. No weight changes and
+    no operator but Identity, so the logits are unchanged."""
+    import onnx
+    from onnx import helper, TensorProto
+    m = onnx.load(src_path)
+    g = m.graph
+    ifs = [n for n in g.node if n.op_type == 'If']
+    if len(ifs) != 1: raise SystemExit('expected one If node in the merged decoder, found %d' % len(ifs))
+    iff = ifs[0]
+    if any(o.name.startswith('cross_attentions.') for o in g.output): raise SystemExit('the decoder already exposes cross-attention')
+    for a in iff.attribute:
+        sg = a.g
+        for L in XATTN_LAYERS:
+            name = '/model/decoder/layers.%d/encoder_attn/Softmax_output_0' % L
+            if not any(name in n.output for n in sg.node): raise SystemExit('%s: no %s' % (a.name, name))
+            out = 'cross_attentions.%d_%s' % (L, a.name)
+            sg.node.append(helper.make_node('Identity', [name], [out], name='expose_cross_attention_%d_%s' % (L, a.name)))
+            sg.output.append(helper.make_tensor_value_info(out, TensorProto.FLOAT, None))
+    for L in XATTN_LAYERS:
+        iff.output.append('cross_attentions.%d' % L)
+        g.output.append(helper.make_tensor_value_info('cross_attentions.%d' % L, TensorProto.FLOAT, None))
+    onnx.save(m, dst_path)
+
+def decoder_entry(src_path, rel):
+    """Expose the cross-attention, shard the result and describe it for the manifest."""
+    os.makedirs(WORK, exist_ok=True)
+    tmp = os.path.join(WORK, 'decoder_model_merged_quantized.xattn.onnx')
+    expose_cross_attention(src_path, tmp)
+    os.makedirs(OUT_DIR, exist_ok=True)
+    for old in os.listdir(OUT_DIR):
+        if old.startswith('decoder_model_merged_quantized.onnx'): os.remove(os.path.join(OUT_DIR, old))
+    parts = write_shards(tmp, os.path.join(OUT_DIR, 'decoder_model_merged_quantized.onnx'))
+    return {'bytes': os.path.getsize(tmp), 'sha256': sha256(tmp), 'parts': parts,
+            'source': rel + ' + cross_attentions.%s outputs (expose_cross_attention)' % '/'.join(str(l) for l in XATTN_LAYERS),
+            'upstream_sha256': PINNED[rel][0]}
+
+def update_parts_registry(name, info):
+    """Keep engine/models/parts.json (build/split-models.js's record) in step with a re-written sharded file."""
+    reg_path = os.path.join(MODELS_DIR, 'parts.json')
+    if not os.path.exists(reg_path) or info['parts'] == [name]: return
+    reg = json.load(open(reg_path, encoding='utf-8'))
+    key = 'engine/models/whisper-tiny/' + name
+    reg['files'][key] = {'bytes': info['bytes'], 'sha256': info['sha256'],
+                         'parts': [{'file': p, 'bytes': os.path.getsize(os.path.join(OUT_DIR, p)), 'sha256': sha256(os.path.join(OUT_DIR, p))} for p in info['parts']]}
+    # the layout split-models.js writes and insists on reading back: indent 1, UTF-8 as is, LF, final newline
+    with open(reg_path, 'w', encoding='utf-8', newline='\n') as f:
+        json.dump(reg, f, indent=1, ensure_ascii=False)
+        f.write('\n')
+
+def cross_attention_info(heads):
+    return {'outputs': ['cross_attentions.%d' % L for L in XATTN_LAYERS], 'layers': list(XATTN_LAYERS),
+            'shape': '[heads, n, 1500] float32, softmax over the audio frames', 'alignment_heads': heads}
+
+DECODER_OUTPUTS = ['logits [1, n, 51865]', 'present.{0-3}.decoder.{key,value} [1, 6, past+n, 64]',
+                   'present.{0-3}.encoder.{key,value} [1, 6, 1500, 64]',
+                   'cross_attentions.{2,3} [6, n, 1500] (added by expose_cross_attention)']
+
+def xattn_from_shipped():
+    """--xattn: rebuild the shipped decoder from its own parts, which must
+    join to the pinned upstream file (so this never stacks on itself)."""
+    mp = os.path.join(OUT_DIR, 'whisper-tiny.json')
+    m = json.load(open(mp, encoding='utf-8'))
+    rel = 'onnx/decoder_model_merged_quantized.onnx'
+    info = m['files']['decoder_model_merged_quantized.onnx']
+    os.makedirs(WORK, exist_ok=True)
+    src = os.path.join(WORK, 'decoder_model_merged_quantized.upstream.onnx')
+    if not (os.path.exists(src) and sha256(src) == PINNED[rel][0]):
+        with open(src, 'wb') as f:
+            for p in info['parts']: f.write(open(os.path.join(OUT_DIR, p), 'rb').read())
+    if sha256(src) != PINNED[rel][0]:
+        raise SystemExit('the shipped decoder parts do not join to the pinned upstream file; run without --xattn to fetch it')
+    entry = decoder_entry(src, rel)
+    m['files']['decoder_model_merged_quantized.onnx'] = entry
+    m['cross_attention'] = cross_attention_info(m.get('alignment_heads'))
+    m['io']['decoder']['outputs'] = DECODER_OUTPUTS
+    json.dump(m, open(mp, 'w', encoding='utf-8'), indent=1)
+    update_parts_registry('decoder_model_merged_quantized.onnx', entry)
+    print('  wrote the decoder with cross_attentions outputs: %d bytes, sha256 %s, parts %s' % (entry['bytes'], entry['sha256'], ', '.join(entry['parts'])))
+    return m
+
 def build(got):
     os.makedirs(OUT_DIR, exist_ok=True)
     cfg = json.load(open(got['config.json']))
@@ -126,9 +223,11 @@ def build(got):
     pre = json.load(open(got['preprocessor_config.json']))
     toks, special = build_tokens(got['vocab.json'], got['added_tokens.json'])
     files = {}
-    for rel, name in [('onnx/encoder_model_quantized.onnx', 'encoder_model_quantized.onnx'), ('onnx/decoder_model_merged_quantized.onnx', 'decoder_model_merged_quantized.onnx')]:
-        parts = write_shards(got[rel], os.path.join(OUT_DIR, name))
-        files[name] = {'bytes': os.path.getsize(got[rel]), 'sha256': PINNED[rel][0], 'parts': parts, 'source': rel}
+    rel = 'onnx/encoder_model_quantized.onnx'; name = 'encoder_model_quantized.onnx'
+    parts = write_shards(got[rel], os.path.join(OUT_DIR, name))
+    files[name] = {'bytes': os.path.getsize(got[rel]), 'sha256': PINNED[rel][0], 'parts': parts, 'source': rel}
+    files['decoder_model_merged_quantized.onnx'] = decoder_entry(got['onnx/decoder_model_merged_quantized.onnx'], 'onnx/decoder_model_merged_quantized.onnx')
+    update_parts_registry('decoder_model_merged_quantized.onnx', files['decoder_model_merged_quantized.onnx'])
     tp = os.path.join(OUT_DIR, 'tokens.json')
     json.dump(toks, open(tp, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
     files['tokens.json'] = {'bytes': os.path.getsize(tp), 'sha256': sha256(tp), 'parts': ['tokens.json'], 'source': 'vocab.json (ids 0-50256)'}
@@ -154,14 +253,14 @@ def build(got):
         'max_initial_timestamp_index': gen['max_initial_timestamp_index'],
         'time_precision': 0.02,
         'alignment_heads': gen.get('alignment_heads'),
+        'cross_attention': cross_attention_info(gen.get('alignment_heads')),
         'io': {
             'encoder': {'inputs': {'input_features': [1, 80, 3000]}, 'outputs': {'last_hidden_state': [1, 1500, 384]}},
             'decoder': {'inputs': ['input_ids [1, n] int64', 'encoder_hidden_states [1, 1500, 384]',
                                    'past_key_values.{0-3}.decoder.{key,value} [1, 6, past, 64]',
                                    'past_key_values.{0-3}.encoder.{key,value} [1, 6, 1500, 64] (empty on the first step)',
                                    'use_cache_branch [1] bool'],
-                        'outputs': ['logits [1, n, 51865]', 'present.{0-3}.decoder.{key,value} [1, 6, past+n, 64]',
-                                    'present.{0-3}.encoder.{key,value} [1, 6, 1500, 64]']}
+                        'outputs': DECODER_OUTPUTS}
         }
     }
     mp = os.path.join(OUT_DIR, 'whisper-tiny.json')
@@ -220,6 +319,9 @@ def write_readme(m, got):
         '      out present.{0..3}.decoder.{key,value} float32 [1, 6, past+n, 64]   (fed back as past)',
         '      out present.{0..3}.encoder.{key,value} float32 [1, 6, 1500, 64]     (computed on the first',
         '                                                        step, then fed back unchanged)',
+        '      out cross_attentions.{2,3} float32 [6, n, 1500]  (added here: the softmax of decoder layers',
+        '                                                        2 and 3 over the 1,500 audio frames of 20 ms;',
+        '                                                        the upstream graph computes it but does not return it)',
         '',
         '  Preprocessing (WhisperFeatureExtractor, mirrored in JS)',
         '    16 kHz mono float32; 30 s windows of 480,000 samples, the last padded with zeros;',
@@ -230,7 +332,10 @@ def write_readme(m, got):
         '    1e-10, clamped to (max - 8) over the window, then (x + 4) / 4.',
         '',
         '  Decoding (greedy, as openai/whisper DecodingTask + transcribe.py)',
-        '    prompt <|startoftranscript|><|en|><|transcribe|> - with timestamps (no <|notimestamps|>);',
+        '    prompt <|startoftranscript|><|lang|><|transcribe|> - with timestamps (no <|notimestamps|>);',
+        '    <|lang|> is the language chosen on the page (English when none is given), or for Auto-detect',
+        '    the language token the decoder rates likeliest after <|startoftranscript|> on the first',
+        '    30 s window (openai/whisper detect_language);',
         '    suppress generation_config.suppress_tokens (non-speech and special tokens) at every step,',
         '    begin_suppress_tokens [220, 50257] at the first step, <|notimestamps|> always; timestamp',
         '    rules: after one timestamp a text token must follow, after a text run a timestamp or',
@@ -240,8 +345,10 @@ def write_readme(m, got):
         '    identical tokens stops the window. Segments follow transcribe.py: text between two',
         '    consecutive timestamps is a segment; a window ending on a single timestamp seeks past',
         '    the whole window, otherwise the next window starts at the last closed timestamp.',
-        '    Word timings are the segment split proportionally to character length (approximate;',
-        '    no cross-attention alignment in this version).',
+        '    Word timings: dynamic time warping over the six alignment heads\' cross-attention, as',
+        '    openai/whisper timing.py does (z-normalised per head, median filter of width 7, averaged),',
+        '    one row per text token; the proportional split by character length is the fallback when',
+        '    the outputs are missing or a line is edited into a different number of words.',
         '',
         '  Prepared by build/ai-video/prepare-whisper.py on ' + time.strftime('%Y-%m-%d') + '.'
     ]
@@ -268,6 +375,10 @@ def check():
         data = b''.join(open(os.path.join(OUT_DIR, p), 'rb').read() for p in parts)
         s = ort.InferenceSession(data, providers=['CPUExecutionProvider'])
         print('  %s loads: %d inputs, %d outputs' % (name, len(s.get_inputs()), len(s.get_outputs())))
+        if name.startswith('decoder'):
+            outs = [o.name for o in s.get_outputs()]
+            for want in m.get('cross_attention', {}).get('outputs', []):
+                if want not in outs: print('  MISSING output', want); ok = False
     if not ok: raise SystemExit('verification failed')
     print('  all files verified')
 
@@ -443,6 +554,10 @@ if __name__ == '__main__':
     if '--transcribe' in args:
         dump = args[args.index('--dump') + 1] if '--dump' in args else None
         transcribe(args[args.index('--transcribe') + 1], dump)
+    elif '--xattn' in args:
+        m = xattn_from_shipped()
+        write_readme(m, None)
+        check()
     elif '--check' in args:
         check()
     else:

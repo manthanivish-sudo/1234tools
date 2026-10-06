@@ -3994,7 +3994,7 @@
         scenes, look: S.look && S.look.spec, lookLock: S.lookLock,
         brand: { handle: b.handle, handleTouched: !!b.handleTouched, url: S.promote ? '' : b.url, endcard: b.endcard, qr: b.qr, progress: b.progress, safe: b.safe,
           logoKind: b.logoKind === 'site' ? 'site' : 'none', logoLost: b.logoKind === 'upload', utm: b.utm, aiLabel: !!b.aiLabel, madeWith: b.madeWith !== false },
-        captions: { source: S.captions.source === 'auto' ? 'scene' : S.captions.source, chosen: S.captions.chosen, style: S.captions.style },
+        captions: { source: S.captions.source === 'auto' ? 'scene' : S.captions.source, chosen: S.captions.chosen, style: S.captions.style, lang: S.captions.lang || 'en' },
         coverT: S.coverT, sizeKey: S.sizeKey, quality: S.quality, openOnCover: S.openOnCover !== false,
         transAll: S.transAll || 'auto', grade: S.grade || 'none', dest: S.dest || 'custom', fps: fpsOf(S),
         hadVoice: !!S.voice, hadMusic: !!S.music
@@ -4028,6 +4028,7 @@
         if (d.look) setLook(d.look, { replace: true });
         Object.assign(S.captions, { source: d.captions ? d.captions.source : 'scene', chosen: !!(d.captions && d.captions.chosen), segments: [], cues: [] });
         if (d.captions && d.captions.style) Object.assign(S.captions.style, d.captions.style);
+        S.captions.lang = (d.captions && d.captions.lang) || 'en'; try { capLang.value = S.captions.lang; } catch (e) { /* */ }
         S.coverT = d.coverT === undefined ? null : d.coverT; S.openOnCover = d.openOnCover !== false;
         if (d.sizeKey && SIZES[d.sizeKey]) { S.sizeKey = d.sizeKey; S.size = { w: SIZES[d.sizeKey].w, h: SIZES[d.sizeKey].h }; try { sizeSel.value = d.sizeKey; } catch (e) { /* */ } }
         if (d.quality) { S.quality = d.quality; try { qualSel.value = d.quality; } catch (e) { /* */ } }
@@ -5370,7 +5371,11 @@
 
     /* ---------------- captions pane ---------------- */
     const capSource = select('reel-cap-source', [['auto', 'From the voiceover (on this device)'], ['scene', 'The scene text, timed to the scene'], ['none', 'No captions']], 'scene');
-    const capHint = hint('A recorded or uploaded voice is transcribed by Whisper tiny — the first use downloads it (41 MB) from this site and it is kept for next time; English speech in this version. A generated voice needs no transcription: its captions are the script, timed as it was spoken.');
+    const capHint = hint('A recorded or uploaded voice is transcribed by Whisper tiny — the first use downloads it (41 MB) from this site and it is kept for next time. Pick the language spoken; English is the most accurate, and Auto Captions’ page says how the smallest Whisper does in each of the others. A generated voice needs no transcription: its captions are the script, timed as it was spoken.');
+    /* the voice's language: Whisper's own language token (aivid-whisper.js); English unless the visitor picks another */
+    const AClang = A.tools['auto-captions'] && A.tools['auto-captions'].LANGS;
+    const capLang = select('reel-cap-lang', AClang || [['en', 'English']], S.captions.lang || 'en');
+    capLang.addEventListener('change', () => { S.captions.lang = capLang.value; edited(); if (S.voice && !(S.voice.generated) && S.captions.source === 'auto') transcribeVoice(); });
     const capProgress = el('div', 'aiimg-progress'); const capBar = el('i'); capProgress.appendChild(capBar); capProgress.hidden = true;
     const capStatus = el('p', 'aiimg-status', 'Record or upload a voice to get captions from it.'); capStatus.id = 'reel-cap-status'; capStatus.setAttribute('aria-live', 'polite');
     const againBtn = button('Transcribe again', 'btn-ghost', () => transcribeVoice()); againBtn.hidden = true;
@@ -5395,7 +5400,7 @@
     const capAccent = on(colour('reel-cap-accent', st.accent), () => { st.accent = capAccent.value; invalidate(); });
     const capStroke = on(colour('reel-cap-stroke', st.stroke), () => { st.stroke = capStroke.value; invalidate(); });
     const capUpper = on(check('reel-cap-upper', 'UPPERCASE', st.uppercase), () => { st.uppercase = capUpper.input.checked; invalidate(); });
-    panes.captions.append(field('Captions', capSource), capHint, capProgress, capStatus, row(againBtn), segList,
+    panes.captions.append(field('Captions', capSource), field('Language spoken', capLang), capHint, capProgress, capStatus, row(againBtn), segList,
       h('Caption style'), swatches, grid(field('Words on screen', capMode), field('Position', capPos)), field('Size', capSize, 'As a share of the frame width.'),
       grid(field('Text', capFill), field('Highlight', capAccent)), grid(field('Outline', capStroke), capUpper));
     syncSwatches();
@@ -5418,7 +5423,7 @@
       capStatus.textContent = 'Getting the speech model ready…';
       try {
         const res = await Wh.transcribe(voice.samples, {
-          signal: job.signal,
+          signal: job.signal, language: S.captions.lang || 'en',
           onLoad: (p) => { if (p.stage === 'ready') return; capBar.style.width = Math.round((p.fraction || 0) * 100) + '%'; capStatus.textContent = fmtLoad(p); },
           onProgress: (p) => {
             S.captions.status = 'running';

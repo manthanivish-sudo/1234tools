@@ -13,13 +13,14 @@
    "source": "onnx/encoder_model_quantized.onnx"
   },
   "decoder_model_merged_quantized.onnx": {
-   "bytes": 30719241,
-   "sha256": "25e807a962b6349356d0ea5d0dfe530b7e5bf0e2a484aeca0359d03143faddd3",
+   "bytes": 30720049,
+   "sha256": "07eba737bb2f059663729f26a6a18286988872325fb8c842ed494d5c53cc9a02",
    "parts": [
     "decoder_model_merged_quantized.onnx.part0",
     "decoder_model_merged_quantized.onnx.part1"
    ],
-   "source": "onnx/decoder_model_merged_quantized.onnx"
+   "source": "onnx/decoder_model_merged_quantized.onnx + cross_attentions.2/3 outputs (expose_cross_attention)",
+   "upstream_sha256": "25e807a962b6349356d0ea5d0dfe530b7e5bf0e2a484aeca0359d03143faddd3"
   },
   "tokens.json": {
    "bytes": 545096,
@@ -314,8 +315,46 @@
    "outputs": [
     "logits [1, n, 51865]",
     "present.{0-3}.decoder.{key,value} [1, 6, past+n, 64]",
-    "present.{0-3}.encoder.{key,value} [1, 6, 1500, 64]"
+    "present.{0-3}.encoder.{key,value} [1, 6, 1500, 64]",
+    "cross_attentions.{2,3} [6, n, 1500] (added by expose_cross_attention)"
    ]
   }
+ },
+ "cross_attention": {
+  "outputs": [
+   "cross_attentions.2",
+   "cross_attentions.3"
+  ],
+  "layers": [
+   2,
+   3
+  ],
+  "shape": "[heads, n, 1500] float32, softmax over the audio frames",
+  "alignment_heads": [
+   [
+    2,
+    2
+   ],
+   [
+    3,
+    0
+   ],
+   [
+    3,
+    2
+   ],
+   [
+    3,
+    3
+   ],
+   [
+    3,
+    4
+   ],
+   [
+    3,
+    5
+   ]
+  ]
  }
 }

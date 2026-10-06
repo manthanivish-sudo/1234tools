@@ -19,9 +19,9 @@ whisper-tiny/  (used by engine/aivid-whisper.js for /ai-video/auto-captions/)
   Files shipped (sha256 of the whole file; a sharded file lists its parts):
     encoder_model_quantized.onnx             10124990 bytes  2af4a414ca47aa30f61246017e5fe82b0a8d229281d1255ba666a2a7f6b84d19
       from onnx/encoder_model_quantized.onnx
-    decoder_model_merged_quantized.onnx      30719241 bytes  25e807a962b6349356d0ea5d0dfe530b7e5bf0e2a484aeca0359d03143faddd3
+    decoder_model_merged_quantized.onnx      30720049 bytes  07eba737bb2f059663729f26a6a18286988872325fb8c842ed494d5c53cc9a02
       parts: decoder_model_merged_quantized.onnx.part0, decoder_model_merged_quantized.onnx.part1
-      from onnx/decoder_model_merged_quantized.onnx
+      from onnx/decoder_model_merged_quantized.onnx + cross_attentions.2/3 outputs (expose_cross_attention)
     tokens.json                                545096 bytes  c3793c6eeb9d72bb5908f0341af745e8dc2d462848ecbc1d97d2f3f6aa7a57a2
       from vocab.json (ids 0-50256)
     whisper-tiny.json                       the manifest: files, dims, token ids, suppress lists, mel settings
@@ -44,6 +44,9 @@ whisper-tiny/  (used by engine/aivid-whisper.js for /ai-video/auto-captions/)
       out present.{0..3}.decoder.{key,value} float32 [1, 6, past+n, 64]   (fed back as past)
       out present.{0..3}.encoder.{key,value} float32 [1, 6, 1500, 64]     (computed on the first
                                                         step, then fed back unchanged)
+      out cross_attentions.{2,3} float32 [6, n, 1500]  (added here: the softmax of decoder layers
+                                                        2 and 3 over the 1,500 audio frames of 20 ms;
+                                                        the upstream graph computes it but does not return it)
 
   Preprocessing (WhisperFeatureExtractor, mirrored in JS)
     16 kHz mono float32; 30 s windows of 480,000 samples, the last padded with zeros;
@@ -54,7 +57,10 @@ whisper-tiny/  (used by engine/aivid-whisper.js for /ai-video/auto-captions/)
     1e-10, clamped to (max - 8) over the window, then (x + 4) / 4.
 
   Decoding (greedy, as openai/whisper DecodingTask + transcribe.py)
-    prompt <|startoftranscript|><|en|><|transcribe|> - with timestamps (no <|notimestamps|>);
+    prompt <|startoftranscript|><|lang|><|transcribe|> - with timestamps (no <|notimestamps|>);
+    <|lang|> is the language chosen on the page (English when none is given), or for Auto-detect
+    the language token the decoder rates likeliest after <|startoftranscript|> on the first
+    30 s window (openai/whisper detect_language);
     suppress generation_config.suppress_tokens (non-speech and special tokens) at every step,
     begin_suppress_tokens [220, 50257] at the first step, <|notimestamps|> always; timestamp
     rules: after one timestamp a text token must follow, after a text run a timestamp or
@@ -64,7 +70,9 @@ whisper-tiny/  (used by engine/aivid-whisper.js for /ai-video/auto-captions/)
     identical tokens stops the window. Segments follow transcribe.py: text between two
     consecutive timestamps is a segment; a window ending on a single timestamp seeks past
     the whole window, otherwise the next window starts at the last closed timestamp.
-    Word timings are the segment split proportionally to character length (approximate;
-    no cross-attention alignment in this version).
+    Word timings: dynamic time warping over the six alignment heads' cross-attention, as
+    openai/whisper timing.py does (z-normalised per head, median filter of width 7, averaged),
+    one row per text token; the proportional split by character length is the fallback when
+    the outputs are missing or a line is edited into a different number of words.
 
-  Prepared by build/ai-video/prepare-whisper.py on 2026-10-03.
+  Prepared by build/ai-video/prepare-whisper.py on 2026-10-06.

@@ -81,18 +81,18 @@
    ]
   },
   "engine/models/whisper-tiny/decoder_model_merged_quantized.onnx": {
-   "bytes": 30719241,
-   "sha256": "25e807a962b6349356d0ea5d0dfe530b7e5bf0e2a484aeca0359d03143faddd3",
+   "bytes": 30720049,
+   "sha256": "07eba737bb2f059663729f26a6a18286988872325fb8c842ed494d5c53cc9a02",
    "parts": [
     {
      "file": "decoder_model_merged_quantized.onnx.part0",
      "bytes": 20971520,
-     "sha256": "a7d3883db132ecb5f1c85e91e7235cb97c0ff96ef6a339f53712710b2d36e322"
+     "sha256": "e6db2bba9791c306b555dfdee1efb6abb0f233c528e8a427913ad4e560d59cbd"
     },
     {
      "file": "decoder_model_merged_quantized.onnx.part1",
-     "bytes": 9747721,
-     "sha256": "93a7bc88fb5804c8623f564e100cc0b5e93b68af759ceb1090bd3918172cb625"
+     "bytes": 9748529,
+     "sha256": "9bfda45f05bf2069cf716ab72afb92f5563188209a7eb34a9ebf524af4e51f11"
     }
    ]
   }
