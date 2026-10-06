@@ -21,7 +21,7 @@
  *  3d. a fixture TOOL_EXAMPLES before/after is wiped: before left of the
  *      seam, after right of it, mid-wipe;
  *  3e. a batch of three is planned in three palettes;
- *   4. ?preset=paper turns the look light; 4b. each of the 7 visitor
+ *   4. ?preset=paper turns the look light; 4b. each of the 19 visitor
  *      templates makes its own scenes with no overflow; Shuffle look works;
  *   5. the caption copy: link-in-bio line, 3–8 hashtags (#gst, #1234tools),
  *      the share module's credit line; the bio link carries the UTMs;
@@ -163,7 +163,20 @@ const TEMPLATE_TYPES = {
   myth: ['hook', 'versus', 'versus', 'text', 'cta'],
   howto: ['hook', 'point', 'point', 'point', 'steps', 'cta'],
   top5: ['hook', 'point', 'point', 'point', 'point', 'point', 'cta'],
-  testimonial: ['hook', 'quote', 'pain', 'fix', 'cta']
+  testimonial: ['hook', 'quote', 'pain', 'fix', 'cta'],
+  /* the twelve added in wave S (2026-10-06), read off each template's lines by hand */
+  listicle: ['hook', 'point', 'point', 'point', 'point', 'cta'],
+  pov: ['hook', 'text', 'text', 'text', 'cta'],
+  dayinlife: ['hook', 'point', 'point', 'point', 'point', 'point', 'cta'],
+  faq: ['hook', 'pain', 'text', 'pain', 'text', 'cta'],
+  quotecard: ['hook', 'quote', 'text', 'cta'],
+  countdown: ['hook', 'point', 'point', 'point', 'text', 'cta'],
+  productdemo: ['hook', 'pain', 'fix', 'steps', 'text', 'cta'],
+  tutorial: ['hook', 'point', 'point', 'point', 'point', 'text', 'cta'],
+  hottake: ['hook', 'text', 'point', 'point', 'text', 'cta'],
+  thisorthat: ['hook', 'versus', 'versus', 'text', 'cta'],
+  wishiknew: ['hook', 'point', 'point', 'point', 'text', 'cta'],
+  bts: ['hook', 'text', 'text', 'text', 'text', 'cta']
 };
 /* In the page: pin a look (optional), render the last frame of the reel and read the QR on the end card's white plate back. */
 const scanEndCard = (page, spec) => page.evaluate(async (spec) => {
@@ -527,7 +540,7 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
     page.on('dialog', (d) => { const a = dialogAnswer; dialogAnswer = 'accept'; (a === 'dismiss' ? d.dismiss() : d.accept()).catch(() => {}); });
     await gotoTool('');
     const tplOpts = await page.$$eval('#reel-template option', (o) => o.map((x) => x.value).filter(Boolean));
-    check(tplOpts.length === 7, 'the template select offers 7 templates (' + tplOpts.join(', ') + ')');
+    check(tplOpts.length === Object.keys(TEMPLATE_TYPES).length, 'the template select offers ' + Object.keys(TEMPLATE_TYPES).length + ' templates (' + tplOpts.join(', ') + ')');
     const tplLooks = [];
     for (const id of Object.keys(TEMPLATE_TYPES)) {
       await page.select('#reel-template', id);
@@ -591,7 +604,7 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
       return { bad, tools, lines, emptyVO, tpl, sample, rules };
     }, Object.keys(TEMPLATE_TYPES));
     fs.writeFileSync(path.join(OUT, 'voice-over.json'), JSON.stringify(vo, null, 1));
-    check(vo.tools >= 20 && vo.bad.length === 0, 'voice-over suggestions for ' + vo.tools + ' tools (' + vo.lines + ' lines) and all 7 templates hold no Wi-Fi payload, URL, hashtag, handle, UTM link, file name, emoji or symbol' + (vo.bad.length ? ': ' + vo.bad.slice(0, 3).join(' | ') : ''));
+    check(vo.tools >= 20 && vo.bad.length === 0, 'voice-over suggestions for ' + vo.tools + ' tools (' + vo.lines + ' lines) and all ' + Object.keys(TEMPLATE_TYPES).length + ' templates hold no Wi-Fi payload, URL, hashtag, handle, UTM link, file name, emoji or symbol' + (vo.bad.length ? ': ' + vo.bad.slice(0, 3).join(' | ') : ''));
     const qrS = vo.sample['/qr/qr-code-generator/'] || vo.sample['qr/qr-code-generator/'] || [];
     const qrEx = qrS.find((x) => x.type === 'example');
     check(!!qrEx && /WIFI:/.test(qrEx.screen) && /joins the Wi-Fi/.test(qrEx.vo) && !/WIFI:|flatwhite/.test(qrEx.vo), 'QR Code Generator: the screen shows the Wi-Fi payload, the voice-over says "' + (qrEx ? qrEx.vo : '?') + '"');
