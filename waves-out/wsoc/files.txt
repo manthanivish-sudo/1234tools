@@ -60,3 +60,17 @@ build-ai-video.js
 engine/aiimg-thumbnail-maker.js
 engine/ai-image-tools-thumbnail-maker.js
 build/ai-image/tests/thumbnail-maker.js
+engine/social-video-to-gif.js
+engine/social-gif-worker.js
+engine/social-reels-resizer.js
+engine/social-link-in-bio.js
+engine/social-tools-video-to-gif.js
+engine/social-tools-reels-resizer.js
+engine/social-tools-link-in-bio.js
+social/video-to-gif/index.html
+social/reels-resizer/index.html
+social/link-in-bio/index.html
+build/social/tests/video-to-gif.js
+build/social/tests/reels-resizer.js
+build/social/tests/link-in-bio.js
+waves-out/wsoc/shared.diff

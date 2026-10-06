@@ -1,0 +1,523 @@
+# wave S (social) — shared files touched, as unified diffs against main a90208e9d
+# (branch wave/wsoc-2026-10-06). One line per file on why:
+#
+# assets/app.css           WAVE-S block appended at the end (reel, social, thumbnail, captions sub-blocks); no existing rule edited
+# build/sections.js        the '/social/' section entry ("Social Media Tools", head "Social Media", noun 'tool')
+# build-sidebar.js         ['/social/', 'i-social'] in ORDER after AI Video; build-social.js refuses to run without it
+# build/release.js         ['social', 'build-social.js'] in GENERATORS, after ai-video
+# build-site.js            'social' in the sitemap section list; REL_AFFINITY for social, and social added to ai-video's
+# build-pwa.js             CATEGORY for social
+# build-hubs.js            the /social/ hub intro and its three finder starters
+# build/jobs.js            section default, verb/io lines, card descriptions and START for the seven /social/ tools; Auto Captions card mentions ASS
+# build/content/_check.js  'social' in FILE_SECTIONS, so /social/ pages meet the file-and-text depth rules
+# build/tests/claims.js    'social' in SECTIONS and claims/social.js in the claims file list
+# engine/vendor/README.txt a line for noto-emoji/ (Apache-2.0 subset used by the Reel Maker and Thumbnail Maker stickers)
+#
+# Not included (generated; the release rewrites them): sw.js V, assets/search-index.js, assets/icons.svg,
+# sitemap-1.xml, 404.html, index.html's home card, privacy/index.html and the site-wide tool count.
+
+diff --git a/assets/app.css b/assets/app.css
+index f09ae7149..b81af3569 100644
+--- a/assets/app.css
++++ b/assets/app.css
+@@ -4307,3 +4307,302 @@ html.is-embed .tool > .depth { display: none !important; }
+ .embed-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: auto; font-size: .84rem; }
+ .share-pop .io-actions a.share-embed-more { margin-left: auto; }
+ /* ==== /embed-page ==== */
++
++/* WAVE-S start */
++/* WAVE-S reel start */
++/* Reel Maker: the timeline, the clip trimmer, side safe bands, transitions, stickers (engine/aivid-reel-maker.js, aivid-reel-fx.js) */
++.reel.is-fx .reel-canvas { touch-action: none; }
++.reel-safe-band.is-left, .reel-safe-band.is-right { right: auto; left: auto; }
++.reel-safe-band.is-left { left: 0; border-right: 1px dashed rgba(255, 120, 120, .55); }
++.reel-safe-band.is-right { right: 0; border-left: 1px dashed rgba(255, 120, 120, .55); }
++.reel-safe-band[hidden] { display: none; }
++.reel-tl { margin-top: 10px; display: grid; gap: 6px; }
++.reel-tl-bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
++.reel-tl-label { font: 600 .78rem/1.2 var(--font-body); letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); margin-right: auto; }
++.reel-tl-bar .btn-ghost { font-size: .78rem; padding: 4px 10px; }
++.reel-tl-wrap { position: relative; height: 46px; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
++.reel-tl-track { list-style: none; margin: 0; padding: 0; position: absolute; inset: 4px 0; }
++.reel-tl-block {
++  position: absolute; top: 0; bottom: 0; box-sizing: border-box; display: flex; align-items: center; padding: 0 12px 0 6px; min-width: 6px;
++  background: var(--surface-strong); border: 1px solid var(--border); border-radius: 8px; cursor: grab; touch-action: none; user-select: none;
++  font: 600 .72rem/1 var(--font-body); color: var(--text-2); overflow: hidden; white-space: nowrap;
++}
++.reel-tl-block[data-type=media] { background: color-mix(in srgb, var(--cyan) 14%, var(--bg-1)); }
++.reel-tl-block.is-live { border-color: var(--border-gold); box-shadow: 0 0 0 1px var(--border-gold) inset; color: var(--text-1); }
++.reel-tl-block.is-drag { z-index: 3; opacity: .85; cursor: grabbing; }
++.reel-tl-block:focus-visible, .reel-tl-edge:focus-visible, .reel-trim-h:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
++.reel-tl-name { overflow: hidden; text-overflow: ellipsis; }
++.reel-tl-edge { position: absolute; top: 0; right: 0; bottom: 0; width: 10px; cursor: ew-resize; touch-action: none; background: linear-gradient(90deg, transparent, var(--border-gold)); }
++.reel-tl-beats { position: absolute; inset: 0; pointer-events: none; }
++.reel-tl-beat { position: absolute; top: 0; bottom: 0; width: 1px; background: color-mix(in srgb, var(--accent) 70%, transparent); }
++.reel-tl-beat::after { content: ""; position: absolute; top: 0; left: -2px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
++.reel-tl-play { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--text-1); pointer-events: none; }
++.reel-trim { display: grid; gap: 4px; }
++.reel-trim[hidden] { display: none; }
++.reel-trim-label { font: 500 .74rem/1.3 var(--font-body); color: var(--text-2); }
++.reel-trim-bar { position: relative; height: 26px; background: var(--bg-1); border: 1px solid var(--border); border-radius: 8px; }
++.reel-trim-win { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--cyan) 22%, transparent); border-top: 2px solid var(--cyan); border-bottom: 2px solid var(--cyan); }
++.reel-trim-h { position: absolute; top: -3px; bottom: -3px; width: 14px; margin-left: -7px; border-radius: 4px; background: var(--cyan); cursor: ew-resize; touch-action: none; }
++.reel-trans { font-size: .8rem; }
++.reel-stk-kinds { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
++.reel-stk-grid { display: flex; flex-wrap: wrap; gap: 6px; max-height: 220px; overflow: auto; margin: 8px 0; }
++.reel-stk-grid:empty { display: none; }
++.reel-stk-btn { font-size: .78rem; padding: 5px 10px; }
++.reel-stk-emoji { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; cursor: pointer; background: var(--bg-0); border: 1px solid var(--border); border-radius: 10px; }
++.reel-stk-emoji:hover, .reel-stk-emoji:focus-visible { border-color: var(--border-gold); }
++.reel-stk-emoji img { width: 32px; height: 32px; }
++.reel-stk-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
++.reel-stk-item { padding: 8px 10px; background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); }
++.reel-stk-item.is-on { border-color: var(--border-gold); }
++.reel-stk-item .aiimg-row { justify-content: space-between; }
++@media (max-width: 520px) { .reel-tl-wrap { height: 40px; } .reel-tl-name { font-size: .66rem; } }
++/* WAVE-S reel end */
++/* WAVE-S social start */
++/* Social Media Tools (/social/): carousel, post maker, caption counter, engagement rate (engine/social-*.js) */
++/* the reading part cites long addresses (developers.facebook.com/…): let them break on a phone */
++.social-tool .depth p, .social-tool .depth li { overflow-wrap: anywhere; }
++.social-tool .aiimg-studio { grid-template-columns: minmax(0, 1fr) 380px; }
++.social-phone { position: relative; width: min(100%, 340px); margin: 0 auto; padding: 14px 10px 18px; background: #0b0d14; border: 1px solid var(--border); border-radius: 34px; box-shadow: var(--shadow-card); }
++.social-phone::before { content: ""; display: block; width: 64px; height: 6px; margin: 0 auto 10px; border-radius: 999px; background: rgba(255, 255, 255, .16); }
++.social-phone .aiimg-canvas { width: 100%; height: auto; max-height: none; border-radius: 6px; cursor: grab; }
++.social-nav { justify-content: center; }
++.social-counter { min-width: 7.5em; text-align: center; font-size: .86rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
++.social-warn { min-height: 1.4em; margin: 8px 0 0; }
++.social-warn:empty { min-height: 0; }
++.social-drop { margin-bottom: 12px; padding: 14px; }
++.social-drop.is-over, .social-slide.is-over { border-color: var(--accent); background: var(--surface-strong); }
++.social-slides { display: grid; gap: 10px; margin-bottom: 12px; }
++.social-slide { padding: 10px 12px; background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); }
++.social-slide.is-current { border-color: var(--border-gold); }
++.social-slide .field { margin-bottom: 8px; }
++.social-slide-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
++.social-slide-head strong { margin-right: auto; font-size: .86rem; }
++.social-mini { font-size: .78rem; padding: 4px 10px; min-height: 30px; }
++.social-slide-photo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: .8rem; }
++.social-photo-name { color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 14em; }
++.social-tpls { margin: -4px 0 12px; }
++.social-tpls .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--text-1); background: var(--surface-strong); }
++.social-job { margin: 10px 0 0; }
++.social-job-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
++.social-job-row .aiimg-status { margin: 0; flex: 1; min-width: 12em; }
++.social-job-status.is-ok { color: var(--text-1); }
++.social-job-status.is-error { color: #ff8a8a; }
++.social-post-stage { display: flex; justify-content: center; }
++.social-post-canvas { max-height: 62vh; width: auto; max-width: 100%; }
++.social-sizes { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; align-items: end; }
++.social-size { margin: 0; padding: 8px; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm); display: grid; gap: 6px; justify-items: center; }
++.social-size canvas { display: block; max-width: 100%; height: auto; max-height: 120px; border-radius: 4px; }
++.social-size figcaption { font-size: .72rem; color: var(--text-3); text-align: center; line-height: 1.3; }
++.social-size.is-current { border-color: var(--border-gold); }
++.social-size.is-off { opacity: .5; }
++.social-size-checks { display: grid; gap: 4px; margin-bottom: 12px; }
++.social-cc-text { width: 100%; min-height: 180px; font-family: var(--font-body); font-size: 16px; line-height: 1.5; resize: vertical; }
++.social-cc-actions { margin: 8px 0 10px; }
++.social-cc .field-check { margin: 4px 0 10px; }
++.social-cc-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 14px; margin: 6px 0 4px; font-size: .88rem; }
++.social-cc-stats .stat-row { display: flex; justify-content: space-between; gap: 8px; padding: 6px 10px; background: var(--bg-1); border: 1px solid var(--border); border-radius: 8px; }
++.social-cc-stats .stat-val { font-weight: 600; color: var(--text-1); font-variant-numeric: tabular-nums; }
++.social-cc-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-bottom: 10px; }
++.social-cc-row { padding: 9px 12px; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm); }
++.social-cc-rowhead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: .88rem; }
++.social-cc-rowhead strong { margin-right: auto; }
++.social-cc-num { font-variant-numeric: tabular-nums; color: var(--text-1); }
++.social-cc-left { font-size: .78rem; color: var(--text-3); font-variant-numeric: tabular-nums; }
++.social-cc-meter { height: 6px; margin: 7px 0 6px; background: var(--bg-2); border-radius: 999px; overflow: hidden; }
++.social-cc-meter > i { display: block; height: 100%; background: #40c478; }
++.social-cc-row.is-near .social-cc-meter > i { background: var(--gold-2); }
++.social-cc-row.is-over { border-color: rgba(255, 99, 99, .55); }
++.social-cc-row.is-over .social-cc-meter > i { background: #ff6363; }
++.social-cc-row.is-over .social-cc-left { color: #ff8a8a; font-weight: 600; }
++.social-cc-unit { display: block; font-size: .76rem; color: var(--text-3); line-height: 1.4; }
++.social-cc-preview { white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px 14px; background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: .92rem; line-height: 1.45; min-height: 3em; }
++.social-cc-more { color: var(--text-3); margin-left: 4px; }
++.social-cc-fixed { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 220px; overflow: auto; padding: 10px 12px; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm); font: .86rem/1.45 var(--font-body); }
++.social-cc-fixed[hidden] { display: none; }
++.social-er { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 18px; align-items: start; }
++.social-er-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
++.social-er-form .field { margin-bottom: 12px; min-width: 0; }
++.social-er-form .control { width: 100%; font-variant-numeric: tabular-nums; }
++.social-er-form .control[aria-invalid="true"] { border-color: #ff6363; }
++.social-er-total { margin: 4px 0 10px; font-size: .9rem; color: var(--text-2); }
++.social-er-total:empty { display: none; }
++.social-er-results { display: grid; gap: 8px; }
++.social-er-card { display: grid; gap: 3px; padding: 10px 14px; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm); }
++.social-er-card.is-empty { opacity: .72; }
++.social-er-label { font-size: .84rem; color: var(--text-2); }
++.social-er-value { font: 700 1.5rem/1.2 var(--font-head); color: var(--text-1); font-variant-numeric: tabular-nums; }
++.social-er-formula { font-family: var(--font-mono); font-size: .76rem; color: var(--text-3); overflow-wrap: anywhere; }
++.social-er-worked { font-family: var(--font-mono); font-size: .76rem; color: var(--text-2); overflow-wrap: anywhere; }
++.social-er-why { font-size: .78rem; color: var(--text-3); }
++.social-er-note { margin: 10px 0 0; }
++@media (max-width: 960px) {
++  .social-tool .aiimg-studio { grid-template-columns: 1fr; }
++  .social-er { grid-template-columns: 1fr; }
++}
++@media (max-width: 520px) {
++  .social-er-form { grid-template-columns: 1fr; }
++  .social-phone { width: min(100%, 300px); }
++  .social-cc-rows { grid-template-columns: 1fr; }
++}
++/* Video to GIF, Reels Resizer, Link in Bio (/social/, engine/social-video-to-gif.js, social-reels-resizer.js, social-link-in-bio.js) */
++.sv-hidden-video { position: absolute; left: 0; top: 0; width: 2px; height: 2px; opacity: .01; pointer-events: none; }
++.sv-canvas { max-height: 64vh; width: auto; cursor: default; }
++.sv-reel-canvas { max-height: 70vh; width: auto; }
++.sv-reel-stage { min-height: 320px; }
++.sv-trim { position: relative; height: 44px; margin: 12px 11px 2px; touch-action: none; }
++.sv-trim-track { position: absolute; left: 0; right: 0; top: 18px; height: 8px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px; cursor: pointer; }
++.sv-trim-sel { position: absolute; top: 18px; height: 8px; background: var(--accent); border-radius: 999px; pointer-events: none; }
++.sv-trim-play { position: absolute; top: 10px; width: 2px; height: 24px; margin-left: -1px; background: var(--text-1); pointer-events: none; }
++.sv-trim-h { position: absolute; top: 4px; width: 22px; height: 36px; margin-left: -11px; padding: 0; background: var(--bg-1); border: 2px solid var(--accent); border-radius: 8px; cursor: ew-resize; touch-action: none; }
++.sv-trim-h::after { content: ""; position: absolute; left: 8px; top: 9px; width: 2px; height: 14px; background: var(--accent); border-radius: 2px; }
++.sv-trim-h:focus-visible { outline: 2px solid var(--text-1); outline-offset: 2px; }
++.sv-times { display: flex; gap: 10px; flex-wrap: wrap; }
++.sv-times .field { flex: 1; min-width: 8em; margin-bottom: 6px; }
++.sv-times .control { width: 100%; font-variant-numeric: tabular-nums; }
++.sv-len { min-height: 1.5em; margin: 4px 0 0; }
++.sv-est { min-height: 4.5em; margin: 6px 0 10px; padding: 8px 12px; font-size: .86rem; line-height: 1.45; color: var(--text-2); background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); }
++.sv-est.is-warn { border-color: var(--border-gold); color: var(--text-1); }
++.sv-status { min-height: 1.5em; }
++.sv-job .aiimg-row { margin-bottom: 8px; }
++.sv-route { margin-top: 0; }
++.sv-result-video { max-height: 60vh; width: auto; }
++.sv-mini { min-width: 34px; min-height: 34px; padding: 4px 8px; font-size: .86rem; line-height: 1; }
++.sv-studio .aiimg-side .control, .sv-lib-sec .control { font-family: var(--font-body); font-size: 15px; padding: 9px 12px; }
++.sv-studio .aiimg-side .field { margin-bottom: 12px; }
++.sv-studio .aiimg-side select.control, .sv-studio .aiimg-side textarea.control, .sv-studio .aiimg-side input[type="text"].control { width: 100%; }
++.sv-studio .aiimg-side textarea.control { resize: vertical; line-height: 1.4; }
++.sv-lib-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; }
++.sv-lib-editor { min-width: 0; }
++.sv-lib-sec { margin-bottom: 14px; padding: 12px 14px; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius); }
++.sv-lib-sec .aiimg-h { margin-top: 0; }
++.sv-lib-sec .field { margin-bottom: 10px; }
++.sv-lib-sec .control { width: 100%; }
++.sv-lib-photo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
++.sv-lib-thumb { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); }
++.sv-lib-thumb[hidden] { display: none; }
++.sv-lib-list { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
++.sv-lib-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 6px; align-items: center; padding: 8px; background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); }
++.sv-lib-row .control { width: 100%; min-width: 0; padding: 8px 10px; font-size: 15px; }
++.sv-lib-row .control[aria-invalid="true"] { border-color: #ff6363; }
++.sv-lib-rowbtns { display: flex; gap: 4px; }
++.sv-lib-err { grid-column: 1 / -1; margin: 0; }
++.sv-lib-err:empty { display: none; }
++.sv-lib-themes { margin-bottom: 12px; }
++.sv-lib-theme { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font: inherit; font-size: .84rem; }
++.sv-lib-theme[aria-pressed="true"] { border-color: var(--accent); background: var(--surface-strong); color: var(--text-1); }
++.sv-lib-swatch { width: 16px; height: 16px; border-radius: 50%; border: 3px solid; flex: none; }
++.sv-lib-size { margin: 0 0 6px; font-size: .88rem; color: var(--text-1); font-variant-numeric: tabular-nums; }
++.sv-lib-left { margin: 0 0 8px; padding-left: 18px; font-size: .84rem; color: #ff8a73; }
++.sv-lib-left:empty { display: none; }
++.sv-lib-help { margin: 0 0 14px; padding: 10px 14px; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius); font-size: .9rem; }
++.sv-lib-help summary { cursor: pointer; font-weight: 600; color: var(--text-1); }
++.sv-lib-help p { color: var(--text-2); }
++.sv-lib-previewcol { position: sticky; top: calc(var(--hdr-h) + 12px); min-width: 0; }
++.sv-lib-previewcol .aiimg-h { margin-top: 0; }
++.sv-lib-phone { width: min(100%, 360px); margin: 0 auto; padding: 12px 8px 14px; background: #0b0d14; border: 1px solid var(--border); border-radius: 30px; box-shadow: var(--shadow-card); }
++.sv-lib-frame { display: block; width: 100%; height: 620px; border: 0; border-radius: 20px; background: #ffffff; }
++.sv-lib-contrast { text-align: center; }
++[data-theme="light"] .sv-lib-left { color: #8c1d0c; }
++@media (prefers-color-scheme: light) { [data-theme="system"] .sv-lib-left { color: #8c1d0c; } }
++@media (max-width: 960px) {
++  .sv-lib-grid { grid-template-columns: 1fr; }
++  .sv-lib-previewcol { position: static; }
++}
++@media (max-width: 520px) {
++  .sv-lib-row { grid-template-columns: minmax(0, 1fr) auto; }
++  .sv-lib-row .lib-link-title, .sv-lib-row .lib-icon-kind { grid-column: 1 / -1; }
++  .sv-lib-frame { height: 540px; }
++}
++/* WAVE-S social end */
++/* WAVE-S thumbnail start */
++/* the preview takes the chosen size's shape, and a tall one fits the screen */
++.aiimg-thumb .aiimg-canvas { aspect-ratio: var(--thumb-ar, 16 / 9); width: min(100%, calc(74vh * var(--thumb-arn, 1.7778))); height: auto; max-height: none; margin-inline: auto; }
++.aiimg-thumb-blank { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin: 10px 0 0; }
++.aiimg-thumb-blank .aiimg-thumb-note { flex-basis: 100%; margin: 0; text-align: center; }
++.aiimg-thumb-blank[hidden] { display: none; }
++.aiimg-thumb-bar .aiimg-thumb-fmt { width: auto; max-width: 100%; padding: 7px 10px; font-size: .88rem; }
++.aiimg-thumb-bar .btn-ghost:disabled { opacity: .45; cursor: default; }
++.aiimg-thumb-bar .field-check { margin: 0; }
++.aiimg-thumb-keys { margin: 8px 0 0; font-size: .78rem; line-height: 1.5; color: var(--text-3); }
++.aiimg-thumb-note { margin: 0 0 10px; font-size: .86rem; line-height: 1.5; color: var(--text-2); min-height: 1.3em; }
++.aiimg-thumb-note.is-error { color: #ff9d8a; }
++[data-theme="light"] .aiimg-thumb-note.is-error { color: #b42318; }
++@media (prefers-color-scheme: light) { [data-theme="system"] .aiimg-thumb-note.is-error { color: #b42318; } }
++.aiimg-thumb-note.is-ok { color: var(--accent); }
++.aiimg-thumb-tpls { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr)); gap: 8px; }
++.aiimg-thumb-tpl { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px; min-width: 0; cursor: pointer; font: inherit; font-size: .78rem; line-height: 1.25;
++  color: var(--text-2); background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); }
++.aiimg-thumb-tpl canvas { display: block; width: 100%; max-height: 150px; object-fit: contain; border-radius: 6px; background: var(--bg-2); }
++.aiimg-thumb-tpl:hover, .aiimg-thumb-tpl:focus-visible { border-color: var(--border-gold); color: var(--text-1); outline: none; }
++.aiimg-thumb-tpl.is-on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); color: var(--text-1); }
++.aiimg-thumb-shapes { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 6px; margin-bottom: 8px; }
++.aiimg-thumb-shape { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; min-width: 0; cursor: pointer; font: inherit; font-size: .72rem;
++  color: var(--text-2); background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); }
++.aiimg-thumb-shape canvas { width: 54px; height: 33px; }
++.aiimg-thumb-shape:hover, .aiimg-thumb-shape:focus-visible { border-color: var(--border-gold); color: var(--text-1); outline: none; }
++.aiimg-thumb-busy { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; margin-bottom: 10px; font-size: .84rem; color: var(--text-2); }
++.aiimg-thumb-busy[hidden] { display: none; }
++.aiimg-thumb-busy .aiimg-progress { grid-column: 1; margin: 0; }
++.aiimg-thumb-busy .btn-ghost { grid-column: 2; grid-row: 1 / span 2; }
++.aiimg-thumb-picker { margin-bottom: 12px; padding: 10px; background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); }
++.aiimg-thumb-picker[hidden] { display: none; }
++.aiimg-thumb-picker .control { width: 100%; margin-bottom: 8px; }
++.aiimg-thumb-emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 4px; }
++.aiimg-thumb-emoji-grid:not(.aiimg-thumb-recent) { max-height: 280px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
++.aiimg-thumb-recent { margin-bottom: 8px; }
++.aiimg-thumb-recent[hidden] { display: none; }
++.aiimg-thumb-egroup { grid-column: 1 / -1; margin: 6px 0 2px; font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); }
++.aiimg-thumb-emo { display: grid; place-items: center; height: 38px; padding: 0; cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: 8px; }
++.aiimg-thumb-emo img { width: 28px; height: 28px; }
++.aiimg-thumb-emo:hover, .aiimg-thumb-emo:focus-visible { background: var(--bg-2); border-color: var(--border-gold); outline: none; }
++.aiimg-thumb-emoji-grid [hidden] { display: none; }
++.aiimg-thumb-sted[hidden], .aiimg-thumb-sted .field[hidden], .aiimg-thumb-sted .field-check[hidden], .aiimg-thumb-sted .btn-ghost[hidden] { display: none; }
++.aiimg-thumb-sted > .btn-ghost { margin-bottom: 12px; }
++.aiimg-thumb-stack { display: grid; gap: 6px; }
++.aiimg-thumb-stackrow { display: flex; align-items: center; gap: 4px; padding: 4px 4px 4px 6px; min-width: 0;
++  background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); }
++.aiimg-thumb-stackrow.is-sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
++.aiimg-thumb-stackrow.is-hidden .aiimg-thumb-stackname { opacity: .5; text-decoration: line-through; }
++.aiimg-thumb-stackname { flex: 1; min-width: 0; padding: 6px 4px; text-align: left; cursor: pointer; font: inherit; font-size: .86rem; color: var(--text-1);
++  background: transparent; border: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.aiimg-thumb-stackname:focus-visible { outline: 2px solid var(--border-gold); outline-offset: 1px; border-radius: 4px; }
++.aiimg-thumb-ib { display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; flex: none; }
++.aiimg-thumb-stackrow { gap: 3px; }
++.aiimg-thumb-ib:disabled { opacity: .35; cursor: default; }
++.aiimg-thumb-projects { display: grid; gap: 8px; }
++.aiimg-thumb-proj { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px; background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); }
++.aiimg-thumb-proj img { width: 64px; height: 40px; object-fit: cover; border-radius: 4px; flex: none; background: var(--bg-2); }
++.aiimg-thumb-projmeta { display: grid; flex: 1; min-width: 120px; font-size: .78rem; color: var(--text-3); }
++.aiimg-thumb-projmeta strong { font-size: .9rem; color: var(--text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++.aiimg-thumb .aiimg-pane .aiimg-row > .btn-ghost[hidden] { display: none; }
++.aiimg-thumb-segcancel { margin: 0 0 12px; }
++@media (max-width: 960px) {
++  .aiimg-thumb .aiimg-canvas { width: min(100%, calc(66vh * var(--thumb-arn, 1.7778))); }
++}
++/* WAVE-S thumbnail end */
++/* WAVE-S captions start */
++/* Auto Captions: language row, keywords, drag to place, the four new looks */
++.aivid-langbox { margin: 0 0 12px; }
++.aivid-langbox .field-hint { margin: 0; }
++.aivid-langrow, .aivid-keyrow, .aivid-posrow { align-items: end; margin-bottom: 6px; }
++.aivid-langrow .field, .aivid-keyrow .field, .aivid-posrow .field { margin: 0; flex: 1 1 180px; min-width: 0; }
++.aivid-progrow { flex-wrap: nowrap; margin-bottom: 0; }
++.aivid-progrow .aiimg-progress { flex: 1; min-width: 0; margin: 0 0 12px; }
++.aivid-progrow .btn-ghost { margin: 0 0 12px; font-size: .74rem; padding: 3px 10px; }
++.aivid-progrow .btn-ghost[hidden], .aivid-segs[hidden], .aivid-wordview[hidden] { display: none; }
++.aivid-wordview { display: grid; gap: 6px; margin: 10px 0 12px; max-height: 46vh; overflow: auto; }
++.aivid-wordline { margin: 0; padding: 6px 8px; line-height: 1.9; background: var(--bg-0); border: 1px solid var(--border); border-radius: var(--radius-sm); }
++.aivid-word { font: inherit; font-size: 14px; line-height: 1.4; color: var(--text-1); background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 0 3px; cursor: pointer; }
++.aivid-word:hover, .aivid-word:focus-visible { border-color: var(--border-gold); }
++.aivid-word.is-key { background: var(--accent); color: var(--bg-0); }
++.aivid-timing:empty { display: none; }
++.aivid-canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
++.aivid-canvas.is-grab { cursor: grab; }
++.aivid-canvas.is-dragging { cursor: grabbing; touch-action: none; }
++.aivid-sample.is-box em { padding: 0 3px; border-radius: 4px; background: #f7c948; color: #0b1020; text-shadow: none; }
++.aivid-sample.is-yellow { font-weight: 900; -webkit-text-stroke: .6px #000; }
++.aivid-sample.is-yellow em { color: #f7c948; }
++.aivid-sample.is-neon em { color: #f7c948; text-shadow: 0 0 6px #f7c948, 0 0 2px #f7c948; }
++.aivid-sample.is-stack { font-size: .95rem; font-weight: 900; -webkit-text-stroke: .5px #000; }
++/* WAVE-S captions end */
++/* WAVE-S end */
+diff --git a/build-hubs.js b/build-hubs.js
+index d01073c70..babe48b42 100644
+--- a/build-hubs.js
++++ b/build-hubs.js
+@@ -73,6 +73,7 @@ const INTRO = {
+   '/image/': 'Image tools that run in your browser: compress an image, convert PNG to JPG or WebP, resize images in bulk, crop, rotate, remove a background, blur a face, strip EXIF data, and turn images into a PDF. Your photos stay on your device from start to finish.',
+   '/ai-image/': 'AI photo tools that run on your own device: remove or blur a background, cut a sticker, erase an object or a person, blur faces, swap the sky, upscale, add film grain, make a 3D parallax clip or a thumbnail, or put text behind the subject. Small models your browser downloads once; export PNG, GIF or MP4 with no upload, no account and no watermark.',
+   '/ai-video/': 'AI video tools that run on your own device. Reel Maker turns a script into a 9:16 Reel with animated text, your screenshots or screen recording, voice, music and captions; Auto Captions transcribes speech with Whisper inside your browser and burns word-by-word captions into a video, with SRT and VTT alongside. Nothing leaves your device; no upload, no account, no watermark.',
++  '/social/': 'Social media tools that run in your browser: make an Instagram or LinkedIn carousel from text slides and photos, design quote and announcement posts in your brand colours, check a caption against every platform’s character limit, work out an engagement rate the ways people quote it, turn a clip into a GIF or a landscape video into a 9:16 one, and build a link-in-bio page as one HTML file. Nothing you add is uploaded.',
+   '/text/': 'Text tools in the browser: a word counter with reading time, a text compare tool that shows the differences, readability scores, text clean-up, number to words, Morse code and Caesar cipher translators, and a password generator. Paste text, get the answer; nothing is stored.',
+   '/mathematics/': 'Maths calculators that show the working: a percentage calculator, a fraction calculator, a quadratic equation solver, a statistics calculator for mean, median and standard deviation, LCM and GCD, prime factorisation, a Roman numeral converter, a number base converter and a scientific calculator.',
+   '/finance/': 'Finance calculators for everyday decisions: a compound interest calculator with regular contributions, a loan payment calculator that shows the total interest paid, and a VAT and sales tax calculator that works in both directions. Each one shows the formula it used.',
+@@ -171,6 +172,7 @@ const STARTERS = {
+   '/image/': ['compress a JPEG', 'PNG to WebP', 'remove a photo background'],
+   '/ai-image/': ['remove a photo background', 'erase a person from a photo', 'text behind a person in a photo'],
+   '/ai-video/': ['make a reel from text', 'captions for a video', 'add a voiceover to a reel'],
++  '/social/': ['make an Instagram carousel', 'Instagram caption character limit', 'engagement rate from likes'],
+   '/text/': ['count the words in my essay', 'compare two texts', 'readability of this text'],
+   '/mathematics/': ['what is 15% of 240', 'solve a quadratic equation', 'mean and standard deviation'],
+   '/finance/': ['compound interest on savings', 'monthly payment on a loan', 'add VAT to a price'],
+diff --git a/build-pwa.js b/build-pwa.js
+index 3aa5caed1..d4367a356 100644
+--- a/build-pwa.js
++++ b/build-pwa.js
+@@ -142,7 +142,7 @@ const CATEGORY = {
+   qr: ['utilities', 'productivity'], image: ['photo', 'utilities'],
+   pdf: ['productivity', 'utilities'], text: ['productivity'], time: ['utilities'],
+   utilities: ['utilities'], design: ['graphics'], 'ai-image': ['photo', 'graphics'],
+-  'ai-video': ['video', 'photo']
++  'ai-video': ['video', 'photo'], social: ['social', 'photo']
+ };
+ 
+ function manifestFor(tool, meta) {
+diff --git a/build-sidebar.js b/build-sidebar.js
+index af0b2e3f8..2b7284e02 100644
+--- a/build-sidebar.js
++++ b/build-sidebar.js
+@@ -57,6 +57,7 @@ const ORDER = [
+   ['/image/', 'i-image'],
+   ['/ai-image/', 'i-ai-image'],
+   ['/ai-video/', 'i-ai-video'],
++  ['/social/', 'i-social'],
+   ['/text/', 'i-text'],
+   ['/mathematics/', 'i-mathematics'],
+   ['/finance/', 'i-finance'],
+diff --git a/build-site.js b/build-site.js
+index f2bac6e1a..2fe5cefe6 100644
+--- a/build-site.js
++++ b/build-site.js
+@@ -177,7 +177,7 @@ const noIndexPages = () => classified().noindex;
+  */
+ const SECTIONS = ['finance', 'mathematics', 'engineering', 'health', 'design',
+   'utilities', 'time', 'developer', 'business', 'education', 'india', 'image',
+-  'text', 'conversions', 'pdf', 'qr', 'ai-image', 'ai-video', 'ai'];
++  'text', 'conversions', 'pdf', 'qr', 'ai-image', 'ai-video', 'social', 'ai'];
+ 
+ /**
+  * The single pages that are not tools. Most change on the order of never, and
+@@ -469,7 +469,8 @@ const REL_AFFINITY = {
+   design:      ['image', 'conversions/length'],
+   image:       ['design', 'ai-image', 'ai-video'],
+   'ai-image':  ['image', 'design', 'ai-video'],
+-  'ai-video':  ['ai-image', 'image'],
++  'ai-video':  ['ai-image', 'image', 'social'],
++  social:      ['ai-video', 'ai-image', 'image'],
+   finance:     ['business', 'india'],
+   business:    ['finance', 'india'],
+   india:       ['finance', 'business'],
+diff --git a/build/content/_check.js b/build/content/_check.js
+index 207143c88..8a663d5a1 100644
+--- a/build/content/_check.js
++++ b/build/content/_check.js
+@@ -91,7 +91,7 @@ function calculatorPages(root) {
+ }
+ 
+ /** The tools that work on files and text: every tool page in these sections. */
+-const FILE_SECTIONS = ['image', 'pdf', 'text', 'developer', 'qr'];
++const FILE_SECTIONS = ['image', 'pdf', 'text', 'developer', 'qr', 'social'];
+ 
+ function filePages(root) {
+   const out = [];
+diff --git a/build/jobs.js b/build/jobs.js
+index 69bb250c9..8e575227b 100644
+--- a/build/jobs.js
++++ b/build/jobs.js
+@@ -44,6 +44,7 @@ const SECTION_DEFAULT = {
+   '/image/':       ['Convert', 'Image → image'],
+   '/ai-image/':    ['Make', 'Photo → PNG/GIF/MP4'],
+   '/ai-video/':    ['Make', 'Video → MP4'],
++  '/social/':      ['Make', 'Text → post images'],
+   '/text/':        ['Check', 'Text → result'],
+   '/mathematics/': ['Calculate', 'Numbers → result'],
+   '/finance/':     ['Calculate', 'Figures → result'],
+@@ -228,6 +229,14 @@ const JOBS = {
+   /* ai-video */
+   '/ai-video/auto-captions/': ['Make', 'Video → captioned MP4 + SRT'],
+   '/ai-video/reel-maker/': ['Make', 'Script → 9:16 MP4 reel'],
++  /* social */
++  '/social/carousel-maker/': ['Make', 'Slides → PNG ZIP or PDF'],
++  '/social/social-post-maker/': ['Make', 'Text + brand → post images'],
++  '/social/caption-counter/': ['Check', 'Caption → limits per platform'],
++  '/social/engagement-rate-calculator/': ['Calculate', 'Likes, followers → rates'],
++  '/social/video-to-gif/': ['Make', 'Video → animated GIF'],
++  '/social/reels-resizer/': ['Make', 'Landscape video → 9:16 MP4'],
++  '/social/link-in-bio/': ['Make', 'Links → one HTML page'],
+ 
+   /* text */
+   '/text/word-counter/': ['Check', 'Text → words, reading time'],
+@@ -428,8 +437,15 @@ const DESCS = {
+   '/ai-image/face-blur/': 'Blur or pixelate every face in a photo or short video and tap the ones to keep. PNG or MP4 out.',
+   '/ai-image/image-upscaler/': 'Upscale a photo 2× or 4×, or unblur it at its own size, with Real-ESRGAN. PNG, JPEG or WebP out.',
+   '/ai-image/film-grain/': 'Film grain, light leaks, VHS tracking, a date stamp and faded colour. Seven presets; PNG, GIF or MP4.',
+-  '/ai-video/auto-captions/': 'Word-by-word animated captions on a video, transcribed offline by Whisper. MP4 with sound, SRT and VTT.',
++  '/ai-video/auto-captions/': 'Word-by-word animated captions on a video, transcribed offline by Whisper. MP4 with sound, SRT, VTT, ASS.',
+   '/ai-video/reel-maker/': 'A script becomes a 9:16 reel: animated text, screenshots or screen recording, voice, music, captions. MP4 out.',
++  '/social/carousel-maker/': 'Instagram and LinkedIn carousels from text slides and photos: a ZIP of PNGs, or one PDF for LinkedIn.',
++  '/social/social-post-maker/': 'Quote and announcement posts in your brand colours, logo and fonts, exported in every platform size.',
++  '/social/caption-counter/': 'Check a caption against Instagram, X, LinkedIn, TikTok, YouTube, Facebook and Threads limits.',
++  '/social/engagement-rate-calculator/': 'Engagement rate by followers, by reach and per post, side by side, from likes, comments, shares and saves.',
++  '/social/video-to-gif/': 'Trim a clip, crop it square or vertical, add a caption and save a GIF. Size shown before you export.',
++  '/social/reels-resizer/': 'Landscape video to a 9:16, 4:5 or 1:1 MP4 over a blurred copy or a colour, with its sound and a title.',
++  '/social/link-in-bio/': 'A link-in-bio page as one HTML file: photo, links and icons, eight themes, no scripts or tracking.',
+   '/utilities/tool-finder/': 'Say what you need in plain words and it finds the right tool among all of them, on your device.'
+ };
+ 
+@@ -444,6 +460,7 @@ const START = {
+   '/image/': ['/image/image-compressor/', '/image/image-converter/'],
+   '/ai-image/': ['/ai-image/background-remover/', '/ai-image/text-behind-image/'],
+   '/ai-video/': ['/ai-video/reel-maker/', '/ai-video/auto-captions/'],
++  '/social/': ['/social/carousel-maker/', '/social/caption-counter/'],
+   '/text/': ['/text/word-counter/', '/text/text-diff/'],
+   '/mathematics/': ['/mathematics/percentage/', '/mathematics/scientific-calculator/'],
+   '/finance/': ['/finance/loan-payment/', '/finance/compound-interest/'],
+diff --git a/build/release.js b/build/release.js
+index 4c99c604c..aeaf0feb2 100644
+--- a/build/release.js
++++ b/build/release.js
+@@ -78,7 +78,7 @@ const GENERATORS = [
+   ['pdf-ship', 'build-pdf-ship.js'], ['finder', 'build-finder.js'],
+   ['stories', 'build-stories.js'], ['examples', 'build-examples.js'], ['tools', 'build-tools.js'], ['collections', 'build-collections.js'],
+   ['guides', 'build-guides.js'], ['compare', 'build-compare.js'], ['embed', 'build-embed.js'],
+-  ['biz', 'build-biz.js'], ['ai-image', 'build-ai-image.js'], ['ai-video', 'build-ai-video.js'], ['showcase', 'build-showcase.js'],
++  ['biz', 'build-biz.js'], ['ai-image', 'build-ai-image.js'], ['ai-video', 'build-ai-video.js'], ['social', 'build-social.js'], ['showcase', 'build-showcase.js'],
+   ['og', 'build/make-og.js', ['--cards']],
+ ];
+ const ONCE = [['learn', 'build-learn.js'], ['ai', 'build-ai.js']];
+diff --git a/build/sections.js b/build/sections.js
+index cc3225dd7..761955b50 100644
+--- a/build/sections.js
++++ b/build/sections.js
+@@ -52,6 +52,10 @@ const SECTIONS = {
+      downloaded once and the video never leaves the browser — and sit beside
+      the AI image tools. build-ai-video.js owns everything under /ai-video/. */
+   '/ai-video/':    { name: 'AI Video Tools', head: 'AI Video', hub: 'AI Video Tools', noun: 'tool' },
++  /* Tools for posting: carousels, post images, caption limits, engagement
++     maths. They run in the browser like the image tools; build-social.js
++     owns everything under /social/. */
++  '/social/':      { name: 'Social Media Tools', head: 'Social Media', hub: 'Social Media Tools', noun: 'tool' },
+   '/india/':       { name: 'India' },
+   /* `crumb` is the short form used as a step in a trail; `hub` is what the
+      section's own page is called at the end of its trail. */
+diff --git a/build/tests/claims.js b/build/tests/claims.js
+index 5b2e3fa20..d95b23561 100644
+--- a/build/tests/claims.js
++++ b/build/tests/claims.js
+@@ -58,7 +58,7 @@ kit.init({ ROOT, OUT, PORT });
+ const claims = [];
+ const manuals = [];
+ const SECTIONS = ['pdf', 'image', 'developer', 'text', 'qr',
+-  'india', 'business', 'finance', 'health', 'time', 'education', 'mathematics', 'utilities', 'engineering', 'design', 'conversions'];
++  'india', 'business', 'finance', 'health', 'time', 'education', 'mathematics', 'utilities', 'engineering', 'design', 'conversions', 'social'];
+ const sectionOf = (page) => page.split('/')[1];
+ 
+ /**
+@@ -82,7 +82,7 @@ const api = { claim, manual, kit };
+ /* the file and text tools, then the calculators and conversions; a file not
+    written yet is skipped, so sections can be added one at a time */
+ for (const f of ['pdf.js', 'image.js', 'developer.js', 'text.js', 'qr.js',
+-  'examples.js', 'calc-privacy.js', 'calc-india.js', 'calc-business.js', 'calc-everyday.js', 'calc-maths.js', 'conversions.js']) {
++  'examples.js', 'calc-privacy.js', 'calc-india.js', 'calc-business.js', 'calc-everyday.js', 'calc-maths.js', 'conversions.js', 'social.js']) {
+   if (fs.existsSync(path.join(__dirname, 'claims', f))) require('./claims/' + f)(api);
+ }
+ 
+diff --git a/engine/vendor/README.txt b/engine/vendor/README.txt
+index 3839fcff0..8456016f4 100644
+--- a/engine/vendor/README.txt
++++ b/engine/vendor/README.txt
+@@ -18,3 +18,10 @@ mp4-muxer.mjs            mp4-muxer 5.2.2 (MIT, LICENSE-mp4-muxer.txt)
+ ort/                     ONNX Runtime Web 1.30.0 (MIT) — see ort/README.txt.
+ 
+ pdfjs/                   pdf.js (Apache-2.0) — see the licence file in that folder.
++
++noto-emoji/              336 of Google's Noto Emoji (Apache-2.0, noto-emoji/LICENSE), as SVG bodies
++                         in one JSON file (noto-subset.json, 1.0 MB), cut from @iconify-json/noto 1.2.9
++                         (https://registry.npmjs.org/@iconify-json/noto/-/noto-1.2.9.tgz) by
++                         build/ai-image/make-noto-subset.js. Not byte-for-byte: a subset, with each
++                         icon's SVG ids prefixed so several can be inlined together. Fetched only
++                         when a sticker picker is opened (Thumbnail Maker, Reel Maker).

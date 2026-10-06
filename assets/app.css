@@ -4467,6 +4467,10 @@ html.is-embed .tool > .depth { display: none !important; }
 .sv-route { margin-top: 0; }
 .sv-result-video { max-height: 60vh; width: auto; }
 .sv-mini { min-width: 34px; min-height: 34px; padding: 4px 8px; font-size: .86rem; line-height: 1; }
+.sv-studio .aiimg-side .control, .sv-lib-sec .control { font-family: var(--font-body); font-size: 15px; padding: 9px 12px; }
+.sv-studio .aiimg-side .field { margin-bottom: 12px; }
+.sv-studio .aiimg-side select.control, .sv-studio .aiimg-side textarea.control, .sv-studio .aiimg-side input[type="text"].control { width: 100%; }
+.sv-studio .aiimg-side textarea.control { resize: vertical; line-height: 1.4; }
 .sv-lib-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; }
 .sv-lib-editor { min-width: 0; }
 .sv-lib-sec { margin-bottom: 14px; padding: 12px 14px; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius); }

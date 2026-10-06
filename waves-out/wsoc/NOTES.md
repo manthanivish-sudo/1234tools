@@ -45,6 +45,54 @@ Existing checks changed by design (reel-maker.js): "the template select offers 7
 
 Untested: Firefox and Safari (all browser runs are Chrome); the Reel Maker's real-time recorder path (`--recorder`) was not run; drag-and-drop of photos into the carousel (the file input is tested).
 
+## Drop 2 (2026-10-06) — progress log
+
+Resumed at 22:15 by a second agent after the first was stopped by the usage limit. C, D and the Reel Maker's captions language were committed in 473d52c7e (pushed); E's three tools were drafts on disk, uncommitted.
+
+### C. Auto Captions — `engine/aivid-whisper.js`, `engine/aivid-auto-captions.js` (committed 473d52c7e)
+
+- Multilingual Whisper tiny (MIT; ONNX from onnx-community, pinned revision, re-exported by `build/ai-video/prepare-whisper.py` with decoder layers 2–3 cross-attentions as outputs; decoder sharded in two parts under 24 MiB; `engine/models/README-whisper.txt` has hashes). Languages: Auto-detect, English, Hindi and the eleven next most-spoken (Ethnologue 2025): Mandarin, Spanish, Arabic, French, Bengali, Portuguese, Russian, Urdu, Indonesian, German, Japanese.
+- Word timing: dynamic time warping over the cross-attention (openai/whisper timing.py), in a worker; the proportional split stays as the fallback and the page says which was used.
+- The page states where tiny fails (Hindi comes out in English, Bengali unreadable, Portuguese unreliable on short clips), from `build/ai-video/tests/auto-captions-langs.js` on five Common Voice clips per language (samples in `E:/tmp/wsoc-cap/samples`, not in the repo).
+- Keyword colours, auto emoji (English words), drag to position, ASS export; four more caption looks shared with the Reel Maker.
+- Reel Maker: "Language spoken" select in the Captions pane (reuses Auto Captions' LANGS), kept in drafts, passed to Whisper. Done (in 473d52c7e).
+
+### D. Thumbnail Maker — `engine/aiimg-thumbnail-maker.js` (committed 473d52c7e)
+
+Templates, any number of text layers, Noto emoji and sticker layers (shapes, arrows, badges), layer order including behind the cut-out, undo/redo, sizes 1280×720 / 1080×1920 / 1080×1080 / 1080×1350 with per-size safe areas, projects saved in IndexedDB on the device.
+
+### E. Video to GIF, Reels Resizer, Link in Bio — finished and committed by the second agent
+
+- Reviewed all three drafts (engines, specs, pages, content, claims, story, tests): complete and to the brief.
+- **Fixed in Reels Resizer** (`engine/social-reels-resizer.js`): the frame reader could silently drop a frame (my runs: 1 failure in 4 solo suite runs, 5 in 16 under load — output frame k showed k−1, 89 samples instead of 90). Causes, from a per-callback trace: (1) the first callback after start or a seek could arrive several frames late with nothing to compare it to; (2) after a seek the player itself drops the second frame or so, so going back to exactly the last frame re-dropped the same one. Now it goes back 0.25 s before the last frame taken (the run-up absorbs those drops and re-establishes the frame length), checks an unexplained first gap (at most twice), and at the slowest speed retries a gap up to four more times before counting it as late. After the fix: 34 of 34 exports frame-exact with three exports running at once. The test prints the trace (`window.__svRrTrace`) if the frame-order check ever fails again.
+- Fixed the /social/ hub intro sentence in `build-hubs.js` (a stray "and") and the same text in `social/index.html`.
+- Checked by me in Chrome: 390 px and 1400 px, light and dark screenshots of all three; Video to GIF progress + Cancel ("Cancelled. Nothing was saved."); Reels Resizer keyboard tab order through every control.
+
+### Drop 2 test counts (exact; run by the second agent in this worktree, 22:45–23:05, Chrome headless, ports 8872–8889)
+
+| Suite | Result |
+|---|---|
+| `build/ai-video/tests/reel-maker.js --root . --port 8872` | 200 passed, 0 failed |
+| `build/ai-video/tests/reel-fx.js --port 8873` | 80 passed, 0 failed |
+| `build/ai-video/tests/reel-voice.js --root . --port 8874` | 86 passed, 0 failed |
+| `build/ai-video/tests/tts-g2p.js --root .` | 45 passed, 0 failed |
+| `build/ai-video/tests/auto-captions.js --root . --port 8875` | 56 ok, 0 failed ("all checks passed") |
+| `build/ai-video/tests/auto-captions-langs.js --samples E:/tmp/wsoc-cap/samples --port 8876 --out E:/tmp/…` | 45 ok, 0 failed (recall table in the log: ja 88%, de 64%, es 59%, fr 52%, ar 45%, ur 42%, ru 40%, id 28%, zh 15%, pt 5%, hi 0%, bn 0%) |
+| `build/ai-image/tests/thumbnail-maker.js --root . --port 8877 --img E:/tmp/cf-img` | 96 ok, 0 failed (needs `--img`; its default folder no longer exists) |
+| `build/social/tests/carousel-maker.js` | 42 passed, 0 failed |
+| `build/social/tests/social-post-maker.js` | 29 passed, 0 failed |
+| `build/social/tests/caption-counter.js` | 75 passed, 0 failed |
+| `build/social/tests/engagement-rate-calculator.js` | 41 passed, 0 failed |
+| `build/social/tests/video-to-gif.js --port 8880` (new) | 45 passed, 0 failed |
+| `build/social/tests/reels-resizer.js --port 8881` (new) | 49 passed, 0 failed (after the fix; 3 earlier runs before it: 48/1, 49/0, 49/0) |
+| `build/social/tests/link-in-bio.js --port 8882` (new) | 50 passed, 0 failed |
+| `build/tests/claims.js --only social --port 8878` | 89 claims checked, 89 passed, 0 failed, 9 manual |
+| `build/content/_check.js` (site-wide) | 155 pages, 0 errors, 0 warnings |
+| `build/tests/hubs-nav.js --port 8879` | 122 passed, 0 failed |
+| `build/tests/home-finder.js --port 8879` | 84 passed, 2 failed — the same two as drop 1, expected until the release runs `build-home.js` (home `<title>` and descriptions still say 1,283) |
+
+Also: `node build-social.js --check` and `node build-hubs.js --check` report 0 files would change; the six new engine/spec files load in a vm with a stub window.
+
 ## Shared files changed
 
 - `assets/app.css` — the `/* WAVE-S start */ … /* WAVE-S end */` block at the very end, one sub-block per part (reel, social, thumbnail, captions). No existing rule edited.
@@ -59,6 +107,8 @@ Untested: Firefox and Safari (all browser runs are Chrome); the Reel Maker's rea
 - `build/tests/claims.js` — `social` in SECTIONS and `social.js` in the claims file list.
 - `engine/vendor/README.txt` — a line for `noto-emoji/`.
 
+All of these, as unified diffs against main a90208e9d with one line on why each, are in `waves-out/wsoc/shared.diff` (11 files). They are also committed on the branch so its pages build.
+
 ## Decisions taken (reversible)
 
 - Generated files that every generator rewrites (sw.js, assets/search-index.js, sitemap-1.xml, assets/icons.svg, index.html's home card, 404.html and the site total on ~1,400 pages) are NOT committed: the release's generators (now including `social`) write them, and committing them would collide with every other wave. Only pages under `/social/` and `/ai-video/` are committed. The home card for /social/ is placed by build-social.js beside the AI Video card (as build-ai-video.js does); no hero tile was added.
@@ -68,8 +118,12 @@ Untested: Firefox and Safari (all browser runs are Chrome); the Reel Maker's rea
 - X preset is 1280×720 landscape (X's recommended size); a 9:16 reel posts to X fine as 1080×1920 via Custom.
 - Social drop-1 decisions by the helper (all reversible): X image 1920×1080 and LinkedIn 1200×628 (each platform's own figure rather than the brief's 1600×900 / 1200×627); TikTok caption 2,200 (the documented API limit; the app's reported 4,000 appears on no TikTok page); Instagram hashtags warn above 5 (Instagram's December 2025 announcement), over above 30; counting in UTF-16 units where a platform does not say; one brand kit shared by Carousel and Post Makers; own ZIP writer in `engine/social-kit.js` (pauses, UTF-8 names).
 - The drop-1 commit's social pages already list the drop-2 social tools (the generator lists every spec present); their pages arrive in the drop-2 commit.
+- Drop-2 E limits, stated on each page: Video to GIF stops at 600 frames and 640 px wide; Reels Resizer takes up to 3 minutes and 500 MB (sound decoded whole, MP4 built in memory), and without WebCodecs (Firefox) records in real time, usually WebM, saying so; Link in Bio links only https:// (http://, javascript:, data: and other schemes refused with a reason), and keeps the page in localStorage only when "Remember this page" is ticked.
+- Reels Resizer frame reader: a run-up of 0.25 s before a re-try and up to four retries at 1/8 speed (second agent's fix, above). It makes a slow device slower on a bad stretch rather than dropping a frame; a gap still left after the retries is counted and named in the status.
+- The site-wide tool-count churn (1,283 → 1,290 on ~1,060 pages, privacy/index.html included), sw.js, search-index.js, icons.svg, sitemap-1.xml and 404.html were restored, not committed, as before.
 
 ## Notes for the release
 
 - **Bump sw.js V**: engine-only changes (Reel Maker, Thumbnail Maker, Auto Captions) and new Whisper decoder bytes under the same file names (a stale cache would refuse the new decoder).
+- The release's `social` generator writes the three new pages' sitemap, search-index and icon entries (glyphs i-social-gif, i-social-reframe, i-social-links are drawn in each spec's glyphSvg and added to assets/icons.svg by build-social.js); bump sw.js V for the new engine files.
 - Run the `ai-image` generator too: `engine/ai-image-tools-thumbnail-maker.js` copy changed and its page is not regenerated on this branch.

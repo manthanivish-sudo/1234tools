@@ -51,5 +51,43 @@ module.exports = {
     example: { kind: 'schematic', input: '412 likes, 38 comments, 17 shares, 55 saves; 12,400 followers', output: 'Rates by followers, reach and impressions', sampleIn: '522 engagements, reach 9,850, impressions 14,200', sampleOut: '4.21% by followers · 5.30% by reach · 3.68% by impressions' },
     howTo: 'How to calculate an engagement rate',
     cta: 'Work out my rate'
+  },
+  /* ---- Video to GIF, Reels Resizer and Link in Bio (drop 2) ----
+  */
+  '/social/video-to-gif/': {
+    persona: 'Support teams, makers and anyone who explains things with a loop',
+    hook: 'Three seconds of video. One GIF. Know the size before you make it.',
+    pain: 'A GIF of a few seconds can outweigh the whole video, and you only find out after exporting.',
+    usual: ['Exporting, checking the size, exporting again', 'Converters that want the video uploaded', 'GIFs stamped with someone else’s logo'],
+    promise: 'Trim, crop and caption a clip; the size is estimated before you export.',
+    steps: ['Choose a video and drag the trim handles', 'Pick width, frame rate, speed and loops', 'Read the size estimate and make the GIF'],
+    proof: ['Free', 'Nothing uploaded', 'No watermark'],
+    example: { kind: 'schematic', input: 'A 6-second 640 × 360 clip, trimmed to 2 seconds', output: 'frames.gif: 20 frames at 480 × 270, plays 3 times', sampleIn: '1.0–3.0 s · 480 px · 10 fps · Play 3 times', sampleOut: 'Estimated 61,155 bytes; made 61,026 bytes' },
+    howTo: 'How to turn a video clip into a GIF, free',
+    cta: 'Make a GIF'
+  },
+  '/social/reels-resizer/': {
+    persona: 'Podcasters, educators and anyone with landscape footage for Reels and Shorts',
+    hook: 'Landscape video, vertical feed. Keep the whole picture.',
+    pain: 'A 16:9 clip in a 9:16 frame is either cropped to the middle or left floating in black bars.',
+    usual: ['Cropping away the sides of every shot', 'Black bars above and below', 'Uploading footage to a server to reframe it'],
+    promise: 'Fit it over a blurred copy of itself, or crop to the part that matters. Sound kept.',
+    steps: ['Choose a landscape video', 'Pick 9:16, 4:5 or 1:1 and the background', 'Make the MP4'],
+    proof: ['Free', 'Nothing uploaded', 'Sound kept'],
+    example: { kind: 'schematic', input: 'A 640 × 360 clip, 3 seconds, with sound', output: 'A 1080 × 1920 MP4 with the sound, every frame kept', sampleIn: '16:9 landscape · Fit, blurred copy behind', sampleOut: '9:16, the picture at 1080 × 608 over its own blur; 90 frames in, 90 out' },
+    howTo: 'How to make a landscape video vertical for Reels and Shorts, free',
+    cta: 'Resize a video'
+  },
+  '/social/link-in-bio/': {
+    persona: 'Creators, small shops and anyone with more links than a bio holds',
+    hook: 'Your link-in-bio page, as one file you own.',
+    pain: 'One link in a bio, and a page of links that lives on someone else’s service, with their name on it.',
+    usual: ['A hosted page under someone else’s address', 'Tracking scripts you did not add', 'Losing the page when an account goes'],
+    promise: 'Build it here, download one HTML file, host it anywhere. No scripts, no tracking.',
+    steps: ['Add a photo, your name and your links', 'Pick a theme, buttons and a font', 'Download index.html and upload it'],
+    proof: ['Free', 'Nothing uploaded', 'No tracking in the file'],
+    example: { kind: 'schematic', input: 'A photo, a name, three links and two icons', output: 'One index.html that makes no outside requests', sampleIn: 'Shop the new collection · Book a workshop · Read the studio notes', sampleOut: 'About 3 KB without a photo, 23–27 KB with one; eight themes' },
+    howTo: 'How to make a link-in-bio page you host yourself, free',
+    cta: 'Make your page'
   }
 };

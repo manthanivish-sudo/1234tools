@@ -234,6 +234,9 @@ const JOBS = {
   '/social/social-post-maker/': ['Make', 'Text + brand → post images'],
   '/social/caption-counter/': ['Check', 'Caption → limits per platform'],
   '/social/engagement-rate-calculator/': ['Calculate', 'Likes, followers → rates'],
+  '/social/video-to-gif/': ['Make', 'Video → animated GIF'],
+  '/social/reels-resizer/': ['Make', 'Landscape video → 9:16 MP4'],
+  '/social/link-in-bio/': ['Make', 'Links → one HTML page'],
 
   /* text */
   '/text/word-counter/': ['Check', 'Text → words, reading time'],
@@ -434,12 +437,15 @@ const DESCS = {
   '/ai-image/face-blur/': 'Blur or pixelate every face in a photo or short video and tap the ones to keep. PNG or MP4 out.',
   '/ai-image/image-upscaler/': 'Upscale a photo 2× or 4×, or unblur it at its own size, with Real-ESRGAN. PNG, JPEG or WebP out.',
   '/ai-image/film-grain/': 'Film grain, light leaks, VHS tracking, a date stamp and faded colour. Seven presets; PNG, GIF or MP4.',
-  '/ai-video/auto-captions/': 'Word-by-word animated captions on a video, transcribed offline by Whisper. MP4 with sound, SRT and VTT.',
+  '/ai-video/auto-captions/': 'Word-by-word animated captions on a video, transcribed offline by Whisper. MP4 with sound, SRT, VTT, ASS.',
   '/ai-video/reel-maker/': 'A script becomes a 9:16 reel: animated text, screenshots or screen recording, voice, music, captions. MP4 out.',
   '/social/carousel-maker/': 'Instagram and LinkedIn carousels from text slides and photos: a ZIP of PNGs, or one PDF for LinkedIn.',
   '/social/social-post-maker/': 'Quote and announcement posts in your brand colours, logo and fonts, exported in every platform size.',
   '/social/caption-counter/': 'Check a caption against Instagram, X, LinkedIn, TikTok, YouTube, Facebook and Threads limits.',
   '/social/engagement-rate-calculator/': 'Engagement rate by followers, by reach and per post, side by side, from likes, comments, shares and saves.',
+  '/social/video-to-gif/': 'Trim a clip, crop it square or vertical, add a caption and save a GIF. Size shown before you export.',
+  '/social/reels-resizer/': 'Landscape video to a 9:16, 4:5 or 1:1 MP4 over a blurred copy or a colour, with its sound and a title.',
+  '/social/link-in-bio/': 'A link-in-bio page as one HTML file: photo, links and icons, eight themes, no scripts or tracking.',
   '/utilities/tool-finder/': 'Say what you need in plain words and it finds the right tool among all of them, on your device.'
 };
 

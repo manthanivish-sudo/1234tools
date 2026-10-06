@@ -181,13 +181,13 @@ function hubPage(parts, all) {
   const sec = SECTIONS['/' + SECTION + '/'];
   const n = all.length;
   const title = 'Social Media Tools — Free, Private, In Your Browser | 1234Tools';
-  const description = 'Free social media tools that run in your browser: carousels for Instagram and LinkedIn, branded post images in every size, caption limits for seven platforms and engagement rates. Nothing is uploaded.';
+  const description = 'Free social media tools in your browser: carousels, branded posts, caption limits, engagement rate, video to GIF, vertical video and a link-in-bio page.';
   const cards = all.map((t) => '<a class="card" href="/' + SECTION + '/' + t.slug + '/"><span class="card-icon">' + icon(t.spec.glyph) + '</span><strong>' + esc(t.spec.title) + '</strong><span class="card-desc">' + esc(t.spec.description) + '</span></a>').join('');
   const body =
     crumbs.render([], sec.hub || sec.name) + '\n' +
     '<p class="eyebrow">' + esc(sec.name) + '</p>\n' +
     '<h1>' + icon('i-social', 'ico ico-title') + esc(sec.name) + '</h1>\n' +
-    '<p class="lede">The jobs around a post, done in your browser: the carousel, the image, the caption and the numbers afterwards. Nothing you add is uploaded, there is no account, and nothing is stamped on what you make. ' + n + ' tool' + (n === 1 ? '' : 's') + ' so far.</p>\n' +
+    '<p class="lede">The jobs around a post, done in your browser: the carousel, the image, the caption, the clip turned vertical or into a GIF, the page your bio links to, and the numbers afterwards. Nothing you add is uploaded, there is no account, and nothing is stamped on what you make. ' + n + ' tool' + (n === 1 ? '' : 's') + ' so far.</p>\n' +
     '<div class="grid">' + cards + '</div>\n' +
     '<section class="panel"><h2>Made for posting</h2>' +
     '<p>Each tool exports the sizes the platforms ask for and says which size is which. Images are drawn on a canvas on your device and saved straight to your downloads; a LinkedIn carousel comes out as one PDF, because LinkedIn shows an uploaded document as a swipeable post. Brand colours, a logo and fonts you save are kept in this browser only, so the next post starts from them.</p>' +

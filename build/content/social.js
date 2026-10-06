@@ -171,5 +171,153 @@ module.exports = {
       /* /social/engagement-rate-calculator/?likes=412&comments=38&shares=17&saves=55&followers=12400&reach=9850&impressions=14200&posts=1, 2 decimal places: the .social-er-card values */
       { browser: { page: '/social/engagement-rate-calculator/', likes: 412, comments: 38, shares: 17, saves: 55, followers: 12400, reach: 9850, impressions: 14200, posts: 1 }, shown: ['522 engagements', '4.21%', '5.30%', '3.68%', '3.63%'] }
     ]
+  },
+  /* ---- Video to GIF, Reels Resizer and Link in Bio (drop 2) ----
+   The reading part of three Social Media Tools — Video to GIF, Reels
+   Resizer, Link in Bio — in build-depth.js's file-and-text shape
+   (howItWorks in place of formula).
+   Shape and rules: build-depth.js and
+   build/content/_check.js.
+   Every figure comes from a run of the tool in headless Chrome on
+   6 October 2026 against a local server of the site (build/tests/serve.js),
+   driven as a person would by build/social/tests/video-to-gif.js,
+   reels-resizer.js and link-in-bio.js: the test videos are made in the page
+   with WebCodecs and the site's own muxer (frames.mp4: 640 × 360, 6 s at
+   30 fps, the frame number in binary on every frame; landscape.mp4:
+   640 × 360, 3 s at 30 fps, a 16 px green border round a magenta picture,
+   with a 440 Hz tone), and the outputs are read back by parsers written in
+   those tests. Byte sizes depend on the browser's H.264 encoder and will
+   differ a little elsewhere; the geometry and frame counts will not.
+  */
+  '/social/video-to-gif/': {
+    term: 'an animated GIF',
+    whatIs: [
+      'GIF is a picture format whose 1989 revision holds several frames, each shown for a set time. Every frame uses at most 256 colours and is compressed on its own with LZW.',
+      'With no motion prediction a GIF is large for what it shows, but it plays wherever a picture does, with no player.'
+    ],
+    howItWorks: {
+      text: 'The page reads the video with the browser’s own decoder and builds the GIF without sending anything anywhere.',
+      points: [
+        'A hidden `video` element is moved to each frame’s moment, the start plus i ÷ fps × speed, and the frame is drawn, cropped and captioned, on a `canvas`.',
+        'Eight frames spread over the selection choose one palette of up to 256 colours for the whole GIF, so colours hold steady from frame to frame.',
+        'A Web Worker running gifenc maps each frame to the palette, dithers it if asked and LZW-compresses it while the page seeks the next one.',
+        'The estimate compresses four frames of the selection the same way and scales up.'
+      ]
+    },
+    worked: {
+      text: 'A six-second 640 × 360 test clip, trimmed to 1.0–3.0 s at 480 px wide, 10 fps and “Play 3 times”, became frames.gif: 61,026 bytes, 20 frames of 480 × 270, every delay 10 hundredths, and a NETSCAPE2.0 repeat count of 2. The estimate beforehand was 61,155 bytes. With dither off the same GIF was 39,734 bytes; at 240 px wide, 30,526.'
+    },
+    uses: [
+      ['Bug reports', 'Three seconds of a screen recording, small enough to paste into a ticket.'],
+      ['Email newsletters', 'A GIF sits in the message as an image, where a video needs a link out.'],
+      ['Readme files', 'A short loop of a feature in use, beside the words that explain it.']
+    ],
+    mistakes: [
+      'Exporting the whole clip at 640 px and 20 fps. Keep the two or three seconds that matter.',
+      'Leaving dither on for screen recordings. Flat colours do not need it; on our test clip turning it off cut the file by about a third.'
+    ],
+    faq: [
+      { q: 'Why is my GIF bigger than the video it came from?', a: 'A video codec stores most frames as small changes from the one before; a GIF stores every frame whole. Our 2-second test GIF, 61,026 bytes, was more than twice the 6-second MP4 it came from, 24,708 bytes.' },
+      { q: 'Does the loop show a jump?', a: 'Only if the last frame leads back into the first. Choose a start and end where the movement matches, such as one full turn of a turntable.' },
+      { q: 'Is the timing right at 15 frames per second?', a: 'Yes. GIF delays are whole hundredths, so 15 fps cannot be 6.67 each; the tool alternates 7 and 6, and 30 frames add up to exactly 2.00 s.' }
+    ],
+    runs: [
+      /* /social/video-to-gif/: frames.mp4 uploaded; #sv-gif-start 1, #sv-gif-end 3, #sv-gif-width 480, #sv-gif-fps 10, #sv-gif-speed 1, #sv-gif-loop 3 ("Play 3 times"), #sv-gif-crop original, dither on. .sv-est read "Estimated size: about 59.7 KB" with data-bytes 61155; Make the GIF saved frames.gif, 61,026 bytes, parsed: GIF89a 480 × 270, 20 frames, delays all 10, NETSCAPE2.0 loop 2 */
+      { browser: { page: '/social/video-to-gif/', video: 'frames.mp4, 640 × 360, 6 s, 30 fps, 24,708 bytes', start: '1.0', end: '3.0', width: 480, fps: 10, speed: 1, plays: 3, crop: 'original', dither: true }, shown: ['61,026 bytes', '20 frames of 480 × 270', '61,155 bytes', 'repeat count of 2', '24,708 bytes'] },
+      /* the same with #sv-gif-dither unticked: 39,734 bytes */
+      { browser: { page: '/social/video-to-gif/', video: 'frames.mp4', start: '1.0', end: '3.0', width: 480, fps: 10, dither: false }, shown: ['39,734 bytes'] },
+      /* dither on, #sv-gif-width 240: 240 × 135, 30,526 bytes */
+      { browser: { page: '/social/video-to-gif/', video: 'frames.mp4', start: '1.0', end: '3.0', width: 240, fps: 10, dither: true }, shown: ['30,526'] },
+      /* #sv-gif-fps 15, "Play once": 30 frames, delays 7,6,7,7,6,7 … summing to 200 hundredths; no NETSCAPE2.0 block */
+      { browser: { page: '/social/video-to-gif/', video: 'frames.mp4', start: '1.0', end: '3.0', width: 480, fps: 15, plays: 1 }, shown: ['2.00 s', 'alternates 7 and 6'] }
+    ]
+  },
+
+  '/social/reels-resizer/': {
+    term: 'a vertical 9:16 video',
+    whatIs: [
+      'Reels, Shorts, TikTok and Stories fill a phone held upright: 9 units wide by 16 tall, 1080 × 1920 pixels at full HD. A 16:9 video is that shape on its side, so shown whole it covers less than a third of the frame.',
+      'It fits either scaled down whole, with something filling the space around it, or cropped to fill, which keeps under a third of its width.'
+    ],
+    howItWorks: {
+      text: 'Each output frame is drawn by one function on a `canvas` and encoded on the device.',
+      points: [
+        'Fitted, the picture is scaled by the smaller of the width and height ratios and centred; “Higher” puts its middle at 40% of the height.',
+        'The blurred copy is the frame shrunk to a 24th and drawn back up twice with smoothing, then darkened; no `ctx.filter`, which older Safari lacks.',
+        'The video plays once, muted; `requestVideoFrameCallback` hands over each frame with its media time. A frame missed sends it back to the last one taken, at half the speed.',
+        'WebCodecs encodes H.264, the vendored mp4-muxer writes the MP4, and the decoded sound is encoded again as AAC or Opus.'
+      ]
+    },
+    worked: {
+      text: 'A 3-second 640 × 360 test clip with a 440 Hz tone, made 9:16 at 1080 × 1920 over a blurred copy, came out with 90 frames, each in its place, and an AAC track of 3.008 s. The picture sat at 1080 × 608 from y 656, its 16-pixel border now 27 pixels wide. With “Higher” it moved up to y 464, leaving the bottom 848 pixels clear; at 720 × 1280 it was 720 × 405 from y 438.'
+    },
+    uses: [
+      ['Clips from a live stream', 'The moment from a landscape recording, posted upright over its own blurred copy.'],
+      ['Webinar snippets', 'Slides stay readable fitted whole, with the lesson’s title above.'],
+      ['Product videos', 'A 4:5 version for the feed and a 9:16 one for Reels, from one file.']
+    ],
+    mistakes: [
+      'Cropping a screen recording to fill. The sides go, and most of the text with them.',
+      'Switching tabs while it runs. Browsers slow background tabs, and the export with them.'
+    ],
+    faq: [
+      { q: 'Why is the blurred background darker than my video?', a: 'It is darkened by 45% unless you change it, so the sharp picture stands out and a white title stays readable. Set “Darken the blurred copy” to 0% to keep it bright.' },
+      { q: 'Does 60 frames per second make it smoother?', a: 'Only for video filmed at 60. No in-between frames are invented: our 30 fps test clip exported at 60 still had 90 frames over its 3 seconds.' },
+      { q: 'Can I add captions as well?', a: 'Not here. Make the vertical video, then open it in Auto Captions, which transcribes the speech on your device and burns the words in.' }
+    ],
+    runs: [
+      /* /social/reels-resizer/: landscape.mp4 uploaded ("640 × 360, 3.0 s, with sound"); #sv-reel-size 9x16, #sv-reel-mode blur, #sv-reel-pos centre; Make the MP4 saved landscape-9x16.mp4, parsed: avc1 1080 × 1920, 90 samples, 3.000 s; mp4a 3.008 s; frame k decoded at (k + ½)/30 s read k for all 90; border green at x 0–27 and y 656–683 */
+      { browser: { page: '/social/reels-resizer/', video: 'landscape.mp4, 640 × 360, 3 s, 30 fps, 440 Hz tone', size: '9x16', output: '1080 × 1920', mode: 'blur', position: 'centre', dark: 45 }, shown: ['90 frames', '3.008 s', '1080 × 608 from y 656', '27 pixels wide'] },
+      /* #sv-reel-pos high: magenta at y 768, green at y 478, the band at y 1150 */
+      { browser: { page: '/social/reels-resizer/', video: 'landscape.mp4', size: '9x16', mode: 'blur', position: 'high' }, shown: ['y 464', 'bottom 848 pixels'] },
+      /* #sv-reel-size 9x16-720, #sv-reel-mode colour #2050a0: the band read (32, 81, 160), the picture from y 438 */
+      { browser: { page: '/social/reels-resizer/', video: 'landscape.mp4', size: '9x16-720', output: '720 × 1280', mode: 'colour', bg: '#2050a0' }, shown: ['720 × 405 from y 438'] },
+      /* #sv-reel-fps 60 on the 30 fps clip: 90 video samples over 3.0 s */
+      { browser: { page: '/social/reels-resizer/', video: 'landscape.mp4', size: '9x16-720', fps: 60 }, shown: ['still had 90 frames'] }
+    ]
+  },
+
+  '/social/link-in-bio/': {
+    term: 'a link-in-bio page',
+    whatIs: [
+      'A profile on a social app has room for little more than one link. A link-in-bio page is what that link opens: your name, a photo and a column of buttons leading to everything else.',
+      'Hosted services keep that page on their own servers. This tool gives you the page itself, one HTML file, to put wherever you like.'
+    ],
+    howItWorks: {
+      text: 'The page is put together as text in your browser and checked before it is offered for download.',
+      points: [
+        'Each address goes through the browser’s URL parser and only an https: result is written; javascript:, data:, http: and other schemes are refused with a reason.',
+        'Text is escaped, so angle brackets in a name show as brackets.',
+        'The photo is cut from the middle to 256 × 256 and stored inside the file as a JPEG data URL at quality 0.85.',
+        'Icons are inline SVG and fonts are system stacks; `<link rel="icon" href="data:,">` stops the favicon request.'
+      ]
+    },
+    worked: {
+      text: 'The example page as it opens — three links, two icons, no photo — is 3,100 bytes; with the site’s sample portrait as its photo it became 26,646 bytes. A test page with two links and four icons, opened at a made-up address with every request recorded, asked for nothing at all, and offline it still showed its 256-pixel photo. Across eight themes and four button styles the lowest text contrast measured was 5.18:1.'
+    },
+    uses: [
+      ['A QR code on a flyer', 'Point it at your own page, so the flyer outlives any link change.'],
+      ['A page per campaign', 'A second file for a launch or an event, uploaded beside the first.'],
+      ['A copy you control', 'If an app account is lost, the page and its links are still yours.']
+    ],
+    mistakes: [
+      'Pasting an http:// address. A bare domain gets https:// added, but http:// is refused.',
+      'Leaving the example links in. They point at example.com; check every button before you download.'
+    ],
+    faq: [
+      { q: 'Can I see how many people visit?', a: 'Not from the page, which has no analytics. Your host may count visits; an analytics snippet added by hand would make requests.' },
+      { q: 'Can I use my own domain?', a: 'Yes. Put the file at the root of a host serving your domain, as index.html.' },
+      { q: 'What happens to a link I typed wrongly?', a: 'It is marked under its box with the reason, listed as left out and not written into the file.' }
+    ],
+    runs: [
+      /* /social/link-in-bio/ on a fresh visit (nothing stored): .sv-lib-size data-bytes 3100 */
+      { browser: { page: '/social/link-in-bio/', project: 'the example (3 links, 2 icons, no photo)' }, shown: ['3,100 bytes'] },
+      /* the same, #lib-photo = build/promo/samples/portrait.jpg: data-bytes 26646 (group.jpg 23858, pet.jpg 23662) */
+      { browser: { page: '/social/link-in-bio/', project: 'the example', photo: 'build/promo/samples/portrait.jpg' }, shown: ['26,646 bytes'] },
+      /* build/social/tests/link-in-bio.js: the downloaded index.html served at https://links.example.test/ with every request recorded (none), then setContent with the browser offline: .avatar naturalWidth 256 */
+      { browser: { page: '/social/link-in-bio/', links: 2, icons: 4, served: 'https://links.example.test/', offline: true }, shown: ['nothing at all', '256-pixel photo'] },
+      /* every theme × button style rendered in the preview, colours read from computed styles, WCAG ratio worked out in the test: lowest 5.18 (peach, filled, button text) */
+      { browser: { page: '/social/link-in-bio/', themes: 8, buttonStyles: 4 }, shown: ['5.18:1'] }
+    ]
   }
 };
