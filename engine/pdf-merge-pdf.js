@@ -30,6 +30,7 @@ window.PDF_TOOLS["merge-pdf"] = {
 "multiple": true,
 "description": "Combine several PDFs into one, in any order, without uploading anything.",
 "keywords": ["merge pdf","combine pdf","join pdf files","pdf merger","concatenate pdf"],
+"perFilePages": "ranges",
 "controls": [{"key":"ranges","label":"Pages to take from each file","type":"text","default":"all","hint":"all, or per-file like: 1-3 | all | 2,5"},{"key":"keepMeta","label":"Metadata","type":"select","default":"strip","options":[{"value":"strip","label":"Strip all metadata"},{"value":"first","label":"Keep metadata from the first file"}]},{"key":"title","label":"Document title (optional)","type":"text","default":""}],
 "run": async ({ docs, opts, core }) => {
       if (docs.length < 2) return { error: 'Choose at least two PDFs to merge.' };
@@ -61,7 +62,7 @@ window.PDF_TOOLS["merge-pdf"] = {
         xmp: opts.keepMeta === 'first' && !opts.title ? docs[0].doc : false
       });
       return {
-        files: [{ name: 'merged.pdf', bytes }],
+        files: [{ name: docs[0].name.replace(/\.pdf$/i, '') + '-merged.pdf', bytes }],
         stats: [
           ['Files merged', String(docs.length)],
           ['Total pages', String(items.length)],

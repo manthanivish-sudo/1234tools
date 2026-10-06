@@ -25,21 +25,15 @@ const PDF_TOOLS = {
   /* ===================== MANIPULATE ===================== */
 
   'merge-pdf': {
-    title: 'Merge PDF Files',
-    kind: 'transform', action: 'Merge PDFs', multiple: true,
-    description: 'Combine several PDFs into one, in any order, without uploading anything.',
-    keywords: ['merge pdf', 'combine pdf', 'join pdf files', 'pdf merger', 'concatenate pdf'],
-    controls: [
-      { key: 'ranges', label: 'Pages to take from each file', type: 'text', default: 'all',
-        hint: 'all, or per-file like: 1-3 | all | 2,5' },
-      { key: 'keepMeta', label: 'Metadata', type: 'select', default: 'strip',
-        options: [
-          { value: 'strip', label: 'Strip all metadata' },
-          { value: 'first', label: 'Keep metadata from the first file' }
-        ]},
-      { key: 'title', label: 'Document title (optional)', type: 'text', default: '' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Merge PDF Files",
+"kind": "transform",
+"action": "Merge PDFs",
+"multiple": true,
+"description": "Combine several PDFs into one, in any order, without uploading anything.",
+"keywords": ["merge pdf","combine pdf","join pdf files","pdf merger","concatenate pdf"],
+"perFilePages": "ranges",
+"controls": [{"key":"ranges","label":"Pages to take from each file","type":"text","default":"all","hint":"all, or per-file like: 1-3 | all | 2,5"},{"key":"keepMeta","label":"Metadata","type":"select","default":"strip","options":[{"value":"strip","label":"Strip all metadata"},{"value":"first","label":"Keep metadata from the first file"}]},{"key":"title","label":"Document title (optional)","type":"text","default":""}],
+"run": async ({ docs, opts, core }) => {
       if (docs.length < 2) return { error: 'Choose at least two PDFs to merge.' };
       const specs = String(opts.ranges || 'all').split('|').map(s => s.trim());
       const items = [];
@@ -69,7 +63,7 @@ const PDF_TOOLS = {
         xmp: opts.keepMeta === 'first' && !opts.title ? docs[0].doc : false
       });
       return {
-        files: [{ name: 'merged.pdf', bytes }],
+        files: [{ name: docs[0].name.replace(/\.pdf$/i, '') + '-merged.pdf', bytes }],
         stats: [
           ['Files merged', String(docs.length)],
           ['Total pages', String(items.length)],
@@ -78,35 +72,21 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'Files merge in the order listed. Use the arrows in the file list to reorder before merging.',
-      'Give one page range to apply to every file, or separate them with | to set each file individually — for example "1-3 | all | 2,5".',
-      'Metadata is stripped by default, since a merged document inheriting one source file\u2019s author and title is usually wrong.',
-      'Links, comments and form fields travel with their page. A link to another page of the same file lands on that page in the merged document; a link to a page you left out is removed rather than pointed somewhere wrong.'
-    ],
-    faq: [
-      { q: 'Are my files uploaded?', a: 'No. The PDFs are parsed and rewritten by your own browser. Nothing is transmitted, which is why this works offline and why it is safe for contracts and financial documents.' },
-      { q: 'What happens to bookmarks and form fields?', a: 'When any of the files has bookmarks, the merged file gets one top-level bookmark per file, named after it and opening at its first page, with that file’s own bookmarks underneath; a bookmark whose page you left out is dropped. Form fields stay fillable. Two files can both have a field called “name”, and a reader treats fields with one name as one field, so the later file’s copy is renamed name_2 rather than filling in both at once.' }
-    ]
-  },
+"tips": ["Files merge in the order listed. Use the arrows in the file list to reorder before merging.","Give one page range to apply to every file, or separate them with | to set each file individually — for example \"1-3 | all | 2,5\".","Metadata is stripped by default, since a merged document inheriting one source file’s author and title is usually wrong.","Links, comments and form fields travel with their page. A link to another page of the same file lands on that page in the merged document; a link to a page you left out is removed rather than pointed somewhere wrong."],
+"faq": [{"q":"Are my files uploaded?","a":"No. The PDFs are parsed and rewritten by your own browser. Nothing is transmitted, which is why this works offline and why it is safe for contracts and financial documents."},{"q":"What happens to bookmarks and form fields?","a":"When any of the files has bookmarks, the merged file gets one top-level bookmark per file, named after it and opening at its first page, with that file’s own bookmarks underneath; a bookmark whose page you left out is dropped. Form fields stay fillable. Two files can both have a field called “name”, and a reader treats fields with one name as one field, so the later file’s copy is renamed name_2 rather than filling in both at once."}]
+},
 
   'split-pdf': {
-    title: 'Split PDF',
-    kind: 'transform', action: 'Split PDF', multiple: false,
-    description: 'Split one PDF into several files — by page count, by ranges, or one file per page.',
-    keywords: ['split pdf', 'separate pdf pages', 'divide pdf', 'pdf splitter', 'break up pdf'],
-    controls: [
-      { key: 'mode', label: 'Split', type: 'select', default: 'each',
-        options: [
-          { value: 'each', label: 'One file per page' },
-          { value: 'every', label: 'Every N pages' },
-          { value: 'ranges', label: 'By explicit ranges' },
-          { value: 'half', label: 'In half' }
-        ]},
-      { key: 'n', label: 'Pages per file', type: 'number', default: 2, min: 1, max: 500 },
-      { key: 'ranges', label: 'Ranges, one output per group', type: 'text', default: '1-3 | 4-6 | 7-' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Split PDF",
+"kind": "transform",
+"action": "Split PDF",
+"multiple": false,
+"description": "Split one PDF into several files — by page count, by ranges, or one file per page.",
+"keywords": ["split pdf","separate pdf pages","divide pdf","pdf splitter","break up pdf"],
+"pageGrid": { "mode": "split", "rotate": true, "rangesKey": "ranges", "title": "Click a page to split after it; each colour is one file" },
+"zipSuffix": "split",
+"controls": [{"key":"mode","label":"Split","type":"select","default":"each","options":[{"value":"each","label":"One file per page"},{"value":"every","label":"Every N pages"},{"value":"ranges","label":"By explicit ranges"},{"value":"half","label":"In half"}]},{"key":"n","label":"Pages per file","type":"number","default":2,"min":1,"max":500},{"key":"ranges","label":"Ranges, one output per group","type":"text","default":"1-3 | 4-6 | 7-"}],
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
       const base = docs[0].name.replace(/\.pdf$/i, '');
@@ -135,7 +115,7 @@ const PDF_TOOLS = {
 
       const files = [];
       for (let g = 0; g < groups.length; g++) {
-        const bytes = await core.assemble(groups[g].map(p => ({ doc, pageIndex: p })), {});
+        const bytes = await core.assemble(groups[g].map(p => ({ doc, pageIndex: p, rotate: Number((opts.turns || {})[p]) || 0 })), {});
         const label = groups[g].length === 1
           ? `p${groups[g][0] + 1}`
           : `p${groups[g][0] + 1}-${groups[g][groups[g].length - 1] + 1}`;
@@ -151,32 +131,20 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'One file per page is the right choice for scanned batches where each page is a separate document.',
-      'Explicit ranges give you full control: "1-3 | 4-6 | 7-" produces three files, with the last taking everything from page 7 onward.',
-      'Several output files are offered as a ZIP so you get them in one download.'
-    ],
-    faq: [
-      { q: 'Do the split files keep the original quality?', a: 'Yes. Page content streams and embedded images are copied byte for byte — nothing is re-encoded or recompressed.' }
-    ]
-  },
+"tips": ["One file per page is the right choice for scanned batches where each page is a separate document.","Explicit ranges give you full control: \"1-3 | 4-6 | 7-\" produces three files, with the last taking everything from page 7 onward.","Several output files are offered as a ZIP so you get them in one download."],
+"faq": [{"q":"Do the split files keep the original quality?","a":"Yes. Page content streams and embedded images are copied byte for byte — nothing is re-encoded or recompressed."}]
+},
 
   'extract-pdf-pages': {
-    title: 'Extract PDF Pages',
-    kind: 'transform', action: 'Extract pages', multiple: false,
-    description: 'Pull specific pages out of a PDF into a new document, keeping the order you specify.',
-    keywords: ['extract pdf pages', 'select pdf pages', 'pdf page extractor', 'get pages from pdf', 'copy pdf pages'],
-    controls: [
-      { key: 'pages', label: 'Pages to keep', type: 'text', default: '1-3',
-        hint: 'e.g. 1-3, 7, 10-' },
-      { key: 'order', label: 'Order', type: 'select', default: 'asis',
-        options: [
-          { value: 'asis', label: 'As listed' },
-          { value: 'sorted', label: 'Sorted by page number' },
-          { value: 'reverse', label: 'Reversed' }
-        ]}
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Extract PDF Pages",
+"kind": "transform",
+"action": "Extract pages",
+"multiple": false,
+"description": "Pull specific pages out of a PDF into a new document, keeping the order you specify.",
+"keywords": ["extract pdf pages","select pdf pages","pdf page extractor","get pages from pdf","copy pdf pages"],
+"pageGrid": { "key": "pages", "mode": "select", "marks": "keep", "rotate": true, "title": "Click the pages to keep, in the order you want them; shift-click for a run, or drag across" },
+"controls": [{"key":"pages","label":"Pages to keep","type":"text","default":"1-3","hint":"e.g. 1-3, 7, 10-"},{"key":"order","label":"Order","type":"select","default":"asis","options":[{"value":"asis","label":"As listed"},{"value":"sorted","label":"Sorted by page number"},{"value":"reverse","label":"Reversed"}]}],
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
       let idx;
@@ -186,7 +154,8 @@ const PDF_TOOLS = {
       if (opts.order === 'sorted') idx = idx.slice().sort((a, b) => a - b);
       if (opts.order === 'reverse') idx = idx.slice().reverse();
 
-      const bytes = await core.assemble(idx.map(p => ({ doc, pageIndex: p })), {});
+      const turns = opts.turns || {};
+      const bytes = await core.assemble(idx.map(p => ({ doc, pageIndex: p, rotate: Number(turns[p]) || 0 })), {});
       const base = docs[0].name.replace(/\.pdf$/i, '');
       return {
         files: [{ name: `${base}-extract.pdf`, bytes }],
@@ -198,25 +167,20 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'Page selections accept ranges, single pages and open-ended forms: "1-3, 7, 10-" takes pages 1 to 3, page 7, and everything from 10 onward.',
-      'Order "as listed" respects what you typed, so "5, 1, 3" produces those pages in that order — useful for reordering as you extract.',
-      'A page can appear twice. "1, 1, 2" duplicates the first page, which is occasionally what you want for a cover sheet.'
-    ],
-    faq: [
-      { q: 'What happens to pages I do not select?', a: 'They are simply not copied. The original file on your device is untouched — this always produces a new document.' }
-    ]
-  },
+"tips": ["Page selections accept ranges, single pages and open-ended forms: \"1-3, 7, 10-\" takes pages 1 to 3, page 7, and everything from 10 onward.","Order \"as listed\" respects what you typed, so \"5, 1, 3\" produces those pages in that order — useful for reordering as you extract.","A page can appear twice. \"1, 1, 2\" duplicates the first page, which is occasionally what you want for a cover sheet."],
+"faq": [{"q":"What happens to pages I do not select?","a":"They are simply not copied. The original file on your device is untouched — this always produces a new document."}]
+},
 
   'delete-pdf-pages': {
-    title: 'Delete PDF Pages',
-    kind: 'transform', action: 'Delete pages', multiple: false,
-    description: 'Remove unwanted pages from a PDF — blank scans, cover sheets, or anything else.',
-    keywords: ['delete pdf pages', 'remove pages from pdf', 'pdf page remover', 'erase pdf page'],
-    controls: [
-      { key: 'pages', label: 'Pages to remove', type: 'text', default: '1', hint: 'e.g. 1, 4-6, 10-' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Delete PDF Pages",
+"kind": "transform",
+"action": "Delete pages",
+"multiple": false,
+"description": "Remove unwanted pages from a PDF — blank scans, cover sheets, or anything else.",
+"keywords": ["delete pdf pages","remove pages from pdf","pdf page remover","erase pdf page"],
+"pageGrid": { "key": "pages", "mode": "select", "marks": "remove", "rotate": true, "title": "Click the pages to remove; shift-click for a run, or drag across" },
+"controls": [{"key":"pages","label":"Pages to remove","type":"text","default":"1","hint":"e.g. 1, 4-6, 10-"}],
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
       let drop;
@@ -226,7 +190,8 @@ const PDF_TOOLS = {
       const keep = Array.from({ length: total }, (_, i) => i).filter(i => !drop.has(i));
       if (!keep.length) return { error: 'That would remove every page. Leave at least one.' };
 
-      const bytes = await core.assemble(keep.map(p => ({ doc, pageIndex: p })), {});
+      const turns = opts.turns || {};
+      const bytes = await core.assemble(keep.map(p => ({ doc, pageIndex: p, rotate: Number(turns[p]) || 0 })), {});
       const base = docs[0].name.replace(/\.pdf$/i, '');
       return {
         files: [{ name: `${base}-trimmed.pdf`, bytes }],
@@ -239,80 +204,63 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'Check the page numbers against the PDF\u2019s own numbering, not any printed numbers on the page — a document with a cover often has them offset by one.',
-      'The inspector tool lists page count and sizes if you are unsure which page is which.',
-      'Nothing is destroyed. A new file is produced and your original stays as it is.'
-    ],
-    faq: [
-      { q: 'Can I get a deleted page back?', a: 'From the output, no. Keep the original file until you have checked the result — which is why this never overwrites anything.' }
-    ]
-  },
+"tips": ["Check the page numbers against the PDF’s own numbering, not any printed numbers on the page — a document with a cover often has them offset by one.","The inspector tool lists page count and sizes if you are unsure which page is which.","Nothing is destroyed. A new file is produced and your original stays as it is."],
+"faq": [{"q":"Can I get a deleted page back?","a":"From the output, no. Keep the original file until you have checked the result — which is why this never overwrites anything."}]
+},
 
   'rotate-pdf': {
-    title: 'Rotate PDF Pages',
-    kind: 'transform', action: 'Rotate pages', multiple: false,
-    description: 'Rotate every page or selected pages by 90, 180 or 270 degrees, permanently.',
-    keywords: ['rotate pdf', 'turn pdf pages', 'pdf orientation', 'fix sideways pdf', 'rotate pdf permanently'],
-    controls: [
-      { key: 'angle', label: 'Rotate by', type: 'select', default: '90',
-        options: [
-          { value: '90', label: '90° clockwise' },
-          { value: '180', label: '180°' },
-          { value: '270', label: '90° anticlockwise' }
-        ]},
-      { key: 'pages', label: 'Pages', type: 'text', default: 'all', hint: 'all, or 1-3, 7' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Rotate PDF Pages",
+"kind": "transform",
+"action": "Rotate pages",
+"multiple": false,
+"description": "Rotate every page or selected pages by 90, 180 or 270 degrees, permanently.",
+"keywords": ["rotate pdf","turn pdf pages","pdf orientation","fix sideways pdf","rotate pdf permanently"],
+"pageGrid": { "key": "pages", "mode": "select", "marks": "mark", "rotate": true, "angleKey": "angle", "title": "Click the pages to turn by the angle above, or turn any one page with its own button" },
+"controls": [{"key":"angle","label":"Rotate by","type":"select","default":"90","options":[{"value":"90","label":"90° clockwise"},{"value":"180","label":"180°"},{"value":"270","label":"90° anticlockwise"}]},{"key":"pages","label":"Pages","type":"text","default":"all","hint":"all, or 1-3, 7"}],
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
       let sel;
-      try { sel = new Set(core.parsePageRange(opts.pages, total)); }
+      /* an empty box means no page takes the angle (the grid's "None"), so
+         only the pages turned one by one change */
+      const want = String(opts.pages == null ? 'all' : opts.pages).trim();
+      try { sel = new Set(want ? core.parsePageRange(want, total) : []); }
       catch (e) { return { error: e.message }; }
+      if (!sel.size && !Object.keys(opts.turns || {}).length) return { error: 'Choose the pages to rotate: type them in Pages, or click them in the grid.' };
 
       const angle = Number(opts.angle) || 90;
+      /* the grid's per-page turns come on top of the angle for the chosen
+         pages, so one page can go a quarter turn and the rest a half */
+      const turns = opts.turns || {};
       const items = Array.from({ length: total }, (_, i) => ({
-        doc, pageIndex: i, rotate: sel.has(i) ? angle : 0
+        doc, pageIndex: i, rotate: ((sel.has(i) ? angle : 0) + (Number(turns[i]) || 0)) % 360
       }));
+      const turned = items.filter((x) => x.rotate).length;
       const bytes = await core.assemble(items, {});
       const base = docs[0].name.replace(/\.pdf$/i, '');
       return {
         files: [{ name: `${base}-rotated.pdf`, bytes }],
         stats: [
           ['Pages', String(total)],
-          ['Pages rotated', String(sel.size)],
+          ['Pages rotated', String(turned)],
           ['Rotation applied', angle + '°'],
           ['Output size', fmtBytes(bytes.length)]
         ]
       };
     },
-    tips: [
-      'Rotation is written into the page itself, so every viewer shows it the same way. Rotating in a reader without saving only changes your own view.',
-      'Rotation is additive: a page already at 90° rotated by another 90° ends at 180°.',
-      'A scanned page that looks sideways but reports no rotation was scanned that way — rotating fixes it properly here.'
-    ],
-    faq: [
-      { q: 'Does rotating reduce quality?', a: 'No. The page content is untouched; only a rotation flag changes. There is no re-rendering and no loss.' }
-    ]
-  },
+"tips": ["Rotation is written into the page itself, so every viewer shows it the same way. Rotating in a reader without saving only changes your own view.","Rotation is additive: a page already at 90° rotated by another 90° ends at 180°.","A scanned page that looks sideways but reports no rotation was scanned that way — rotating fixes it properly here."],
+"faq": [{"q":"Does rotating reduce quality?","a":"No. The page content is untouched; only a rotation flag changes. There is no re-rendering and no loss."}]
+},
 
   'pdf-metadata': {
-    title: 'PDF Metadata Editor & Remover',
-    kind: 'transform', action: 'Apply to metadata', multiple: false,
-    description: 'View, change or completely strip the hidden metadata in a PDF — author, title, software.',
-    keywords: ['pdf metadata', 'remove pdf metadata', 'edit pdf properties', 'pdf author remove', 'anonymise pdf'],
-    controls: [
-      { key: 'action', label: 'Action', type: 'select', default: 'strip',
-        options: [
-          { value: 'strip', label: 'Remove all metadata' },
-          { value: 'edit', label: 'Set the fields below' }
-        ]},
-      { key: 'Title', label: 'Title', type: 'text', default: '' },
-      { key: 'Author', label: 'Author', type: 'text', default: '' },
-      { key: 'Subject', label: 'Subject', type: 'text', default: '' },
-      { key: 'Keywords', label: 'Keywords', type: 'text', default: '' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "PDF Metadata Editor & Remover",
+"kind": "transform",
+"action": "Apply to metadata",
+"multiple": false,
+"description": "View, change or completely strip the hidden metadata in a PDF — author, title, software.",
+"keywords": ["pdf metadata","remove pdf metadata","edit pdf properties","pdf author remove","anonymise pdf"],
+"controls": [{"key":"action","label":"Action","type":"select","default":"strip","options":[{"value":"strip","label":"Remove all metadata"},{"value":"edit","label":"Set the fields below"}]},{"key":"Title","label":"Title","type":"text","default":""},{"key":"Author","label":"Author","type":"text","default":""},{"key":"Subject","label":"Subject","type":"text","default":""},{"key":"Keywords","label":"Keywords","type":"text","default":""}],
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const before = await doc.getInfo();
       const total = await doc.pageCount();
@@ -340,24 +288,18 @@ const PDF_TOOLS = {
           ? `Removed: ${found.map(([k]) => k).join(', ')}. The original file on your device still contains them.` : ''
       };
     },
-    tips: [
-      'PDFs routinely carry the author\u2019s name, their organisation, the software used and creation timestamps. It is a common and unintended disclosure when sending documents externally.',
-      'This rewrites the document without the metadata dictionary rather than blanking fields, so nothing survives in the file.',
-      'Some PDFs also carry an XMP metadata stream. Rebuilding the document drops that too.',
-      'Text inside the page content is not metadata and is left alone. Redacting visible text needs a different approach.'
-    ],
-    faq: [
-      { q: 'Is stripping metadata the same as redacting?', a: 'No, and the difference matters. This removes document properties. It does not remove text or images from the page, and it does not remove content hidden under a black box. For genuine redaction, the content itself must be deleted before the file is produced.' }
-    ]
-  },
+"tips": ["PDFs routinely carry the author’s name, their organisation, the software used and creation timestamps. It is a common and unintended disclosure when sending documents externally.","This rewrites the document without the metadata dictionary rather than blanking fields, so nothing survives in the file.","Some PDFs also carry an XMP metadata stream. Rebuilding the document drops that too.","Text inside the page content is not metadata and is left alone. Redacting visible text needs a different approach."],
+"faq": [{"q":"Is stripping metadata the same as redacting?","a":"No, and the difference matters. This removes document properties. It does not remove text or images from the page, and it does not remove content hidden under a black box. For genuine redaction, the content itself must be deleted before the file is produced."}]
+},
 
   'pdf-inspector': {
-    title: 'PDF Inspector',
-    kind: 'inspect', multiple: false,
-    description: 'Examine a PDF: page count, sizes, rotation, fonts, images, metadata and structure.',
-    keywords: ['pdf inspector', 'pdf info', 'pdf properties', 'analyse pdf', 'pdf page size checker'],
-    controls: [],
-    run: async ({ docs, core }) => {
+"title": "PDF Inspector",
+"kind": "inspect",
+"multiple": false,
+"description": "Examine a PDF: page count, sizes, rotation, fonts, images, metadata and structure.",
+"keywords": ["pdf inspector","pdf info","pdf properties","analyse pdf","pdf page size checker"],
+"controls": [],
+"run": async ({ docs, core }) => {
       const doc = docs[0].doc;
       const pages = await doc.getPages();
       const info = await doc.getInfo();
@@ -417,36 +359,20 @@ const PDF_TOOLS = {
       const report = rows.map(([k, v]) => `${k.padEnd(22)} ${v}`).join('\n');
       return { files: [], report, stats: rows };
     },
-    tips: [
-      'Page sizes are given in points and millimetres. A4 is 595 × 842 pt; US Letter is 612 × 792.',
-      'Mixed page sizes in one document are a common cause of printing problems — this shows them grouped so a stray page stands out.',
-      'Fonts listed with a prefix like ABCDEF+Arial are subsetted, meaning only the glyphs actually used are embedded.',
-      'The metadata section is worth checking before sending a document externally. Author names and software versions are disclosed more often than people expect.'
-    ],
-    faq: [
-      { q: 'Why does the object count differ from other tools?', a: 'Counting depends on whether objects inside compressed object streams are expanded and whether unreferenced objects are included. This expands object streams and counts everything it can reach.' }
-    ]
-  },
+"tips": ["Page sizes are given in points and millimetres. A4 is 595 × 842 pt; US Letter is 612 × 792.","Mixed page sizes in one document are a common cause of printing problems — this shows them grouped so a stray page stands out.","Fonts listed with a prefix like ABCDEF+Arial are subsetted, meaning only the glyphs actually used are embedded.","The metadata section is worth checking before sending a document externally. Author names and software versions are disclosed more often than people expect."],
+"faq": [{"q":"Why does the object count differ from other tools?","a":"Counting depends on whether objects inside compressed object streams are expanded and whether unreferenced objects are included. This expands object streams and counts everything it can reach."}]
+},
 
   'watermark-pdf': {
-    title: 'Add Watermark to PDF',
-    kind: 'transform', action: 'Add watermark', multiple: false,
-    description: 'Stamp text across every page — DRAFT, CONFIDENTIAL, a name or a date — at any angle and opacity.',
-    keywords: ['watermark pdf', 'add text to pdf', 'stamp pdf', 'draft watermark', 'confidential pdf'],
-    controls: [
-      { key: 'text', label: 'Watermark text', type: 'text', default: 'DRAFT' },
-      { key: 'size', label: 'Font size', type: 'number', default: 60, min: 6, max: 300 },
-      { key: 'angle', label: 'Angle', type: 'select', default: '45',
-        options: [{ value: '0', label: 'Horizontal' }, { value: '45', label: '45° diagonal' },
-                  { value: '90', label: 'Vertical' }, { value: '315', label: '−45° diagonal' }] },
-      { key: 'colour', label: 'Colour', type: 'color', default: '#ff0000' },
-      { key: 'opacity', label: 'Opacity %', type: 'number', default: 20, min: 5, max: 100 },
-      { key: 'position', label: 'Position', type: 'select', default: 'center',
-        options: [{ value: 'center', label: 'Centre' }, { value: 'tile', label: 'Tiled across the page' },
-                  { value: 'bottom', label: 'Bottom of the page' }] },
-      { key: 'pages', label: 'Pages', type: 'text', default: 'all' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Add Watermark to PDF",
+"kind": "transform",
+"action": "Add watermark",
+"multiple": false,
+"description": "Stamp text across every page — DRAFT, CONFIDENTIAL, a name or a date — at any angle and opacity.",
+"keywords": ["watermark pdf","add text to pdf","stamp pdf","draft watermark","confidential pdf"],
+"livePreview": true,
+"controls": [{"key":"text","label":"Watermark text","type":"text","default":"DRAFT","remember":true},{"key":"size","label":"Font size","type":"number","default":60,"min":6,"max":300},{"key":"angle","label":"Angle","type":"select","default":"45","options":[{"value":"0","label":"Horizontal"},{"value":"45","label":"45° diagonal"},{"value":"90","label":"Vertical"},{"value":"315","label":"−45° diagonal"}]},{"key":"colour","label":"Colour","type":"color","default":"#ff0000"},{"key":"opacity","label":"Opacity %","type":"number","default":20,"min":5,"max":100},{"key":"position","label":"Position","type":"select","default":"center","options":[{"value":"center","label":"Centre"},{"value":"tile","label":"Tiled across the page"},{"value":"bottom","label":"Bottom of the page"}]},{"key":"pages","label":"Pages","type":"text","default":"all"}],
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
       let sel;
@@ -510,44 +436,20 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'A watermark added this way sits on top of the page content and can be removed by anyone with a PDF editor. It signals status; it does not protect anything.',
-      'Tiled watermarks are much harder to crop out than a single central one, which matters for documents that might be screenshotted.',
-      'Keep opacity around 15–25%. Higher and it fights the text; lower and it vanishes when printed.',
-      'The text is drawn with a standard font, so no font file is embedded and the file barely grows.'
-    ],
-    faq: [
-      { q: 'Can the watermark be removed?', a: 'Yes, by anyone reasonably determined — it is a content layer, not a security feature. If a document genuinely must not be redistributed, watermarking is a deterrent and an audit aid, not a control.' }
-    ]
-  },
+"tips": ["A watermark added this way sits on top of the page content and can be removed by anyone with a PDF editor. It signals status; it does not protect anything.","Tiled watermarks are much harder to crop out than a single central one, which matters for documents that might be screenshotted.","Keep opacity around 15–25%. Higher and it fights the text; lower and it vanishes when printed.","The text is drawn with a standard font, so no font file is embedded and the file barely grows."],
+"faq": [{"q":"Can the watermark be removed?","a":"Yes, by anyone reasonably determined — it is a content layer, not a security feature. If a document genuinely must not be redistributed, watermarking is a deterrent and an audit aid, not a control."}]
+},
 
   'pdf-page-numbers': {
-    title: 'Add Page Numbers to PDF',
-    kind: 'transform', action: 'Add page numbers', multiple: false,
-    description: 'Stamp page numbers, headers or footers onto an existing PDF.',
-    keywords: ['add page numbers to pdf', 'pdf page numbering', 'pdf header footer', 'number pdf pages'],
-    controls: [
-      { key: 'format', label: 'Format', type: 'select', default: 'n',
-        options: [
-          { value: 'n', label: '1' },
-          { value: 'n-of-t', label: '1 of 10' },
-          { value: 'page-n', label: 'Page 1' },
-          { value: 'page-n-of-t', label: 'Page 1 of 10' },
-          { value: 'dash', label: '– 1 –' }
-        ]},
-      { key: 'position', label: 'Position', type: 'select', default: 'bc',
-        options: [
-          { value: 'bl', label: 'Bottom left' }, { value: 'bc', label: 'Bottom centre' },
-          { value: 'br', label: 'Bottom right' }, { value: 'tl', label: 'Top left' },
-          { value: 'tc', label: 'Top centre' }, { value: 'tr', label: 'Top right' }
-        ]},
-      { key: 'start', label: 'Start numbering at', type: 'number', default: 1, min: 0 },
-      { key: 'skip', label: 'Skip first N pages', type: 'number', default: 0, min: 0 },
-      { key: 'size', label: 'Font size', type: 'number', default: 10, min: 5, max: 48 },
-      { key: 'colour', label: 'Colour', type: 'color', default: '#333333' },
-      { key: 'extra', label: 'Header or footer text (optional)', type: 'text', default: '' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Add Page Numbers to PDF",
+"kind": "transform",
+"action": "Add page numbers",
+"multiple": false,
+"description": "Stamp page numbers, headers or footers onto an existing PDF.",
+"keywords": ["add page numbers to pdf","pdf page numbering","pdf header footer","number pdf pages"],
+"livePreview": true,
+"controls": [{"key":"format","label":"Format","type":"select","default":"n","options":[{"value":"n","label":"1"},{"value":"n-of-t","label":"1 of 10"},{"value":"page-n","label":"Page 1"},{"value":"page-n-of-t","label":"Page 1 of 10"},{"value":"dash","label":"– 1 –"}]},{"key":"position","label":"Position","type":"select","default":"bc","options":[{"value":"bl","label":"Bottom left"},{"value":"bc","label":"Bottom centre"},{"value":"br","label":"Bottom right"},{"value":"tl","label":"Top left"},{"value":"tc","label":"Top centre"},{"value":"tr","label":"Top right"}]},{"key":"start","label":"Start numbering at","type":"number","default":1,"min":0},{"key":"skip","label":"Skip first N pages","type":"number","default":0,"min":0},{"key":"size","label":"Font size","type":"number","default":10,"min":5,"max":48},{"key":"colour","label":"Colour","type":"color","default":"#333333"},{"key":"extra","label":"Header or footer text (optional)","type":"text","default":""}],
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
       const pages = await doc.getPages();
@@ -608,41 +510,19 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'Skip the first page when the document has a cover, and start numbering at 1 on the page after it.',
-      'Numbers are placed 32 points — about 11 mm — from the page edge, inside the printable area of virtually every printer.',
-      'If the document already has printed page numbers, these will sit alongside them. Check a page before committing to a long document.',
-      'Mixed page sizes are handled: the position is computed per page from the part of that page a reader sees, turned the way it is shown, so a landscape page stored sideways or a cropped scan is numbered upright and inside its visible edge.'
-    ],
-    faq: [
-      { q: 'Can I use Roman numerals for a preface?', a: 'Not in one pass. Split the document, number the preface separately with a different format, then merge — which is exactly what the split and merge tools are for.' }
-    ]
-  },
-
-  /* ===================== CREATE ===================== */
+"tips": ["Skip the first page when the document has a cover, and start numbering at 1 on the page after it.","Numbers are placed 32 points — about 11 mm — from the page edge, inside the printable area of virtually every printer.","If the document already has printed page numbers, these will sit alongside them. Check a page before committing to a long document.","Mixed page sizes are handled: the position is computed per page from the part of that page a reader sees, turned the way it is shown, so a landscape page stored sideways or a cropped scan is numbered upright and inside its visible edge."],
+"faq": [{"q":"Can I use Roman numerals for a preface?","a":"Not in one pass. Split the document, number the preface separately with a different format, then merge — which is exactly what the split and merge tools are for."}]
+},
 
   'text-to-pdf': {
-    title: 'Text to PDF Converter',
-    kind: 'create', multiple: false,
-    description: 'Turn plain text into a properly paginated PDF with margins, wrapping and page numbers.',
-    keywords: ['text to pdf', 'txt to pdf', 'create pdf from text', 'convert text to pdf', 'make a pdf'],
-    inputLabel: 'Your text',
-    controls: [
-      { key: 'pageSize', label: 'Page size', type: 'select', default: 'a4',
-        options: [{ value: 'a4', label: 'A4' }, { value: 'letter', label: 'US Letter' },
-                  { value: 'a5', label: 'A5' }, { value: 'legal', label: 'Legal' }] },
-      { key: 'font', label: 'Font', type: 'select', default: 'Helvetica',
-        options: [{ value: 'Helvetica', label: 'Helvetica (sans)' },
-                  { value: 'Times-Roman', label: 'Times (serif)' },
-                  { value: 'Courier', label: 'Courier (monospace)' }] },
-      { key: 'size', label: 'Font size', type: 'number', default: 11, min: 6, max: 36 },
-      { key: 'leading', label: 'Line spacing', type: 'number', default: 1.4, min: 1, max: 3, step: 0.1 },
-      { key: 'margin', label: 'Margin (mm)', type: 'number', default: 20, min: 5, max: 60 },
-      { key: 'numbers', label: 'Page numbers', type: 'select', default: 'yes',
-        options: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }] },
-      { key: 'title', label: 'Document title', type: 'text', default: '' }
-    ],
-    run: async ({ text, opts, core }) => {
+"title": "Text to PDF Converter",
+"kind": "create",
+"multiple": false,
+"description": "Turn plain text into a properly paginated PDF with margins, wrapping and page numbers.",
+"keywords": ["text to pdf","txt to pdf","create pdf from text","convert text to pdf","make a pdf"],
+"inputLabel": "Your text",
+"controls": [{"key":"pageSize","label":"Page size","type":"select","default":"a4","options":[{"value":"a4","label":"A4"},{"value":"letter","label":"US Letter"},{"value":"a5","label":"A5"},{"value":"legal","label":"Legal"}]},{"key":"font","label":"Font","type":"select","default":"Helvetica","options":[{"value":"Helvetica","label":"Helvetica (sans)"},{"value":"Times-Roman","label":"Times (serif)"},{"value":"Courier","label":"Courier (monospace)"}]},{"key":"size","label":"Font size","type":"number","default":11,"min":6,"max":36},{"key":"leading","label":"Line spacing","type":"number","default":1.4,"min":1,"max":3,"step":0.1},{"key":"margin","label":"Margin (mm)","type":"number","default":20,"min":5,"max":60},{"key":"numbers","label":"Page numbers","type":"select","default":"yes","options":[{"value":"yes","label":"Yes"},{"value":"no","label":"No"}]},{"key":"title","label":"Document title","type":"text","default":""}],
+"run": async ({ text, opts, core }) => {
       const body = String(text || '');
       if (!body.trim()) return { error: 'Enter or paste some text to convert.' };
 
@@ -685,42 +565,18 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'Text is wrapped using the real font metrics, so lines break where they actually would rather than at a guessed character count.',
-      'Only the standard PDF fonts are used — Helvetica, Times and Courier — which means no font file is embedded and the file stays tiny.',
-      'Characters outside Western European ranges cannot be represented without embedding a font, and appear as "?". For other scripts, use a word processor.',
-      'Blank lines in your text are preserved as blank lines in the output.'
-    ],
-    faq: [
-      { q: 'Why do accented characters work but not Chinese or Arabic?', a: 'The standard PDF fonts cover WinAnsi encoding, which includes Western European accents. Other scripts need an embedded font with those glyphs, and embedding a CJK font would add several megabytes to every page of this site.' }
-    ]
-  },
+"tips": ["Text is wrapped using the real font metrics, so lines break where they actually would rather than at a guessed character count.","Only the standard PDF fonts are used — Helvetica, Times and Courier — which means no font file is embedded and the file stays tiny.","Characters outside Western European ranges cannot be represented without embedding a font, and appear as \"?\". For other scripts, use a word processor.","Blank lines in your text are preserved as blank lines in the output."],
+"faq": [{"q":"Why do accented characters work but not Chinese or Arabic?","a":"The standard PDF fonts cover WinAnsi encoding, which includes Western European accents. Other scripts need an embedded font with those glyphs, and embedding a CJK font would add several megabytes to every page of this site."}]
+},
 
   'invoice-pdf': {
-    title: 'Invoice Generator (PDF)',
-    kind: 'create', multiple: false,
-    description: 'Create a clean, professional invoice PDF with line items, tax and totals calculated for you.',
-    keywords: ['invoice generator', 'create invoice pdf', 'free invoice template', 'make an invoice', 'invoice maker'],
-    controls: [
-      { key: 'from', label: 'Your business (name, address)', type: 'textarea', default: 'MVR IT Services LTD\nReading, United Kingdom\nCompany No. 10251131' },
-      { key: 'to', label: 'Bill to', type: 'textarea', default: 'Client Name Ltd\n1 Example Street\nLondon, EC1A 1AA' },
-      { key: 'number', label: 'Invoice number', type: 'text', default: 'INV-0001' },
-      { key: 'date', label: 'Invoice date', type: 'date', default: 'TODAY' },
-      { key: 'due', label: 'Payment terms', type: 'select', default: '30',
-        options: [{ value: '0', label: 'Due on receipt' }, { value: '7', label: 'Net 7' },
-                  { value: '14', label: 'Net 14' }, { value: '30', label: 'Net 30' },
-                  { value: '60', label: 'Net 60' }] },
-      { key: 'items', label: 'Line items — description, qty, unit price (one per line)', type: 'textarea',
-        default: 'Website design and build, 1, 4500\nHosting and support (12 months), 12, 45\nDomain registration, 1, 15' },
-      { key: 'currency', label: 'Currency', type: 'select', default: 'GBP',
-        options: [{ value: 'GBP', label: 'GBP £' }, { value: 'USD', label: 'USD $' },
-                  { value: 'EUR', label: 'EUR €' }, { value: 'INR', label: 'INR Rs' }] },
-      { key: 'tax', label: 'Tax rate %', type: 'number', default: 20, min: 0, max: 100, step: 0.5 },
-      { key: 'taxLabel', label: 'Tax label', type: 'text', default: 'VAT' },
-      { key: 'notes', label: 'Notes / payment details', type: 'textarea', default: 'Payment by bank transfer.\nThank you for your business.' },
-      { key: 'accent', label: 'Accent colour', type: 'color', default: '#f7c948' }
-    ],
-    run: async ({ opts, core }) => {
+"title": "Invoice Generator (PDF)",
+"kind": "create",
+"multiple": false,
+"description": "Create a clean, professional invoice PDF with line items, tax and totals calculated for you.",
+"keywords": ["invoice generator","create invoice pdf","free invoice template","make an invoice","invoice maker"],
+"controls": [{"key":"from","label":"Your business (name, address)","type":"textarea","default":"MVR IT Services LTD\nReading, United Kingdom\nCompany No. 10251131"},{"key":"to","label":"Bill to","type":"textarea","default":"Client Name Ltd\n1 Example Street\nLondon, EC1A 1AA"},{"key":"number","label":"Invoice number","type":"text","default":"INV-0001"},{"key":"date","label":"Invoice date","type":"date","default":"TODAY"},{"key":"due","label":"Payment terms","type":"select","default":"30","options":[{"value":"0","label":"Due on receipt"},{"value":"7","label":"Net 7"},{"value":"14","label":"Net 14"},{"value":"30","label":"Net 30"},{"value":"60","label":"Net 60"}]},{"key":"items","label":"Line items — description, qty, unit price (one per line)","type":"textarea","default":"Website design and build, 1, 4500\nHosting and support (12 months), 12, 45\nDomain registration, 1, 15"},{"key":"currency","label":"Currency","type":"select","default":"GBP","options":[{"value":"GBP","label":"GBP £"},{"value":"USD","label":"USD $"},{"value":"EUR","label":"EUR €"},{"value":"INR","label":"INR Rs"}]},{"key":"tax","label":"Tax rate %","type":"number","default":20,"min":0,"max":100,"step":0.5},{"key":"taxLabel","label":"Tax label","type":"text","default":"VAT"},{"key":"notes","label":"Notes / payment details","type":"textarea","default":"Payment by bank transfer.\nThank you for your business."},{"key":"accent","label":"Accent colour","type":"color","default":"#f7c948"}],
+"run": async ({ opts, core }) => {
       const SYM = { GBP: '\u00a3', USD: '$', EUR: '\u20ac', INR: 'Rs ' };
       const sym = SYM[opts.currency] || '';
       const rows = [];
@@ -824,46 +680,18 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'Line items take the form "description, quantity, unit price". The description may contain commas — only the last two values are read as numbers.',
-      'Prices may keep their thousands commas, western or Indian: "Consulting, 1, 1,200" is 1 at 1,200 and "Fit-out, 1, 1,25,000" is 1 at 1,25,000, because a comma followed by a space separates fields and one between digits does not. "Consulting x2 @ 1,200" works too. When a line could mean two different prices, the tool says so and asks, rather than picking one.',
-      'A UK VAT invoice must show your VAT number, the tax point date and the rate applied. Add your VAT number to the business details block.',
-      'Invoice numbers should be sequential with no gaps. Tax authorities in most jurisdictions expect to see an unbroken series.',
-      'Everything is generated on your device, so client names and amounts never leave it.'
-    ],
-    faq: [
-      { q: 'Is this a legally compliant invoice?', a: 'It produces the layout. Whether it is compliant depends on your jurisdiction and what you include — VAT registration number, tax point, reverse charge wording where relevant. Check the requirements for your country, or ask your accountant, before issuing.' }
-    ]
-  },
+"tips": ["Line items take the form \"description, quantity, unit price\". The description may contain commas — only the last two values are read as numbers.","Prices may keep their thousands commas, western or Indian: \"Consulting, 1, 1,200\" is 1 at 1,200 and \"Fit-out, 1, 1,25,000\" is 1 at 1,25,000, because a comma followed by a space separates fields and one between digits does not. \"Consulting x2 @ 1,200\" works too. When a line could mean two different prices, the tool says so and asks, rather than picking one.","A UK VAT invoice must show your VAT number, the tax point date and the rate applied. Add your VAT number to the business details block.","Invoice numbers should be sequential with no gaps. Tax authorities in most jurisdictions expect to see an unbroken series.","Everything is generated on your device, so client names and amounts never leave it."],
+"faq": [{"q":"Is this a legally compliant invoice?","a":"It produces the layout. Whether it is compliant depends on your jurisdiction and what you include — VAT registration number, tax point, reverse charge wording where relevant. Check the requirements for your country, or ask your accountant, before issuing."}]
+},
 
   'paper-pdf': {
-    title: 'Printable Paper Generator',
-    kind: 'create', multiple: false,
-    description: 'Generate graph, lined, dotted, isometric or music paper as a print-ready PDF.',
-    keywords: ['graph paper pdf', 'printable lined paper', 'dot grid paper', 'isometric paper', 'music manuscript paper', 'squared paper'],
-    controls: [
-      { key: 'type', label: 'Paper type', type: 'select', default: 'grid',
-        options: [
-          { value: 'grid', label: 'Graph / squared' },
-          { value: 'lined', label: 'Lined (ruled)' },
-          { value: 'dot', label: 'Dot grid' },
-          { value: 'iso', label: 'Isometric' },
-          { value: 'music', label: 'Music manuscript' },
-          { value: 'cornell', label: 'Cornell notes' },
-          { value: 'blank', label: 'Blank with margin' }
-        ]},
-      { key: 'pageSize', label: 'Page size', type: 'select', default: 'a4',
-        options: [{ value: 'a4', label: 'A4' }, { value: 'letter', label: 'US Letter' },
-                  { value: 'a5', label: 'A5' }, { value: 'a3', label: 'A3' }] },
-      { key: 'orientation', label: 'Orientation', type: 'select', default: 'portrait',
-        options: [{ value: 'portrait', label: 'Portrait' }, { value: 'landscape', label: 'Landscape' }] },
-      { key: 'spacing', label: 'Spacing (mm)', type: 'number', default: 5, min: 2, max: 30, step: 0.5 },
-      { key: 'colour', label: 'Line colour', type: 'color', default: '#9db4d0' },
-      { key: 'weight', label: 'Line weight', type: 'number', default: 0.4, min: 0.1, max: 2, step: 0.1 },
-      { key: 'margin', label: 'Margin (mm)', type: 'number', default: 10, min: 0, max: 40 },
-      { key: 'pages', label: 'Number of pages', type: 'number', default: 1, min: 1, max: 100 }
-    ],
-    run: async ({ opts, core }) => {
+"title": "Printable Paper Generator",
+"kind": "create",
+"multiple": false,
+"description": "Generate graph, lined, dotted, isometric or music paper as a print-ready PDF.",
+"keywords": ["graph paper pdf","printable lined paper","dot grid paper","isometric paper","music manuscript paper","squared paper"],
+"controls": [{"key":"type","label":"Paper type","type":"select","default":"grid","options":[{"value":"grid","label":"Graph / squared"},{"value":"lined","label":"Lined (ruled)"},{"value":"dot","label":"Dot grid"},{"value":"iso","label":"Isometric"},{"value":"music","label":"Music manuscript"},{"value":"cornell","label":"Cornell notes"},{"value":"blank","label":"Blank with margin"}]},{"key":"pageSize","label":"Page size","type":"select","default":"a4","options":[{"value":"a4","label":"A4"},{"value":"letter","label":"US Letter"},{"value":"a5","label":"A5"},{"value":"a3","label":"A3"}]},{"key":"orientation","label":"Orientation","type":"select","default":"portrait","options":[{"value":"portrait","label":"Portrait"},{"value":"landscape","label":"Landscape"}]},{"key":"spacing","label":"Spacing (mm)","type":"number","default":5,"min":2,"max":30,"step":0.5},{"key":"colour","label":"Line colour","type":"color","default":"#9db4d0"},{"key":"weight","label":"Line weight","type":"number","default":0.4,"min":0.1,"max":2,"step":0.1},{"key":"margin","label":"Margin (mm)","type":"number","default":10,"min":0,"max":40},{"key":"pages","label":"Number of pages","type":"number","default":1,"min":1,"max":100}],
+"run": async ({ opts, core }) => {
       let [W, H] = core.PAGE_SIZES[opts.pageSize] || core.PAGE_SIZES.a4;
       if (opts.orientation === 'landscape') [W, H] = [H, W];
       const MM = 72 / 25.4;
@@ -939,42 +767,18 @@ const PDF_TOOLS = {
         warn: ops.length > 8000 ? 'That spacing produces a very dense grid, which will make a large file and may print slowly.' : ''
       };
     },
-    tips: [
-      'Print at 100% scale with no "fit to page", or the spacing will not measure what it says. 5 mm graph paper printed at 96% is no longer 5 mm.',
-      'A pale blue-grey grid photocopies and scans far better than black, and is easier to draw over.',
-      'Isometric paper uses a 60-degree triangular grid, which is the standard for technical and orthographic sketching.',
-      'Cornell layout gives a narrow cue column on the left, a wide notes area, and a summary strip at the bottom.'
-    ],
-    faq: [
-      { q: 'Why does my printed grid measure slightly wrong?', a: 'Almost always print scaling. Check the print dialogue for "Actual size" or 100%, and turn off any margin fitting. Printers also have a small non-printable border, which is what the margin setting accounts for.' }
-    ]
-  },
+"tips": ["Print at 100% scale with no \"fit to page\", or the spacing will not measure what it says. 5 mm graph paper printed at 96% is no longer 5 mm.","A pale blue-grey grid photocopies and scans far better than black, and is easier to draw over.","Isometric paper uses a 60-degree triangular grid, which is the standard for technical and orthographic sketching.","Cornell layout gives a narrow cue column on the left, a wide notes area, and a summary strip at the bottom."],
+"faq": [{"q":"Why does my printed grid measure slightly wrong?","a":"Almost always print scaling. Check the print dialogue for \"Actual size\" or 100%, and turn off any margin fitting. Printers also have a small non-printable border, which is what the margin setting accounts for."}]
+},
 
   'label-pdf': {
-    title: 'Label Sheet Generator',
-    kind: 'create', multiple: false,
-    description: 'Print address or product labels on standard sheet layouts, with data from a list.',
-    keywords: ['label template pdf', 'address label generator', 'avery labels pdf', 'print labels', 'label sheet maker'],
-    controls: [
-      { key: 'layout', label: 'Label layout', type: 'select', default: '3x7',
-        options: [
-          { value: '3x7', label: 'A4 — 3 × 7 (63.5 × 38.1 mm, 21 per sheet)' },
-          { value: '2x8', label: 'A4 — 2 × 8 (99.1 × 33.9 mm, 16 per sheet)' },
-          { value: '2x7', label: 'A4 — 2 × 7 (99.1 × 38.1 mm, 14 per sheet)' },
-          { value: '1x10', label: 'A4 — 1 × 10 (200 × 27 mm, 10 per sheet)' },
-          { value: '4x10', label: 'A4 — 4 × 10 (45.7 × 25.4 mm, 40 per sheet)' }
-        ]},
-      { key: 'items', label: 'Label text — blank line between labels', type: 'textarea',
-        default: 'MVR IT Services LTD\nReading\nUnited Kingdom\n\nSecond Label\nAnother Address\nSomewhere' },
-      { key: 'repeat', label: 'If fewer labels than the sheet holds', type: 'select', default: 'repeat',
-        options: [{ value: 'repeat', label: 'Repeat to fill the sheet' }, { value: 'once', label: 'Leave the rest blank' }] },
-      { key: 'size', label: 'Font size', type: 'number', default: 9, min: 5, max: 18 },
-      { key: 'align', label: 'Alignment', type: 'select', default: 'left',
-        options: [{ value: 'left', label: 'Left' }, { value: 'center', label: 'Centred' }] },
-      { key: 'guides', label: 'Cutting guides', type: 'select', default: 'no',
-        options: [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Show outlines' }] }
-    ],
-    run: async ({ opts, core }) => {
+"title": "Label Sheet Generator",
+"kind": "create",
+"multiple": false,
+"description": "Print address or product labels on standard sheet layouts, with data from a list.",
+"keywords": ["label template pdf","address label generator","avery labels pdf","print labels","label sheet maker"],
+"controls": [{"key":"layout","label":"Label layout","type":"select","default":"3x7","options":[{"value":"3x7","label":"A4 — 3 × 7 (63.5 × 38.1 mm, 21 per sheet)"},{"value":"2x8","label":"A4 — 2 × 8 (99.1 × 33.9 mm, 16 per sheet)"},{"value":"2x7","label":"A4 — 2 × 7 (99.1 × 38.1 mm, 14 per sheet)"},{"value":"1x10","label":"A4 — 1 × 10 (200 × 27 mm, 10 per sheet)"},{"value":"4x10","label":"A4 — 4 × 10 (45.7 × 25.4 mm, 40 per sheet)"}]},{"key":"items","label":"Label text — blank line between labels","type":"textarea","default":"MVR IT Services LTD\nReading\nUnited Kingdom\n\nSecond Label\nAnother Address\nSomewhere"},{"key":"repeat","label":"If fewer labels than the sheet holds","type":"select","default":"repeat","options":[{"value":"repeat","label":"Repeat to fill the sheet"},{"value":"once","label":"Leave the rest blank"}]},{"key":"size","label":"Font size","type":"number","default":9,"min":5,"max":18},{"key":"align","label":"Alignment","type":"select","default":"left","options":[{"value":"left","label":"Left"},{"value":"center","label":"Centred"}]},{"key":"guides","label":"Cutting guides","type":"select","default":"no","options":[{"value":"no","label":"No"},{"value":"yes","label":"Show outlines"}]}],
+"run": async ({ opts, core }) => {
       const LAYOUTS = {
         '3x7':  { cols: 3, rows: 7,  w: 63.5, h: 38.1, left: 7.2,  top: 15.1, gapX: 2.5, gapY: 0 },
         '2x8':  { cols: 2, rows: 8,  w: 99.1, h: 33.9, left: 4.6,  top: 13.1, gapX: 2.5, gapY: 0 },
@@ -1040,34 +844,18 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'Print at exactly 100% scale. Label sheets are unforgiving — even 2% scaling shifts text off the labels by the bottom of the page.',
-      'Run one sheet on plain paper first and hold it against a real label sheet up to a window to check alignment.',
-      'These dimensions match the common A4 label formats. Manufacturers vary slightly, so verify against your own sheets before printing a batch.',
-      'Turn on cutting guides for plain paper, and off for real label stock where the outlines would print onto the labels.'
-    ],
-    faq: [
-      { q: 'My labels are consistently a few millimetres off. What now?', a: 'That is almost always printer margin offset rather than the template. Most print drivers have a calibration or offset setting; alternatively adjust the margin in your printer dialogue by the amount you measured.' }
-    ]
-  },
+"tips": ["Print at exactly 100% scale. Label sheets are unforgiving — even 2% scaling shifts text off the labels by the bottom of the page.","Run one sheet on plain paper first and hold it against a real label sheet up to a window to check alignment.","These dimensions match the common A4 label formats. Manufacturers vary slightly, so verify against your own sheets before printing a batch.","Turn on cutting guides for plain paper, and off for real label stock where the outlines would print onto the labels."],
+"faq": [{"q":"My labels are consistently a few millimetres off. What now?","a":"That is almost always printer margin offset rather than the template. Most print drivers have a calibration or offset setting; alternatively adjust the margin in your printer dialogue by the amount you measured."}]
+},
 
   'certificate-pdf': {
-    title: 'Certificate Generator',
-    kind: 'create', multiple: false,
-    description: 'Create certificates of completion, achievement or attendance — one, or a batch from a name list.',
-    keywords: ['certificate generator', 'certificate of completion', 'award certificate pdf', 'diploma maker', 'certificate template'],
-    controls: [
-      { key: 'heading', label: 'Heading', type: 'text', default: 'Certificate of Completion' },
-      { key: 'names', label: 'Recipient names (one per line)', type: 'textarea', default: 'Priya Sharma\nJames Okafor\nAnna Kowalski' },
-      { key: 'body', label: 'Body text', type: 'textarea', default: 'has successfully completed the course\nAdvanced Web Development' },
-      { key: 'date', label: 'Date', type: 'date', default: 'TODAY' },
-      { key: 'signatory', label: 'Signatory name and title', type: 'text', default: 'A. Director\nManaging Director' },
-      { key: 'org', label: 'Organisation', type: 'text', default: 'MVR IT Services LTD' },
-      { key: 'accent', label: 'Accent colour', type: 'color', default: '#f7c948' },
-      { key: 'orientation', label: 'Orientation', type: 'select', default: 'landscape',
-        options: [{ value: 'landscape', label: 'Landscape' }, { value: 'portrait', label: 'Portrait' }] }
-    ],
-    run: async ({ opts, core }) => {
+"title": "Certificate Generator",
+"kind": "create",
+"multiple": false,
+"description": "Create certificates of completion, achievement or attendance — one, or a batch from a name list.",
+"keywords": ["certificate generator","certificate of completion","award certificate pdf","diploma maker","certificate template"],
+"controls": [{"key":"heading","label":"Heading","type":"text","default":"Certificate of Completion"},{"key":"names","label":"Recipient names (one per line)","type":"textarea","default":"Priya Sharma\nJames Okafor\nAnna Kowalski"},{"key":"body","label":"Body text","type":"textarea","default":"has successfully completed the course\nAdvanced Web Development"},{"key":"date","label":"Date","type":"date","default":"TODAY"},{"key":"signatory","label":"Signatory name and title","type":"text","default":"A. Director\nManaging Director"},{"key":"org","label":"Organisation","type":"text","default":"MVR IT Services LTD"},{"key":"accent","label":"Accent colour","type":"color","default":"#f7c948"},{"key":"orientation","label":"Orientation","type":"select","default":"landscape","options":[{"value":"landscape","label":"Landscape"},{"value":"portrait","label":"Portrait"}]}],
+"run": async ({ opts, core }) => {
       const names = String(opts.names || '').split('\n').map(s => s.trim()).filter(Boolean);
       if (!names.length) return { error: 'Enter at least one recipient name.' };
       if (names.length > 500) return { error: 'That is over 500 certificates. Split the list.' };
@@ -1136,70 +924,63 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'Enter one name per line to generate a batch — each becomes its own page in a single PDF, ready to print or split.',
-      'Landscape is conventional for certificates and gives long names room to breathe.',
-      'Very long names reduce automatically only if you lower the font size; check the longest name in your list before printing a batch.',
-      'The signature line is left blank deliberately, for a real signature. A printed signature image offers no assurance to anyone.'
-    ],
-    faq: [
-      { q: 'Can I add a logo?', a: 'Not in this tool — it uses only vector drawing and standard fonts, which is what keeps it dependency-free. To add a logo, generate the certificate here and overlay the image in a PDF editor, or print onto pre-printed letterhead.' }
-    ]
-  },
-
-  /* ===================== RENDER (needs pdf.js) ===================== */
+"tips": ["Enter one name per line to generate a batch — each becomes its own page in a single PDF, ready to print or split.","Landscape is conventional for certificates and gives long names room to breathe.","Very long names reduce automatically only if you lower the font size; check the longest name in your list before printing a batch.","The signature line is left blank deliberately, for a real signature. A printed signature image offers no assurance to anyone."],
+"faq": [{"q":"Can I add a logo?","a":"Not in this tool — it uses only vector drawing and standard fonts, which is what keeps it dependency-free. To add a logo, generate the certificate here and overlay the image in a PDF editor, or print onto pre-printed letterhead."}]
+},
 
   'pdf-to-images': {
-    title: 'PDF to Images',
-    kind: 'render', action: 'Convert to images', multiple: false,
-    description: 'Convert PDF pages to PNG or JPEG images at any resolution, entirely in your browser.',
-    keywords: ['pdf to image', 'pdf to png', 'pdf to jpg', 'convert pdf to picture', 'extract pdf pages as images'],
-    needsRenderer: true,
-    controls: [
-      { key: 'pages', label: 'Pages', type: 'text', default: 'all' },
-      { key: 'dpi', label: 'Resolution', type: 'select', default: '150',
-        options: [{ value: '72', label: '72 DPI — screen' }, { value: '150', label: '150 DPI — good' },
-                  { value: '300', label: '300 DPI — print' }, { value: '600', label: '600 DPI — very large' }] },
-      { key: 'format', label: 'Format', type: 'select', default: 'image/png',
-        options: [{ value: 'image/png', label: 'PNG — lossless' }, { value: 'image/jpeg', label: 'JPEG — smaller' },
-                  { value: 'image/webp', label: 'WebP — smallest' }] },
-      { key: 'quality', label: 'Quality (JPEG/WebP)', type: 'number', default: 90, min: 40, max: 100 }
-    ],
-    tips: [
-      'Rendering needs a PDF engine, so this page downloads one on first use — about a megabyte, cached afterwards, and only on this page.',
-      '150 DPI suits screen use and most documents. 300 DPI matches print resolution and produces files roughly four times larger.',
-      'PNG is lossless and right for text and diagrams. JPEG is smaller and better for pages that are mostly photographs.',
-      'A 600 DPI A4 page is about 5000 × 7000 pixels. A long document at that resolution will use a great deal of memory.'
-    ],
-    faq: [
-      { q: 'Why does this one need a download when the other PDF tools do not?', a: 'Merging, splitting and rotating only rearrange the file\u2019s structure, which needs no rendering. Turning a page into an image means interpreting fonts, vector paths and colour spaces — that is a full rendering engine, and it cannot be written small.' }
-    ]
-  },
+"title": "PDF to Images",
+"kind": "render",
+"action": "Convert to images",
+"multiple": false,
+"description": "Convert PDF pages to PNG or JPEG images at any resolution, entirely in your browser.",
+"keywords": ["pdf to image","pdf to png","pdf to jpg","convert pdf to picture","extract pdf pages as images"],
+"needsRenderer": true,
+"pageGrid": { "key": "pages", "mode": "select", "marks": "keep", "rotate": true, "title": "Click the pages to convert; shift-click for a run, or drag across" },
+"zipSuffix": "images",
+"controls": [{"key":"pages","label":"Pages","type":"text","default":"all"},{"key":"dpi","label":"Resolution","type":"select","default":"150","options":[{"value":"72","label":"72 DPI — screen"},{"value":"150","label":"150 DPI — good"},{"value":"300","label":"300 DPI — print"},{"value":"600","label":"600 DPI — very large"}]},{"key":"format","label":"Format","type":"select","default":"image/png","options":[{"value":"image/png","label":"PNG — lossless"},{"value":"image/jpeg","label":"JPEG — smaller"},{"value":"image/webp","label":"WebP — smallest"}]},{"key":"quality","label":"Quality (JPEG/WebP)","type":"number","default":90,"min":40,"max":100}],
+"tips": ["Rendering needs a PDF engine, so this page downloads one on first use — about a megabyte, cached afterwards, and only on this page.","150 DPI suits screen use and most documents. 300 DPI matches print resolution and produces files roughly four times larger.","PNG is lossless and right for text and diagrams. JPEG is smaller and better for pages that are mostly photographs.","A 600 DPI A4 page is about 5000 × 7000 pixels. A long document at that resolution will use a great deal of memory."],
+"faq": [{"q":"Why does this one need a download when the other PDF tools do not?","a":"Merging, splitting and rotating only rearrange the file’s structure, which needs no rendering. Turning a page into an image means interpreting fonts, vector paths and colour spaces — that is a full rendering engine, and it cannot be written small."}]
+},
 
   'pdf-organise': {
-    title: 'Organise PDF Pages',
-    kind: 'render', action: 'Show the pages', multiple: false,
-    description: 'See page thumbnails and reorder, rotate or delete pages visually before saving.',
-    keywords: ['organise pdf', 'reorder pdf pages', 'rearrange pdf', 'pdf page organizer', 'move pdf pages'],
-    needsRenderer: true,
-    controls: [],
-    tips: [
-      'Thumbnails need a rendering engine, downloaded once on first use and cached afterwards.',
-      'Drag thumbnails to reorder, use the rotate button on each, and the cross to mark a page for removal. On a touch screen, drag by the grip in a card’s corner; from the keyboard, the ← and → buttons move a page one place and keep the focus, so you can press them again.',
-      'Nothing is changed until you save. The original file on your device is never modified.',
-      'If you already know the page numbers you want, the extract, delete and rotate tools do the same job without any download.'
-    ],
-    faq: [
-      { q: 'Is there a page limit?', a: 'No fixed limit, but every page’s thumbnail is drawn when the file opens, so a document of several hundred pages takes a while to appear and uses noticeable memory. For very large files, the numeric tools are lighter.' }
-    ]
-  },
+"title": "Organise PDF Pages",
+"kind": "transform",
+"action": "Save the new order",
+"multiple": false,
+"description": "See page thumbnails and reorder, rotate or delete pages visually before saving.",
+"keywords": ["organise pdf","reorder pdf pages","rearrange pdf","pdf page organizer","move pdf pages"],
+"needsRenderer": true,
+"pageGrid": { "mode": "organise", "label": "Pages, in their new order" },
+"controls": [],
+"run": async ({ docs, opts, core }) => {
+      const doc = docs[0].doc;
+      const total = await doc.pageCount();
+      /* the grid hands over the kept pages in their new order, each with the
+         quarter turns added to it; with no grid (a test, an old browser) the
+         file is saved as it is */
+      const layout = Array.isArray(opts.layout)
+        ? opts.layout.filter((x) => x && x.p >= 0 && x.p < total)
+        : Array.from({ length: total }, (_, i) => ({ p: i, r: 0 }));
+      if (!layout.length) return { error: 'Every page is marked for removal.' };
+      const bytes = await core.assemble(layout.map((x) => ({ doc, pageIndex: x.p, rotate: Number(x.r) || 0 })), {});
+      const moved = layout.filter((x, i) => x.p !== i).length;
+      return {
+        files: [{ name: docs[0].name.replace(/\.pdf$/i, '') + '-organised.pdf', bytes }],
+        stats: [
+          ['Source pages', String(total)],
+          ['Pages kept', String(layout.length)],
+          ['Pages removed', String(total - layout.length)],
+          ['Pages moved', String(moved)],
+          ['Rotated', String(layout.filter((x) => Number(x.r)).length)],
+          ['Output size', fmtBytes(bytes.length)]
+        ]
+      };
+    },
+"tips": ["The thumbnails appear as soon as the file is open, drawn as they scroll into view; the rendering engine behind them is downloaded once and cached afterwards.","Drag thumbnails to reorder, use the rotate button on each, and the cross to mark a page for removal. On a touch screen, drag by the grip in a card’s corner; from the keyboard, the ← and → buttons move a page one place and keep the focus, so you can press them again.","Nothing is changed until you save. The original file on your device is never modified.","If you already know the page numbers you want, the extract, delete and rotate tools do the same job without any download."],
+"faq": [{"q":"Is there a page limit?","a":"Up to 10,000 pages. Only the thumbnails near the part of the grid on screen are drawn, so a long document opens quickly and memory stays modest; the pages further down are drawn as you scroll to them."}]
+},
 
-  /* ===================== NEW TOOLS - RAPID PROTOTYPING =====================
-     pdf-editor and pdf-signature ship; the other six here are drafts that
-     do not (build-pdf-ship.js says why). */
-
-  /* pdf-editor ships: this block is engine/pdf-pdf-editor.js's spec, copied verbatim
-     (that file is edited directly). test_pdftools.js fails if the two differ. */
   'pdf-editor': {
 "title": "Add Text to a PDF",
 "kind": "transform",
@@ -1574,76 +1355,92 @@ const PDF_TOOLS = {
 "multiple": false,
 "description": "Draw or type a signature onto a PDF and place it where you want. A visible signature, not a cryptographic one — the difference is explained below.",
 "keywords": ["sign pdf","add signature to pdf","pdf signature image","signature on pdf","place signature pdf","pdf sign online free"],
-"controls": [{"key":"drawn","label":"Draw your signature (optional)","type":"draw","hint":"Mouse, pen or finger. It sits just above the typed line."},{"key":"drawWidth","label":"Drawn signature width","type":"number","default":150,"min":40,"max":400,"hint":"Points; the height follows the drawing"},{"key":"signatureText","label":"Signature text","type":"text","default":"Signed by: ","hint":"Your name, or whatever should appear on the line"},{"key":"date","label":"Include date","type":"select","default":"yes","options":[{"value":"yes","label":"Yes"},{"value":"no","label":"No"}]},{"key":"x","label":"X","type":"number","default":400,"min":0,"hint":"Points from the left edge"},{"key":"y","label":"Y","type":"number","default":100,"min":0,"hint":"Points up from the bottom edge"},{"key":"pages","label":"Pages","type":"text","default":"last","hint":"last, 1, 2-5, or all"}],
-"placePreview": { "x": "x", "y": "y", "page": "pages", "text": "signatureText", "size": 11, "colour": "#000000", "drawing": "drawn", "drawingWidth": "drawWidth" },
+"controls": [{"key":"drawn","label":"Draw your signature (optional)","type":"draw","hint":"Mouse, pen or finger. It sits just above the typed line."},{"key":"drawWidth","label":"Drawn signature width","type":"number","default":150,"min":40,"max":400,"hint":"Points; the height follows the drawing"},{"key":"signatureText","label":"Signature text","type":"text","default":"Signed by: ","hint":"Your name, or whatever should appear on the line"},{"key":"size","label":"Text size","type":"number","default":11,"min":6,"max":48,"hint":"Points, for the typed line and the date"},{"key":"date","label":"Include date","type":"select","default":"yes","options":[{"value":"yes","label":"Yes"},{"value":"no","label":"No"}]},{"key":"x","label":"X","type":"number","default":400,"min":0,"hint":"Points from the left edge"},{"key":"y","label":"Y","type":"number","default":100,"min":0,"hint":"Points up from the bottom edge"},{"key":"pages","label":"Pages","type":"text","default":"last","hint":"last, 1, 2-5, or all"}],
+"placePreview": { "x": "x", "y": "y", "page": "pages", "text": "signatureText", "size": "size", "colour": "#000000", "drawing": "drawn", "drawingWidth": "drawWidth", "date": "date", "items": "items", "lastWord": true, "title": "Click the page to place the signature, or drag it; drag its corner to resize it", "bankLabel": "Add as another signature", "bankHint": "Keep this signature where it is and place another — initials on every page and a full signature on the last, for example.", "emptyMessage": "Type or draw a signature first, then add it as another one." },
 "inkPlacement": inkPlacement,
 "run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
-
-      let sel;
-      if (opts.pages === 'last') {
-        sel = new Set([total - 1]);
-      } else {
-        try { sel = new Set(core.parsePageRange(opts.pages, total)); }
-        catch (e) { return { error: e.message }; }
-      }
-
-      const sigText = String(opts.signatureText == null ? '' : opts.signatureText);
-      const ink = inkPlacement(opts.drawn, opts);
-      if (!sigText.trim() && !ink) return { error: 'Type a signature or draw one first.' };
-      const x = Math.max(0, numOr(opts.x, 400));
-      const y = Math.max(0, numOr(opts.y, 100));
       const col = rgbTriplet('#000000');
+      const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
-      /* The drawing as vector strokes: as sharp as the text beside it at any
-         zoom, and a few hundred bytes rather than an embedded picture. */
-      let inkOps = '';
-      if (ink) {
-        const X = (p) => nf(ink.x0 + (p[0] - ink.minX) * ink.s);
-        const Y = (p) => nf(ink.y0 + (ink.maxY - p[1]) * ink.s);
-        inkOps = `q\n${col} RG\n1.4 w\n1 J\n1 j\n`;
-        for (const s of opts.drawn.strokes) {
-          if (!s.length) continue;
-          inkOps += `${X(s[0])} ${Y(s[0])} m\n`;
-          (s.length === 1 ? [s[0]] : s.slice(1)).forEach(p => { inkOps += `${X(p)} ${Y(p)} l\n`; });
-          inkOps += 'S\n';
+      /* Every banked signature, then whatever is in the controls now. */
+      const list = (opts.items || []).map((it) => ({
+        text: it.text, drawn: it.drawn || null, drawWidth: it.drawWidth, date: it.date,
+        size: it.size, x: it.x, y: it.y, pages: it.pages
+      }));
+      const cur = { text: opts.signatureText, drawn: opts.drawn, drawWidth: opts.drawWidth, date: opts.date, size: opts.size, x: opts.x, y: opts.y, pages: opts.pages };
+      const curText = String(cur.text == null ? '' : cur.text);
+      if (curText.trim() || inkPlacement(cur.drawn, cur) || !list.length) list.push(cur);
+
+      const placed = [];
+      for (const it of list) {
+        const text = String(it.text == null ? '' : it.text);
+        const ink = inkPlacement(it.drawn, { x: it.x, y: it.y, drawWidth: it.drawWidth, signatureText: text });
+        if (!text.trim() && !ink) {
+          if (list.length === 1) return { error: 'Type a signature or draw one first.' };
+          continue;
         }
-        inkOps += 'Q\n';
+        const v = String(it.pages == null ? 'last' : it.pages).trim();
+        let sel;
+        if (/^last$/i.test(v)) sel = new Set([total - 1]);
+        else {
+          try { sel = new Set(core.parsePageRange(v, total)); }
+          catch (e) { return { error: (list.length > 1 ? '"' + (text.trim() || 'Drawn signature').slice(0, 30) + '": ' : '') + e.message }; }
+        }
+        const x = Math.max(0, numOr(it.x, 400));
+        const y = Math.max(0, numOr(it.y, 100));
+        const size = Math.max(6, Math.min(48, numOr(it.size, 11)));
+
+        /* The drawing as vector strokes: as sharp as the text beside it at
+           any zoom, and a few hundred bytes rather than an embedded picture. */
+        let ops = '';
+        if (ink) {
+          const X = (q) => nf(ink.x0 + (q[0] - ink.minX) * ink.s);
+          const Y = (q) => nf(ink.y0 + (ink.maxY - q[1]) * ink.s);
+          ops += `q\n${col} RG\n1.4 w\n1 J\n1 j\n`;
+          for (const st of it.drawn.strokes) {
+            if (!st.length) continue;
+            ops += `${X(st[0])} ${Y(st[0])} m\n`;
+            (st.length === 1 ? [st[0]] : st.slice(1)).forEach((q) => { ops += `${X(q)} ${Y(q)} l\n`; });
+            ops += 'S\n';
+          }
+          ops += 'Q\n';
+        }
+        ops += `q\n${col} rg\nBT\n/MVRsig ${nf(size)} Tf\n`;
+        if (text.trim()) ops += `1 0 0 1 ${nf(x)} ${nf(y)} Tm\n(${core.contentEscape(text)}) Tj\n`;
+        if (it.date === 'yes') {
+          ops += `\n1 0 0 1 ${nf(x)} ${nf(y - size * 14 / 11)} Tm\n(${core.contentEscape('Date: ' + dateStr)}) Tj`;
+        }
+        ops += '\nET\nQ\n';
+        placed.push({ sel, ops, ink, text });
       }
 
       const items = [];
+      let signedPages = 0;
       for (let i = 0; i < total; i++) {
-        if (!sel.has(i)) { items.push({ doc, pageIndex: i }); continue; }
-
-        let ops = inkOps + `q\n${col} rg\nBT\n/MVRsig 11 Tf\n`;
-        if (sigText.trim()) ops += `1 0 0 1 ${nf(x)} ${nf(y)} Tm\n(${core.contentEscape(sigText)}) Tj\n`;
-
-        if (opts.date === 'yes') {
-          const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-          ops += `\n1 0 0 1 ${nf(x)} ${nf(y - 14)} Tm\n(${core.contentEscape('Date: ' + dateStr)}) Tj`;
-        }
-
-        ops += '\nET\nQ\n';
-
+        const here = placed.filter((pl) => pl.sel.has(i));
+        if (!here.length) { items.push({ doc, pageIndex: i }); continue; }
+        signedPages++;
         /* X and Y are measured on the page as it is shown — cropped and
            turned by its /Rotate — which is also what the preview shows. */
         items.push({ doc, pageIndex: i, overlay: {
-          content: ops, fontKey: 'MVRsig', fontName: 'Helvetica', needsGS: false, opacity: 1, upright: true
+          content: here.map((pl) => pl.ops).join(''), fontKey: 'MVRsig', fontName: 'Helvetica', needsGS: false, opacity: 1, upright: true
         }});
       }
 
       const bytes = await core.assemble(items, {});
       const base = docs[0].name.replace(/\.pdf$/i, '');
+      const one = placed.length === 1 ? placed[0] : null;
       return {
         files: [{ name: `${base}-signed.pdf`, bytes }],
         stats: [
           ['Pages', String(total)],
-          ['Pages signed', String(sel.size)],
-          ['Signature', ink ? (sigText.trim() ? 'Drawn, with typed text' : 'Drawn') : 'Typed'],
-          ...(sigText.trim() ? [['Signature text', sigText]] : []),
-          ...(ink ? [['Drawn size', Math.round(ink.w) + ' × ' + Math.round(ink.h) + ' points']] : []),
-          ['Date included', opts.date],
+          ['Pages signed', String(signedPages)],
+          ...(one ? [['Signature', one.ink ? (one.text.trim() ? 'Drawn, with typed text' : 'Drawn') : 'Typed']] : [['Signatures placed', String(placed.length)]]),
+          ...(one && one.text.trim() ? [['Signature text', one.text]] : []),
+          ...(one && one.ink ? [['Drawn size', Math.round(one.ink.w) + ' × ' + Math.round(one.ink.h) + ' points']] : []),
+          ['Date included', list.some((it) => it.date === 'yes') ? 'yes' : 'no'],
           ['Output size', fmtBytes(bytes.length)]
         ],
         warn: 'This adds visual signature elements. For legally binding digital signatures, you need certificate-based cryptographic signing.'
@@ -1651,7 +1448,7 @@ const PDF_TOOLS = {
     },
 "tips": ["Draw in the box with a mouse, a pen or a finger, or leave it empty and type. A drawing is placed just above the typed line, at the width you choose, as vector strokes rather than a picture, so it stays sharp when zoomed and adds only a few hundred bytes.","Click the page preview to place the signature. The dashed box is where the line will sit on the finished file, and a drawing is shown above it where it will land.","The arrows beside the page number page through the document. That changes only what you are looking at; the Pages box decides which pages are signed.","Leave the pages box on \"last\" to sign only the final page, which is where most contracts want it.","The date, if you include it, is drawn on a second line just under the signature.","X and Y are PDF points from the bottom-left corner of the page as it is shown, 72 to the inch — a rotated or cropped page is measured the way you see it. A4 is 595 × 842, US Letter 612 × 792. 0 is a real position: the very edge.","This is a visible signature and can be removed by anyone with an editor. A cryptographic signature cannot — see the question below."],
 "faq": [{"q":"Is this a legally binding digital signature?","a":"No, and the distinction matters. This adds visual elements only: your typed or drawn signature is drawn onto the page, the same as signing a printout and scanning it. A digital signature in the legal sense is a cryptographic operation that binds a certificate to the document so any later change is detectable, and it needs a certificate from a certifying authority or trust service provider. This tool writes no signature field, certificate or /ByteRange, so a signature validator finds nothing to check. If a contract, a court or a regulator asks for a digital signature, this is not it — use a certificate-based signing service. For a form, an invoice or an internal approval that only has to look signed, a visible signature is what is wanted."}]
-  },
+},
 
   'pdf-portfolio': {
     title: 'PDF Portfolio Creator',

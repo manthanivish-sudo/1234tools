@@ -30,6 +30,7 @@ window.PDF_TOOLS["delete-pdf-pages"] = {
 "multiple": false,
 "description": "Remove unwanted pages from a PDF — blank scans, cover sheets, or anything else.",
 "keywords": ["delete pdf pages","remove pages from pdf","pdf page remover","erase pdf page"],
+"pageGrid": { "key": "pages", "mode": "select", "marks": "remove", "rotate": true, "title": "Click the pages to remove; shift-click for a run, or drag across" },
 "controls": [{"key":"pages","label":"Pages to remove","type":"text","default":"1","hint":"e.g. 1, 4-6, 10-"}],
 "run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
@@ -41,7 +42,8 @@ window.PDF_TOOLS["delete-pdf-pages"] = {
       const keep = Array.from({ length: total }, (_, i) => i).filter(i => !drop.has(i));
       if (!keep.length) return { error: 'That would remove every page. Leave at least one.' };
 
-      const bytes = await core.assemble(keep.map(p => ({ doc, pageIndex: p })), {});
+      const turns = opts.turns || {};
+      const bytes = await core.assemble(keep.map(p => ({ doc, pageIndex: p, rotate: Number(turns[p]) || 0 })), {});
       const base = docs[0].name.replace(/\.pdf$/i, '');
       return {
         files: [{ name: `${base}-trimmed.pdf`, bytes }],

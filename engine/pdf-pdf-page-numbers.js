@@ -30,6 +30,7 @@ window.PDF_TOOLS["pdf-page-numbers"] = {
 "multiple": false,
 "description": "Stamp page numbers, headers or footers onto an existing PDF.",
 "keywords": ["add page numbers to pdf","pdf page numbering","pdf header footer","number pdf pages"],
+"livePreview": true,
 "controls": [{"key":"format","label":"Format","type":"select","default":"n","options":[{"value":"n","label":"1"},{"value":"n-of-t","label":"1 of 10"},{"value":"page-n","label":"Page 1"},{"value":"page-n-of-t","label":"Page 1 of 10"},{"value":"dash","label":"– 1 –"}]},{"key":"position","label":"Position","type":"select","default":"bc","options":[{"value":"bl","label":"Bottom left"},{"value":"bc","label":"Bottom centre"},{"value":"br","label":"Bottom right"},{"value":"tl","label":"Top left"},{"value":"tc","label":"Top centre"},{"value":"tr","label":"Top right"}]},{"key":"start","label":"Start numbering at","type":"number","default":1,"min":0},{"key":"skip","label":"Skip first N pages","type":"number","default":0,"min":0},{"key":"size","label":"Font size","type":"number","default":10,"min":5,"max":48},{"key":"colour","label":"Colour","type":"color","default":"#333333"},{"key":"extra","label":"Header or footer text (optional)","type":"text","default":""}],
 "run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;

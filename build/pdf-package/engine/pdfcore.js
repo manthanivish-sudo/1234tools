@@ -15,6 +15,14 @@
    Byte helpers
    ============================================================ */
 
+/* The standard security handler (pdfcrypt.js). In the browser bundle it is
+   declared just before this file; in Node it sits beside it. */
+const CRYPT = (function () {
+  try { if (typeof PDFCrypt !== 'undefined') return PDFCrypt; } catch (e) { /* not in this scope */ }
+  try { if (typeof require === 'function') return require('./pdfcrypt.js').PDFCrypt; } catch (e) { /* absent */ }
+  return null;
+})();
+
 const WS = new Set([0x00, 0x09, 0x0a, 0x0c, 0x0d, 0x20]);
 const DELIM = new Set([0x28, 0x29, 0x3c, 0x3e, 0x5b, 0x5d, 0x7b, 0x7d, 0x2f, 0x25]);
 const isWS = (c) => WS.has(c);
@@ -47,6 +55,32 @@ async function inflate(bytes) {
     } catch (e) { /* try the next format */ }
   }
   throw new Error('A compressed stream in this PDF could not be decoded.');
+}
+
+/** zlib-wrapped deflate, the platform's own (FlateDecode's format). */
+async function deflate(bytes) {
+  if (typeof CompressionStream === 'undefined') {
+    throw new Error('This browser cannot compress PDF streams.');
+  }
+  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/* ============================================================
+   Progress and preview hooks
+
+   The worker sets these around a run. Progress is reported per page as
+   assemble writes it; a preview run (the page render before the real run)
+   makes assemble write only the one page being looked at, so a 400-page
+   watermark preview costs one page, not four hundred.
+   ============================================================ */
+
+let PROGRESS = null;
+let PREVIEW = null;
+function setProgress(fn) { PROGRESS = typeof fn === 'function' ? fn : null; }
+function setPreview(p) { PREVIEW = p && typeof p.pageIndex === 'number' ? p : null; }
+function progress(done, total, label) {
+  if (PROGRESS) { try { PROGRESS(done, total, label); } catch (e) { /* a reporter must never break a run */ } }
 }
 
 /* PNG/TIFF predictors, used by xref streams and some image data */
@@ -299,8 +333,12 @@ class PDFDocument {
     this.warnings = [];
   }
 
-  static async load(bytes) {
+  static async load(bytes, options) {
     const doc = new PDFDocument(bytes);
+    doc._password = (options && options.password) || '';
+    /* decrypt: false reads an encrypted file's objects as they are stored,
+       still encrypted (the security handler's own tests use this) */
+    doc._noDecrypt = !!(options && options.decrypt === false);
     await doc._parse();
     return doc;
   }
@@ -328,9 +366,8 @@ class PDFDocument {
       this.trailer = this.trailer || Object.create(null);
       this.trailer.Root = found;
     }
-    if (this.trailer && this.trailer.Encrypt) {
-      throw new Error('This PDF is encrypted. Remove the password in the application that created it first.');
-    }
+    if (this.trailer && this.trailer.Encrypt) { if (this._noDecrypt) this.encrypted = true; else await this._decrypt(); }
+    else if (this._deferred) await this._expandDeferred();
   }
 
   async _readXrefChain(offset, seen) {
@@ -416,10 +453,16 @@ class PDFDocument {
           if (c !== 'obj') continue;
           if (parseInt(a, 10) !== num) continue;
           const v = lex.parse(0);
-          if (v !== undefined) this.objects.set(num, v);
+          if (v !== undefined) { this.objects.set(num, v); this._gen(num, b2); }
         } catch (e) { /* one bad object should not sink the document */ }
       }
       this._offsets = null;
+    }
+    if (this._inObjStm && this._inObjStm.size && this.trailer && this.trailer.Encrypt) {
+      this._deferred = this._deferred || new Map();
+      for (const [num, loc] of this._inObjStm) if (!this._deferred.has(num)) this._deferred.set(num, loc);
+      this._inObjStm = null;
+      return;
     }
     if (this._inObjStm && this._inObjStm.size) {
       const byStm = new Map();
@@ -470,11 +513,12 @@ class PDFDocument {
       try {
         const lex = new Lexer(this.bytes, m.index + m[0].length);
         const v = lex.parse(0);
-        if (v !== undefined) this.objects.set(num, v);         // later wins
+        if (v !== undefined) { this.objects.set(num, v); this._gen(num, m[2]); }   // later wins
       } catch (e) { /* skip */ }
     }
+    if (this._findEncryptByScan()) { this._scanDeferred = true; }
     // expand any object streams we found
-    for (const [num, v] of [...this.objects]) {
+    for (const [num, v] of (this._scanDeferred ? [] : [...this.objects])) {
       if (v instanceof PDFStream && isName(v.dict.Type, 'ObjStm')) {
         try { await this._expandObjStm(num, null); } catch (e) { /* skip */ }
       }
@@ -488,6 +532,107 @@ class PDFDocument {
           if (isDict(tr)) { this.trailer = this.trailer || Object.create(null); Object.assign(this.trailer, tr); }
         } catch (e) { /* fall through to catalogue scan */ }
       }
+    }
+  }
+
+  _gen(num, g) {
+    const n = parseInt(g, 10);
+    if (n > 0) { this._gens = this._gens || new Map(); this._gens.set(num, n); }
+  }
+
+  /** A damaged file's trailer may be lost; its Encrypt dictionary is not. */
+  _findEncryptByScan() {
+    if (this.trailer && this.trailer.Encrypt) return true;
+    for (const [num, v] of this.objects) {
+      if (isDict(v) && isName(v.Filter) && v.O !== undefined && v.U !== undefined && v.P !== undefined && v.R !== undefined) {
+        this.trailer = this.trailer || Object.create(null);
+        this.trailer.Encrypt = new Ref(num, 0);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Open an encrypted file with the password given to load(), or with none:
+   * a file protected only against printing or copying has an empty user
+   * password and opens like any other. Every string and stream is decrypted
+   * in place, so the rest of the engine never sees ciphertext and what it
+   * writes is a plain file. doc.security says how it was opened.
+   */
+  async _decrypt() {
+    if (!CRYPT) throw Object.assign(new Error('This PDF is encrypted, and this copy of the engine cannot open encrypted files.'), { code: 'unsupported' });
+    const encRef = this.trailer.Encrypt;
+    const enc = await this.resolve(encRef);
+    if (!isDict(enc)) throw Object.assign(new Error('This PDF says it is encrypted but its encryption dictionary is missing.'), { code: 'damaged' });
+    const plain = (v, depth) => {
+      if (depth > 6) return null;
+      if (v instanceof Ref) return plain(this.objects.get(v.num), depth + 1);
+      if (v instanceof Name) return v.name;
+      if (v && v.__string !== undefined) return v.__string;
+      if (Array.isArray(v)) return v.map((x) => plain(x, depth + 1));
+      if (isDict(v)) { const o = {}; for (const k of Object.keys(v)) o[k] = plain(v[k], depth + 1); return o; }
+      return v;
+    };
+    const ids = await this.resolve(this.trailer.ID);
+    const id0 = Array.isArray(ids) && ids[0] && ids[0].__string ? ids[0].__string : new Uint8Array(0);
+    const h = CRYPT.openHandler({ encrypt: plain(enc, 0), id0, password: this._password || '' });
+    if (!h.ok) {
+      if (h.reason === 'password') {
+        throw Object.assign(new Error(this._password ? 'That password did not open it.' : 'This PDF needs a password to open.'), { code: 'password' });
+      }
+      throw Object.assign(new Error(h.message || 'This PDF uses an encryption method these tools cannot open (a certificate rather than a password, for example).'), { code: 'unsupported' });
+    }
+    const skip = encRef instanceof Ref ? encRef.num : -1;
+    const gens = this._gens || new Map();
+    const walk = (v, num, gen) => {
+      if (!v || typeof v !== 'object') return;
+      if (v.__string !== undefined) { v.__string = CRYPT.decryptBytes(h, num, gen, v.__string, 'string'); return; }
+      if (Array.isArray(v)) { for (const x of v) walk(x, num, gen); return; }
+      if (v instanceof PDFStream) { walk(v.dict, num, gen); return; }
+      if (isDict(v)) for (const k of Object.keys(v)) walk(v[k], num, gen);
+    };
+    for (const [num, v] of this.objects) {
+      if (num === skip) continue;
+      const gen = gens.get(num) || 0;
+      if (v instanceof PDFStream) {
+        const type = v.dict.Type;
+        if (isName(type, 'XRef')) continue;
+        const kind = isName(type, 'Metadata') ? 'metadata' : isName(type, 'EmbeddedFile') ? 'embeddedFile' : 'stream';
+        walk(v.dict, num, gen);
+        v.raw = CRYPT.decryptBytes(h, num, gen, v.raw, kind);
+        v._decoded = null;
+      } else walk(v, num, gen);
+    }
+    this.security = {
+      method: h.method || (h.stmf === 'AESV3' ? 'AES-256' : h.stmf === 'AESV2' ? 'AES-128' : 'RC4'),
+      openedWith: h.openedWith || (this._password ? (h.isOwner ? 'owner' : 'user') : 'empty'),
+      isOwner: !!h.isOwner,
+      permissions: CRYPT.permissionsFromP(h.permissions, h.revision),
+      describe: CRYPT.describeHandler(h)
+    };
+    delete this.trailer.Encrypt;
+    if (this._deferred) await this._expandDeferred();
+    if (this._scanDeferred) {
+      this._scanDeferred = false;
+      for (const [num, v] of [...this.objects]) {
+        if (v instanceof PDFStream && isName(v.dict.Type, 'ObjStm')) {
+          try { await this._expandObjStm(num, null); } catch (e) { /* skip */ }
+        }
+      }
+    }
+  }
+
+  async _expandDeferred() {
+    const byStm = new Map();
+    for (const [num, loc] of this._deferred) {
+      if (!byStm.has(loc.stm)) byStm.set(loc.stm, []);
+      byStm.get(loc.stm).push(num);
+    }
+    this._deferred = null;
+    for (const [stmNum, nums] of byStm) {
+      try { await this._expandObjStm(stmNum, nums); }
+      catch (e) { this.warnings.push(`Object stream ${stmNum} could not be expanded.`); }
     }
   }
 
@@ -678,7 +823,7 @@ class PDFWriter {
     return 'null';
   }
 
-  build(rootRef, infoRef, version) {
+  build(rootRef, infoRef, version, extraTrailer) {
     const chunks = [];
     let len = 0;
     const push = (x) => { const a = typeof x === 'string' ? bytesOf(x) : x; chunks.push(a); len += a.length; };
@@ -712,6 +857,7 @@ class PDFWriter {
     }
     const trailer = { Size: this.objects.length, Root: rootRef };
     if (infoRef) trailer.Info = infoRef;
+    if (extraTrailer) Object.assign(trailer, extraTrailer);
     push('trailer\n' + this.serialiseValue(trailer) + `\nstartxref\n${xrefAt}\n%%EOF\n`);
 
     const out = new Uint8Array(len);
@@ -1312,7 +1458,15 @@ async function buildForm(writer, states) {
  * upright frame pageFrame() describes.
  */
 async function assemble(items, options) {
-  const opts = options || {};
+  const opts = Object.assign({}, options || {});
+  if (PREVIEW) {
+    /* one page, as it will be written, and nothing a preview cannot show */
+    const want = PREVIEW.pageIndex;
+    const first = items.length ? items[0].doc : null;
+    const hit = items.filter((it) => it.doc === (PREVIEW.doc || first) && it.pageIndex === want).slice(0, 1);
+    items = hit.length ? hit : items.slice(0, 1);
+    opts.outline = 'none'; opts.noForm = true; opts.xmp = null; opts.info = {};
+  }
   const writer = new PDFWriter();
   const catalogNum = writer.alloc();
   const pagesNum = writer.alloc();
@@ -1340,6 +1494,7 @@ async function assemble(items, options) {
   let isolate = 0;                // one shared "q" stream for every stamped page
   const fmt = (v) => String(Number(Number(v).toFixed(4)));
 
+  let written = 0;
   for (const { item, page, num, st } of plan) {
     const doc = item.doc;
     const map = st.map;
@@ -1419,6 +1574,7 @@ async function assemble(items, options) {
     out.Parent = new Ref(pagesNum, 0);
     writer.set(num, out);
     kids.push(new Ref(num, 0));
+    progress(++written, plan.length, 'page');
   }
 
   writer.set(pagesNum, { Type: new Name('Pages'), Kids: kids, Count: kids.length });
@@ -1427,7 +1583,7 @@ async function assemble(items, options) {
   /* bookmarks */
   const top = [];
   let anyOutline = false;
-  for (const [doc, st] of states) {
+  for (const [doc, st] of (opts.outline === 'none' ? [] : states)) {
     const ol = await doc.resolve(st.root.Outlines);
     const entries = isDict(ol) ? await outlineEntries(doc, st, ol.First, 0, new Set()) : [];
     if (entries.length) anyOutline = true;
@@ -1439,7 +1595,7 @@ async function assemble(items, options) {
   if (anyOutline && top.length) catalog.Outlines = new Ref(await writeOutline(writer, top), 0);
 
   /* the form */
-  const form = await buildForm(writer, states);
+  const form = opts.noForm ? null : await buildForm(writer, states);
   if (form) catalog.AcroForm = new Ref(writer.add(form), 0);
 
   const only = states.size === 1 ? states.keys().next().value : null;
@@ -1471,7 +1627,74 @@ async function assemble(items, options) {
     if (Object.keys(info).length) infoRef = new Ref(writer.add(info), 0);
   }
 
+  if (opts.protect) return encryptAndBuild(writer, new Ref(catalogNum, 0), infoRef, opts.protect);
   return writer.build(new Ref(catalogNum, 0), infoRef, opts.version || '1.7');
+}
+
+/* ============================================================
+   Writing an encrypted file
+   ============================================================ */
+
+function randomBytes(n) {
+  const out = new Uint8Array(n);
+  const c = (typeof crypto !== 'undefined' && crypto.getRandomValues) ? crypto : null;
+  if (!c) throw new Error('This browser has no secure random numbers, so it cannot encrypt.');
+  c.getRandomValues(out);
+  return out;
+}
+const hexOf = (b) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+
+/**
+ * Encrypt every string and stream the writer holds with the standard
+ * security handler, then write the file with /Encrypt and /ID in its
+ * trailer. options: { userPassword, ownerPassword, permissions, method:
+ * 'AES-256' | 'AES-128', encryptMetadata }.
+ */
+function encryptAndBuild(writer, rootRef, infoRef, options) {
+  if (!CRYPT) throw new Error('This copy of the engine cannot encrypt.');
+  const id0 = randomBytes(16);
+  const { handler, encryptDict } = CRYPT.createHandler({
+    userPassword: options.userPassword || '', ownerPassword: options.ownerPassword || '',
+    permissions: options.permissions || {}, method: options.method === 'AES-128' ? 'AES-128' : 'AES-256',
+    id0, encryptMetadata: options.encryptMetadata !== false, random: randomBytes
+  });
+  const walk = (v, num) => {
+    if (!v || typeof v !== 'object') return;
+    if (v.__string !== undefined) { v.__string = CRYPT.encryptBytes(handler, num, 0, v.__string, 'string', randomBytes); return; }
+    if (Array.isArray(v)) { for (const x of v) walk(x, num); return; }
+    if (v instanceof PDFStream) { walk(v.dict, num); return; }
+    if (isDict(v)) for (const k of Object.keys(v)) walk(v[k], num);
+  };
+  for (let num = 1; num < writer.objects.length; num++) {
+    const v = writer.objects[num];
+    if (v === undefined || v === null) continue;
+    if (v instanceof PDFStream) {
+      const kind = isName(v.dict.Type, 'Metadata') ? 'metadata' : isName(v.dict.Type, 'EmbeddedFile') ? 'embeddedFile' : 'stream';
+      walk(v.dict, num);
+      writer.objects[num] = new PDFStream(v.dict, CRYPT.encryptBytes(handler, num, 0, v.raw, kind, randomBytes));
+    } else walk(v, num);
+  }
+  const toCore = (v) => {
+    if (v instanceof Uint8Array) return { __raw: '<' + hexOf(v) + '>' };
+    if (Array.isArray(v)) return v.map(toCore);
+    if (typeof v === 'string') return new Name(v);
+    if (v && typeof v === 'object') { const o = Object.create(null); for (const k of Object.keys(v)) o[k] = toCore(v[k]); return o; }
+    return v;
+  };
+  const encNum = writer.add(toCore(encryptDict));
+  const idHex = { __raw: '<' + hexOf(handler.id0 || id0) + '>' };
+  return writer.build(rootRef, infoRef, '1.7', { Encrypt: new Ref(encNum, 0), ID: [idHex, { __raw: '<' + hexOf(randomBytes(16)) + '>' }] });
+}
+
+/**
+ * The whole document again, every page, its bookmarks, form and metadata,
+ * encrypted with a password (protect), or written plain (unlock: the
+ * document was opened with its password, so it is already decrypted).
+ */
+async function protectDocument(doc, options) {
+  const n = await doc.pageCount();
+  const items = Array.from({ length: n }, (_, i) => ({ doc, pageIndex: i }));
+  return assemble(items, options && options.protect === false ? {} : { protect: options || {} });
 }
 
 /** Parse "1-3, 5, 8-" style page selections into zero-based indices. */
@@ -1700,6 +1923,7 @@ if (typeof module !== 'undefined' && module.exports) {
     assemble, parsePageRange, copyObject, pageFrame,
     createPDF, textWidth, wrapText, contentEscape, PAGE_SIZES, FONTS,
     pdfString, decodePdfString, inflate, applyPredictor, ascii85Decode,
-    latin1, bytesOf, isDict, isName, isRef
+    latin1, bytesOf, isDict, isName, isRef,
+    deflate, setProgress, setPreview, protectDocument
   };
 }

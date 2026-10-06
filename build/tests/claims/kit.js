@@ -629,6 +629,8 @@ K.pdf.upload = async (p, files) => {
     await input.uploadFile(f);
     await p.waitForFunction((k) => document.querySelectorAll('.file-list .file-row').length > k, { timeout: 30000 }, n);
   }
+  /* a row is drawn while its file is read and again once it is open */
+  await p.waitForFunction(() => !document.querySelector('.file-list .file-row.is-loading'), { timeout: 60000 });
 };
 K.pdf.press = async (p) => {
   await p.click('.pdf-run .btn-primary');

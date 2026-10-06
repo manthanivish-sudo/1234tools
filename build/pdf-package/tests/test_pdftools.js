@@ -190,6 +190,9 @@ const statMap = (res) => new Map((res.stats || []).map(([k, v]) => [k, v]));
 
   const ids = Object.keys(PDF_TOOLS);
   const byKind = (k) => ids.filter(id => PDF_TOOLS[id].kind === k);
+  /* the hub groups by what a tool needs: the organiser runs in the worker
+     like any transform, but its thumbnails still need the renderer */
+  const needsEngine = ids.filter(id => PDF_TOOLS[id].needsRenderer === true);
   console.log(`  ${ids.length} shipped tools: ` + ['transform', 'create', 'inspect', 'render']
     .map(k => `${byKind(k).length} ${k}`).join(', '));
 
@@ -219,11 +222,11 @@ const statMap = (res) => new Map((res.stats || []).map(([k, v]) => [k, v]));
   eq(side && Number(side[1]), ids.length, 'the sidebar count matches the shipped tools');
   eq(byKind('transform').length + byKind('create').length + byKind('inspect').length + byKind('render').length,
     ids.length, 'every tool is one of the four kinds');
-  eq(byKind('render').length, section('Needs a rendering engine').length,
+  eq(needsEngine.length, section('Needs a rendering engine').length,
     'the render tools are the hub’s “needs a rendering engine” cards');
   eq(byKind('inspect').length, section('Look inside a PDF').length,
     'the inspect tools are the hub’s “look inside a PDF” cards');
-  eq(byKind('transform').length + byKind('create').length,
+  eq(byKind('transform').filter(id => !PDF_TOOLS[id].needsRenderer).length + byKind('create').length,
     section('Work with an existing PDF').length + section('Create a PDF from scratch').length,
     'the transform and create tools are the hub’s other two sections');
 
@@ -279,7 +282,7 @@ const statMap = (res) => new Map((res.stats || []).map(([k, v]) => [k, v]));
       t('render tools have no run() — the browser supplies it', typeof s.run === 'undefined');
     } else {
       t('has an async run()', typeof s.run === 'function');
-      t('does not set needsRenderer', !s.needsRenderer);
+      t('sets needsRenderer only with a page grid that draws thumbnails', !s.needsRenderer || !!s.pageGrid || typeof s.mainRun === 'function');
     }
   }
 
@@ -331,7 +334,7 @@ const statMap = (res) => new Map((res.stats || []).map(([k, v]) => [k, v]));
   let r = await run('merge-pdf', { docs: [c5, o4] });
   ok(!r.error, 'merging two documents succeeds', r.error);
   eq(r.files.length, 1, 'merging produces a single file');
-  eq(r.files[0].name, 'merged.pdf', 'the merged file is named merged.pdf');
+  eq(r.files[0].name, 'classic5-merged.pdf', 'the merged file is named after the first file');
   eq(await pagesOf(r.files[0].bytes), 9, 'five pages plus four gives nine');
   keep('out-merged.pdf', r.files[0].bytes);
   eq(statMap(r).get('Files merged'), '2', 'the stats report two files merged');

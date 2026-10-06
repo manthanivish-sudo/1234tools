@@ -30,6 +30,8 @@ window.PDF_TOOLS["split-pdf"] = {
 "multiple": false,
 "description": "Split one PDF into several files — by page count, by ranges, or one file per page.",
 "keywords": ["split pdf","separate pdf pages","divide pdf","pdf splitter","break up pdf"],
+"pageGrid": { "mode": "split", "rotate": true, "rangesKey": "ranges", "title": "Click a page to split after it; each colour is one file" },
+"zipSuffix": "split",
 "controls": [{"key":"mode","label":"Split","type":"select","default":"each","options":[{"value":"each","label":"One file per page"},{"value":"every","label":"Every N pages"},{"value":"ranges","label":"By explicit ranges"},{"value":"half","label":"In half"}]},{"key":"n","label":"Pages per file","type":"number","default":2,"min":1,"max":500},{"key":"ranges","label":"Ranges, one output per group","type":"text","default":"1-3 | 4-6 | 7-"}],
 "run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
@@ -60,7 +62,7 @@ window.PDF_TOOLS["split-pdf"] = {
 
       const files = [];
       for (let g = 0; g < groups.length; g++) {
-        const bytes = await core.assemble(groups[g].map(p => ({ doc, pageIndex: p })), {});
+        const bytes = await core.assemble(groups[g].map(p => ({ doc, pageIndex: p, rotate: Number((opts.turns || {})[p]) || 0 })), {});
         const label = groups[g].length === 1
           ? `p${groups[g][0] + 1}`
           : `p${groups[g][0] + 1}-${groups[g][groups[g].length - 1] + 1}`;

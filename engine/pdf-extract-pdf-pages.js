@@ -30,6 +30,7 @@ window.PDF_TOOLS["extract-pdf-pages"] = {
 "multiple": false,
 "description": "Pull specific pages out of a PDF into a new document, keeping the order you specify.",
 "keywords": ["extract pdf pages","select pdf pages","pdf page extractor","get pages from pdf","copy pdf pages"],
+"pageGrid": { "key": "pages", "mode": "select", "marks": "keep", "rotate": true, "title": "Click the pages to keep, in the order you want them; shift-click for a run, or drag across" },
 "controls": [{"key":"pages","label":"Pages to keep","type":"text","default":"1-3","hint":"e.g. 1-3, 7, 10-"},{"key":"order","label":"Order","type":"select","default":"asis","options":[{"value":"asis","label":"As listed"},{"value":"sorted","label":"Sorted by page number"},{"value":"reverse","label":"Reversed"}]}],
 "run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
@@ -41,7 +42,8 @@ window.PDF_TOOLS["extract-pdf-pages"] = {
       if (opts.order === 'sorted') idx = idx.slice().sort((a, b) => a - b);
       if (opts.order === 'reverse') idx = idx.slice().reverse();
 
-      const bytes = await core.assemble(idx.map(p => ({ doc, pageIndex: p })), {});
+      const turns = opts.turns || {};
+      const bytes = await core.assemble(idx.map(p => ({ doc, pageIndex: p, rotate: Number(turns[p]) || 0 })), {});
       const base = docs[0].name.replace(/\.pdf$/i, '');
       return {
         files: [{ name: `${base}-extract.pdf`, bytes }],
