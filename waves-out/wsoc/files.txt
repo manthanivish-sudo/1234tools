@@ -1,0 +1,13 @@
+assets/app.css
+build/sections.js
+build-sidebar.js
+build/release.js
+build-site.js
+build-pwa.js
+build-hubs.js
+build/jobs.js
+build/content/_check.js
+build/tests/claims.js
+build-social.js
+waves-out/wsoc/NOTES.md
+waves-out/wsoc/files.txt

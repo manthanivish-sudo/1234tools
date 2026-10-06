@@ -78,7 +78,7 @@ const GENERATORS = [
   ['pdf-ship', 'build-pdf-ship.js'], ['finder', 'build-finder.js'],
   ['stories', 'build-stories.js'], ['examples', 'build-examples.js'], ['tools', 'build-tools.js'], ['collections', 'build-collections.js'],
   ['guides', 'build-guides.js'], ['compare', 'build-compare.js'], ['embed', 'build-embed.js'],
-  ['biz', 'build-biz.js'], ['ai-image', 'build-ai-image.js'], ['ai-video', 'build-ai-video.js'], ['showcase', 'build-showcase.js'],
+  ['biz', 'build-biz.js'], ['ai-image', 'build-ai-image.js'], ['ai-video', 'build-ai-video.js'], ['social', 'build-social.js'], ['showcase', 'build-showcase.js'],
   ['og', 'build/make-og.js', ['--cards']],
 ];
 const ONCE = [['learn', 'build-learn.js'], ['ai', 'build-ai.js']];

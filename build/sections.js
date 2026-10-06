@@ -52,6 +52,10 @@ const SECTIONS = {
      downloaded once and the video never leaves the browser — and sit beside
      the AI image tools. build-ai-video.js owns everything under /ai-video/. */
   '/ai-video/':    { name: 'AI Video Tools', head: 'AI Video', hub: 'AI Video Tools', noun: 'tool' },
+  /* Tools for posting: carousels, post images, caption limits, engagement
+     maths. They run in the browser like the image tools; build-social.js
+     owns everything under /social/. */
+  '/social/':      { name: 'Social Media Tools', head: 'Social Media', hub: 'Social Media Tools', noun: 'tool' },
   '/india/':       { name: 'India' },
   /* `crumb` is the short form used as a step in a trail; `hub` is what the
      section's own page is called at the end of its trail. */
