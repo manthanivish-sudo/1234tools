@@ -134,15 +134,17 @@ module.exports = {
     hook: 'The work is done. The invoice is still a blank page.',
     pain: 'The client says “send an invoice and we’ll pay this week”. You have no template and no accounts software.',
     usual: ['Templates that need a word processor', 'Invoice apps that want a monthly plan', 'Sign-up walls before the download'],
-    promise: 'Type the line items. Totals and VAT are worked out; download a PDF.',
+    promise: 'Type the line items. VAT or GST is worked out, your logo goes on top, and the next number is ready.',
     steps: ['Fill in you and your client', 'Add one line per item', 'Download the invoice PDF'],
-    proof: ['Free', 'No sign-up', 'No watermark'],
+    proof: ['Free', 'Nothing uploaded', 'No watermark'],
     example: {
       kind: 'pdf-make',
       fields: {
-        from: 'Studio North Photography\n12 Mill Lane, Leeds LS1 4AB',
-        to: 'Harbour Café Ltd\n3 Quay Street\nWhitby YO21 1PU',
-        number: 'INV-0042',
+        fromName: 'Studio North Photography',
+        fromAddress: '12 Mill Lane, Leeds LS1 4AB',
+        toName: 'Harbour Café Ltd',
+        toAddress: '3 Quay Street\nWhitby YO21 1PU',
+        number: 'INV-2026-0042',
         items: 'Menu photography, half day, 1, 450\nEdited images for web and print, 24, 12\nTravel, 1, 38',
         notes: 'Payment by bank transfer within 30 days.\nThank you, it was a pleasure to shoot for you.'
       }

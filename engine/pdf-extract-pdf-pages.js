@@ -55,7 +55,7 @@ window.PDF_TOOLS["extract-pdf-pages"] = {
         ]
       };
     },
-"tips": ["Page selections accept ranges, single pages and open-ended forms: \"1-3, 7, 10-\" takes pages 1 to 3, page 7, and everything from 10 onward.","Order \"as listed\" respects what you typed, so \"5, 1, 3\" produces those pages in that order — useful for reordering as you extract.","A page can appear twice. \"1, 1, 2\" duplicates the first page, which is occasionally what you want for a cover sheet."],
+"tips": ["The pages appear as thumbnails once the file is open. Click the pages to keep in the order you want them: the box fills with that order, so clicking 5, then 1, then 3 gives \"5, 1, 3\". Shift-click chooses a run of pages and dragging across the thumbnails chooses every page you pass; from the keyboard the arrow keys move between pages and Space chooses one.","Page selections accept ranges, single pages and open-ended forms: \"1-3, 7, 10-\" takes pages 1 to 3, page 7, and everything from 10 onward.","Order \"as listed\" respects what you typed, so \"5, 1, 3\" produces those pages in that order — useful for reordering as you extract.","A page can appear twice. \"1, 1, 2\" duplicates the first page, which is occasionally what you want for a cover sheet."],
 "faq": [{"q":"What happens to pages I do not select?","a":"They are simply not copied. The original file on your device is untouched — this always produces a new document."}]
 };
 })();

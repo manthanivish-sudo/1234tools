@@ -79,8 +79,16 @@ K.pkg = () => K._pkg || (K._pkg = require(path.join(K.ROOT, 'build/pdf-package/e
 const pdfSpecs = new Map();
 K.pdfSpec = (id) => {
   if (!pdfSpecs.has(id)) {
-    const w = {};
+    let w = {};
     new Function('window', fs.readFileSync(path.join(K.ROOT, 'engine/pdf-' + id + '.js'), 'utf8'))(w);
+    /* a spec that reuses another engine's code at run time (the invoice reads
+       its lines with the quotation's reader) is loaded with the files its
+       worker loads, together, as the worker does */
+    const ws = w.PDF_TOOLS[id] && w.PDF_TOOLS[id].workerScripts;
+    if (Array.isArray(ws) && ws.length > 1) {
+      w = {};
+      for (const s of ws) new Function('window', fs.readFileSync(path.join(K.ROOT, 'engine', s), 'utf8'))(w);
+    }
     pdfSpecs.set(id, w.PDF_TOOLS[id]);
   }
   return pdfSpecs.get(id);
@@ -94,7 +102,7 @@ K.pdfDefaults = (id) => {
 K.runPdf = async (id, files, opts, text) => {
   const core = K.core();
   const docs = [];
-  for (const f of files || []) docs.push({ doc: await core.PDFDocument.load(f.bytes), name: f.name, size: f.bytes.length });
+  for (const f of files || []) docs.push({ doc: await core.PDFDocument.load(f.bytes, { password: f.password || '' }), name: f.name, size: f.bytes.length });
   return (await K.pdfSpec(id).run({ docs, text, opts: Object.assign(K.pdfDefaults(id), opts || {}), core })) || {};
 };
 K.pdfOut = (res, i) => (res.files && res.files[i || 0] ? res.files[i || 0].bytes : null);

@@ -78,7 +78,7 @@ window.PDF_TOOLS["split-pdf"] = {
         ]
       };
     },
-"tips": ["One file per page is the right choice for scanned batches where each page is a separate document.","Explicit ranges give you full control: \"1-3 | 4-6 | 7-\" produces three files, with the last taking everything from page 7 onward.","Several output files are offered as a ZIP so you get them in one download."],
+"tips": ["One file per page is the right choice for scanned batches where each page is a separate document.","Explicit ranges give you full control: \"1-3 | 4-6 | 7-\" produces three files, with the last taking everything from page 7 onward.","Several output files are offered as a ZIP so you get them in one download.","The pages appear as thumbnails with each output file in its own shade. Click a page, or its scissors button, to split after it; the ranges box fills in to match, and a page can be turned before it is split off."],
 "faq": [{"q":"Do the split files keep the original quality?","a":"Yes. Page content streams and embedded images are copied byte for byte — nothing is re-encoded or recompressed."}]
 };
 })();

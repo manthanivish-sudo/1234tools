@@ -82,7 +82,7 @@ module.exports = {
     ],
     faq: [
       { q: 'Does merging PDFs reduce quality?', a: 'No. Content, images and fonts are copied without being decoded again, so a scan looks exactly the same.' },
-      { q: 'Can I merge password-protected PDFs?', a: 'No. An encrypted file is refused on opening; remove the password in the program that made it.' },
+      { q: 'Can I merge password-protected PDFs?', a: 'Yes, with its password, asked for when the file is added and not kept. The result has none.' },
       { q: 'Do hyperlinks still work after merging?', a: 'Yes. Web links are copied as they are; a link within one document lands on the same page of the merged file.' }
     ],
     related: { guides: ['/guides/merge-pdf-files/'] },
@@ -289,47 +289,46 @@ module.exports = {
   '/pdf/invoice-pdf/': {
     term: 'an invoice',
     whatIs: [
-      'An invoice is a seller’s request for payment: who is billing whom, for what, how much and by when. It is the record both sides keep and, between VAT-registered businesses, what the buyer needs to reclaim the VAT.',
-      'What the law adds depends on the country and the tax, so registration numbers and similar identifiers are yours to type into the business block.'
+      'An invoice is a seller’s request for payment: who is billing whom, for what, how much and by when. Between VAT-registered businesses it is what the buyer needs to reclaim the VAT.',
+      'Other legal details depend on the country, so identifiers are yours to type in; under GST the heading becomes TAX INVOICE.'
     ],
     howItWorks: {
-      text: 'One A4 page is drawn by the site’s own PDF writer in Helvetica, a font readers supply themselves, so nothing is embedded.',
+      text: 'The Quotation tool’s line reader parses the items; the site’s own PDF writer draws the pages.',
       points: [
         'Item lines are read from the right: price last, quantity before it, description the rest; a comma between digits, as in 1,25,000, groups thousands.',
-        'Tax is the rate applied once to the subtotal, not line by line, and every sum shows two decimals.',
+        'Tax is worked out once per rate on that rate’s whole taxable value, not line by line, and rounded to the penny or paisa.',
         'The due date is the invoice date plus the payment terms in calendar days.',
-        'Text uses the WinAnsi character set: £, € and $ print but the rupee sign cannot, so INR shows as “Rs”.',
-        'The file’s Title is “Invoice” plus your number; its Author is the first line of your business details.'
+        'The file takes the invoice number as its name, SPH-2026-0117.pdf, and as its Title after “Invoice”.'
       ]
     },
     worked: {
-      text: 'A stationery supplier billed a school for laminating pouches at £12.53, two packs of sticky labels at £3.74 and rubber bands at £3.33. The subtotal was £23.34, VAT at 20% was £4.67 and the total due £28.01. Invoiced one line at a time, the same items gave VAT of £2.51, £1.50 and £0.67, a penny more between them, because each line is then rounded on its own. With Net 7 terms from 2 October 2026, the due date was 9 October 2026, and the PDF was 1 page and 3.6 KB.'
+      text: 'A Pune printer (GSTIN beginning 27) bills a Bengaluru school (29): 500 brochures at Rs 18.50 at the default 18%, 20 registers at Rs 2,450 written “GST 5%”, 10% off, and Rs 1,500 courier taxed at 18%. Subtotal Rs 58,250.00, discount Rs 5,825.00, taxable value Rs 53,925.00. The states differ, so IGST is Rs 1,768.50 at 18% on Rs 9,825.00 plus Rs 2,205.00 at 5% on Rs 44,100.00: Rs 57,898.50, due 20 October 2026. Billed to a Pune branch (27), the same total splits into CGST and SGST of Rs 884.25 each at 9% and Rs 1,102.50 each at 2.5%.'
     },
     uses: [
-      ['Clubs and societies', 'Subscriptions or hall hire, with tax at 0 when the club is not VAT-registered.'],
-      ['A lost copy', 'Recreate an invoice with its original number and date.'],
-      ['Overseas clients', 'Bill in euros or dollars; the currency sign changes, the sums do not.']
+      ['Freelancers', 'A day rate in pounds with VAT, stamped PAID when the transfer arrives.'],
+      ['Mixed baskets', 'Goods at 5% and 18% on one GST invoice, each rate totalled on its own.'],
+      ['Regular clients', 'Pick a saved client and carry on from the last invoice number.']
     ],
     mistakes: [
-      'Dropping the spaces in a line with a thousands comma: “Consulting,2,1,200” could be 2 at 1,200 or 1 at 200, so the tool asks.',
-      'Pasting characters outside Western European text, such as ₹ or Polish ł, into an address or note. They print as question marks.'
+      'Ending a line with a bare “18%” to mean tax. A bare percentage is that line’s discount; write “GST 18%” or “VAT 20%” for a rate.',
+      'Choosing GST for a client with no GSTIN and no place of supply. The tool stops and asks for the state rather than guess the split.'
     ],
     faq: [
-      { q: 'What is the difference between an invoice and a receipt?', a: 'An invoice asks to be paid; a receipt confirms payment. To mark one of these invoices settled, add “Paid in full” and the date in the notes.' },
+      { q: 'What is the difference between an invoice and a receipt?', a: 'An invoice asks to be paid; a receipt confirms payment. Tick Mark as paid and this one says it was settled, with a PAID stamp, the date and the method.' },
       { q: 'What does Net 30 mean on an invoice?', a: 'Payment is due 30 days after the invoice date; the tool prints that due date for you.' },
-      { q: 'Can I add my logo to the invoice?', a: 'No. The page is built from text, lines and filled boxes only, so print it on headed paper instead.' }
+      { q: 'What is the place of supply on a GST invoice?', a: 'The state where the supply counts as made, shown with its two-digit code. Your own state means CGST plus SGST, another state IGST; 96 is a client abroad.' }
     ],
     related: { guides: ['/guides/chase-unpaid-invoices/'] },
     runs: [
-      /* Invoice Generator: the fields below set, Create PDF pressed */
+      /* 2026-10-06, the rewritten generator (three layouts, per-line GST). /pdf/invoice-pdf/ in headless
+         Chrome, these fields set and "Create invoice" pressed; the stats and the PDF read by pdf.js.
+         Repeated by build/tests/pdf-invoice.js (group B4). */
       {
-        browser: { tool: '/pdf/invoice-pdf/', controls: { from: 'Inkwell Stationers\n7 Bridge Street, Hereford HR4 9DG', to: 'Castle Primary School\nSchool Office\nHereford HR1 2NN', number: 'INK-1907', date: '2026-10-02', due: '7', currency: 'GBP', tax: 20, taxLabel: 'VAT', items: 'Laminating pouches A4 (pack of 100), 1, 12.53\nSticky labels, 2, 3.74\nRubber bands, 1, 3.33', notes: 'Bank transfer to Inkwell Stationers, sort code 40-11-22.' } },
-        shown: ['£23.34', '£4.67', '£28.01', '9 October 2026', '1 page', '3.6 KB']
+        browser: { tool: '/pdf/invoice-pdf/', controls: { fromName: 'Sahyadri Print House', fromAddress: '14 Karve Road, Pune 411004', fromTax: '27AAKFS4821M1Z3', toName: 'Lalbagh Learning Centre', toAddress: '22 Lalbagh Road, Bengaluru 560027', toTax: '29AACCL7310Q1ZP', number: 'SPH-2026-0117', date: '2026-10-05', due: '15', currency: 'INR', taxMode: 'gst', tax: 18, items: 'Brochures, 500, Nos, 18.50\nHardbound registers, 20, Nos, 2,450, GST 5%', discount: '10', discountType: 'percent', shipping: '1,500', shippingTax: 'taxable' } },
+        shown: ['Rs 58,250.00', 'Rs 5,825.00', 'Rs 53,925.00', 'Rs 1,768.50', 'Rs 9,825.00', 'Rs 2,205.00', 'Rs 44,100.00', 'Rs 57,898.50', '20 October 2026', 'SPH-2026-0117.pdf']
       },
-      /* the same invoice with one line at a time in Line items (other fields as above): VAT 20% each time */
-      { browser: { tool: '/pdf/invoice-pdf/', items: 'Laminating pouches A4 (pack of 100), 1, 12.53' }, shown: ['£2.51'] },
-      { browser: { tool: '/pdf/invoice-pdf/', items: 'Sticky labels, 2, 3.74' }, shown: ['£1.50'] },
-      { browser: { tool: '/pdf/invoice-pdf/', items: 'Rubber bands, 1, 3.33' }, shown: ['£0.67'] }
+      /* the same, toAddress '9 FC Road, Pune 411005' and toTax '27AAACL7310Q1ZQ' */
+      { browser: { tool: '/pdf/invoice-pdf/', controls: 'as above, toTax: 27AAACL7310Q1ZQ' }, shown: ['Rs 884.25', 'Rs 1,102.50', 'Rs 57,898.50'] }
     ]
   },
 
@@ -598,11 +597,11 @@ module.exports = {
       'Rotation is a page property, the /Rotate entry, counted clockwise in steps of 90 degrees and applied by the viewer, so a turned page keeps selectable text.'
     ],
     howItWorks: {
-      text: 'This tool must draw your pages before you change anything, so the first press loads pdf.js, Mozilla’s open-source renderer, from this site’s own copy.',
+      text: 'This tool must draw your pages before you change anything, so opening a file loads pdf.js, Mozilla’s open-source renderer, from this site’s own copy.',
       points: [
-        'pdf.js renders every page onto a small canvas at 28% of its size; each card has buttons to move it earlier or later, turn it 90° clockwise or mark it for removal.',
+        'pdf.js draws each card’s page only as it scrolls near the screen; each card has buttons to move it earlier or later, turn it 90° clockwise or mark it for removal.',
         'A card can also be dragged, anywhere on it with a mouse or pen, by its grip with a finger. Each thumbnail is drawn once per turn, so moving pages does not redraw them.',
-        'Build hands the kept pages, in grid order, to the site’s own writer, `pdfcore`. A turn is added to any `/Rotate` the page already had; nothing is re-rendered.'
+        'Saving hands the kept pages, in grid order, to the site’s own writer, `pdfcore`, in a background worker. A turn is added to any `/Rotate` the page already had; nothing is re-rendered.'
       ]
     },
     worked: {
@@ -615,7 +614,7 @@ module.exports = {
     ],
     mistakes: [
       'Dragging a thumbnail with a finger on a phone. Touching the picture scrolls the page, as it should; drag by the grip in the card’s corner instead.',
-      'Opening a document of several hundred pages. Every thumbnail is drawn on opening, which costs memory and time.'
+      'Waiting for every thumbnail before saving. The file is built from the document, not the pictures, so every page is in it.'
     ],
     faq: [
       { q: 'Does reordering PDF pages reduce quality?', a: 'No. The thumbnails are only for choosing; the saved file reuses each page’s content stream and images byte for byte.' },
@@ -624,8 +623,8 @@ module.exports = {
     ],
     related: { guides: ['/guides/merge-pdf-files/'] },
     runs: [
-      /* Open /pdf/pdf-organise/, choose numbered-test-document.pdf (top of this file), press "Show the pages"; on card 2 press "Remove this page", on card 4 "Rotate 90°", on card 5 "Move earlier"; read the order and stats, press "Build reorganised PDF", save the download and read its text with pdf.js. Re-measured on 2026-10-04 with the fixed writer, which keeps the Title (before: 14.4 KB). */
-      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, 200 numbered lines', pressed: ['Show the pages', 'card 2: Remove this page', 'card 4: Rotate 90°', 'card 5: Move earlier', 'Build reorganised PDF'], result: '4 pages · 14.5 KB (14,822 bytes)' }, shown: ['1, 2, 3, 5, 4', '4 kept, 1 removed, 1 rotated', '4 pages in 14.5 KB', 'Line 142'] }
+      /* Open /pdf/pdf-organise/, choose numbered-test-document.pdf (top of this file) and the grid appears (until 2026-10-06 a "Show the pages" press came first); on card 2 press "Remove this page", on card 4 "Rotate 90°", on card 5 "Move earlier"; read the order and stats, press "Build reorganised PDF", save the download and read its text with pdf.js. Re-measured on 2026-10-04 with the fixed writer, which keeps the Title (before: 14.4 KB). */
+      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, 200 numbered lines', pressed: ['card 2: Remove this page', 'card 4: Rotate 90°', 'card 5: Move earlier', 'Save the new order'], result: '4 pages · 14.5 KB (14,822 bytes)' }, shown: ['1, 2, 3, 5, 4', '4 kept, 1 removed, 1 rotated', '4 pages in 14.5 KB', 'Line 142'] }
     ]
   },
 
@@ -987,7 +986,7 @@ module.exports = {
     faq: [
       { q: 'How do I watermark only some pages of a PDF?', a: 'Type them in Pages, for example 1 or 2-5, 9; the other pages are copied unchanged.' },
       { q: 'Can I use a logo or image as the watermark?', a: 'No, only text, in Helvetica Bold. Colour, angle, a size from 6 to 300 pt and the opacity can all be set.' },
-      { q: 'Can I watermark a password-protected PDF?', a: 'No. Encrypted files are refused on opening; remove the password in the program that set it first.' }
+      { q: 'Can I watermark a password-protected PDF?', a: 'Yes, if you know its password: it is asked for when you choose the file. The watermarked copy is saved without a password; add one back with Protect PDF.' }
     ],
     runs: [
       /* Open /pdf/watermark-pdf/, Watermark text DRAFT, Font size 60, Angle 45° diagonal, Opacity 15, Position Centre, Pages all, choose numbered-test-document.pdf (top of this file), press "Add watermark"; count "(DRAFT) Tj" in the download. Then Position "Tiled across the page"; read the page text back with pdf.js. */

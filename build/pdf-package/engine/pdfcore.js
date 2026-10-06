@@ -853,7 +853,8 @@ class PDFWriter {
     push(`xref\n0 ${this.objects.length}\n`);
     push('0000000000 65535 f \n');
     for (let i = 1; i < this.objects.length; i++) {
-      push(String(offsets[i]).padStart(10, '0') + ' 00000 n \n');
+      /* a number left empty (a duplicate folded into another) is free */
+      push(this.objects[i] === undefined ? '0000000000 65535 f \n' : String(offsets[i]).padStart(10, '0') + ' 00000 n \n');
     }
     const trailer = { Size: this.objects.length, Root: rootRef };
     if (infoRef) trailer.Info = infoRef;
@@ -892,6 +893,59 @@ const pdfString = (str) => {
   }
   return { __string: new Uint8Array(out) };
 };
+
+/* ============================================================
+   Pictures: image XObjects for logos, stamps and scans
+   ============================================================ */
+
+/**
+ * Make a picture ready to embed. A JPEG goes in as its own bytes
+ * (DCTDecode); raw pixels are deflated, with their transparency as a soft
+ * mask. Input, from the page's image control or a canvas:
+ *   { kind: 'jpeg', bytes, width, height, components }
+ *   { kind: 'raw', width, height, rgb, alpha | null }      (8 bits per sample)
+ *   { kind: 'grey', width, height, grey }
+ * Async because deflating uses the platform's CompressionStream.
+ */
+async function prepareImage(img) {
+  if (!img || !(img.width > 0) || !(img.height > 0)) throw new Error('That picture has no size.');
+  if (img.prepared) return img;
+  if (img.kind === 'jpeg') {
+    return { prepared: true, width: img.width, height: img.height, filter: 'DCTDecode', data: img.bytes,
+      colorSpace: img.components === 1 ? 'DeviceGray' : img.components === 4 ? 'DeviceCMYK' : 'DeviceRGB', smask: null };
+  }
+  if (img.kind === 'grey') {
+    return { prepared: true, width: img.width, height: img.height, filter: 'FlateDecode', data: await deflate(img.grey), colorSpace: 'DeviceGray', smask: null };
+  }
+  if (img.kind === 'raw') {
+    const out = { prepared: true, width: img.width, height: img.height, filter: 'FlateDecode', data: await deflate(img.rgb), colorSpace: 'DeviceRGB', smask: null };
+    if (img.alpha) out.smask = await deflate(img.alpha);
+    return out;
+  }
+  throw new Error('Unknown picture format.');
+}
+
+/** Add a prepared picture to a writer once, however many pages draw it. */
+function imageRef(writer, prep) {
+  writer._images = writer._images || new Map();
+  if (writer._images.has(prep)) return writer._images.get(prep);
+  const d = Object.create(null);
+  d.Type = new Name('XObject'); d.Subtype = new Name('Image');
+  d.Width = prep.width; d.Height = prep.height;
+  d.ColorSpace = new Name(prep.colorSpace); d.BitsPerComponent = 8;
+  d.Filter = new Name(prep.filter);
+  if (prep.colorSpace === 'DeviceCMYK' && prep.filter === 'DCTDecode') d.Decode = [1, 0, 1, 0, 1, 0, 1, 0];
+  if (prep.smask) {
+    const m = Object.create(null);
+    m.Type = new Name('XObject'); m.Subtype = new Name('Image');
+    m.Width = prep.width; m.Height = prep.height;
+    m.ColorSpace = new Name('DeviceGray'); m.BitsPerComponent = 8; m.Filter = new Name('FlateDecode');
+    d.SMask = new Ref(writer.add(new PDFStream(m, prep.smask)), 0);
+  }
+  const ref = new Ref(writer.add(new PDFStream(d, prep.data)), 0);
+  writer._images.set(prep, ref);
+  return ref;
+}
 
 /* ============================================================
    Page operations
@@ -1490,6 +1544,15 @@ async function assemble(items, options) {
   }
   if (!plan.length) throw new Error('No pages were selected.');
   for (const [doc, st] of states) await prepareSource(doc, st);
+  if (opts.replace) {
+    /* compression swaps some objects (pictures) for smaller ones as they are copied */
+    for (const [doc, st] of states) {
+      const swap = opts.replace.get(doc);
+      if (!swap || !st.ctx) continue;
+      const inner = st.ctx.rewrite;
+      st.ctx.rewrite = async (num, v) => swap.has(num) ? swap.get(num) : (inner ? inner(num, v) : v);
+    }
+  }
 
   let isolate = 0;                // one shared "q" stream for every stamped page
   const fmt = (v) => String(Number(Number(v).toFixed(4)));
@@ -1553,12 +1616,25 @@ async function assemble(items, options) {
 
       let font = deref(res.Font);
       if (!isDict(font)) { font = Object.create(null); res.Font = font; }
-      if (!font[item.overlay.fontKey]) {
-        font[item.overlay.fontKey] = new Ref(writer.add({
-          Type: new Name('Font'), Subtype: new Name('Type1'),
-          BaseFont: new Name(item.overlay.fontName || 'Helvetica'),
-          Encoding: new Name('WinAnsiEncoding')
-        }), 0);
+      if (item.overlay.fontKey && !font[item.overlay.fontKey]) {
+        /* one font object per face for the whole file, not one per page */
+        const face = item.overlay.fontName || 'Helvetica';
+        writer._base14 = writer._base14 || Object.create(null);
+        if (!writer._base14[face]) {
+          writer._base14[face] = new Ref(writer.add({
+            Type: new Name('Font'), Subtype: new Name('Type1'),
+            BaseFont: new Name(face), Encoding: new Name('WinAnsiEncoding')
+          }), 0);
+        }
+        font[item.overlay.fontKey] = writer._base14[face];
+      }
+      if (item.overlay.images) {
+        let xo = deref(res.XObject);
+        if (!isDict(xo)) { xo = Object.create(null); res.XObject = xo; }
+        for (const [key, prep] of Object.entries(item.overlay.images)) xo[key] = imageRef(writer, prep);
+      }
+      if (item.overlay.fonts) {
+        for (const [key, ref] of Object.entries(item.overlay.fonts)) font[key] = typeof ref === 'function' ? ref(writer) : ref;
       }
       if (item.overlay.needsGS) {
         let eg = deref(res.ExtGState);
@@ -1627,7 +1703,9 @@ async function assemble(items, options) {
     if (Object.keys(info).length) infoRef = new Ref(writer.add(info), 0);
   }
 
+  if (opts.finish) await opts.finish(writer);
   if (opts.protect) return encryptAndBuild(writer, new Ref(catalogNum, 0), infoRef, opts.protect);
+  if (opts.compact) return compactBuild(writer, new Ref(catalogNum, 0), infoRef);
   return writer.build(new Ref(catalogNum, 0), infoRef, opts.version || '1.7');
 }
 
@@ -1695,6 +1773,340 @@ async function protectDocument(doc, options) {
   const n = await doc.pageCount();
   const items = Array.from({ length: n }, (_, i) => ({ doc, pageIndex: i }));
   return assemble(items, options && options.protect === false ? {} : { protect: options || {} });
+}
+
+/* ============================================================
+   Compression
+   ============================================================ */
+
+/**
+ * The writer's objects as a PDF 1.5 file: every object that is not a stream
+ * packed into compressed object streams, and a compressed cross-reference
+ * stream in place of the table. For a text-heavy file this is where most of
+ * the structure's bytes go: a classic table costs 20 bytes an object and
+ * every dictionary is stored as plain text.
+ */
+async function compactBuild(writer, rootRef, infoRef) {
+  const objs = writer.objects;
+  const size0 = objs.length;
+  const packable = [];
+  for (let i = 1; i < size0; i++) {
+    const v = objs[i];
+    if (v === undefined || v instanceof PDFStream) continue;
+    packable.push(i);
+  }
+  const where = new Map();          /* object number -> [stream number, index] */
+  const streams = [];
+  for (let k = 0; k < packable.length; k += 200) {
+    const group = packable.slice(k, k + 200);
+    const bodies = group.map((i) => writer.serialiseValue(objs[i]));
+    let head = '', off = 0;
+    group.forEach((num, j) => { head += num + ' ' + off + ' '; off += bodies[j].length + 1; });
+    const first = head.length;
+    const data = bytesOf(head + bodies.join('\n') + '\n');
+    const z = await deflate(data);
+    const num = writer.add(null);
+    streams.push({ num, dict: { Type: new Name('ObjStm'), N: group.length, First: first, Filter: new Name('FlateDecode') }, raw: z });
+    group.forEach((i, j) => where.set(i, [num, j]));
+  }
+  for (const st of streams) objs[st.num] = new PDFStream(st.dict, st.raw);
+
+  const chunks = [];
+  let len = 0;
+  const push = (x) => { const a = typeof x === 'string' ? bytesOf(x) : x; chunks.push(a); len += a.length; };
+  push('%PDF-1.7\n%\xE2\xE3\xCF\xD3\n');
+  const offsets = new Map();
+  for (let i = 1; i < objs.length; i++) {
+    const v = objs[i];
+    if (!(v instanceof PDFStream)) continue;
+    offsets.set(i, len);
+    const d = Object.assign(Object.create(null), v.dict);
+    d.Length = v.raw.length;
+    push(i + ' 0 obj\n' + writer.serialiseValue(d) + '\nstream\n');
+    push(v.raw);
+    push('\nendstream\nendobj\n');
+  }
+  const xrefNum = objs.length;
+  const size = xrefNum + 1;
+  const rows = new Uint8Array(size * 7);
+  for (let i = 0; i < size; i++) {
+    const r = i * 7;
+    if (i === 0) { rows[r] = 0; rows[r + 5] = 0xff; rows[r + 6] = 0xff; continue; }
+    if (offsets.has(i) || i === xrefNum) {
+      const off = i === xrefNum ? len : offsets.get(i);
+      rows[r] = 1; rows[r + 1] = (off >>> 24) & 255; rows[r + 2] = (off >>> 16) & 255; rows[r + 3] = (off >>> 8) & 255; rows[r + 4] = off & 255;
+    } else if (where.has(i)) {
+      const [sn, idx] = where.get(i);
+      rows[r] = 2; rows[r + 1] = (sn >>> 24) & 255; rows[r + 2] = (sn >>> 16) & 255; rows[r + 3] = (sn >>> 8) & 255; rows[r + 4] = sn & 255;
+      rows[r + 5] = (idx >>> 8) & 255; rows[r + 6] = idx & 255;
+    }
+  }
+  const z = await deflate(rows);
+  const xd = { Type: new Name('XRef'), Size: size, W: [1, 4, 2], Root: rootRef, Filter: new Name('FlateDecode'), Length: z.length };
+  if (infoRef) xd.Info = infoRef;
+  const xrefAt = len;
+  push(xrefNum + ' 0 obj\n' + writer.serialiseValue(xd) + '\nstream\n');
+  push(z);
+  push('\nendstream\nendobj\nstartxref\n' + xrefAt + '\n%%EOF\n');
+  const out = new Uint8Array(len);
+  let at = 0;
+  for (const c of chunks) { out.set(c, at); at += c.length; }
+  return out;
+}
+
+const mul = (a, b) => [
+  a[0] * b[0] + a[1] * b[2], a[0] * b[1] + a[1] * b[3],
+  a[2] * b[0] + a[3] * b[2], a[2] * b[1] + a[3] * b[3],
+  a[4] * b[0] + a[5] * b[2] + b[4], a[4] * b[1] + a[5] * b[3] + b[5]
+];
+
+async function streamBytes(doc, contents) {
+  const list = await doc.resolve(contents);
+  const parts = [];
+  for (const c of Array.isArray(list) ? list : [list]) {
+    const st = await doc.resolve(c);
+    if (st instanceof PDFStream) { try { parts.push(await doc.decodeStream(st)); } catch (e) { /* unreadable: skip */ } }
+  }
+  const len = parts.reduce((n, x) => n + x.length + 1, 0);
+  const out = new Uint8Array(len);
+  let at = 0;
+  for (const x of parts) { out.set(x, at); at += x.length; out[at++] = 10; }
+  return out;
+}
+
+/**
+ * How large each picture is drawn, in points, the largest use winning:
+ * the page content is walked for q, Q, cm and Do (into forms too), which is
+ * all the geometry a picture's size depends on.
+ */
+async function drawnSizes(doc, res, bytes, ctm, out, depth) {
+  if (depth > 8 || !bytes || !bytes.length) return;
+  const resources = await doc.resolve(res);
+  const xobjects = isDict(resources) ? await doc.resolve(resources.XObject) : null;
+  const lex = new Lexer(bytes, 0);
+  const stack = [];
+  let m = ctm, ops = [];
+  for (let guard = 0; guard < 5e6; guard++) {
+    let v;
+    try { v = lex.parse(0); } catch (e) { lex.p++; ops = []; continue; }
+    if (v === undefined) { if (lex.p >= bytes.length) break; ops = []; continue; }
+    if (!v || v.__keyword === undefined) { ops.push(v); continue; }
+    const op = v.__keyword;
+    if (op === 'q') stack.push(m);
+    else if (op === 'Q') m = stack.length ? stack.pop() : ctm;
+    else if (op === 'cm' && ops.length >= 6) m = mul(ops.slice(-6).map(Number), m);
+    else if (op === 'BI') {
+      /* an inline image: its data is binary, skip to EI */
+      const at = latin1(bytes, lex.p).search(/\sEI[\s]/);
+      lex.p = at < 0 ? bytes.length : lex.p + at + 4;
+    } else if (op === 'Do' && ops.length && xobjects && isDict(xobjects)) {
+      const nm = ops[ops.length - 1];
+      const ref = nm instanceof Name ? xobjects[nm.name] : null;
+      const x = await doc.resolve(ref);
+      if (x instanceof PDFStream) {
+        if (isName(x.dict.Subtype, 'Image') && ref instanceof Ref) {
+          const w = Math.hypot(m[0], m[1]), h = Math.hypot(m[2], m[3]);
+          const was = out.get(ref.num);
+          if (!was || w * h > was.w * was.h) out.set(ref.num, { w, h });
+        } else if (isName(x.dict.Subtype, 'Form')) {
+          const fm = await doc.resolve(x.dict.Matrix);
+          const fmat = Array.isArray(fm) && fm.length === 6 ? fm.map(Number) : [1, 0, 0, 1, 0, 0];
+          let fb = null;
+          try { fb = await doc.decodeStream(x); } catch (e) { fb = null; }
+          await drawnSizes(doc, x.dict.Resources !== undefined ? x.dict.Resources : res, fb, mul(fmat, m), out, depth + 1);
+        }
+      }
+    }
+    ops = [];
+  }
+}
+
+/** A picture, decoded to RGBA for a canvas, or null when it cannot be. */
+async function imageToBitmap(doc, stm) {
+  if (typeof createImageBitmap !== 'function') return null;
+  const d = stm.dict;
+  let filters = await doc.resolve(d.Filter);
+  if (filters && !Array.isArray(filters)) filters = [filters];
+  const names = (filters || []).map((f) => f && f.name);
+  if (names.length === 1 && (names[0] === 'DCTDecode' || names[0] === 'DCT')) {
+    return createImageBitmap(new Blob([stm.raw], { type: 'image/jpeg' }));
+  }
+  if (names.some((n) => !/^(FlateDecode|Fl|ASCII85Decode|A85|ASCIIHexDecode|AHx)$/.test(n))) return null;
+  const W = Number(await doc.resolve(d.Width)), H = Number(await doc.resolve(d.Height));
+  const comps = (await colourComponents(doc, d.ColorSpace));
+  if (!comps || comps === 4) return null;
+  const data = await doc.decodeStream(stm);
+  if (data.length < W * H * comps) return null;
+  const rgba = new Uint8ClampedArray(W * H * 4);
+  for (let i = 0, j = 0; i < W * H; i++, j += comps) {
+    const k = i * 4;
+    if (comps === 1) { rgba[k] = rgba[k + 1] = rgba[k + 2] = data[j]; }
+    else { rgba[k] = data[j]; rgba[k + 1] = data[j + 1]; rgba[k + 2] = data[j + 2]; }
+    rgba[k + 3] = 255;
+  }
+  return createImageBitmap(new ImageData(rgba, W, H));
+}
+async function colourComponents(doc, cs) {
+  const v = await doc.resolve(cs);
+  if (isName(v, 'DeviceRGB') || isName(v, 'CalRGB')) return 3;
+  if (isName(v, 'DeviceGray') || isName(v, 'CalGray')) return 1;
+  if (isName(v, 'DeviceCMYK')) return 4;
+  if (Array.isArray(v) && isName(v[0], 'ICCBased')) {
+    const st = await doc.resolve(v[1]);
+    const n = st instanceof PDFStream ? Number(await doc.resolve(st.dict.N)) : 0;
+    return n === 1 || n === 3 || n === 4 ? n : null;
+  }
+  if (Array.isArray(v) && (isName(v[0], 'CalRGB'))) return 3;
+  if (Array.isArray(v) && (isName(v[0], 'CalGray'))) return 1;
+  return null;
+}
+
+/**
+ * Make a PDF smaller: pictures drawn at more than the chosen resolution are
+ * scaled down and pictures re-encoded as JPEG at the chosen quality (only
+ * where that is actually smaller), uncompressed streams are deflated,
+ * identical streams and fonts are stored once, objects nothing uses are left
+ * out (assemble copies only what the pages reach), and the metadata is
+ * removed on request. Options: { dpi, quality (0.1–1), images: true,
+ * metadata: 'keep' | 'strip', greyscale: false }.
+ * Returns { bytes, report }.
+ */
+async function compressDocument(doc, options) {
+  const o = Object.assign({ dpi: 150, quality: 0.75, images: true, metadata: 'strip' }, options || {});
+  const pages = await doc.getPages();
+  const report = { images: 0, recoded: 0, downsampled: 0, kept: {}, imageBytesBefore: 0, imageBytesAfter: 0, deflated: 0, merged: 0 };
+  const keep = (why) => { report.kept[why] = (report.kept[why] || 0) + 1; };
+
+  /* 1. how big each picture is drawn */
+  const sizes = new Map();
+  for (let i = 0; i < pages.length; i++) {
+    progress(i, pages.length, 'Measuring the pictures on page ' + (i + 1));
+    const pg = pages[i];
+    const res = pg.dict.Resources !== undefined ? pg.dict.Resources : pg.inherited.Resources;
+    let bytes = null;
+    try { bytes = await streamBytes(doc, pg.dict.Contents); } catch (e) { bytes = null; }
+    try { await drawnSizes(doc, res, bytes, [1, 0, 0, 1, 0, 0], sizes, 0); } catch (e) { /* a page we cannot read keeps its pictures */ }
+  }
+
+  /* 2. pictures, re-encoded where it pays */
+  const replace = new Map();
+  const masks = new Set();
+  for (const v of doc.objects.values()) {
+    const d = v instanceof PDFStream ? v.dict : null;
+    if (d && d.SMask instanceof Ref) masks.add(d.SMask.num);
+    if (d && d.Mask instanceof Ref) masks.add(d.Mask.num);
+  }
+  const canEncode = typeof OffscreenCanvas === 'function' && typeof createImageBitmap === 'function';
+  const imgs = [...doc.objects].filter(([n, v]) => v instanceof PDFStream && isName(v.dict.Subtype, 'Image') && !masks.has(n));
+  let done = 0;
+  for (const [num, stm] of imgs) {
+    progress(done++, imgs.length, 'Pictures');
+    report.images++;
+    report.imageBytesBefore += stm.raw.length;
+    const d = stm.dict;
+    const fallback = () => { report.imageBytesAfter += stm.raw.length; };
+    if (!o.images) { keep('pictures left as they are'); fallback(); continue; }
+    if (!canEncode) { keep('this browser cannot re-encode pictures here'); fallback(); continue; }
+    if ((await doc.resolve(d.ImageMask)) === true) { keep('a stencil mask'); fallback(); continue; }
+    if (Number(await doc.resolve(d.BitsPerComponent)) !== 8) { keep('not 8 bits per sample'); fallback(); continue; }
+    if (d.Decode !== undefined || Array.isArray(await doc.resolve(d.Mask))) { keep('a colour key or decode array'); fallback(); continue; }
+    const comps = await colourComponents(doc, d.ColorSpace);
+    if (comps !== 1 && comps !== 3) { keep(comps === 4 ? 'CMYK' : 'an unusual colour space'); fallback(); continue; }
+    const W = Number(await doc.resolve(d.Width)), H = Number(await doc.resolve(d.Height));
+    if (!(W > 0 && H > 0)) { fallback(); continue; }
+    const drawn = sizes.get(num);
+    let scale = 1;
+    if (drawn && drawn.w > 0 && drawn.h > 0) {
+      const tw = drawn.w / 72 * o.dpi, th = drawn.h / 72 * o.dpi;
+      scale = Math.min(1, Math.max(tw / W, th / H));
+      if (scale > 0.87) scale = 1;            /* not worth a generation of loss */
+    }
+    if (scale === 1 && stm.raw.length < 24 * 1024) { keep('already small'); fallback(); continue; }
+    let bmp = null;
+    try { bmp = await imageToBitmap(doc, stm); } catch (e) { bmp = null; }
+    if (!bmp) { keep('a format the browser cannot decode (JPEG 2000, JBIG2, CCITT …)'); fallback(); continue; }
+    const w = Math.max(1, Math.round(W * scale)), h = Math.max(1, Math.round(H * scale));
+    const cv = new OffscreenCanvas(w, h);
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bmp, 0, 0, w, h);
+    bmp.close && bmp.close();
+    let blob;
+    try { blob = await cv.convertToBlob({ type: 'image/jpeg', quality: Math.max(0.1, Math.min(1, o.quality)) }); }
+    catch (e) { keep('could not be encoded'); fallback(); continue; }
+    const jpeg = new Uint8Array(await blob.arrayBuffer());
+    if (blob.type !== 'image/jpeg' || jpeg.length >= stm.raw.length * 0.95) { keep('re-encoding would not make it smaller'); fallback(); continue; }
+    const nd = Object.create(null);
+    for (const k of Object.keys(d)) if (!/^(Filter|DecodeParms|DP|Length|Width|Height|BitsPerComponent|ColorSpace|Intent)$/.test(k)) nd[k] = d[k];
+    nd.Width = w; nd.Height = h; nd.BitsPerComponent = 8;
+    nd.ColorSpace = new Name('DeviceRGB');
+    nd.Filter = new Name('DCTDecode');
+    replace.set(num, new PDFStream(nd, jpeg));
+    report.recoded++;
+    if (scale < 1) report.downsampled++;
+    report.imageBytesAfter += jpeg.length;
+  }
+
+  /* 3. write it again, deflating and folding duplicates on the way out */
+  const finish = async (writer) => {
+    const fnv = (b) => { let h = 2166136261; for (let i = 0; i < b.length; i++) { h ^= b[i]; h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
+    const all = writer.objects;
+    let k = 0;
+    for (let i = 1; i < all.length; i++) {
+      const v = all[i];
+      if (!(v instanceof PDFStream) || v.dict.Filter !== undefined || v.raw.length < 64) continue;
+      if (isName(v.dict.Type, 'Metadata') || isName(v.dict.Type, 'XRef')) continue;
+      if (++k % 50 === 0) progress(i, all.length, 'Compressing streams');
+      const z = await deflate(v.raw);
+      if (z.length < v.raw.length) {
+        const dd = Object.assign(Object.create(null), v.dict);
+        dd.Filter = new Name('FlateDecode');
+        all[i] = new PDFStream(dd, z);
+        report.deflated++;
+      }
+    }
+    /* identical streams, and identical fonts, descriptors and graphics states */
+    const FOLD = new Set(['Font', 'FontDescriptor', 'ExtGState']);
+    for (let pass = 0; pass < 3; pass++) {
+      const seen = new Map(), alias = new Map();
+      for (let i = 1; i < all.length; i++) {
+        const v = all[i];
+        let key = null;
+        if (v instanceof PDFStream) key = 's' + writer.serialiseValue(v.dict) + '|' + v.raw.length + '|' + fnv(v.raw);
+        else if (isDict(v) && v.Type instanceof Name && FOLD.has(v.Type.name)) key = 'd' + writer.serialiseValue(v);
+        if (!key) continue;
+        const first = seen.get(key);
+        if (first === undefined) { seen.set(key, i); continue; }
+        if (v instanceof PDFStream) {
+          const a = all[first].raw, b = v.raw;
+          let same = a.length === b.length;
+          for (let j = 0; same && j < a.length; j++) if (a[j] !== b[j]) same = false;
+          if (!same) continue;
+        }
+        alias.set(i, first);
+      }
+      if (!alias.size) break;
+      const swap = (x) => {
+        if (x instanceof Ref) return alias.has(x.num) ? new Ref(alias.get(x.num), 0) : x;
+        if (Array.isArray(x)) { for (let j = 0; j < x.length; j++) x[j] = swap(x[j]); return x; }
+        if (x instanceof PDFStream) { swap(x.dict); return x; }
+        if (isDict(x)) { for (const key of Object.keys(x)) x[key] = swap(x[key]); return x; }
+        return x;
+      };
+      for (let i = 1; i < all.length; i++) if (all[i] !== undefined && !alias.has(i)) swap(all[i]);
+      for (const i of alias.keys()) { all[i] = undefined; report.merged++; }
+    }
+  };
+
+  const items = pages.map((pg, i) => ({ doc, pageIndex: i }));
+  const strip = o.metadata === 'strip';
+  const bytes = await assemble(items, Object.assign({ replace: new Map([[doc, replace]]), finish, compact: o.compact !== false },
+    strip ? { info: {}, xmp: false } : {}));
+  report.before = doc.bytes.length;
+  report.after = bytes.length;
+  return { bytes, report };
 }
 
 /** Parse "1-3, 5, 8-" style page selections into zero-based indices. */
@@ -1859,6 +2271,7 @@ function createPDF(pages, opts) {
   for (const page of pages) {
     const [W, H] = page.size || PAGE_SIZES[o.pageSize || 'a4'];
     const used = new Set();
+    const usedImages = Object.create(null);
     let cs = '';
 
     for (const op of page.ops || []) {
@@ -1869,6 +2282,13 @@ function createPDF(pages, opts) {
       } else if (op.line) {
         const [x1, y1, x2, y2] = op.line;
         cs += `${rgb(op.stroke || '#000000')} RG\n${n(op.lineWidth || 1)} w\n${n(x1)} ${n(y1)} m ${n(x2)} ${n(y2)} l S\n`;
+      } else if (op.image) {
+        const key = 'Im' + imageRef(writer, op.image).num;
+        usedImages[key] = imageRef(writer, op.image);
+        const w = op.w, h = op.h !== undefined ? op.h : op.w * op.image.height / op.image.width;
+        cs += `q\n${n(w)} 0 0 ${n(h)} ${n(op.x)} ${n(op.y)} cm\n/${key} Do\nQ\n`;
+      } else if (op.raw !== undefined) {
+        cs += op.raw + '\n';
       } else if (op.text !== undefined) {
         const fk = fontKeyFor(op.font || 'Helvetica');
         used.add(fk);
@@ -1886,6 +2306,12 @@ function createPDF(pages, opts) {
     const fdict = Object.create(null);
     used.forEach(k => { fdict[k.replace(/[^A-Za-z0-9]/g, '')] = fontRefs[k]; });
     if (Object.keys(fdict).length) res.Font = fdict;
+    if (Object.keys(usedImages).length) res.XObject = usedImages;
+    if (page.gs) {
+      const gs = Object.create(null);
+      for (const [k, v] of Object.entries(page.gs)) gs[k] = { Type: new Name('ExtGState'), ca: v, CA: v };
+      res.ExtGState = gs;
+    }
 
     const contentNum = writer.add(new PDFStream(Object.create(null), bytesOf(cs)));
     const pageNum = writer.alloc();
@@ -1924,6 +2350,7 @@ if (typeof module !== 'undefined' && module.exports) {
     createPDF, textWidth, wrapText, contentEscape, PAGE_SIZES, FONTS,
     pdfString, decodePdfString, inflate, applyPredictor, ascii85Decode,
     latin1, bytesOf, isDict, isName, isRef,
-    deflate, setProgress, setPreview, protectDocument
+    deflate, setProgress, setPreview, protectDocument, prepareImage, imageRef,
+    compressDocument
   };
 }

@@ -76,10 +76,12 @@ module.exports = function ({ claim, manual, kit: K }) {
     const a = await K.analyse(K.pdfOut(r));
     return [a.info.Title === 'Secrets A' && a.root.Metadata !== undefined && /XMP-AUTHOR-A/.test(a.text), 'Title ' + a.info.Title + ', XMP ' + (a.root.Metadata ? 'kept' : 'absent')];
   });
-  claim(M, 'dfaq', 'An encrypted file is refused on opening', 'a PDF with /Encrypt is refused', N, async () => {
-    let msg = '';
-    try { const r = await K.runPdf('merge-pdf', [{ name: 'enc.pdf', bytes: K.encrypted() }, await S('A')], {}); msg = errOf(r) ? 'run error: ' + errOf(r) : 'accepted and merged'; } catch (e) { msg = 'refused: ' + e.message; }
-    return [/^refused|run error/.test(msg) && /encrypt|password/i.test(msg), msg];
+  claim(M, 'dfaq', 'Yes, with its password, asked for when the file is added and not kept. The result has none.', 'an AES-256 file opened with its password merges, and the result has no /Encrypt', N, async () => {
+    const enc = await K.core().protectDocument(await K.core().PDFDocument.load(await sec('B')), { userPassword: 'm-pass', method: 'AES-256' });
+    const r = await K.runPdf('merge-pdf', [{ name: 'enc.pdf', bytes: enc, password: 'm-pass' }, await S('A')], {});
+    const out = K.pdfOut(r);
+    const t = out ? (await pagesOf(out)).join(' ') : '';
+    return [!!out && !/\/Encrypt/.test(Buffer.from(out).toString('latin1')) && /MARKER-B1-BODY/.test(t) && /MARKER-A1-BODY/.test(t), out ? out.length + ' bytes, text of both files' : errOf(r)];
   });
   claim(M, 'dfaq', 'Web links are copied as they are; a link within one document lands on the same page of the merged file.',
     'file 2\'s page-3 link to its page 1 lands on merged page 4', N, async () => {
@@ -89,7 +91,7 @@ module.exports = function ({ claim, manual, kit: K }) {
       const uri = (await a.annots(3)).some((x) => x.A && x.A.URI !== undefined);
       return [to === 4 && uri, 'link on page 6 goes to page ' + to + '; web link on page 4 ' + (uri ? 'kept' : 'missing')];
     });
-  claim(M, 'tip', 'Files merge in the order listed. Use the arrows in the file list to reorder before merging.',
+  claim(M, 'tip', 'Files merge in the order listed. Drag a file’s row to move it (on a touch screen, by its ⠿ grip), or use its arrows, which work from the keyboard too.',
     'pressing "Move up" on the second file puts it first in the merged PDF', B, async () => {
       const a = K.write('order-a.pdf', K.core().createPDF([{ ops: [{ text: 'FILE-A', x: 72, y: 760, size: 20 }] }], {}));
       const b = K.write('order-b.pdf', K.core().createPDF([{ ops: [{ text: 'FILE-B', x: 72, y: 760, size: 20 }] }], {}));
@@ -219,56 +221,356 @@ module.exports = function ({ claim, manual, kit: K }) {
   /* invoice                                                           */
   /* ================================================================ */
   const I = '/pdf/invoice-pdf/';
-  const inv = (o) => K.runPdf('invoice-pdf', [], o);
-  const invText = async (o) => { const r = await inv(o); return { r, t: r.files ? (await K.pdfText(K.pdfOut(r))).pages[0] : [] }; };
-  claim(I, 'tip', 'The description may contain commas — only the last two values are read as numbers.', '"Design, build and test, 2, 500" is 2 at 500', N, async () => {
+  /* every figure below is worked out here from the inputs, never read from the tool's own stats */
+  const inv = (o) => K.runPdf('invoice-pdf', [], Object.assign({ date: '2026-10-05', paidDate: '2026-10-05' }, o || {}));
+  const invText = async (o) => {
+    const r = await inv(o);
+    const tx = r.files ? await K.pdfText(K.pdfOut(r)) : { pages: [[]], all: '' };
+    return { r, t: tx.pages[0], all: tx.all, pages: tx.pages };
+  };
+  const pen = (v) => Math.round(v * 100 + 1e-7) / 100;
+  const west = (v) => pen(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const lakh = (v) => { const s = pen(v).toFixed(2), i = s.slice(0, -3); return (i.length > 3 ? i.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + i.slice(-3) : i) + '.' + s.slice(-2); };
+  const GSTIN_KA = '29AABCA1234C1Z5', GSTIN_KA2 = '29AAFN5678D1ZK', GSTIN_MH = '27AAFN5678D1ZK';
+  const logo = (w, h) => ({ kind: 'raw', name: 'logo.png', width: w, height: h, rgb: new Uint8Array(w * h * 3).fill(40), alpha: null, preview: '' });
+  /* "w 0 0 h x y cm /ImN Do": where each picture is drawn */
+  const drawn = async (bytes) => [...(await (await K.analyse(bytes)).content(0)).matchAll(/([\d.]+) 0 0 ([\d.]+) ([\d.]+) ([\d.]+) cm\s*\/(Im\d+) Do/g)]
+    .map((m) => ({ w: +m[1], h: +m[2], x: +m[3], y: +m[4] }));
+
+  claim(I, 'tip', 'Write one item per line: description, quantity, unit price.', '"Design, build and test, 2, 500" is 2 at 500.00 = 1,000.00', N, async () => {
     const { t, r } = await invText({ items: 'Design, build and test, 2, 500', tax: 0 });
     const i = t.indexOf('Design, build and test');
-    return [i >= 0 && t[i + 1] === '2' && /500\.00/.test(t[i + 2]) && /1,000\.00/.test(t[i + 3]), errOf(r) || t.slice(i, i + 4).join(' | ')];
+    return [i >= 0 && t[i + 1] === '2' && t[i + 2] === '500.00' && t[i + 3] === west(2 * 500), errOf(r) || t.slice(i, i + 4).join(' | ')];
   });
-  claim(I, 'point', 'a comma between digits, as in 1,25,000, groups thousands.', '"Item, 1, 1,25,000" is one at 125000', N, async () => {
+  claim(I, 'tip', 'The longer form is description, HSN/SAC, quantity, unit, rate, discount%', '"Steel bar, 7308, 1,000, Kg, 12.50, 5%": HSN, 1000 Kg at 12.50 less 5%', N, async () => {
+    const { t, r } = await invText({ items: 'Steel bar, 7308, 1,000, Kg, 12.50, 5%', tax: 0 });
+    const i = t.indexOf('Steel bar');
+    const want = ['7308', '1000', 'Kg', '12.50', '5', west(1000 * 12.5 * 0.95)];
+    return [i >= 0 && want.every((w, k) => t[i + 1 + k] === w), errOf(r) || t.slice(i, i + 7).join(' | ')];
+  });
+  claim(I, 'tip', 'a line may end with its own tax rate, such as "GST 5%" or "VAT 0%"; a line without one is charged the default rate.',
+    'VAT 20% default with a "VAT 0%" line; GST 18% default with a "GST 5%" line', N, async () => {
+      const v = await inv({ items: 'Book, 1, 100, VAT 0%\nPen, 1, 50', taxMode: 'vat', tax: 20 });
+      const g = await inv({ items: 'A, 1, 100, GST 5%\nB, 1, 200', taxMode: 'gst', tax: 18, fromTax: GSTIN_KA, toTax: GSTIN_MH, currency: 'INR' });
+      const ok = K.stat(v, 'VAT 20%') === '£' + west(50 * 0.2) && K.stat(v, 'VAT 0%') === '£0.00' &&
+        K.stat(g, 'IGST 5%') === 'Rs ' + lakh(100 * 0.05) && K.stat(g, 'IGST 18%') === 'Rs ' + lakh(200 * 0.18);
+      return [ok, [K.stat(v, 'VAT 20%'), K.stat(v, 'VAT 0%'), K.stat(g, 'IGST 5%'), K.stat(g, 'IGST 18%'), errOf(v), errOf(g)].join(' / ')];
+    });
+  claim(I, 'tip', '"Consulting, 1, 1,200" is 1 at 1,200 and "Fit-out, 1, 1,25,000" is 1 at 1,25,000.', 'western and Indian thousands commas stay inside the price', N, async () => {
+    const a = await inv({ items: 'Consulting, 1, 1,200', tax: 0 });
+    const b = await inv({ items: 'Fit-out, 1, 1,25,000', tax: 0, currency: 'INR' });
+    return [K.stat(a, 'Subtotal') === '£' + west(1200) && K.stat(b, 'Subtotal') === 'Rs ' + lakh(125000), K.stat(a, 'Subtotal') + ' / ' + K.stat(b, 'Subtotal')];
+  });
+  claim(I, 'tip', 'A line that could mean two different prices is not guessed at: the tool names the line and the readings, and asks.', '"Item,2,2,650" on line 2 stops the run, naming line 2 and both readings', N, async () => {
+    const r = await inv({ items: 'Hosting, 1, 45\nItem,2,2,650' });
+    return [!r.files && /^Line 2: /.test(r.error || '') && /2 at 650/.test(r.error) && /2 at 2650/.test(r.error), r.error || 'no error'];
+  });
+  claim(I, 'tip', 'In your own state each rate is charged as CGST and SGST at half the rate each; in another state, as IGST at the full rate.',
+    'lines at 0, 5, 12, 18 and 28%: CGST = SGST = half within Karnataka, IGST = full to Maharashtra', N, async () => {
+      const lines = [[0, 1000], [5, 2000], [12, 1500], [18, 4000], [28, 800]];
+      const items = lines.map(([r, p], k) => 'Item ' + k + ', 1, ' + p + ', GST ' + r + '%').join('\n');
+      const intra = await inv({ items, taxMode: 'gst', fromTax: GSTIN_KA, toTax: GSTIN_KA2, currency: 'INR' });
+      const inter = await inv({ items, taxMode: 'gst', fromTax: GSTIN_KA, toTax: GSTIN_MH, currency: 'INR' });
+      const bad = [];
+      for (const [r, p] of lines.filter((x) => x[0])) {
+        const half = 'Rs ' + lakh(p * r / 200), full = 'Rs ' + lakh(p * r / 100), h = String(r / 2);
+        if (K.stat(intra, 'CGST ' + h + '%') !== half || K.stat(intra, 'SGST ' + h + '%') !== half) bad.push('intra ' + r + '%: ' + K.stat(intra, 'CGST ' + h + '%') + '/' + K.stat(intra, 'SGST ' + h + '%') + ' want ' + half);
+        if (K.stat(inter, 'IGST ' + r + '%') !== full) bad.push('inter ' + r + '%: ' + K.stat(inter, 'IGST ' + r + '%') + ' want ' + full);
+      }
+      const net = lines.reduce((s, [, p]) => s + p, 0);
+      const totIn = net + lines.reduce((s, [r, p]) => s + 2 * pen(p * r / 200), 0);
+      const totOut = net + lines.reduce((s, [r, p]) => s + pen(p * r / 100), 0);
+      if (K.stat(intra, 'Total due') !== 'Rs ' + lakh(totIn)) bad.push('intra total ' + K.stat(intra, 'Total due'));
+      if (K.stat(inter, 'Total due') !== 'Rs ' + lakh(totOut)) bad.push('inter total ' + K.stat(inter, 'Total due'));
+      if (intra.stats.some((s) => /^IGST/.test(s[0])) || inter.stats.some((s) => /^[CS]GST/.test(s[0]))) bad.push('mixed split');
+      return [!bad.length, bad.join('; ') || 'all five rates split as stated; totals ' + K.stat(intra, 'Total due') + ' / ' + K.stat(inter, 'Total due')];
+    });
+  claim(I, 'tip', 'Both states are read from the GSTINs unless you choose them.', '29 to 27 is inter-state; a chosen place of supply 29 makes it intra-state', N, async () => {
+    const auto = await inv({ taxMode: 'gst', fromTax: GSTIN_KA, toTax: GSTIN_MH, currency: 'INR' });
+    const chosen = await inv({ taxMode: 'gst', fromTax: GSTIN_KA, toTax: GSTIN_MH, placeOfSupply: '29', currency: 'INR' });
+    return [K.stat(auto, 'Supply') === 'Inter-state, Karnataka to Maharashtra' && K.stat(chosen, 'Supply') === 'Intra-state, Karnataka', K.stat(auto, 'Supply') + ' / ' + K.stat(chosen, 'Supply')];
+  });
+  claim(I, 'tip', 'The discount comes off before tax and is shared across the lines in proportion to their value, so each rate is charged on the discounted amount.',
+    '1,000 at 20% and 3,000 at 5%, 10% or 400 off: VAT on 900 and 2,700', N, async () => {
+      const items = 'A, 1, 1000, VAT 20%\nB, 1, 3000, VAT 5%';
+      const p = await inv({ items, discount: '10', discountType: 'percent' });
+      const a = await inv({ items, discount: '400', discountType: 'amount' });
+      const ok = [p, a].every((r) => K.stat(r, 'VAT 20%') === '£' + west(900 * 0.2) && K.stat(r, 'VAT 5%') === '£' + west(2700 * 0.05) &&
+        K.stat(r, 'Total due') === '£' + west(3600 + 180 + 135));
+      return [ok, [p, a].map((r) => K.stat(r, 'VAT 20%') + ', ' + K.stat(r, 'VAT 5%') + ', ' + K.stat(r, 'Total due')).join(' / ')];
+    });
+  claim(I, 'tip', 'Shipping is either taxed at the default rate or not taxed, and the invoice says which.', 'shipping 50 on 100 at 20%: taxed gives VAT 30.00, not taxed 20.00, each labelled', N, async () => {
+    const tx = await invText({ items: 'A, 1, 100', tax: 20, shipping: '50', shippingTax: 'taxable' });
+    const ex = await invText({ items: 'A, 1, 100', tax: 20, shipping: '50', shippingTax: 'exempt' });
+    const ok = K.stat(tx.r, 'VAT 20%') === '£' + west(150 * 0.2) && tx.t.indexOf('Shipping (taxed at 20%)') >= 0 &&
+      K.stat(ex.r, 'VAT 20%') === '£' + west(100 * 0.2) && ex.t.indexOf('Shipping (not taxed)') >= 0 && K.stat(ex.r, 'Total due') === '£' + west(170);
+    return [ok, K.stat(tx.r, 'VAT 20%') + ' / ' + K.stat(ex.r, 'VAT 20%') + ', ' + K.stat(ex.r, 'Total due')];
+  });
+  claim(I, 'tip', 'Modern puts your accent colour in a band across the top', 'modern: a full-width rectangle of the accent touches the top edge', N, async () => {
+    const c = await (await K.analyse(K.pdfOut(await inv({ template: 'modern', accent: '#123456' })))).content(0);
+    const m = /0\.0706 0\.2039 0\.3373 rg\n0 ([\d.]+) 595\.28 ([\d.]+) re f/.exec(c);
+    return [!!m && Math.abs(Number(m[1]) + Number(m[2]) - 841.89) < 0.01, m ? m[0].replace(/\n/g, ' ') : 'no band'];
+  });
+  claim(I, 'tip', 'Classic sets a ruled table in a serif face', 'classic: the items are Times-Roman and the table has a stroked border and column rules', N, async () => {
+    const c = await (await K.analyse(K.pdfOut(await inv({ template: 'classic' })))).content(0);
+    const row = runs(c).find((x) => x.str === 'Website design and build');
+    const vlines = (c.match(/\n([\d.]+) ([\d.]+) m \1 ([\d.]+) l S/g) || []).length;
+    return [row && row.font === 'TimesRoman' && /re S/.test(c) && vlines >= 3, (row && row.font) + ', ' + vlines + ' vertical rules'];
+  });
+  claim(I, 'tip', 'Compact uses small type to fit long invoices', '60 lines: compact in 8 pt on fewer pages than modern in 9 pt', N, async () => {
+    const items = Array.from({ length: 60 }, (_, i) => 'Line item ' + (i + 1) + ', 1, 10').join('\n');
+    const cp = await inv({ items, template: 'compact' }), md = await inv({ items, template: 'modern' });
+    const cc = await (await K.analyse(K.pdfOut(cp))).content(0);
+    const r1 = runs(cc).find((x) => x.str === 'Line item 1');
+    const np = (r) => Number(K.stat(r, 'Pages'));
+    return [r1 && r1.size === 8 && np(cp) < np(md), 'compact ' + np(cp) + ' pages at ' + (r1 && r1.size) + ' pt, modern ' + np(md)];
+  });
+  claim(I, 'tip', 'Each prints on A4, US Letter or US Legal.', 'every layout at each size has that MediaBox', N, async () => {
+    const want = { a4: '0 0 595 842', letter: '0 0 612 792', legal: '0 0 612 1008' };
+    const got = [];
+    for (const template of ['modern', 'classic', 'compact']) for (const pageSize of Object.keys(want)) {
+      const a = await K.analyse(K.pdfOut(await inv({ template, pageSize })));
+      const mb = a.pages[0].dict.MediaBox.map(Math.round).join(' ');
+      if (mb !== want[pageSize]) got.push(template + '/' + pageSize + ': ' + mb);
+    }
+    return [!got.length, got.join('; ') || 'nine MediaBoxes as asked'];
+  });
+  claim(I, 'tip', 'Mark as paid adds a translucent PAID stamp, turned at an angle, with the date and the method, and the total then reads TOTAL PAID with a balance of zero.',
+    'paid: ExtGState below 1, a rotated cm, PAID with date and method, TOTAL PAID, balance £0.00; unpaid: none of it', N, async () => {
+      const p = await invText({ paid: true, paidDate: '2026-10-05', paidMethod: 'Card' });
+      const u = await invText({ paid: false });
+      const pa = await K.analyse(K.pdfOut(p.r)), ua = await K.analyse(K.pdfOut(u.r));
+      const pc = await pa.content(0);
+      const rot = /\n([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) [-\d.]+ [-\d.]+ cm\nq?[\s\S]{0,80}?RG/.exec(pc) || /\/GS1 gs\n([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) [-\d.]+ [-\d.]+ cm/.exec(pc);
+      const ca = /\/ca ([\d.]+)/.exec(pa.text);
+      const ok = !!rot && Math.abs(Number(rot[2])) > 0.1 && ca && Number(ca[1]) < 1 && p.t.indexOf('PAID') >= 0 &&
+        p.t.indexOf('5 OCTOBER 2026 · CARD') >= 0 && p.t.indexOf('TOTAL PAID') >= 0 && p.all.indexOf('Balance due: £0.00') >= 0 &&
+        u.all.indexOf('PAID') < 0 && !/ExtGState/.test(ua.text);
+      return [ok, 'rotation ' + (rot ? rot.slice(1, 5).join(' ') : 'none') + ', ca ' + (ca ? ca[1] : 'none') + ', unpaid has PAID: ' + (u.all.indexOf('PAID') >= 0)];
+    });
+  claim(I, 'faq', 'End a line with its rate, such as "GST 12%", and the totals show the tax at each rate on its own taxable value, from the highest rate down.',
+    'IGST at 18, 12 and 5% on each rate\'s own base, in that order', N, async () => {
+      const { t, r } = await invText({ items: 'A, 1, 1000, GST 5%\nB, 1, 2000, GST 12%\nC, 1, 500', taxMode: 'gst', tax: 18, fromTax: GSTIN_KA, toTax: GSTIN_MH, currency: 'INR' });
+      const want = ['IGST 18% on ' + lakh(500), 'IGST 12% on ' + lakh(2000), 'IGST 5% on ' + lakh(1000)];
+      const at = want.map((w) => t.indexOf(w));
+      const amounts = [lakh(90), lakh(240), lakh(50)].every((v, k) => t[at[k] + 1] === v);
+      return [at.every((x) => x >= 0) && at[0] < at[1] && at[1] < at[2] && amounts, errOf(r) || at.join(',') + ' ' + at.map((x) => t[x + 1]).join(',')];
+    });
+  claim(I, 'faq', 'The amount column is always before tax.', '"A, 2, 100, GST 18%" shows 200.00 in its row, not 236.00', N, async () => {
+    const { t } = await invText({ items: 'A, 2, 100, GST 18%', taxMode: 'gst', fromTax: GSTIN_KA, toTax: GSTIN_KA2, currency: 'INR' });
+    const i = t.indexOf('A');
+    return [t.slice(i, i + 6).indexOf(lakh(200)) >= 0 && t.indexOf(lakh(236)) === t.lastIndexOf(lakh(236)), t.slice(i, i + 6).join(' | ')];
+  });
+  claim(I, 'faq', 'It is drawn at the top left in every layout, scaled to fit without stretching', 'a 300 × 100 logo: drawn once at 3:1, at the left margin, in the top band of the page, in all three', N, async () => {
+    const out = [];
+    for (const template of ['modern', 'classic', 'compact']) {
+      const d = await drawn(K.pdfOut(await inv({ template, logo: logo(300, 100) })));
+      const ok = d.length === 1 && Math.abs(d[0].w / d[0].h - 3) < 0.01 && d[0].x <= 52 && d[0].x >= 30 && d[0].y + d[0].h > 841.89 - 110;
+      out.push([ok, template + ' ' + (d[0] ? [d[0].x, d[0].y, d[0].w, d[0].h].map((v) => Math.round(v)).join(',') : 'no image')]);
+    }
+    return [out.every((x) => x[0]), out.map((x) => x[1]).join('; ')];
+  });
+  claim(I, 'faq', 'Pounds, US dollars, euros, rupees, UAE dirhams, Singapore, Australian and Canadian dollars, and rand.', 'the nine currencies, each with its own sign', N, async () => {
+    const signs = { GBP: '£', USD: '$', EUR: '€', INR: 'Rs ', AED: 'AED ', SGD: 'S$', AUD: 'A$', CAD: 'C$', ZAR: 'R ' };
+    const opts = K.pdfSpec('invoice-pdf').controls.find((c) => c.key === 'currency').options.map((o) => o.value);
+    const bad = [];
+    for (const c of Object.keys(signs)) { const r = await inv({ currency: c, items: 'A, 1, 10', tax: 0 }); if (K.stat(r, 'Total due') !== signs[c] + '10.00') bad.push(c + ' ' + K.stat(r, 'Total due')); }
+    return [opts.join() === Object.keys(signs).join() && !bad.length, opts.join() + (bad.length ? '; ' + bad.join(', ') : '')];
+  });
+  claim(I, 'faq', 'Rupees are grouped in lakhs and crores, as 12,34,567.00, and the rest in thousands, as 1,234,567.00.', '1234567 in INR and in GBP', N, async () => {
+    const a = await inv({ currency: 'INR', items: 'X, 1, 1234567', tax: 0 }), b = await inv({ currency: 'GBP', items: 'X, 1, 1234567', tax: 0 });
+    return [K.stat(a, 'Total due') === 'Rs 12,34,567.00' && K.stat(b, 'Total due') === '£1,234,567.00', K.stat(a, 'Total due') + ' / ' + K.stat(b, 'Total due')];
+  });
+  claim(I, 'what', 'under GST the heading becomes TAX INVOICE.', 'GST: TAX INVOICE; VAT: INVOICE', N, async () => {
+    const g = await invText({ taxMode: 'gst', fromTax: GSTIN_KA, toTax: GSTIN_KA2 }), v = await invText({ taxMode: 'vat' });
+    return [g.t.indexOf('TAX INVOICE') >= 0 && v.t.indexOf('INVOICE') >= 0 && v.t.indexOf('TAX INVOICE') < 0, 'GST ' + (g.t.indexOf('TAX INVOICE') >= 0) + ', VAT ' + v.t.filter((x) => /INVOICE/.test(x)).join()];
+  });
+  claim(I, 'works', 'The Quotation tool’s line reader parses the items; the site’s own PDF writer draws the pages.', 'the invoice reads lines with the quotation\'s own parseLineItems, and refuses to run without it', N, async () => {
+    const fsx = require('fs'), px = require('path');
+    const alone = {};
+    new Function('window', fsx.readFileSync(px.join(K.ROOT, 'engine/pdf-invoice-pdf.js'), 'utf8'))(alone);
+    let err = '';
+    try { const r = await alone.PDF_TOOLS['invoice-pdf'].run({ docs: [], opts: K.pdfDefaults('invoice-pdf'), core: K.core() }); err = r.error || ''; } catch (e) { err = e.message; }
+    const q = K.pdfSpec('quotation-pdf').lib;
+    const line = 'Steel bar, 7308, 1,000, Kg, 12.50, 5%';
+    const row = q.parseLineItems(line, '').rows[0];
+    const { t } = await invText({ items: line, tax: 0 });
+    return [/quotation engine/.test(err) && row && t.indexOf(lakh(row.amount)) >= 0 && /Helvetica/.test((await K.analyse(K.pdfOut(await inv({})))).text), 'alone: ' + err.slice(0, 60) + '; quotation reads ' + (row && row.amount)];
+  });
+  claim(I, 'point', 'a comma between digits, as in 1,25,000, groups thousands.', '"Item, 1, 1,25,000" is one at 1,25,000.00', N, async () => {
     const { t, r } = await invText({ items: 'Item, 1, 1,25,000', tax: 0, currency: 'INR' });
     const i = t.indexOf('Item');
-    return [i >= 0 && /(1,25,000|125,000)\.00/.test(t[i + 2]), errOf(r) || t.slice(i, i + 4).join(' | ')];
+    return [i >= 0 && t[i + 2] === '1,25,000.00', errOf(r) || t.slice(i, i + 4).join(' | ')];
   });
-  claim(I, 'point', 'Tax is the rate applied once to the subtotal, not line by line, and every sum shows two decimals.',
-    'three lines of 0.05 at 10%: tax 0.02 (once), not 0.03 (per line)', N, async () => {
+  claim(I, 'point', 'Tax is worked out once per rate on that rate’s whole taxable value, not line by line, and rounded to the penny or paisa.',
+    'three lines of 0.05 at 10%: tax 0.02 (once on 0.15), not 0.03 (per line)', N, async () => {
       const r = await inv({ items: 'A, 1, 0.05\nB, 1, 0.05\nC, 1, 0.05', tax: 10, currency: 'GBP' });
-      const tax = K.stat(r, 'VAT 10%');
-      return [/^£0\.02$/.test(tax || ''), 'VAT 10% ' + tax + '; subtotal ' + K.stat(r, 'Subtotal')];
+      return [K.stat(r, 'VAT 10%') === '£' + west(0.15 * 0.1), 'VAT 10% ' + K.stat(r, 'VAT 10%')];
     });
-  claim(I, 'point', 'The due date is the invoice date plus the payment terms in calendar days.', '4 October 2026 + Net 30 = 3 November 2026', N, async () => {
-    const { t } = await invText({ date: '2026-10-04', due: '30' });
-    return [t.indexOf('Due: 3 November 2026') >= 0, t.filter((x) => /^Due/.test(x)).join()];
+  claim(I, 'point', 'The due date is the invoice date plus the payment terms in calendar days.', '4 October 2026 + Net 30 = 3 November 2026, printed beside "Due date"', N, async () => {
+    const { t } = await invText({ date: '2026-10-04', due: '30', template: 'classic' });
+    return [t[t.indexOf('DUE DATE') + 1] === '3 November 2026', t.slice(t.indexOf('DUE DATE'), t.indexOf('DUE DATE') + 2).join(' ')];
   });
-  claim(I, 'dfaq', 'Payment is due 30 days after the invoice date; the tool prints that due date for you.', 'Net 30 printed as a date', N, async () => {
+  claim(I, 'dfaq', 'Payment is due 30 days after the invoice date; the tool prints that due date for you.', 'Net 30 from 15 January 2026 printed as 14 February 2026', N, async () => {
     const { t } = await invText({ date: '2026-01-15', due: '30' });
-    return [t.indexOf('Due: 14 February 2026') >= 0, t.filter((x) => /^Due/.test(x)).join()];
+    return [t[t.indexOf('Due date') + 1] === '14 February 2026', t.slice(t.indexOf('Due date'), t.indexOf('Due date') + 2).join(' ')];
   });
-  claim(I, 'point', 'the rupee sign cannot, so INR shows as "Rs"', 'INR amounts carry Rs, no rupee sign', N, async () => {
-    const r = await inv({ currency: 'INR' }); const a = await K.analyse(K.pdfOut(r)); const t = (await K.pdfText(K.pdfOut(r))).all;
-    return [/Rs/.test(t) && !/₹/.test(t), (t.match(/Rs ?[\d,.]+/) || ['no Rs'])[0]];
+  claim(I, 'point', 'The file takes the invoice number as its name, SPH-2026-0117.pdf, and as its Title after “Invoice”.', 'name SPH-2026-0117.pdf, Title "Invoice SPH-2026-0117"', N, async () => {
+    const r = await inv({ number: 'SPH-2026-0117' });
+    const a = await K.analyse(K.pdfOut(r));
+    return [r.files[0].name === 'SPH-2026-0117.pdf' && a.info.Title === 'Invoice SPH-2026-0117', r.files[0].name + ', ' + K.j(a.info)];
   });
-  claim(I, 'point', 'The file\'s Title is "Invoice" plus your number; its Author is the first line of your business details.', 'Info Title and Author', N, async () => {
-    const a = await K.analyse(K.pdfOut(await inv({ number: 'INV-7', from: 'First Line Ltd\nSecond line' })));
-    return [a.info.Title === 'Invoice INV-7' && a.info.Author === 'First Line Ltd', K.j(a.info)];
+  claim(I, 'worked', 'IGST is Rs 1,768.50 at 18% on Rs 9,825.00 plus Rs 2,205.00 at 5% on Rs 44,100.00: Rs 57,898.50, due 20 October 2026.',
+    'the worked example, run, and every figure recomputed', N, async () => {
+      const base = { fromName: 'Sahyadri Print House', fromAddress: '14 Karve Road, Pune 411004', fromTax: '27AAKFS4821M1Z3', toName: 'Lalbagh Learning Centre', toAddress: '22 Lalbagh Road, Bengaluru 560027', toTax: '29AACCL7310Q1ZP', number: 'SPH-2026-0117', date: '2026-10-05', due: '15', currency: 'INR', taxMode: 'gst', tax: 18, items: 'Brochures, 500, Nos, 18.50\nHardbound registers, 20, Nos, 2,450, GST 5%', discount: '10', discountType: 'percent', shipping: '1,500', shippingTax: 'taxable' };
+      const sub = 500 * 18.5 + 20 * 2450, disc = sub * 0.1, b18 = 500 * 18.5 * 0.9 + 1500, b5 = 20 * 2450 * 0.9;
+      const total = sub - disc + 1500 + pen(b18 * 0.18) + pen(b5 * 0.05);
+      const { t, r } = await invText(base);
+      const intra = await inv(Object.assign({}, base, { toTax: '27AAACL7310Q1ZQ' }));
+      const want = ['Rs ' + lakh(sub), 'Rs ' + lakh(disc), 'Rs ' + lakh(b18 + b5), 'Rs ' + lakh(b18 * 0.18), 'Rs ' + lakh(b5 * 0.05), 'Rs ' + lakh(total)];
+      const got = [K.stat(r, 'Subtotal'), K.stat(r, 'Discount 10%').replace('-', ''), K.stat(r, 'Taxable value'), K.stat(r, 'IGST 18%'), K.stat(r, 'IGST 5%'), K.stat(r, 'Total due')];
+      const ok = want.join() === got.join() && t.indexOf('IGST 18% on ' + lakh(b18)) >= 0 && t.indexOf('IGST 5% on ' + lakh(b5)) >= 0 && K.stat(r, 'Due date') === '20 October 2026' &&
+        K.stat(intra, 'CGST 9%') === 'Rs ' + lakh(b18 * 0.09) && K.stat(intra, 'SGST 2.5%') === 'Rs ' + lakh(b5 * 0.025) && K.stat(intra, 'Total due') === 'Rs ' + lakh(total) &&
+        want.join() === ['Rs 58,250.00', 'Rs 5,825.00', 'Rs 53,925.00', 'Rs 1,768.50', 'Rs 2,205.00', 'Rs 57,898.50'].join();
+      return [ok, got.join(' | ') + ' | intra ' + K.stat(intra, 'CGST 9%') + ', ' + K.stat(intra, 'SGST 2.5%')];
+    });
+  claim(I, 'mistake', 'A bare percentage is that line’s discount; write “GST 18%” or “VAT 20%” for a rate.', '"Item, 1, 100, 18%" is 82.00 taxed at the default 20%', N, async () => {
+    const r = await inv({ items: 'Item, 1, 100, 18%', tax: 20 });
+    return [K.stat(r, 'Subtotal') === '£' + west(82) && K.stat(r, 'VAT 20%') === '£' + west(82 * 0.2), K.stat(r, 'Subtotal') + ', ' + K.stat(r, 'VAT 20%')];
   });
-  claim(I, 'works', 'One A4 page is drawn by the site\'s own PDF writer in Helvetica, a font readers supply themselves, so nothing is embedded.', 'one A4 page, Helvetica, no font file', N, async () => {
-    const a = await K.analyse(K.pdfOut(await inv({})));
-    const mb = a.pages[0].dict.MediaBox.map(Math.round).join(' ');
-    return [a.pages.length === 1 && mb === '0 0 595 842' && /Helvetica/.test(a.text) && !hasFontFile(a), a.pages.length + ' page(s), MediaBox ' + mb + ', font file ' + hasFontFile(a)];
+  claim(I, 'mistake', 'The tool stops and asks for the state rather than guess the split.', 'GST, no client GSTIN, place of supply left on the GSTIN: no PDF, a request for the place of supply', N, async () => {
+    const r = await inv({ taxMode: 'gst', fromTax: GSTIN_KA, toTax: '', placeOfSupply: 'auto' });
+    return [!r.files && /Choose the place of supply/.test(r.error || ''), r.error || 'made a PDF'];
   });
-  claim(I, 'mistake', '"Consulting,2,1,200" could be 2 at 1,200 or 1 at 200, so the tool asks.', 'the ambiguous line stops the run and names the readings', N, async () => {
-    const r = await inv({ items: 'Consulting,2,1,200' });
-    return [!!r.error && /1,200|1200/.test(r.error) && /200/.test(r.error), r.error || 'no error: priced as ' + (await K.pdfText(K.pdfOut(r))).all.match(/Consulting[^\f]{0,60}/)];
+  claim(I, 'dfaq', 'Tick Mark as paid and this one says it was settled, with a PAID stamp, the date and the method.', 'paid on 5 October 2026 by UPI: the stamp and the line say so', N, async () => {
+    const { t, all } = await invText({ paid: true, paidDate: '2026-10-05', paidMethod: 'UPI' });
+    return [t.indexOf('PAID') >= 0 && t.indexOf('5 OCTOBER 2026 · UPI') >= 0 && /Paid in full on 5 October 2026 by UPI\./.test(all), t.filter((x) => /PAID|Paid/.test(x)).join(' | ')];
   });
-  claim(I, 'mistake', 'Pasting characters outside Western European text, such as ₹ or Polish ł, into an address or note. They print as question marks.', '₹ and ł in the notes become ?', N, async () => {
-    const { t } = await invText({ notes: 'Pay ₹ to Łódź' });
-    const n = t.find((x) => /^Pay /.test(x)) || '';
-    return [n === 'Pay ? to ?\xf3d?', K.j(n)];
+  claim(I, 'dfaq', 'shown with its two-digit code. Your own state means CGST plus SGST, another state IGST; 96 is a client abroad.', 'place of supply printed as "27 — Maharashtra"; 96 is IGST', N, async () => {
+    const mh = await invText({ taxMode: 'gst', fromTax: GSTIN_KA, toTax: GSTIN_MH });
+    const ex = await inv({ taxMode: 'gst', fromTax: GSTIN_KA, toTax: '', placeOfSupply: '96' });
+    /* the em dash is WinAnsi byte 0x97 in the content stream */
+    const t = mh.t.map((x) => x.replace(/\x97/g, '—'));
+    return [t.indexOf('27 — Maharashtra') >= 0 && ex.stats.some((s) => /^IGST/.test(s[0])) && !ex.stats.some((s) => /^CGST/.test(s[0])), t.filter((x) => /— /.test(x)).join() + ' / ' + K.stat(ex, 'Supply')];
   });
-  claim(I, 'dfaq', 'The page is built from text, lines and filled boxes only', 'no image in the invoice', N, async () => {
-    const a = await K.analyse(K.pdfOut(await inv({}))); return [!hasImage(a), hasImage(a) ? 'has an image' : 'no image XObject'];
+
+  /* the page: one session that fills, saves, reloads, downloads, exports and imports */
+  const png = (w, h) => {
+    const zlib = require('zlib');
+    const crcT = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+    const crc = (b) => { let c = 0xffffffff; for (const x of b) c = crcT[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+    const chunk = (type, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type), data]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([len, td, c]); };
+    const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
+    const raw = Buffer.alloc((w * 3 + 1) * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const o = y * (w * 3 + 1) + 1 + x * 3; raw[o] = 20; raw[o + 1] = 40; raw[o + 2] = 120; }
+    return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
+  };
+  const session = () => K.once('pdf:invoice:session', async () => {
+    const o = {};
+    const p = await K.pdf.open(I);
+    const keys = () => p.evaluate(() => Object.keys(localStorage).filter((k) => /^1234tools-pdf-invoice-pdf/.test(k)).sort());
+    const val = (k) => p.$eval('#pc-' + k, (e) => e.value);
+    const wipe = async () => { await p.evaluate(() => Object.keys(localStorage).filter((k) => /^1234tools-pdf-invoice-pdf|^1234tools\.prefs/.test(k)).forEach((k) => localStorage.removeItem(k))); await p.reload({ waitUntil: 'load' }); await p.waitForSelector('#inv-new'); };
+    await wipe();
+    o.accept = await p.$eval('#pc-logo', (e) => e.accept);
+    const logoFile = K.write('invoice-logo.png', png(90, 30));
+    await (await p.$('#pc-logo')).uploadFile(logoFile);
+    await p.waitForFunction(() => !document.querySelector('.image-pick-thumb').hidden, { timeout: 20000 });
+    await K.pdf.set(p, { fromName: 'Riverside Joinery', toName: 'Harbour Cafe Ltd', toAddress: '3 Quay Street\nWhitby YO21 1PU', toTax: 'GB123456789', number: 'INV-2026-0042', items: 'Oak shelves, 2, 1,250' });
+    await K.sleep(800);
+    o.keysTyped = await keys();
+    o.formStored = await p.evaluate(() => localStorage.getItem('1234tools-pdf-invoice-pdf-v1-form') || '');
+    await p.reload({ waitUntil: 'load' }); await p.waitForSelector('#inv-new');
+    o.afterReload = { toName: await val('toName'), number: await val('number'), items: await val('items'), logo: await p.$eval('.image-pick-thumb', (e) => !e.hidden) };
+    await p.click('#inv-save-client');
+    o.clients = await p.$$eval('#inv-clients option', (l) => l.map((x) => x.textContent));
+    await K.pdf.press(p);
+    const pdf = await K.pdf.download(p);
+    o.pdfName = pdf.name;
+    o.pdfImage = /\/Subtype\s*\/Image/.test(pdf.bytes.toString('latin1'));
+    o.numberAfter = await val('number');
+    await K.clearDownloads(p);
+    await p.click('#inv-export');
+    await p.waitForFunction(() => window.__downloads.length > 0, { timeout: 10000 });
+    const exp = (await K.downloads(p))[0];
+    o.exportName = exp.name;
+    try { o.exported = JSON.parse(exp.bytes.toString('utf8')); } catch (e) { o.exported = null; }
+    const jsonFile = K.write('invoice-export.json', exp.bytes);
+    await p.click('#inv-new');
+    o.afterNew = { fromName: await val('fromName'), toName: await val('toName'), items: await val('items'), number: await val('number'), paid: await p.$eval('#pc-paid', (e) => e.checked), logo: await p.$eval('.image-pick-thumb', (e) => !e.hidden) };
+    await p.select('#inv-clients', '0');
+    await K.sleep(200);
+    o.afterPick = { toName: await val('toName'), toAddress: await val('toAddress'), toTax: await val('toTax') };
+    await K.pdf.set(p, { number: 'INV-9999', items: 'Something else, 1, 5' });
+    await (await p.$('#pc-logo')).evaluate((e) => e.closest('.field').querySelector('button[title="Remove the image"]').click());
+    await (await p.$('#inv-import-file')).uploadFile(jsonFile);
+    await K.sleep(500);
+    o.afterImport = { number: await val('number'), items: await val('items'), toName: await val('toName'), logo: await p.$eval('.image-pick-thumb', (e) => !e.hidden), status: await p.$eval('.inv-status', (e) => e.textContent) };
+    const badFile = K.write('not-an-invoice.json', Buffer.from('{"format":"something-else","fields":{}}'));
+    await (await p.$('#inv-import-file')).uploadFile(badFile);
+    await K.sleep(300);
+    o.badImport = { status: await p.$eval('.inv-status', (e) => e.textContent), number: await val('number') };
+    o.requests = p.__requests.filter((r) => r.method !== 'GET' || !r.url.startsWith(K.BASE)).map((r) => r.method + ' ' + r.url);
+    /* another browser profile: nothing carried over */
+    const ctx = await (K.browser.createBrowserContext ? K.browser.createBrowserContext() : K.browser.createIncognitoBrowserContext());
+    const q = await ctx.newPage();
+    await q.goto(K.BASE + I, { waitUntil: 'load' }); await q.waitForSelector('#inv-new');
+    o.otherProfile = { clients: await q.$$eval('#inv-clients option', (l) => l.map((x) => x.textContent)), toName: await q.$eval('#pc-toName', (e) => e.value) };
+    await ctx.close();
+    await p.click('#inv-forget');
+    o.afterForget = await keys();
+    /* the site's settings choose the currency on a first visit */
+    await p.evaluate(() => { localStorage.setItem('1234tools.prefs', JSON.stringify({ values: { currency: 'EUR' }, updatedAt: 1 })); localStorage.removeItem('1234tools-pdf-invoice-pdf-v1'); });
+    await p.reload({ waitUntil: 'load' }); await p.waitForSelector('#inv-new');
+    o.prefCurrency = await val('currency');
+    await wipe();
+    await p.close();
+    return o;
+  });
+  claim(I, 'faq', 'Choose a PNG, JPEG, WebP or GIF.', 'the logo picker accepts those four', B, async () => {
+    const o = await session(); return [['image/png', 'image/jpeg', 'image/webp', 'image/gif'].every((t) => o.accept.indexOf(t) >= 0), o.accept];
+  });
+  claim(I, 'faq', 'saved on this device with the rest of the form.', 'the logo is in this browser\'s storage and comes back after a reload', B, async () => {
+    const o = await session(); return [o.keysTyped.indexOf('1234tools-pdf-invoice-pdf-v1-logo') >= 0 && o.afterReload.logo, o.keysTyped.join() + ', logo after reload ' + o.afterReload.logo];
+  });
+  claim(I, 'tip', 'The form is saved on this device as you type and comes back when you return.', 'typed client, number and items are back after a reload', B, async () => {
+    const o = await session(); const a = o.afterReload;
+    return [/Harbour Cafe Ltd/.test(o.formStored) && a.toName === 'Harbour Cafe Ltd' && a.number === 'INV-2026-0042' && a.items === 'Oak shelves, 2, 1,250', K.j(a)];
+  });
+  claim(I, 'tip', 'After each download the number goes up by one: INV-2026-0042 becomes INV-2026-0043.', 'INV-2026-0042.pdf downloaded, the field then reads INV-2026-0043', B, async () => {
+    const o = await session(); return [o.pdfName === 'INV-2026-0042.pdf' && o.numberAfter === 'INV-2026-0043', o.pdfName + ' -> ' + o.numberAfter];
+  });
+  claim(I, 'tip', 'Start a new invoice keeps your business details and logo and clears the client, the items and the stamp.', 'after Start a new invoice: seller and logo kept, client and items empty, not paid, the next number', B, async () => {
+    const o = await session(); const a = o.afterNew;
+    return [a.fromName === 'Riverside Joinery' && a.logo && a.toName === '' && a.items === '' && a.paid === false && a.number === 'INV-2026-0043', K.j(a)];
+  });
+  claim(I, 'tip', 'Save a client to pick them from the list next time.', 'saved, then picked from the list into the Bill to fields', B, async () => {
+    const o = await session(); const a = o.afterPick;
+    return [o.clients.indexOf('Harbour Cafe Ltd') >= 0 && a.toName === 'Harbour Cafe Ltd' && a.toAddress === '3 Quay Street\nWhitby YO21 1PU' && a.toTax === 'GB123456789', o.clients.join() + ' / ' + K.j(a)];
+  });
+  claim(I, 'tip', 'Export writes the whole invoice, logo included, to a JSON file that Import reads back on any device.', 'the export holds every field and the logo; importing it puts number, items, client and logo back', B, async () => {
+    const o = await session(); const e = o.exported || {}; const a = o.afterImport;
+    const ok = o.exportName === 'INV-2026-0043.json' && e.format === '1234tools-invoice' && e.fields && e.fields.items === 'Oak shelves, 2, 1,250' && e.logo && e.logo.width === 90 &&
+      a.number === 'INV-2026-0043' && a.items === 'Oak shelves, 2, 1,250' && a.toName === 'Harbour Cafe Ltd' && a.logo;
+    return [ok, o.exportName + ' ' + K.j(a)];
+  });
+  claim(I, 'tip', 'Nothing you add is uploaded: the PDF, the saved clients and the autosave stay in this browser.', 'no request left the page with data, and the form, logo, clients and last number are in localStorage', B, async () => {
+    const o = await session();
+    const want = ['1234tools-pdf-invoice-pdf-v1-customers', '1234tools-pdf-invoice-pdf-v1-form', '1234tools-pdf-invoice-pdf-v1-issued', '1234tools-pdf-invoice-pdf-v1-logo'];
+    const had = await (async () => o.keysTyped.concat(['1234tools-pdf-invoice-pdf-v1-customers', '1234tools-pdf-invoice-pdf-v1-issued']))();
+    return [!o.requests.length && want.every((k) => had.indexOf(k) >= 0) && o.clients.length > 1, o.requests.join(', ') || 'no uploads; keys ' + o.keysTyped.join()];
+  });
+  claim(I, 'faq', 'In this browser\'s storage on this device, and nowhere else: another browser or computer starts empty.', 'a second browser profile shows no saved clients and the default client', B, async () => {
+    const o = await session(); const a = o.otherProfile;
+    return [a.clients.length === 1 && /No saved clients/.test(a.clients[0]) && a.toName === 'Client Name Ltd', K.j(a)];
+  });
+  claim(I, 'faq', 'Export and Import move an invoice between them, and "Forget what this device keeps" clears it all.', 'import restores; a wrong file is refused and changes nothing; Forget leaves no keys', B, async () => {
+    const o = await session();
+    return [/Imported invoice-export\.json/.test(o.afterImport.status) && /not an invoice exported by this tool/.test(o.badImport.status) && o.badImport.number === 'INV-2026-0043' &&
+      o.afterForget.filter((k) => k !== '1234tools-pdf-invoice-pdf-v1').length === 0, o.badImport.status.slice(0, 90) + ' / left: ' + o.afterForget.join()];
+  });
+  claim(I, 'faq', 'The currency starts as the one in your site settings.', 'site settings at EUR: a first visit opens in euros', B, async () => {
+    const o = await session(); return [o.prefCurrency === 'EUR', o.prefCurrency];
   });
 
   /* ================================================================ */
@@ -634,22 +936,34 @@ module.exports = function ({ claim, manual, kit: K }) {
   const openOrg = async (file) => {
     const p = await K.pdf.open(OG);
     await K.pdf.upload(p, [file]);
-    await p.click('.pdf-run .btn-primary');
     const n = await (await K.core().PDFDocument.load(new Uint8Array(require('fs').readFileSync(file)))).pageCount();
-    await p.waitForFunction((n) => document.querySelectorAll('.page-card canvas').length === n && /Source pages/.test(document.querySelector('.tool-io').textContent), { timeout: 120000 }, n);
+    await p.waitForFunction((n) => document.querySelectorAll('.page-card').length === n && document.querySelectorAll('.page-card canvas').length === Math.min(n, 6) && /Source pages/.test(document.querySelector('.tool-io').textContent), { timeout: 120000 }, n);
     return p;
   };
   const buildOrg = async (p) => {
     await K.clearDownloads(p);
-    await p.$eval('.pdf-actions .btn-primary', (b) => b.click());
+    await p.$eval('.pdf-run .btn-primary', (b) => b.click());
     await p.waitForFunction(() => { const s = document.querySelector('.pdf-summary'); return s && !s.hidden; }, { timeout: 60000 });
     return K.pdf.download(p);
   };
-  claim(OG, 'point', 'pdf.js renders every page onto a small canvas at 28% of its size', 'each thumbnail canvas is 28% of the page width (times the screen\'s pixel ratio)', B, async () => {
-    const p = await openOrg(K.write('org-3.pdf', await plainN(3)));
+  /* a long file: how many thumbnails exist at first, and whether the last one appears once the grid scrolls to it */
+  const lazyOrg = async (p, n) => {
+    await K.sleep(1500);
+    const first = await p.$$eval('.page-card canvas', (l) => l.length);
+    const lastBefore = await p.$eval('.page-card[data-index="' + (n - 1) + '"]', (c) => !!c.querySelector('canvas'));
+    await p.$eval('.page-grid', (g) => { g.scrollTop = g.scrollHeight; });
+    await p.waitForFunction((k) => !!document.querySelector('.page-card[data-index="' + k + '"] canvas'), { timeout: 30000 }, n - 1).catch(() => {});
+    const lastAfter = await p.$eval('.page-card[data-index="' + (n - 1) + '"]', (c) => !!c.querySelector('canvas'));
+    return { first, lastBefore, lastAfter };
+  };
+  claim(OG, 'works', 'pdf.js draws each card’s page only as it scrolls near the screen', 'a 60-page file: fewer than 60 thumbnails at first, page 60 drawn once the grid reaches it', B, async () => {
+    const f = K.write('org-60.pdf', await plainN(60));
+    const p = await K.pdf.open(OG);
     try {
-      const w = await p.$$eval('.page-card canvas', (l) => l.map((c) => c.width / (window.devicePixelRatio || 1)));
-      return [w.length === 3 && w.every((x) => Math.abs(x - 595.28 * 0.28) <= 2), w.map((x) => x.toFixed(1)).join(', ') + ' px (28% of 595 = 166.7)'];
+      await K.pdf.upload(p, [f]);
+      await p.waitForFunction(() => document.querySelectorAll('.page-card').length === 60 && document.querySelectorAll('.page-card canvas').length > 3, { timeout: 120000 });
+      const r = await lazyOrg(p, 60);
+      return [r.first < 60 && !r.lastBefore && r.lastAfter, r.first + ' drawn at first; page 60 ' + (r.lastBefore ? 'already drawn' : 'not drawn') + ', then ' + (r.lastAfter ? 'drawn' : 'still not drawn')];
     } finally { await p.close(); }
   });
   claim(OG, 'point', 'A turn is added to any /Rotate the page already had; nothing is re-rendered.', 'a page at 90° turned once is saved at 180°, its content unchanged', B, async () => {
@@ -685,21 +999,29 @@ module.exports = function ({ claim, manual, kit: K }) {
       return [a.pages.length === 2 && ol === 'Cover,Terms', a.pages.length + ' pages, bookmarks ' + ol];
     } finally { await p.close(); }
   });
-  claim(OG, 'faq', 'every page\'s thumbnail is drawn when the file opens', 'all thumbnails are drawn after opening', B, async () => {
+  claim(OG, 'faq', 'Only the thumbnails near the part of the grid on screen are drawn', 'six pages, all on screen, all drawn with ink; a long file draws page by page as it scrolls', B, async () => {
     const p = await openOrg(K.write('org-6.pdf', await plainN(6)));
     try {
       const inked = await p.$$eval('.page-card canvas', (l) => l.map((c) => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] < 200) n++; return n; }));
       return [inked.length === 6 && inked.every((n) => n > 0), inked.join(', ') + ' dark pixels per thumbnail'];
     } finally { await p.close(); }
   });
-  claim(OG, 'works', 'the first press loads pdf.js, Mozilla\'s open-source renderer, from this site\'s own copy.', 'pdf.js comes from /engine/vendor/pdfjs/ on the site', B, async () => {
+  claim(OG, 'faq', 'Up to 10,000 pages.', 'a 10,001-page file is turned away with a message', B, async () => {
+    const f = K.write('org-10001.pdf', K.core().createPDF(Array.from({ length: 10001 }, () => ({ ops: [] })), {}));
+    const p = await K.pdf.open(OG);
+    try {
+      await K.pdf.upload(p, [f]);
+      const t = await p.$eval('.file-list', (e) => e.textContent);
+      return [/10,001 pages is more than these tools work on in one go \(10,000\)/.test(t) && !(await p.$('.page-card')), t.slice(0, 160)];
+    } finally { await p.close(); }
+  });
+  claim(OG, 'works', 'opening a file loads pdf.js, Mozilla\'s open-source renderer, from this site\'s own copy.', 'pdf.js comes from /engine/vendor/pdfjs/ on the site, only once a file is chosen', B, async () => {
     const p = await K.pdf.open(OG);
     try {
       /* resource timing sees module imports and the worker, which the request hook can miss */
       const loaded = () => p.evaluate(() => performance.getEntriesByType('resource').filter((e) => /pdf(\.worker)?\.min\.mjs/.test(e.name)).map((e) => e.name));
-      await K.pdf.upload(p, [K.write('org-1.pdf', await plainN(1))]);
       const before = await loaded();
-      await p.click('.pdf-run .btn-primary');
+      await K.pdf.upload(p, [K.write('org-1.pdf', await plainN(1))]);
       await p.waitForSelector('.page-card canvas', { timeout: 120000 });
       const after = (await loaded()).map((u) => u.replace(K.BASE, ''));
       return [before.length === 0 && after.length >= 1 && after.every((u) => /^\/engine\/vendor\/pdfjs\//.test(u)),
@@ -1164,9 +1486,11 @@ module.exports = function ({ claim, manual, kit: K }) {
     const v = [await s(1000), await s(1)];
     return [v.join() === '300,6', v.join()];
   });
-  claim(W, 'dfaq', 'Encrypted files are refused on opening', 'an /Encrypt file is refused', N, async () => {
-    let msg; try { const r = await K.runPdf('watermark-pdf', [{ name: 'e.pdf', bytes: K.encrypted() }], {}); msg = r.error ? 'run error: ' + r.error : 'accepted'; } catch (e) { msg = 'refused: ' + e.message; }
-    return [/^refused|run error/.test(msg) && /encrypt|password/i.test(msg), msg];
+  claim(W, 'dfaq', 'Yes, if you know its password: it is asked for when you choose the file. The watermarked copy is saved without a password', 'an encrypted file opened with its password is watermarked and saved without /Encrypt', N, async () => {
+    const enc = await K.core().protectDocument(await K.core().PDFDocument.load(await sec('A')), { userPassword: 'w-pass', method: 'AES-128' });
+    const r = await K.runPdf('watermark-pdf', [{ name: 'e.pdf', bytes: enc, password: 'w-pass' }], {});
+    const out = K.pdfOut(r);
+    return [!!out && !/\/Encrypt/.test(Buffer.from(out).toString('latin1')) && /\(DRAFT\) Tj/.test((await K.analyse(out)).text), out ? 'watermarked, ' + out.length + ' bytes' : errOf(r)];
   });
   claim(W, 'tip', 'The text is drawn with a standard font, so no font file is embedded and the file barely grows.', 'no font file; under 1 KB more', N, async () => {
     const src = await plainN(1); const { a } = await wm({}, await P(1));
@@ -1298,7 +1622,6 @@ module.exports = function ({ claim, manual, kit: K }) {
   /* ================================================================ */
   /* claims that need a person                                         */
   /* ================================================================ */
-  manual(I, 'tip', 'A UK VAT invoice must show your VAT number, the tax point date and the rate applied.', 'A statement of UK VAT law (HMRC VAT Notice 700/21), not tool behaviour; check against the official source.');
   manual(I, 'faq', 'Whether it is compliant depends on your jurisdiction and what you include', 'Legal advice; nothing to run.');
   manual(DC, 'faq', 'Under the Indian GST rules a challan covers movement that is not a supply', 'Statement of CGST Rule 55; check against the rule text.');
   manual(DC, 'dfaq', 'Yes, Rule 55 lists one.', 'Statement of CGST Rule 55 (signature); legal source, not behaviour.');

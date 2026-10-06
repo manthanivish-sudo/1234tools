@@ -767,7 +767,7 @@ async function browserPart() {
   check(await pagesBox() === '2-4' && await chosen() === '2,3,4', 'click page 2, shift-click page 4: "2-4" in the box, three cards marked', await pagesBox() + ' / ' + await chosen());
   /* along the second row of the grid, so the pointer passes only those cards */
   const k = await dg.$$eval('.page-card', (l) => l.filter((c) => c.offsetTop === l[0].offsetTop).length);
-  await dg.$eval('.page-card[data-index="' + k + '"]', (c) => c.scrollIntoView({ block: 'center' }));
+  await dg.$eval('.page-card[data-index="' + k + '"]', (c) => c.scrollIntoView({ block: 'center', behavior: 'instant' }));
   const c6 = await (await dg.$('.page-card[data-index="' + k + '"]')).boundingBox();
   const c8 = await (await dg.$('.page-card[data-index="' + (k + 2) + '"]')).boundingBox();
   await dg.mouse.move(c6.x + c6.width / 2, c6.y + c6.height / 2);

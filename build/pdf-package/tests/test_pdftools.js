@@ -82,6 +82,15 @@ for (const id of SHIPPED) {
   const w = loadScript(rel);
   ENGINE_DEFINES.set(id, Object.keys(w.PDF_TOOLS || {}));
   if (w.PDF_TOOLS && w.PDF_TOOLS[id]) PDF_TOOLS[id] = w.PDF_TOOLS[id];
+  /* a spec that reuses another engine's code at run time names the files its
+     worker loads (workerScripts, as the invoice reuses the quotation's line
+     reader): run it with those files loaded together, the way the worker does */
+  const ws = PDF_TOOLS[id] && PDF_TOOLS[id].workerScripts;
+  if (Array.isArray(ws) && ws.length > 1) {
+    const both = {};
+    for (const s of ws) new Function('window', fs.readFileSync(siteFile('engine/' + s), 'utf8'))(both);
+    if (both.PDF_TOOLS && both.PDF_TOOLS[id]) PDF_TOOLS[id] = both.PDF_TOOLS[id];
+  }
 
   /* Each engine carries its own copy of the shared helpers inside its IIFE.
      Reopen it with a return on the end to reach them, so the helper tests

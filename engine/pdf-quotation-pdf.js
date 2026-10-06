@@ -36,9 +36,14 @@ const CURRENCIES = {
   INR: { sym: 'Rs ', major: 'Rupees', minor: 'Paise', group: 'indian', tax: 'GSTIN' }
 };
 
+/* A currency is a code from the table above or, for a tool that borrows
+   these helpers (the Invoice generator), a description of its own in the
+   same shape: { sym, major, minor, group }. */
+const curOf = (cur) => (cur && typeof cur === 'object') ? cur : (CURRENCIES[cur] || CURRENCIES.INR);
+
 /** 1234567.5 -> "12,34,567.50" in India, "1,234,567.50" everywhere else. */
 function amt(v, cur) {
-  const c = CURRENCIES[cur] || CURRENCIES.INR;
+  const c = curOf(cur);
   const neg = Number(v) < 0;
   const s = Math.abs(Number(v) || 0).toFixed(2);
   const i = s.slice(0, -3), d = s.slice(-2);
@@ -47,7 +52,7 @@ function amt(v, cur) {
     : i.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   return (neg ? '-' : '') + head + '.' + d;
 }
-const money = (v, cur) => (CURRENCIES[cur] || CURRENCIES.INR).sym + amt(v, cur);
+const money = (v, cur) => curOf(cur).sym + amt(v, cur);
 
 /* 0 decimals where a quantity is whole, up to 3 where it is not */
 function qtyText(v) {
@@ -99,7 +104,7 @@ function westWords(n) {
 }
 
 function amountWords(value, cur) {
-  const c = CURRENCIES[cur] || CURRENCIES.INR;
+  const c = curOf(cur);
   const w = c.group === 'indian' ? indianWords : westWords;
   const neg = value < 0;
   const minor = Math.round(Math.abs(value) * 100);
@@ -724,6 +729,10 @@ window.PDF_TOOLS["quotation-pdf"] = {
   {"q":"Why does the total sometimes end in .00 when the tax does not?","a":"Because rounding is set to the nearest whole unit, which is the convention on Indian invoices. The rounding line shows exactly how much was added or taken off, so the arithmetic still reconciles. Set rounding to \"Do not round\" to keep the paise or pence."},
   {"q":"Can different line items carry different tax rates?","a":"Not in this version. One rate applies to the whole document, which covers most quotations but not a mixed basket where, say, a 5% item and an 18% item sit on the same page. Where the rates differ, raise one quotation per rate, or quote the goods net and state the rates in the terms. The arithmetic on the page always reconciles to the rate it shows."},
   {"q":"How many line items fit?","a":"As many as you need, up to 200. The table continues onto further pages with the column headings repeated and \"Page n of m\" in the footer; the totals, terms and acceptance block print once, at the end."}
-]
+],
+/* What other document tools reuse at run time rather than copy: the Invoice
+   generator loads this file into its worker (its workerScripts) and reads
+   its line items, amounts and words with these. Nothing here runs at load. */
+"lib": { parseLineItems, readItemLine, isNumTok, amountWords, indianWords, westWords, amt, money, qtyText, fmtDate, daysBetween, onAccent, CURRENCIES }
 };
 })();

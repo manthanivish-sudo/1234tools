@@ -96,7 +96,7 @@ window.PDF_TOOLS["watermark-pdf"] = {
         ]
       };
     },
-"tips": ["A watermark added this way sits on top of the page content and can be removed by anyone with a PDF editor. It signals status; it does not protect anything.","Tiled watermarks are much harder to crop out than a single central one, which matters for documents that might be screenshotted.","Keep opacity around 15–25%. Higher and it fights the text; lower and it vanishes when printed.","The text is drawn with a standard font, so no font file is embedded and the file barely grows."],
+"tips": ["The preview shows a page as it will be saved: it is drawn from the real output for that page and redrawn as you change the text, size, angle or opacity. Use the arrows to look at other pages.","Your settings are kept on this device for next time, the watermark text included; the Reset link under the settings puts the defaults back.","A watermark added this way sits on top of the page content and can be removed by anyone with a PDF editor. It signals status; it does not protect anything.","Tiled watermarks are much harder to crop out than a single central one, which matters for documents that might be screenshotted.","Keep opacity around 15–25%. Higher and it fights the text; lower and it vanishes when printed.","The text is drawn with a standard font, so no font file is embedded and the file barely grows."],
 "faq": [{"q":"Can the watermark be removed?","a":"Yes, by anyone reasonably determined — it is a content layer, not a security feature. If a document genuinely must not be redistributed, watermarking is a deterrent and an audit aid, not a control."}]
 };
 })();

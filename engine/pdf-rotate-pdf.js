@@ -63,7 +63,7 @@ window.PDF_TOOLS["rotate-pdf"] = {
         ]
       };
     },
-"tips": ["Rotation is written into the page itself, so every viewer shows it the same way. Rotating in a reader without saving only changes your own view.","Rotation is additive: a page already at 90° rotated by another 90° ends at 180°.","A scanned page that looks sideways but reports no rotation was scanned that way — rotating fixes it properly here."],
+"tips": ["Click the pages to turn by the angle above, or press the turn button on any one page to give it its own quarter turn; each thumbnail shows the page the way it will be saved.","Rotation is written into the page itself, so every viewer shows it the same way. Rotating in a reader without saving only changes your own view.","Rotation is additive: a page already at 90° rotated by another 90° ends at 180°.","A scanned page that looks sideways but reports no rotation was scanned that way — rotating fixes it properly here."],
 "faq": [{"q":"Does rotating reduce quality?","a":"No. The page content is untouched; only a rotation flag changes. There is no re-rendering and no loss."}]
 };
 })();
