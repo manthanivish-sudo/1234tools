@@ -375,11 +375,38 @@ function patchHub(oldPdf, newPdf) {
      goes into the grid for its kind: a tool that makes a PDF from a few fields
      (kind "create") under "Create a PDF from scratch", anything that takes a
      PDF under "Work with an existing PDF". */
-  const GRIDS = { create: '<h2>Create a PDF from scratch</h2>', other: '<h2>Work with an existing PDF</h2>' };
+  const GRIDS = { create: '<h2>Create a PDF from scratch</h2>', other: '<h2>Work with an existing PDF</h2>', render: '<h2>Needs a rendering engine</h2>' };
+  /* a tool that draws pages (pdf.js) or reads them (OCR) goes with the others that download an engine */
+  const gridOf = function (t) { return t.kind === 'create' ? 'create' : t.needsRenderer ? 'render' : 'other'; };
+  /* A shipped tool's card sits in the grid its spec says (a tool that gains
+     or loses pdf.js moves), and carries the spec's own description: a card
+     in the wrong grid, or out of date, is taken out and written again. */
+  SHIPPING.forEach(function (x) {
+    const re = new RegExp('<a class="card" href="/pdf/' + x[0] + '/">[\\s\\S]*?</a>');
+    const m = re.exec(out);
+    if (!m) return;
+    const t = spec(x[0]);
+    const heads = Object.keys(GRIDS).map(function (g) { return [g, out.indexOf(GRIDS[g])]; })
+      .filter(function (h) { return h[1] >= 0 && h[1] < m.index; }).sort(function (a, b) { return b[1] - a[1]; });
+    const inGrid = heads.length ? heads[0][0] : null;
+    const fresh = '<a class="card" href="/pdf/' + x[0] + '/"><span class="card-icon">' + icon(x[1]) + '</span>' +
+      '<strong>' + esc(t.title) + '</strong><span class="card-desc">' + esc(t.description) + '</span></a>';
+    if (inGrid !== gridOf(t)) out = out.slice(0, m.index) + out.slice(m.index + m[0].length);
+    else if (m[0] !== fresh) out = out.slice(0, m.index) + fresh + out.slice(m.index + m[0].length);
+  });
+  /* the cards of the older, hand-kept PDF pages take their description from their spec too */
+  out = out.replace(/(<a class="card" href="\/pdf\/([a-z0-9-]+)\/">[\s\S]*?<span class="card-desc">)([^<]*)(<\/span><\/a>)/g, function (m, a, slug, d, z) {
+    if (SHIPPING.some(function (x) { return x[0] === slug; })) return m;
+    const file = path.join(ROOT, 'engine', 'pdf-' + slug + '.js');
+    if (!fs.existsSync(file)) return m;
+    let t;
+    try { t = spec(slug); } catch (e) { return m; }
+    return a + esc(t.description) + z;
+  });
   const missing = SHIPPING.filter(function (x) { return out.indexOf('href="/pdf/' + x[0] + '/"') < 0; });
-  ['create', 'other'].forEach(function (g) {
+  ['create', 'other', 'render'].forEach(function (g) {
     const cards = missing
-      .filter(function (x) { return (spec(x[0]).kind === 'create') === (g === 'create'); })
+      .filter(function (x) { return gridOf(spec(x[0])) === g; })
       .map(function (x) {
         const t = spec(x[0]);
         return '<a class="card" href="/pdf/' + x[0] + '/"><span class="card-icon">' + icon(x[1]) + '</span>' +

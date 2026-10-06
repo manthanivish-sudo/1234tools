@@ -203,7 +203,7 @@ window.PDF_TOOLS["invoice-pdf"] = {
     {"value":"vat","label":"VAT or sales tax — one rate, or each line’s own"},
     {"value":"gst","label":"GST — CGST + SGST or IGST, by place of supply"},
     {"value":"none","label":"No tax"}]},
-  {"key":"tax","label":"Tax rate % (lines without their own)","type":"number","default":20,"min":0,"max":100,"step":0.25,"hint":"GST: 0, 5, 12, 18 or 28. UK VAT: 20, 5 or 0"},
+  {"key":"tax","label":"Tax rate % (lines without their own)","type":"number","default":20,"min":0,"max":100,"step":0.25,"hint":"A line ending “GST 5%” or “VAT 0%” keeps its own rate"},
   {"key":"taxLabel","label":"Tax name","type":"text","default":"VAT","remember":true},
   {"key":"sellerState","label":"Your state (GST)","type":"select","default":"auto","options":[
     {"value":"auto","label":"From your GSTIN"},
@@ -407,6 +407,9 @@ window.PDF_TOOLS["invoice-pdf"] = {
       /* ---------- the page: every word goes through T(), so a font is
          changed in one place (FONT) ---------- */
       const FONT = { r: 'Helvetica', b: 'Helvetica-Bold', serif: 'Times-Roman', mono: 'Courier' };
+      /* names, addresses and items WinAnsi cannot hold (Hindi, Polish, ₹ …)
+         are drawn in embedded Noto subsets by createDocument below */
+      const tf = core.textRun ? core.textRun() : null;
       const tw = (s, st, size) => core.textWidth(String(s), FONT[st] || FONT.r, size);
       const wrap = (s, st, size, w) => core.wrapText(String(s), FONT[st] || FONT.r, size, w);
       const fit = (s, st, size, w) => {
@@ -707,7 +710,9 @@ window.PDF_TOOLS["invoice-pdf"] = {
         const p = pages[0];
         const sub = [paidDate, paidMethod].filter(Boolean).join(' · ').toUpperCase();
         const big = 46, small = 8.5;
-        const w1 = tw('PAID', 'b', big), w2 = sub ? tw(sub, 'b', small) : 0;
+        const uniSub = !!(sub && tf && core.unicodeFonts.needs(sub));
+        if (uniSub) await tf.prepare(sub, true);
+        const w1 = tw('PAID', 'b', big), w2 = sub ? (uniSub ? tf.widthSync(sub, small, true) : tw(sub, 'b', small)) : 0;
         const bw = Math.max(w1, w2) + 36, bh = big * 0.72 + (sub ? small + 12 : 0) + 26;
         const ang = 18 * Math.PI / 180, cs = Math.cos(ang), sn = Math.sin(ang);
         const [cxs, cys] = stampAt;
@@ -721,7 +726,11 @@ window.PDF_TOOLS["invoice-pdf"] = {
           '3 w', [-bw / 2, -bh / 2, bw, bh].map(f).join(' ') + ' re S',
           '1 w', [-bw / 2 + 5, -bh / 2 + 5, bw - 10, bh - 10].map(f).join(' ') + ' re S',
           'BT /' + fk + ' ' + big + ' Tf ' + f(-w1 / 2) + ' ' + f(-bh / 2 + 13 + (sub ? small + 12 : 0)) + ' Td (' + core.contentEscape('PAID') + ') Tj ET'];
-        if (sub) cmds.push('BT /' + fk + ' ' + small + ' Tf ' + f(-w2 / 2) + ' ' + f(-bh / 2 + 15) + ' Td (' + core.contentEscape(sub) + ') Tj ET');
+        if (sub && uniSub) {
+          const shown = tf.show(sub, small, true);
+          p.unicodeKeys = (p.unicodeKeys || []).concat([shown.key]);
+          cmds.push('BT ' + f(-w2 / 2) + ' ' + f(-bh / 2 + 15) + ' Td ' + shown.ops + ' ET');
+        } else if (sub) cmds.push('BT /' + fk + ' ' + small + ' Tf ' + f(-w2 / 2) + ' ' + f(-bh / 2 + 15) + ' Td (' + core.contentEscape(sub) + ') Tj ET');
         cmds.push('Q');
         p.ops.push({ raw: cmds.join('\n') });
       }
@@ -735,7 +744,8 @@ window.PDF_TOOLS["invoice-pdf"] = {
         T('Page ' + (i + 1) + ' of ' + pages.length, W - m, 34, 7.5, 'r', GREY, 'right');
       });
 
-      const bytes = core.createPDF(pages, {
+      const bytes = await (core.createDocument ? core.createDocument : core.createPDF)(pages, {
+        text: tf,
         info: { Title: ('Invoice ' + number).trim(), Author: fromName, Subject: 'Invoice for ' + toName }
       });
 

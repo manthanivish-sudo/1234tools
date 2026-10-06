@@ -153,6 +153,21 @@
     }).promise;
   }
 
+  /** A classic script from engine/, once, on demand. */
+  const scripts = new Map();
+  function loadScript(file) {
+    if (!scripts.has(file)) {
+      scripts.set(file, new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = new URL(file, ENGINE_BASE).href;
+        s.onload = () => resolve();
+        s.onerror = () => { scripts.delete(file); reject(new Error(file + ' could not be loaded. Check the connection and try again.')); };
+        document.head.appendChild(s);
+      }));
+    }
+    return scripts.get(file);
+  }
+
   /* ---------- the engine: a worker, or the page when there is none ---------- */
 
   function abortError() {
@@ -547,8 +562,9 @@
   window.MVRTool.mountPDF = function (spec, root) {
     const io = root.querySelector('.tool-io');
     const core = window.MVRPdfCore;
-    const needsFiles = spec.kind !== 'create' && spec.files !== false;
+    const needsFiles = spec.files === true || (spec.kind !== 'create' && spec.files !== false);
     const engine = createEngine(spec);
+    if (core && core.unicodeFonts) core.unicodeFonts.setFontBase(ENGINE_BASE);
     const KEY = '1234tools-pdf-' + spec.id + '-v1';
 
     let drop = null, fileInput = null;
@@ -607,6 +623,9 @@
     const live = el('div', 'place-preview live-preview');
     live.hidden = true;
     if (spec.livePreview) io.appendChild(live);
+    const crop = el('div', 'place-preview crop-preview');
+    crop.hidden = true;
+    if (spec.cropEditor) io.appendChild(crop);
 
     const readers = (spec.controls || []).map((c) => {
       const b = buildControl(c);
@@ -895,6 +914,7 @@
         clearOutputs();
         if (P) { place.hidden = true; place.innerHTML = ''; placeDoc = null; }
         if (spec.livePreview) { live.hidden = true; live.innerHTML = ''; }
+        if (spec.cropEditor) { crop.hidden = true; crop.innerHTML = ''; }
         resetGrid();
         updateSticky();
         return;
@@ -902,6 +922,7 @@
       if (spec.pageGrid) mountGrid();
       if (P) paintPlace();
       if (spec.livePreview) paintLive();
+      if (spec.cropEditor) paintCrop();
       if (spec.onFiles) { try { spec.onFiles(api()); } catch (e) { /* a spec hook must not stop the page */ } }
       if (spec.kind === 'inspect') run();
       updateSticky();
@@ -1788,12 +1809,48 @@
        box you drag is the thing that will be written. */
     function linesOf(it) {
       if (!it.text || !it.text.trim()) return [];
+      if (it.width > 0 && uniNeeded(it.text)) {
+        /* the same word-by-word wrap the engine uses for these fonts */
+        const out = [];
+        const space = textW(' ', P.font || 'Helvetica', it.size);
+        for (const para of String(it.text).split('\n')) {
+          if (!para.trim()) { out.push(''); continue; }
+          let line = '', lw = 0;
+          for (const word of para.split(/\s+/)) {
+            const ww = textW(word, P.font || 'Helvetica', it.size);
+            if (line && lw + space + ww > it.width) { out.push(line); line = word; lw = ww; }
+            else { lw = line ? lw + space + ww : ww; line = line ? line + ' ' + word : word; }
+          }
+          if (line) out.push(line);
+        }
+        return out;
+      }
       if (it.width > 0 && core.wrapText) return core.wrapText(it.text, P.font || 'Helvetica', it.size, it.width);
       return String(it.text).split('\n');
     }
     function inkOf(it) {
       if (!it.drawn || !it.drawn.strokes || !it.drawn.strokes.length || typeof spec.inkPlacement !== 'function') return null;
       return spec.inkPlacement(it.drawn, { x: it.x, y: it.y, drawWidth: it.drawWidth, signatureText: it.text });
+    }
+    /* Text WinAnsi cannot hold is drawn in the PDF with a Noto subset; the
+       preview measures and draws it with the same fonts, loaded into the
+       page from the site's copy the first time such text is typed. */
+    const UNI_FACES = '"MVR Noto", "MVR Noto Devanagari", sans-serif';
+    let uniFaces = null;
+    const uniNeeded = (t) => !!(core.unicodeFonts && core.unicodeFonts.needs(t));
+    function loadUniFaces() {
+      if (uniFaces || typeof FontFace !== 'function') return;
+      uniFaces = Promise.all([['MVR Noto', 'NotoSans-Regular.ttf'], ['MVR Noto Devanagari', 'NotoSansDevanagari-Regular.ttf']].map(([fam, file]) => {
+        const f = new FontFace(fam, 'url(' + ENGINE_BASE + 'vendor/fonts/' + file + ')');
+        return f.load().then((x) => { document.fonts.add(x); }).catch(() => {});
+      })).then(() => drawPlace());
+    }
+    const measurer = document.createElement('canvas').getContext('2d');
+    function textW(text, font, size) {
+      if (!uniNeeded(text)) return core.textWidth(text, font, size);
+      loadUniFaces();
+      measurer.font = '100px ' + UNI_FACES;
+      return measurer.measureText(text).width * size / 100;
     }
     function boxOf(it) {
       if (!it) return null;
@@ -1802,7 +1859,7 @@
       const lines = linesOf(it);
       const font = P.font || 'Helvetica';
       if (lines.length) {
-        const w = Math.max.apply(null, lines.map((l) => core.textWidth(l, font, it.size)));
+        const w = Math.max.apply(null, lines.map((l) => textW(l, font, it.size)));
         const lead = it.size * 1.25;
         add(it.x, it.y - lead * (lines.length - 1) - it.size * 0.22, it.x + Math.max(w, it.width || 0), it.y + it.size * 0.78);
       }
@@ -1841,7 +1898,7 @@
         const lines = linesOf(it);
         if (lines.length || it.date === 'yes') {
           const px = it.size * S;
-          ctx.font = px.toFixed(2) + 'px Helvetica, Arial, sans-serif';
+          ctx.font = px.toFixed(2) + 'px ' + (lines.some((l) => uniNeeded(l)) ? UNI_FACES : 'Helvetica, Arial, sans-serif');
           ctx.fillStyle = it.colour || '#000';
           lines.forEach((l, k) => ctx.fillText(l, it.x * S, (hPt - it.y) * S + k * px * 1.25));
           if (it.date === 'yes') {
@@ -2066,6 +2123,162 @@
     });
 
     /* ================================================================ */
+    /* the crop box: drag it, its edges or its corners on the page       */
+    /* ================================================================ */
+    const CROP = spec.cropEditor || null;
+    const MMPT = 72 / 25.4;
+    let cropState = null, cropPage = 0;
+    async function paintCrop() {
+      const src = ready()[0];
+      if (!CROP || !src) return;
+      crop.hidden = false;
+      let pdf;
+      try { pdf = await pdfFor(src); }
+      catch (e) { crop.innerHTML = ''; crop.appendChild(el('p', 'place-note', 'The page could not be drawn here, but the margins boxes still work: they are in millimetres, measured on the page as it is shown.')); return; }
+      const total = pdf.numPages;
+      cropPage = Math.max(0, Math.min(total - 1, cropPage));
+      crop.innerHTML = '';
+      const head = el('div', 'place-head');
+      head.appendChild(el('span', 'place-title', 'Drag the box, its edges or its corners: the shaded part is cropped away'));
+      const pager = el('div', 'place-pager');
+      const prev = btn('‹', 'btn-ghost', 'Previous page');
+      const lab = el('span', 'place-page-num');
+      const next = btn('›', 'btn-ghost', 'Next page');
+      pager.appendChild(prev); pager.appendChild(lab); pager.appendChild(next);
+      if (total > 1) head.appendChild(pager);
+      const fit = btn('Fit to the content', 'btn-ghost crop-fit');
+      fit.title = 'Put the box just around what is drawn on this page';
+      head.appendChild(fit);
+      crop.appendChild(head);
+      const stage = el('div', 'place-stage crop-stage');
+      const cv = el('canvas', 'place-canvas crop-canvas');
+      cv.setAttribute('role', 'img');
+      const box = el('div', 'crop-box');
+      box.tabIndex = 0;
+      box.setAttribute('role', 'group');
+      box.setAttribute('aria-label', 'Crop box. Arrow keys move it by 1 mm, Shift by 5 mm; focus an edge or a corner to move only that.');
+      const HANDLES = ['n', 'e', 's', 'w', 'ne', 'se', 'sw', 'nw'];
+      const NAMES = { n: 'top edge', e: 'right edge', s: 'bottom edge', w: 'left edge', ne: 'top right corner', se: 'bottom right corner', sw: 'bottom left corner', nw: 'top left corner' };
+      HANDLES.forEach((h) => {
+        const d = el('span', 'crop-handle crop-' + h);
+        d.dataset.h = h;
+        d.tabIndex = 0;
+        d.setAttribute('role', 'slider');
+        d.setAttribute('aria-label', 'Crop ' + NAMES[h] + ': arrow keys move it by 1 mm, Shift by 5 mm');
+        box.appendChild(d);
+      });
+      stage.appendChild(cv); stage.appendChild(box);
+      crop.appendChild(stage);
+      const readout = el('p', 'place-readout');
+      crop.appendChild(readout);
+
+      const m = () => ['top', 'right', 'bottom', 'left'].map((k) => Math.max(0, Number(val(CROP[k], 0)) || 0) * MMPT);
+      const setM = (t, r, b, l) => {
+        const mm = (v) => Math.round(Math.max(0, v) / MMPT * 2) / 2;
+        const vals = { top: mm(t), right: mm(r), bottom: mm(b), left: mm(l) };
+        Object.keys(vals).forEach((k) => { const rd = reader(CROP[k]); if (rd) rd.set(vals[k]); });
+        place2();
+      };
+      const show = async (i) => {
+        cropPage = Math.max(0, Math.min(total - 1, i));
+        const page = await pdf.getPage(cropPage + 1);
+        const base = page.getViewport({ scale: 1 });
+        const wide = Math.min(620, Math.max(260, (crop.clientWidth || 560) - 30));
+        const scale = Math.min(1.6, wide / base.width);
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        const vp = page.getViewport({ scale: scale * dpr });
+        cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+        cv.style.width = Math.round(vp.width / dpr) + 'px';
+        cv.style.height = Math.round(vp.height / dpr) + 'px';
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        cropState = { scale, dpr, w: base.width, h: base.height };
+        lab.textContent = 'Page ' + (cropPage + 1) + ' of ' + total;
+        prev.disabled = cropPage === 0; next.disabled = cropPage >= total - 1;
+        cv.setAttribute('aria-label', 'Page ' + (cropPage + 1) + ' with the crop box');
+        place2();
+      };
+      function place2() {
+        if (!cropState) return;
+        const [t, r, b, l] = m();
+        const S = cropState.scale;
+        box.style.left = (l * S) + 'px';
+        box.style.top = (t * S) + 'px';
+        box.style.width = Math.max(4, (cropState.w - l - r) * S) + 'px';
+        box.style.height = Math.max(4, (cropState.h - t - b) * S) + 'px';
+        const mm = (v) => (Math.round(v / MMPT * 10) / 10).toLocaleString('en-GB');
+        const left = cropState.w - l - r, tall = cropState.h - t - b;
+        readout.textContent = 'Keeps ' + mm(left) + ' × ' + mm(tall) + ' mm of a ' + mm(cropState.w) + ' × ' + mm(cropState.h) + ' mm page' + (left <= 0 || tall <= 0 ? ' — that leaves nothing' : '');
+        readout.className = 'place-readout' + (left <= 0 || tall <= 0 ? ' is-off' : '');
+      }
+      let drag = null;
+      box.addEventListener('pointerdown', (ev) => {
+        if (!cropState || (ev.button !== undefined && ev.button > 0)) return;
+        ev.preventDefault();
+        const h = ev.target.dataset && ev.target.dataset.h ? ev.target.dataset.h : 'move';
+        drag = { id: ev.pointerId, h, x: ev.clientX, y: ev.clientY, m0: m() };
+        try { box.setPointerCapture(ev.pointerId); } catch (e) { /* synthetic */ }
+        (ev.target.dataset && ev.target.dataset.h ? ev.target : box).focus({ preventScroll: true });
+      });
+      box.addEventListener('pointermove', (ev) => {
+        if (!drag || ev.pointerId !== drag.id) return;
+        const S = cropState.scale;
+        const dx = (ev.clientX - drag.x) / S, dy = (ev.clientY - drag.y) / S;
+        let [t, r, b, l] = drag.m0;
+        const W = cropState.w, H = cropState.h;
+        if (drag.h === 'move') {
+          const ddx = Math.max(-l, Math.min(r, dx)), ddy = Math.max(-t, Math.min(b, dy));
+          l += ddx; r -= ddx; t += ddy; b -= ddy;
+        } else {
+          if (/w/.test(drag.h)) l = Math.max(0, Math.min(W - r - 6, l + dx));
+          if (/e/.test(drag.h)) r = Math.max(0, Math.min(W - l - 6, r - dx));
+          if (/n/.test(drag.h)) t = Math.max(0, Math.min(H - b - 6, t + dy));
+          if (/s/.test(drag.h)) b = Math.max(0, Math.min(H - t - 6, b - dy));
+        }
+        setM(t, r, b, l);
+      });
+      const end = (ev) => { if (drag && ev.pointerId === drag.id) drag = null; };
+      box.addEventListener('pointerup', end);
+      box.addEventListener('pointercancel', end);
+      box.addEventListener('keydown', (ev) => {
+        const moves = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+        if (!moves[ev.key] || !cropState) return;
+        ev.preventDefault();
+        const step = (ev.shiftKey ? 5 : 1) * MMPT;
+        const [mx, my] = moves[ev.key].map((v) => v * step);
+        let [t, r, b, l] = m();
+        const h = ev.target.dataset && ev.target.dataset.h ? ev.target.dataset.h : 'move';
+        if (h === 'move') {
+          const ddx = Math.max(-l, Math.min(r, mx)), ddy = Math.max(-t, Math.min(b, my));
+          l += ddx; r -= ddx; t += ddy; b -= ddy;
+        } else {
+          if (/w/.test(h)) l = Math.max(0, l + mx);
+          if (/e/.test(h)) r = Math.max(0, r - mx);
+          if (/n/.test(h)) t = Math.max(0, t + my);
+          if (/s/.test(h)) b = Math.max(0, b - my);
+        }
+        setM(t, r, b, l);
+      });
+      fit.addEventListener('click', () => {
+        if (!cropState) return;
+        const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+        let x0 = cv.width, y0 = cv.height, x1 = -1, y1 = -1;
+        for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+          const i = (y * cv.width + x) * 4;
+          if (d[i] < 240 || d[i + 1] < 240 || d[i + 2] < 240) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+        }
+        if (x1 < 0) { say('Nothing is drawn on this page, so there is nothing to fit to.', 'note'); return; }
+        const k = cropState.scale * cropState.dpr, pad = 2 * MMPT;
+        setM(y0 / k - pad, cropState.w - (x1 + 1) / k - pad, cropState.h - (y1 + 1) / k - pad, x0 / k - pad);
+      });
+      prev.addEventListener('click', () => show(cropPage - 1));
+      next.addEventListener('click', () => show(cropPage + 1));
+      ['top', 'right', 'bottom', 'left'].forEach((k) => { const rd = reader(CROP[k]); if (rd && !rd.__crop) { rd.__crop = true; rd.input.addEventListener('input', () => place2()); } });
+      await show(cropPage);
+    }
+
+    /* ================================================================ */
     /* live preview: the real output of one page, before you commit      */
     /* ================================================================ */
     let livePage = 0, liveSeq = 0, liveTimer = null, liveBound = false;
@@ -2201,7 +2414,13 @@
         set: (o) => Object.keys(o || {}).forEach((k) => { const r = reader(k); if (r) r.set(o[k]); }),
         reader, el, btn, store, download, fmtBytes,
         results, actions, renderStats,
-        storageKey: (suffix) => KEY + (suffix ? '-' + suffix : '')
+        storageKey: (suffix) => KEY + (suffix ? '-' + suffix : ''),
+        loadScript,
+        addFiles: (list) => loadFiles(list),
+        removeEntry: (entry) => { const i = entries.indexOf(entry); if (i >= 0) { engine.drop(entry); entries.splice(i, 1); renderFileList(); afterFilesChanged(); } },
+        allEntries: () => entries.slice(),
+        refreshFiles: () => { renderFileList(); updateSticky(); },
+        ENGINE_BASE
       };
     }
 
@@ -2236,7 +2455,18 @@
         if (res.error) { say(res.error, 'error'); reveal(msg); return; }
         if (res.warn) say(res.warn, 'warn');
         if (res.note) say(res.note, 'note');
-        if (res.report) { report.textContent = res.report; report.hidden = false; }
+        if (res.report) {
+          report.textContent = res.report; report.hidden = false;
+          if (spec.copyReport) {
+            const cp = btn('Copy the text', 'btn-ghost');
+            cp.addEventListener('click', async () => {
+              try { await navigator.clipboard.writeText(res.fullText || res.report); cp.textContent = 'Copied'; }
+              catch (e) { const r = document.createRange(); r.selectNodeContents(report); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); cp.textContent = 'Selected: press Ctrl+C'; }
+              setTimeout(() => { cp.textContent = 'Copy the text'; }, 2500);
+            });
+            actions.appendChild(cp);
+          }
+        }
         renderStats(res.stats);
         const files = res.files || [];
         if (files.length) await showResult(files);

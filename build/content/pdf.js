@@ -109,6 +109,178 @@ module.exports = {
     ]
   },
 
+  /* Compress, Protect and Remove a Password (wave 2). The runs below were made on 2026-10-06 in
+     headless Chrome against a local server of the wave-2 branch (build/tests/serve.js), with two
+     inputs made for them:
+       inventory-report.pdf  4 A4 pages written by reportlab: on each, a heading, three paragraphs of
+         Helvetica and one colour photo 160 mm wide (453.5 pt). The photos are the CC0 samples in
+         build/promo/samples (landscape, product, food, street) enlarged with Lanczos to 4032 px wide,
+         as a 12-megapixel phone saves them, stored as plain DCTDecode JPEG at quality 92; Title
+         "Check-in inventory, Lakeside Cottage". 5,483,344 bytes, shown as 5.23 MB.
+       statement-rc4.pdf  2 A4 pages written by PyMuPDF (MuPDF 1.28.2), RC4 128-bit, user password
+         "15031988", owner password "bank-owner-7731", permissions print, high-quality print and
+         accessibility only; Title "Statement September 2026". 3,659 bytes, shown as 3.6 KB.
+     Outputs were read back with pdf.js (the site's copy, in the page), MuPDF and pdfcore's parser. */
+  '/pdf/compress-pdf/': {
+    whatTitle: 'What makes a PDF heavy, and what compression takes out',
+    whatIs: [
+      'Most of the weight in a large PDF is pictures. A phone photo is about 4,000 pixels across; printed 16 cm wide it needs under 1,000 for a screen or office printer, yet the file keeps every pixel.',
+      'Text and vector drawings cost little by comparison, so compressing a PDF mostly means resampling each picture to the size it is shown at.'
+    ],
+    howItWorks: {
+      text: 'It all happens in a background worker on this page, with the site’s own PDF engine and the browser’s JPEG encoder.',
+      points: [
+        'Each page’s drawing instructions are followed to find how large every picture is printed; a picture used twice is sized for its largest use.',
+        'A picture printed at more than the chosen DPI is scaled to fit it, laid on white and saved as JPEG at the chosen quality.',
+        'Scaling is skipped when it would remove less than 13% of the width, and a picture under 24 KB that needs no scaling is left alone.',
+        'On the way out, uncompressed streams are deflated, identical streams and font dictionaries are stored once, and the rest is packed into compressed object streams with a cross-reference stream.'
+      ]
+    },
+    worked: {
+      text: 'A four-page check-in inventory came to 5.23 MB: on each page a few paragraphs and one 4032-pixel phone photo printed 160 mm wide. Email needed only its first step, 150 DPI at quality 72: 251.1 KB, 95.3% smaller, each photo now 945 pixels wide, exactly 160 mm at 150 DPI. Print gave 656.5 KB and Smallest 52.8 KB. Lossless saved only 1.7 KB, since the photos were already JPEG. pdf.js read all four pages’ text from every copy.'
+    },
+    uses: [
+      ['Mail size limits', 'Bring a photo-heavy report under what a mail server will accept.'],
+      ['Upload portals', 'Fit scanned passports or payslips under a portal’s per-file cap.'],
+      ['Shared folders', 'Shrink photo-filled inspection reports before they fill a team drive.']
+    ],
+    mistakes: [
+      'Choosing Smallest for a document that will be printed. At 72 DPI a photo looks soft on paper; Print keeps 200 DPI and was still 87.7% smaller above.',
+      'Expecting a black-and-white scan to shrink much. Such pages are often stored as 1-bit CCITT or JBIG2 pictures, already compact, and those are left as they are.'
+    ],
+    faq: [
+      { q: 'Can I set my own resolution and quality?', a: 'Yes: choose My own settings, then 36 to 600 DPI and a JPEG quality from 10 to 100.' },
+      { q: 'Does compressing remove a PDF’s password?', a: 'Yes. A protected file is opened with its password, asked for when you add it, and the smaller copy is saved without one; Protect PDF puts it back.' },
+      { q: 'Will the page layout change?', a: 'No. Pages keep their size and every picture its place and printed size; only the pixels inside change.' }
+    ],
+    runs: [
+      /* Compress PDF, inventory-report.pdf (top of this entry), How small "Email: aim for under 2 MB",
+         Metadata "Remove it", Compress PDF pressed; the download read back with pdfcore (picture sizes)
+         and pdf.js (text of all 4 pages). Stats: Before 5.23 MB, After 251.1 KB, Change "4.98 MB smaller
+         (95.3%)", Settings "150 DPI pictures, JPEG quality 72", Pictures "4 found, 4 re-encoded (4 scaled
+         down)", Picture data "5.22 MB → 247.3 KB". No warning: under 2 MB at the first step. */
+      {
+        browser: { tool: '/pdf/compress-pdf/', file: 'inventory-report.pdf, 4 pages, 5,483,344 bytes; 4 JPEG photos 4032 px wide drawn 160 mm (453.5 pt) wide', controls: { preset: 'email', metadata: 'strip' }, pressed: 'Compress PDF', result: 'inventory-report-compressed.pdf, 257,138 bytes; photos 945x628, 945x630, 945x630, 945x709 DCTDecode' },
+        shown: ['5.23 MB', '4032-pixel', '160 mm', '150 DPI at quality 72', '251.1 KB', '95.3%', '945 pixels']
+      },
+      /* the same file and page, How small "Print" (Settings "200 DPI pictures, JPEG quality 85", Change
+         "4.59 MB smaller (87.7%)", photos 1260 px wide), then "Smallest" (72 DPI, quality 45, 99%
+         smaller, photos 454 px wide), then "Lossless" (Change "1.7 KB smaller (0%)", Pictures kept as
+         they were "4 pictures left as they are", Streams compressed 0) */
+      { browser: { tool: '/pdf/compress-pdf/', file: 'inventory-report.pdf', controls: { preset: 'print' } }, shown: ['656.5 KB', '87.7%'] },
+      { browser: { tool: '/pdf/compress-pdf/', file: 'inventory-report.pdf', controls: { preset: 'smallest' } }, shown: ['52.8 KB'] },
+      { browser: { tool: '/pdf/compress-pdf/', file: 'inventory-report.pdf', controls: { preset: 'lossless' } }, shown: ['1.7 KB'] }
+    ]
+  },
+
+  '/pdf/protect-pdf/': {
+    whatTitle: 'What a password on a PDF actually does',
+    whatIs: [
+      'A PDF can carry two passwords. The open (user) password is needed to read the file at all; the owner password gives full rights, including lifting any limits on printing, copying or editing.',
+      'Behind both sits one file key that encrypts every stream and string. Each password is a way of recovering that key, which is why a forgotten one cannot simply be reset.'
+    ],
+    howItWorks: {
+      text: 'The document is rebuilt by the site’s own engine in a background worker on this page, then encrypted with the PDF specification’s standard security handler.',
+      points: [
+        'AES-256 writes revision 6 from PDF 2.0: a random 256-bit file key, wrapped once for each password with an iterated SHA-2 hash and its own random salt.',
+        'AES-128 writes revision 4, which readers from PDF 1.6 onwards understand.',
+        'Every stream and string gets its own random 16-byte starting vector, so identical pages never encrypt to identical bytes.',
+        'Printing covers high-quality printing too, changes cover page assembly, and comments cover form filling; copying for accessibility always stays allowed, so screen readers keep working.'
+      ]
+    },
+    worked: {
+      text: 'The 251.1 KB inventory from the Compress PDF run was protected with AES-256 and a 14-character open password, printing and comments allowed, copying and changes not. The copy was 252.9 KB, 1,871 bytes larger. pdf.js refused it with no password and with the password in lower case; with the right one it read all four pages, printing allowed and copying not. MuPDF described it as Standard V5 R6 256-bit AES. Saved again with no open password and printing off, it opened at once, but printing was gone from its permissions.'
+    },
+    uses: [
+      ['Documents by email', 'Encrypt a tax return or contract before attaching it; send the password separately.'],
+      ['Review copies', 'Let a draft be read and printed, not copied, while it circulates.'],
+      ['Personal records', 'Keep passport and certificate scans encrypted on a shared computer.']
+    ],
+    mistakes: [
+      'Sending the password in the same email as the file. Anyone who can read one can read the other; send it by text message or say it on the phone.',
+      'Treating “no copying” as a barrier. Converters and some readers ignore permission bits, and screens can be photographed; anything confidential needs an open password.'
+    ],
+    faq: [
+      { q: 'Can I protect several PDFs at once?', a: 'Not here: the page takes one file at a time. Merge them first if they can travel together, then protect the merged file.' },
+      { q: 'How do I change the password later?', a: 'Open the protected file in the Remove a Password tool with the old password, then protect the plain copy again with the new one.' },
+      { q: 'Does encryption make the file bigger?', a: 'Slightly: each stream gains up to 32 bytes of starting vector and padding. The run above grew by 1,871 bytes.' }
+    ],
+    runs: [
+      /* Protect PDF with a Password on inventory-report-compressed.pdf (257,138 bytes, from the Email run
+         on /pdf/compress-pdf/): Password to open it and the same again "Lakeside-Oct26", Owner password
+         empty, Encryption AES-256, Allow printing on, Allow copying off, Allow changes off, Allow comments
+         and form filling on; Protect PDF pressed. Stats: Pages 4, Opens with "A password", Owner password
+         "Random, not shown", Printing Allowed, Copying Not allowed, Changes Not allowed, Comments and forms
+         Allowed, Output size 252.9 KB. The download, 259,009 bytes, read with pdf.js in the page: no password
+         -> PasswordException "No password given"; "lakeside-oct26" -> "Incorrect Password"; the password
+         -> the text of all 4 pages, permissions PRINT, PRINT_HIGH_QUALITY, MODIFY_ANNOTATIONS,
+         FILL_INTERACTIVE_FORMS, COPY_FOR_ACCESSIBILITY. MuPDF: needs_pass, metadata encryption
+         "Standard V5 R6 256-bit AES". localStorage afterwards held the four switches and the method, no password. */
+      {
+        browser: { tool: '/pdf/protect-pdf/', file: 'inventory-report-compressed.pdf, 4 pages, 257,138 bytes (251.1 KB)', controls: { userPassword: 'Lakeside-Oct26 (14 characters)', userPassword2: 'Lakeside-Oct26', ownerPassword: '', method: 'AES-256', allowPrint: true, allowCopy: false, allowModify: false, allowAnnotate: true }, pressed: 'Protect PDF', result: 'inventory-report-compressed-protected.pdf, 259,009 bytes, 1,871 more than the input' },
+        shown: ['251.1 KB', '14-character', '252.9 KB', '1,871 bytes', 'Standard V5 R6 256-bit AES']
+      },
+      /* the same file, both passwords empty, Allow printing off, Allow copying off, changes and comments on:
+         "Opens with: No password (restrictions only)", Printing Not allowed; pdf.js opened it with no
+         password and listed MODIFY_CONTENTS, MODIFY_ANNOTATIONS, FILL_INTERACTIVE_FORMS,
+         COPY_FOR_ACCESSIBILITY and ASSEMBLE, no PRINT */
+      { browser: { tool: '/pdf/protect-pdf/', file: 'inventory-report-compressed.pdf', controls: { userPassword: '', ownerPassword: '', method: 'AES-256', allowPrint: false, allowCopy: false, allowModify: true, allowAnnotate: true } }, shown: ['opened at once'] }
+    ]
+  },
+
+  '/pdf/unlock-pdf/': {
+    whatTitle: 'What taking the password off a PDF involves',
+    whatIs: [
+      'An encrypted PDF stores its pages scrambled with a file key that only a password recovers. Taking the password off means opening the file with it once, then writing every object out again in plain form.',
+      'A file that opens freely yet refuses printing or copying is encrypted too, with an empty open password; the refusal is a flag readers choose to obey.'
+    ],
+    howItWorks: {
+      text: 'Your password goes no further than the background worker on this page, where the site’s own engine opens the file and writes the copy.',
+      points: [
+        'The security handler reads the method, RC4 at 40 or 128 bits, AES-128 or AES-256, and tries what you type both as the open password and as the owner password.',
+        'A wrong password is turned away before anything is decrypted, and the box asks again.',
+        'Every string and stream is decrypted, object streams included, and the whole document is written to a new file with no permission flags.',
+        'The results name the method, the password that opened the file and each restriction lifted, by internal name such as fillForms.'
+      ]
+    },
+    worked: {
+      text: 'A two-page bank statement written by MuPDF, 3.6 KB, used RC4 128-bit with an eight-digit open password and blocked copying and changes. Added here it showed a password box, and a wrong guess got “That password did not open it”. With the right one the results read “RC4 128-bit, opened with the password to open it” and listed five restrictions lifted: modify, copy, annotate, fillForms, assemble. The 3.2 KB copy opened in pdf.js and MuPDF with no password or permission limits. The inventory protected on Protect PDF came back at 252.1 KB.'
+    },
+    uses: [
+      ['Statements for an accountant', 'Save plain copies for bookkeeping software that cannot open protected files.'],
+      ['Loan and visa applications', 'Portals often reject encrypted PDFs; a decrypted payslip goes through.'],
+      ['Printing a restricted form', 'Lift a no-printing flag on a form you are entitled to print.']
+    ],
+    mistakes: [
+      'Typing the password with Caps Lock on. Passwords are case-sensitive, so “lakeside” will not open a file protected with “Lakeside”.',
+      'Leaving the decrypted copy in a shared folder. It has no protection at all; delete it when done, or protect it again.'
+    ],
+    faq: [
+      { q: 'Does the copy keep bookmarks and form fields?', a: 'Yes. Pages, bookmarks, links, form fields and the title come across; only the encryption and permission flags go.' },
+      { q: 'Can I use the owner password instead?', a: 'Yes. Either password opens the file, and the results then say it was opened with the owner password.' },
+      { q: 'Why did my file open without asking for a password?', a: 'It has restrictions only: its open password is empty. It is still encrypted, and the copy saved here drops the printing and copying limits.' }
+    ],
+    runs: [
+      /* Unlock PDF (Remove a Password) on statement-rc4.pdf (top of the Compress entry): the row showed
+         "Password-protected" and the box "statement-rc4.pdf needs its password to open. It is used here,
+         on this device, and not kept."; "wrong-one" typed and Open pressed -> "That password did not open
+         it. Check the capitals and try again."; then "15031988" -> "2 pages · 3.6 KB · opened with its
+         password"; Remove the password pressed. Stats: Pages 2, Was "RC4 128-bit, opened with the
+         password to open it", Restrictions lifted "modify, copy, annotate, fillForms, assemble", Now "No
+         password, no restrictions", Output size 3.2 KB. The download (3,296 bytes) has no /Encrypt;
+         pdf.js read both pages with no password, getPermissions() null, Title "Statement September
+         2026"; MuPDF needs_pass false. */
+      {
+        browser: { tool: '/pdf/unlock-pdf/', file: 'statement-rc4.pdf, 2 pages, 3,659 bytes, RC4 128-bit, an 8-digit user password', typed: ['wrong-one', 'the user password'], pressed: 'Remove the password', result: 'statement-rc4-unlocked.pdf, 3,296 bytes' },
+        shown: ['3.6 KB', 'RC4 128-bit', 'That password did not open it', 'RC4 128-bit, opened with the password to open it', 'modify, copy, annotate, fillForms, assemble', '3.2 KB']
+      },
+      /* the protected inventory from the /pdf/protect-pdf/ run, opened with "Lakeside-Oct26": Was "AES-256,
+         opened with the password to open it", Restrictions lifted "modify, copy, assemble", Output size
+         252.1 KB (258,138 bytes), no /Encrypt; pdf.js read all 4 pages with no password */
+      { browser: { tool: '/pdf/unlock-pdf/', file: 'inventory-report-compressed-protected.pdf, 259,009 bytes', typed: ['Lakeside-Oct26'] }, shown: ['252.1 KB'] }
+    ]
+  },
+
   '/pdf/delete-pdf-pages/': {
     whatTitle: 'What deleting a PDF page really removes',
     whatIs: [
@@ -250,8 +422,8 @@ module.exports = {
       text: 'Each item becomes a few lines of drawing code appended to the page by the site’s own engine; pdf.js draws only the preview.',
       points: [
         'A wrap width breaks lines using Helvetica’s real character widths, and each line steps down 1.25 times the font size.',
-        'Each chosen page gets a new content stream and a font entry, `MVRedit`, for Helvetica: one of the standard 14 fonts readers supply, so nothing is embedded.',
-        'Text is mapped to WinAnsi, which covers Western European letters, curly quotes, dashes and €; most characters outside it become question marks.',
+        'Each chosen page gets a new content stream and a font entry, `MVRedit`, for Helvetica: one of the standard 14 fonts readers supply, so nothing is embedded for it.',
+        'A line WinAnsi cannot hold (Hindi, Greek, Cyrillic, ₹) is drawn instead from a subset of Noto Sans or Noto Sans Devanagari, `MVRu0`, embedded with a map back to the characters.',
         'The file is rebuilt by the assembler merge uses, which keeps the bookmarks, the form fields, the title and the author.'
       ]
     },
@@ -917,18 +1089,18 @@ module.exports = {
     whatTitle: 'What turning plain text into a PDF involves',
     whatIs: [
       'Plain text has characters and line breaks but no page. To become a PDF it must be typeset: broken into lines that fit a measured width, gathered into pages and drawn in a font the viewer can show.',
-      'The PDF standard names 14 base fonts that readers have long been expected to provide, Helvetica, Times and Courier among them. Using only those means no font data in the file, but only the characters their WinAnsi encoding holds.'
+      'The PDF standard names 14 base fonts that readers have long been expected to provide, Helvetica, Times and Courier among them. They need no font data in the file, but hold only the characters of their WinAnsi encoding; any other script needs a font embedded.'
     ],
     howItWorks: {
-      text: 'Your text is laid out by the page’s own script and written by `createPDF` in the site’s engine; no font file is fetched or embedded.',
+      text: 'Your text is laid out and written by the site’s own engine; a font file is fetched and embedded only when the text needs one.',
       points: [
         'Each paragraph is wrapped word by word, using the font’s character widths at the chosen size, within the page width less both margins.',
-        'Each line becomes a `Tj` command in WinAnsi: curly quotes, dashes, € and ½ have their own codes; anything else becomes “?”.',
+        'Each line becomes a `Tj` command in WinAnsi: curly quotes, dashes, € and ½ have their own codes. Text with anything else is set in Noto Sans, glyph by glyph, Hindi shaped by HarfBuzz.',
         'A Document title goes into the file’s Title property and its name, not onto the page.'
       ]
     },
     worked: {
-      text: 'Take 1,200 words written as 200 short numbered sentences. One sentence per line on A4 at 11 pt fills 200 lines over 5 pages (47 lines a page, 18.7 KB). Joined into one paragraph, they wrap to 67 lines in Helvetica, 58 in Times and 86 in Courier, 2 pages each, at 10.6 KB, 10.1 KB and 11.5 KB. In a second test, “Advance: ₹1500 or €18 — paid ½ now” kept the euro sign, the dash and the half, but the rupee sign came out as “?”, and a 126-character URL with no spaces ran past the margin and off the page.'
+      text: 'Take 1,200 words written as 200 short numbered sentences. One sentence per line on A4 at 11 pt fills 200 lines over 5 pages (47 lines a page, 18.7 KB). Joined into one paragraph, they wrap to 67 lines in Helvetica, 58 in Times and 86 in Courier, 2 pages each, at 10.6 KB, 10.1 KB and 11.5 KB. A second test, “Advance: ₹1500 or €18 — paid ½ now”, came back exactly, rupee sign included, on a 7.4 KB page set in Noto Sans; a 126-character URL with no spaces still ran off the page.'
     },
     uses: [
       ['Claim forms', 'Turn a written statement into the PDF an upload form demands.'],
@@ -936,7 +1108,7 @@ module.exports = {
       ['Records', 'Keep a paginated copy of an email or transcript with other PDFs.']
     ],
     mistakes: [
-      'Pasting indented or column-aligned text. Runs of spaces and tabs shrink to one space when lines are wrapped, so code, tables and verse lose their layout, even in Courier.',
+      'Pasting indented or column-aligned text. Runs of spaces and tabs shrink to one space when lines wrap, so code and tables lose their layout.',
       'Expecting the Document title to be printed. It is stored only in the file’s properties and name; type it as the first line if it should appear.'
     ],
     faq: [
@@ -952,7 +1124,8 @@ module.exports = {
       { browser: { text: 'the same 200 sentences joined with spaces', font: 'Times-Roman', size: 11, numbers: 'no' }, shown: ['58 in Times', '10.1 KB'] },
       { browser: { text: 'the same 200 sentences joined with spaces', font: 'Courier', size: 11, numbers: 'no' }, shown: ['86 in Courier', '11.5 KB'] },
       /* Helvetica, numbers off; the output's text read back with pdf.js. */
-      { browser: { text: 'Advance: ₹1500 or €18 — paid ½ now, “balance” later. Łódź office.\nhttps://example.com/a/very/long/path/that/has/no/spaces/at/all/so/it/cannot/be/wrapped/anywhere/by/the/line/breaker/index.html (126 characters)', font: 'Helvetica', numbers: 'no' }, shown: ['came out as “?”', 'off the page'] }
+      /* re-run on 2026-10-06 after Unicode text arrived: the rupee sign and Ł now come back from pdf.js exactly; document.pdf, 1 page, 7,622 bytes; the URL line ends at x 598.7 on a 595.3-wide page */
+      { browser: { text: 'Advance: ₹1500 or €18 — paid ½ now, “balance” later. Łódź office.\nhttps://example.com/a/very/long/path/that/has/no/spaces/at/all/so/it/cannot/be/wrapped/anywhere/by/the/line/breaker/index.html (126 characters)', font: 'Helvetica', numbers: 'no', result: 'document.pdf, 1 page, 7.4 KB (7,622 bytes)' }, shown: ['rupee sign included', '7.4 KB', 'off the page'] }
     ]
   },
 

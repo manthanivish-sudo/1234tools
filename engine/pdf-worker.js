@@ -92,6 +92,8 @@ async function handle(m) {
   try {
     if (m.type === 'init') {
       importScripts(m.core);
+      /* fonts and the shaper are fetched from beside this worker */
+      if (self.MVRPdfCore && self.MVRPdfCore.unicodeFonts) self.MVRPdfCore.unicodeFonts.setFontBase(new URL('./', self.location.href).href);
       for (const s of m.scripts || []) importScripts(s);
       self.postMessage({ type: 'ready' });
       return;

@@ -1638,4 +1638,823 @@ module.exports = function ({ claim, manual, kit: K }) {
   manual(OG, 'tip', 'On a touch screen, drag by the grip in a card\'s corner', 'Touch dragging needs a touch device (pdf-fixes.js covers mouse dragging).');
   manual(M, 'faq', 'Nothing is transmitted, which is why this works offline', 'Offline use needs the service worker and a network switch; the browser check above only shows no upload happened.');
   manual(Q, 'what', 'It applies the single rate you enter; the rate pages it was checked against are under Sources.', 'Sources list on the page; editorial.');
+
+  /* ================================================================ */
+  /* compress, protect, remove a password (wave 2)                     */
+  /* ================================================================ */
+  /* In a block of its own, so its names cannot meet another section's. Encrypted
+     fixtures for Remove a Password come from MuPDF (PyMuPDF, through python), so the
+     encryption is an independent producer's; photos for Compress are JPEGs drawn by a
+     canvas in the page, because only the browser re-encodes pictures. */
+  {
+    const fs = require('fs');
+    const zlib = require('zlib');
+    const { spawnSync } = require('child_process');
+    const WC = '/pdf/compress-pdf/', WP = '/pdf/protect-pdf/', WU = '/pdf/unlock-pdf/';
+    const lat = (b) => Buffer.from(b).toString('latin1');
+    const fmt = (n) => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(2) + ' MB';
+    const hasEncrypt = (b) => /\/Encrypt\b/.test(lat(b));
+    const st = (res, k) => K.stat(res, k) || '';
+    const pk = () => K.pkg();
+    const NN = (s) => new (pk().Name)(s), RR = (n) => new (pk().Ref)(n, 0);
+
+    /** the /Encrypt dictionary of a file the site's writer encrypted, as text */
+    const encDict = (b) => {
+      const s = lat(b);
+      const m = /\/Encrypt\s+(\d+)\s+0\s+R/.exec(s.slice(s.lastIndexOf('trailer')));
+      if (!m) return '';
+      const at = s.indexOf(m[1] + ' 0 obj');
+      return at < 0 ? '' : s.slice(at, s.indexOf('endobj', at));
+    };
+    const hexLen = (d, key) => { const m = new RegExp('/' + key + '\\s*<([0-9a-fA-F]*)>').exec(d); return m ? m[1].length / 2 : -1; };
+    /** object number -> { start, len } of each stored stream, read from the file's bytes (classic layout) */
+    const storedLens = (b) => {
+      const s = lat(b), out = new Map();
+      const re = /(\d+) 0 obj/g;
+      let m;
+      while ((m = re.exec(s))) {
+        const end = s.indexOf('endobj', m.index);
+        if (end < 0) break;
+        const body = s.slice(m.index, end);
+        const k = /stream\r?\n/.exec(body);
+        if (k && /^\d+ 0 obj\s*<</.test(body)) {
+          const start = m.index + k.index + k[0].length;
+          out.set(Number(m[1]), { start, len: s.lastIndexOf('endstream', end) - 1 - start });
+        }
+        re.lastIndex = end;
+      }
+      return out;
+    };
+    /** the text a page draws, hex strings (as MuPDF writes them) decoded too */
+    const textOf = async (b) => {
+      const a = await K.analyse(b);
+      let s = '';
+      for (let i = 0; i < a.pages.length; i++) s += (await a.content(i)).replace(/<([0-9a-fA-F]+)>/g, (x, h) => Buffer.from(h, 'hex').toString('latin1')) + '\n';
+      return s;
+    };
+    /** pictures in a PDF: object number, size, filter and raw bytes */
+    const picsOf = async (b, pw) => {
+      const pkg = pk();
+      const d = await pkg.PDFDocument.load(new Uint8Array(b), { password: pw || '' });
+      return [...d.objects].filter(([n, v]) => v instanceof pkg.PDFStream && v.dict.Subtype && v.dict.Subtype.name === 'Image').map(([n, v]) => ({
+        n, w: Number(v.dict.Width), h: Number(v.dict.Height), raw: Buffer.from(v.raw),
+        f: v.dict.Filter ? (Array.isArray(v.dict.Filter) ? v.dict.Filter.map((x) => x.name).join('+') : v.dict.Filter.name) : 'none'
+      }));
+    };
+    /** the first six luminance quantisers of a JPEG, and what libjpeg's quality scaling gives for q */
+    const dqt = (jpeg) => { const segs = K.jpegSegs(Buffer.from(jpeg)); const q = segs && segs.find((x) => x.m === 0xdb); return q ? Array.from(q.body.slice(1, 7)) : null; };
+    const ijg = (q) => { const sc = q < 50 ? Math.floor(5000 / q) : 200 - q * 2; return [16, 11, 12, 14, 12, 10].map((v) => Math.min(255, Math.max(1, Math.floor((v * sc + 50) / 100)))); };
+
+    /** A4 pages of pictures: [{ images: [{ id, data, w, h, cs, bpc, filter, extra, at: [x, y, dw, dh] }] }];
+        each page also draws its own text and a filled rectangle, in an uncompressed content stream */
+    const build = (pages) => {
+      const { PDFWriter, PDFStream } = pk();
+      const w = new PDFWriter();
+      const cat = w.alloc(), tree = w.alloc();
+      const font = w.add({ Type: NN('Font'), Subtype: NN('Type1'), BaseFont: NN('Helvetica') });
+      const made = new Map(), kids = [];
+      pages.forEach((P, i) => {
+        const xo = {};
+        let ops = 'BT /F1 14 Tf 72 810 Td (W2-PHOTO-' + (i + 1) + ') Tj ET\n0.2 0.4 0.8 rg 72 20 200 12 re f\n';
+        P.images.forEach((im, k) => {
+          let num = made.get(im.id);
+          if (!num) {
+            const d = Object.assign({ Type: NN('XObject'), Subtype: NN('Image'), Width: im.w, Height: im.h, ColorSpace: NN(im.cs || 'DeviceRGB'), BitsPerComponent: im.bpc || 8 }, im.extra || {});
+            if (im.filter !== null) d.Filter = NN(im.filter || 'DCTDecode');
+            Object.keys(d).forEach((key) => { if (d[key] === undefined) delete d[key]; });
+            num = w.add(new PDFStream(d, new Uint8Array(im.data)));
+            made.set(im.id, num);
+          }
+          xo['Im' + k] = RR(num);
+          ops += 'q ' + im.at[2] + ' 0 0 ' + im.at[3] + ' ' + im.at[0] + ' ' + im.at[1] + ' cm /Im' + k + ' Do Q\n';
+        });
+        const c = w.add(new PDFStream({}, new Uint8Array(Buffer.from(ops, 'latin1'))));
+        kids.push(RR(w.add({ Type: NN('Page'), Parent: RR(tree), MediaBox: [0, 0, 595, 842], Resources: { Font: { F1: RR(font) }, XObject: xo }, Contents: RR(c) })));
+      });
+      w.set(tree, { Type: NN('Pages'), Kids: kids, Count: kids.length });
+      w.set(cat, { Type: NN('Catalog'), Pages: RR(tree) });
+      return Buffer.from(w.build(RR(cat), null, '1.7'));
+    };
+    /** a photo-like JPEG (gradient, soft discs, grain) drawn by the page's canvas */
+    const jpeg = (p, w, h, q, seed) => p.evaluate((w, h, q, seed) => {
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const x = c.getContext('2d');
+      const g = x.createLinearGradient(0, 0, w, h);
+      g.addColorStop(0, 'hsl(' + (seed * 47 % 360) + ',60%,55%)'); g.addColorStop(1, 'hsl(' + (seed * 91 % 360) + ',50%,35%)');
+      x.fillStyle = g; x.fillRect(0, 0, w, h);
+      let s = seed * 7919 + 1; const rnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+      for (let i = 0; i < 60; i++) { x.fillStyle = 'hsla(' + Math.floor(rnd() * 360) + ',60%,' + Math.floor(30 + rnd() * 50) + '%,0.5)'; x.beginPath(); x.arc(rnd() * w, rnd() * h, 20 + rnd() * w / 6, 0, 7); x.fill(); }
+      const d = x.getImageData(0, 0, w, h); for (let i = 0; i < d.data.length; i += 4) { const n = (rnd() - 0.5) * 50; d.data[i] += n; d.data[i + 1] += n; d.data[i + 2] += n; }
+      x.putImageData(d, 0, 0);
+      return c.toDataURL('image/jpeg', q).split(',')[1];
+    }, w, h, q, seed).then((b) => Buffer.from(b, 'base64'));
+
+    /* ---------- the page: set, upload, press, read ---------- */
+    const setC = async (p, c) => {
+      const miss = await p.evaluate((c) => Object.keys(c).filter((k) => {
+        const el = document.getElementById('pc-' + k);
+        if (!el) return true;
+        if (el.type === 'checkbox') el.checked = c[k] === true;
+        else if (el.tagName === 'SELECT') el.value = String(c[k]);
+        else { const d = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value'); d.set.call(el, String(c[k])); }
+        el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true }));
+        return false;
+      }), c);
+      if (miss.length) throw new Error('controls not found: ' + miss.join(', '));
+    };
+    const upload = async (p, file) => {
+      await p.evaluate(() => { const b = [...document.querySelectorAll('.file-list .file-row button')].find((x) => x.title === 'Remove'); if (b) b.click(); });
+      await K.pdf.upload(p, [file]);
+    };
+    /** press the run button and wait for this run's result (a summary, or a message once the button is free again) */
+    const press = async (p) => {
+      await p.evaluate(() => { const s = document.querySelector('.pdf-summary'); if (s) s.hidden = true; const m = document.querySelector('.tool-io > .io-msg'); if (m) { m.className = 'io-msg'; m.textContent = ''; } });
+      await p.click('.pdf-run .btn-primary');
+      await p.waitForFunction(() => {
+        const b = document.querySelector('.pdf-run .btn-primary'); const s = document.querySelector('.pdf-summary'); const m = document.querySelector('.tool-io > .io-msg');
+        return !b.disabled && ((s && !s.hidden) || (m && /is-(error|warn|note)/.test(m.className)));
+      }, { timeout: 300000 });
+      return p.evaluate(() => { const m = document.querySelector('.tool-io > .io-msg'); const s = document.querySelector('.pdf-summary'); return { msg: m ? m.textContent : '', cls: m ? m.className : '', done: !!(s && !s.hidden) }; });
+    };
+    const statsOf = async (p) => Object.fromEntries(await p.$$eval('.tool-io .stat-row', (l) => l.map((r) => [r.querySelector('.stat-key').textContent, r.querySelector('.stat-val').textContent])));
+    /** set, press, read the stats and download the result */
+    const go = async (p, controls) => {
+      await setC(p, controls);
+      const r = await press(p);
+      const s = await statsOf(p);
+      const out = r.done ? (await K.pdf.download(p)).bytes : null;
+      return { r, s, out };
+    };
+    /** what pdf.js (the site's copy, in the page) makes of bytes, with a password */
+    const pdfjsPw = (p, bytes, pw) => p.evaluate(async (b64, pw) => {
+      const lib = await import('/engine/vendor/pdfjs/pdf.min.mjs');
+      lib.GlobalWorkerOptions.workerSrc = '/engine/vendor/pdfjs/pdf.worker.min.mjs';
+      const bin = atob(b64); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      try {
+        const pdf = await lib.getDocument({ data: u8, password: pw || undefined, standardFontDataUrl: '/engine/vendor/pdfjs/standard_fonts/' }).promise;
+        const pages = [];
+        for (let i = 1; i <= pdf.numPages; i++) pages.push((await (await pdf.getPage(i)).getTextContent()).items.map((t) => t.str).join(' ').trim());
+        const perms = await pdf.getPermissions();
+        return { pages, perms: perms ? Object.keys(lib.PermissionFlag).filter((k) => perms.includes(lib.PermissionFlag[k])) : null };
+      } catch (e) { return { error: e.name + ':' + (e.code || '') }; }
+    }, Buffer.from(bytes).toString('base64'), pw || '');
+    /** a page whose every request is seen: the service worker an earlier page installed is
+        bypassed (requests it answers never reach the page's interception), and the page reloaded */
+    const openSeen = async (url) => {
+      const p = await K.pdf.open(url);
+      await p.setBypassServiceWorker(true);
+      p.__requests.length = 0;
+      await p.reload({ waitUntil: 'load' });
+      await p.evaluate(() => { const b = document.querySelector('.cc'); if (b) b.remove(); });
+      await p.waitForSelector('.pdf-run .btn-primary', { timeout: 30000 });
+      return p;
+    };
+    /** the page's dedicated workers, by script URL */
+    const workersOf = (p) => p.workers().map((w) => w.url());
+    /** everything the page keeps: local and session storage, cookies */
+    const kept = (p) => p.evaluate(() => [...Object.keys(localStorage).map((k) => k + '=' + localStorage.getItem(k)), ...Object.keys(sessionStorage).map((k) => k + '=' + sessionStorage.getItem(k)), document.cookie].join('\n'));
+
+    /* ---------- MuPDF fixtures (an encrypter that shares no code with the site) ---------- */
+    const MU = [
+      'import pymupdf, sys, os',
+      'out = sys.argv[1]',
+      'def doc(tag, n):',
+      '    d = pymupdf.open()',
+      '    for i in range(n):',
+      '        p = d.new_page(width=595, height=842)',
+      '        p.insert_text((72, 100), tag + "-P" + str(i + 1), fontname="helv", fontsize=16)',
+      '    d.set_toc([[1, "First", 1], [1, "Last", n]])',
+      '    d.set_metadata({"title": "W2C " + tag})',
+      '    return d',
+      'PR = pymupdf.PDF_PERM_PRINT | pymupdf.PDF_PERM_PRINT_HQ | pymupdf.PDF_PERM_ACCESSIBILITY',
+      'for stem, m in [("rc4-40", pymupdf.PDF_ENCRYPT_RC4_40), ("rc4-128", pymupdf.PDF_ENCRYPT_RC4_128), ("aes-128", pymupdf.PDF_ENCRYPT_AES_128), ("aes-256", pymupdf.PDF_ENCRYPT_AES_256)]:',
+      '    doc("W2C-" + stem.upper(), 3).save(os.path.join(out, "w2c-" + stem + ".pdf"), encryption=m, owner_pw="owner-w2c", user_pw="user-w2c", permissions=PR)',
+      'doc("W2C-OBJSTM", 3).save(os.path.join(out, "w2c-aes-256-objstm.pdf"), encryption=pymupdf.PDF_ENCRYPT_AES_256, owner_pw="owner-w2c", user_pw="user-w2c", permissions=PR, use_objstms=1, garbage=3, deflate=True)',
+      'doc("W2C-RESTRICTED", 1).save(os.path.join(out, "w2c-restricted.pdf"), encryption=pymupdf.PDF_ENCRYPT_AES_256, owner_pw="owner-w2c", user_pw="", permissions=pymupdf.PDF_PERM_ACCESSIBILITY)',
+      'print("ok")'
+    ].join('\n');
+    const mu = () => K.once('w2c:mupdf', () => {
+      const r = spawnSync('python', ['-c', MU, K.OUT], { encoding: 'utf8' });
+      if (r.status !== 0) throw new Error('PyMuPDF fixtures could not be written: ' + String(r.stderr || r.error || '').slice(-300));
+      const f = (n) => ({ path: K.out('w2c-' + n + '.pdf'), bytes: new Uint8Array(fs.readFileSync(K.out('w2c-' + n + '.pdf'))) });
+      return { 'rc4-40': f('rc4-40'), 'rc4-128': f('rc4-128'), 'aes-128': f('aes-128'), 'aes-256': f('aes-256'), objstm: f('aes-256-objstm'), restricted: f('restricted') };
+    });
+    /** a file encrypted for a certificate (the public-key handler), not a password */
+    const pubsec = () => {
+      const { PDFWriter } = pk();
+      const w = new PDFWriter();
+      const cat = w.alloc(), pages = w.alloc();
+      const pg = w.add({ Type: NN('Page'), Parent: RR(pages), MediaBox: [0, 0, 595, 842] });
+      w.set(pages, { Type: NN('Pages'), Kids: [RR(pg)], Count: 1 });
+      w.set(cat, { Type: NN('Catalog'), Pages: RR(pages) });
+      const enc = w.add({ Filter: NN('Adobe.PubSec'), SubFilter: NN('adbe.pkcs7.s5'), V: 4, R: 4, Length: 128, Recipients: [pk().pdfString('x'.repeat(40))] });
+      let b = lat(w.build(RR(cat), null, '1.7'));
+      b = b.replace(/trailer\s*<</, 'trailer\n<< /Encrypt ' + enc + ' 0 R /ID [<00112233445566778899aabbccddeeff> <00112233445566778899aabbccddeeff>]');
+      return new Uint8Array(Buffer.from(b, 'latin1'));
+    };
+
+    /* ================= Compress PDF ================= */
+
+    /* Node: no canvas here, so pictures stay; the structure is what changes */
+    const structFix = () => K.once('w2c:struct', () => {
+      const { PDFWriter, PDFStream, pdfString } = pk();
+      const w = new PDFWriter();
+      const cat = w.alloc(), tree = w.alloc();
+      const grey = Buffer.alloc(96 * 96); for (let i = 0; i < grey.length; i++) grey[i] = (i * 7 + (i >> 6)) & 255;
+      const pix = new Uint8Array(zlib.deflateSync(grey));
+      const img = (k) => w.add(new PDFStream({ Type: NN('XObject'), Subtype: NN('Image'), Width: 96, Height: 96, ColorSpace: NN('DeviceGray'), BitsPerComponent: 8, Filter: NN('FlateDecode') }, pix));
+      const imA = img(), imB = img();                               /* the same picture stored twice */
+      w.add({ Type: NN('Annot'), Subtype: NN('Text'), Rect: [0, 0, 1, 1], Contents: pdfString('W2C-ORPHAN-MARKER') });   /* nothing refers to it */
+      const kids = [];
+      for (let i = 0; i < 3; i++) {
+        const f = w.add({ Type: NN('Font'), Subtype: NN('Type1'), BaseFont: NN('Helvetica'), Encoding: NN('WinAnsiEncoding') });  /* identical on every page */
+        const ops = 'BT /F1 18 Tf 72 760 Td (W2C-STRUCT-' + (i + 1) + ') Tj ET\n' + 'BT /F1 9 Tf 72 740 Td (' + 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '.repeat(4) + ') Tj ET\n0 0 1 rg 72 600 200 40 re f\nq 96 0 0 96 72 400 cm /Im1 Do Q\n';
+        const c = w.add(new PDFStream({}, new Uint8Array(Buffer.from(ops, 'latin1'))));
+        kids.push(RR(w.add({ Type: NN('Page'), Parent: RR(tree), MediaBox: [0, 0, 595, 842], Resources: { Font: { F1: RR(f) }, XObject: { Im1: RR(i === 0 ? imA : imB) } }, Contents: RR(c) })));
+      }
+      w.set(tree, { Type: NN('Pages'), Kids: kids, Count: 3 });
+      w.set(cat, { Type: NN('Catalog'), Pages: RR(tree) });
+      const info = w.add({ Title: pdfString('W2C structure fixture') });
+      return { bytes: new Uint8Array(w.build(RR(cat), RR(info), '1.4')), pix: Buffer.from(pix) };
+    });
+    const lossless = () => K.once('w2c:lossless', async () => {
+      const f = await structFix();
+      return { f, res: await K.runPdf('compress-pdf', [{ name: 'struct.pdf', bytes: f.bytes }], { preset: 'lossless' }) };
+    });
+    claim(WC, 'tip', 'Lossless rewrites only the structure: text and drawing streams compressed, identical fonts and pictures stored once, unused objects left behind, the table of objects packed.',
+      'lossless: content deflated, 3 identical fonts and 2 identical pictures stored once, the orphan gone, an xref stream', N, async () => {
+        const { res } = await lossless();
+        const out = K.pdfOut(res);
+        if (!out) return [false, res.error || res.warn || 'no file'];
+        const a = await K.analyse(out);
+        const pics = await picsOf(out);
+        const fonts = [...a.doc.objects.values()].filter((v) => v && v.Type && v.Type.name === 'Font').length;
+        const ok = Number(st(res, 'Streams compressed')) >= 3 && Number(st(res, 'Duplicates stored once')) >= 3 && pics.length === 1 && fonts === 1 &&
+          a.text.indexOf('W2C-ORPHAN-MARKER') < 0 && /\/Type\s*\/XRef/.test(a.text) && /\/Type\s*\/ObjStm/.test(a.text);
+        return [ok, 'streams compressed ' + st(res, 'Streams compressed') + ', duplicates ' + st(res, 'Duplicates stored once') + ', ' + pics.length + ' picture, ' + fonts + ' font object, orphan ' + (a.text.indexOf('W2C-ORPHAN-MARKER') < 0 ? 'gone' : 'kept') + ', xref stream ' + /\/Type\s*\/XRef/.test(a.text)];
+      });
+    claim(WC, 'tip', 'Nothing you can see changes.', 'lossless: every page draws the same text, rectangle and picture bytes as before', N, async () => {
+      const { f, res } = await lossless();
+      const out = K.pdfOut(res);
+      const a = await K.analyse(f.bytes), b = await K.analyse(out);
+      const same = [];
+      for (let i = 0; i < 3; i++) same.push((await a.content(i)).trim() === (await b.content(i)).trim());
+      const pics = await picsOf(out);
+      return [same.every(Boolean) && pics.length === 1 && pics[0].raw.equals(f.pix), 'content identical on ' + same.filter(Boolean).length + ' of 3 pages; picture bytes ' + (pics[0] && pics[0].raw.equals(f.pix) ? 'unchanged' : 'changed')];
+    });
+    claim(WC, 'point', 'the rest is packed into compressed object streams with a cross-reference stream', 'the output has no xref table: object streams and a FlateDecode xref stream', N, async () => {
+      const out = K.pdfOut((await lossless()).res);
+      const s = lat(out);
+      return [!/\nxref\s/.test(s) && !/\ntrailer\s/.test(s) && /\/Type\s*\/ObjStm/.test(s) && /\/Type\s*\/XRef[^>]*\/Filter\s*\/FlateDecode/.test(s.replace(/\n/g, ' ')), (s.match(/\/Type\s*\/ObjStm/g) || []).length + ' object stream(s); classic table ' + (/\nxref\s/.test(s) ? 'present' : 'absent')];
+    });
+    claim(WC, 'tip', 'The size before and after is shown, measured, never estimated.', 'Before and After are the input and output byte counts, formatted', N, async () => {
+      const { f, res } = await lossless();
+      const out = K.pdfOut(res);
+      return [st(res, 'Before') === fmt(f.bytes.length) && st(res, 'After') === fmt(out.length), st(res, 'Before') + ' / ' + st(res, 'After') + ' for ' + f.bytes.length + ' and ' + out.length + ' bytes'];
+    });
+    claim(WC, 'tip', 'A PDF that is mostly text from a modern program may shrink very little: there is not much in it to remove.',
+      'a compact, text-only PDF (object streams already) gains under 5%, or is refused as already compact', N, async () => {
+        const text = K.core().createPDF(Array.from({ length: 6 }, (_, i) => ({ ops: Array.from({ length: 40 }, (_, j) => ({ text: 'Line ' + (j + 1) + ' of page ' + (i + 1) + ': the quick brown fox jumps over the lazy dog.', x: 60, y: 780 - j * 18, size: 10 })) })), {});
+        const first = K.pdfOut(await K.runPdf('compress-pdf', [{ name: 'text.pdf', bytes: text }], { preset: 'lossless' }));
+        const again = await K.runPdf('compress-pdf', [{ name: 'text2.pdf', bytes: first }], { preset: 'email' });
+        const out = K.pdfOut(again);
+        const gain = out ? 1 - out.length / first.length : 0;
+        return [(!out && /already compact/.test(again.warn || '')) || gain < 0.05, out ? (Math.round(gain * 1000) / 10) + '% smaller (' + first.length + ' → ' + out.length + ' bytes)' : again.warn];
+      });
+    claim(WC, 'tip', 'and says so if it never gets there', 'Email on a file whose text alone is over 2 MB: all four steps tried, a warning, the file still offered', N, async () => {
+      const { PDFWriter, PDFStream } = pk();
+      const w = new PDFWriter();
+      const cat = w.alloc(), tree = w.alloc();
+      const font = w.add({ Type: NN('Font'), Subtype: NN('Type1'), BaseFont: NN('Helvetica') });
+      const noise = require('crypto').randomBytes(2800000).toString('base64').match(/.{1,76}/g).map((l) => '% ' + l).join('\n');
+      const c = w.add(new PDFStream({}, new Uint8Array(Buffer.from('BT /F1 12 Tf 72 700 Td (W2C-BIG) Tj ET\n' + noise + '\n', 'latin1'))));
+      const pg = w.add({ Type: NN('Page'), Parent: RR(tree), MediaBox: [0, 0, 595, 842], Resources: { Font: { F1: RR(font) } }, Contents: RR(c) });
+      w.set(tree, { Type: NN('Pages'), Kids: [RR(pg)], Count: 1 });
+      w.set(cat, { Type: NN('Catalog'), Pages: RR(tree) });
+      /* the spec run directly, to hear the steps it reports as it tries them */
+      const tried = [];
+      const doc = await K.core().PDFDocument.load(w.build(RR(cat), null, '1.7'));
+      const res = await K.pdfSpec('compress-pdf').run({ docs: [{ doc, name: 'big.pdf' }], opts: Object.assign(K.pdfDefaults('compress-pdf'), { preset: 'email' }), core: K.core(), progress: (a, b, label) => { if (/^Trying/.test(label || '')) tried.push(label); } });
+      return [!!K.pdfOut(res) && /^Under 2 MB was not reached/.test(res.warn || '') && tried.join(' | ') === 'Trying 150 DPI, quality 72 | Trying 120 DPI, quality 62 | Trying 96 DPI, quality 50 | Trying 72 DPI, quality 40',
+        tried.join(' | ') + ' → ' + (res.warn || 'no warning')];
+    });
+    claim(WC, 'faq', 'which carries bookmarks, links, comments and form fields across. Only the metadata is removed by default, and you can choose to keep it.',
+      'compressed: bookmarks, links, comment and fields kept; Info and XMP gone by default, Title kept with "Keep it"', N, async () => {
+        const src = await sec('A');
+        const res = await K.runPdf('compress-pdf', [{ name: 'a.pdf', bytes: src }], {});
+        const a = await K.analyse(K.pdfOut(res));
+        const ol = (await a.outline()).map((o) => o.title).join(',');
+        const fl = ((await a.fields()) || []).join(',');
+        const an = [...(await a.annots(0)), ...(await a.annots(1))].map((x) => x.Subtype.name);
+        const keep = await K.analyse(K.pdfOut(await K.runPdf('compress-pdf', [{ name: 'a.pdf', bytes: src }], { metadata: 'keep' })));
+        const ok = ol === 'Cover,Payment,Terms' && fl === 'name,account' && an.filter((x) => x === 'Link').length === 3 && an.includes('Text') &&
+          JSON.stringify(a.info) === '{}' && a.root.Metadata === undefined && keep.info.Title === 'Secrets A';
+        return [ok, 'outline ' + ol + '; fields ' + fl + '; annots ' + an.join(',') + '; info ' + K.j(a.info) + '; kept Title ' + keep.info.Title];
+      });
+    claim(WC, 'dfaq', 'Yes: choose My own settings, then 36 to 600 DPI and a JPEG quality from 10 to 100.', 'the custom controls run 36–600 and 10–100, and values outside are held to those ends', N, async () => {
+      const c = Object.fromEntries(K.pdfSpec('compress-pdf').controls.map((x) => [x.key, x]));
+      const f = { name: 'p.pdf', bytes: await plainN(1) };
+      const hi = st(await K.runPdf('compress-pdf', [f], { preset: 'custom', dpi: 1000, quality: 500 }), 'Settings');
+      const lo = st(await K.runPdf('compress-pdf', [f], { preset: 'custom', dpi: 5, quality: 1 }), 'Settings');
+      const ok = c.dpi.min === 36 && c.dpi.max === 600 && c.quality.min === 10 && c.quality.max === 100 && c.preset.options.some((o) => o.value === 'custom' && /My own settings/.test(o.label)) &&
+        hi === '600 DPI pictures, JPEG quality 100' && lo === '36 DPI pictures, JPEG quality 10';
+      return [ok, 'dpi ' + c.dpi.min + '–' + c.dpi.max + ', quality ' + c.quality.min + '–' + c.quality.max + '; 1000/500 → ' + hi + '; 5/1 → ' + lo];
+    });
+    claim(WC, 'dfaq', 'A protected file is opened with its password, asked for when you add it, and the smaller copy is saved without one',
+      'an AES-256 file opened with its password compresses to a file with no /Encrypt', N, async () => {
+        const enc = await K.core().protectDocument(await K.core().PDFDocument.load(await sec('A')), { userPassword: 'cp-pass', method: 'AES-256' });
+        const out = K.pdfOut(await K.runPdf('compress-pdf', [{ name: 'enc.pdf', bytes: enc, password: 'cp-pass' }], {}));
+        const t = out ? (await pagesOf(out)).join(' ') : '';
+        return [!!out && !hasEncrypt(out) && /MARKER-A1-BODY/.test(t), out ? out.length + ' bytes, /Encrypt ' + (hasEncrypt(out) ? 'present' : 'absent') : 'no file'];
+      });
+
+    /* Browser: pictures are re-encoded only where there is a canvas */
+    const photoRun = () => K.once('w2c:photo', async () => {
+      const p = await K.pdf.open(WC);
+      try {
+        /* page 1: a 1600 x 1200 photo printed 5 cm wide; page 2: one picture printed 100 pt and 300 pt wide */
+        const a = await jpeg(p, 1600, 1200, 0.92, 21), b = await jpeg(p, 1600, 1200, 0.92, 22);
+        const cm5 = 5 / 2.54 * 72;
+        const src = build([
+          { images: [{ id: 'a', data: a, w: 1600, h: 1200, at: [72, 500, cm5, cm5 * 0.75] }] },
+          { images: [{ id: 'b', data: b, w: 1600, h: 1200, at: [72, 600, 100, 75] }, { id: 'b', at: [72, 200, 300, 225] }] }
+        ]);
+        await upload(p, K.write('w2c-photo.pdf', src));
+        const res = await go(p, { preset: 'custom', dpi: 150, quality: 72, metadata: 'strip' });
+        return { src, a, b, res };
+      } finally { await p.close(); }
+    });
+    claim(WC, 'tip', 'The resolution is measured at the size each picture is printed on the page, so a photo shown 5 cm wide keeps enough pixels for 5 cm.',
+      'a 1600-pixel photo printed 5 cm wide comes out 295 pixels wide at 150 DPI (5 cm = 1.97 in)', B, async () => {
+        const { res } = await photoRun();
+        if (!res.out) return [false, res.r.msg];
+        const pics = await picsOf(res.out);
+        const w5 = Math.round(1600 * (5 / 2.54 * 150) / 1600);
+        const first = pics.find((x) => Math.abs(x.w - w5) <= 1);
+        return [!!first && first.f === 'DCTDecode', 'pictures ' + pics.map((x) => x.w + '×' + x.h + ' ' + x.f).join(', ') + '; 5 cm at 150 DPI = ' + w5 + ' px'];
+      });
+    claim(WC, 'point', 'a picture used twice is sized for its largest use', 'one picture printed 100 pt and 300 pt wide keeps 625 pixels (300 pt at 150 DPI)', B, async () => {
+      const { res } = await photoRun();
+      const pics = await picsOf(res.out);
+      return [pics.length === 2 && pics.some((x) => Math.abs(x.w - 625) <= 1), pics.map((x) => x.w + ' px').join(', ')];
+    });
+    claim(WC, 'point', 'A picture printed at more than the chosen DPI is scaled to fit it, laid on white and saved as JPEG at the chosen quality.',
+      'both photos scaled and saved as JPEG whose quantisation tables are libjpeg\'s for quality 72', B, async () => {
+        const { res } = await photoRun();
+        const pics = await picsOf(res.out);
+        const want = ijg(72);
+        const q = pics.map((x) => dqt(x.raw));
+        return [pics.length === 2 && pics.every((x) => x.f === 'DCTDecode' && x.w < 1600) && q.every((t) => t && t.join() === want.join()),
+          'DQT ' + q.map((t) => t && t.join(' ')).join(' | ') + ' (quality 72: ' + want.join(' ') + '); stats ' + res.s.Settings];
+      });
+    claim(WC, 'dfaq', 'Pages keep their size and every picture its place and printed size; only the pixels inside change.',
+      'MediaBox and every page\'s drawing (cm matrices, text, rectangle) identical; only the pictures\' pixel counts differ', B, async () => {
+        const { src, res } = await photoRun();
+        const a = await K.analyse(src), b = await K.analyse(res.out);
+        const boxes = a.pages.map((x) => K.j(x.dict.MediaBox)).join() === b.pages.map((x) => K.j(x.dict.MediaBox)).join();
+        const same = [];
+        for (let i = 0; i < a.pages.length; i++) same.push((await a.content(i)).trim() === (await b.content(i)).trim());
+        return [boxes && same.every(Boolean), 'MediaBox ' + (boxes ? 'same' : 'changed') + '; content identical on ' + same.filter(Boolean).length + ' of ' + same.length + ' pages'];
+      });
+    claim(WC, 'faq', 'Text and vector drawings are never turned into pictures: their streams are only compressed, which is lossless.',
+      'after re-encoding the photos, the text and the filled rectangle are still in the content and no new picture was added', B, async () => {
+        const { src, res } = await photoRun();
+        const b = await K.analyse(res.out);
+        const c = (await b.content(0)) + (await b.content(1));
+        const before = (await picsOf(src)).length, after = (await picsOf(res.out)).length;
+        return [/\(W2-PHOTO-1\) Tj/.test(c) && /\(W2-PHOTO-2\) Tj/.test(c) && /72 20 200 12 re f/.test(c) && after === before, 'text and rectangle ' + (/72 20 200 12 re f/.test(c) ? 'in the content' : 'missing') + '; pictures ' + before + ' → ' + after];
+      });
+
+    const resRun = () => K.once('w2c:res', async () => {
+      const p = await K.pdf.open(WC);
+      try {
+        /* all printed 2 in (144 pt) wide, which is 300 px at 150 DPI */
+        const exact = await jpeg(p, 1200, 900, 0.97, 31);    /* printed 8 in wide: exactly 150 DPI */
+        const small = await jpeg(p, 300, 225, 0.8, 32);      /* exactly 150 DPI, under 24 KB */
+        const near = await jpeg(p, 330, 248, 0.95, 33);      /* 300 / 330: 9% to remove */
+        const far = await jpeg(p, 375, 281, 0.95, 34);       /* 300 / 375: 20% to remove */
+        const src = build([{ images: [
+          { id: 'exact', data: exact, w: 1200, h: 900, at: [10, 400, 576, 432] },
+          { id: 'small', data: small, w: 300, h: 225, at: [72, 72, 144, 108] },
+          { id: 'near', data: near, w: 330, h: 248, at: [230, 72, 144, 108] },
+          { id: 'far', data: far, w: 375, h: 281, at: [390, 72, 144, 108] }
+        ] }]);
+        await upload(p, K.write('w2c-res.pdf', src));
+        const res = await go(p, { preset: 'custom', dpi: 150, quality: 75 });
+        return { src, exact, small, near, far, res, pics: res.out ? await picsOf(res.out) : [] };
+      } finally { await p.close(); }
+    });
+    const byW = (pics, w) => pics.find((x) => x.w === w);
+    claim(WC, 'tip', 'A picture already at or near the resolution you choose is not touched.',
+      'pictures printed at, or within 13% of, 150 DPI come out with their original bytes', B, async () => {
+        const { exact, small, near, pics } = await resRun();
+        const e = byW(pics, 1200), s = byW(pics, 300), n = byW(pics, 330);
+        const same = (x, b) => !!x && x.raw.equals(b);
+        return [same(e, exact) && same(s, small) && same(n, near),
+          'at 150 DPI, 1200 px: ' + (e ? exact.length + ' → ' + e.raw.length + ' bytes' : 'missing') + '; under 24 KB, 300 px: ' + (s ? small.length + ' → ' + s.raw.length : 'missing') + '; 330 px (9% over): ' + (n ? near.length + ' → ' + n.raw.length + ' bytes' : 'missing')];
+      });
+    claim(WC, 'point', 'Scaling is skipped when it would remove less than 13% of the width, and a picture under 24 KB that needs no scaling is left alone.',
+      '330 px for 300 keeps its 330 pixels; 375 px for 300 is scaled to 300; a 300 px picture under 24 KB keeps its bytes', B, async () => {
+        const { small, pics } = await resRun();
+        const s = byW(pics, 300) && pics.filter((x) => x.w === 300);
+        const scaledFar = pics.filter((x) => x.w === 300).length === 2;
+        return [!!byW(pics, 330) && scaledFar && s.some((x) => x.raw.equals(small)), 'widths out: ' + pics.map((x) => x.w).join(', ')];
+      });
+    claim(WC, 'tip', 'A picture is only replaced when the re-encoded version is actually smaller.',
+      'a heavily compressed 3000-pixel JPEG that Print would only make bigger keeps its bytes, and the list says why', B, async () => {
+        const p = await K.pdf.open(WC);
+        try {
+          const lo = await jpeg(p, 3000, 2000, 0.05, 41);
+          /* printed 1080 x 720 pt: 3000 px at 200 DPI, so Print does not scale it */
+          await upload(p, K.write('w2c-notsmaller.pdf', build([{ images: [{ id: 'lo', data: lo, w: 3000, h: 2000, at: [0, 0, 1080, 720] }] }])));
+          const res = await go(p, { preset: 'print' });
+          const pics = res.out ? await picsOf(res.out) : [];
+          return [pics.length === 1 && pics[0].raw.equals(lo) && /re-encoding would not make it smaller/.test(res.s['Pictures kept as they were'] || ''),
+            (res.s['Pictures kept as they were'] || 'no kept list') + '; bytes ' + (pics[0] && pics[0].raw.equals(lo) ? 'unchanged' : 'changed')];
+        } finally { await p.close(); }
+      });
+    const keptRun = () => K.once('w2c:kept', async () => {
+      const p = await K.pdf.open(WC);
+      try {
+        const cmyk = Buffer.from(zlib.deflateSync(Buffer.from(Array.from({ length: 800 * 600 * 4 }, (_, i) => (i * 37 + (i >> 9)) & 255))));
+        const mask = Buffer.from(zlib.deflateSync(Buffer.from(Array.from({ length: 1000 * 1000 / 8 }, (_, i) => (i * 131) & 255))));
+        const jpx = Buffer.alloc(40000, 7);
+        const ccitt = Buffer.alloc(30000, 0x55), jbig2 = Buffer.alloc(30000, 0x33);
+        const ims = [
+          { id: 'k', data: cmyk, w: 800, h: 600, cs: 'DeviceCMYK', filter: 'FlateDecode', at: [200, 600, 100, 75] },
+          { id: 'm', data: mask, w: 1000, h: 1000, bpc: 1, filter: 'FlateDecode', extra: { ImageMask: true, ColorSpace: undefined }, at: [72, 400, 100, 100] },
+          { id: 'j', data: jpx, w: 2000, h: 1500, filter: 'JPXDecode', at: [200, 400, 100, 75] },
+          { id: 'c', data: ccitt, w: 2480, h: 3508, cs: 'DeviceGray', bpc: 1, filter: 'CCITTFaxDecode', extra: { DecodeParms: { K: -1, Columns: 2480, Rows: 3508 } }, at: [300, 100, 100, 141] },
+          { id: 'g', data: jbig2, w: 2480, h: 3508, cs: 'DeviceGray', bpc: 1, filter: 'JBIG2Decode', at: [420, 100, 100, 141] }
+        ];
+        await upload(p, K.write('w2c-kept.pdf', build([{ images: ims }])));
+        const res = await go(p, { preset: 'screen' });
+        return { ims, res, pics: res.out ? await picsOf(res.out) : [] };
+      } finally { await p.close(); }
+    });
+    claim(WC, 'tip', 'Stencil masks, CMYK pictures and formats the browser cannot decode, such as JPEG 2000, are left as they were, and the results list says how many and why.',
+      'a stencil mask, a CMYK picture and a JPEG 2000 one keep their bytes; the list reads "1 CMYK; 1 a stencil mask; 1 a format the browser cannot decode"', B, async () => {
+        const { ims, res, pics } = await keptRun();
+        const list = res.s['Pictures kept as they were'] || '';
+        const same = ['k', 'm', 'j'].every((id) => { const im = ims.find((x) => x.id === id); return pics.some((x) => x.raw.equals(im.data)); });
+        return [same && /1 CMYK/.test(list) && /1 a stencil mask/.test(list) && /a format the browser cannot decode \(JPEG 2000/.test(list), list + '; bytes ' + (same ? 'unchanged' : 'changed')];
+      });
+    claim(WC, 'mistake', 'Such pages are often stored as 1-bit CCITT or JBIG2 pictures, already compact, and those are left as they are.',
+      'a 1-bit CCITT picture and a 1-bit JBIG2 one keep their bytes', B, async () => {
+        const { ims, res, pics } = await keptRun();
+        const same = ['c', 'g'].every((id) => { const im = ims.find((x) => x.id === id); return pics.some((x) => x.raw.equals(im.data)); });
+        return [same, (res.s['Pictures kept as they were'] || '') + '; CCITT and JBIG2 bytes ' + (same ? 'unchanged' : 'changed')];
+      });
+    const emailRun = () => K.once('w2c:email', async () => {
+      const p = await K.pdf.open(WC);
+      try {
+        /* eight full-page photos, 1800 x 2547 px: about 15 MB */
+        const pages = [];
+        for (let i = 0; i < 8; i++) pages.push({ images: [{ id: 'e' + i, data: await jpeg(p, 1800, 2547, 0.9, i + 1), w: 1800, h: 2547, at: [0, 0, 595, 842] }] });
+        const src = build(pages);
+        await upload(p, K.write('w2c-email.pdf', src));
+        const email = await go(p, { preset: 'email' });
+        const at150 = await go(p, { preset: 'custom', dpi: 150, quality: 72 });
+        return { src, email, at150 };
+      } finally { await p.close(); }
+    });
+    claim(WC, 'tip', 'Email is the place to start: it tries 150 DPI first and steps down, to 72 DPI at the lowest, only until the file is under 2 MB',
+      'eight full-page photos: 150 DPI gives over 2 MB, so Email stops at 120 DPI, quality 62, under 2 MB', B, async () => {
+        const { email, at150 } = await emailRun();
+        const ok = !!email.out && email.out.length <= 2 * 1048576 && /^120 DPI pictures, JPEG quality 62/.test(email.s.Settings || '') && !!at150.out && at150.out.length > 2 * 1048576;
+        return [ok, '150 DPI q72: ' + (at150.out ? fmt(at150.out.length) : '-') + '; Email: ' + (email.s.Settings || email.r.msg) + ', ' + (email.out ? fmt(email.out.length) : '-')];
+      });
+    claim(WC, 'faq', 'Scans and photo-heavy files usually shrink a great deal', 'eight full-page photos shrink by more than 80% with Email', B, async () => {
+      const { src, email } = await emailRun();
+      return [!!email.out && email.out.length < src.length * 0.2, fmt(src.length) + ' → ' + (email.out ? fmt(email.out.length) : '-') + ' (' + email.s.Change + ')'];
+    });
+    claim(WC, 'faq', 'Nothing you add is uploaded, which is also why it keeps working with the network off.',
+      'a compression with the network switched off still produces a file; every request a GET to the site; the work done in the page\'s pdf-worker.js', B, async () => {
+        const p = await openSeen(WC);
+        try {
+          await upload(p, K.write('w2c-offline.pdf', (await photoRun()).src));
+          await go(p, { preset: 'screen' });
+          await p.setOfflineMode(true);
+          const res = await go(p, { preset: 'smallest' });
+          await p.setOfflineMode(false);
+          const bad = p.__requests.filter((r) => r.method !== 'GET' || !r.url.startsWith(K.BASE));
+          const worker = workersOf(p).some((u) => /\/engine\/pdf-worker\.js/.test(u));
+          return [!!res.out && /^72 DPI/.test(res.s.Settings || '') && p.__requests.length > 0 && !bad.length && worker, 'offline run: ' + (res.out ? res.out.length + ' bytes, ' + res.s.Settings : res.r.msg) + '; ' + (bad.length ? bad.map((r) => r.method + ' ' + r.url).join(', ') : p.__requests.length + ' requests, all GET to the site') + '; workers ' + (workersOf(p).join(', ') || 'none')];
+        } finally { await p.close(); }
+      });
+    manual(WC, 'mistake', 'At 72 DPI a photo looks soft on paper', 'How a print looks needs a printer and a person; the 72 and 200 DPI settings themselves are checked by the Settings rows above.');
+
+    /* ================= Protect PDF with a Password ================= */
+
+    const protect = async (bytes, opts) => K.runPdf('protect-pdf', [{ name: 'in.pdf', bytes }], Object.assign({ userPassword: '', userPassword2: '' }, opts));
+    const prA = () => K.once('w2p:A', async () => K.pdfOut(await protect(await sec('A'), { userPassword: 'pr-open', userPassword2: 'pr-open', ownerPassword: 'pr-owner' })));
+    const prRestricted = () => K.once('w2p:restricted', async () => K.pdfOut(await protect(await sec('A'), { allowPrint: false, allowCopy: false })));
+    const loadCode = async (b, pw) => { try { await K.core().PDFDocument.load(b, { password: pw || '' }); return 'opened'; } catch (e) { return e.code || e.message; } };
+
+    claim(WP, 'tip', 'AES-256 is the default and what current readers expect.', 'the default writes /V 5 /R 6 with AESV3 crypt filters', N, async () => {
+      const d = encDict(await prA());
+      return [K.pdfDefaults('protect-pdf').method === 'AES-256' && /\/V 5 \/R 6 \/Length 256/.test(d) && /\/CFM \/AESV3/.test(d), d.replace(/<[0-9a-f]{20,}>/g, '<…>').slice(0, 160)];
+    });
+    manual(WP, 'tip', 'Choose AES-128 only for a reader from before 2010 that refuses the file.', 'Which old readers refuse AES-256 needs those readers; the AES-128 output itself is checked below.');
+    claim(WP, 'tip', 'A password to open it is real encryption: every page, picture and font is encrypted and cannot be read without it.',
+      'without the password: refused; no stream inflates, and the picture, text and field markers are not in the bytes', N, async () => {
+        const out = await prA();
+        const s = lat(out);
+        const lens = storedLens(out);
+        let inflatable = 0;
+        for (const { start, len } of lens.values()) {
+          try { zlib.inflateSync(Buffer.from(out.slice(start, start + len))); inflatable++; } catch (e) { /* encrypted */ }
+        }
+        const code = await loadCode(out);
+        return [code === 'password' && inflatable === 0 && !/MARKER-A2-IMG|MARKER-A2-FIELD|Secrets A/.test(s), 'load without a password: ' + code + '; ' + inflatable + ' of ' + lens.size + ' streams inflate; markers ' + (/MARKER-A2-IMG|Secrets A/.test(s) ? 'visible' : 'absent')];
+      });
+    claim(WP, 'tip', 'Restrictions without an open password are different: readers honour them, but they are a request, not a lock.',
+      'a no-print, no-copy file opens with no password, its text reads, and Remove a Password lifts the flags with none', N, async () => {
+        const out = await prRestricted();
+        const d = await K.core().PDFDocument.load(out);
+        const t = (await pagesOf(out)).join(' ');
+        const u = K.pdfOut(await K.runPdf('unlock-pdf', [{ name: 'r.pdf', bytes: out }], {}));
+        return [d.security.openedWith === 'empty' && d.security.permissions.print === false && /MARKER-A1-BODY/.test(t) && !!u && !hasEncrypt(u),
+          'opened ' + d.security.openedWith + ', print ' + d.security.permissions.print + '; text ' + (/MARKER-A1-BODY/.test(t) ? 'read' : 'not read') + '; lifted copy ' + (u ? 'has no /Encrypt' : 'not made')];
+      });
+    claim(WP, 'faq', 'Restrictions on printing or copying without an open password are not encryption of that kind and should not be relied on.',
+      'the restricted file needs no password to decrypt, so any program can read it', N, async () => {
+        const out = await prRestricted();
+        return [(await loadCode(out)) === 'opened' && /MARKER-A1-BODY/.test((await pagesOf(out)).join(' ')), 'opened without a password and read'];
+      });
+    claim(WP, 'tip', 'Leave the owner password empty and a random one is used, so nobody, you included, can lift the restrictions later. Set one if you will want to.',
+      'empty owner: the open password is not owner, the empty one fails, and two runs write different /O; a set owner password opens as owner', N, async () => {
+        const src = await plainN(2);
+        const opts = { userPassword: 'u-w2p', userPassword2: 'u-w2p', allowCopy: false, method: 'AES-128' };
+        const a = K.pdfOut(await protect(src, opts)), b = K.pdfOut(await protect(src, opts));
+        const oA = /\/O\s*<([0-9a-f]+)>/.exec(encDict(a))[1], oB = /\/O\s*<([0-9a-f]+)>/.exec(encDict(b))[1];
+        const asUser = await K.core().PDFDocument.load(a, { password: 'u-w2p' });
+        const set = K.pdfOut(await protect(src, Object.assign({}, opts, { ownerPassword: 'boss-w2p' })));
+        const asOwner = await K.core().PDFDocument.load(set, { password: 'boss-w2p' });
+        return [!asUser.security.isOwner && (await loadCode(a, '')) === 'password' && oA !== oB && asOwner.security.isOwner,
+          'open password → owner ' + asUser.security.isOwner + '; empty → ' + (await loadCode(a, '')) + '; /O differs between runs ' + (oA !== oB) + '; set owner → owner ' + asOwner.security.isOwner];
+      });
+    claim(WP, 'faq', 'Everything: every page, bookmarks, links, comments, form fields and the title. The document is rewritten and then every string and stream in it is encrypted.',
+      'opened with the password: 3 pages, bookmarks, links, comment, both fields and the Title; none of their strings in clear', N, async () => {
+        const out = await prA();
+        const pkg = pk();
+        const doc = await pkg.PDFDocument.load(out, { password: 'pr-open' });
+        const info = await doc.getInfo();
+        const pages = await doc.getPages();
+        const raw = lat(out);
+        const cleartext = ['Cover', 'Payment', 'Terms', 'https://www.1234tools.com/', 'MARKER-A2-COMMENT', 'account', 'Secrets A'].filter((x) => raw.indexOf(x) >= 0);
+        const dec = await K.core().PDFDocument.load(out, { password: 'pr-open' });
+        const plain = await K.core().protectDocument(dec, { protect: false });
+        const a = await K.analyse(plain);
+        const ol = (await a.outline()).map((o) => o.title).join(',');
+        const fl = ((await a.fields()) || []).join(',');
+        const an = [...(await a.annots(0)), ...(await a.annots(1))].map((x) => x.Subtype.name);
+        return [pages.length === 3 && info.Title === 'Secrets A' && ol === 'Cover,Payment,Terms' && fl === 'name,account' && an.includes('Link') && an.includes('Text') && !cleartext.length,
+          pages.length + ' pages, Title ' + info.Title + ', outline ' + ol + ', fields ' + fl + ', annots ' + an.join(',') + '; in clear: ' + (cleartext.join(', ') || 'none')];
+      });
+    claim(WP, 'point', 'AES-256 writes revision 6 from PDF 2.0: a random 256-bit file key, wrapped once for each password with an iterated SHA-2 hash and its own random salt.',
+      '/V 5 /R 6 with 48-byte U and O (hash plus two salts) and 32-byte UE and OE; the same password twice gives different U', N, async () => {
+        const src = await plainN(1);
+        const a = encDict(K.pdfOut(await protect(src, { userPassword: 'same', userPassword2: 'same' })));
+        const b = encDict(K.pdfOut(await protect(src, { userPassword: 'same', userPassword2: 'same' })));
+        const u = (d) => /\/U\s*<([0-9a-f]+)>/.exec(d)[1];
+        return [/\/V 5 \/R 6/.test(a) && hexLen(a, 'U') === 48 && hexLen(a, 'O') === 48 && hexLen(a, 'UE') === 32 && hexLen(a, 'OE') === 32 && u(a) !== u(b),
+          'U ' + hexLen(a, 'U') + ', O ' + hexLen(a, 'O') + ', UE ' + hexLen(a, 'UE') + ', OE ' + hexLen(a, 'OE') + ' bytes; U differs between runs ' + (u(a) !== u(b))];
+      });
+    claim(WP, 'point', 'AES-128 writes revision 4, which readers from PDF 1.6 onwards understand.', 'AES-128: /V 4 /R 4 /Length 128 with AESV2 crypt filters', N, async () => {
+      const d = encDict(K.pdfOut(await protect(await plainN(1), { userPassword: 'x', userPassword2: 'x', method: 'AES-128' })));
+      return [/\/V 4 \/R 4 \/Length 128/.test(d) && /\/CFM \/AESV2/.test(d), d.replace(/<[0-9a-f]{20,}>/g, '<…>').slice(0, 160)];
+    });
+    claim(WP, 'point', 'Every stream and string gets its own random 16-byte starting vector, so identical pages never encrypt to identical bytes.',
+      'two pages with identical content: their encrypted streams differ from the first byte, and each is 17–32 bytes longer than its plain text', N, async () => {
+        const src = K.core().createPDF([{ ops: [{ text: 'TWIN', x: 72, y: 760, size: 20 }] }, { ops: [{ text: 'TWIN', x: 72, y: 760, size: 20 }] }], {});
+        const out = K.pdfOut(await protect(src, { userPassword: 'twin', userPassword2: 'twin' }));
+        const lens = storedLens(out);
+        const dec = await K.core().PDFDocument.load(out, { password: 'twin' });
+        const s = lat(out);
+        const bodies = [...lens.values()].map(({ start }) => s.slice(start, start + 16));
+        const grow = [...lens].map(([num, x]) => x.len - dec.objects.get(num).raw.length);
+        return [lens.size >= 2 && new Set(bodies).size === bodies.length && grow.every((g) => g >= 17 && g <= 32), lens.size + ' streams, first 16 bytes all different: ' + (new Set(bodies).size === bodies.length) + '; growth ' + grow.join(', ')];
+      });
+    claim(WP, 'dfaq', 'Slightly: each stream gains up to 32 bytes of starting vector and padding.', 'on a 3-page file every encrypted stream is 17 to 32 bytes longer than the decrypted one', N, async () => {
+      const out = await prA();
+      const lens = storedLens(out);
+      const dec = await K.core().PDFDocument.load(out, { password: 'pr-open' });
+      const grow = [...lens].map(([num, x]) => x.len - dec.objects.get(num).raw.length);
+      return [grow.length > 3 && grow.every((g) => g >= 17 && g <= 32), grow.length + ' streams, growth ' + Math.min(...grow) + '–' + Math.max(...grow) + ' bytes'];
+    });
+    claim(WP, 'point', 'Printing covers high-quality printing too, changes cover page assembly, and comments cover form filling; copying for accessibility always stays allowed, so screen readers keep working.',
+      'all four switches off: print, printHighRes, modify, assemble, annotate, fillForms, copy off; accessibility on', N, async () => {
+        const out = K.pdfOut(await protect(await plainN(1), { allowPrint: false, allowCopy: false, allowModify: false, allowAnnotate: false }));
+        const p = (await K.core().PDFDocument.load(out)).security.permissions;
+        const off = ['print', 'printHighRes', 'modify', 'assemble', 'annotate', 'fillForms', 'copy'];
+        return [off.every((k) => p[k] === false) && p.accessibility === true, K.j(p)];
+      });
+    claim(WP, 'mistake', 'Converters and some readers ignore permission bits', 'the site\'s own reader extracts the text of a no-copy file without asking', N, async () => {
+      const out = K.pdfOut(await protect(await plainN(2), { allowCopy: false }));
+      const t = (await pagesOf(out)).join(',');
+      return [(await K.core().PDFDocument.load(out)).security.permissions.copy === false && t === 'PAGE-1,PAGE-2', 'copy allowed: false; text read: ' + t];
+    });
+    manual(WP, 'mistake', 'Sending the password in the same email as the file.', 'Advice about how people send passwords; nothing to run.');
+    manual(WP, 'faq', 'A long passphrase cannot be guessed in any useful time; a short common word can be, by anyone who has the file.', 'Password-guessing cost; a general security statement, not tool behaviour.');
+    claim(WP, 'dfaq', 'Not here: the page takes one file at a time.', 'the spec takes a single file', N, async () => [K.pdfSpec('protect-pdf').multiple === false, 'multiple: ' + K.pdfSpec('protect-pdf').multiple]);
+    claim(WP, 'dfaq', 'Open the protected file in the Remove a Password tool with the old password, then protect the plain copy again with the new one.',
+      'protect, remove with the old password, protect with a new one: the old one no longer opens it, the new one does', N, async () => {
+        const one = await prA();
+        const plain = K.pdfOut(await K.runPdf('unlock-pdf', [{ name: 'a.pdf', bytes: one, password: 'pr-open' }], {}));
+        const two = K.pdfOut(await protect(plain, { userPassword: 'new-pass', userPassword2: 'new-pass' }));
+        const oldC = await loadCode(two, 'pr-open'), newC = await loadCode(two, 'new-pass');
+        return [oldC === 'password' && newC === 'opened', 'old password: ' + oldC + '; new password: ' + newC];
+      });
+    claim(WP, 'faq', 'With a password to open it, the file is encrypted with AES-256 (or AES-128 if you choose it), as the PDF standard specifies',
+      'pdf.js, which shares no code with the site\'s writer, asks for the password of both and reads them with it', B, async () => {
+        const p = await K.pdf.open(WP);
+        try {
+          const rows = [];
+          for (const method of ['AES-256', 'AES-128']) {
+            const out = K.pdfOut(await protect(await plainN(2), { userPassword: 'std-pass', userPassword2: 'std-pass', method }));
+            const none = await pdfjsPw(p, out), ok = await pdfjsPw(p, out, 'std-pass');
+            rows.push({ method, none: none.error, pages: (ok.pages || []).join(',') });
+          }
+          return [rows.every((r) => r.none === 'PasswordException:1' && r.pages === 'PAGE-1,PAGE-2'), K.j(rows)];
+        } finally { await p.close(); }
+      });
+    const protectPage = () => K.once('w2p:page', async () => {
+      const p = await openSeen(WP);
+      try {
+        await upload(p, K.write('w2p-in.pdf', await plainN(3)));
+        const pw = 'Wv2-sëcret-77';
+        const res = await go(p, { userPassword: pw, userPassword2: pw, ownerPassword: 'Wv2-owner-88', method: 'AES-256', allowPrint: true, allowCopy: false, allowModify: true, allowAnnotate: true });
+        await K.sleep(800);                                   /* the page saves its settings 300 ms after the last change */
+        const store = await kept(p);
+        const reqs = p.__requests.slice();
+        const workers = workersOf(p);
+        await p.reload({ waitUntil: 'load' });
+        await p.waitForSelector('.pdf-run .btn-primary', { timeout: 30000 });
+        const after = await p.evaluate(() => ({ user: document.getElementById('pc-userPassword').value, owner: document.getElementById('pc-ownerPassword').value, copy: document.getElementById('pc-allowCopy').checked }));
+        const pj = res.out ? await pdfjsPw(p, res.out, pw) : {};
+        return { pw, res, store: store + '\n' + (await kept(p)), reqs, workers, after, pj };
+      } finally { await p.close(); }
+    });
+    claim(WP, 'tip', 'Passwords are used on this page and forgotten: they are never stored, remembered or sent anywhere. Only the permission switches are remembered for next time.',
+      'after a run and a reload: no password in storage or cookies or any request, the boxes empty, "Allow copying" still off', B, async () => {
+        const { pw, res, store, reqs, after, pj } = await protectPage();
+        const leak = [pw, 'Wv2-owner-88', encodeURIComponent(pw)].filter((x) => store.indexOf(x) >= 0 || reqs.some((r) => r.url.indexOf(x) >= 0));
+        const ok = !!res.out && (pj.pages || []).length === 3 && !leak.length && !reqs.some((r) => r.method !== 'GET') && after.user === '' && after.owner === '' && after.copy === false && /allowCopy/.test(store);
+        return [ok, 'leaks: ' + (leak.join(', ') || 'none') + '; after reload: boxes "' + after.user + '"/"' + after.owner + '", copy ' + after.copy + '; stored: ' + store.split('\n').filter((x) => /protect/.test(x)).join(' ')];
+      });
+    claim(WP, 'faq', 'No. The file is encrypted by your own browser, in a background worker on this page. Nothing you add is uploaded',
+      'protecting a file sends nothing: every request is a GET to the site, and the page runs pdf-worker.js', B, async () => {
+        const { reqs, res, workers } = await protectPage();
+        const bad = reqs.filter((r) => r.method !== 'GET' || !r.url.startsWith(K.BASE));
+        const worker = workers.some((u) => /\/engine\/pdf-worker\.js/.test(u));
+        return [!!res.out && reqs.length > 0 && !bad.length && worker, (bad.length ? bad.map((r) => r.method + ' ' + r.url).join(', ') : reqs.length + ' requests, all GET to the site') + '; workers ' + (workers.join(', ') || 'none')];
+      });
+
+    /* ================= Remove a Password ================= */
+
+    const unl = async (f, pw) => K.runPdf('unlock-pdf', [{ name: 'f.pdf', bytes: f.bytes, password: pw }], {});
+    claim(WU, 'faq', 'Every kind the PDF standard defines for passwords: the older RC4 encryption at 40 and 128 bits, AES-128 and AES-256.',
+      'MuPDF files in all four: each opened with its password, named, and saved with no /Encrypt and its text', N, async () => {
+        const m = await mu();
+        const rows = [];
+        for (const [k, label] of [['rc4-40', 'RC4 40-bit'], ['rc4-128', 'RC4 128-bit'], ['aes-128', 'AES-128'], ['aes-256', 'AES-256']]) {
+          const r = await unl(m[k], 'user-w2c');
+          const out = K.pdfOut(r);
+          const t = out ? await textOf(out) : '';
+          rows.push([k, st(r, 'Was').indexOf(label) === 0, !!out && !hasEncrypt(out), t.indexOf('W2C-' + k.toUpperCase() + '-P1') >= 0]);
+        }
+        return [rows.every((r) => r[1] && r[2] && r[3]), rows.map((r) => r[0] + ': label ' + r[1] + ', plain ' + r[2] + ', text ' + r[3]).join(' | ')];
+      });
+    claim(WU, 'tip', 'This removes a password you know. It does not guess or crack passwords, and a file whose password you do not have cannot be opened here.',
+      'no password and a wrong one are both refused (code "password"); the tool has no controls at all', N, async () => {
+        const m = await mu();
+        const a = await loadCode(m['aes-256'].bytes), b = await loadCode(m['aes-256'].bytes, 'guess');
+        return [a === 'password' && b === 'password' && K.pdfSpec('unlock-pdf').controls.length === 0, 'none: ' + a + ', wrong: ' + b + ', controls ' + K.pdfSpec('unlock-pdf').controls.length];
+      });
+    claim(WU, 'faq', 'It needs the password to decrypt the file; it does not try to guess it.', 'a file opened without its password never reaches the tool: loading stops with code "password"', N, async () => {
+      const m = await mu();
+      let err = null;
+      try { await unl(m['rc4-128'], ''); } catch (e) { err = e.code; }
+      return [err === 'password', 'load without the password: ' + err];
+    });
+    claim(WU, 'point', 'tries what you type both as the open password and as the owner password.', 'the owner password opens a MuPDF RC4 file as owner, and the results say so', N, async () => {
+      const r = await unl((await mu())['rc4-128'], 'owner-w2c');
+      return [st(r, 'Was') === 'RC4 128-bit, opened with the owner password' && !!K.pdfOut(r), st(r, 'Was')];
+    });
+    claim(WU, 'dfaq', 'Either password opens the file, and the results then say it was opened with the owner password.', 'user password: "opened with the password to open it"; owner: "opened with the owner password"', N, async () => {
+      const m = await mu();
+      const a = st(await unl(m['aes-128'], 'user-w2c'), 'Was'), b = st(await unl(m['aes-128'], 'owner-w2c'), 'Was');
+      return [a === 'AES-128, opened with the password to open it' && b === 'AES-128, opened with the owner password', a + ' | ' + b];
+    });
+    claim(WU, 'point', 'Every string and stream is decrypted, object streams included, and the whole document is written to a new file with no permission flags.',
+      'a MuPDF AES-256 file with object streams: the copy has no /Encrypt, every stream decodes, bookmarks and Title read in clear', N, async () => {
+        const out = K.pdfOut(await unl((await mu()).objstm, 'user-w2c'));
+        const a = await K.analyse(out);
+        const bad = a.streams.filter((x) => x.data === null).length;
+        const ol = (await a.outline()).map((o) => o.title).join(',');
+        return [!hasEncrypt(out) && bad === 0 && ol === 'First,Last' && a.info.Title === 'W2C W2C-OBJSTM' && /W2C-OBJSTM-P3/.test(await textOf(out)),
+          a.streams.length + ' streams, ' + bad + ' undecodable; outline ' + ol + '; Title ' + a.info.Title];
+      });
+    claim(WU, 'point', 'The results name the method, the password that opened the file and each restriction lifted, by internal name such as fillForms.',
+      'a MuPDF RC4 128 file allowing only printing: Was names it, Restrictions lifted lists modify, copy, annotate, fillForms, assemble', N, async () => {
+        const r = await unl((await mu())['rc4-128'], 'user-w2c');
+        return [st(r, 'Was') === 'RC4 128-bit, opened with the password to open it' && st(r, 'Restrictions lifted') === 'modify, copy, annotate, fillForms, assemble', st(r, 'Was') + ' | ' + st(r, 'Restrictions lifted')];
+      });
+    claim(WU, 'dfaq', 'Pages, bookmarks, links, form fields and the title come across; only the encryption and permission flags go.',
+      'a protected 3-page file with bookmarks, links, comment and fields: all there after removing the password, no /Encrypt', N, async () => {
+        const out = K.pdfOut(await K.runPdf('unlock-pdf', [{ name: 'a.pdf', bytes: await prA(), password: 'pr-open' }], {}));
+        const a = await K.analyse(out);
+        const ol = (await a.outline()).map((o) => o.title).join(',');
+        const fl = ((await a.fields()) || []).join(',');
+        const an = [...(await a.annots(0)), ...(await a.annots(1))].map((x) => x.Subtype.name);
+        return [a.pages.length === 3 && ol === 'Cover,Payment,Terms' && fl === 'name,account' && an.filter((x) => x === 'Link').length === 3 && a.info.Title === 'Secrets A' && !hasEncrypt(out),
+          a.pages.length + ' pages; outline ' + ol + '; fields ' + fl + '; annots ' + an.join(',') + '; Title ' + a.info.Title];
+      });
+    claim(WU, 'dfaq', 'It has restrictions only: its open password is empty. It is still encrypted, and the copy saved here drops the printing and copying limits.',
+      'a MuPDF file with an empty user password: it carries /Encrypt, opens with none, and the copy has none and no limits', N, async () => {
+        const f = (await mu()).restricted;
+        const d = await K.core().PDFDocument.load(f.bytes);
+        const r = await unl(f, '');
+        const out = K.pdfOut(r);
+        return [hasEncrypt(f.bytes) && d.security.openedWith === 'empty' && !!out && !hasEncrypt(out) && /print/.test(st(r, 'Restrictions lifted')) && /copy/.test(st(r, 'Restrictions lifted')),
+          'source /Encrypt ' + hasEncrypt(f.bytes) + ', opened ' + d.security.openedWith + '; Was ' + st(r, 'Was') + '; lifted ' + st(r, 'Restrictions lifted')];
+      });
+    claim(WU, 'mistake', 'Passwords are case-sensitive, so “lakeside” will not open a file protected with “Lakeside”.', 'protected with "Lakeside": "lakeside" is refused, "Lakeside" opens', N, async () => {
+      const out = K.pdfOut(await protect(await plainN(1), { userPassword: 'Lakeside', userPassword2: 'Lakeside' }));
+      const a = await loadCode(out, 'lakeside'), b = await loadCode(out, 'Lakeside');
+      return [a === 'password' && b === 'opened', '"lakeside": ' + a + ', "Lakeside": ' + b];
+    });
+    manual(WU, 'tip', 'Use it only on files you have the right to change', 'A statement about the reader\'s rights; nothing to run.');
+    manual(WU, 'faq', 'their covering email or letter usually says what the password is made of, often a date of birth or part of an account number', 'How banks and employers send passwords; not tool behaviour.');
+
+    const unlockPage = () => K.once('w2u:page', async () => {
+      const m = await mu();
+      const p = await openSeen(WU);
+      try {
+        const input = await p.$('.tool-io .dropzone input[type=file]');
+        await input.uploadFile(m['aes-256'].path);
+        await p.waitForSelector('.file-pass input', { timeout: 30000 });
+        const box = await p.evaluate(() => ({ text: document.querySelector('.file-pass').textContent, focus: document.activeElement && document.activeElement.type }));
+        await p.type('.file-pass input', 'not-it');
+        await p.click('.file-pass .btn-primary');
+        await p.waitForFunction(() => /did not open it/.test((document.querySelector('.file-pass') || {}).textContent || ''), { timeout: 30000 });
+        const again = await p.evaluate(() => ({ text: document.querySelector('.file-pass').textContent, focus: document.activeElement && document.activeElement.type }));
+        await p.$eval('.file-pass input', (i) => { i.value = ''; });
+        await p.type('.file-pass input', 'user-w2c');
+        await p.click('.file-pass .btn-primary');
+        await p.waitForFunction(() => !document.querySelector('.file-pass') && !document.querySelector('.file-list .file-row.is-loading'), { timeout: 60000 });
+        const r = await press(p);
+        const out = r.done ? (await K.pdf.download(p)).bytes : null;
+        const store = await kept(p);
+        const pj = out ? await pdfjsPw(p, out) : {};
+        return { box, again, out, store, pj, reqs: p.__requests.slice(), workers: workersOf(p) };
+      } finally { await p.close(); }
+    });
+    claim(WU, 'tip', 'Choose the file and type its password in the box that appears.', 'a protected file gets a password box with the focus; with the password it is saved with none', B, async () => {
+      const { box, out, pj } = await unlockPage();
+      return [/needs its password to open/.test(box.text) && box.focus === 'password' && !!out && !hasEncrypt(out) && (pj.pages || []).length === 3 && pj.perms === null,
+        'box: "' + box.text.slice(0, 60) + '…", focus on ' + box.focus + '; output ' + (out ? out.length + ' bytes, pdf.js reads ' + (pj.pages || []).length + ' pages without a password, permissions ' + K.j(pj.perms) : 'none')];
+    });
+    claim(WU, 'point', 'A wrong password is turned away before anything is decrypted, and the box asks again.', 'a wrong password: "That password did not open it", the box stays with the focus', B, async () => {
+      const { again } = await unlockPage();
+      return [/That password did not open it/.test(again.text) && again.focus === 'password', again.text.replace(/\s+/g, ' ').slice(0, 140)];
+    });
+    claim(WU, 'tip', 'The password is used on this page to decrypt the file and is then forgotten: it is never stored or sent anywhere.',
+      'after decrypting: the password is in no storage, cookie or request URL, and nothing but GETs were sent', B, async () => {
+        const { store, reqs } = await unlockPage();
+        const leak = ['user-w2c', 'not-it'].filter((x) => store.indexOf(x) >= 0 || reqs.some((r) => r.url.indexOf(x) >= 0));
+        return [!leak.length && !reqs.some((r) => r.method !== 'GET'), 'leaks: ' + (leak.join(', ') || 'none') + '; ' + reqs.length + ' requests, ' + reqs.filter((r) => r.method !== 'GET').length + ' not GET'];
+      });
+    claim(WU, 'faq', 'No. The file is decrypted by your own browser, in a background worker on this page. Nothing you add is uploaded, and the password is never stored or remembered.',
+      'every request a GET to the site, the page runs pdf-worker.js, nothing kept', B, async () => {
+        const { store, reqs, out, workers } = await unlockPage();
+        const bad = reqs.filter((r) => r.method !== 'GET' || !r.url.startsWith(K.BASE));
+        const worker = workers.some((u) => /\/engine\/pdf-worker\.js/.test(u));
+        return [!!out && reqs.length > 0 && !bad.length && worker && store.indexOf('user-w2c') < 0, (bad.length ? bad.map((r) => r.method + ' ' + r.url).join(', ') : reqs.length + ' requests, all GET to the site') + '; workers ' + (workers.join(', ') || 'none')];
+      });
+    claim(WU, 'tip', 'A file that opens without a password but will not let you print or copy has restrictions only; it opens here straight away and the copy you save has none.',
+      'a MuPDF restrictions-only file: no password box, and pdf.js finds no permission limits in the copy', B, async () => {
+        const p = await K.pdf.open(WU);
+        try {
+          await K.pdf.upload(p, [(await mu()).restricted.path]);
+          const boxed = await p.evaluate(() => !!document.querySelector('.file-pass'));
+          const r = await press(p);
+          const out = r.done ? (await K.pdf.download(p)).bytes : null;
+          const pj = out ? await pdfjsPw(p, out) : {};
+          return [!boxed && !!out && pj.perms === null && (pj.pages || [])[0] === 'W2C-RESTRICTED-P1', 'password box ' + (boxed ? 'shown' : 'not shown') + '; copy permissions ' + K.j(pj.perms) + ', text ' + K.j(pj.pages)];
+        } finally { await p.close(); }
+      });
+    claim(WU, 'faq', 'Files encrypted for a certificate or a company\'s rights-management server rather than with a password cannot be opened here, and the page says so.',
+      'a file for the public-key handler (Adobe.PubSec) is not opened, and its row says it needs a certificate', B, async () => {
+        const p = await K.pdf.open(WU);
+        try {
+          const input = await p.$('.tool-io .dropzone input[type=file]');
+          await input.uploadFile(K.write('w2u-pubsec.pdf', pubsec()));
+          await p.waitForFunction(() => document.querySelector('.file-list .file-row') && !document.querySelector('.file-list .file-row.is-loading'), { timeout: 30000 });
+          const t = await p.$eval('.file-list', (e) => e.textContent);
+          return [/certificate rather than a password/.test(t) && !/needs its password/.test(t), t.replace(/\s+/g, ' ').slice(0, 220)];
+        } finally { await p.close(); }
+      });
+  }
 };

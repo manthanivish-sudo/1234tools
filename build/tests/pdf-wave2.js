@@ -11,6 +11,8 @@
  *   crypt     opening encrypted files (RC4 40/128, AES-128/256, object
  *             streams, wrong and missing passwords); Protect and Unlock
  *   compress  Compress PDF: structure in Node; pictures in the browser
+ *   unicode   Hindi, Polish, Greek, Cyrillic and ₹ in Add text, Signature, Text to PDF, the invoice
+ *   tools2    Flatten, Crop, Add an image: the engine, read back by MuPDF and pdf.js
  *   pages     the password prompt, Protect, Unlock and Compress on their pages
  *
  * Fixtures are written by this test (pdfcore's writer, or PyMuPDF for the
@@ -274,6 +276,208 @@ async function compressPart() {
   check(!t.files || t.files[0].bytes.length < tiny.length, 'a file that would not get smaller is never offered larger', t.warn || (t.files && t.files[0].bytes.length + ' vs ' + tiny.length));
 }
 
+/* ---------- flatten, crop, add an image: the engine, in Node ---------- */
+function formPdf(file) {
+  python([
+    'import pymupdf, sys',
+    'd = pymupdf.open()',
+    'p = d.new_page(width=595, height=842)',
+    'p.insert_text((72, 80), "FORM-PAGE-TEXT", fontname="helv", fontsize=14)',
+    'w = pymupdf.Widget(); w.field_type = pymupdf.PDF_WIDGET_TYPE_TEXT; w.field_name = "fullname"; w.rect = pymupdf.Rect(72, 120, 372, 145); w.field_value = "Asha Rao"; w.text_fontsize = 12; p.add_widget(w)',
+    'c = pymupdf.Widget(); c.field_type = pymupdf.PDF_WIDGET_TYPE_CHECKBOX; c.field_name = "agree"; c.rect = pymupdf.Rect(72, 160, 90, 178); c.field_value = True; p.add_widget(c)',
+    'a = p.add_freetext_annot(pymupdf.Rect(72, 220, 372, 250), "NOTE-XYZ comment", fontsize=12)',
+    'h = p.add_rect_annot(pymupdf.Rect(400, 300, 500, 360))',
+    'p.insert_link({"kind": pymupdf.LINK_URI, "from": pymupdf.Rect(72, 400, 200, 420), "uri": "https://www.1234tools.com/"})',
+    'd.save(sys.argv[1])',
+    'print("ok")'
+  ].join('\n'), [file]);
+}
+/** a text field saved with no appearance: the reader is told to draw it (NeedAppearances) */
+function noApPdf() {
+  const w = new PDFWriter();
+  const cat = w.alloc(), pages = w.alloc(), pg = w.alloc();
+  const font = w.add({ Type: new Name('Font'), Subtype: new Name('Type1'), BaseFont: new Name('Helvetica'), Encoding: new Name('WinAnsiEncoding') });
+  const fld = w.add({ Type: new Name('Annot'), Subtype: new Name('Widget'), FT: new Name('Tx'), T: pdfString('ref'), V: pdfString('NO-AP-VALUE'), Rect: [72, 600, 300, 622], DA: pdfString('/Helv 11 Tf 0 g'), P: new Ref(pg, 0) });
+  const c = w.add(new PDFStream({}, pkg.bytesOf('BT /F1 12 Tf 72 700 Td (Reference:) Tj ET')));
+  w.set(pg, { Type: new Name('Page'), Parent: new Ref(pages, 0), MediaBox: [0, 0, 595, 842], Resources: { Font: { F1: new Ref(font, 0) } }, Contents: new Ref(c, 0), Annots: [new Ref(fld, 0)] });
+  w.set(pages, { Type: new Name('Pages'), Kids: [new Ref(pg, 0)], Count: 1 });
+  w.set(cat, { Type: new Name('Catalog'), Pages: new Ref(pages, 0), AcroForm: { Fields: [new Ref(fld, 0)], NeedAppearances: true, DR: { Font: { Helv: new Ref(font, 0) } } } });
+  return w.build(new Ref(cat, 0), null, '1.7');
+}
+function mupdfInfo(file) {
+  const out = python([
+    'import pymupdf, sys, json',
+    'd = pymupdf.open(sys.argv[1]); p = d[0]',
+    'print(json.dumps({"widgets": len(list(p.widgets())), "annots": [a.type[1] for a in p.annots()], "links": len(p.get_links()), "text": p.get_text(), "form": d.is_form_pdf}))'
+  ].join('\n'), [file]);
+  return JSON.parse(out.trim().split('\n').pop());
+}
+function mupdfDiff(a, b) {
+  return Number(python([
+    'import pymupdf, sys',
+    'def px(f):',
+    '    pm = pymupdf.open(f)[0].get_pixmap(dpi=72, annots=True)',
+    '    return pm.samples, pm.width, pm.height',
+    'sa, w, h = px(sys.argv[1]); sb, w2, h2 = px(sys.argv[2])',
+    'n = min(len(sa), len(sb)); d = sum(abs(sa[i] - sb[i]) for i in range(0, n, 3)) / (n / 3)',
+    'print(round(d, 3) if (w, h) == (w2, h2) else 999)'
+  ].join('\n'), [a, b]).trim());
+}
+
+async function tools2Part() {
+  group('flatten  form answers and comments drawn into the page (MuPDF and pdf.js read the result)');
+  const form = path.join(OUT, 'form.pdf');
+  formPdf(form);
+  const before = mupdfInfo(form);
+  check(before.widgets === 2 && before.annots.length >= 2 && before.links === 1, 'the fixture has 2 fields, a FreeText and a Square comment, and a link', JSON.stringify(before).slice(0, 160));
+  const fl = await runSpec('flatten-pdf', [{ name: 'form.pdf', bytes: new Uint8Array(fs.readFileSync(form)) }], { what: 'all' });
+  const flat = write('form-flattened.pdf', fl.files[0].bytes);
+  const after = mupdfInfo(flat);
+  check(fl.files[0].name === 'form-flattened.pdf' && after.widgets === 0 && after.annots.length === 0 && !after.form, 'no form fields and no comments are left; the file is no longer a form', JSON.stringify(after).slice(0, 160));
+  check(after.links === 1, 'the link is still a link');
+  check(/Asha Rao/.test(after.text) && /NOTE-XYZ/.test(after.text) && /FORM-PAGE-TEXT/.test(after.text), 'MuPDF reads the answer and the comment as page text now', after.text.replace(/\s+/g, ' ').slice(0, 120));
+  const diff = mupdfDiff(form, flat);
+  check(diff < 1.5, 'the page looks the same as the form did with its fields and comments shown (mean difference ' + diff + ' of 255)', String(diff));
+  const pj = await pdfjsFields(fl.files[0].bytes);
+  check(!pj.fields && pj.annots.join() === 'Link', 'pdf.js finds no fields and only the link', JSON.stringify(pj));
+  const onlyForms = await runSpec('flatten-pdf', [{ name: 'form.pdf', bytes: new Uint8Array(fs.readFileSync(form)) }], { what: 'forms' });
+  const of = mupdfInfo(write('form-forms.pdf', onlyForms.files[0].bytes));
+  check(of.widgets === 0 && of.annots.length >= 2, '"Form fields only" keeps the comments as comments', JSON.stringify(of.annots));
+  const noap = await runSpec('flatten-pdf', [{ name: 'noap.pdf', bytes: noApPdf() }], { what: 'all' });
+  const na = mupdfInfo(write('noap-flattened.pdf', noap.files[0].bytes));
+  check(/NO-AP-VALUE/.test(na.text) && na.widgets === 0 && (noap.stats || []).some((r) => /drawn in Helvetica/.test(r[0]) && r[1] === '1'), 'an answer saved with no appearance is drawn in Helvetica, not lost', na.text.replace(/\s+/g, ' '));
+  const none = await runSpec('flatten-pdf', [{ name: 'p.pdf', bytes: plain(1) }], { what: 'all' });
+  check(/no form fields or comments to flatten/.test(none.error || ''), 'a PDF with nothing to flatten says so', none.error);
+
+  group('crop  the visible box, measured on the page as shown');
+  const turned = (() => {
+    const w = new PDFWriter();
+    const cat = w.alloc(), pages = w.alloc();
+    const font = w.add({ Type: new Name('Font'), Subtype: new Name('Type1'), BaseFont: new Name('Helvetica'), Encoding: new Name('WinAnsiEncoding') });
+    const mk = (rot, label) => { const c = w.add(new PDFStream({}, pkg.bytesOf('BT /F1 12 Tf 72 760 Td (' + label + ') Tj ET'))); const d = { Type: new Name('Page'), Parent: new Ref(pages, 0), MediaBox: [0, 0, 595, 842], Resources: { Font: { F1: new Ref(font, 0) } }, Contents: new Ref(c, 0) }; if (rot) d.Rotate = rot; return new Ref(w.add(d), 0); };
+    const kids = [mk(0, 'CROP-1'), mk(90, 'CROP-2'), mk(0, 'CROP-3')];
+    w.set(pages, { Type: new Name('Pages'), Kids: kids, Count: 3 });
+    w.set(cat, { Type: new Name('Catalog'), Pages: new Ref(pages, 0) });
+    return w.build(new Ref(cat, 0), null, '1.7');
+  })();
+  write('crop-src.pdf', turned);
+  const cr = await runSpec('crop-pdf', [{ name: 'c.pdf', bytes: turned }], { top: 20, right: 10, bottom: 30, left: 15, pages: '1-2' });
+  const geo = await pdfjsGeometry(cr.files[0].bytes);
+  const mm = 72 / 25.4;
+  check(Math.abs(geo[0].w - (595 - 25 * mm)) < 0.6 && Math.abs(geo[0].h - (842 - 50 * mm)) < 0.6, 'page 1: pdf.js shows ' + geo[0].w.toFixed(1) + ' × ' + geo[0].h.toFixed(1) + ' pt, 25 mm narrower and 50 mm shorter', JSON.stringify(geo[0]));
+  check(Math.abs(geo[0].tx - (72 - 15 * mm)) < 0.6 && Math.abs(geo[0].ty - (842 - 760 - 20 * mm)) < 0.6, 'page 1: the text moved 15 mm left and 20 mm up, as a reader sees it', JSON.stringify(geo[0]));
+  check(Math.abs(geo[1].w - (842 - 25 * mm)) < 0.6 && Math.abs(geo[1].h - (595 - 50 * mm)) < 0.6, 'page 2, stored sideways: the margins are taken from the page as shown (' + geo[1].w.toFixed(1) + ' × ' + geo[1].h.toFixed(1) + ')', JSON.stringify(geo[1]));
+  check(Math.abs(geo[2].w - 595) < 0.1 && Math.abs(geo[2].h - 842) < 0.1, 'page 3, not in the Pages box, is untouched');
+  check((await readPdfjs(cr.files[0].bytes)).pages.join() === 'CROP-1,CROP-2,CROP-3', 'nothing is deleted: every page keeps its text');
+  const big = await runSpec('crop-pdf', [{ name: 'c.pdf', bytes: turned }], { top: 200, right: 0, bottom: 200, left: 0, pages: 'all' });
+  check(/leave nothing of page 2/.test(big.error || '') || /leave nothing of page 1/.test(big.error || ''), 'margins that leave nothing are refused, naming the page', big.error);
+
+  group('add an image  one picture object, drawn where asked, with its transparency');
+  const W = 60, H = 30, rgb = new Uint8Array(W * H * 3), alpha = new Uint8Array(W * H);
+  for (let i = 0; i < W * H; i++) { rgb[i * 3] = 220; rgb[i * 3 + 1] = 30; rgb[i * 3 + 2] = 30; alpha[i] = (i % W) < W / 2 ? 255 : 0; }
+  const img = { kind: 'raw', width: W, height: H, rgb, alpha, name: 'logo.png' };
+  const ai = await runSpec('add-image-to-pdf', [{ name: 'three.pdf', bytes: plain(3) }], {
+    image: img, width: 120, opacity: 100, x: 400, y: 760, pages: 'all',
+    items: [{ image: { kind: 'raw', width: W, height: H, rgb: rgb.slice(), alpha: alpha.slice(), name: 'logo.png' }, imageWidth: 240, opacity: 50, x: 100, y: 300, pages: '2' }]
+  });
+  const ab = ai.files[0].bytes;
+  const aa = await pkg.PDFDocument.load(ab);
+  const imgs = [...aa.objects.values()].filter((v) => v instanceof PDFStream && v.dict.Subtype && v.dict.Subtype.name === 'Image');
+  check(imgs.length === 2 && imgs.some((v) => v.dict.SMask), 'the same picture placed twice is stored once (one image and its soft mask)', imgs.length + ' image objects');
+  const opsPer = await pdfjsImages(ab);
+  check(opsPer.join() === '1,2,1', 'pdf.js paints it once on pages 1 and 3 and twice on page 2', opsPer.join());
+  const raw = Buffer.from(ab).toString('latin1');
+  check(/\/ca 0\.5/.test(raw), 'the 50% one has its own transparency setting');
+  check(ai.files[0].name === 'three-with-image.pdf', 'named after the source', ai.files[0].name);
+}
+
+async function pdfjsFields(bytes) {
+  const lib = await pdfjs();
+  const doc = await lib.getDocument({ data: new Uint8Array(bytes), verbosity: 0 }).promise;
+  const fields = await doc.getFieldObjects();
+  const annots = (await (await doc.getPage(1)).getAnnotations()).map((a) => a.subtype);
+  await doc.destroy();
+  return { fields: fields && Object.keys(fields).length ? Object.keys(fields) : null, annots };
+}
+async function pdfjsGeometry(bytes) {
+  const lib = await pdfjs();
+  const doc = await lib.getDocument({ data: new Uint8Array(bytes), verbosity: 0, standardFontDataUrl: path.join(ROOT, 'engine/vendor/pdfjs/standard_fonts') + path.sep }).promise;
+  const out = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const pg = await doc.getPage(i);
+    const vp = pg.getViewport({ scale: 1 });
+    const it = (await pg.getTextContent()).items[0];
+    const m = it ? lib.Util.transform(vp.transform, it.transform) : [0, 0, 0, 0, 0, 0];
+    out.push({ w: vp.width, h: vp.height, tx: m[4], ty: m[5] });
+  }
+  await doc.destroy();
+  return out;
+}
+async function pdfjsImages(bytes) {
+  const lib = await pdfjs();
+  const doc = await lib.getDocument({ data: new Uint8Array(bytes), verbosity: 0 }).promise;
+  const out = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const ol = await (await doc.getPage(i)).getOperatorList();
+    out.push(ol.fnArray.filter((f) => f === lib.OPS.paintImageXObject).length);
+  }
+  await doc.destroy();
+  return out;
+}
+
+/* ---------- Unicode text in the tools that write text ---------- */
+async function unicodePart() {
+  group('unicode  text outside WinAnsi in Add text, Signature, Text to PDF and the invoice, read back by pdf.js');
+  core.unicodeFonts.setFontLoader(async (rel) => new Uint8Array(fs.readFileSync(path.join(ROOT, 'engine', rel))),
+    async () => require(path.join(ROOT, 'engine/pdf-shaper.js')));
+  const lines = async (bytes) => {
+    const lib = await pdfjs();
+    const doc = await lib.getDocument({ data: new Uint8Array(bytes), verbosity: 0, standardFontDataUrl: path.join(ROOT, 'engine/vendor/pdfjs/standard_fonts') + path.sep }).promise;
+    const out = [];
+    for (let i = 1; i <= doc.numPages; i++) {
+      const tc = await (await doc.getPage(i)).getTextContent();
+      let line = '';
+      for (const it of tc.items) { line += it.str; if (it.hasEOL) { if (line.trim()) out.push(line.replace(/\s+/g, ' ').trim()); line = ''; } }
+      if (line.trim()) out.push(line.replace(/\s+/g, ' ').trim());
+    }
+    await doc.destroy();
+    return out;
+  };
+  const ed = await runSpec('pdf-editor', [{ name: 'p.pdf', bytes: plain(1, 'BASE') }], { text: 'नमस्ते दुनिया\nZażółć gęślą jaźń', size: 18, colour: '#000000', x: 72, y: 500, pages: '1', width: 0, items: [{ text: 'Ωμέγα ₹2,500', size: 14, colour: '#000000', x: 72, y: 300, width: 0, pages: '1' }] });
+  const el = await lines(ed.files[0].bytes);
+  check(el.includes('नमस्ते दुनिया') && el.includes('Zażółć gęślą jaźń') && el.includes('Ωμέγα ₹2,500') && el.includes('BASE-1'), 'Add text: Hindi, Polish, Greek and ₹ come back exactly from pdf.js', JSON.stringify(el));
+  const raw = Buffer.from(ed.files[0].bytes).toString('latin1');
+  check(/\/Subtype\s*\/Type0/.test(raw) && (raw.match(/\/FontFile2/g) || []).length >= 2, 'embedded as subset Type0 fonts (Noto Sans and Noto Sans Devanagari)');
+  const asc = await runSpec('pdf-editor', [{ name: 'p.pdf', bytes: plain(1, 'BASE') }], { text: 'Plain text', size: 12, colour: '#000000', x: 72, y: 500, pages: '1', width: 0, items: [] });
+  check(!/FontFile2|Type0/.test(Buffer.from(asc.files[0].bytes).toString('latin1')), 'text WinAnsi can hold still embeds no font');
+  const wrapped = await runSpec('pdf-editor', [{ name: 'p.pdf', bytes: plain(1, 'BASE') }], { text: 'यह एक लंबा वाक्य है जो कई पंक्तियों में टूटना चाहिए', size: 16, colour: '#000000', x: 72, y: 500, pages: '1', width: 180, items: [] });
+  const wl = (await lines(wrapped.files[0].bytes)).filter((x) => !/BASE/.test(x));
+  check(wl.length >= 2 && wl.join(' ') === 'यह एक लंबा वाक्य है जो कई पंक्तियों में टूटना चाहिए', 'Hindi wrapped to 180 pt: ' + wl.length + ' lines, no word lost', JSON.stringify(wl));
+
+  const sg = await runSpec('pdf-signature', [{ name: 'p.pdf', bytes: plain(1, 'BASE') }], { signatureText: 'Łukasz Wójcik / राम', date: 'no', x: 300, y: 100, pages: '1', drawn: null, drawWidth: 150, size: 12 });
+  check((await lines(sg.files[0].bytes)).includes('Łukasz Wójcik / राम'), 'Signature: a Polish and Hindi name is written exactly');
+
+  const tp = await loadSpec('text-to-pdf').run({ docs: [], text: 'Привет, мир!\nदूसरी पंक्ति हिन्दी में\nThird line, plain', opts: { pageSize: 'a4', font: 'Helvetica', size: 12, leading: 1.4, margin: 20, numbers: 'yes', title: '' }, core });
+  const tl = await lines(tp.files[0].bytes);
+  check(tl[0] === 'Привет, мир!' && tl[1] === 'दूसरी पंक्ति हिन्दी में' && tl[2] === 'Third line, plain', 'Text to PDF: Cyrillic and Hindi lines, and the plain line, all exact', JSON.stringify(tl));
+  const traw = Buffer.from(tp.files[0].bytes).toString('latin1');
+  check(!/\/BaseFont\s*\/Helvetica\b/.test(traw.replace(/\/Helvetica-Bold/g, '')) || /NotoSans/.test(traw), 'the whole document is set in Noto Sans once one line needs it');
+
+  const inv = loadSpec('invoice-pdf');
+  if (inv && inv.workerScripts) {
+    const w = {};
+    for (const f of inv.workerScripts) new Function('window', fs.readFileSync(path.join(ROOT, 'engine', f), 'utf8'))(w);
+    const spec = w.PDF_TOOLS['invoice-pdf'];
+    const o = {};
+    for (const c of spec.controls || []) o[c.key] = c.default === 'TODAY' ? '2026-10-06' : c.default;
+    Object.assign(o, { toName: 'श्री राम एंटरप्राइज़ेज़', items: 'सेवा शुल्क, 1, 1500\nŁódź delivery, 2, 250', taxMode: 'none', number: 'INV-77' });
+    const r = await spec.run({ docs: [], opts: o, core, text: '' });
+    const il = r.files ? await lines(r.files[0].bytes) : [];
+    const all = il.join(' | ');
+    check(/श्री राम एंटरप्राइज़ेज़/.test(all) && /सेवा शुल्क/.test(all) && /Łódź delivery/.test(all), 'Invoice: a Hindi client and Hindi and Polish items come back exactly', r.error || all.slice(0, 300));
+  } else check(false, 'the invoice spec loads with its worker scripts');
+}
+
 /* ================================================================== */
 /* the browser part                                                    */
 
@@ -399,6 +603,8 @@ async function browserPart() {
     const cp = await open('/pdf/compress-pdf/');
     await upload(cp, [ph]);
     await setControls(cp, { preset: 'screen' });
+    /* the fixture's page 2 is turned on its side: those margins would leave nothing of it */
+    await setControls(cp, { pages: '1' });
     await press(cp);
     const cb = await download(cp);
     const cs = await stats(cp);
@@ -435,6 +641,102 @@ async function browserPart() {
     await cp.close();
   }
 
+  if (want('tools2')) {
+    group('tools2  the crop box, the picture placer and Flatten on their pages');
+    const cropSrc = path.join(OUT, 'crop-src.pdf');
+    if (!fs.existsSync(cropSrc)) fs.writeFileSync(cropSrc, plain(3, 'CROP'));
+    const cp = await open('/pdf/crop-pdf/');
+    await upload(cp, [cropSrc]);
+    await cp.waitForSelector('.crop-box', { timeout: 60000 });
+    await cp.$eval('.crop-stage', (e) => window.scrollTo({ top: e.getBoundingClientRect().top + window.scrollY - 120, behavior: 'instant' }));
+    await new Promise((r) => setTimeout(r, 300));
+    const scale = await cp.$eval('.crop-canvas', (c) => c.getBoundingClientRect().width / 595);
+    const mmPx = 72 / 25.4 * scale;
+    const hw = await (await cp.$('.crop-w')).boundingBox();
+    await cp.mouse.move(hw.x + hw.width / 2, hw.y + hw.height / 2); await cp.mouse.down();
+    await cp.mouse.move(hw.x + hw.width / 2 + 10 * mmPx, hw.y + hw.height / 2, { steps: 6 }); await cp.mouse.up();
+    const left = Number(await cp.$eval('#pc-left', (e) => e.value));
+    check(Math.abs(left - 25) <= 0.5, 'dragging the left edge 10 mm inwards sets Left from 15 to 25 mm', String(left));
+    await cp.focus('.crop-n');
+    await cp.keyboard.press('ArrowDown'); await cp.keyboard.down('Shift'); await cp.keyboard.press('ArrowDown'); await cp.keyboard.up('Shift');
+    const top = Number(await cp.$eval('#pc-top', (e) => e.value));
+    check(top === 21, 'the top edge from the keyboard: ↓ 1 mm, Shift+↓ 5 mm (15 → 21)', String(top));
+    await setControls(cp, { right: 40 });
+    const bw = await cp.$eval('.crop-box', (b) => b.getBoundingClientRect().width);
+    check(Math.abs(bw - (595 - (25 + 40) * 72 / 25.4) * scale) < 2, 'typing Right 40 moves the box to match', bw.toFixed(1));
+    await cp.click('.crop-fit');
+    const fitted = await cp.evaluate(() => ['top', 'right', 'bottom', 'left'].map((k) => Number(document.getElementById('pc-' + k).value)));
+    /* plain(): one line "CROP-1" at x 72, baseline 760, 20 pt Helvetica */
+    check(fitted[3] > 22 && fitted[3] < 25.5 && fitted[0] > 20 && fitted[0] < 27 && fitted[2] > 260, 'Fit to the content puts the box around the one line of text (margins ' + fitted.join(', ') + ' mm)', fitted.join(', '));
+    /* the fixture's page 2 is turned on its side: those margins would leave nothing of it */
+    await setControls(cp, { pages: '1' });
+    await press(cp);
+    const cb = await download(cp);
+    const g = await pdfjsGeometry(cb);
+    check(Math.abs(g[0].w - (595 - (fitted[1] + fitted[3]) * 72 / 25.4)) < 1, 'the saved page is the size the box showed', g[0].w.toFixed(1));
+    await cp.close();
+
+    const ai = await open('/pdf/add-image-to-pdf/');
+    await upload(ai, [write('img-target.pdf', plain(2, 'IMG'))]);
+    const png = await ai.evaluate(async () => {
+      const c = document.createElement('canvas'); c.width = 200; c.height = 100;
+      const x = c.getContext('2d'); x.fillStyle = 'rgb(0,90,200)'; x.fillRect(0, 0, 100, 100);
+      const b = await new Promise((r) => c.toBlob(r, 'image/png'));
+      return Array.from(new Uint8Array(await b.arrayBuffer()));
+    });
+    const pngPath = write('logo-half.png', Buffer.from(png));
+    const fileInput = await ai.$('#pc-image');
+    await fileInput.uploadFile(pngPath);
+    await ai.waitForSelector('.place-box.is-current', { timeout: 30000 });
+    await ai.$eval('.place-stage', (e) => window.scrollTo({ top: e.getBoundingClientRect().top + window.scrollY - 120, behavior: 'instant' }));
+    await new Promise((r) => setTimeout(r, 300));
+    const s2 = await ai.$eval('.place-canvas', (c) => c.getBoundingClientRect().width / 595);
+    const box = await (await ai.$('.place-box.is-current')).boundingBox();
+    await ai.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await ai.mouse.down();
+    await ai.mouse.move(box.x + box.width / 2 - 50 * s2, box.y + box.height / 2 + 100 * s2, { steps: 8 }); await ai.mouse.up();
+    const xy = [Number(await ai.$eval('#pc-x', (e) => e.value)), Number(await ai.$eval('#pc-y', (e) => e.value))];
+    check(Math.abs(xy[0] - 10) <= 1.5 && Math.abs(xy[1] - 500) <= 1.5, 'dragging the picture moves X 60 → 10 and Y 600 → 500', xy.join(', '));
+    const corner = await (await ai.$('.place-box.is-current .place-handle-se')).boundingBox();
+    await ai.mouse.move(corner.x + corner.width / 2, corner.y + corner.height / 2); await ai.mouse.down();
+    await ai.mouse.move(corner.x + corner.width / 2 + 150 * s2, corner.y + corner.height / 2 + 75 * s2, { steps: 8 }); await ai.mouse.up();
+    const wNow = Number(await ai.$eval('#pc-width', (e) => e.value));
+    check(Math.abs(wNow - 300) <= 3, 'pulling the corner 150 points right doubles the width, 150 → ' + wNow + ' points, keeping the proportions');
+    await setControls(ai, { pages: 'all' });
+    await press(ai);
+    const ab = await download(ai);
+    const per = await pdfjsImages(ab);
+    const a2 = await pkg.PDFDocument.load(ab);
+    const im = [...a2.objects.values()].filter((v) => v instanceof PDFStream && v.dict.Subtype && v.dict.Subtype.name === 'Image');
+    check(per.join() === '1,1' && im.some((v) => v.dict.SMask), 'saved: the picture on both pages, its transparent half kept as a soft mask', per.join() + ' / ' + im.length);
+    await ai.close();
+
+    const fp = await open('/pdf/flatten-pdf/');
+    const formFile = path.join(OUT, 'form.pdf');
+    if (!fs.existsSync(formFile)) formPdf(formFile);
+    await upload(fp, [formFile]);
+    await press(fp);
+    const fb = await download(fp);
+    const info = mupdfInfo(write('form-flat-page.pdf', fb));
+    check(info.widgets === 0 && /Asha Rao/.test(info.text), 'Flatten on its page: no fields left, the answer is page text', JSON.stringify(info).slice(0, 120));
+    await fp.close();
+  }
+
+  if (want('unicode')) {
+    group('unicode  in the page: the worker fetches the fonts and the shaper from the site');
+    const ue = await open('/pdf/pdf-editor/');
+    const seen = [];
+    ue.on('request', (r) => seen.push(r.url()));
+    await upload(ue, [write('uni-base.pdf', plain(1, 'BASE'))]);
+    await setControls(ue, { text: 'हिन्दी में परीक्षण — Zażółć', x: 72, y: 500 });
+    await press(ue);
+    const ub = await download(ue);
+    const ul = (await readPdfjs(ub)).pages[0];
+    check(/हिन्दी में परीक्षण — Zażółć/.test(ul), 'typed Hindi and Polish come back from the downloaded file exactly', ul);
+    const fonts = seen.filter((u) => /vendor\/(fonts|harfbuzz)\//.test(u)).map((u) => u.replace(BASE, ''));
+    check(fonts.some((u) => /NotoSansDevanagari-Regular\.ttf$/.test(u)) && fonts.some((u) => /harfbuzz\.wasm$/.test(u)) && fonts.every((u) => /^\/engine\/vendor\//.test(u)),'fonts and the shaper come from /engine/vendor/ on this site, only when needed', fonts.join(', '));
+    await ue.close();
+  }
+
   const foreign = [...requests].filter((h) => !/^127\.0\.0\.1(:\d+)?$/.test(h));
   check(!foreign.length, 'no request left 127.0.0.1', foreign.join(', '));
 }
@@ -444,7 +746,9 @@ async function browserPart() {
   try {
     if (want('crypt')) await cryptPart();
     if (want('compress')) await compressPart();
-    if (BROWSER && (want('pages') || want('compress'))) await browserPart();
+    if (want('tools2')) await tools2Part();
+    if (want('unicode')) await unicodePart();
+    if (BROWSER && (want('pages') || want('compress') || want('tools2') || want('unicode'))) await browserPart();
   } catch (e) {
     console.error('\nthe run broke: ' + (e && e.stack || e));
     if (browser) await browser.close();

@@ -201,7 +201,7 @@ const statMap = (res) => new Map((res.stats || []).map(([k, v]) => [k, v]));
   const byKind = (k) => ids.filter(id => PDF_TOOLS[id].kind === k);
   /* the hub groups by what a tool needs: the organiser runs in the worker
      like any transform, but its thumbnails still need the renderer */
-  const needsEngine = ids.filter(id => PDF_TOOLS[id].needsRenderer === true);
+  const needsEngine = ids.filter(id => PDF_TOOLS[id].needsRenderer === true && PDF_TOOLS[id].kind !== 'create');
   console.log(`  ${ids.length} shipped tools: ` + ['transform', 'create', 'inspect', 'render']
     .map(k => `${byKind(k).length} ${k}`).join(', '));
 
@@ -290,8 +290,8 @@ const statMap = (res) => new Map((res.stats || []).map(([k, v]) => [k, v]));
       t('render tools flag needsRenderer', s.needsRenderer === true);
       t('render tools have no run() — the browser supplies it', typeof s.run === 'undefined');
     } else {
-      t('has an async run()', typeof s.run === 'function');
-      t('sets needsRenderer only with a page grid that draws thumbnails', !s.needsRenderer || !!s.pageGrid || typeof s.mainRun === 'function');
+      t('has an async run() (in the worker) or mainRun() (in the page)', typeof s.run === 'function' || typeof s.mainRun === 'function');
+      t('sets needsRenderer only when it draws pages (a grid, a page editor, or a run in the page)', !s.needsRenderer || !!s.pageGrid || !!s.placePreview || !!s.cropEditor || typeof s.mainRun === 'function');
     }
   }
 
@@ -775,7 +775,7 @@ const statMap = (res) => new Map((res.stats || []).map(([k, v]) => [k, v]));
 
   r = await run('invoice-pdf', {});
   ok(!r.error, 'the default invoice generates', r.error);
-  eq(r.files[0].name, 'inv-0001.pdf', 'the invoice number becomes the filename');
+  eq(r.files[0].name, 'INV-0001.pdf', 'the invoice number becomes the filename');
   eq(await pagesOf(r.files[0].bytes), 1, 'the invoice is one page');
   eq(statMap(r).get('Line items'), '3', 'the three default line items are read');
   keep('out-invoice.pdf', r.files[0].bytes);

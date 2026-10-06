@@ -29,7 +29,7 @@ const EXPORTS = [
   'setProgress', 'setPreview', 'PDFWriter', 'PDFStream', 'Name', 'Ref', 'pdfString',
   'decodePdfString', 'bytesOf', 'isRef', 'inflate', 'deflate', 'copyObject',
   'prepareImage', 'compressDocument', 'protectDocument', 'flattenDocument',
-  'cropDocument', 'unicodeFonts', 'textRun'
+  'cropDocument', 'unicodeFonts', 'textRun', 'createDocument', 'TextFonts', 'compactBuild'
 ];
 
 function strip(src) {
@@ -39,7 +39,7 @@ function strip(src) {
 
 function build() {
   /* an explicit list: a module joins the bundle when the engine uses it */
-  const parts = ['pdfcore.js', 'pdfcrypt.js'];
+  const parts = ['pdfcore.js', 'pdfcrypt.js', 'pdffont.js'];
   /* the font and crypto modules sit before pdfcore, which refers to them */
   const order = parts.filter((f) => f !== 'pdfcore.js').concat(['pdfcore.js']);
   let body = '';
@@ -49,8 +49,20 @@ function build() {
     '\nwindow.MVRPdfCore={' + names.map((n) => n + ':' + n).join(',') + '};\n})();';
 }
 
+/** The bundle must load as the pages load it, or nothing on /pdf/ works: a
+    syntax error in one module (a regex the browser rejects) would otherwise
+    ship silently. */
+function verify(src) {
+  const w = {};
+  new Function('window', src)(w);
+  const missing = ['PDFDocument', 'assemble', 'createPDF'].filter((n) => !w.MVRPdfCore || typeof w.MVRPdfCore[n] !== 'function');
+  if (missing.length) throw new Error('the bundle loads but lacks ' + missing.join(', '));
+}
+
 if (require.main === module) {
   const next = build();
+  try { verify(next); }
+  catch (e) { console.error('engine/pdfcore.bundle.js NOT written: ' + e.message); process.exit(1); }
   const now = fs.existsSync(OUT) ? fs.readFileSync(OUT, 'utf8') : '';
   if (process.argv.includes('--check')) {
     if (now !== next) { console.log('engine/pdfcore.bundle.js is out of date: run node build/pdf-package/bundle.js'); process.exit(1); }

@@ -755,6 +755,116 @@ const strBytes = (v) => latin1(v.__string);
   near(PAGE_SIZES.a3[0], PAGE_SIZES.a4[1], 0.01, 'A3 width equals A4 height');
   near(PAGE_SIZES.a4[0], PAGE_SIZES.a5[1], 0.01, 'A4 width equals A5 height');
 
+  /* =====================================================================
+     15. WAVE 2: read back by pdf.js (the site's vendored copy), never by
+         this engine: Unicode text, encryption, pictures, the compact
+         writer, and the progress and preview hooks
+     ===================================================================== */
+  const SITE = path.resolve(__dirname, '..', '..', '..');
+  const { pathToFileURL } = require('url');
+  let pdfjsLib = null;
+  if (fs.existsSync(path.join(SITE, 'engine/vendor/pdfjs/pdf.min.mjs'))) {
+    pdfjsLib = await import(pathToFileURL(path.join(SITE, 'engine/vendor/pdfjs/pdf.min.mjs')).href);
+    pdfjsLib.GlobalWorkerOptions.workerSrc = pathToFileURL(path.join(SITE, 'engine/vendor/pdfjs/pdf.worker.min.mjs')).href;
+  }
+  const readLines = async (bytes, password) => {
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(bytes), password, verbosity: 0, standardFontDataUrl: path.join(SITE, 'engine/vendor/pdfjs/standard_fonts') + path.sep }).promise;
+    const pages = [];
+    for (let i = 1; i <= doc.numPages; i++) {
+      const tc = await (await doc.getPage(i)).getTextContent();
+      const lines = []; let line = '';
+      for (const it of tc.items) { line += it.str; if (it.hasEOL) { lines.push(line.replace(/\s+/g, ' ').trim()); line = ''; } }
+      if (line.trim()) lines.push(line.replace(/\s+/g, ' ').trim());
+      pages.push(lines.filter(Boolean));
+    }
+    const ops = await (await doc.getPage(1)).getOperatorList();
+    const r = { pages, numPages: doc.numPages, ops: ops.fnArray, OPS: pdfjsLib.OPS };
+    await doc.destroy();
+    return r;
+  };
+
+  G('Unicode text (TrueType subsets), read back by pdf.js');
+  if (!pdfjsLib || !core.unicodeFonts) ok(false, 'pdf.js and the Unicode text module are present');
+  else {
+    core.unicodeFonts.setFontLoader(async (rel) => new Uint8Array(fs.readFileSync(path.join(SITE, 'engine', rel))),
+      async () => require(path.join(SITE, 'engine/pdf-shaper.js')));
+    const LINES = ['Zażółć gęślą jaźń', 'Ωμέγα — Жж ₹1,250', 'हिन्दी में परीक्षण', 'क्षत्रिय र्क कि ड़ प्र', 'Rupee ₹500 नमस्ते', 'Plain WinAnsi café'];
+    const uni = await core.createDocument([{ ops: LINES.map((t, i) => ({ text: t, x: 72, y: 760 - i * 36, size: 16, font: i === 2 ? 'Helvetica-Bold' : 'Helvetica' })) }], {});
+    const got = await readLines(uni);
+    deep(got.pages[0], LINES, 'pdf.js extracts every line exactly: Polish, Greek, Cyrillic, ₹, Hindi conjuncts, reph, i-matra, nukta, mixed');
+    const raw = latin1(uni);
+    ok(/\/Subtype\s*\/Type0/.test(raw) && /\/CIDFontType2/.test(raw) && /\/ToUnicode/.test(raw) && /\/FontFile2/.test(raw), 'embedded as Type0 / CIDFontType2 with a ToUnicode map and the font program');
+    ok((raw.match(/\/BaseFont\s*\/[A-Z]{6}\+NotoSans/g) || []).length >= 2, 'subset fonts carry a six-letter tag: ' + (raw.match(/\/BaseFont\s*\/[A-Z]{6}\+[A-Za-z-]+/g) || []).join(', '));
+    ok(/\/BaseFont\s*\/Helvetica\b/.test(raw), 'the WinAnsi-only line stays in base-14 Helvetica');
+    ok(uni.length < 120000, 'the subsets keep the file small: ' + uni.length + ' bytes for six lines (the fonts alone are 1.7 MB)', String(uni.length));
+    const winOnly = await core.createDocument([{ ops: [{ text: 'Only “WinAnsi” here — £5', x: 72, y: 700 }] }], {});
+    ok(!/FontFile2|Type0/.test(latin1(winOnly)), 'text WinAnsi can hold embeds no font at all');
+    deep((await readLines(winOnly)).pages[0], ['Only “WinAnsi” here — £5'], 'and pdf.js reads it back');
+    const tf = core.textRun();
+    const wrapped = await tf.wrap('यह एक लंबा वाक्य है जो कई पंक्तियों में टूटना चाहिए क्योंकि चौड़ाई कम है', 14, false, 160);
+    ok(wrapped.length >= 3 && wrapped.join(' ') === 'यह एक लंबा वाक्य है जो कई पंक्तियों में टूटना चाहिए क्योंकि चौड़ाई कम है', 'Hindi wraps into ' + wrapped.length + ' lines at 160 pt without losing a word');
+    const w0 = await tf.width('क्ष', 20, false);
+    ok(w0 > 5 && w0 < 20, 'a conjunct is measured as one shaped glyph (' + w0.toFixed(1) + ' pt at 20 pt)');
+  }
+
+  G('Encryption written here, opened by pdf.js');
+  if (pdfjsLib && core.protectDocument) {
+    const base = await PDFDocument.load(createPDF([{ ops: [{ text: 'CORE-ENCRYPTED', x: 72, y: 700 }] }], { info: { Title: 'Locked' } }));
+    for (const method of ['AES-256', 'AES-128']) {
+      const enc = await core.protectDocument(base, { userPassword: 'pw-' + method, ownerPassword: 'own', method, permissions: { copy: false } });
+      let err = null;
+      try { await readLines(enc); } catch (e) { err = e.name; }
+      ok(err === 'PasswordException', method + ': pdf.js will not open it without the password');
+      deep((await readLines(enc, 'pw-' + method)).pages[0], ['CORE-ENCRYPTED'], method + ': with the password pdf.js reads the text');
+      const back = await PDFDocument.load(enc, { password: 'pw-' + method });
+      ok(back.security && back.security.method === method && back.security.permissions.copy === false, method + ': and this engine opens it again, copying not allowed');
+      let code = null;
+      try { await PDFDocument.load(enc, { password: 'nope' }); } catch (e) { code = e.code; }
+      ok(code === 'password', method + ': a wrong password is refused with code "password"');
+    }
+  }
+
+  G('Pictures');
+  if (pdfjsLib && core.prepareImage) {
+    const W = 40, H = 30, rgb = new Uint8Array(W * H * 3), alpha = new Uint8Array(W * H);
+    for (let i = 0; i < W * H; i++) { rgb[i * 3] = 200; rgb[i * 3 + 1] = 40; rgb[i * 3 + 2] = (i % W) * 6; alpha[i] = i % 2 ? 255 : 120; }
+    const prep = await core.prepareImage({ kind: 'raw', width: W, height: H, rgb, alpha });
+    const imgPdf = createPDF([{ ops: [{ image: prep, x: 72, y: 600, w: 200 }, { image: prep, x: 300, y: 600, w: 100 }] }], {});
+    const doc = await PDFDocument.load(imgPdf);
+    const images = [...doc.objects.values()].filter((v) => v instanceof PDFStream && isName(v.dict.Subtype, 'Image'));
+    ok(images.length === 2 && images.some((v) => v.dict.SMask instanceof Ref), 'a picture drawn twice is stored once, with its transparency as a soft mask', images.length + ' image objects');
+    const r = await readLines(imgPdf);
+    ok(r.ops.filter((f) => f === r.OPS.paintImageXObject).length === 2, 'pdf.js paints the picture twice');
+    const jpeg = fixture('img.jpg');
+    const jp = await core.prepareImage({ kind: 'jpeg', bytes: jpeg, width: 64, height: 48, components: 3 });
+    ok(jp.filter === 'DCTDecode' && jp.data === jpeg, 'a JPEG goes in as its own bytes');
+  }
+
+  G('The compact writer and compression');
+  if (pdfjsLib && core.compressDocument) {
+    const src = fixture('many30.pdf');
+    const res = await core.compressDocument(await PDFDocument.load(src), { metadata: 'keep' });
+    const r = await readLines(res.bytes);
+    ok(r.numPages === 30 && r.pages[29].join(' ').indexOf('30') >= 0, 'object streams and an xref stream: pdf.js reads all 30 pages', r.pages[29].join(' '));
+    ok(/\/Type\s*\/ObjStm/.test(latin1(res.bytes)) && /\/Type\s*\/XRef/.test(latin1(res.bytes)), 'the output holds object streams and a cross-reference stream');
+    const again = await PDFDocument.load(res.bytes);
+    eq(await again.pageCount(), 30, 'and this engine reads its own compact output');
+  }
+
+  G('Progress and preview hooks');
+  {
+    const three = await PDFDocument.load(createPDF([1, 2, 3].map((i) => ({ ops: [{ text: 'HOOK-' + i, x: 72, y: 700 }] })), {}));
+    const seen = [];
+    core.setProgress((d, t, l) => seen.push(d + '/' + t + ' ' + l));
+    await assemble([0, 1, 2].map((i) => ({ doc: three, pageIndex: i })), {});
+    core.setProgress(null);
+    deep(seen, ['1/3 page', '2/3 page', '3/3 page'], 'assemble reports each page written');
+    core.setPreview({ pageIndex: 1 });
+    const one = await assemble([0, 1, 2].map((i) => ({ doc: three, pageIndex: i })), {});
+    core.setPreview(null);
+    if (pdfjsLib) deep((await readLines(one)).pages, [['HOOK-2']], 'a preview run writes only the page asked for');
+  }
+
   /* ---------------------------------------------------------------- */
   console.log(`\n${'-'.repeat(60)}`);
   console.log(`${pass + fail} assertions   ${pass} passed   ${fail} failed`);

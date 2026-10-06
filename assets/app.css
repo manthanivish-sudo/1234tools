@@ -4448,4 +4448,27 @@ html.is-embed .tool > .depth { display: none !important; }
 .live-note { min-height: 1.3em; }
 .pdf-extras:empty, .pdf-extras[hidden] { display: none; }
 .pdf-extras { margin: 0 0 16px; }
+/* ---------- the crop box ---------- */
+.crop-stage { overflow: hidden; border-radius: var(--radius-sm); }
+.crop-box {
+  position: absolute; box-sizing: border-box; cursor: move; touch-action: none;
+  border: 2px dashed #f7c948; box-shadow: 0 0 0 9999px rgba(6, 8, 15, .5);
+}
+.crop-box:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.crop-handle { position: absolute; width: 14px; height: 14px; background: #f7c948; border: 2px solid #1a1204; border-radius: 3px; touch-action: none; }
+.crop-handle:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+.crop-n { top: -8px; left: calc(50% - 7px); cursor: ns-resize; }
+.crop-s { bottom: -8px; left: calc(50% - 7px); cursor: ns-resize; }
+.crop-e { right: -8px; top: calc(50% - 7px); cursor: ew-resize; }
+.crop-w { left: -8px; top: calc(50% - 7px); cursor: ew-resize; }
+.crop-ne { right: -8px; top: -8px; cursor: nesw-resize; }
+.crop-sw { left: -8px; bottom: -8px; cursor: nesw-resize; }
+.crop-se { right: -8px; bottom: -8px; cursor: nwse-resize; }
+.crop-nw { left: -8px; top: -8px; cursor: nwse-resize; }
+@media (pointer: coarse) {
+  .crop-handle { width: 22px; height: 22px; }
+  .crop-n, .crop-s { left: calc(50% - 11px); } .crop-e, .crop-w { top: calc(50% - 11px); }
+  .crop-n, .crop-ne, .crop-nw { top: -12px; } .crop-s, .crop-se, .crop-sw { bottom: -12px; }
+  .crop-e, .crop-ne, .crop-se { right: -12px; } .crop-w, .crop-nw, .crop-sw { left: -12px; }
+}
 /* WAVE-2 end */

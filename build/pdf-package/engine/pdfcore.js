@@ -23,6 +23,13 @@ const CRYPT = (function () {
   return null;
 })();
 
+/* The TrueType embedder (pdffont.js), the same way. */
+const PFONT = (function () {
+  try { if (typeof PDFFont !== 'undefined') return PDFFont; } catch (e) { /* not in this scope */ }
+  try { if (typeof require === 'function') return require('./pdffont.js').PDFFont; } catch (e) { /* absent */ }
+  return null;
+})();
+
 const WS = new Set([0x00, 0x09, 0x0a, 0x0c, 0x0d, 0x20]);
 const DELIM = new Set([0x28, 0x29, 0x3c, 0x3e, 0x5b, 0x5d, 0x7b, 0x7d, 0x2f, 0x25]);
 const isWS = (c) => WS.has(c);
@@ -1261,12 +1268,13 @@ async function rewriteAnnot(doc, st, a) {
 }
 
 /** A kept page's annotations, without the links that lead to a page the output leaves out. */
-async function keptAnnots(doc, st, value) {
+async function keptAnnots(doc, st, value, drop) {
   const arr = await doc.resolve(value);
   if (!Array.isArray(arr)) return undefined;
   const out = [];
   for (const r of arr) {
     if (r instanceof Ref && st.barred.has(r.num)) continue;
+    if (drop && r instanceof Ref && drop.has(r.num)) continue;
     const a = await doc.resolve(r);
     if (!isDict(a)) continue;
     if (isName(await doc.resolve(a.Subtype), 'Link')) {
@@ -1570,7 +1578,7 @@ async function assemble(items, options) {
       let v = src[k] !== undefined ? src[k] : page.inherited[k];
       if (v === undefined) continue;
       if (k === 'Annots') {
-        v = await keptAnnots(doc, st, v);
+        v = await keptAnnots(doc, st, v, item.dropAnnots);
         if (!v || !v.length) continue;
       }
       if (k === 'Resources') v = await pruneResources(doc, v, src.Contents);
@@ -1578,6 +1586,11 @@ async function assemble(items, options) {
       if (c !== BARRED && c !== undefined) out[k] = c;
     }
     if (out.MediaBox === undefined) out.MediaBox = [0, 0, 595.28, 841.89];
+    if (Array.isArray(item.cropBox) && item.cropBox.length === 4) {
+      /* a new visible area; the boxes printers use must lie inside it */
+      out.CropBox = item.cropBox.map((v) => Number(Number(v).toFixed(3)));
+      delete out.TrimBox; delete out.BleedBox; delete out.ArtBox;
+    }
     if (out.Resources === undefined) out.Resources = Object.create(null);
 
     const baseRotate = Number(src.Rotate !== undefined ? src.Rotate : page.inherited.Rotate) || 0;
@@ -1627,6 +1640,24 @@ async function assemble(items, options) {
           }), 0);
         }
         font[item.overlay.fontKey] = writer._base14[face];
+      }
+      if (item.overlay.xobjects) {
+        /* objects of the source drawn by the overlay (a form field's
+           appearance, when flattening), copied like the rest of the page */
+        let xo = deref(res.XObject);
+        if (!isDict(xo)) { xo = Object.create(null); res.XObject = xo; }
+        for (const [key, src] of Object.entries(item.overlay.xobjects)) {
+          let c = await copyObject(doc, writer, src, st.map, 0, st.ctx);
+          if (c instanceof PDFStream) c = new Ref(writer.add(c), 0);
+          if (c instanceof Ref) xo[key] = c;
+        }
+      }
+      if (item.overlay.gs) {
+        let eg2 = deref(res.ExtGState);
+        if (!isDict(eg2)) { eg2 = Object.create(null); res.ExtGState = eg2; }
+        for (const [key, a] of Object.entries(item.overlay.gs)) {
+          eg2[key] = new Ref(writer.add({ Type: new Name('ExtGState'), ca: a, CA: a }), 0);
+        }
       }
       if (item.overlay.images) {
         let xo = deref(res.XObject);
@@ -2109,6 +2140,106 @@ async function compressDocument(doc, options) {
   return { bytes, report };
 }
 
+/* ============================================================
+   Flattening: form answers and comments drawn into the page
+   ============================================================ */
+
+/** The field dictionary a widget's value lives in (itself, or a parent). */
+async function fieldValue(doc, a) {
+  let f = a, guard = 0;
+  while (f && guard++ < 10) {
+    const v = await doc.resolve(f.V);
+    const ft = await doc.resolve(f.FT);
+    if (v !== undefined || ft !== undefined) return { v, ft: ft && ft.name, ff: Number(await doc.resolve(f.Ff)) || 0, da: await doc.resolve(f.DA), q: Number(await doc.resolve(f.Q)) || 0, field: f };
+    f = await doc.resolve(f.Parent);
+  }
+  return { v: undefined, ft: undefined };
+}
+
+/**
+ * Draw every form field's answer and every comment into the page content
+ * as it appears now, and remove the live objects, so nothing can be changed
+ * or lost and every printer and viewer shows the same. Links stay links.
+ * options: { forms: true, comments: true }.
+ */
+async function flattenDocument(doc, options) {
+  const o = Object.assign({ forms: true, comments: true }, options || {});
+  const pages = await doc.getPages();
+  const stats = { fields: 0, comments: 0, generated: 0, hidden: 0, links: 0 };
+  const items = [];
+  const fmt = (v) => String(Number(Number(v).toFixed(4)));
+  for (let i = 0; i < pages.length; i++) {
+    progress(i, pages.length, 'Flattening page ' + (i + 1));
+    const pg = pages[i];
+    const arr = await doc.resolve(pg.dict.Annots);
+    const drop = new Set();
+    const xobjects = {};
+    let ops = '';
+    let k = 0;
+    for (const r of Array.isArray(arr) ? arr : []) {
+      const a = await doc.resolve(r);
+      if (!isDict(a)) continue;
+      const sub = (await doc.resolve(a.Subtype)) || {};
+      const name = sub.name || '';
+      if (name === 'Link') { stats.links++; continue; }
+      const widget = name === 'Widget';
+      if (widget ? !o.forms : !o.comments) continue;
+      if (!(r instanceof Ref)) continue;
+      drop.add(r.num);
+      if (name === 'Popup') continue;
+      const flags = Number(await doc.resolve(a.F)) || 0;
+      if (flags & (2 | 32)) { stats.hidden++; continue; }          /* Hidden, NoView: not drawn now, not drawn after */
+      const rect = (await doc.resolve(a.Rect)) || [0, 0, 0, 0];
+      const R = [Math.min(rect[0], rect[2]), Math.min(rect[1], rect[3]), Math.max(rect[0], rect[2]), Math.max(rect[1], rect[3])].map(Number);
+      if (!(R[2] > R[0] && R[3] > R[1])) continue;
+      const ap = await doc.resolve(a.AP);
+      let nRef = isDict(ap) ? ap.N : undefined;
+      let n = await doc.resolve(nRef);
+      if (isDict(n) && !(n instanceof PDFStream)) {
+        const as = await doc.resolve(a.AS);
+        const key = as instanceof Name ? as.name : null;
+        nRef = key ? n[key] : undefined;
+        n = await doc.resolve(nRef);
+      }
+      if (n instanceof PDFStream) {
+        const bb = (await doc.resolve(n.dict.BBox)) || [0, 0, 1, 1];
+        const mm = await doc.resolve(n.dict.Matrix);
+        const M = Array.isArray(mm) && mm.length === 6 ? mm.map(Number) : [1, 0, 0, 1, 0, 0];
+        const pts = [[bb[0], bb[1]], [bb[2], bb[1]], [bb[0], bb[3]], [bb[2], bb[3]]].map(([x, y]) => [M[0] * x + M[2] * y + M[4], M[1] * x + M[3] * y + M[5]]);
+        const bx0 = Math.min(...pts.map((q) => q[0])), bx1 = Math.max(...pts.map((q) => q[0]));
+        const by0 = Math.min(...pts.map((q) => q[1])), by1 = Math.max(...pts.map((q) => q[1]));
+        const sx = (bx1 - bx0) ? (R[2] - R[0]) / (bx1 - bx0) : 1, sy = (by1 - by0) ? (R[3] - R[1]) / (by1 - by0) : 1;
+        const key = 'MVRflat' + (k++);
+        xobjects[key] = nRef;
+        ops += 'q ' + [sx, 0, 0, sy, R[0] - bx0 * sx, R[1] - by0 * sy].map(fmt).join(' ') + ' cm /' + key + ' Do Q\n';
+      } else if (widget) {
+        /* no appearance (a form saved with NeedAppearances): the answer is
+           drawn plainly in Helvetica, so it is not lost */
+        const fv = await fieldValue(doc, a);
+        let text = null;
+        if (fv.v && fv.v.__string !== undefined) text = decodePdfString(fv.v.__string);
+        else if (fv.v instanceof Name && fv.v.name !== 'Off') text = fv.ft === 'Btn' ? 'X' : fv.v.name;
+        else if (Array.isArray(fv.v)) text = fv.v.map((x) => x && x.__string ? decodePdfString(x.__string) : '').join(', ');
+        if (text) {
+          const m = /([\d.]+)\s+Tf/.exec(fv.da && fv.da.__string ? latin1(fv.da.__string) : '');
+          let size = m ? Number(m[1]) : 0;
+          const h = R[3] - R[1];
+          if (!size) size = Math.max(6, Math.min(12, h * 0.7));
+          const w = textWidth(text, 'Helvetica', size);
+          const x = fv.q === 1 ? R[0] + (R[2] - R[0] - w) / 2 : fv.q === 2 ? R[2] - 2 - w : R[0] + 2;
+          const y = R[1] + Math.max(1, (h - size) / 2 + size * 0.22);
+          ops += 'q BT 0 g /MVRflatF ' + fmt(size) + ' Tf ' + fmt(x) + ' ' + fmt(y) + ' Td (' + contentEscape(text) + ') Tj ET Q\n';
+          stats.generated++;
+        }
+      }
+      if (widget) stats.fields++; else stats.comments++;
+    }
+    items.push({ doc, pageIndex: i, dropAnnots: drop, overlay: ops ? { content: ops, fontKey: 'MVRflatF', fontName: 'Helvetica', xobjects, upright: false } : undefined });
+  }
+  const bytes = await assemble(items, { noForm: !!o.forms });
+  return { bytes, stats };
+}
+
 /** Parse "1-3, 5, 8-" style page selections into zero-based indices. */
 function parsePageRange(spec, total) {
   // Strip all whitespace before splitting: people type "3 - 4" and "1, 5",
@@ -2144,6 +2275,169 @@ function parsePageRange(spec, total) {
   if (!out.length) throw new Error('That selection matches no pages in this document.');
   return out;
 }
+
+/* ============================================================
+   Unicode text: Noto Sans subsets, shaped where the script needs it
+
+   Text that WinAnsi can hold is still drawn in the base-14 fonts, which
+   embed nothing. Anything else (Polish, Greek, Cyrillic, the rupee sign,
+   Hindi) is drawn with a subset of a vendored Noto font, embedded as a
+   CIDFontType2 with a ToUnicode map so it can be searched and copied.
+   Devanagari is shaped by HarfBuzz (engine/pdf-shaper.js), loaded the first
+   time a run needs it; the fonts are fetched from engine/vendor/fonts/ the
+   same way, and kept for the rest of the session.
+   ============================================================ */
+
+const UNI = { base: null, loader: null, fonts: new Map(), shaper: null, shaperLoader: null };
+/** Where engine/ is (the worker and the shell set it). */
+function setFontBase(url) { UNI.base = url; }
+/** fn(relativePath) -> Promise<Uint8Array>, for Node and the tests. */
+function setFontLoader(fn, shaperLoader) { UNI.loader = fn; if (shaperLoader) UNI.shaperLoader = shaperLoader; }
+
+async function engineFile(rel) {
+  if (UNI.loader) return UNI.loader(rel);
+  const base = UNI.base || (typeof self !== 'undefined' && self.location ? new URL('./', self.location.href).href : '');
+  const r = await fetch(base + rel);
+  if (!r.ok) throw new Error('The font ' + rel.split('/').pop() + ' could not be loaded (HTTP ' + r.status + ').');
+  return new Uint8Array(await r.arrayBuffer());
+}
+async function fontFile(name) {
+  if (!UNI.fonts.has(name)) {
+    UNI.fonts.set(name, (async () => {
+      const bytes = await engineFile('vendor/fonts/' + name);
+      const font = PFONT.parse(bytes);
+      return { font, bytes };
+    })());
+  }
+  return UNI.fonts.get(name);
+}
+async function shaper() {
+  if (UNI.shaper) return UNI.shaper;
+  let S = null;
+  if (UNI.shaperLoader) S = await UNI.shaperLoader();
+  if (!S) { try { if (typeof MVRShaper !== 'undefined') S = MVRShaper; } catch (e) { /* none */ } }
+  if (!S && typeof importScripts === 'function' && UNI.base) { importScripts(UNI.base + 'pdf-shaper.js'); S = self.MVRShaper; }
+  if (!S) throw new Error('The text shaper for this script could not be loaded.');
+  UNI.shaper = await S.load(UNI.base || undefined);
+  return UNI.shaper;
+}
+
+/**
+ * The fonts one output document draws Unicode text with. Prepare every
+ * string first (async: fonts and the shaper load on demand), then draw with
+ * show(), which is synchronous; finish(writer) embeds each font used, once,
+ * as a subset of exactly the glyphs drawn.
+ */
+class TextFonts {
+  /* force: every string in a Noto font, not only those WinAnsi cannot hold,
+     so a document that needs one non-Latin line reads as one typeface */
+  constructor(options) { this.cache = new Map(); this.used = new Map(); this.force = !!(options && options.force); }
+  wants(text) { const t = String(text == null ? '' : text); return this.force ? !!PFONT && t.trim() !== '' : TextFonts.needs(t); }
+  static needs(text) { return !!PFONT && PFONT.needsUnicode(String(text == null ? '' : text)); }
+  key(text, bold) { return (bold ? 'B' : 'R') + '\u0000' + text; }
+  has(text, bold) { return this.cache.has(this.key(String(text), !!bold)); }
+  async prepare(text, bold) {
+    text = String(text == null ? '' : text);
+    if (!this.wants(text)) return null;
+    const k = this.key(text, !!bold);
+    if (this.cache.has(k)) return this.cache.get(k);
+    const file = PFONT.pickFont(text, !!bold);
+    const { font, bytes } = await fontFile(file);
+    let glyphs;
+    if (PFONT.scriptOf(text) === 'latin') glyphs = PFONT.shapeSimple(font, text);
+    else {
+      const sh = await shaper();
+      glyphs = PFONT.fromShaper(font, text, sh.shape(bytes, text, {}));
+    }
+    const rec = { file, font, glyphs, em: glyphs.reduce((sum, g) => sum + (g.adv || 0), 0) / font.unitsPerEm };
+    /* characters neither Noto font has (Chinese, Arabic, emoji …) draw as
+       empty boxes; they are collected so the tool can say so */
+    for (const ch of text) {
+      const cp = ch.codePointAt(0);
+      if (cp > 0x20 && !/\p{Mn}|\p{Cf}|\s/u.test(ch) && font.glyphForCodePoint(cp) === 0) (this.missingChars = this.missingChars || new Set()).add(ch);
+    }
+    this.cache.set(k, rec);
+    return rec;
+  }
+  /** characters drawn as empty boxes, for a warning */
+  missing() { return this.missingChars ? [...this.missingChars] : []; }
+  async prepareAll(texts, bold) { for (const t of texts) await this.prepare(t, bold); return this; }
+  /** points, after prepare() (base-14 metrics for text that needs no font) */
+  widthSync(text, size, bold, base14) {
+    const r = this.cache.get(this.key(String(text), !!bold));
+    return r ? r.em * size : textWidth(text, base14 || (bold ? 'Helvetica-Bold' : 'Helvetica'), size);
+  }
+  async width(text, size, bold, base14) { await this.prepare(text, bold); return this.widthSync(text, size, bold, base14); }
+  /** "/MVRuN size Tf" and the glyphs, inside BT … ET at the current point */
+  show(text, size, bold) {
+    const r = this.cache.get(this.key(String(text), !!bold));
+    if (!r) throw new Error('Text was drawn before it was prepared.');
+    let u = this.used.get(r.file);
+    if (!u) { u = { font: r.font, registry: PFONT.createRegistry(r.font), key: 'MVRu' + this.used.size, refs: new Map() }; this.used.set(r.file, u); }
+    return { key: u.key, ops: '/' + u.key + ' ' + n(size) + ' Tf\n' + PFONT.showGlyphs(u.registry, r.glyphs, size) };
+  }
+  /** the Ref a page's /Font entry names, allocated now and filled by finish() */
+  refFor(writer, key) {
+    for (const u of this.used.values()) {
+      if (u.key !== key) continue;
+      if (!u.refs.has(writer)) u.refs.set(writer, new Ref(writer.alloc(), 0));
+      return u.refs.get(writer);
+    }
+    throw new Error('Unknown font ' + key);
+  }
+  /** { MVRu0: (writer) => Ref, … } for an assemble overlay */
+  overlayFonts() {
+    const out = {};
+    for (const u of this.used.values()) out[u.key] = (writer) => this.refFor(writer, u.key);
+    return out;
+  }
+  finish(writer) {
+    for (const u of this.used.values()) {
+      const ref = u.refs.get(writer);
+      if (!ref) continue;
+      PFONT.embedType0(writer, { Name, Ref, PDFStream }, { font: u.font, registry: u.registry, ref });
+    }
+  }
+  /** pdfcore's wrapText, measured with the right font for each line */
+  async wrap(text, size, bold, maxWidth, base14) {
+    /* each word is measured once and a line is the sum of its words and
+       spaces: shaping never joins across a space, and measuring every
+       growing line would cost the square of a paragraph's length */
+    const lines = [];
+    const words = new Map();
+    const wordWidth = async (w) => {
+      if (!words.has(w)) words.set(w, await this.width(w, size, bold, base14));
+      return words.get(w);
+    };
+    const space = await wordWidth(' ');
+    for (const para of String(text).split('\n')) {
+      if (!para.trim()) { lines.push(''); continue; }
+      let line = '', lw = 0;
+      for (const word of para.split(/\s+/)) {
+        const ww = await wordWidth(word);
+        if (line && lw + space + ww > maxWidth) { lines.push(line); line = word; lw = ww; }
+        else { line = line ? line + ' ' + word : word; lw = line === word ? ww : lw + space + ww; }
+      }
+      if (line) lines.push(line);
+    }
+    for (const l of lines) await this.prepare(l, bold);
+    return lines;
+  }
+}
+
+/** A text helper for specs: textRun(...) -> new TextFonts() */
+function textRun() { return new TextFonts(); }
+
+/** createPDF, with every op's text prepared first so any script can be drawn. */
+async function createDocument(pages, opts) {
+  const tf = (opts && opts.text) || new TextFonts();
+  for (const pg of pages) for (const op of pg.ops || []) {
+    if (op.text !== undefined && tf.wants(op.text)) await tf.prepare(op.text, /Bold/.test(op.font || ''));
+  }
+  return createPDF(pages, Object.assign({}, opts || {}, { text: tf.used.size || tf.cache.size ? tf : null }));
+}
+
+const unicodeFonts = { setFontBase, setFontLoader, TextFonts, needs: (t) => TextFonts.needs(t) };
 
 /* ============================================================
    Base-14 text: widths, wrapping, page building
@@ -2272,6 +2566,7 @@ function createPDF(pages, opts) {
     const [W, H] = page.size || PAGE_SIZES[o.pageSize || 'a4'];
     const used = new Set();
     const usedImages = Object.create(null);
+    const usedUnicode = Object.create(null);
     let cs = '';
 
     for (const op of page.ops || []) {
@@ -2289,6 +2584,17 @@ function createPDF(pages, opts) {
         cs += `q\n${n(w)} 0 0 ${n(h)} ${n(op.x)} ${n(op.y)} cm\n/${key} Do\nQ\n`;
       } else if (op.raw !== undefined) {
         cs += op.raw + '\n';
+      } else if (op.text !== undefined && o.text && o.text.has(op.text, /Bold/.test(op.font || ''))) {
+        /* text outside WinAnsi: a Noto subset, shaped where the script needs it */
+        const size = op.size || 11;
+        const bold = /Bold/.test(op.font || '');
+        const w = o.text.widthSync(op.text, size, bold);
+        let x = op.x || 0;
+        if (op.align === 'center') x = op.x - w / 2;
+        else if (op.align === 'right') x = op.x - w;
+        const shown = o.text.show(op.text, size, bold);
+        usedUnicode[shown.key] = true;
+        cs += `BT\n${rgb(op.colour || '#000000')} rg\n${n(x)} ${n(op.y)} Td\n${shown.ops}\nET\n`;
       } else if (op.text !== undefined) {
         const fk = fontKeyFor(op.font || 'Helvetica');
         used.add(fk);
@@ -2305,6 +2611,8 @@ function createPDF(pages, opts) {
     const res = Object.create(null);
     const fdict = Object.create(null);
     used.forEach(k => { fdict[k.replace(/[^A-Za-z0-9]/g, '')] = fontRefs[k]; });
+    for (const key of page.unicodeKeys || []) usedUnicode[key] = true;
+    for (const key of Object.keys(usedUnicode)) fdict[key] = o.text.refFor(writer, key);
     if (Object.keys(fdict).length) res.Font = fdict;
     if (Object.keys(usedImages).length) res.XObject = usedImages;
     if (page.gs) {
@@ -2324,6 +2632,7 @@ function createPDF(pages, opts) {
 
   writer.set(pagesNum, { Type: new Name('Pages'), Kids: kids, Count: kids.length });
   writer.set(catalogNum, { Type: new Name('Catalog'), Pages: new Ref(pagesNum, 0) });
+  if (o.text) o.text.finish(writer);
 
   let infoRef = null;
   if (o.info) {
@@ -2351,6 +2660,6 @@ if (typeof module !== 'undefined' && module.exports) {
     pdfString, decodePdfString, inflate, applyPredictor, ascii85Decode,
     latin1, bytesOf, isDict, isName, isRef,
     deflate, setProgress, setPreview, protectDocument, prepareImage, imageRef,
-    compressDocument
+    compressDocument, unicodeFonts, textRun, createDocument, TextFonts, flattenDocument
   };
 }

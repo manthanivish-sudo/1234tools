@@ -663,7 +663,7 @@
     } else {
       leaves.forEach(function (lf) { leafParas.push(paragraphs(leafLines(lf), lf.col, body)); });
     }
-    var paras = joinAcrossLeaves(leafParas, body);
+    var paras = joinAcrossLeaves(leafParas, body, [fTop + 0.1 * P.frameH, fBot - 0.1 * P.frameH]);
 
     // text that is not in the main direction: its own frames, at the end of the page
     var groups = {};
@@ -722,12 +722,21 @@
   }
 
   // A paragraph cut by a column (or stream segment) break is one paragraph again.
-  function joinAcrossLeaves(leafParas, body) {
+  // Not when the first piece lies wholly in the top or bottom tenth of the page
+  // (zones: [zTop, zBot]) and the second does not: a running header is not the
+  // start of a sentence that a page beginning in lower case finishes.
+  function joinAcrossLeaves(leafParas, body, zones) {
     var out = [];
+    var band = function (p) {
+      if (!zones) return 'body';
+      var top = Infinity, bottom = -Infinity;
+      p.lines.forEach(function (l) { top = Math.min(top, l.base - 0.8 * l.size); bottom = Math.max(bottom, l.base + 0.25 * l.size); });
+      return bottom <= zones[0] ? 'top' : top >= zones[1] ? 'bottom' : 'body';
+    };
     leafParas.forEach(function (ps) {
       ps.forEach(function (p, i) {
         var last = out[out.length - 1];
-        if (i === 0 && last && !last.lineBreaks && !p.list && !p.lineBreaks) {
+        if (i === 0 && last && !last.lineBreaks && !p.list && !p.lineBreaks && (band(last) === 'body' || band(last) === band(p))) {
           var lt = last.lines[last.lines.length - 1].text, nt = p.lines[0].text;
           var ls = last.lines[last.lines.length - 1].size, ns = p.lines[0].size;
           var lb = last.lines[last.lines.length - 1].bold, nb = p.lines[0].bold;
