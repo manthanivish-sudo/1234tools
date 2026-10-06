@@ -45,11 +45,31 @@
  * Byte counts, /Rotate and "(DRAFT) Tj" counts were read from the downloaded
  * output; page text and positions were read back with the site's own pdf.js
  * (engine/vendor/pdfjs, getTextContent).
+ *
+ * ----
+ *
+ * 2026-10-06, wave 2: every run recorded for the pages of both batches above
+ * was repeated in headless Chrome (154.0.8037.94) against the wave-2 worktree,
+ * with the inputs made again: membership-form.pdf byte for byte (2,480
+ * bytes), quotation-qt-0001.pdf (11,463) and numbered-test-document.pdf
+ * (19,177) unchanged, membership-invoice.pdf 4,534 bytes from the rewritten
+ * invoice generator (was 3,181). Figures that changed are corrected and noted
+ * at their run: merge and extract (the invoice; the merged file is now named
+ * after the first file), the inspector (the guide page it prints has
+ * changed), add text, page numbers and watermark (the overlay font is now one
+ * object per file, not one per page) and signature (the date is the day of
+ * the run). Every figure quoted on delete, payslip, delivery challan, labels,
+ * certificate, paper, metadata, organise (no "Show the pages" press now),
+ * PDF to images, purchase order, quotation, rotate, split and text to PDF
+ * came out the same.
  */
 'use strict';
 
 const FORM = 'membership-form.pdf (2 A4 pages, 2.4 KB: 2 bookmarks, a fillable text field, a web link, a link from page 2 to page 1, Title and Author set; see the top of this file)';
-const CLUB_INVOICE = 'membership-invoice.pdf, made by /pdf/invoice-pdf/ with from "Riverside Club\\n4 Towpath Walk, Oxford OX1 1AA", to "Sam Whitlock\\n9 Canal Row\\nOxford OX2 6AB", number RC-2026-118, date 2026-10-01, Net 14, items "Annual membership, 1, 120\\nLocker hire (12 months), 12, 4.50", GBP, tax 0 (1 page, 3.1 KB)';
+/* Re-made on 2026-10-06 with the rewritten invoice generator (its fields renamed, the Modern layout
+   by default): 1 page, 4,534 bytes, where the generator of 2026-10-04 made 3,181. The generator names
+   it RC-2026-118.pdf; it was saved as membership-invoice.pdf, the name the merge's bookmark shows. */
+const CLUB_INVOICE = 'membership-invoice.pdf, made by /pdf/invoice-pdf/ with fromName "Riverside Club", fromAddress "4 Towpath Walk, Oxford OX1 1AA", fromTax and fromContact empty, toName "Sam Whitlock", toAddress "9 Canal Row\\nOxford OX2 6AB", number RC-2026-118, date 2026-10-01, due Net 14, items "Annual membership, 1, 120\\nLocker hire (12 months), 12, 4.50", GBP, taxMode none, bank empty, notes "Membership fees are not subject to VAT.", every other field at its default (1 page, 4.4 KB)';
 
 module.exports = {
   '/pdf/merge-pdf/': {
@@ -69,7 +89,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'A club’s two-page membership form (bookmarks, a fillable name field, a web link and a “back to the form” link; 2.4 KB) was merged with a one-page invoice from the site’s generator (3.1 KB), keeping the first file’s metadata. merged.pdf had 3 pages and 5.4 KB. The PDF Inspector counted 3 annotations, and the Title “Membership application” now covered an invoice too. pdf.js found the field “fullname” still fillable and a bookmark per file, with “Application” and “Payment details” under the form’s. Swapped, the back link, now on page 3, jumped to page 2, the form’s first page.'
+      text: 'A club’s two-page membership form (bookmarks, a fillable name field, a web link and a “back to the form” link; 2.4 KB) was merged with a one-page invoice from the site’s generator (4.4 KB), keeping the first file’s metadata. membership-form-merged.pdf had 3 pages and 6.7 KB. The PDF Inspector counted 3 annotations, and the Title “Membership application” now covered an invoice too. pdf.js found the field “fullname” still fillable and a bookmark per file, with “Application” and “Payment details” under the form’s. Swapped, the back link, now on page 3, jumped to page 2, the form’s first page.'
     },
     uses: [
       ['Board packs', 'Agenda, minutes and reports as one file.'],
@@ -90,20 +110,24 @@ module.exports = {
       /* Merge PDF Files, files added in this order, "Keep metadata from the first file", ranges "all".
          The output was then opened in /pdf/pdf-inspector/ and with the site's pdf.js
          (getOutline, getFieldObjects, getAnnotations, getMetadata). Re-measured on 2026-10-04 after the
-         writer stopped dropping bookmarks and forms and stopped copying pages through links. */
+         writer stopped dropping bookmarks and forms and stopped copying pages through links.
+         Re-measured on 2026-10-06 with the invoice made again by the rewritten generator (4.4 KB, was
+         3.1 KB): the output is now named after the first file and is 6,840 bytes (was merged.pdf,
+         5,523 bytes); the Inspector's counts and pdf.js's findings are unchanged. */
       {
         browser: {
           tool: '/pdf/merge-pdf/', files: [FORM, CLUB_INVOICE], controls: { keepMeta: 'first', ranges: 'all' }, pressed: 'Merge PDFs',
-          result: 'merged.pdf, 3 pages, 5.4 KB (5,523 bytes)',
+          result: 'membership-form-merged.pdf, 3 pages, 6.7 KB (6,840 bytes)',
           inspector: 'Pages 3, Objects 22, Annotations 3, Metadata: Title Membership application, Author Riverside Club',
           pdfjs: 'getOutline(): "membership-form" { "Application", "Payment details" }, "membership-invoice"; getFieldObjects(): fullname; annotations: Link (URI) and Widget "fullname" on page 1, Link to page 1 on page 2'
         },
-        shown: ['2.4 KB', '3.1 KB', '3 pages', '5.4 KB', '3 annotations', 'Membership application', 'fullname', 'Application', 'Payment details']
+        shown: ['2.4 KB', '4.4 KB', '3 pages', '6.7 KB', '3 annotations', 'Membership application', 'fullname', 'Application', 'Payment details']
       },
       /* the same two files in the opposite order (invoice first), metadata stripped: pdf.js
-         resolves the form's internal link, now on page 3, to page 2, the form's first page */
+         resolves the form's internal link, now on page 3, to page 2, the form's first page
+         (2026-10-06: membership-invoice-merged.pdf, 6.5 KB, 6,703 bytes; was 5.3 KB) */
       {
-        browser: { tool: '/pdf/merge-pdf/', files: ['membership-invoice.pdf (as above)', 'membership-form.pdf (as above)'], controls: { keepMeta: 'strip' }, result: '3 pages, 5.3 KB', pdfjs: 'Link on page 3: destPage 2' },
+        browser: { tool: '/pdf/merge-pdf/', files: ['membership-invoice.pdf (as above)', 'membership-form.pdf (as above)'], controls: { keepMeta: 'strip' }, result: 'membership-invoice-merged.pdf, 3 pages, 6.5 KB', pdfjs: 'Link on page 3: destPage 2' },
         shown: ['page 3', 'page 2']
       }
     ]
@@ -281,6 +305,183 @@ module.exports = {
     ]
   },
 
+  /* Flatten, Crop and Add an Image (wave 2). The runs below were made on 2026-10-06 in headless
+     Chrome against a local server of the wave-2 worktree (build/tests/serve.js). Inputs:
+       renewal-form.pdf  1 A4 page written by PyMuPDF (MuPDF 1.28.2): the heading "Riverside Club:
+         membership renewal 2027", text fields fullname "Sam Whitlock" and email
+         "sam.whitlock@example.com", a combo box membership "Family" (Adult, Family, Junior), a ticked
+         check box "agree", a FreeText comment "Checked by R. Iyer, 2 Oct", an Approved stamp and a
+         URI link to https://www.1234tools.com/; every field with MuPDF's own appearance; Title
+         "Membership renewal 2027". 5,327 bytes, shown as 5.2 KB.
+       renewal-noap.pdf  the same fullname field and value, its /AP removed and NeedAppearances set
+         (as programs that leave drawing to the reader save it). 1,310 bytes.
+       e-ticket.pdf  1 A4 page (595.28 x 841.89 pt) written by PyMuPDF: a ticket box from 72 to 523 pt
+         across and 60 to 300 pt down, its text "E-TICKET Oxford to London Paddington", "Passenger: Sam
+         Whitlock", "Booking reference: RVX4K7", a black square, and at y 800 the 8 pt line "Terms of
+         carriage: valid only on the train shown. Ref RVX4K7."; Title "E-ticket RVX4K7". 2,302 bytes.
+       acme-logo.png  600 x 240 px, drawn by the page's canvas: a navy disc with a yellow triangle and
+         "ACME", the rest transparent. 14,474 bytes.
+       product.jpg  build/promo/samples/product.jpg, CC0 (see its LICENSES.md), 1600 x 1067, no EXIF
+         turn, 219,945 bytes.
+     Outputs were read back with MuPDF (PyMuPDF), pdf.js (the site's copy, in the page) and pdfcore's parser. */
+  '/pdf/flatten-pdf/': {
+    whatTitle: 'What flattening a PDF changes',
+    whatIs: [
+      'A filled-in PDF form keeps its answers apart from the page. Each box is a widget annotation holding a value and an appearance stream, a stored picture of it that the reader draws over the page; comments and stamps are annotations too.',
+      'Flattening copies those pictures into the page’s own drawing and deletes the annotations.'
+    ],
+    howItWorks: {
+      text: 'It runs in a background worker on this page, in the site’s own PDF engine; nothing becomes pixels.',
+      points: [
+        'Each field or comment’s appearance, in the state it shows now, is placed on the page as a form XObject scaled to its rectangle.',
+        'A field with a value but no stored appearance has the value typed in Helvetica inside its box.',
+        'Annotations flagged hidden are dropped undrawn, and a comment’s pop-up note goes with it.',
+        'Links stay links. With the fields flattened the form dictionary goes too, so readers stop treating the file as a form.'
+      ]
+    },
+    worked: {
+      text: 'A club renewal form filled in by MuPDF (5.2 KB) held four answers, among them Family chosen from a list and a ticked box, plus a typed note, an APPROVED stamp and a web link. With every default the stats read 4 form fields and 2 comments drawn into the page and 1 link kept: 4.3 KB. MuPDF then found no fields or comments, only the link, and read “Sam Whitlock” as page text; rendered at 72 DPI, the page matched the original to within 0.0004 of 255. Form fields only kept the note and stamp as comments (4.7 KB), and a name saved with no appearance came back in Helvetica.'
+    },
+    uses: [
+      ['Applications', 'Fix the answers before a form goes to a landlord or a bank.'],
+      ['Printing filled forms', 'Some viewers leave field values out; flattened answers always print.'],
+      ['Approved paperwork', 'Make a reviewer’s note and stamp part of the record.']
+    ],
+    mistakes: [
+      'Flattening before checking every answer. Afterwards a slip can only be put right in the original form, so keep it.',
+      'Flattening a form that still needs a digital signature. The signature box is a field too, so it is drawn as it looks and can no longer be signed.'
+    ],
+    faq: [
+      { q: 'Does flattening make the PDF smaller?', a: 'Usually a little, as the field objects and the form dictionary go: 5.2 KB became 4.3 KB above.' },
+      { q: 'Can the flattened answers still be searched and copied?', a: 'Yes, when their appearance was drawn as text, as typed answers almost always are. MuPDF and pdf.js both read the flattened name and email as page text.' },
+      { q: 'What happens to a ticked box or a chosen option?', a: 'Each is drawn as it showed, the tick as a tick and the list as the chosen word, and neither can be changed afterwards.' }
+    ],
+    runs: [
+      /* Flatten PDF, renewal-form.pdf, every default (Flatten: Form fields and comments), Flatten PDF
+         pressed. Stats: Pages 1, Form fields drawn into the page 4, Comments and stamps drawn into the
+         page 2, Links kept as links 1, Output size 4.3 KB. The download, renewal-form-flattened.pdf
+         (4,398 bytes): MuPDF widgets 0, annotations none, links 1, is_form_pdf false, page text holds
+         "Sam Whitlock | sam.whitlock@example.com | Family | … Checked by R. Iyer, 2 Oct | APPROVED";
+         rendered by MuPDF at 72 DPI against the original with annotations shown, mean difference
+         0.0004 of 255, and 0 of 500,990 pixels differing by more than 48; pdf.js: no fields, one Link,
+         the same words in getTextContent, Title kept. */
+      {
+        browser: { tool: '/pdf/flatten-pdf/', file: 'renewal-form.pdf, 1 page, 5,327 bytes: 4 filled fields, a FreeText comment, a stamp, a link', controls: { what: 'all' }, pressed: 'Flatten PDF', result: 'renewal-form-flattened.pdf, 4,398 bytes' },
+        shown: ['5.2 KB', '4 form fields', '2 comments', '1 link', '4.3 KB', 'Sam Whitlock', '72 DPI', '0.0004 of 255']
+      },
+      /* the same file, Flatten "Form fields only": Form fields 4, Comments 0, 4.7 KB (4,773 bytes);
+         MuPDF: widgets 0, annotations FreeText and Stamp kept. ("Comments, stamps and drawings only":
+         5.3 KB, the 4 fields still fields.) */
+      { browser: { tool: '/pdf/flatten-pdf/', file: 'renewal-form.pdf', controls: { what: 'forms' } }, shown: ['4.7 KB'] },
+      /* renewal-noap.pdf, Flatten "Form fields and comments": the stat row "Answers with no stored
+         appearance, drawn in Helvetica 1", 1.0 KB; MuPDF and pdf.js read "Sam Whitlock" at x 162 as
+         page text, no widget left */
+      { browser: { tool: '/pdf/flatten-pdf/', file: 'renewal-noap.pdf, 1,310 bytes, a text field with a value and no /AP, NeedAppearances true', controls: { what: 'all' } }, shown: ['Helvetica'] }
+    ]
+  },
+
+  '/pdf/crop-pdf/': {
+    whatTitle: 'What cropping a PDF page does',
+    whatIs: [
+      'A PDF page carries several boxes. The media box is the whole sheet; the crop box, when set, is the part a viewer shows and a printer prints, and whatever lies outside it stays in the file.',
+      'Cropping here sets that crop box: nothing is cut, resampled or redrawn.'
+    ],
+    howItWorks: {
+      text: 'pdf.js, from this site’s own copy, draws the preview; the site’s own engine writes the file in a background worker.',
+      points: [
+        'Margins are millimetres, at 72 ÷ 25.4 points each, taken off the page as it is shown now.',
+        'On a page stored turned by its `/Rotate`, or cropped already, the new box is mapped back into the page’s own coordinates.',
+        'Fit to the content finds every preview pixel darker than near-white and adds a 2 mm border; dragged and fitted margins round to half a millimetre.',
+        'Margins that would leave a point or less of a page are refused, naming that page and its size.'
+      ]
+    },
+    worked: {
+      text: 'An e-ticket saved as an A4 PDF (2.2 KB) fills the top third of the page, with small print at the foot. Fit to the content set the margins to 18.5, 23, 12 and 23 mm, taking in the small print too. Typing 189 into Bottom pulled that edge up under the ticket: the readout said it keeps 164 × 89.5 mm of a 210 × 297 mm page. The cropped file was 2.2 KB, and pdf.js showed a 464.89 × 253.7 point page with the ticket alone. Yet the small print was still there: MuPDF read it again once the crop box was reset to the whole sheet.'
+    },
+    uses: [
+      ['Tickets and labels', 'Cut a ticket or a shipping label down from the A4 page it came on.'],
+      ['Scans and slides', 'Trim the white border a scanner or a slide export left.'],
+      ['Reading on a phone', 'Take off wide margins so the text fills a small screen.']
+    ],
+    mistakes: [
+      'Cropping to hide an account number or a name. Anyone who resets the crop box sees it again, as MuPDF did above.',
+      'Pressing Fit to the content on a page with a footer or a stray speck. The box stretches to include it; drag or type the edge where it should stop.'
+    ],
+    faq: [
+      { q: 'Can I make a crop larger again here?', a: 'No. Margins come off the page as shown, already cropped, so 0 keeps it as it is. Start again from the original, which this tool never changes.' },
+      { q: 'Does cropping change the text or links inside the box?', a: 'No. Words stay selectable and links keep their targets; only what falls outside stops showing.' },
+      { q: 'Is cropping the same as changing the paper size?', a: 'No. Cropping hides part of the page and scales nothing; print scaling is what fits other paper.' }
+    ],
+    runs: [
+      /* Crop PDF, e-ticket.pdf (top of the Flatten entry): the preview's readout first said "Keeps 180 ×
+         267 mm of a 210 × 297 mm page" (the 15 mm defaults); "Fit to the content" pressed: Top 18.5,
+         Right 23, Bottom 12, Left 23, "Keeps 164 × 266.5 mm"; Bottom typed as 189: "Keeps 164 × 89.5 mm
+         of a 210 × 297 mm page"; Pages all; Crop PDF pressed. Stats: Pages 1, Pages cropped 1, Margins
+         removed "top 18.5, right 23, bottom 189, left 23 mm", First cropped page "164 × 89.5 mm", Output
+         size 2.2 KB. The download, e-ticket-cropped.pdf (2,229 bytes): /MediaBox [0 0 595.28 841.89] kept,
+         /CropBox [65.197 535.748 530.083 789.449]; pdf.js viewport 464.89 × 253.7, text the ticket's
+         lines only; MuPDF page.rect 464.9 × 253.7, text the ticket's lines; after MuPDF's
+         set_cropbox(mediabox) its text ends "Terms of carriage: valid only on the train shown. Ref RVX4K7." */
+      {
+        browser: { tool: '/pdf/crop-pdf/', file: 'e-ticket.pdf, 1 A4 page, 2,302 bytes', pressed: ['Fit to the content', 'Crop PDF'], controls: { top: 18.5, right: 23, bottom: 189, left: 23, pages: 'all' }, fitted: 'top 18.5, right 23, bottom 12, left 23', result: 'e-ticket-cropped.pdf, 2,229 bytes' },
+        shown: ['2.2 KB', '18.5, 23, 12 and 23 mm', '189', '164 × 89.5 mm of a 210 × 297 mm page', '464.89 × 253.7']
+      }
+    ]
+  },
+
+  '/pdf/add-image-to-pdf/': {
+    whatTitle: 'What adding a picture to a PDF involves',
+    whatIs: [
+      'A picture in a PDF is an image object: pixels, their size and colour space, and a compression filter. A page draws it by name, with a matrix setting its place and size.',
+      'One stored picture can appear on any number of pages; its transparency travels as a greyscale soft mask.'
+    ],
+    howItWorks: {
+      text: 'This browser decodes the picture on your device; the site’s own engine writes the PDF in a background worker.',
+      points: [
+        'A grey or colour JPEG, stored the way up it is shown and at most 6,000 pixels long, goes in as it is.',
+        'Any other picture becomes pixels, at most 2,400 on the longer side, deflated without loss, with its transparency as a soft mask.',
+        'A picture placed several times, or on many pages, is stored once; each placement is one line of drawing code.',
+        'Opacity below 100% adds a graphics state with a fill alpha. X, Y and width are points on the page as shown.'
+      ]
+    },
+    worked: {
+      text: 'A 600 × 240-pixel PNG logo with a transparent background (14.1 KB) went on both pages of the Quotation tool’s quotation (11.2 KB) via “every page”, at X 40, Y 760, 150 points wide. A 1600 × 1067 JPEG photo of a coffee cup (214.8 KB, CC0) followed on page 1, 200 points wide. The stats read 2 pictures placed and 2 picture files embedded; the file was 236.3 KB. pdf.js painted two pictures on page 1 and one on page 2, the photo’s stream was the JPEG byte for byte, and the logo was stored once. Alone at 30% opacity it made 21.3 KB.'
+    },
+    uses: [
+      ['Letterhead after the fact', 'Put a logo on every page of a PDF made without one.'],
+      ['Seals and stamps', 'Add a scanned company seal or a PAID stamp as a transparent PNG.'],
+      ['Photos in reports', 'Drop a site photo into an inspection report.']
+    ],
+    mistakes: [
+      'Using a JPEG logo with a white box round it. JPEG has no transparency, so the box hides what is under it; use a transparent PNG.',
+      'Adding a full-size phone photo to a PDF meant for email. A JPEG goes in at full size, so run Compress PDF on the result.'
+    ],
+    faq: [
+      { q: 'Does a logo on every page make the file much bigger?', a: 'No. It is stored once and drawn from each page: above, one image and its soft mask, 9.3 KB in all, served both pages.' },
+      { q: 'Can I add a picture to a password-protected PDF?', a: 'Yes, with its password, asked for when you add the file. The result is saved without one; Protect PDF can put it back.' },
+      { q: 'Which picture formats can I use?', a: 'PNG, JPEG, WebP and GIF. Only a JPEG keeps its own bytes; the rest are stored as pixels, without loss.' }
+    ],
+    runs: [
+      /* Add an Image to a PDF, quotation-qt-0001.pdf (top of this file, 11,463 bytes): Image
+         acme-logo.png (the picker read "acme-logo.png · 600 × 240 px"), the "every page" button above
+         the preview (Pages became "all"), X 40, Y 760, Width 150, Opacity 100; "Add as another image";
+         Image product.jpg ("1600 × 1067 px"), X 330, Y 470, Width 200, Pages 1; Add the image pressed.
+         Stats: Pages 2, Pages with a picture 2, Pictures placed 2, Picture files embedded "2 (each
+         stored once, however often it is drawn)", Output size 236.3 KB. The download (242,022 bytes):
+         pdf.js paintImageXObject 2 on page 1, 1 on page 2; pdfcore's parser: three image objects, the
+         logo 600x240 FlateDecode (4,070 bytes) with its 600x240 soft mask (5,497 bytes), and a
+         1600x1067 DCTDecode stream equal to product.jpg byte for byte. */
+      {
+        browser: { tool: '/pdf/add-image-to-pdf/', file: 'quotation-qt-0001.pdf, 2 pages, 11,463 bytes', images: ['acme-logo.png, 600 x 240, 14,474 bytes, transparent background', 'product.jpg, 1600 x 1067 JPEG, 219,945 bytes'], items: [{ image: 'acme-logo.png', pages: 'all (the "every page" button)', x: 40, y: 760, width: 150, opacity: 100 }, { image: 'product.jpg', pages: '1', x: 330, y: 470, width: 200, opacity: 100 }], pressed: ['Add as another image', 'Add the image'], result: 'quotation-qt-0001-with-image.pdf, 242,022 bytes' },
+        shown: ['600 × 240', '14.1 KB', '11.2 KB', '1600 × 1067', '214.8 KB', '2 pictures placed', '2 picture files embedded', '236.3 KB', '9.3 KB']
+      },
+      /* the quotation again, acme-logo.png alone at X 120, Y 300, Width 360, Opacity 30, Pages last:
+         Pictures placed 1, Output size 21.3 KB (21,765 bytes); the file holds "/ca 0.3"; pdf.js still
+         reads page 2's text */
+      { browser: { tool: '/pdf/add-image-to-pdf/', file: 'quotation-qt-0001.pdf', items: [{ image: 'acme-logo.png', pages: 'last', x: 120, y: 300, width: 360, opacity: 30 }] }, shown: ['30%', '21.3 KB'] }
+    ]
+  },
+
   '/pdf/delete-pdf-pages/': {
     whatTitle: 'What deleting a PDF page really removes',
     whatIs: [
@@ -340,7 +541,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'A three-page merged file, a two-page form followed by an invoice, was cut with “3, 1” left as listed: the invoice came first and the form’s opening page second, 2 pages and 4.7 KB. Sorted, the same selection came out as “1, 3”. Separately, a one-page invoice of 3.1 KB extracted as “1, 1, 1” gave three identical pages in 3.5 KB, since all three page entries share one content stream.'
+      text: 'A three-page merged file, a two-page form followed by an invoice, was cut with “3, 1” left as listed: the invoice came first and the form’s opening page second, 2 pages and 6.0 KB. Sorted, the same selection came out as “1, 3”. Separately, a one-page invoice of 4.4 KB extracted as “1, 1, 1” gave three identical pages in 4.8 KB, since all three page entries share one content stream.'
     },
     uses: [
       ['A chapter for a study group', 'Pages 45-62 of a course reader, not the whole volume.'],
@@ -357,13 +558,16 @@ module.exports = {
       { q: 'Why does my page selection give an error?', a: 'Each part must be a page or a range such as 3-5, 8- or -2, and a selection that matches no page, like “12-15” in a ten-page file, is refused.' }
     ],
     runs: [
-      /* Extract PDF Pages on the 3-page merged.pdf from the merge run (form pages 1-2, invoice page 3), pages "3, 1", order As listed.
-         Re-measured on 2026-10-04 with the fixed writer (before: 4.8 KB, and 3.4 KB for the invoice below). */
-      { browser: { tool: '/pdf/extract-pdf-pages/', file: 'merged.pdf (3 pages, 5.4 KB, from the /pdf/merge-pdf/ run recorded on that page)', controls: { pages: '3, 1', order: 'asis' }, pressed: 'Extract pages' }, shown: ['2 pages', '4.7 KB'] },
-      /* the same, order Sorted by page number: Page order "1, 3", 4.7 KB */
-      { browser: { tool: '/pdf/extract-pdf-pages/', file: 'merged.pdf', controls: { pages: '3, 1', order: 'sorted' } }, shown: ['1, 3'] },
-      /* Extract PDF Pages on membership-invoice.pdf, pages "1, 1, 1", As listed: 3 pages, 3.5 KB */
-      { browser: { tool: '/pdf/extract-pdf-pages/', file: CLUB_INVOICE, controls: { pages: '1, 1, 1', order: 'asis' } }, shown: ['3.1 KB', '3.5 KB'] }
+      /* Extract PDF Pages on the 3-page membership-form-merged.pdf from the merge run (form pages 1-2, invoice page 3), pages "3, 1", order As listed.
+         Re-measured on 2026-10-04 with the fixed writer (before: 4.8 KB, and 3.4 KB for the invoice below).
+         Re-measured on 2026-10-06 on the merge re-made with the invoice from the rewritten generator:
+         6.0 KB (6,152 bytes; was 4.7 KB), and 4.8 KB (4,896 bytes) for that 4.4 KB invoice (was 3.5 KB from 3.1 KB);
+         the three pages still name one content stream. */
+      { browser: { tool: '/pdf/extract-pdf-pages/', file: 'membership-form-merged.pdf (3 pages, 6.7 KB, from the /pdf/merge-pdf/ run recorded on that page)', controls: { pages: '3, 1', order: 'asis' }, pressed: 'Extract pages', result: 'membership-form-merged-extract.pdf, 2 pages, 6,152 bytes' }, shown: ['2 pages', '6.0 KB'] },
+      /* the same, order Sorted by page number: Page order "1, 3", 6.0 KB */
+      { browser: { tool: '/pdf/extract-pdf-pages/', file: 'membership-form-merged.pdf', controls: { pages: '3, 1', order: 'sorted' } }, shown: ['1, 3'] },
+      /* Extract PDF Pages on membership-invoice.pdf, pages "1, 1, 1", As listed: 3 pages, 4.8 KB */
+      { browser: { tool: '/pdf/extract-pdf-pages/', file: CLUB_INVOICE, controls: { pages: '1, 1, 1', order: 'asis' } }, shown: ['4.4 KB', '4.8 KB'] }
     ]
   },
 
@@ -383,7 +587,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'Chrome’s print to PDF (version 154, A4) turned the site’s merge guide into a 441.8 KB file. The inspector read 4 pages at 596 × 842 pt (210 × 297 mm), 1041 objects and 22 annotations, the guide’s links. The metadata held the page title, the full HeadlessChrome browser string as Creator, Skia/PDF m154 as Producer and the creation time to the second. Distinct fonts said “none found” on pages full of text: Chrome wrote every font as Type 3, drawn glyph by glyph with no name to list.'
+      text: 'Chrome’s print to PDF (version 154, A4) turned the site’s merge guide into a 437.5 KB file. The inspector read 4 pages at 596 × 842 pt (210 × 297 mm), 1030 objects and 22 annotations, the guide’s links. The metadata held the page title, the full HeadlessChrome browser string as Creator, Skia/PDF m154 as Producer and the creation time to the second. Distinct fonts said “none found” on pages full of text: Chrome wrote every font as Type 3, drawn glyph by glyph with no name to list.'
     },
     uses: [
       ['Before an upload portal', 'Check size and page count before a portal rejects the file.'],
@@ -402,10 +606,14 @@ module.exports = {
     runs: [
       /* Chrome 154.0.8037.94 (headless): page.pdf({ format: 'A4', printBackground: true }) of
          /guides/merge-pdf-files/ served from this export, then that file chosen in PDF Inspector.
-         All 60 font resources in the file are Subtype /Type3 with no /BaseFont. */
+         All 60 font resources in the file are Subtype /Type3 with no /BaseFont.
+         Re-measured on 2026-10-06 against the wave-2 worktree, the same Chrome: the guide page has
+         changed since, so its print is 448,041 bytes, 437.5 KB (was 441.8 KB), with 1030 objects (was
+         1041) and 40 font resources, all /Type3; 4 pages, 22 annotations, Skia/PDF m154 and "none
+         found" as before. */
       {
         browser: { tool: '/pdf/pdf-inspector/', file: 'merge-guide-chrome.pdf: Chrome 154 Save as PDF of /guides/merge-pdf-files/, A4, printBackground true', creator: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.' },
-        shown: ['441.8 KB', '4 pages', '596 × 842 pt (210 × 297 mm)', '1041', '22 annotations', 'Skia/PDF m154', 'none found']
+        shown: ['437.5 KB', '4 pages', '596 × 842 pt (210 × 297 mm)', '1030', '22 annotations', 'Skia/PDF m154', 'none found']
       },
       /* the FAQ: PDF Inspector on the payslip from the /pdf/payslip-pdf/ run recorded on that page */
       { browser: { tool: '/pdf/pdf-inspector/', file: 'payslip-rahul-menon-september-2026.pdf (1 page, 6.0 KB)' }, shown: ['Helvetica-Bold, Helvetica'] }
@@ -428,7 +636,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'A two-page membership form with a real fillable name field (2.4 KB) got two items: “Sam Whitlock” at X 156, Y 698 on page 1, inside the field’s box, and “Paid by card on 1 October 2026” at X 72, Y 600 on page 2. The run showed 2 pages written to, 2 items placed and 2 lines written, and the file grew to 3.0 KB. pdf.js found both phrases as selectable text, the Title and the field “fullname”, which stayed empty: the name was drawn over the box, not entered into it.'
+      text: 'A two-page membership form with a real fillable name field (2.4 KB) got two items: “Sam Whitlock” at X 156, Y 698 on page 1, inside the field’s box, and “Paid by card on 1 October 2026” at X 72, Y 600 on page 2. The run showed 2 pages written to, 2 items placed and 2 lines written, and the file grew to 2.9 KB. pdf.js found both phrases as selectable text, the Title and the field “fullname”, which stayed empty: the name was drawn over the box, not entered into it.'
     },
     uses: [
       ['Reference numbers', 'Stamp a purchase-order number on every page before filing.'],
@@ -450,10 +658,12 @@ module.exports = {
          card on 1 October 2026", size 12, X 72, Y 600, Pages 2); Add text pressed. The output was
          read with pdf.js: getTextContent, getFieldObjects (fullname, value empty), getMetadata (Title
          Membership application). Re-measured on 2026-10-04 with the fixed writer (before: 2.7 KB,
-         no fields, no Title). */
+         no fields, no Title). Re-measured on 2026-10-06, after the overlay font became one object per
+         file instead of one per page: membership-form-edited.pdf, 2,962 bytes, 2.9 KB (was 3,078,
+         3.0 KB); the stats, the text, the field and the Title as before. */
       {
-        browser: { tool: '/pdf/pdf-editor/', file: FORM, items: [{ text: 'Sam Whitlock', size: 12, x: 156, y: 698, pages: '1' }, { text: 'Paid by card on 1 October 2026', size: 12, x: 72, y: 600, pages: '2' }], pressed: ['Add as another item', 'Add text'], result: 'form-edited.pdf, 2 pages, 3.0 KB (3,078 bytes)' },
-        shown: ['2.4 KB', '2 pages written to', '2 items placed', '2 lines written', '3.0 KB', 'fullname']
+        browser: { tool: '/pdf/pdf-editor/', file: FORM, items: [{ text: 'Sam Whitlock', size: 12, x: 156, y: 698, pages: '1' }, { text: 'Paid by card on 1 October 2026', size: 12, x: 72, y: 600, pages: '2' }], pressed: ['Add as another item', 'Add text'], result: 'membership-form-edited.pdf, 2 pages, 2.9 KB (2,962 bytes)' },
+        shown: ['2.4 KB', '2 pages written to', '2 items placed', '2 lines written', '2.9 KB', 'fullname']
       }
     ]
   },
@@ -816,7 +1026,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'A 5-page report whose first page is a cover (the test file from Text to PDF, its own numbering off) was numbered in the “Page 1 of 10” style, skipping 1 page and starting at 1. Pages numbered: 4. The output’s text reads “Page 1 of 4” on the second sheet and “Page 4 of 4” on the last, each 32 points above the bottom edge, centred: the total counts numbered pages only. The file grew from 18.7 KB to 19.9 KB.'
+      text: 'A 5-page report whose first page is a cover (the test file from Text to PDF, its own numbering off) was numbered in the “Page 1 of 10” style, skipping 1 page and starting at 1. Pages numbered: 4. The output’s text reads “Page 1 of 4” on the second sheet and “Page 4 of 4” on the last, each 32 points above the bottom edge, centred: the total counts numbered pages only. The file grew from 18.7 KB to 19.6 KB.'
     },
     uses: [
       ['Dissertations', 'Number the body of a thesis exported without page numbers, leaving the title page bare.'],
@@ -833,8 +1043,8 @@ module.exports = {
       { q: 'Will my viewer’s page counter match the printed numbers?', a: 'Not when you skip pages. No page labels are written, so the viewer still calls the cover page 1.' }
     ],
     runs: [
-      /* Open /pdf/pdf-page-numbers/, set Format "Page 1 of 10", Position "Bottom centre", Start numbering at 1, Skip first N pages 1, choose numbered-test-document.pdf (top of this file), press "Add page numbers"; read the output's text and positions with pdf.js (label baseline at y = 32 pt). Re-measured on 2026-10-04 with the fixed writer, which keeps the Title (before: 19.8 KB). */
-      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, Text to PDF with numbers off', format: 'page-n-of-t (label "Page 1 of 10")', position: 'bc', start: 1, skip: 1, size: 10, pressed: 'Add page numbers', result: '5 pages · 19.9 KB (20,427 bytes)' }, shown: ['Pages numbered: 4', 'Page 1 of 4', 'Page 4 of 4', '32 points', '19.9 KB'] }
+      /* Open /pdf/pdf-page-numbers/, set Format "Page 1 of 10", Position "Bottom centre", Start numbering at 1, Skip first N pages 1, choose numbered-test-document.pdf (top of this file), press "Add page numbers"; read the output's text and positions with pdf.js (label baseline at y = 32 pt). Re-measured on 2026-10-04 with the fixed writer, which keeps the Title (before: 19.8 KB). Re-measured on 2026-10-06, after the label's font became one object per file instead of one per page: 20,079 bytes, 19.6 KB (was 20,427, 19.9 KB); the labels, their x 272.1 and baseline 32 pt as before. */
+      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, Text to PDF with numbers off', format: 'page-n-of-t (label "Page 1 of 10")', position: 'bc', start: 1, skip: 1, size: 10, pressed: 'Add page numbers', result: 'numbered-test-document-numbered.pdf, 5 pages · 19.6 KB (20,079 bytes)' }, shown: ['Pages numbered: 4', 'Page 1 of 4', 'Page 4 of 4', '32 points', '19.6 KB'] }
     ]
   },
 
@@ -853,7 +1063,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'The 2-page quotation from this site’s Quotation tool was signed “For Acme Interiors: R. Shah”, date on, X 330, Y 150, Pages “last”. The stats read 2 pages, 1 signed, and the file went from 11,463 to 11,884 bytes. Page 2’s extracted text holds the name as an ordinary line and “Date: 4 October 2026” 14 points below it, so any editor can select or delete it. A byte search of the output finds no /ByteRange and no /Sig entry.'
+      text: 'The 2-page quotation from this site’s Quotation tool was signed “For Acme Interiors: R. Shah”, date on, X 330, Y 150, Pages “last”. The stats read 2 pages, 1 signed, and the file went from 11,463 to 11,884 bytes. Page 2’s extracted text holds the name as an ordinary line and “Date: 6 October 2026” 14 points below it, so any editor can select or delete it. A byte search of the output finds no /ByteRange and no /Sig entry.'
     },
     uses: [
       ['Internal approvals', 'Mark an expense claim approved by a named manager.'],
@@ -872,7 +1082,8 @@ module.exports = {
     runs: [
       /* Open /pdf/pdf-signature/, set Signature text "For Acme Interiors: R. Shah", Include date Yes, X 330, Y 150, Pages "last", choose quotation-qt-0001.pdf (top of this file), press "Add signature" on 4 October 2026; save the download, read page 2's text with pdf.js and search its bytes for /ByteRange and /Sig. */
       /* Re-measured on 2026-10-04 with the fixed writer, which keeps the Title and isolates the page's own drawing state in q … Q (before: 11,620 bytes). */
-      { browser: { input: 'quotation-qt-0001.pdf, 2 pages, 11,463 bytes', signatureText: 'For Acme Interiors: R. Shah', date: 'yes', x: 330, y: 150, pages: 'last', pressed: 'Add signature', runDate: '2026-10-04' }, shown: ['2 pages, 1 signed', '11,884 bytes', 'Date: 4 October 2026', '14 points below'] }
+      /* Re-measured on 2026-10-06: still 11,884 bytes (one page signed, so one overlay font either way); the date is the day of the run, so it now reads "Date: 6 October 2026" (was 4 October), at x 330, 136 pt up, 14 below the name. */
+      { browser: { input: 'quotation-qt-0001.pdf, 2 pages, 11,463 bytes', signatureText: 'For Acme Interiors: R. Shah', date: 'yes', x: 330, y: 150, pages: 'last', pressed: 'Add signature', runDate: '2026-10-06' }, shown: ['2 pages, 1 signed', '11,884 bytes', 'Date: 6 October 2026', '14 points below'] }
     ]
   },
 
@@ -1323,7 +1534,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'The 5-page test document (18.7 KB, 200 numbered lines from Text to PDF) was stamped DRAFT at 60 pt, 45°, 15% opacity. Centred, it gained 5 copies, one a page, and grew to 20.9 KB. Tiled, the output was 58.3 KB, about three times the size, because the file holds 385 separate “(DRAFT) Tj” commands, 77 a page, most of them starting off the visible sheet. Every page’s extracted text includes “DRAFT”, so search and copy pick it up too.'
+      text: 'The 5-page test document (18.7 KB, 200 numbered lines from Text to PDF) was stamped DRAFT at 60 pt, 45°, 15% opacity. Centred, it gained 5 copies, one a page, and grew to 20.4 KB. Tiled, the output was 57.8 KB, about three times the size, because the file holds 385 separate “(DRAFT) Tj” commands, 77 a page, most of them starting off the visible sheet. Every page’s extracted text includes “DRAFT”, so search and copy pick it up too.'
     },
     uses: [
       ['Drafts for comment', 'Stamp DRAFT so nobody mistakes a proposal for the agreed version.'],
@@ -1342,8 +1553,9 @@ module.exports = {
     runs: [
       /* Open /pdf/watermark-pdf/, Watermark text DRAFT, Font size 60, Angle 45° diagonal, Opacity 15, Position Centre, Pages all, choose numbered-test-document.pdf (top of this file), press "Add watermark"; count "(DRAFT) Tj" in the download. Then Position "Tiled across the page"; read the page text back with pdf.js. */
       /* Re-measured on 2026-10-04 with the fixed writer, which keeps the Title (before: 20.7 KB and 58.1 KB). */
-      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, 200 numbered lines', text: 'DRAFT', size: 60, angle: '45', opacity: 15, position: 'center', pages: 'all', pressed: 'Add watermark' }, shown: ['5 copies', '20.9 KB'] },
-      { browser: { input: 'numbered-test-document.pdf', text: 'DRAFT', size: 60, angle: '45', opacity: 15, position: 'tile', pages: 'all' }, shown: ['58.3 KB', '385', '77 a page'] }
+      /* Re-measured on 2026-10-06, after the watermark font became one object per file instead of one per page: centred 20,918 bytes, 20.4 KB (was 20.9 KB); tiled 59,208 bytes, 57.8 KB (was 58.3 KB), still 385 "(DRAFT) Tj", 77 a page. */
+      { browser: { input: 'numbered-test-document.pdf, 5 pages, 18.7 KB, 200 numbered lines', text: 'DRAFT', size: 60, angle: '45', opacity: 15, position: 'center', pages: 'all', pressed: 'Add watermark' }, shown: ['5 copies', '20.4 KB'] },
+      { browser: { input: 'numbered-test-document.pdf', text: 'DRAFT', size: 60, angle: '45', opacity: 15, position: 'tile', pages: 'all' }, shown: ['57.8 KB', '385', '77 a page'] }
     ]
   },
 
@@ -1353,7 +1565,7 @@ module.exports = {
    * the fixtures build/tests/pdf-ocr-tools.js writes: text drawn on canvases in
    * the page (Arial; Nirmala UI for Hindi) and wrapped into PDFs by PyMuPDF.
    *
-   *   scan.pdf   2 pages, A4, each one 200 DPI picture, 87,805 bytes (85.7 KB).
+   *   scan.pdf   2 pages, A4, each one 200 DPI picture, 87,741 bytes (85.7 KB).
    *              Page 1: four lines of English at 42 px ("Scanned letter for
    *              the OCR test" …). Page 2: stored landscape with /Rotate 90 so
    *              it shows upright: "Rotated page with a line in Hindi", "भारत
@@ -1379,7 +1591,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'A two-page test scan at 200 DPI (85.7 KB), its second page stored sideways with a 90° rotation flag and holding the Hindi line भारत एक विशाल देश है, was read in English and Hindi at 300 DPI: 45 words at a mean confidence of 96%, and the file grew to 90.9 KB. pdf.js and MuPDF both read every line back as drawn, and MuPDF placed each English word within 0.7 pt of the drawn one. On a page of 5 to 8 pt print, 200 DPI added a stray quotation mark; 300 DPI read every character.'
+      text: 'A two-page test scan at 200 DPI (85.7 KB), its second page stored sideways with a 90° rotation flag and holding the Hindi line भारत एक विशाल देश है, was read in English and Hindi at 300 DPI: 45 words at a mean confidence of 96%, and the file grew to 90.8 KB. pdf.js and MuPDF both read every line back as drawn, and MuPDF placed each English word within 0.7 pt of the drawn one. On a page of 5 to 8 pt print, 200 DPI added a stray quotation mark; 300 DPI read every character.'
     },
     uses: [
       ['Old paperwork', 'Find scanned letters by a name or reference number.'],
@@ -1397,7 +1609,7 @@ module.exports = {
     ],
     runs: [
       /* Open /pdf/ocr-pdf/, choose scan.pdf (top of this entry), Language "English and Hindi", Pages all, Pages that already have text "Skip them", Resolution 300 DPI, press "Make it searchable". Read the stats and the summary; download and read with pdf.js and MuPDF (build/tests/pdf-ocr-tools.js section 1, which also measures the word boxes: worst 0.66 pt on page 1, 0.60 pt on page 2). */
-      { browser: { input: 'scan.pdf, 2 pages, 85.7 KB, page 2 /Rotate 90', lang: 'both', pages: 'all', existing: 'skip', dpi: '300', pressed: 'Make it searchable' }, shown: ['45 words', '96%', '90.9 KB', '0.7 pt'] },
+      { browser: { input: 'scan.pdf, 2 pages, 85.7 KB, page 2 /Rotate 90', lang: 'both', pages: 'all', existing: 'skip', dpi: '300', pressed: 'Make it searchable' }, shown: ['45 words', '96%', '90.8 KB', '0.7 pt'] },
       /* The same file with Language English (section 4 of the test, the run after Cancel): the report's page 2 reads "URd Up faxna ere" for the Hindi line; 44 words, 91%. */
       { browser: { input: 'scan.pdf', lang: 'eng', pages: 'all', existing: 'skip', dpi: '300' }, shown: ['URd Up faxna ere'] },
       /* small-print.pdf at 200 DPI: the report's second line starts with a stray "‘" ("‘Sphinx of black quartz…"); at 300 DPI every line matches. 96 words, 96% both times. */
@@ -1422,7 +1634,7 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'Two pictures were read as English. receipt.png, three lines of a shop receipt, gave 17 words at a mean confidence of 96%; notice.jpg, a two-line notice saved as JPEG, gave 12 words at 96%. Every character matched what was drawn, and both came back in one image-text.txt with each file’s name above its text. A third file, broken.png, was text renamed as a picture: the run named it and carried on. A Hindi line, आज मौसम बहुत अच्छा है, read as Hindi gave 5 words at 95%, letter for letter.'
+      text: 'Two pictures were read as English. receipt.png, three lines of a shop receipt, gave 17 words at a mean confidence of 96%; notice.jpg, a two-line notice saved as JPEG, gave 12 words at 96%. Every character matched what was drawn, and both came back in one image-text.txt with each file’s name above its text. A third file, broken.png, was text renamed as a picture: the run named it and carried on. A Hindi line, आज मौसम बहुत अच्छा है, read as Hindi gave 5 words at 96%, letter for letter.'
     },
     uses: [
       ['Screenshots', 'Copy an error message or a block of figures out of a screenshot.'],
@@ -1431,7 +1643,7 @@ module.exports = {
     ],
     mistakes: [
       'Adding a PDF. This page takes pictures only; OCR PDF reads the pages of a scanned PDF and gives the file back searchable.',
-      'Reading Hindi with the language set to English. The same Hindi picture came back as “Sst AA Fed Ba eS” at 47% mean confidence, against 95% when read as Hindi.'
+      'Reading Hindi with the language set to English. The same Hindi picture came back as “Sst AA Fed BTS” at 50% mean confidence, against 96% when read as Hindi.'
     ],
     faq: [
       { q: 'What does the confidence figure mean?', a: 'It is Tesseract’s own score, from 0 to 100, of how sure it is of each word, averaged over the picture. It is an estimate rather than a measured error rate, but a low figure is a good sign to check the text against the picture.' },
@@ -1441,8 +1653,8 @@ module.exports = {
     runs: [
       /* Open /pdf/image-to-text/, Language English, choose receipt.png, notice.jpg and broken.png (top of the OCR PDF entry), press "Read the text"; read the stats, the warning and the download (build/tests/pdf-ocr-tools.js section 3). */
       { browser: { input: 'receipt.png, notice.jpg, broken.png', lang: 'eng', pressed: 'Read the text' }, shown: ['17 words', '12 words', '96%', 'image-text.txt', 'broken.png'] },
-      { browser: { input: 'hindi.png', lang: 'hin' }, shown: ['5 words', '95%'] },
-      { browser: { input: 'hindi.png', lang: 'eng' }, shown: ['Sst AA Fed Ba eS', '47%'] }
+      { browser: { input: 'hindi.png', lang: 'hin' }, shown: ['5 words', '96%'] },
+      { browser: { input: 'hindi.png', lang: 'eng' }, shown: ['Sst AA Fed BTS', '50%'] }
     ]
   }
 };

@@ -116,10 +116,10 @@ window.PDF_TOOLS["ocr-pdf"] = {
   {"key":"dpi","label":"Resolution","type":"select","default":"300","options":[{"value":"300","label":"300 DPI: small print, most accurate"},{"value":"200","label":"200 DPI: faster"}]}
 ],
 "tips": [
-  "Each page is drawn at the resolution you choose, read by Tesseract in your browser, and given an invisible layer of the words it found, each placed over the word in the picture. The page looks exactly as it did; search, select and copy now work on it.",
-  "The first run downloads the OCR engine (about 3 MB) and the language data (English 1.9 MB, Hindi 0.9 MB) from this site. Your browser keeps them, so later runs start at once.",
+  "Each page you choose is drawn at the resolution you pick, read by Tesseract in your browser, and given an invisible layer of the words it found, each placed over the word in the picture. The page looks exactly as it did; search, select and copy now work on it.",
+  "The first run downloads the OCR engine (about 3 MB) and the language data (English 1.9 MB, Hindi 0.9 MB) from this site. Your browser keeps them, so later runs download nothing.",
   "Pages that already have text, such as a typed page in a mostly scanned file, are skipped by default and copied unchanged. Choose \"Recognise them too\" to read every page you picked.",
-  "300 DPI reads small print best. 200 DPI is quicker and is usually enough for text of 10 pt and larger.",
+  "300 DPI suits small print and is the default; 200 DPI reads faster. An A4 page is drawn at 2480 × 3508 pixels at 300 DPI and 1654 × 2339 at 200.",
   "Choose English and Hindi for a page that mixes the two. Hindi words are written into the file in an embedded Noto Sans Devanagari subset, so they copy and search as Hindi text.",
   "The recognised text is shown under the result: copy it, or save it as a .txt file."
 ],
@@ -183,14 +183,16 @@ window.PDF_TOOLS["ocr-pdf"] = {
       const page = await pdf.getPage(i + 1);
       const base = page.getViewport({ scale: 1 });
       let scale = dpi / 72;
+      let fit = Math.round;
       if (base.width * base.height * scale * scale > MAX_PIXELS) {
         scale = Math.sqrt(MAX_PIXELS / (base.width * base.height));
+        fit = Math.floor;       /* rounding up could tip it over the cap */
         clamped++;
       }
       const vp = page.getViewport({ scale });
       const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(vp.width));
-      canvas.height = Math.max(1, Math.round(vp.height));
+      canvas.width = Math.max(1, fit(vp.width));
+      canvas.height = Math.max(1, fit(vp.height));
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);

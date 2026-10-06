@@ -70,9 +70,9 @@ window.PDF_TOOLS["image-to-text"] = {
 "tips": [
   "Add one picture or several: PNG, JPEG, WebP, GIF or BMP. Each is read in the order listed, and the text of several comes as one .txt file with the name of each picture above its text.",
   "The first run downloads the OCR engine (about 3 MB) and the language data (English 1.9 MB, Hindi 0.9 MB) from this site. Your browser keeps them, so later runs start at once.",
-  "Choose English and Hindi for a picture that mixes the two; choosing only the language in the picture is a little faster and more accurate.",
-  "Text should be at least 20 pixels tall in the picture. Crop a phone photo to the page and keep it square on; shadows and curved pages cost accuracy.",
-  "A photo larger than about 16 megapixels is scaled down to that size first, which is still far more than the text needs.",
+  "Choose the language the picture is in, or English and Hindi when it mixes the two. Read as English, a Hindi line comes back as Latin letters that mean nothing.",
+  "Photos are read the right way up, as your browser shows them: a phone's EXIF orientation is applied first.",
+  "A picture larger than 16 megapixels is scaled down to that size before it is read, and the result says so.",
   "For each picture the result lists the words found and the mean confidence Tesseract reports, so a doubtful read stands out."
 ],
 "faq": [

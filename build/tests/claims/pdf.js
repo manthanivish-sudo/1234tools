@@ -3583,4 +3583,229 @@ module.exports = function ({ claim, manual, kit: K }) {
       });
     manual(I2, 'faq', 'Not reliably. Tesseract is trained on printed text; neat block capitals sometimes read, joined-up handwriting rarely does.', 'Handwriting needs real handwritten samples; general OCR behaviour.');
   }
+
+  /* ================================================================ */
+  /* flatten, crop, add an image (wave 2)                              */
+  /* ================================================================ */
+  /* The fixtures are written here object by object with the package's own
+     low-level writer (no tool code): a form with an answered field, an
+     answer saved with no appearance, a shown and a hidden comment and a
+     link; three pages, one stored sideways. Every output is read back with
+     pdf.js (the site's copy, in Node) or the package parser, never with the
+     spec that wrote it. The pictures for Add an Image go through the page
+     itself, so the page's own decoding is what is checked. */
+  {
+    const fs = require('fs');
+    const path = require('path');
+    const { pathToFileURL } = require('url');
+    const FL = '/pdf/flatten-pdf/', CR = '/pdf/crop-pdf/', AI = '/pdf/add-image-to-pdf/';
+    const MM = 72 / 25.4;
+    let lib = null;
+    const pdfjsLib = async () => {
+      if (!lib) {
+        lib = await import(pathToFileURL(path.join(K.ROOT, 'engine/vendor/pdfjs/pdf.min.mjs')).href);
+        lib.GlobalWorkerOptions.workerSrc = pathToFileURL(path.join(K.ROOT, 'engine/vendor/pdfjs/pdf.worker.min.mjs')).href;
+      }
+      return lib;
+    };
+    /** pdf.js: per page the size as shown, the text items where a reader shows them, pictures painted, annotations */
+    const pj = async (bytes) => {
+      const L = await pdfjsLib();
+      const doc = await L.getDocument({ data: new Uint8Array(bytes), verbosity: 0, standardFontDataUrl: path.join(K.ROOT, 'engine/vendor/pdfjs/standard_fonts') + path.sep }).promise;
+      const pages = [];
+      for (let i = 1; i <= doc.numPages; i++) {
+        const pg = await doc.getPage(i);
+        const vp = pg.getViewport({ scale: 1 });
+        const items = (await pg.getTextContent()).items.filter((t) => t.str.trim()).map((t) => { const m = L.Util.transform(vp.transform, t.transform); return { str: t.str, x: m[4], y: m[5] }; });
+        const ol = await pg.getOperatorList();
+        pages.push({ w: vp.width, h: vp.height, items, text: items.map((t) => t.str).join(' '), imgs: ol.fnArray.filter((f) => f === L.OPS.paintImageXObject).length, annots: (await pg.getAnnotations()).map((a) => a.subtype) });
+      }
+      const fields = await doc.getFieldObjects();
+      await doc.destroy();
+      return { pages, fields: fields && Object.keys(fields).length ? Object.keys(fields) : null };
+    };
+    const item = (page, s) => page.items.find((t) => t.str.indexOf(s) >= 0);
+    const num = (v) => typeof v === 'number' ? v : NaN;
+    const imagesOf = (a) => a.streams.filter((s) => s.dict.Subtype && s.dict.Subtype.name === 'Image');
+
+    const formPdf = () => K.once('pdf:w2:form', () => {
+      const { PDFWriter, PDFStream, Name, Ref, pdfString, bytesOf } = K.pkg();
+      const N = (n) => new Name(n);
+      const w = new PDFWriter();
+      const cat = w.alloc(), pages = w.alloc(), pg = w.alloc();
+      const font = w.add({ Type: N('Font'), Subtype: N('Type1'), BaseFont: N('Helvetica'), Encoding: N('WinAnsiEncoding') });
+      const ap = (txt, bw, bh) => new Ref(w.add(new PDFStream({ Type: N('XObject'), Subtype: N('Form'), BBox: [0, 0, bw, bh], Resources: { Font: { Helv: new Ref(font, 0) } } }, bytesOf('BT /Helv 12 Tf 2 7 Td (' + txt + ') Tj ET'))), 0);
+      const P = new Ref(pg, 0);
+      const name = w.add({ Type: N('Annot'), Subtype: N('Widget'), FT: N('Tx'), T: pdfString('fullname'), V: pdfString('Asha Rao'), Rect: [72, 600, 372, 625], F: 4, DA: pdfString('/Helv 12 Tf 0 g'), AP: { N: ap('Asha Rao', 300, 25) }, P });
+      const noap = w.add({ Type: N('Annot'), Subtype: N('Widget'), FT: N('Tx'), T: pdfString('ref'), V: pdfString('NO-AP-VALUE'), Rect: [72, 560, 300, 582], F: 4, DA: pdfString('/Helv 11 Tf 0 g'), P });
+      const shown = w.add({ Type: N('Annot'), Subtype: N('FreeText'), Rect: [72, 500, 372, 530], F: 4, Contents: pdfString('VISIBLE-NOTE'), DA: pdfString('/Helv 12 Tf 0 g'), AP: { N: ap('VISIBLE-NOTE', 300, 30) }, P });
+      const hidden = w.add({ Type: N('Annot'), Subtype: N('FreeText'), Rect: [72, 450, 372, 480], F: 2, Contents: pdfString('HIDDEN-NOTE'), DA: pdfString('/Helv 12 Tf 0 g'), AP: { N: ap('HIDDEN-NOTE', 300, 30) }, P });
+      const link = w.add({ Type: N('Annot'), Subtype: N('Link'), Rect: [72, 400, 200, 420], Border: [0, 0, 0], A: { S: N('URI'), URI: pdfString('https://www.1234tools.com/') } });
+      const c = w.add(new PDFStream({}, bytesOf('BT /F1 14 Tf 72 700 Td (FORM-BASE) Tj ET')));
+      w.set(pg, { Type: N('Page'), Parent: new Ref(pages, 0), MediaBox: [0, 0, 595, 842], Resources: { Font: { F1: new Ref(font, 0) } }, Contents: new Ref(c, 0), Annots: [name, noap, shown, hidden, link].map((n) => new Ref(n, 0)) });
+      w.set(pages, { Type: N('Pages'), Kids: [P], Count: 1 });
+      w.set(cat, { Type: N('Catalog'), Pages: new Ref(pages, 0), AcroForm: { Fields: [new Ref(name, 0), new Ref(noap, 0)], NeedAppearances: true, DR: { Font: { Helv: new Ref(font, 0) } } } });
+      return w.build(new Ref(cat, 0), null, '1.7');
+    });
+    const flat = (what) => K.once('pdf:w2:flat:' + what, async () => K.pdfOut(await K.runPdf('flatten-pdf', [{ name: 'form.pdf', bytes: await formPdf() }], { what })));
+
+    claim(FL, 'tip', 'Links are not flattened: they stay clickable. Hidden fields and comments are left out, as they were never shown.',
+      'pdf.js: only the link is left as an annotation; the shown comment is page text, the hidden one is nowhere', N, async () => {
+        const before = await pj(await formPdf());
+        const r = await pj(await flat('all'));
+        const p = r.pages[0];
+        const raw = Buffer.from(await flat('all')).toString('latin1');
+        return [before.pages[0].annots.length === 5 && p.annots.join() === 'Link' && /VISIBLE-NOTE/.test(p.text) && !/HIDDEN-NOTE/.test(p.text) && !/HIDDEN-NOTE/.test((await K.analyse(await flat('all'))).text) && raw.length > 0,
+          'before ' + before.pages[0].annots.join(',') + '; after ' + p.annots.join(',') + ' | ' + p.text];
+      });
+    claim(FL, 'tip', 'A field saved without one (some programs leave that to the reader) has its answer drawn plainly in Helvetica, so it is not lost.',
+      'the answer with no /AP is page text in pdf.js, drawn in a font whose BaseFont is Helvetica', N, async () => {
+        const bytes = await flat('all');
+        const r = await pj(bytes);
+        const a = await K.analyse(bytes);
+        const s = a.streams.find((x) => x.data && /\(NO-AP-VALUE\)\s*Tj/.test(x.data));
+        if (!s) return [false, 'no stream draws NO-AP-VALUE; pdf.js: ' + r.pages[0].text];
+        const before = s.data.slice(0, s.data.search(/\(NO-AP-VALUE\)\s*Tj/));
+        const tf = [...before.matchAll(/\/([A-Za-z0-9+_.-]+)\s+[\d.]+\s+Tf/g)].pop();
+        let res = await a.doc.resolve(s.dict.Resources);
+        if (!res) res = await a.doc.resolve(a.pages[0].dict.Resources);
+        const fonts = await a.doc.resolve(res && res.Font);
+        const f = tf && fonts ? await a.doc.resolve(fonts[tf[1]]) : null;
+        const base = f && f.BaseFont ? f.BaseFont.name : '?';
+        return [/NO-AP-VALUE/.test(r.pages[0].text) && base === 'Helvetica', 'pdf.js "' + r.pages[0].text + '", font /' + (tf ? tf[1] : '?') + ' = ' + base];
+      });
+    claim(FL, 'tip', 'Keep the original: a flattened form cannot be filled in again, and the form itself is removed from the file.',
+      'no AcroForm in the catalogue, no Widget annotation, and pdf.js finds no fields', N, async () => {
+        const a = await K.analyse(await flat('all'));
+        const widgets = (await a.annots(0)).filter((x) => x.Subtype && x.Subtype.name === 'Widget').length;
+        const r = await pj(await flat('all'));
+        return [a.root.AcroForm === undefined && widgets === 0 && !r.fields && /Asha Rao/.test(r.pages[0].text), 'AcroForm ' + (a.root.AcroForm ? 'present' : 'gone') + ', widgets ' + widgets + ', pdf.js fields ' + K.j(r.fields)];
+      });
+    claim(FL, 'worked', 'Form fields only kept the note and stamp as comments',
+      '"Form fields only": no field is left, the shown comment is still a FreeText annotation', N, async () => {
+        const r = await pj(await flat('forms'));
+        const p = r.pages[0];
+        return [!r.fields && p.annots.indexOf('Widget') < 0 && p.annots.indexOf('FreeText') >= 0 && /Asha Rao/.test(p.text), p.annots.join(',') + ' | ' + p.text];
+      });
+
+    const cropSrc = () => K.once('pdf:w2:cropsrc', () => {
+      const { PDFWriter, PDFStream, Name, Ref, bytesOf } = K.pkg();
+      const N = (n) => new Name(n);
+      const w = new PDFWriter();
+      const cat = w.alloc(), pages = w.alloc();
+      const font = w.add({ Type: N('Font'), Subtype: N('Type1'), BaseFont: N('Helvetica'), Encoding: N('WinAnsiEncoding') });
+      const mk = (rot, ops) => { const c = w.add(new PDFStream({}, bytesOf(ops))); const d = { Type: N('Page'), Parent: new Ref(pages, 0), MediaBox: [0, 0, 595, 842], Resources: { Font: { F1: new Ref(font, 0) } }, Contents: new Ref(c, 0) }; if (rot) d.Rotate = rot; return new Ref(w.add(d), 0); };
+      const kids = [mk(0, 'BT /F1 12 Tf 200 400 Td (CROP-IN) Tj ET BT /F1 8 Tf 72 20 Td (CROP-FOOT) Tj ET'), mk(90, 'BT /F1 12 Tf 300 400 Td (CROP-TURNED) Tj ET'), mk(0, 'BT /F1 12 Tf 72 760 Td (CROP-3) Tj ET')];
+      w.set(pages, { Type: N('Pages'), Kids: kids, Count: 3 });
+      w.set(cat, { Type: N('Catalog'), Pages: new Ref(pages, 0) });
+      return w.build(new Ref(cat, 0), null, '1.7');
+    });
+    const cropped = () => K.once('pdf:w2:cropped', async () => K.pdfOut(await K.runPdf('crop-pdf', [{ name: 'c.pdf', bytes: await cropSrc() }], { top: 20, right: 10, bottom: 30, left: 15, pages: '1-2' })));
+
+    claim(CR, 'faq', 'A crop sets the visible area of each page (its CropBox); everything outside is still stored, just not shown or printed.',
+      'page 1: CropBox is the margins in from the MediaBox, the MediaBox and the content stream are unchanged', N, async () => {
+        const src = await K.analyse(await cropSrc()), out = await K.analyse(await cropped());
+        const cb = ((await out.doc.resolve(out.pages[0].dict.CropBox)) || []).map(num);
+        const mb = ((await out.doc.resolve(out.pages[0].dict.MediaBox)) || []).map(num);
+        const want = [15 * MM, 30 * MM, 595 - 10 * MM, 842 - 20 * MM];
+        const same = (await src.content(0)) === (await out.content(0));
+        return [cb.length === 4 && cb.every((v, i) => Math.abs(v - want[i]) < 0.01) && mb.join() === '0,0,595,842' && same, 'CropBox ' + cb.map((v) => v.toFixed(2)).join(' ') + ', MediaBox ' + mb.join(' ') + ', content ' + (same ? 'unchanged' : 'changed')];
+      });
+    claim(CR, 'tip', 'Cropping hides what is outside the box; it does not delete it. The content is still in the file',
+      'page 1 still draws the footer line (the kit\'s reader), at y 20 pt, below the CropBox; pdf.js, which shows only the box, no longer finds it', N, async () => {
+        const out = await K.pdfText(await cropped());
+        const cb = ((await out.a.doc.resolve(out.a.pages[0].dict.CropBox)) || []).map(num);
+        const p = (await pj(await cropped())).pages[0];
+        const drawn = out.pages[0].indexOf('CROP-FOOT') >= 0;
+        return [drawn && cb[1] > 20 + 8 && !item(p, 'CROP-FOOT') && !!item(p, 'CROP-IN'), 'in the content: ' + out.pages[0].join(', ') + '; CropBox bottom ' + (cb[1] || 0).toFixed(1) + ' pt; pdf.js: ' + p.text];
+      });
+    claim(CR, 'tip', 'Margins are measured on the page as you see it, so a page stored sideways is cropped the way it is shown.',
+      'page 2 (/Rotate 90): pdf.js shows it 25 mm narrower and 50 mm shorter, its text 15 mm left and 20 mm up of where it was', N, async () => {
+        const b = (await pj(await cropSrc())).pages[1], a = (await pj(await cropped())).pages[1];
+        const tb = item(b, 'CROP-TURNED'), ta = item(a, 'CROP-TURNED');
+        const ok = tb && ta && Math.abs(a.w - (b.w - 25 * MM)) < 0.1 && Math.abs(a.h - (b.h - 50 * MM)) < 0.1 && Math.abs(ta.x - (tb.x - 15 * MM)) < 0.1 && Math.abs(ta.y - (tb.y - 20 * MM)) < 0.1;
+        return [!!ok, 'before ' + b.w.toFixed(1) + ' × ' + b.h.toFixed(1) + ', after ' + a.w.toFixed(1) + ' × ' + a.h.toFixed(1) + (tb && ta ? '; text ' + tb.x.toFixed(1) + ',' + tb.y.toFixed(1) + ' → ' + ta.x.toFixed(1) + ',' + ta.y.toFixed(1) : '')];
+      });
+    claim(CR, 'faq', 'The Pages box decides which pages each run touches; the others are left exactly as they were.',
+      'Pages "1-2": page 3 has no CropBox, the same content, and pdf.js shows it 595 × 842', N, async () => {
+        const src = await K.analyse(await cropSrc()), out = await K.analyse(await cropped());
+        const p3 = (await pj(await cropped())).pages[2];
+        const same = (await src.content(2)) === (await out.content(2));
+        return [out.pages[2].dict.CropBox === undefined && same && Math.abs(p3.w - 595) < 0.01 && Math.abs(p3.h - 842) < 0.01, 'CropBox ' + K.j(out.pages[2].dict.CropBox) + ', content ' + (same ? 'same' : 'changed') + ', ' + p3.w + ' × ' + p3.h];
+      });
+
+    /* a 60 x 30 red picture, its right half transparent, as the page hands it to the spec */
+    const raw = () => {
+      const W = 60, H = 30, rgb = new Uint8Array(W * H * 3), alpha = new Uint8Array(W * H);
+      for (let i = 0; i < W * H; i++) { rgb[i * 3] = 220; rgb[i * 3 + 1] = 30; rgb[i * 3 + 2] = 30; alpha[i] = (i % W) < W / 2 ? 255 : 0; }
+      return { kind: 'raw', name: 'logo.png', width: W, height: H, rgb, alpha };
+    };
+    claim(AI, 'dfaq', 'It is stored once and drawn from each page',
+      'Pages "all" on three pages: one image and one soft mask in the file, and pdf.js paints it once on each page', N, async () => {
+        const bytes = K.pdfOut(await K.runPdf('add-image-to-pdf', [{ name: 'three.pdf', bytes: await K.plain(3) }], { image: raw(), width: 120, x: 400, y: 700, pages: 'all' }));
+        const a = await K.analyse(bytes);
+        const im = imagesOf(a);
+        const per = (await pj(bytes)).pages.map((p) => p.imgs);
+        return [im.length === 2 && im.filter((s) => s.dict.SMask).length === 1 && per.join() === '1,1,1', im.length + ' image objects; painted per page ' + per.join()];
+      });
+    claim(AI, 'tip', 'Opacity below 100% suits a faint stamp or a background picture; the text underneath stays readable and selectable.',
+      'opacity 30: the picture is drawn under a graphics state with /ca 0.3, and pdf.js still reads the page text under it', N, async () => {
+        const bytes = K.pdfOut(await K.runPdf('add-image-to-pdf', [{ name: 'one.pdf', bytes: await K.plain(1) }], { image: raw(), width: 300, opacity: 30, x: 60, y: 700, pages: '1' }));
+        const a = await K.analyse(bytes);
+        const p = (await pj(bytes)).pages[0];
+        return [/\/ca\s+0?\.3\b/.test(a.text) && /PAGE-1/.test(p.text) && p.imgs === 1, (a.text.match(/\/ca\s+[\d.]+/) || ['no /ca'])[0] + '; text "' + p.text + '"'];
+      });
+    claim(AI, 'faq', 'No, it is always drawn on top of the page\'s existing content.',
+      'the picture\'s Do comes after the page\'s own text in the content, in a q … Q of its own', N, async () => {
+        const bytes = K.pdfOut(await K.runPdf('add-image-to-pdf', [{ name: 'one.pdf', bytes: await K.plain(1) }], { image: raw(), width: 120, x: 60, y: 740, pages: '1' }));
+        const c = await (await K.analyse(bytes)).content(0);
+        const t = c.indexOf('(PAGE-1) Tj'), d = c.search(/\/[A-Za-z0-9_]+\s+Do\b/);
+        return [t >= 0 && d > t, 'text at ' + t + ', Do at ' + d];
+      });
+
+    /* the page itself: a JPEG and a large transparent PNG chosen with the picture button */
+    const onPage = (key, file) => K.once('pdf:w2:aipage:' + key, async () => {
+      const p = await K.pdf.open(AI);
+      try {
+        await K.pdf.upload(p, [K.write('ai-target.pdf', await K.plain(1))]);
+        let f = file;
+        if (!f) {
+          const png = await K.img.makePng(p, 3000, 1200, "x.fillStyle = 'rgb(0,90,200)'; x.fillRect(0, 0, 1500, 1200);");
+          f = K.write('ai-wide.png', png);
+        }
+        await (await p.$('#pc-image')).uploadFile(f);
+        await p.waitForSelector('.place-box.is-current', { timeout: 30000 });
+        const m = await K.pdf.press(p);
+        if (/is-error/.test(m.cls)) return { error: m.msg };
+        const d = await K.pdf.download(p);
+        const a = await K.analyse(d.bytes);
+        return { a, im: imagesOf(a), bytes: d.bytes, name: d.name };
+      } finally { await p.close(); }
+    });
+    claim(AI, 'tip', 'A JPEG goes into the PDF as it is, untouched.',
+      'product.jpg (1600 × 1067) chosen on the page: the PDF holds a DCTDecode image whose bytes are the file\'s, byte for byte', B, async () => {
+        const jpg = path.join(K.ROOT, 'build/promo/samples/product.jpg');
+        const r = await onPage('jpeg', jpg);
+        if (r.error) return [false, r.error];
+        const src = fs.readFileSync(jpg);
+        const dct = r.im.filter((s) => s.dict.Filter && s.dict.Filter.name === 'DCTDecode');
+        const same = dct.some((s) => Buffer.compare(Buffer.from(s.raw), src) === 0);
+        return [same && dct.length === 1, dct.length + ' DCTDecode image(s), ' + (dct[0] ? dct[0].raw.length + ' bytes against ' + src.length : 'none') + ', identical ' + same];
+      });
+    claim(AI, 'faq', 'a JPEG is embedded byte for byte and any other format losslessly, at up to 2,400 pixels on its longer side.',
+      'a 3000 × 1200 PNG, left half rgb(0,90,200), right half transparent: stored 2400 × 960, the blue exact, the transparent half 0 in the soft mask', B, async () => {
+        const r = await onPage('png');
+        if (r.error) return [false, r.error];
+        const img = r.im.find((s) => s.dict.SMask);
+        if (!img) return [false, r.im.length + ' images, none with a soft mask'];
+        const Wd = img.dict.Width, Ht = img.dict.Height;
+        const px = Buffer.from(img.data, 'latin1');
+        const mask = await r.a.doc.resolve(img.dict.SMask);
+        const mpx = Buffer.from(await r.a.doc.decodeStream(mask));
+        const at = (x, y) => [px[(y * Wd + x) * 3], px[(y * Wd + x) * 3 + 1], px[(y * Wd + x) * 3 + 2]];
+        const blue = at(300, 480).join() === '0,90,200' && at(1000, 900).join() === '0,90,200';
+        const alpha = [mpx[480 * Wd + 300], mpx[480 * Wd + 2000]];
+        return [Wd === 2400 && Ht === 960 && blue && alpha[0] === 255 && alpha[1] === 0, Wd + ' × ' + Ht + ', pixel ' + at(300, 480).join() + ', mask ' + alpha.join('/')];
+      });
+  }
 };

@@ -1,0 +1,467 @@
+# Shared files touched by wave 2 (PDF), diffed against the branch base a90208e9d.
+# One line per file saying why; the diffs follow in the same order.
+#   .gitattributes            the vendored OCR engine, HarfBuzz and the Noto fonts kept byte for byte (-text / binary) so the READMEs' sha256 sums match
+#   assets/app.css            WAVE-2 block only (appended between the markers): page grids, file-row drag, progress/Cancel, password rows, live preview, draggable items, crop editor, Scan to PDF cards and camera, text output wrapping
+#   build-hubs.js             the /pdf/ hub intro names the new tools (compress, password, crop, picture, OCR, Word, text)
+#   build/compare-extra.js    item G: /compare/free-pdf-editor gap list, table, groups and FAQ made true for the new tools (gap first, no product claims)
+#   build/jobs.js             finder rows and card lines for the 11 new PDF tools
+#   build/tests/claims/kit.js runPdf passes a password; specs with workerScripts load as their worker does; pdfcore gets the font loader in Node; upload waits for rows to finish loading
+#   privacy/index.html        two lines: PDF tool settings and the invoice kept in local storage; Scan to PDF's camera only on request
+
+diff --git a/.gitattributes b/.gitattributes
+index 8be0b52df..365e605a1 100644
+--- a/.gitattributes
++++ b/.gitattributes
+@@ -25,3 +25,8 @@ engine/vendor/ort/** -text
+ # models (and their 20 MiB .partN pieces) are binary: no line-ending
+ # conversion, no text diff, and release.js's 0x08 scan skips them
+ engine/models/** binary
++# The PDF tools' OCR engine, shaper and fonts, stored as published, so the
++# sha256 sums in their READMEs keep matching.
++engine/vendor/tesseract/** -text
++engine/vendor/harfbuzz/** -text
++engine/vendor/fonts/** binary
+diff --git a/assets/app.css b/assets/app.css
+index f09ae7149..2d2be3706 100644
+--- a/assets/app.css
++++ b/assets/app.css
+@@ -4307,3 +4307,225 @@ html.is-embed .tool > .depth { display: none !important; }
+ .embed-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: auto; font-size: .84rem; }
+ .share-pop .io-actions a.share-embed-more { margin-left: auto; }
+ /* ==== /embed-page ==== */
++/* WAVE-2 start */
++/* PDF shell v2 (engine/render-pdf.js): page grids, file rows that drag,
++   progress with Cancel, passwords, live previews, items you drag and resize */
++
++/* ---------- page grid: thumbnails that pick pages ---------- */
++.pdf-grid-host:empty { display: none; }
++.pdf-grid-host { margin: 0 0 16px; }
++.pdf-grid-head {
++  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
++  margin: 0 0 10px; font-size: .84rem; color: var(--text-2);
++}
++.pdf-grid-title { flex: 1 1 260px; }
++.pdf-grid-count { font-family: var(--font-mono); font-size: .76rem; color: var(--text-3); }
++.pdf-grid-head .btn-ghost { padding: 3px 12px; }
++.page-grid { max-height: min(70vh, 760px); overflow: auto; padding: 4px; overscroll-behavior: contain; }
++.page-thumb {
++  display: grid; place-items: center; width: 100%; height: 150px;
++}
++.page-thumb canvas { max-width: 100%; max-height: 150px; width: auto; height: auto; }
++.page-thumb-wait {
++  display: grid; place-items: center; width: 106px; height: 150px;
++  background: #fff; border-radius: 4px; color: #9aa3b5;
++  font-family: var(--font-mono); font-size: .8rem;
++  box-shadow: 0 2px 10px rgba(0, 0, 0, .25);
++}
++.page-grid-select .page-card, .page-grid-split .page-card { cursor: pointer; }
++.page-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
++.page-check {
++  position: absolute; top: 6px; right: 6px; width: 22px; height: 22px;
++  display: grid; place-items: center; border-radius: 50%;
++  border: 1px solid var(--border); background: var(--bg-2); color: transparent;
++  font-size: .8rem; font-weight: 800;
++}
++.page-card.is-selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
++.page-card.is-selected .page-check { background: var(--accent); border-color: var(--accent); color: var(--nav-cta-ink); }
++/* deleting: a chosen page is struck through, the way the organiser shows a removed one */
++.marks-remove .page-card.is-selected { border-color: #e05c4a; box-shadow: 0 0 0 1px #e05c4a inset; }
++.marks-remove .page-card.is-selected .page-check { background: #e05c4a; border-color: #e05c4a; color: #fff; }
++.marks-remove .page-card.is-selected .page-check::before { content: '\00d7'; color: #fff; position: absolute; }
++.marks-remove .page-card.is-selected .page-thumb { opacity: .45; filter: grayscale(1); }
++.marks-remove .page-card.is-selected::after {
++  content: ''; position: absolute; inset: 10px;
++  background: linear-gradient(to bottom right, transparent calc(50% - 1px), #e05c4a 50%, transparent calc(50% + 1px));
++  pointer-events: none;
++}
++.page-card .page-tools { min-height: 26px; }
++.page-rot, .page-cut { padding: 1px 8px !important; }
++/* splitting: alternate groups get their own plate, a cut is a bar after the page */
++.page-grid-split .page-card.grp-odd { background: color-mix(in srgb, var(--accent) 9%, var(--bg-1)); }
++.page-grid-split .page-card.is-cut { box-shadow: inset -4px 0 0 var(--accent); }
++.page-grid-split .page-cut[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
++
++/* ---------- file rows: drag to reorder, passwords, per-file pages ---------- */
++.file-grip { flex: none; color: var(--text-3); cursor: grab; touch-action: none; padding: 2px 2px; user-select: none; -webkit-user-select: none; }
++.file-row { user-select: none; -webkit-user-select: none; }
++.file-list .file-row.is-dragging { opacity: .5; }
++.file-list .file-row.is-drop-before { box-shadow: inset 0 3px 0 var(--accent); }
++.file-list .file-row.is-drop-after { box-shadow: inset 0 -3px 0 var(--accent); }
++.file-row.is-locked, .file-row.is-error { border-color: color-mix(in srgb, #e05c4a 55%, var(--border)); }
++.file-row.is-loading .file-meta { color: var(--accent); }
++.file-row .btn-ghost[disabled] { opacity: .35; cursor: default; }
++.file-row .file-pages-btn { font-size: .76rem; padding: 2px 10px; white-space: nowrap; }
++.file-error { margin: -2px 0 4px; }
++.file-pass {
++  display: grid; gap: 8px; padding: 10px 12px; margin: -2px 0 4px;
++  background: var(--bg-1); border: 1px dashed var(--border-gold); border-radius: var(--radius-sm);
++  font-size: .84rem; color: var(--text-2);
++}
++.file-pass-row { display: flex; gap: 8px; flex-wrap: wrap; }
++.file-pass-row .control { flex: 1 1 200px; min-width: 0; }
++.file-pass .io-msg { margin: 0; }
++.file-pages { padding: 10px; margin: -2px 0 6px; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm); }
++.file-pages-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; font-size: .8rem; color: var(--text-3); }
++.file-pages-hint { flex: 1 1 240px; }
++.file-pages .page-grid { max-height: 340px; }
++@media (max-width: 640px) {
++  .file-row { flex-wrap: wrap; row-gap: 4px; }
++  .file-name { flex: 1 1 60%; }
++}
++
++/* ---------- progress, with a Cancel that stops the work ---------- */
++.pdf-progress {
++  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
++  margin: 0 0 14px; padding: 10px 14px;
++  background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm);
++}
++.pdf-progress[hidden] { display: none; }
++.pdf-progress-bar { flex: 1 1 200px; height: 8px; border-radius: 999px; background: var(--bg-2); overflow: hidden; position: relative; }
++.pdf-progress-bar span { display: block; height: 100%; width: 0; background: var(--grad-gold, var(--accent)); border-radius: inherit; transition: width .2s; }
++.pdf-progress.is-indeterminate .pdf-progress-bar span { width: 35% !important; animation: pdf-indet 1.2s ease-in-out infinite; }
++@keyframes pdf-indet { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
++.pdf-progress-label { font-size: .82rem; color: var(--text-2); font-variant-numeric: tabular-nums; min-width: 12ch; }
++@media (prefers-reduced-motion: reduce) {
++  .pdf-progress.is-indeterminate .pdf-progress-bar span { animation: none; width: 100% !important; opacity: .5; }
++}
++
++/* ---------- settings kept on this device ---------- */
++.pdf-remembered { grid-column: 1 / -1; margin: 0; font-size: .78rem; color: var(--text-3); }
++.btn-link { padding: 0; border: 0; background: none; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
++.field-check { display: flex; align-items: center; gap: 8px; }
++.field-check label { margin: 0; }
++.control-check { width: 18px; height: 18px; accent-color: var(--accent); }
++.field-wide { grid-column: 1 / -1; }
++
++/* ---------- a picture control (logos, images to place) ---------- */
++.image-pick { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
++.image-pick-thumb { max-height: 48px; max-width: 120px; border-radius: 6px; background: #fff; border: 1px solid var(--border); object-fit: contain; }
++.image-pick-thumb[hidden] { display: none; }
++
++/* ---------- placing items: boxes you drag, corners you pull ---------- */
++.place-stage { position: relative; width: max-content; max-width: 100%; margin: 0 auto; }
++.place-stage .place-canvas { margin: 0; }
++.place-layer { position: absolute; inset: 0; pointer-events: none; }
++.place-box {
++  position: absolute; pointer-events: auto; cursor: move;
++  border-radius: 3px; touch-action: none;
++}
++.place-box:hover { box-shadow: 0 0 0 1px rgba(120, 130, 150, .9); }
++.place-box.is-current { box-shadow: 0 0 0 1px rgba(247, 201, 72, .9); }
++.place-box:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
++.place-handle {
++  position: absolute; width: 14px; height: 14px; border-radius: 3px;
++  background: #f7c948; border: 2px solid #1a1204; touch-action: none;
++}
++.place-handle-se { right: -8px; bottom: -8px; cursor: nwse-resize; }
++.place-handle-e { right: -8px; top: calc(50% - 7px); cursor: ew-resize; border-radius: 50%; }
++.place-box:not(.is-current):not(:hover):not(:focus-visible) .place-handle { opacity: .55; }
++.place-where { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; font-size: .8rem; color: var(--text-3); }
++.place-where .btn-ghost { padding: 2px 10px; font-size: .78rem; }
++.place-where-hint { flex: 1 1 200px; }
++@media (pointer: coarse) {
++  .place-handle { width: 22px; height: 22px; }
++  .place-handle-se { right: -12px; bottom: -12px; }
++  .place-handle-e { right: -12px; top: calc(50% - 11px); }
++}
++
++/* ---------- the live preview of a stamp ---------- */
++.live-preview .place-canvas { cursor: default; }
++.live-note { min-height: 1.3em; }
++.pdf-extras:empty, .pdf-extras[hidden] { display: none; }
++.pdf-extras { margin: 0 0 16px; }
++/* ---------- the crop box ---------- */
++.crop-stage { overflow: hidden; border-radius: var(--radius-sm); }
++.crop-box {
++  position: absolute; box-sizing: border-box; cursor: move; touch-action: none;
++  border: 2px dashed #f7c948; box-shadow: 0 0 0 9999px rgba(6, 8, 15, .5);
++}
++.crop-box:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
++.crop-handle { position: absolute; width: 14px; height: 14px; background: #f7c948; border: 2px solid #1a1204; border-radius: 3px; touch-action: none; }
++.crop-handle:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
++.crop-n { top: -8px; left: calc(50% - 7px); cursor: ns-resize; }
++.crop-s { bottom: -8px; left: calc(50% - 7px); cursor: ns-resize; }
++.crop-e { right: -8px; top: calc(50% - 7px); cursor: ew-resize; }
++.crop-w { left: -8px; top: calc(50% - 7px); cursor: ew-resize; }
++.crop-ne { right: -8px; top: -8px; cursor: nesw-resize; }
++.crop-sw { left: -8px; bottom: -8px; cursor: nesw-resize; }
++.crop-se { right: -8px; bottom: -8px; cursor: nwse-resize; }
++.crop-nw { left: -8px; top: -8px; cursor: nwse-resize; }
++@media (pointer: coarse) {
++  .crop-handle { width: 22px; height: 22px; }
++  .crop-n, .crop-s { left: calc(50% - 11px); } .crop-e, .crop-w { top: calc(50% - 11px); }
++  .crop-n, .crop-ne, .crop-nw { top: -12px; } .crop-s, .crop-se, .crop-sw { bottom: -12px; }
++  .crop-e, .crop-ne, .crop-se { right: -12px; } .crop-w, .crop-nw, .crop-sw { left: -12px; }
++}
++/* ---------- text read out of a PDF or a picture: wrap, do not scroll sideways ---------- */
++article.tool[data-tool="pdf-to-text"] .code-out,
++article.tool[data-tool="ocr-pdf"] .code-out,
++article.tool[data-tool="image-to-text"] .code-out { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 60vh; overflow: auto; }
++/* ---------- Scan to PDF (/pdf/scan-to-pdf/) ---------- */
++.docscan-io > .file-list { display: none; }
++.docscan-tool { display: flex; flex-direction: column; gap: 14px; margin-bottom: 16px; min-width: 0; }
++.docscan-camera { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
++.docscan-camera-bar, .docscan-camera-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
++.docscan-camera-bar .btn-ghost[hidden] { display: none; }
++.docscan-camera-note { font-size: .82rem; color: var(--text-3); }
++.docscan-camera-live { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
++.docscan-camera-live[hidden], .docscan-camera-fallback[hidden], .docscan-pages[hidden] { display: none; }
++.docscan-camera-view { position: relative; min-width: 0; display: flex; justify-content: center; background: #000; border-radius: var(--radius-sm); overflow: hidden; }
++.docscan-camera-view:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
++.docscan-camera-video { display: block; width: 100%; max-width: 100%; min-width: 0; max-height: 70vh; object-fit: contain; }
++.docscan-camera-view.is-flash::after { content: ""; position: absolute; inset: 0; background: #fff; opacity: .55; }
++.docscan-camera-count { flex: 1; min-width: 10em; font-size: .85rem; color: var(--text-2); }
++.docscan-camera-fallback { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
++.docscan-camera-fallback .io-msg { margin: 0; }
++.docscan-pages-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 8px; }
++.docscan-pages-hint { font-size: .82rem; color: var(--text-3); }
++.docscan-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 12px; }
++.docscan-card { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 14px; overflow: hidden; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius-sm); }
++.docscan-card.is-error { border-color: rgba(229, 72, 77, .6); }
++.docscan-card-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
++.docscan-num { flex: none; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); font-family: var(--font-mono); font-size: .7rem; font-weight: 700; }
++.docscan-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: .78rem; color: var(--text-1); }
++.docscan-flag { flex: none; padding: 1px 8px; border-radius: 999px; font-size: .72rem; font-weight: 600; color: var(--text-1); background: color-mix(in srgb, var(--amber) 24%, transparent); border: 1px solid color-mix(in srgb, var(--amber) 55%, transparent); }
++.docscan-flag[hidden] { display: none; }
++.docscan-card-body { display: grid; grid-template-columns: minmax(0, 1fr) 92px; gap: 12px; align-items: start; }
++.docscan-stage { position: relative; width: 100%; aspect-ratio: 4 / 3; background: var(--recess); border-radius: 6px; touch-action: none; user-select: none; -webkit-user-select: none; }
++.docscan-photo { display: block; width: 100%; height: 100%; border-radius: 6px; }
++.docscan-quad { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
++.docscan-quad-shade { fill: rgba(0, 0, 0, .45); }
++.docscan-quad-line { fill: none; stroke: var(--gold-2); stroke-width: 2; }
++.docscan-handle { position: absolute; width: 24px; height: 24px; margin: -12px 0 0 -12px; padding: 0; border-radius: 50%; border: 2px solid #fff; background: rgba(247, 201, 72, .9); box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 2px 6px rgba(0, 0, 0, .45); cursor: grab; touch-action: none; }
++.docscan-handle::after { content: ""; position: absolute; inset: -9px; border-radius: 50%; }
++.docscan-handle:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
++.docscan-handle.is-dragging { cursor: grabbing; transform: scale(1.2); }
++.docscan-handle[hidden] { display: none; }
++.docscan-busy { position: absolute; inset: 0; display: grid; place-items: center; padding: 8px; text-align: center; font-size: .85rem; color: #fff; background: rgba(0, 0, 0, .5); border-radius: 6px; }
++.docscan-busy[hidden] { display: none; }
++.docscan-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
++.docscan-result { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
++.docscan-preview { display: block; max-width: 100%; max-height: 130px; width: auto; height: auto; background: #fff; border: 1px solid var(--border); box-shadow: var(--shadow-card); }
++.docscan-result figcaption { font-size: .72rem; color: var(--text-3); }
++.docscan-status { margin: 0; font-size: .78rem; line-height: 1.45; color: var(--text-2); overflow-wrap: anywhere; }
++.docscan-tools { display: flex; flex-wrap: wrap; gap: 6px; }
++.docscan-tools .btn-ghost { padding: 3px 10px; font-size: .8rem; line-height: 1.4; }
++@media (max-width: 480px) {
++  .docscan-card { padding: 12px; }
++  .docscan-card-body { grid-template-columns: minmax(0, 1fr); }
++  .docscan-side { flex-direction: row; align-items: center; }
++  .docscan-result { flex: none; }
++  .docscan-preview { max-height: 96px; max-width: 80px; }
++}
++/* WAVE-2 end */
+diff --git a/build-hubs.js b/build-hubs.js
+index d01073c70..dfcaa57c6 100644
+--- a/build-hubs.js
++++ b/build-hubs.js
+@@ -66,7 +66,7 @@ const isStub = (html) => /name="robots" content="noindex,follow"/.test(html) &&
+ const INTRO = {
+   '/business/': 'Business calculators and spreadsheet tools that run in your browser: a UK take-home pay calculator, profit margin and break-even calculators, a VAT return from a spreadsheet, a monthly payroll run with payslips, bank reconciliation and Tally converters. Nothing you open leaves your device, because nothing is uploaded.',
+   '/ai/': 'AI tools for the paperwork of a business: an invoice data extractor that turns a PDF into a table, a bank statement categoriser, a contract summariser, and writers for business emails, product listings, job descriptions and social media posts. These call a language model on a server, say so before you press the button, and give you ten calls a month free.',
+-  '/pdf/': 'Free PDF tools that run in your browser: merge PDF files into one, split a PDF, rotate, delete or reorder pages, add a watermark, page numbers or a signature, convert PDF to JPG or PNG, and make invoices, payslips and certificates as PDF. No upload, no file size limit and no watermark on the output.',
++  '/pdf/': 'Free PDF tools that run in your browser: merge PDF files into one, split, rotate, crop or reorder pages, compress a PDF, add or remove a password, add text, a picture, a watermark or a signature, OCR a scan, convert PDF to Word, text or JPG, and make invoices, payslips and certificates. No upload and no watermark on the output.',
+   '/education/': 'Calculators for students and schools: convert CGPA to percentage and SGPA to CGPA, work out a marks percentage and an attendance percentage, convert rank to percentile, and count the days to an exam. For staff there is a timetable generator, an exam seating plan and report cards from a marks sheet, all in the browser.',
+   '/india/': 'Indian tax and savings calculators: a GST calculator with the CGST, SGST and IGST split, income tax under the new and old regime, HRA exemption, TDS, capital gains and advance tax, plus SIP, PPF, EPF, NPS, FD and EMI calculators. The rates follow the current financial year, and each page says which.',
+   '/developer/': 'Developer tools in the browser: a JSON formatter and validator, a regex tester, Base64 and URL encoders, a JWT decoder, a cron expression parser, a Markdown to HTML converter, and generators for UUIDs, meta tags, robots.txt and favicons. Paste, convert, copy; nothing is sent to a server.',
+diff --git a/build/compare-extra.js b/build/compare-extra.js
+index 596b5f6b6..aea90bed8 100644
+--- a/build/compare-extra.js
++++ b/build/compare-extra.js
+@@ -40,21 +40,21 @@ const COMPARISONS = [
+     name: 'Free PDF editor',
+     crumb: 'Free PDF editor',
+     title: 'Free PDF editor: what a browser can honestly do to a PDF, and what it cannot',
+-    lede: 'Add text, a signature, a watermark or page numbers; merge, split, reorder, rotate and delete pages; turn pages into images and images into a PDF — free, with nothing uploaded. What these tools cannot do is change the words already on the page, and that is the first thing a desktop PDF editor is bought for.',
++    lede: 'Add text in any of four scripts, a signature, a picture, a watermark or page numbers; merge, split, reorder, rotate, crop and delete pages; compress, protect, unlock, flatten and OCR; turn a PDF into text or a Word file — free, with nothing uploaded. What these tools cannot do is change the words already on the page, and that is the first thing a desktop PDF editor is bought for.',
+     honest: [
+-      'Most people searching for a free PDF editor want one of two things. Either they need to put something onto a PDF — a line of text in a form that has no boxes, a signature, a date, a DRAFT stamp — or they need to rearrange its pages. Both are here, free, with no account and no watermark of ours on the result, and the file is read and rewritten by your own browser rather than sent anywhere.',
++      'Most people searching for a free PDF editor want one of three things: to put something onto a PDF (a line of text in a form that has no boxes, a signature, a date, a logo, a DRAFT stamp), to rearrange or shrink it, or to get it past a password or a scanner. All of that is here, free, with no account and no watermark of ours on the result, and the file is read and rewritten by your own browser rather than sent anywhere.',
+       'The other thing people mean by “edit a PDF” is changing the text that is already there: a typo in a contract, a price, a paragraph. None of these tools can do that, and the Add Text tool says so on its own page. Changing existing words means re-flowing the original text with the fonts and the layout it was made from, which is the core job of a desktop PDF editor. If that is what you need, this page will save you finding out the slow way.'
+     ],
+     gap: {
+       heading: 'What a desktop PDF editor does that we do not',
+-      intro: 'We compare against the category, not a product: we have not tested any particular editor and will not describe one from memory. These are the jobs the category exists for.',
++      intro: 'We compare against the category, not a product: we have not tested any particular editor and will not describe one from memory. These are the jobs the category exists for that this site still does not do.',
+       points: [
+         { h: 'It changes the text that is already there.', p: 'Click into a paragraph, retype it, and the line re-flows. Our Add Text tool draws new text on top of the page and leaves what is underneath exactly as it was. The honest workaround is to correct the source document and export it again.' },
+-        { h: 'It reads scanned pages.', p: 'Character recognition turns a scanned or photographed page into text you can select and search. Nothing here makes a scanned PDF searchable. The AI readers on this site pull the fields out of invoices and receipts, which is a different job.' },
+-        { h: 'It fills and builds forms.', p: 'Interactive fields — text boxes, tick boxes, drop-downs — can be filled, created and flattened. Ours do not fill form fields: Add Text places text where you click, which suits a form that is only a printed page, but it is not a field anything can read back. Merging and the page tools keep the fields a file already has, still fillable; they do not fill, create or flatten any.' },
++        { h: 'It fills and builds interactive forms.', p: 'Fields — text boxes, tick boxes, drop-downs — can be filled in, created and edited. Flatten PDF fixes the answers a form already has into the page, and the page tools keep fields fillable, but nothing here fills in or creates a field. Add Text places text where you click, which suits a form that is only a printed page.' },
+         { h: 'It signs with a certificate.', p: 'A certificate-based digital signature makes any later change detectable. Our signature tool draws a visible signature — the same as signing a printout and scanning it — and its own page explains the difference and when it matters.' },
+-        { h: 'It redacts, protects and compresses.', p: 'Permanently removing what sits under a black box, adding or removing a password, and making a PDF smaller are all common editor features. None of the three is here. A watermark added here sits on top of the page and can be removed by anyone with an editor; the watermark tool says that too.' },
+-        { h: 'It writes in any script, and places pictures.', p: 'Text added with the Add Text tool is drawn in the standard Helvetica font, which has no characters outside Latin-1, so Hindi, Greek, Cyrillic and Chinese will not render. Placing a logo or an image onto an existing page is not offered either.' }
++        { h: 'It redacts.', p: 'Permanently removing what sits under a black box needs the text and pictures underneath taken out of the file, not covered. Nothing here does that, and Crop PDF hides the area outside its box rather than deleting it; its page says so.' },
++        { h: 'It keeps the layout when it converts.', p: 'PDF to Word here rebuilds headings, paragraphs and lists from the text, in reading order; tables come out as lines and pictures, fonts and positions are not kept. A desktop editor’s export aims to keep the page as it looks.' },
++        { h: 'It reads more scripts, and more languages from scans.', p: 'Text added here can be Latin, Greek, Cyrillic or Devanagari (Hindi shaped properly); Chinese, Japanese, Korean and Arabic are not covered. OCR here reads English and Hindi only, and works best on clean scans.' }
+       ]
+     },
+     table: {
+@@ -62,15 +62,17 @@ const COMPARISONS = [
+       them: 'A desktop PDF editor',
+       rows: [
+         { edge: 'them', need: 'Changing words already on the page', us: 'No. New text can be drawn on top; what is there is untouched.', them: 'The core feature of the category.' },
+-        { edge: 'them', need: 'Scanned pages to searchable text', us: 'No.', them: 'Common in the category; check the edition you are looking at.' },
+-        { edge: 'them', need: 'Filling interactive form fields', us: 'No. Text goes where you click, which suits a form with no fields; merging keeps existing fields fillable but fills none.', them: 'Filled, created and flattened.' },
++        { edge: 'them', need: 'Filling in or creating interactive form fields', us: 'No. Existing answers can be flattened into the page; fields are kept fillable through the page tools, but none is filled or created.', them: 'Filled, created and edited.' },
+         { edge: 'them', need: 'A certificate-based digital signature', us: 'No. A drawn or typed signature, visible and removable.', them: 'Usually offered, with a certificate you obtain from a provider.' },
+-        { edge: 'them', need: 'Redaction, passwords and making a PDF smaller', us: 'None of the three.', them: 'Commonly included.' },
+-        { edge: 'them', need: 'Text in Hindi, Greek, Cyrillic or Chinese', us: 'Not with Add Text: Helvetica has no characters for them.', them: 'Embeds fonts, so any script the font covers.' },
+-        { edge: 'them', need: 'Bookmarks and annotations', us: 'Kept through a merge, with each file’s bookmarks under its name and links still landing on the right page, but not editable here.', them: 'Kept, and editable.' },
+-        { edge: 'us', need: 'Putting a line of text, a date or a signature on a PDF', us: 'Click where it goes, type, download. As many pieces as you like on any pages, previewed before you commit.', them: 'Also does it, after an install or a sign-in.' },
+-        { edge: 'us', need: 'Merging, splitting, reordering, rotating, deleting or extracting pages', us: 'One page per job, and an organiser with page thumbnails you drag into order. Merging takes a page range per file — “1-3 | all | 2,5”.', them: 'Also does it.' },
+-        { edge: 'us', need: 'Where the contract goes', us: 'Nowhere. It is parsed and rewritten by your own browser; nothing is uploaded, queued or logged.', them: 'A desktop editor works locally too. An online editor may take the file onto its server; check before you send a contract to one.' },
++        { edge: 'them', need: 'True redaction', us: 'No. Cropping hides the outside of the box but keeps it in the file.', them: 'Commonly included.' },
++        { edge: 'them', need: 'Word export that keeps tables, pictures and layout', us: 'Text, headings, paragraphs and lists only, in reading order.', them: 'The aim of the category’s converters.' },
++        { edge: 'them', need: 'Chinese, Japanese, Korean or Arabic text; OCR beyond English and Hindi', us: 'Not covered: the embedded fonts and the OCR data are Latin, Greek, Cyrillic and Devanagari, and English and Hindi.', them: 'Depends on the fonts and languages the edition includes.' },
++        { edge: 'them', need: 'Editing bookmarks and annotations', us: 'Kept through merges and page edits, flattened on request, but not editable here.', them: 'Kept, and editable.' },
++        { edge: 'us', need: 'Putting text, a picture, a date or a signature on a PDF', us: 'Drag it where it goes, pull its corner to resize it, as many pieces as you like on any pages, previewed before you commit. Hindi, Greek and Cyrillic included.', them: 'Also does it, after an install or a sign-in.' },
++        { edge: 'us', need: 'Merging, splitting, reordering, rotating, cropping, deleting or extracting pages', us: 'One page per job, with page thumbnails to click, shift-click or drag, and an organiser you drag into order.', them: 'Also does it.' },
++        { edge: 'us', need: 'Making a PDF smaller, adding or removing a password, flattening', us: 'Compress PDF (before and after shown, never a promised ratio), Protect PDF with AES-256, Unlock PDF with the password you have, Flatten PDF.', them: 'Also does it.' },
++        { edge: 'us', need: 'A scanned PDF made searchable', us: 'OCR PDF adds an invisible text layer, English and Hindi, recognised on your device.', them: 'Also does it, in the editions that include OCR.' },
++        { edge: 'us', need: 'Where the contract goes', us: 'Nowhere. It is parsed and rewritten by your own browser; nothing you add is uploaded, queued or logged.', them: 'A desktop editor works locally too. An online editor may take the file onto its server; check before you send a contract to one.' },
+         { edge: 'us', need: 'A machine you cannot install anything on', us: 'Nothing to install: a browser tab on a work laptop, a library computer or a phone.', them: 'An install, and often an administrator to approve it.' },
+         { edge: 'us', need: 'Cost', us: 'Free, no account, no limit, and no watermark of ours on the output.', them: 'A licence or a subscription. The vendor has the current figure; we will not guess at it.' }
+       ]
+@@ -80,25 +82,26 @@ const COMPARISONS = [
+       intro: 'If your work is changing documents rather than adding to them, the answer is yes, and soon.',
+       points: [
+         'You need to change existing wording, and often. Correcting the source and exporting again stops being a workaround after the third contract.',
+-        'You handle scanned paperwork that has to be searchable, or you need the text out of it.',
+         'You build or fill forms that a system reads back, or you send documents that must carry a certificate-based signature.',
+-        'You redact. Covering text with a box is not removing it, and getting that wrong discloses exactly what you meant to hide.',
+-        'You write in a script other than Latin, or you need logos and images placed onto existing pages.'
++        'You redact. Covering text with a box, or cropping it out of view, is not removing it, and getting that wrong discloses exactly what you meant to hide.',
++        'You need Word files that look like the PDF, tables and pictures included.',
++        'You work in Chinese, Japanese, Korean or Arabic, or need OCR in languages other than English and Hindi.'
+       ]
+     },
+     groups: [
+-      { name: 'Put something onto a PDF', blurb: 'Text, a signature, a stamp, page numbers — drawn on top and previewed first.', tools: ['/pdf/pdf-editor/', '/pdf/pdf-signature/', '/pdf/watermark-pdf/', '/pdf/pdf-page-numbers/'] },
+-      { name: 'Rearrange the pages', blurb: 'Visually, or by page number when you already know which.', tools: ['/pdf/pdf-organise/', '/pdf/merge-pdf/', '/pdf/split-pdf/', '/pdf/rotate-pdf/', '/pdf/delete-pdf-pages/', '/pdf/extract-pdf-pages/'] },
+-      { name: 'Convert in and out', blurb: 'Pages to pictures, pictures to pages, plain text to a paginated document.', tools: ['/pdf/pdf-to-images/', '/image/image-to-pdf/', '/pdf/text-to-pdf/'] },
++      { name: 'Put something onto a PDF', blurb: 'Text, a signature, a picture, a stamp, page numbers — dragged into place and previewed first.', tools: ['/pdf/pdf-editor/', '/pdf/pdf-signature/', '/pdf/add-image-to-pdf/', '/pdf/watermark-pdf/', '/pdf/pdf-page-numbers/'] },
++      { name: 'Rearrange the pages', blurb: 'Visually, or by page number when you already know which.', tools: ['/pdf/pdf-organise/', '/pdf/merge-pdf/', '/pdf/split-pdf/', '/pdf/rotate-pdf/', '/pdf/crop-pdf/', '/pdf/delete-pdf-pages/', '/pdf/extract-pdf-pages/'] },
++      { name: 'Shrink, lock, unlock, flatten', blurb: 'The file itself: its size, its password and its form.', tools: ['/pdf/compress-pdf/', '/pdf/protect-pdf/', '/pdf/unlock-pdf/', '/pdf/flatten-pdf/'] },
++      { name: 'Convert in and out', blurb: 'Pages to pictures, text or Word; pictures, scans and plain text to PDF.', tools: ['/pdf/pdf-to-text/', '/pdf/pdf-to-word/', '/pdf/ocr-pdf/', '/pdf/pdf-to-images/', '/image/image-to-pdf/', '/pdf/scan-to-pdf/', '/pdf/text-to-pdf/'] },
+       { name: 'Look inside before you send it', blurb: 'What the file says about itself, and what it says about you.', tools: ['/pdf/pdf-inspector/', '/pdf/pdf-metadata/'] }
+     ],
+     faq: [
+       { q: 'Can I edit the existing text in a PDF here?', a: 'No. The Add Text tool draws new text on top of the page and does not touch what is already there. Editing existing words means re-flowing the original text, which needs the fonts and the layout the PDF was made from, and most PDFs do not carry enough of either. If you need to change the wording, edit the source document and export it again, or use a desktop PDF editor.' },
+-      { q: 'How do I fill in a PDF form that has no boxes?', a: 'Open Add Text, click the page where the first answer goes, type it, then press “Add as another item” and do the next one. Each piece keeps its own page, position and size, and a wrap width stops a long answer running off the page. The preview shows every piece before anything is written.' },
+-      { q: 'Is my PDF uploaded?', a: 'No. Each tool parses and rewrites the file in your own browser, so nothing is transmitted, queued or logged — which is why they work offline and why they are safe for contracts. The page organiser downloads a rendering engine from this site the first time you use it, to draw the thumbnails; your file still never leaves the device.' },
++      { q: 'How do I fill in a PDF form that has no boxes?', a: 'Open Add Text, click the page where the first answer goes, type it, then press “Add as another item” and do the next one. Each piece can be dragged and resized, keeps its own page, and a wrap width stops a long answer running off the page. The preview shows every piece before anything is written.' },
++      { q: 'Is my PDF uploaded?', a: 'No. Each tool parses and rewrites the file in your own browser, so nothing you add is uploaded, queued or logged — which is why they work offline and why they are safe for contracts. The tools that draw pages or read scans download their engine from this site the first time you use them; your file still never leaves the device.' },
+       { q: 'Is a signature added here legally binding?', a: 'It is a visible signature, the same as signing a printout and scanning it. A digital signature in the legal sense is a cryptographic operation with a certificate from a trust service provider. If a contract, a court or a regulator asks for one, this is not it. For a form, an invoice or an internal approval that needs to look signed, it is exactly right.' },
+       { q: 'Will there be a watermark on my file?', a: 'Not one of ours. The only watermark that ends up on your PDF is one you add yourself with the watermark tool.' },
+-      { q: 'Can it make a PDF smaller, or remove a password?', a: 'No. There is no compression tool and no password tool for PDFs on this site. A desktop PDF editor is the right tool for both.' }
++      { q: 'Can it make a PDF smaller, or remove a password?', a: 'Yes. Compress PDF shrinks pictures to the resolution you choose and shows the size before and after; how much it saves depends on the file. Unlock PDF removes a password you know, and Protect PDF adds one with AES-256. Neither guesses or cracks a password.' }
+     ],
+     collections: ['small-business', 'going-paperless', 'freelancers'],
+     sources: null
+diff --git a/build/jobs.js b/build/jobs.js
+index 69bb250c9..79b7931a9 100644
+--- a/build/jobs.js
++++ b/build/jobs.js
+@@ -259,6 +259,17 @@ const JOBS = {
+   '/pdf/pdf-organise/': ['Clean up', 'PDF → reordered, trimmed PDF'],
+   '/pdf/pdf-editor/': ['Make', 'PDF → PDF with your text on it'],
+   '/pdf/pdf-signature/': ['Make', 'PDF + signature → signed PDF'],
++  '/pdf/compress-pdf/': ['Clean up', 'PDF → smaller PDF'],
++  '/pdf/protect-pdf/': ['Make', 'PDF + password → encrypted PDF'],
++  '/pdf/unlock-pdf/': ['Clean up', 'PDF + its password → open PDF'],
++  '/pdf/pdf-to-text/': ['Convert', 'PDF → plain text'],
++  '/pdf/pdf-to-word/': ['Convert', 'PDF → Word document'],
++  '/pdf/ocr-pdf/': ['Convert', 'Scanned PDF → searchable PDF'],
++  '/pdf/image-to-text/': ['Convert', 'Photo or scan → text'],
++  '/pdf/scan-to-pdf/': ['Make', 'Camera photos → PDF'],
++  '/pdf/flatten-pdf/': ['Clean up', 'PDF → PDF, forms flattened'],
++  '/pdf/crop-pdf/': ['Clean up', 'PDF → PDF, margins cropped'],
++  '/pdf/add-image-to-pdf/': ['Make', 'PDF + picture → PDF'],
+   '/pdf/payslip-pdf/': ['Make', 'Pay details → payslip PDF'],
+   '/pdf/quotation-pdf/': ['Make', 'Line items → quotation PDF'],
+   '/pdf/purchase-order-pdf/': ['Make', 'Line items → purchase order PDF'],
+@@ -411,6 +422,17 @@ const DESCS = {
+   '/education/report-card/': 'A printed report card for every student from a class marks spreadsheet, as one PDF each and one combined.',
+   '/pdf/pdf-editor/': 'Put text anywhere on a PDF, on any pages, wrapped to a width. Click the page to place each piece.',
+   '/pdf/pdf-signature/': 'Draw or type a signature onto a PDF and place it where you want. A visible signature, not a cryptographic one.',
++  '/pdf/compress-pdf/': 'Make a PDF smaller: pictures scaled to the resolution you choose, streams compressed. Before and after shown.',
++  '/pdf/protect-pdf/': 'Encrypt a PDF with a password, AES-256 by default, and choose whether it can be printed or copied.',
++  '/pdf/unlock-pdf/': 'Remove the password from a PDF you can open, or lift its printing and copying restrictions.',
++  '/pdf/pdf-to-text/': 'The text of a PDF as a .txt file, in reading order or as stored, with columns and headings kept apart.',
++  '/pdf/pdf-to-word/': 'The text of a PDF as an editable Word file with headings, paragraphs and lists. Layout is not kept.',
++  '/pdf/ocr-pdf/': 'Make a scanned PDF searchable and copyable: text recognised on your device, in English and Hindi.',
++  '/pdf/image-to-text/': 'Read the text in a photo or a scan, in English or Hindi, on your device, and copy it or save it.',
++  '/pdf/scan-to-pdf/': 'Photograph pages; the edges are found and straightened, the paper whitened, and a PDF made.',
++  '/pdf/flatten-pdf/': 'Fix form answers and comments into the page, so they print as shown and can no longer be changed.',
++  '/pdf/crop-pdf/': 'Draw a crop box on the page and apply it to every page, or only the ones you choose.',
++  '/pdf/add-image-to-pdf/': 'Place a logo, a stamp or a photo on a PDF; drag and resize it, on one page or many.',
+   '/pdf/payslip-pdf/': 'A clean, print-ready payslip PDF: company and employee details, earnings, deductions and the net pay.',
+   '/pdf/quotation-pdf/': 'A quotation, proforma invoice or estimate as a clean PDF, with GST or VAT worked out and terms included.',
+   '/pdf/purchase-order-pdf/': 'A purchase order PDF from the buyer’s side: supplier, line items with HSN/SAC, charges, tax and terms.',
+diff --git a/build/tests/claims/kit.js b/build/tests/claims/kit.js
+index ee7a755b5..e8193dd0e 100644
+--- a/build/tests/claims/kit.js
++++ b/build/tests/claims/kit.js
+@@ -72,6 +72,12 @@ K.core = () => {
+     const w = {};
+     new Function('window', fs.readFileSync(path.join(K.ROOT, 'engine/pdfcore.bundle.js'), 'utf8'))(w);
+     K._core = w.MVRPdfCore;
++    /* the worker fetches the Noto fonts and the shaper from /engine/; in Node
++       they are read from the site's own copies */
++    if (K._core.unicodeFonts) {
++      K._core.unicodeFonts.setFontLoader(async (rel) => new Uint8Array(fs.readFileSync(path.join(K.ROOT, 'engine', rel))),
++        async () => require(path.join(K.ROOT, 'engine/pdf-shaper.js')));
++    }
+   }
+   return K._core;
+ };
+@@ -79,8 +85,16 @@ K.pkg = () => K._pkg || (K._pkg = require(path.join(K.ROOT, 'build/pdf-package/e
+ const pdfSpecs = new Map();
+ K.pdfSpec = (id) => {
+   if (!pdfSpecs.has(id)) {
+-    const w = {};
++    let w = {};
+     new Function('window', fs.readFileSync(path.join(K.ROOT, 'engine/pdf-' + id + '.js'), 'utf8'))(w);
++    /* a spec that reuses another engine's code at run time (the invoice reads
++       its lines with the quotation's reader) is loaded with the files its
++       worker loads, together, as the worker does */
++    const ws = w.PDF_TOOLS[id] && w.PDF_TOOLS[id].workerScripts;
++    if (Array.isArray(ws) && ws.length > 1) {
++      w = {};
++      for (const s of ws) new Function('window', fs.readFileSync(path.join(K.ROOT, 'engine', s), 'utf8'))(w);
++    }
+     pdfSpecs.set(id, w.PDF_TOOLS[id]);
+   }
+   return pdfSpecs.get(id);
+@@ -94,7 +108,7 @@ K.pdfDefaults = (id) => {
+ K.runPdf = async (id, files, opts, text) => {
+   const core = K.core();
+   const docs = [];
+-  for (const f of files || []) docs.push({ doc: await core.PDFDocument.load(f.bytes), name: f.name, size: f.bytes.length });
++  for (const f of files || []) docs.push({ doc: await core.PDFDocument.load(f.bytes, { password: f.password || '' }), name: f.name, size: f.bytes.length });
+   return (await K.pdfSpec(id).run({ docs, text, opts: Object.assign(K.pdfDefaults(id), opts || {}), core })) || {};
+ };
+ K.pdfOut = (res, i) => (res.files && res.files[i || 0] ? res.files[i || 0].bytes : null);
+@@ -629,6 +643,8 @@ K.pdf.upload = async (p, files) => {
+     await input.uploadFile(f);
+     await p.waitForFunction((k) => document.querySelectorAll('.file-list .file-row').length > k, { timeout: 30000 }, n);
+   }
++  /* a row is drawn while its file is read and again once it is open */
++  await p.waitForFunction(() => !document.querySelector('.file-list .file-row.is-loading'), { timeout: 60000 });
+ };
+ K.pdf.press = async (p) => {
+   await p.click('.pdf-run .btn-primary');
+diff --git a/privacy/index.html b/privacy/index.html
+index 07bff739d..ce0917c98 100644
+--- a/privacy/index.html
++++ b/privacy/index.html
+@@ -325,6 +325,8 @@
+     <li><strong>Showcase submissions (optional).</strong> If you send something you made to the <a href="/showcase/">showcase</a>, nothing leaves the page until you press the button. Then our server receives, and stores in Google Cloud Firestore in the Mumbai region (asia-south1), your name, any handle, the platform, the link, the tool you used, your one-line description, what you do (if you pick it), your email (if you leave one) and a note that you ticked the consent box, along with a one-way hash of your connection’s address that we use only to limit sending to five an hour. Nothing is published unless you ticked the consent box and we have approved it by hand. We then show your name, handle, platform, link, tool and description on the showcase and on the page of the tool you used, and use what you do, if you picked it, to list the entry with others in the same line of work. Your email is never shown; it is used only to tell you the entry is live. To have an entry taken down, ask on the <a href="/contact/">contact page</a> with the link to it: it comes off the site at the next update, and the stored submission is deleted by our daily clean-up once it is 90 days past the day it arrived (within a day, if it is already older). Approved entries stay, with their email and address hash, until you ask for them to be removed; pending and rejected submissions are deleted automatically 90 days after they arrive. The address hash is never published, and the hourly count kept against it is deleted after a day.</li>
+     <li><strong>A theme preference.</strong> If you switch between light, dark or system theme, that single choice is saved in your browser's local storage so it's remembered next visit. It never leaves your device.</li>
+     <li><strong>The last few tools you opened.</strong> So the homepage can offer them back to you, the names of your six most recent tools are saved in your browser's local storage. Only the names — never anything you entered into them. It never leaves your device, we cannot see it, and clearing your browser data removes it.</li>
++    <li><strong>PDF tool settings, and the invoice you are writing.</strong> The PDF tools remember the choices you make (a resolution, a position, a watermark's wording) in your browser's local storage, one entry per tool, so they are set the same next time; never page ranges, signatures or passwords. The Invoice Generator also keeps the invoice you are working on, your logo, the clients you save and your last invoice number there, until you press its "forget" button or clear your browser data. None of it leaves your device.</li>
++    <li><strong>The camera, only when you ask.</strong> Scan to PDF turns the camera on when you press its camera button and off when you press Done. The pictures are straightened and made into a PDF in the page; nothing is recorded or sent.</li>
+     <li><strong>Hosting logs.</strong> This site is hosted on GitHub Pages. GitHub, Inc. may log IP addresses and request metadata for security and operational purposes, independently of us. See <a referrerpolicy="no-referrer-when-downgrade" href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement?utm_source=1234tools.com&amp;utm_medium=referral&amp;utm_campaign=privacy&amp;utm_content=content" rel="noopener" target="_blank">GitHub's Privacy Statement</a>.</li>
+     <li><strong>Analytics, only with your consent.</strong> If you accept when asked, Google Analytics 4 and Microsoft Clarity record which pages you visit, roughly where in the world you are, and how you moved through the page. Clarity also replays page usage, with every form field, result panel and generated document masked, so what you enter into a tool is not captured. Advertising and personalisation signals are disabled and IP addresses are anonymised. See <a referrerpolicy="no-referrer-when-downgrade" href="https://policies.google.com/privacy?utm_source=1234tools.com&amp;utm_medium=referral&amp;utm_campaign=privacy&amp;utm_content=content" rel="noopener" target="_blank">Google's Privacy Policy</a> and <a referrerpolicy="no-referrer-when-downgrade" href="https://privacy.microsoft.com/privacystatement?utm_source=1234tools.com&amp;utm_medium=referral&amp;utm_campaign=privacy&amp;utm_content=content" rel="noopener" target="_blank">Microsoft's Privacy Statement</a>. Nothing loads until you agree, and a Global Privacy Control or Do Not Track signal is treated as a refusal.</li>
+   </ul>

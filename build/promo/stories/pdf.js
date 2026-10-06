@@ -204,6 +204,18 @@ module.exports = {
     howTo: 'How to make certificates from a list of names',
     cta: 'Make certificates'
   },
+  '/pdf/scan-to-pdf/': {
+    persona: 'Anyone who needs a scan and has only a phone',
+    hook: 'They want it scanned by five. The scanner is in the office.',
+    pain: 'A photo of the signed form shows the kitchen table, a slant and a grey shadow. They asked for a PDF, page by page.',
+    usual: ['Sending a crooked photo and hoping', 'An app that wants an account first', 'Uploading a signed form to a stranger\'s server'],
+    promise: 'Photograph each page. The edges are found, the page straightened and whitened, and one PDF made.',
+    steps: ['Take or choose a photo per page', 'Check the corners on each card', 'Make the PDF'],
+    proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
+    example: { kind: 'schematic', input: 'Three phone photos of A4 pages: on wood with a shadow, on a grey table, on carpet', output: 'One PDF of three upright A4 pages', sampleIn: 'A slanted page on a wooden table, grey in the shadow', sampleOut: 'A straight A4 page, paper white, ink black' },
+    howTo: 'How to scan pages to PDF with your phone camera',
+    cta: 'Scan to PDF'
+  },
   '/pdf/pdf-to-images/': {
     persona: 'Anyone posting a PDF as a picture',
     hook: 'Instagram will not take a PDF. Your poster is a PDF.',
@@ -363,5 +375,68 @@ module.exports = {
     example: { kind: 'schematic', input: 'A PDF you have the password for', output: 'The same document with no password', sampleIn: 'statement-sep-2026.pdf · RC4 128-bit · password needed', sampleOut: 'statement-sep-2026-unlocked.pdf · opens anywhere, no limits' },
     howTo: 'How to remove a password from a PDF you can open',
     cta: 'Remove a password'
+  },
+  /* Wave 2, drop 2. All five are schematic: OCR needs a scan, flatten a filled form, and crop and
+     add-an-image a choice made on the page; none of the desk's samples is one. Every sample line
+     is a run recorded in build/content/pdf.js. */
+  '/pdf/ocr-pdf/': {
+    persona: 'Anyone with a drawer of scanned paperwork',
+    hook: 'You know the letter mentions the policy number. Search finds nothing.',
+    pain: 'Every page the scanner made is a photograph. Search, copy and select all come up empty.',
+    usual: ['Retyping the paragraph you need', 'Uploading a scanned contract to a converter', 'Paging through forty scans by eye'],
+    promise: 'Each page is read in your browser and given an invisible text layer. It looks the same; now it searches and copies.',
+    steps: ['Open the scanned PDF', 'Choose English, Hindi or both', 'Download the searchable PDF'],
+    proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
+    example: { kind: 'schematic', input: 'A scanned PDF: every page a picture, no text', output: 'The same pages with an invisible, searchable text layer', sampleIn: 'A two-page scan at 200 DPI, one line in Hindi', sampleOut: '45 words read at 96% mean confidence; pdf.js copies every line' },
+    howTo: 'How to make a scanned PDF searchable',
+    cta: 'Make it searchable'
+  },
+  '/pdf/image-to-text/': {
+    persona: 'Anyone copying words out of a picture',
+    hook: 'The error message is in a screenshot. You need it as text.',
+    pain: 'A receipt, a notice, a screenshot: the words are right there, and none of them can be copied.',
+    usual: ['Typing it out letter by letter', 'Uploading the photo to an app', 'Zooming in and guessing'],
+    promise: 'Add the pictures. The text is read on your device, in English or Hindi, ready to copy.',
+    steps: ['Add one picture or several', 'Choose the language', 'Copy the text or save the .txt'],
+    proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
+    example: { kind: 'schematic', input: 'Photos and screenshots with text in them', output: 'Plain text, with each picture\'s name above its words', sampleIn: 'receipt.png: three lines of a shop receipt', sampleOut: '17 words at 96% mean confidence, every character as printed' },
+    howTo: 'How to copy text from a picture',
+    cta: 'Get the text'
+  },
+  '/pdf/flatten-pdf/': {
+    persona: 'Anyone sending a filled-in form',
+    hook: 'You filled in the form. They opened it and the boxes were empty.',
+    pain: 'Some viewers and printers leave form answers out, and anyone can change an answer after you send it.',
+    usual: ['Printing the form and scanning it back', 'A screenshot of every page', 'Hoping their viewer shows the fields'],
+    promise: 'The answers, ticks, notes and stamps become part of the page. Links stay links.',
+    steps: ['Open the filled-in PDF', 'Choose fields, comments or both', 'Download the flattened copy'],
+    proof: ['Free', 'Nothing uploaded', 'No watermark'],
+    example: { kind: 'schematic', input: 'A filled-in PDF form with a note and a stamp', output: 'The same page with the answers drawn in, no fields left', sampleIn: 'renewal-form.pdf: 4 answers, a note, a stamp, a link', sampleOut: '4 fields and 2 comments drawn in, the link kept: 5.2 KB became 4.3 KB' },
+    howTo: 'How to flatten a filled-in PDF form',
+    cta: 'Flatten a PDF'
+  },
+  '/pdf/crop-pdf/': {
+    persona: 'Anyone printing an e-ticket or a label',
+    hook: 'You need the ticket. The PDF is a whole A4 page of small print.',
+    pain: 'The part you want is a box in one corner, and the rest of the page prints, wastes paper and shrinks it on a phone.',
+    usual: ['Screenshotting the box and losing the sharp text', 'Printing the whole page and cutting it out', 'Uploading the ticket to an editor'],
+    promise: 'Set the box on the page. The PDF shows just that part, its text still sharp. The rest is hidden, not deleted.',
+    steps: ['Open the PDF', 'Fit to the content or set each margin', 'Download the cropped PDF'],
+    proof: ['Free', 'Nothing uploaded', 'No watermark'],
+    example: { kind: 'schematic', input: 'An A4 PDF with the part you need in one box', output: 'The same PDF showing only that box', sampleIn: 'e-ticket.pdf: a ticket box at the top of an A4 page', sampleOut: 'A 164 x 89.5 mm page with the ticket alone; the small print hidden, still in the file' },
+    howTo: 'How to crop a PDF page',
+    cta: 'Crop a PDF'
+  },
+  '/pdf/add-image-to-pdf/': {
+    persona: 'Small firms putting a logo on paperwork',
+    hook: 'The letter went out without the logo. Again.',
+    pain: 'The document is a PDF now. The logo, the stamp or the photo has to go on top, on the right pages.',
+    usual: ['Rebuilding the document in a word processor', 'Pasting a screenshot and losing the quality', 'Uploading the file to a site to stamp it'],
+    promise: 'Place a PNG or JPEG on the page, drag and resize it, and put it on one page or many.',
+    steps: ['Open the PDF and choose the picture', 'Drag and resize it on the page', 'Download the PDF'],
+    proof: ['Free', 'Nothing uploaded', 'No watermark'],
+    example: { kind: 'schematic', input: 'A PDF and a logo with a transparent background', output: 'The same PDF with the logo on the pages you chose', sampleIn: 'A two-page quotation and acme-logo.png, 600 x 240 px, transparent', sampleOut: 'The logo on both pages, stored once in the file' },
+    howTo: 'How to add a logo or picture to a PDF',
+    cta: 'Add an image'
   }
 };

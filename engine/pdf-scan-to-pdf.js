@@ -161,8 +161,8 @@ function move(pg, dir) {
     S.order.splice(j, 0, pg.id);
   }
   sync();
-  const b = pg.card.querySelector(dir < 0 ? '.scan-up' : '.scan-down');
-  const other = pg.card.querySelector(dir < 0 ? '.scan-down' : '.scan-up');
+  const b = pg.card.querySelector(dir < 0 ? '.docscan-up' : '.docscan-down');
+  const other = pg.card.querySelector(dir < 0 ? '.docscan-down' : '.docscan-up');
   if (b && !b.disabled) b.focus(); else if (other) other.focus();
 }
 
@@ -175,6 +175,9 @@ function sync() {
   for (const [id, pg] of S.pages) {
     if (!ids.has(id)) { pg.gone = true; pg.card.remove(); S.pages.delete(id); }
   }
+  /* cards are only moved when the order changed: moving a node drops the
+     keyboard focus inside it, which is put back */
+  const active = document.activeElement;
   entries.forEach((e, i) => {
     let pg = S.pages.get(e.id);
     if (!pg) { pg = newPage(e); S.pages.set(e.id, pg); }
@@ -182,9 +185,10 @@ function sync() {
     pg.index = i;
     if (e.state === 'ready' && pg.status === 'waiting') queueDetect(pg);
     if (e.state === 'error' && pg.status !== 'error') { pg.status = 'error'; pg.error = e.error || 'This file could not be read.'; }
-    S.list.appendChild(pg.card);
+    if (S.list.children[i] !== pg.card) S.list.insertBefore(pg.card, S.list.children[i] || null);
     paintCard(pg, entries.length);
   });
+  if (active && active !== document.activeElement && S.list.contains(active)) active.focus({ preventScroll: true });
   S.wrap.hidden = !entries.length;
   S.head.textContent = entries.length === 1 ? '1 page' : entries.length + ' pages';
 }
@@ -192,39 +196,39 @@ function sync() {
 function newPage(e) {
   const pg = { id: e.id, entry: e, status: 'waiting', error: '', quad: null, det: null, turns: 0, moved: false, thumb: null, promise: null };
   const el = S.api.el, btn = S.api.btn;
-  const card = el('li', 'scan-card');
+  const card = el('li', 'docscan-card');
   card.dataset.id = String(e.id);
-  const head = el('div', 'scan-card-head');
-  pg.num = el('span', 'scan-num', '1');
-  pg.name = el('span', 'scan-name', e.name);
-  pg.flag = el('span', 'scan-flag', 'Check the corners');
+  const head = el('div', 'docscan-card-head');
+  pg.num = el('span', 'docscan-num', '1');
+  pg.name = el('span', 'docscan-name', e.name);
+  pg.flag = el('span', 'docscan-flag', 'Check the corners');
   pg.flag.hidden = true;
   head.appendChild(pg.num); head.appendChild(pg.name); head.appendChild(pg.flag);
   card.appendChild(head);
 
-  const body = el('div', 'scan-card-body');
-  const stage = el('div', 'scan-stage');
-  pg.photo = el('canvas', 'scan-photo');
+  const body = el('div', 'docscan-card-body');
+  const stage = el('div', 'docscan-stage');
+  pg.photo = el('canvas', 'docscan-photo');
   pg.photo.width = 4; pg.photo.height = 3;
   pg.photo.setAttribute('role', 'img');
   pg.photo.setAttribute('aria-label', 'Photo ' + e.name + ' with the page\'s corners marked');
   stage.appendChild(pg.photo);
   const NS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(NS, 'svg');
-  svg.setAttribute('class', 'scan-quad');
+  svg.setAttribute('class', 'docscan-quad');
   svg.setAttribute('viewBox', '0 0 1000 1000');
   svg.setAttribute('preserveAspectRatio', 'none');
   svg.setAttribute('aria-hidden', 'true');
   pg.shade = document.createElementNS(NS, 'path');
-  pg.shade.setAttribute('class', 'scan-quad-shade');
+  pg.shade.setAttribute('class', 'docscan-quad-shade');
   pg.shade.setAttribute('fill-rule', 'evenodd');
   pg.outline = document.createElementNS(NS, 'polygon');
-  pg.outline.setAttribute('class', 'scan-quad-line');
+  pg.outline.setAttribute('class', 'docscan-quad-line');
   pg.outline.setAttribute('vector-effect', 'non-scaling-stroke');
   svg.appendChild(pg.shade); svg.appendChild(pg.outline);
   stage.appendChild(svg);
   pg.handles = CORNERS.map((label, k) => {
-    const h = el('button', 'scan-handle');
+    const h = el('button', 'docscan-handle');
     h.type = 'button';
     h.dataset.corner = String(k);
     h.title = label + ' corner: drag it, or use the arrow keys (Shift for bigger steps)';
@@ -233,34 +237,34 @@ function newPage(e) {
     stage.appendChild(h);
     return h;
   });
-  pg.busy = el('div', 'scan-busy', 'Finding the edges…');
+  pg.busy = el('div', 'docscan-busy', 'Finding the edges…');
   stage.appendChild(pg.busy);
   pg.stage = stage;
   body.appendChild(stage);
 
-  const side = el('div', 'scan-side');
-  const fig = el('figure', 'scan-result');
-  pg.preview = el('canvas', 'scan-preview');
+  const side = el('div', 'docscan-side');
+  const fig = el('figure', 'docscan-result');
+  pg.preview = el('canvas', 'docscan-preview');
   pg.preview.width = 3; pg.preview.height = 4;
   pg.preview.setAttribute('role', 'img');
   fig.appendChild(pg.preview);
   fig.appendChild(el('figcaption', null, 'Straightened'));
   side.appendChild(fig);
-  pg.status_ = el('p', 'scan-status');
+  pg.status_ = el('p', 'docscan-status');
   pg.status_.setAttribute('aria-live', 'polite');
   side.appendChild(pg.status_);
   body.appendChild(side);
   card.appendChild(body);
 
-  const tools = el('div', 'scan-tools');
+  const tools = el('div', 'docscan-tools');
   const mk = (label, cls, title, fn) => { const b = btn(label, 'btn-ghost ' + cls); b.title = title; b.addEventListener('click', fn); tools.appendChild(b); return b; };
-  pg.bLeft = mk('↺ Turn left', 'scan-left', 'Turn the page a quarter turn anticlockwise', () => { pg.turns = (pg.turns + 3) % 4; afterEdit(pg); });
-  pg.bRight = mk('↻ Turn right', 'scan-right', 'Turn the page a quarter turn clockwise', () => { pg.turns = (pg.turns + 1) % 4; afterEdit(pg); });
-  pg.bReset = mk('Reset to detected', 'scan-reset', 'Put the corners back where they were found', () => { if (pg.det) { pg.quad = copyQuad(pg.det.quad); pg.moved = false; afterEdit(pg); } });
-  pg.bWhole = mk('Use the whole photo', 'scan-whole', 'Put the corners at the photo\'s own corners', () => { pg.quad = whole(); pg.moved = true; afterEdit(pg); });
-  pg.bUp = mk('↑', 'scan-up', 'Move this page up', () => move(pg, -1));
-  pg.bDown = mk('↓', 'scan-down', 'Move this page down', () => move(pg, 1));
-  pg.bRemove = mk('Remove', 'scan-remove', 'Remove this page', () => { S.api.removeEntry(pg.entry); setTimeout(sync, 0); });
+  pg.bLeft = mk('↺ Turn left', 'docscan-left', 'Turn the page a quarter turn anticlockwise', () => { pg.turns = (pg.turns + 3) % 4; afterEdit(pg); });
+  pg.bRight = mk('↻ Turn right', 'docscan-right', 'Turn the page a quarter turn clockwise', () => { pg.turns = (pg.turns + 1) % 4; afterEdit(pg); });
+  pg.bReset = mk('Reset to detected', 'docscan-reset', 'Put the corners back where they were found', () => { if (pg.det) { pg.quad = copyQuad(pg.det.quad); pg.moved = false; afterEdit(pg); } });
+  pg.bWhole = mk('Use the whole photo', 'docscan-whole', 'Put the corners at the photo\'s own corners', () => { pg.quad = whole(); pg.moved = true; afterEdit(pg); });
+  pg.bUp = mk('↑', 'docscan-up', 'Move this page up', () => move(pg, -1));
+  pg.bDown = mk('↓', 'docscan-down', 'Move this page down', () => move(pg, 1));
+  pg.bRemove = mk('Remove', 'docscan-remove', 'Remove this page', () => { S.api.removeEntry(pg.entry); setTimeout(sync, 0); });
   card.appendChild(tools);
   pg.card = card;
   return pg;
@@ -290,11 +294,11 @@ function paintCard(pg, total) {
   pg.card.classList.toggle('is-error', pg.status === 'error');
   if (pg.status === 'error') {
     pg.status_.textContent = pg.entry.name + ': ' + pg.error;
-    pg.status_.className = 'scan-status io-msg is-error';
+    pg.status_.className = 'docscan-status io-msg is-error';
     pg.flag.hidden = true;
     return;
   }
-  pg.status_.className = 'scan-status';
+  pg.status_.className = 'docscan-status';
   if (!ready) { pg.status_.textContent = pg.busy.textContent; pg.flag.hidden = true; return; }
   drawQuad(pg);
   const d = pg.det, turn = pg.turns ? (pg.turns === 2 ? ' Turned upside down.' : pg.turns === 1 ? ' Turned right.' : ' Turned left.') : '';
@@ -421,43 +425,43 @@ async function detectOne(pg) {
 
 function mountCamera(api) {
   const el = api.el, btn = api.btn;
-  const box = el('div', 'scan-camera');
-  const bar = el('div', 'scan-camera-bar');
-  const start = btn('Use the camera', 'btn-ghost scan-cam-start');
+  const box = el('div', 'docscan-camera');
+  const bar = el('div', 'docscan-camera-bar');
+  const start = btn('Use the camera', 'btn-ghost docscan-cam-start');
   start.title = 'Open a live view from this device\'s camera and photograph the pages one by one';
   bar.appendChild(start);
-  bar.appendChild(el('span', 'scan-camera-note', 'The camera starts only when you press this. Nothing is recorded or sent.'));
+  bar.appendChild(el('span', 'docscan-camera-note', 'The camera starts only when you press this. Nothing is recorded or sent.'));
   box.appendChild(bar);
 
-  const live = el('div', 'scan-camera-live');
+  const live = el('div', 'docscan-camera-live');
   live.hidden = true;
-  const view = el('div', 'scan-camera-view');
+  const view = el('div', 'docscan-camera-view');
   view.tabIndex = 0;
   view.setAttribute('aria-label', 'Camera view. Press Space or Enter to take the photo.');
-  const video = el('video', 'scan-camera-video');
+  const video = el('video', 'docscan-camera-video');
   video.muted = true; video.playsInline = true; video.autoplay = true;
   video.setAttribute('playsinline', ''); video.setAttribute('muted', '');
   view.appendChild(video);
   live.appendChild(view);
-  const acts = el('div', 'scan-camera-actions');
-  const shoot = btn('Take the photo', 'btn-primary scan-cam-shoot');
-  const count = el('span', 'scan-camera-count', 'No pages taken yet.');
+  const acts = el('div', 'docscan-camera-actions');
+  const shoot = btn('Take the photo', 'btn-primary docscan-cam-shoot');
+  const count = el('span', 'docscan-camera-count', 'No pages taken yet.');
   count.setAttribute('aria-live', 'polite');
-  const done = btn('Done', 'btn-ghost scan-cam-done');
+  const done = btn('Done', 'btn-ghost docscan-cam-done');
   done.title = 'Turn the camera off';
   acts.appendChild(shoot); acts.appendChild(count); acts.appendChild(done);
   live.appendChild(acts);
   box.appendChild(live);
 
-  const fb = el('div', 'scan-camera-fallback');
+  const fb = el('div', 'docscan-camera-fallback');
   fb.hidden = true;
-  const fbMsg = el('p', 'io-msg is-note scan-camera-msg');
+  const fbMsg = el('p', 'io-msg is-note docscan-camera-msg');
   fbMsg.setAttribute('role', 'status');
   const fbInput = el('input', 'visually-hidden');
   fbInput.type = 'file'; fbInput.accept = 'image/*'; fbInput.multiple = true;
   fbInput.setAttribute('capture', 'environment');
   fbInput.tabIndex = -1;
-  const fbBtn = btn('Open the phone\'s camera', 'btn-ghost scan-cam-native');
+  const fbBtn = btn('Open the phone\'s camera', 'btn-ghost docscan-cam-native');
   fbBtn.title = 'On a phone this opens its camera app; elsewhere it opens the file picker';
   fbBtn.addEventListener('click', () => fbInput.click());
   fbInput.addEventListener('change', () => { if (fbInput.files.length) { const l = [...fbInput.files]; fbInput.value = ''; api.addFiles(l); } });
@@ -522,6 +526,19 @@ function mountCamera(api) {
     return b;
   }
 
+  async function toJpeg(blob) {
+    try {
+      const bm = await createImageBitmap(blob);
+      const c = document.createElement('canvas');
+      c.width = bm.width; c.height = bm.height;
+      c.getContext('2d').drawImage(bm, 0, 0);
+      if (bm.close) bm.close();
+      const b = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.92));
+      c.width = c.height = 1;
+      return b && b.type === 'image/jpeg' ? b : null;
+    } catch (e) { return null; }
+  }
+
   async function takePhoto() {
     if (!stream || shooting) return;
     shooting = true; shoot.disabled = true;
@@ -531,6 +548,7 @@ function mountCamera(api) {
       let blob = null;
       if (capture) { try { blob = await capture.takePhoto(); } catch (e) { blob = null; } }
       if (!blob || !blob.size || !/^image\//.test(blob.type)) blob = await grab();
+      else if (blob.type !== 'image/jpeg') blob = (await toJpeg(blob)) || blob;   /* some cameras hand back a PNG many times the size */
       if (!blob) { count.textContent = 'The camera gave no picture. Try again.'; return; }
       const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
       const n = api.allEntries().length + 1;
@@ -597,21 +615,21 @@ mountExtras: (api) => {
   S.api = api;
   S.base = api.ENGINE_BASE;
   S.io = api.root.closest ? api.root.closest('.tool-io') : null;
-  if (S.io) S.io.classList.add('scan-io');
+  if (S.io) S.io.classList.add('docscan-io');
   S.detector = makeRunner(S);
   S.runner = makeRunner(S);
   const el = api.el;
-  api.root.classList.add('scan-tool');
+  api.root.classList.add('docscan-tool');
   api.root.appendChild(mountCamera(api));
-  S.wrap = el('section', 'scan-pages');
+  S.wrap = el('section', 'docscan-pages');
   S.wrap.hidden = true;
   S.wrap.setAttribute('aria-label', 'Pages');
-  const top = el('div', 'scan-pages-head');
+  const top = el('div', 'docscan-pages-head');
   S.head = el('strong', null, '');
   top.appendChild(S.head);
-  top.appendChild(el('span', 'scan-pages-hint', 'Check each page\'s corners, then make the PDF. The pages go in this order.'));
+  top.appendChild(el('span', 'docscan-pages-hint', 'Check each page\'s corners, then make the PDF. The pages go in this order.'));
   S.wrap.appendChild(top);
-  S.list = el('ol', 'scan-list');
+  S.list = el('ol', 'docscan-list');
   S.wrap.appendChild(S.list);
   api.root.appendChild(S.wrap);
   /* the shell redraws its file list on every add, remove and move,
@@ -632,7 +650,7 @@ mainRun: async (api) => {
   const o = api.opts;
   const mode = MODES[o.enhance] ? o.enhance : 'colour';
   const quality = clamp(Number(o.quality) || 0.85, 0.3, 1);
-  const size = PAPER[o.pageSize] || o.pageSize === 'fit' ? o.pageSize : 'a4';
+  const size = (PAPER[o.pageSize] || o.pageSize === 'fit') ? o.pageSize : 'a4';
   const N = entries.length;
   const pages = [], used = [], left = [];
   let largest = null, kinds = new Set();

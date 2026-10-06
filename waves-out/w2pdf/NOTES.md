@@ -50,6 +50,51 @@ counts are in "Final state" at the bottom once it exists.
   presets incl. "Email: under 2 MB" which says when it misses), Protect PDF
   (AES-256 default, AES-128, permissions, owner password), Unlock PDF.
 
+## Drop 2 (progress log)
+
+- 19:04 c2a6ab03f **E. Unicode text**: TrueType subsets embedded as
+  CIDFontType2 + ToUnicode (build/pdf-package/engine/pdffont.js), Noto Sans
+  regular/bold and Noto Sans Devanagari (OFL) in engine/vendor/fonts/,
+  HarfBuzz WASM (MIT) shapes Hindi; base-14 kept for WinAnsi-only text.
+  Used by Add text, Signature, Text to PDF, the invoice and OCR's layer.
+  Also **Flatten**, **Crop**, **Add an Image** (engines, pages).
+- 19:11 15fc768cd copy for compress/protect/unlock; **G**: the
+  /compare/free-pdf-editor data in build/compare-extra.js rewritten (gap
+  first: editing existing text, interactive forms, certificate signatures,
+  redaction, layout-keeping Word export, CJK/Arabic and OCR beyond
+  English/Hindi; rows the site now wins moved to "us").
+  `node build-compare.js --check`: honesty check passes, 12 comparisons.
+- 19:18 76f950641 **PDF to Text** and **PDF to Word** (pdf.js extraction,
+  engine/pdf-textlayout.js reading order, a minimal .docx writer).
+- 19:22 e22f652ba claims for Unicode text; phone checks.
+- (old agent cut off here; resumed 22:15 by a new agent)
+- 22:30 **OCR PDF**, **Image to Text**, **Scan to PDF** finished: the
+  uncommitted helper edits reviewed and kept (OCR pages' depth figures
+  re-measured; scan classes renamed `scan-*` → `docscan-*` because the QR
+  scanner already owns `.scan-stage`; camera PNGs re-encoded as JPEG; a
+  focus fix when cards reorder; an operator-precedence bug in the page
+  size fixed). The scan tool's CSS, which existed only inside its test,
+  appended to assets/app.css in the WAVE-2 block (53 lines).
+  Tesseract.js 6.0.1 + core 6.1.2 (Apache-2.0), eng/hin tessdata_fast
+  (Apache-2.0) vendored, hashes checked against the README; loaded only on
+  Run; Cancel terminates the worker. Verified in headless Chrome by the
+  suites: drawn text read back from the searchable PDF by pdf.js and MuPDF
+  exactly (Hindi CER 0.0%), each word within 0.66 pt, page renders
+  unchanged pixel for pixel, layer in `3 Tr`; scan: corners, rectification
+  (cells right > 95%), camera (fake device), 390 px.
+  Screenshots taken by hand at 390 and 1400 px (scan card layout from
+  app.css, no horizontal scroll).
+- 22:45 stories added for OCR PDF, Image to Text, Flatten, Crop, Add an
+  Image (schematic; every sample line is a recorded run); promo lint clean.
+  Claims added for Flatten (4), Crop (4) and Add an Image (5, two of them
+  on the page in Chrome: a JPEG stored byte for byte; a 3000 px PNG stored
+  at 2400 px, lossless, transparency in the soft mask).
+- Depth blocks refreshed with build-depth.js (12 PDF pages); sw.js bump
+  reverted. build-pdf-ship.js was NOT applied: alone it strips the DEPTH
+  blocks and touches shared generated files (assets/icons.svg +11 glyphs,
+  assets/search-index.js, sitemap-1.xml, sw.js). The release runs ship and
+  then depth, so those land at release time.
+
 ## Decisions taken (reversible)
 
 - **qpdf WASM not used.** `@neslinesli93/qpdf-wasm` 0.3.0 is ISC, ships no
