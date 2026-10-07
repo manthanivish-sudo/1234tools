@@ -228,7 +228,7 @@
       w.timer = setTimeout(function () {
         if (waiting === w) waiting = null;
         reject(new Error('The tool did not hand over a file.'));
-      }, 120000);
+      }, 30000);
       waiting = w;
       api.capturing = true;
       try { btn.click(); } finally { setTimeout(function () { api.capturing = false; }, 0); }

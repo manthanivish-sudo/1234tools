@@ -6157,4 +6157,17 @@ details.jw-panel[open] > summary.jw-h { margin-bottom: 12px; }
   .ho-send, .ho-folder { margin-left: 0; }
   .ho-menu { left: 16px; right: 16px; min-width: 0; max-width: none; }
 }
+/* accessibility (axe-core, build/tests/a11y.js): a link inside running text is
+   underlined, not told apart by colour alone */
+main :where(p, li, dd, td, figcaption, blockquote) > a:not([class]),
+footer p > a:not([class]),
+:where(.footer-note, .see-credit, .ai-gate-text) a:not([class]) {
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px;
+}
+/* the readout panel stays dark in the light theme: its small print uses the readout's own colours */
+.tool-results .cur-note { color: var(--readout-label); }
+.tool-results .cur-note a, .tool-results .age-live { color: var(--readout-fg); }
+/* an idle field stays readable (it was 70% opacity, 2.8:1 in the light theme) */
+.tool-form .field.is-idle { opacity: 1; }
+.tool-form .field.is-idle label { color: var(--text-3); font-style: italic; }
 /* WAVE-W7SITE end */

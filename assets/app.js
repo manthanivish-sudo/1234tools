@@ -392,6 +392,48 @@
   document.head.appendChild(s);
 })();
 
+/* ---------- accessibility repairs every shell needs ----------
+   Found by axe-core over the tool pages (build/tests/a11y.js). Made here,
+   once, rather than in each of the shells that share the pattern:
+   - a drop zone is already the button (role=button, Tab, Enter and Space
+     open the picker), so the hidden file input inside it is a second, invisible
+     Tab stop and an unlabelled control nested in a button: it leaves the Tab
+     order and the accessibility tree (the zone speaks for it), and keeps the
+     zone's words as its name for any tool that reads it;
+   - an output <pre> named with aria-label needs a role for the name to count;
+   - a <pre> that scrolls must be reachable by keyboard to be scrolled. */
+(function () {
+  'use strict';
+  var tool = document.querySelector('article.tool, .tool[data-tool]');
+  if (!tool || typeof MutationObserver !== 'function') return;
+  function repair() {
+    Array.prototype.forEach.call(tool.querySelectorAll('[role="button"] input[type="file"]'), function (i) {
+      if (i.getAttribute('tabindex') !== '-1') i.setAttribute('tabindex', '-1');
+      if (!i.hasAttribute('aria-hidden')) i.setAttribute('aria-hidden', 'true');
+      if (!i.hasAttribute('aria-label') && !(i.labels && i.labels.length)) {
+        var zone = i.closest('[role="button"]');
+        var words = zone.getAttribute('aria-label') || (zone.querySelector('strong') || zone).textContent;
+        i.setAttribute('aria-label', (words || 'Choose a file').replace(/\s+/g, ' ').trim().slice(0, 100));
+      }
+    });
+    Array.prototype.forEach.call(tool.querySelectorAll('pre[aria-label]:not([role])'), function (p) {
+      p.setAttribute('role', 'region');
+    });
+    Array.prototype.forEach.call(tool.querySelectorAll('pre:not([tabindex])'), function (p) {
+      if (p.scrollWidth > p.clientWidth + 1 || p.scrollHeight > p.clientHeight + 1) {
+        p.setAttribute('tabindex', '0');
+        if (!p.hasAttribute('role')) p.setAttribute('role', 'region');
+        if (!p.hasAttribute('aria-label') && !p.hasAttribute('aria-labelledby')) p.setAttribute('aria-label', 'Scrollable text');
+      }
+    });
+  }
+  var queued = 0;
+  function later() { if (!queued) queued = requestAnimationFrame(function () { queued = 0; repair(); }); }
+  new MutationObserver(later).observe(tool, { childList: true, subtree: true });
+  if (document.readyState === 'complete') later(); else addEventListener('load', later);
+  later();
+})();
+
 /* ---------- keyboard: the shortcut sheet (?) ----------
    One list of the shortcuts the page in front of you actually has: the
    site-wide ones, then the ones the tool's shell binds (read from which
