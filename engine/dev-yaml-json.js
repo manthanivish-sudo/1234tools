@@ -45,6 +45,7 @@ function intNum(t) {
 function parseYaml(src, warns) {
   const text = String(src).replace(/\r\n?/g, '\n').replace(/^\ufeff/, '');
   const raw = text.split('\n');
+  if (raw.length > 1 && raw[raw.length - 1] === '') raw.pop();   /* the file's final line break ends the last line; it is not an empty line */
   /* documents: split at --- and ... at column 0 */
   const docs = [];
   let cur = null, sawDirective = false, explicitEnd = true;
@@ -170,6 +171,7 @@ Doc.prototype.seq = function (ind) {
   for (;;) {
     this.skip();
     const l = this.L[this.i];
+    if (l && l.tab) throw new YErr('a tab is used for indentation; YAML allows spaces only', l.n, 1);
     if (!l || l.ind !== ind || !/^-( |$)/.test(this.body(l))) {
       if (l && l.ind > ind) throw new YErr('this line is indented more than the list item above, but is not part of it', l.n, l.ind + 1);
       break;
@@ -193,6 +195,7 @@ Doc.prototype.map = function (ind) {
   for (;;) {
     this.skip();
     const l = this.L[this.i];
+    if (l && l.tab) throw new YErr('a tab is used for indentation; YAML allows spaces only', l.n, 1);
     if (!l || l.ind !== ind) {
       if (l && l.ind > ind) throw new YErr('this line is indented more than the key above, but is not part of it', l.n, l.ind + 1);
       break;
@@ -230,20 +233,20 @@ Doc.prototype.map = function (ind) {
     if (k.plain && k.key === '<<') { merges.push({ merge: v, l: l }); continue; }
     merges.push({ key: key, v: v });
   }
-  /* << merges, in place: keys written in the mapping win, then earlier sources */
-  const own = new Set(merges.filter((m) => !m.l).map((m) => m.key));
+  /* << merges: merged keys come first (earlier sources win), then the keys
+     written in the mapping, whose values win (the order PyYAML gives) */
   const put = (k, v) => {
     if (k === '__proto__') Object.defineProperty(out, k, { value: v, enumerable: true, writable: true, configurable: true });
     else out[k] = v;
   };
-  merges.forEach((m) => {
-    if (!m.l) { put(m.key, m.v); return; }
+  merges.filter((m) => m.l).forEach((m) => {
     const srcs = Array.isArray(m.merge) ? m.merge : [m.merge];
     srcs.forEach((s) => {
       if (!s || typeof s !== 'object' || Array.isArray(s) || s instanceof Num) throw new YErr('<< must name a mapping or a list of mappings', m.l.n);
-      Object.keys(s).forEach((kk) => { if (!own.has(kk) && !Object.prototype.hasOwnProperty.call(out, kk)) put(kk, s[kk]); });
+      Object.keys(s).forEach((kk) => { if (!Object.prototype.hasOwnProperty.call(out, kk)) put(kk, s[kk]); });
     });
   });
+  merges.filter((m) => !m.l).forEach((m) => put(m.key, m.v));
   return out;
 };
 function keyText(k) {

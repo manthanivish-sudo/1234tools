@@ -53,7 +53,8 @@ window.DEV_TOOLS['code-beautifier'] = {
     'Minified JavaScript comes back one statement per line, blocks indented, operators spaced; strings, regular expressions and template literals are left exactly as they were.',
     'Every line break already in your JavaScript is kept (at most one blank line), so code written without semicolons runs exactly as before.',
     'CSS gets one declaration per line and one selector per line in a list; HTML gets block elements on their own lines, while short runs of inline text stay together.',
-    'Script and style blocks inside HTML are beautified as JavaScript and CSS; pre and textarea are left exactly as they are.',
+    'List items and table cells move to new lines only where your HTML already had a space between them, because menus and breadcrumbs often show them side by side.',
+    'Script and style blocks inside HTML are beautified as JavaScript and CSS; pre, textarea and code are left exactly as they are.',
     'Ctrl+Enter runs it again and Ctrl+S downloads the result with .pretty in the name.'
   ],
   faq: [

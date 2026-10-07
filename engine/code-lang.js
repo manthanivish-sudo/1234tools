@@ -366,7 +366,7 @@ function tightCss(text, kind) {
     if (pendingWs && prevSig) {
       const a = prevSig, b = t;
       let drop = false;
-      if (a.t === 'p' && (a.v === ',' || a.v === '(' || (a.v === ':' && kind !== 'selector') || (kind === 'selector' && /^[>~+]$/.test(a.v)))) drop = true;
+      if (a.t === 'p' && ((a.v === ',' && kind !== 'pretty') || a.v === '(' || (a.v === ':' && kind !== 'selector' && kind !== 'pretty') || (kind === 'selector' && /^[>~+]$/.test(a.v)))) drop = true;
       if (b.t === 'p' && (b.v === ',' || b.v === ')' || (kind === 'selector' && /^[>~+]$/.test(b.v)) || (b.v === '!' && kind === 'value'))) drop = true;
       if (kind === 'value' && a.t === 'p' && a.v === '/' && depth === 0) drop = true;
       if (kind === 'at' && b.t === 'p' && b.v === ':') drop = true;
@@ -375,6 +375,8 @@ function tightCss(text, kind) {
       if (b.t === 'p' && b.v === '(' && a.t !== 'p') drop = false;
       if (!drop) out += ' ';
     }
+    /* laid out: one space after every comma */
+    if (kind === 'pretty' && prevSig && prevSig.t === 'p' && prevSig.v === ',' && !/ $/.test(out)) out += ' ';
     if (t.t === 'p' && t.v === '(') depth++;
     if (t.t === 'p' && t.v === ')') depth--;
     out += v;
@@ -459,9 +461,12 @@ const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input'
 const RAW = new Set(['script', 'style', 'textarea', 'title', 'pre', 'xmp', 'plaintext', 'noscript', 'template']);
 const BLOCK = new Set(['html', 'head', 'body', 'title', 'meta', 'link', 'base', 'style', 'script', 'noscript', 'template', 'address', 'article', 'aside', 'blockquote', 'details',
   'dialog', 'dd', 'div', 'dl', 'dt', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hgroup', 'hr', 'li', 'main', 'nav', 'ol',
-  'p', 'pre', 'section', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'caption', 'colgroup', 'col', 'ul', 'summary', 'menu', 'search', 'option', 'optgroup', 'source', 'track', 'picture', 'video', 'audio', 'iframe', 'canvas', 'svg', 'object']);
+  'p', 'pre', 'section', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'caption', 'colgroup', 'col', 'ul', 'summary', 'menu', 'search', 'option', 'optgroup', 'source', 'track']);
+/* block by default but often shown side by side (menus, breadcrumbs, cells): the beautifier breaks
+   the line next to them only where the file already had white space */
+const SOFT = new Set(['li', 'dt', 'dd', 'td', 'th', 'caption', 'summary', 'option', 'optgroup']);
 /* elements whose inside white space a browser draws (or keeps as value) */
-const KEEP_INSIDE = new Set(['pre', 'textarea', 'xmp', 'plaintext']);
+const KEEP_INSIDE = new Set(['pre', 'textarea', 'xmp', 'plaintext', 'code', 'kbd', 'samp']);
 
 function lexHtml(src) {
   const s = String(src);
@@ -554,7 +559,9 @@ function minifyHtml(src, o) {
     }
     if (t.t === 'text') {
       if (pre) { out.push(t.v); continue; }
-      let v = t.v.replace(/[ \t\n\r\f]+/g, ' ');
+      /* a run of spaces on one line is kept (it may be meant: CSS can show it); a run with a line break is layout */
+      let v = t.v.replace(/[ \t]*[\n\r\f][ \t\n\r\f]*/g, ' ');
+      if (/^[ \t\n\r\f]+$/.test(t.v)) v = ' ';
       if (v === ' ' || /^ /.test(v) || / $/.test(v)) {
         const prevT = list[k - 1], nextT = list[k + 1];
         if (v.trim() === '') { if (boundary(prevT) || boundary(nextT) || !prevT || !nextT) v = ''; }
@@ -579,6 +586,9 @@ function beautifyHtml(src, o) {
   const notes = [];
   const flush = () => { if (line.trim()) lines.push(line.replace(/\s+$/, '')); line = ''; };
   const start = () => { flush(); line = IND.repeat(level); };
+  const hard = (u) => u && ((u.t === 'open' || u.t === 'close') && BLOCK.has(u.name) && !SOFT.has(u.name) || u.t === 'decl' || u.t === 'com');
+  const breakBefore = (k) => { const p = toks[k - 1]; return !p || (p.t === 'text' && /\s$/.test(p.v)) || hard(p); };
+  const breakAfter = (k) => { const n = toks[k + 1]; return !n || (n.t === 'text' && /^\s/.test(n.v)) || hard(n); };
   for (let k = 0; k < toks.length; k++) {
     const t = toks[k];
     if (pre) {
@@ -589,7 +599,7 @@ function beautifyHtml(src, o) {
     }
     if (t.t === 'open') {
       const blk = BLOCK.has(t.name);
-      if (blk) start();
+      if (blk && (!SOFT.has(t.name) || breakBefore(k))) start();
       /* a block holding only inline content and short enough stays on one line */
       if (blk && !RAW.has(t.name) && !VOID.has(t.name) && !/\/>$/.test(t.v)) {
         let d = 0, j = k + 1, len = 0, okInline = true;
@@ -605,7 +615,7 @@ function beautifyHtml(src, o) {
           let body = '';
           for (let q = k + 1; q < j; q++) body += toks[q].t === 'text' ? toks[q].v.replace(/[ \t\n\r\f]+/g, ' ') : tightTag(toks[q].v);
           line += tightTag(t.v) + body.replace(/^ | $/g, '') + tightTag(toks[j].v);
-          start();
+          if (!SOFT.has(t.name) || breakAfter(j)) start();
           k = j;
           continue;
         }
@@ -617,9 +627,9 @@ function beautifyHtml(src, o) {
     }
     if (t.t === 'close') {
       const blk = BLOCK.has(t.name);
-      if (blk) { level = Math.max(0, level - 1); if (!RAW.has(t.name) || /\n/.test(line)) start(); }
+      if (blk) { level = Math.max(0, level - 1); if ((!RAW.has(t.name) || /\n/.test(line)) && (!SOFT.has(t.name) || breakBefore(k))) start(); }
       line += tightTag(t.v);
-      if (blk) start();
+      if (blk && (!SOFT.has(t.name) || breakAfter(k))) start();
       continue;
     }
     if (t.t === 'raw') {

@@ -202,8 +202,10 @@ function fracOf(ns) {
   return '.' + f;
 }
 function offStr(off, colon) {
-  const m = Math.round(off / 60000), a = Math.abs(m);
-  return (m < 0 ? '-' : '+') + pad(Math.floor(a / 60)) + (colon ? ':' : '') + pad(a % 60);
+  /* local mean time before about 1920 can be seconds off a whole minute: then the seconds are written too */
+  const sec = Math.round(off / 1000), a = Math.abs(sec);
+  const s = a % 60;
+  return (sec < 0 ? '-' : '+') + pad(Math.floor(a / 3600)) + (colon ? ':' : '') + pad(Math.floor(a / 60) % 60) + (s ? (colon ? ':' : '') + pad(s) : '');
 }
 function yearStr(y) { return y >= 0 && y <= 9999 ? pad(y, 4) : (y < 0 ? '-' : '+') + pad(Math.abs(y), 6); }
 function isoIn(zone, ms, ns) {

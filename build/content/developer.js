@@ -1055,7 +1055,7 @@ module.exports = {
       points: [
         'JavaScript: comments go and spaces stay only where two tokens would merge, as in a - -b. A line break is kept wherever automatic semicolon insertion could depend on it, for example before ++ at the start of a line.',
         'CSS: comments, spaces round braces, colons and commas, the last semicolon in a block and empty rules go; #ffffff becomes #fff and 0.5rem .5rem. Spaces in `calc()` stay, as CSS needs them.',
-        'HTML: comments go, runs of white space become one space, and white space next to block elements such as div, p and li is removed. Inline script and style blocks are minified as JavaScript and CSS.',
+        'HTML: comments go, white space holding a line break becomes one space, and white space next to block elements such as div, p and li is removed. Inline script and style blocks are minified as JavaScript and CSS.',
         'Licence comments starting /*! stay unless you untick the box.'
       ]
     },
@@ -1086,7 +1086,7 @@ module.exports = {
     term: 'a code beautifier',
     whatIs: [
       'A beautifier, or pretty-printer, lays out minified or generated code with one statement per line and blocks indented by depth.',
-      'It only changes the white space, so the result runs exactly as before. What it cannot restore is what minification threw away: original names that a bundler shortened, and comments.'
+      'Only the white space changes, so the result runs as before. It cannot restore what minification threw away: shortened names and comments.'
     ],
     howItWorks: {
       text: 'The code is cut into tokens, and each token is written out with a layout rule for its kind.',
@@ -1098,12 +1098,12 @@ module.exports = {
       ]
     },
     worked: {
-      text: 'The 41 B line if(a){b()}else{c()}const x={k:1,v:[1,2]}; comes back as 9 lines: the if block, } else { on one line, the else block, then const x = { with k: 1 and v: [1, 2] each on a line, 67 B in all. A one-line list, <ul><li>One</li><li>Two <b>bold</b></li></ul>, becomes 4 lines, <li>Two <b>bold</b></li> indented under the ul.'
+      text: 'The 41 B line if(a){b()}else{c()}const x={k:1,v:[1,2]}; comes back as 9 lines: the if block, } else { on one line, the else block, then const x = { with k: 1 and v: [1, 2] each on a line, 67 B in all. A one-line list, <ul><li>One</li><li>Two <b>bold</b></li></ul>, becomes 3 lines with both items on the indented middle line: the file had no space between them, and a break there could open a gap in a menu.'
     },
     uses: [
       ['Reading a vendor script', 'Lay out a minified third-party file to see what it does.'],
       ['Tidying copied code', 'Fix the indentation of a snippet pasted from a chat or a web page.'],
-      ['Debugging generated HTML', 'See the structure of markup a CMS wrote on one line.']
+      ['Debugging generated HTML', 'See the structure of one-line CMS markup.']
     ],
     mistakes: [
       'Expecting short names to come back. A bundler that renamed totalWithVat to t leaves t, and nothing in the file says what it was.',
@@ -1116,7 +1116,7 @@ module.exports = {
     ],
     runs: [
       { input: 'if(a){b()}else{c()}const x={k:1,v:[1,2]};', check: [['output', '} else {'], ['output', 'v: [1, 2]'], ['stat:Lines after', '9'], ['stat:Size', '41 B'], ['stat:Size', '67 B']] },
-      { input: '<ul><li>One</li><li>Two <b>bold</b></li></ul>', check: [['output', '<li>Two <b>bold</b></li>'], ['stat:Lines after', '4']] }
+      { input: '<ul><li>One</li><li>Two <b>bold</b></li></ul>', check: [['output', '<li>One</li><li>Two <b>bold</b></li>'], ['stat:Lines after', '3']] }
     ]
   },
 

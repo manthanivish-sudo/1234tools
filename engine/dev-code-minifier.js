@@ -58,7 +58,7 @@ window.DEV_TOOLS['code-minifier'] = {
     'JavaScript keeps every name and every statement: only comments and white space go, and a line break stays wherever removing it could change where JavaScript ends a statement.',
     'Licence comments that start with /*! or carry @license or @preserve are kept unless you untick the box, as most open-source licences ask.',
     'CSS also loses the last semicolon in each block and empty rules, and writes #aabbcc as #abc and 0.5em as .5em.',
-    'HTML keeps the text inside pre and textarea exactly, and every attribute value as typed. Spaces between words stay; spaces next to block elements, which a browser does not show, go.',
+    'HTML keeps pre, textarea and code exactly, and every attribute value as typed. White space holding a line break becomes one space, and white space next to block elements, which a browser does not show, goes.',
     'The Gzipped figure is what most servers send: compare that, not the raw size, to judge the saving.'
   ],
   faq: [
