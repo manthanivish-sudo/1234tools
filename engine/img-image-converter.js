@@ -16,6 +16,8 @@ window.IMAGE_TOOLS["image-converter"] = {
 "codecs": "wasm",
 "passthroughAnimated": true,
 "perFile": ["format", "quality"],
+"liveCompare": true,
+"legacy": {"maxSide": ["width", "height"]},
 "noLargerNote": true,
 "description": "Convert between PNG, JPEG, WebP, AVIF, GIF, BMP and ICO in your browser, one file or a batch. No upload, no queue, no watermark.",
 "keywords": ["image converter","png to jpg","jpg to png","webp converter","convert image format","png to webp","jpg to avif","png to ico","webp to jpg"],
@@ -30,7 +32,14 @@ window.IMAGE_TOOLS["image-converter"] = {
     {"value":"image/x-icon","label":"ICO — a Windows or site icon, 16 to 256 px"}]},
   {"key":"quality","label":"Quality (JPEG / WebP / AVIF)","type":"range","default":92,"min":10,"max":100,"when":{"format":["image/jpeg","image/webp","image/avif"]}},
   {"key":"bg","label":"Background for transparency","type":"color","default":"#ffffff","when":{"format":["image/jpeg"]}},
-  {"key":"maxSide","label":"Longest side in px (0 = keep)","type":"number","default":0,"min":0},
+  {"key":"scale","label":"Scale","type":"select","default":"100","group":"resize","options":[
+    {"value":"100","label":"100% — its own size"},{"value":"75","label":"75%"},{"value":"50","label":"50% — a quarter of the pixels"},{"value":"33","label":"33%"},{"value":"25","label":"25%"}]},
+  {"key":"width","label":"Width (px)","type":"number","default":0,"min":0,"max":30000,"group":"resize","blankZero":true},
+  {"key":"height","label":"Height (px)","type":"number","default":0,"min":0,"max":30000,"group":"resize","blankZero":true},
+  {"key":"lockAspect","label":"Keep the shape","type":"select","default":"yes","group":"resize","options":[
+    {"value":"yes","label":"Locked — the picture fits inside the width and height"},{"value":"no","label":"Unlocked — stretched to both"}]},
+  {"key":"resizeMethod","label":"Resize method","type":"select","default":"lanczos3","group":"resize","options":[
+    {"value":"lanczos3","label":"Lanczos3 — sharpest"},{"value":"browser","label":"Browser — fastest"}]},
   {"key":"metadata","label":"Metadata","type":"select","default":"icc","options":[
     {"value":"none","label":"Remove all (colours converted to sRGB)"},
     {"value":"icc","label":"Keep the colour profile only"},
@@ -52,19 +61,14 @@ window.IMAGE_TOOLS["image-converter"] = {
   if (input && ACCEPT[from]) input.accept = ACCEPT[from] + ',image/*';
 },
 "paint": async (ctx, img, o, h) => {
-      const side = Number(o.maxSide) || 0;
-      let w = img.naturalWidth, hh = img.naturalHeight;
-      /* a longest side caps the size; a smaller picture is never enlarged */
-      if (side > 0 && Math.max(w, hh) > side) {
-        const k = side / Math.max(w, hh);
-        w = Math.max(1, Math.round(w * k)); hh = Math.max(1, Math.round(hh * k));
-      }
-      const src = (w !== img.naturalWidth || hh !== img.naturalHeight) && h.resample ? await h.resample(img, w, hh) : img;
+      /* the Resize panel's size; a smaller picture is never enlarged */
+      const { w, h: hh } = h.resizeDims(img, o);
+      const src = (w !== img.naturalWidth || hh !== img.naturalHeight) && o.resizeMethod !== 'browser' && h.resample ? await h.resample(img, w, hh) : img;
       h.size(w, hh);
       if (o.format === 'image/jpeg') h.fill(o.bg || '#ffffff');
       ctx.drawImage(src, 0, 0, w, hh);
     },
-"tips": ["JPEG has no alpha channel. Converting a transparent PNG to JPEG fills the transparency with the background colour chosen above.","PNG is lossless, so the quality slider has no effect on it — the setting applies to JPEG, WebP and AVIF only.","An animated GIF or WebP converted to the same format is kept exactly as it is, every frame. Converted to anything else, only its first frame is used, and the page says so.","Each file in a batch can have its own format: open “Own settings” beside it.","Converting JPEG to PNG will not restore detail already lost. It usually just produces a much larger file."],
+"tips": ["JPEG has no alpha channel. Converting a transparent PNG to JPEG fills the transparency with the background colour chosen above.","PNG is lossless, so the quality slider has no effect on it — the setting applies to JPEG, WebP and AVIF only.","An animated GIF or WebP converted to the same format is kept exactly as it is, every frame. Converted to anything else, only its first frame is used, and the page says so.","Each file in a batch can have its own format: open “Own settings” beside it.","Converting JPEG to PNG will not restore detail already lost. It usually just produces a much larger file.","Resize can make the converted picture smaller too: a percentage, a width or a height, with the shape kept unless you unlock it. With one picture, a before/after view shows the result beside the original; scroll or pinch to zoom."],
 "faq": [{"q":"Can you convert HEIC from my iPhone?","a":"Only in Safari. HEIC needs a decoder that Chrome, Edge and Firefox do not have, and the free decoders for it are under licences this site does not ship. Safari on an iPhone, iPad or Mac opens HEIC itself, so this page converts it there. On an iPhone you can also set Settings › Camera › Formats to Most Compatible, which saves JPEG."},{"q":"Can I link straight to one conversion?","a":"Yes. Add ?from=png&to=jpg (or webp, avif, gif, bmp, ico) to this page’s address: the format is set and the page asks for the right kind of file. The link never carries an image."}]
 };
 })();

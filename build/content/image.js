@@ -49,13 +49,13 @@ module.exports = {
       text: 'The browser decodes your file and a background worker writes it again with WebAssembly encoders: MozJPEG, libwebp, libavif and oxipng. Where WebAssembly is off, `canvas.toBlob` takes over and the page says so.',
       points: [
         'Keep original format re-encodes in the file’s own format; a PNG is first cut to 256 colours, unless PNG colours says All.',
-        'A max width scales the picture down first with Lanczos3; a narrower photo is never enlarged.',
+        'Resize scales the picture first, by a percentage or to a width or height, with Lanczos3 or the browser’s faster scaling; a smaller photo is never enlarged.',
         '“Make it under” bisects the quality, then shrinks the size if it must, and reports its tries.',
         'Only the colour profile is kept by default, so EXIF tags and GPS do not reach the smaller file.'
       ]
     },
     worked: {
-      text: 'A 1600×1200 street photo, already a tight 321.4 KB JPEG, came out at 322.4 KB at quality 80, Keep original format: larger, and the page said so. WebP at 80 gave 277.0 KB, JPEG at 60 185.8 KB, AVIF 188.0 KB. Under 100 KB gave 96.1 KB at 1472×1104 after 12 tries; a max width of 800 gave 92.4 KB. A 2.41 MB PNG fell to 835.3 KB in 256 colours, 1.60 MB with all colours, 1.10 MB as lossless WebP.'
+      text: 'A 1600×1200 street photo, already a tight 321.4 KB JPEG, came out at 322.4 KB at quality 80, Keep original format: larger, and the page said so. WebP at 80 gave 277.0 KB, JPEG at 60 185.8 KB, AVIF 188.0 KB. Under 100 KB gave 96.1 KB at 1472×1104 after 12 tries; 800 px wide (50%) gave 92.4 KB, 1280 px wide 211.3 KB. A 2.41 MB PNG fell to 835.3 KB in 256 colours, 1.60 MB with all colours, 1.10 MB as lossless WebP.'
     },
     uses: [
       ['Portal size limits', 'Get a CV photo under an upload cap.'],
@@ -67,7 +67,7 @@ module.exports = {
       'Recompressing a small JPEG. The street photo grew at quality 80; check the saving first.'
     ],
     faq: [
-      { q: 'Does compressing an image reduce its resolution?', a: 'Not unless you set a max width, or a limit that quality alone cannot meet. Otherwise the street photo stayed 1600×1200.' },
+      { q: 'Does compressing an image reduce its resolution?', a: 'Not unless you set a size under Resize, or a limit that quality alone cannot meet. Otherwise the street photo stayed 1600×1200.' },
       { q: 'Does compressing a photo remove its EXIF data?', a: 'By default, yes: a test JPEG with camera, date and GPS tags came out with none. The Metadata control can keep EXIF.' },
       { q: 'Why does the size differ from what my computer shows?', a: 'This page divides by 1,024 and macOS by 1,000: 329,068 bytes is 321.4 KB here, 329.1 KB on a Mac.' }
     ],
@@ -81,7 +81,10 @@ module.exports = {
       { browser: { input: 'street.jpg', format: 'image/jpeg', quality: 60 }, shown: ['185.8 KB'] },
       /* target 100 KB, Keep original format: "quality 32, 1472×1104, 12 tries" */
       { browser: { input: 'street.jpg', format: 'same', target: '100' }, shown: ['96.1 KB', '1472×1104', '12 tries'] },
-      { browser: { input: 'street.jpg', format: 'same', quality: 80, maxWidth: 800 }, shown: ['92.4 KB'] },
+      /* Resize: width 800 (the same as 50%), then 1280; Lanczos3, the default method */
+      { browser: { input: 'street.jpg', format: 'same', quality: 80, width: 800 }, shown: ['92.4 KB'] },
+      { browser: { input: 'street.jpg', format: 'same', quality: 80, scale: '50' }, shown: ['92.4 KB'] },
+      { browser: { input: 'street.jpg', format: 'same', quality: 80, width: 1280 }, shown: ['211.3 KB'] },
       /* pet.jpg re-saved as a PNG in Chrome (2,529,986 bytes = 2.41 MB): Keep original format with PNG colours 256, then All, then WebP lossless */
       { browser: { input: 'pet.jpg as PNG, 2.41 MB', format: 'same', pngColours: '256' }, shown: ['2.41 MB', '835.3 KB'] },
       { browser: { input: 'pet.jpg as PNG', format: 'image/png', pngColours: 'all' }, shown: ['1.60 MB'] },
@@ -120,7 +123,7 @@ module.exports = {
       'Feeding in a TIFF scan or camera RAW file. Chrome cannot decode either, and the page names the file; export a JPEG first.'
     ],
     faq: [
-      { q: 'Does converting an image change its resolution?', a: 'Not unless you set a longest side. The test photo stayed 1600×1067, except in ICO, which holds at most 256×256.' },
+      { q: 'Does converting an image change its resolution?', a: 'Not unless you set a size under Resize. The test photo stayed 1600×1067, except in ICO, which holds at most 256×256.' },
       { q: 'Does converting keep the photo’s EXIF data?', a: 'Not by default. A test JPEG with camera tags and a GPS position came out with only a JFIF header; Metadata can keep EXIF.' },
       { q: 'Is converting PNG to JPG lossless?', a: 'No. JPEG discards some detail at every quality setting, 100 included. Only PNG keeps every pixel exactly.' }
     ],

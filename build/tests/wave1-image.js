@@ -37,6 +37,10 @@
  *      metadata choices, HEIC only in Safari, no JPEG XL)
  *  13  the new Image Resizer is registered (job card, search, page) and opens
  *  14  an animated GIF converted to GIF is kept byte for byte; to PNG its first frame is used and the page says so
+ *  15  the live before/after view: labelled sides, wheel, key and pinch zoom (10%-1600%), and a
+ *      settings change shown in the same view at the same zoom, pan and divider; full screen; 390 px
+ *  16  the Resize panel: % and width buttons, the shape lock, never enlarged, the method, the readout,
+ *      per-file width, presets; the converter and the resizers share it (old maxWidth/maxSide links: case 4)
  *   and, through all of it, not one request to anything but 127.0.0.1.
  */
 'use strict';
@@ -452,29 +456,38 @@ const files = (p) => p.$$eval('.tool-io .image-cap', (l) => l.map((c) => c.textC
     if (want(4)) {
       const copyStub = () => { window.__copied = ''; Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (t) => { window.__copied = t; } }, configurable: true }); };
       const p = await open(browser, '/image/image-compressor/', copyStub);
-      await setCtl(p, 'format', 'image/webp'); await setCtl(p, 'quality', 70); await setCtl(p, 'maxWidth', 1200);
+      await setCtl(p, 'format', 'image/webp'); await setCtl(p, 'quality', 70); await setCtl(p, 'width', 1200);
       await upload(p, [sample('street.jpg')]);
       await p.evaluate(() => document.querySelector('.img-link').click());
       await sleep(300);
       const link = await p.evaluate(() => window.__copied);
       const u = new URL(link || 'http://x/');
-      check(u.pathname === '/image/image-compressor/' && u.searchParams.get('f') === 'webp' && u.searchParams.get('q') === '70' && u.searchParams.get('maxWidth') === '1200', '4  "Copy settings link" gives ?f=webp&q=70&maxWidth=1200 on this page', link);
+      check(u.pathname === '/image/image-compressor/' && u.searchParams.get('f') === 'webp' && u.searchParams.get('q') === '70' && u.searchParams.get('width') === '1200', '4  "Copy settings link" gives ?f=webp&q=70&width=1200 on this page', link);
       check(link.length < 160 && !/blob:|data:|base64|street/i.test(link), '4  the link is short (' + link.length + ' characters) and carries no image or file name', link);
       await sleep(500);
       const kept = await p.evaluate(() => localStorage.getItem('1234tools-img-image-compressor-v1'));
       let kv = null; try { kv = JSON.parse(kept); } catch (e) { /* none */ }
-      check(!!kv && kv.format === 'image/webp' && Number(kv.quality) === 70 && Number(kv.maxWidth) === 1200 && kept.length < 200 && !/blob|data:/.test(kept), '4  the device remembers it as 1234tools-img-image-compressor-v1: ' + kept, kept);
+      check(!!kv && kv.format === 'image/webp' && Number(kv.quality) === 70 && Number(kv.width) === 1200 && kept.length < 200 && !/blob|data:/.test(kept), '4  the device remembers it as 1234tools-img-image-compressor-v1: ' + kept, kept);
       errs.push(...p.__errors); await p.close();
       /* the link, opened on a first visit */
       const q = await open(browser, u.pathname + u.search);
-      const v = await q.evaluate(() => ['format', 'quality', 'maxWidth'].map((k) => document.getElementById('ic-' + k).value));
+      const v = await q.evaluate(() => ['format', 'quality', 'width'].map((k) => document.getElementById('ic-' + k).value));
       const pv = await previews(q);
       check(v.join() === 'image/webp,70,1200' && pv.length === 0, '4  opened on a first visit it sets WebP, quality 70, width 1200 and holds no image', v.join() + ' / ' + pv.length + ' previews');
       errs.push(...q.__errors); await q.close();
+      /* links and remembered settings from before the Resize panel: maxWidth is now the width */
+      const old = await open(browser, '/image/image-compressor/?maxWidth=1600&f=jpg', () => { try { localStorage.removeItem('1234tools-img-image-compressor-v1'); } catch (e) { /* none */ } });
+      const ov = await old.evaluate(() => ['format', 'width', 'height', 'lockAspect'].map((k) => document.getElementById('ic-' + k).value));
+      check(ov.join() === 'image/jpeg,1600,,yes', '4  an old link with maxWidth=1600 sets the width to 1600, the height automatic and the shape locked: ' + ov.join(), ov.join());
+      errs.push(...old.__errors); await old.close();
+      const oldc = await open(browser, '/image/image-converter/?maxSide=800');
+      const oc = await oldc.evaluate(() => ['width', 'height', 'lockAspect'].map((k) => document.getElementById('ic-' + k).value));
+      check(oc.join() === '800,800,yes', '4  an old converter link with maxSide=800 fits the picture inside 800×800: ' + oc.join(), oc.join());
+      errs.push(...oldc.__errors); await oldc.close();
       /* a hostile link: out-of-range and unknown values are not taken */
-      const h = await open(browser, '/image/image-compressor/?q=999999&f=exe&maxWidth=-5&target=bogus&nope=1');
-      const hv = await h.evaluate(() => ['format', 'quality', 'maxWidth', 'target'].map((k) => [document.getElementById('ic-' + k).value, document.getElementById('ic-' + k).min, document.getElementById('ic-' + k).max]));
-      check(hv[0][0] === 'same' && Number(hv[1][0]) <= 100 && Number(hv[1][0]) >= 10 && Number(hv[2][0]) >= 0 && hv[3][0] === '0', '4  a hostile link (q=999999, f=exe, maxWidth=-5, target=bogus) leaves valid settings: ' + hv.map((x) => x[0]).join(), JSON.stringify(hv));
+      const h = await open(browser, '/image/image-compressor/?q=999999&f=exe&width=-5&height=99999999&maxWidth=-5&target=bogus&nope=1');
+      const hv = await h.evaluate(() => ['format', 'quality', 'width', 'target', 'height'].map((k) => [document.getElementById('ic-' + k).value, document.getElementById('ic-' + k).min, document.getElementById('ic-' + k).max]));
+      check(hv[0][0] === 'same' && Number(hv[1][0]) <= 100 && Number(hv[1][0]) >= 10 && Number(hv[2][0] || 0) >= 0 && hv[3][0] === '0' && Number(hv[4][0]) <= 30000, '4  a hostile link (q=999999, f=exe, width=-5, height=99999999, target=bogus) leaves valid settings: ' + hv.map((x) => x[0]).join(), JSON.stringify(hv));
       errs.push(...h.__errors); await h.close();
       /* the page remembers across visits: the same device, a new page */
       const r = await open(browser, '/image/image-compressor/#keep', () => { try { localStorage.setItem('1234tools-img-image-compressor-v1', JSON.stringify({ format: 'image/jpeg', quality: 55 })); } catch (e) { /* none */ } });
@@ -728,6 +741,179 @@ const files = (p) => p.$$eval('.tool-io .image-cap', (l) => l.map((c) => c.textC
       const px = png ? await pixels(p, png, [[0, 0], [1, 0]]) : null;
       check(png && isPng(png) && /only its first frame was converted/.test(m2.text) && px.w === 2 && near(px.px[0], [255, 0, 0, 255], 2) && near(px.px[1], [0, 0, 255, 255], 2), '14  to PNG only the first frame is used (red, blue) and the page says so: "' + m2.text.slice(0, 90) + '"', m2.text + ' ' + (px && JSON.stringify(px.px)));
       errs.push(...p.__errors); await p.close();
+    }
+
+    /* ============ 15 the live before/after view: wheel and pinch zoom, kept through a settings change ============ */
+    if (want(15)) {
+      const p = await open(browser, '/image/image-compressor/');
+      await upload(p, [sample('street.jpg')]);
+      const st = await p.evaluate(() => {
+        const io = document.querySelector('.tool-io'), box = document.querySelector('.img-compare');
+        window.__box = box;
+        const tags = [...document.querySelectorAll('.img-compare-port .img-compare-tag')].map((t) => t.textContent);
+        return { live: io.classList.contains('img-live'), box: !!box, tags, pct: box && box.querySelector('.img-zoom-pct').textContent,
+          beside: (() => { const a = document.querySelector('.tool-io .image-stage').getBoundingClientRect(), b = document.querySelector('.tool-io .opt-bar').getBoundingClientRect(); return a.right <= b.left + 1; })() };
+      });
+      check(st.live && st.box, '15  one picture: the before/after view is the main view (img-live)', JSON.stringify(st));
+      check(/Original/.test(st.tags[0]) && /JPEG · 1600×1200 · 321\.4 KB/.test(st.tags[0]) && /Result/.test(st.tags[1]) && /JPEG · 1600×1200 · [\d.]+ KB/.test(st.tags[1]), '15  each side is labelled with its format, size in pixels and bytes: ' + st.tags.join(' | '), st.tags.join(' | '));
+      check(st.beside, '15  at 1280 px the view sits beside the settings, not below them');
+      /* the mouse wheel zooms about the pointer */
+      const vr = await p.$eval('.img-compare-view', (v) => { const r = v.getBoundingClientRect(); return { x: r.left + r.width * 0.7, y: r.top + r.height * 0.4 }; });
+      await p.mouse.move(vr.x, vr.y);
+      await p.mouse.wheel({ deltaY: -600 });
+      await sleep(200);
+      const z1 = await p.evaluate(() => { const b = window.__box, v = b.querySelector('.img-compare-view'); return { pct: parseInt(b.querySelector('.img-zoom-pct').textContent, 10), zoomed: v.classList.contains('is-zoomed'), l: v.scrollLeft, t: v.scrollTop }; });
+      check(z1.pct > parseInt(st.pct, 10) && z1.zoomed && z1.l > 0, '15  the mouse wheel zooms in about the pointer (' + st.pct + ' → ' + z1.pct + '%, scrolled to ' + z1.l + ',' + z1.t + ')', JSON.stringify(z1));
+      await p.mouse.wheel({ deltaY: 100000 });
+      await sleep(150);
+      const zmin = await p.$eval('.img-zoom-pct', (e) => parseInt(e.textContent, 10));
+      await p.mouse.wheel({ deltaY: -100000 }); await p.mouse.wheel({ deltaY: -100000 });
+      await sleep(150);
+      const zmax = await p.$eval('.img-zoom-pct', (e) => parseInt(e.textContent, 10));
+      check(zmin >= 10 && zmin <= 100 && zmax === 1600, '15  zoom is held between 10% and 1600% (' + zmin + '% … ' + zmax + '%)', zmin + ' ' + zmax);
+      await p.evaluate(() => window.__box.setZoom(2));
+      await sleep(100);
+      await p.evaluate(() => document.querySelector('.img-compare-handle').focus({ preventScroll: true }));
+      await p.keyboard.press('ArrowLeft'); await p.keyboard.press('ArrowLeft');
+      const split = await p.$eval('[role=slider]', (e) => e.getAttribute('aria-valuenow'));
+      const z2 = await p.evaluate(() => { const v = window.__box.querySelector('.img-compare-view'); v.scrollLeft = 700; v.scrollTop = 300; return { l: v.scrollLeft, t: v.scrollTop, pct: window.__box.querySelector('.img-zoom-pct').textContent }; });
+      const src0 = await p.$eval('.img-compare-after', (i) => i.src);
+      /* a settings change: a new result in the same view, at the same zoom, pan and divider */
+      await change(p, 'quality', 40);
+      const z3 = await p.evaluate(() => { const b = document.querySelector('.img-compare'), v = b.querySelector('.img-compare-view'); return { same: b === window.__box, l: v.scrollLeft, t: v.scrollTop, pct: b.querySelector('.img-zoom-pct').textContent, split: b.querySelector('[role=slider]').getAttribute('aria-valuenow'), src: b.querySelector('.img-compare-after').src, tag: b.querySelector('.img-compare-port .is-after').textContent, busy: !b.querySelector('.img-compare-busy').hidden }; });
+      check(z3.same && z3.src !== src0 && z3.src.startsWith('blob:'), '15  a settings change shows the new result in the same view, live', JSON.stringify(z3));
+      check(z3.pct === z2.pct && Math.abs(z3.l - z2.l) <= 2 && Math.abs(z3.t - z2.t) <= 2 && z3.split === split && !z3.busy, '15  …at the same zoom (' + z3.pct + '), pan (' + z3.l + ',' + z3.t + ') and divider (' + z3.split + '%)', JSON.stringify([z2, z3, split]));
+      const r40 = await resultBytes(p);
+      check(r40.length === 1 && z3.tag.indexOf((r40[0].length / 1024).toFixed(1) + ' KB') >= 0, '15  the result label follows the new file (' + z3.tag + ')', z3.tag + ' / ' + (r40[0] && r40[0].length));
+      /* keys: + zooms in, 0 fits, 1 is 100% */
+      await p.focus('.img-compare-view');
+      await p.keyboard.press('0');
+      const kf = await p.$eval('.img-zoom-pct', (e) => e.textContent);
+      await p.keyboard.press('+');
+      const kp = await p.$eval('.img-zoom-pct', (e) => e.textContent);
+      await p.keyboard.press('1');
+      const k1 = await p.$eval('.img-zoom-pct', (e) => e.textContent);
+      check(parseInt(kp, 10) > parseInt(kf, 10) && k1 === '100%', '15  the keys zoom too: 0 fits (' + kf + '), + zooms in (' + kp + '), 1 is ' + k1, [kf, kp, k1].join());
+      /* a two-finger pinch on a touch screen */
+      await p.keyboard.press('0');
+      const c = await p.$eval('.img-compare-view', (v) => { const r = v.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+      const cdp = await p.target().createCDPSession();
+      const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map(([x, y], i) => ({ x, y, id: i + 1, radiusX: 2, radiusY: 2, force: 1 })) });
+      const zp0 = parseInt(await p.$eval('.img-zoom-pct', (e) => e.textContent), 10);
+      await touch('touchStart', [[c.x - 40, c.y], [c.x + 40, c.y]]);
+      for (let k = 1; k <= 8; k++) { await touch('touchMove', [[c.x - 40 - k * 12, c.y], [c.x + 40 + k * 12, c.y]]); await sleep(16); }
+      await touch('touchEnd', []);
+      await sleep(150);
+      const zp1 = parseInt(await p.$eval('.img-zoom-pct', (e) => e.textContent), 10);
+      check(zp1 > zp0 * 1.5, '15  a two-finger pinch zooms in (' + zp0 + '% → ' + zp1 + '%)', zp0 + ' ' + zp1);
+      /* full screen, and Escape out of it */
+      await p.evaluate(() => document.querySelector('.img-full-btn').click());
+      await sleep(200);
+      const fs1 = await p.evaluate(() => { const io = document.querySelector('.tool-io'); const r = io.getBoundingClientRect(); return { full: io.classList.contains('is-full'), pos: getComputedStyle(io).position, w: r.width, beside: document.querySelector('.tool-io .image-stage').getBoundingClientRect().right <= document.querySelector('.tool-io .opt-bar').getBoundingClientRect().left + 1 }; });
+      await p.keyboard.press('Escape');
+      await sleep(100);
+      const fs2 = await p.evaluate(() => document.querySelector('.tool-io').classList.contains('is-full'));
+      check(fs1.full && fs1.pos === 'fixed' && fs1.w >= 1260 && fs1.beside && !fs2, '15  "Full screen" fills the window with the view beside the settings; Escape leaves it', JSON.stringify(fs1));
+      errs.push(...p.__errors); await p.close();
+
+      /* a 390 px phone: the view first, no sideways scrolling */
+      const q = await open(browser, '/image/image-compressor/');
+      await q.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+      await upload(q, [sample('street.jpg')]);
+      const mo = await q.evaluate(() => {
+        const stage = document.querySelector('.tool-io .image-stage').getBoundingClientRect(), bar = document.querySelector('.tool-io .opt-bar').getBoundingClientRect(), v = document.querySelector('.img-compare-view').getBoundingClientRect();
+        return { above: stage.bottom <= bar.top + 1, sw: document.scrollingElement.scrollWidth, vw: v.width, tags: [...document.querySelectorAll('.img-compare-port .img-compare-tag')].map((t) => Math.round(t.getBoundingClientRect().right)) };
+      });
+      check(mo.above && mo.sw <= 390 && mo.vw <= 390 && mo.tags.every((r) => r <= 390), '15  at 390 px the view comes first, above the settings, and nothing scrolls sideways (' + mo.sw + ' px)', JSON.stringify(mo));
+      errs.push(...q.__errors); await q.close();
+    }
+
+    /* ============ 16 the Resize panel ============ */
+    if (want(16)) {
+      const p = await open(browser, '/image/image-compressor/');
+      const btns = await p.$$eval('.img-resize button', (l) => l.map((b) => b.textContent.trim() || b.getAttribute('aria-label')));
+      check(['100%', '75%', '50%', '33%', '25%', '3840', '1920', '1280', '1080', '800'].every((t) => btns.indexOf(t) >= 0) && btns.some((t) => /Keep the shape/.test(t)), '16  Resize offers 100/75/50/33/25%, widths 3840 to 800 and a shape lock: ' + btns.join(' '), btns.join(' | '));
+      const meth = await p.$$eval('#ic-resizeMethod option', (l) => l.map((o) => o.textContent));
+      check(meth.length === 2 && /Lanczos3/.test(meth[0]) && /Browser/.test(meth[1]), '16  the method is Lanczos3 or the browser’s own: ' + meth.join(' / '), meth.join());
+      const empty = await p.$eval('.img-resize-readout', (e) => e.textContent);
+      check(/Choose an image/.test(empty), '16  before a picture is chosen the readout says so: ' + empty, empty);
+      await upload(p, [sample('street.jpg')]);
+      const dimsOf = async () => { const r = await resultBytes(p); const px = await pixels(p, r[0], [[0, 0]]); return [px.w, px.h]; };
+      const press = (label) => act(p, () => p.evaluate((t) => [...document.querySelectorAll('.img-resize button')].find((b) => b.textContent.trim() === t).click(), label));
+      await press('1280');
+      let d = await dimsOf(); let ro = await p.$eval('.img-resize-readout', (e) => e.textContent);
+      const ph = await p.$eval('#ic-height', (e) => [e.value, e.placeholder]);
+      check(d.join() === '1280,960' && /1600×1200 → 1280×960 \(−36% pixels\)/.test(ro) && ph[0] === '' && ph[1] === '960', '16  width 1280: the result is 1280×960, the height follows (placeholder ' + ph[1] + ') and the readout says "' + ro + '"', d.join() + ' / ' + ro + ' / ' + ph);
+      const tag = await p.$eval('.img-compare-port .is-after', (e) => e.textContent);
+      const fw = await p.evaluate(() => { const b = document.querySelector('.img-compare'); b.setZoom(1); return b.querySelector('.img-compare-frame').getBoundingClientRect().width; });
+      check(/1280×960/.test(tag) && Math.round(fw) === 1600, '16  the smaller result is shown at the original’s size, so its loss is seen in place (100% = ' + Math.round(fw) + ' px wide)', tag + ' / ' + fw);
+      await press('50%');
+      d = await dimsOf(); ro = await p.$eval('.img-resize-readout', (e) => e.textContent);
+      check(d.join() === '800,600' && /→ 800×600 \(−75% pixels\)/.test(ro), '16  50%: 800×600 (' + ro + ')', d.join() + ' / ' + ro);
+      await press('25%');
+      d = await dimsOf();
+      check(d.join() === '400,300', '16  25%: 400×300', d.join());
+      /* unlocked, both sides: stretched to exactly that, and shown side by side */
+      await p.evaluate(() => document.querySelector('.img-lock').click());
+      await sleep(200);
+      await setCtl(p, 'width', 500);
+      await change(p, 'height', 500);
+      d = await dimsOf();
+      const sideBy = await p.evaluate(() => ({ side: !document.querySelector('.img-compare-side').hidden, slider: document.querySelector('.img-compare .img-seg-btn').disabled, lock: document.querySelector('.img-lock').getAttribute('aria-pressed') }));
+      check(d.join() === '500,500' && sideBy.side && sideBy.slider && sideBy.lock === 'false', '16  unlocked, 500 × 500 stretches to exactly 500×500, shown side by side', d.join() + ' ' + JSON.stringify(sideBy));
+      /* locked again: the height gives way to the width */
+      await act(p, () => p.evaluate(() => document.querySelector('.img-lock').click()));
+      d = await dimsOf();
+      const hv = await p.$eval('#ic-height', (e) => e.value);
+      check(d.join() === '500,375' && hv === '', '16  locked again, the width leads: 500×375', d.join() + ' / ' + hv);
+      /* never enlarged unless asked */
+      await change(p, 'width', 5000);
+      d = await dimsOf(); ro = await p.$eval('.img-resize-readout', (e) => e.textContent);
+      check(d.join() === '1600,1200' && /never enlarged/.test(ro), '16  width 5000 on a 1600 px picture keeps it at 1600×1200 and says it is never enlarged', d.join() + ' / ' + ro);
+      /* the browser's own method */
+      await setCtl(p, 'width', 1080);
+      await change(p, 'resizeMethod', 'browser');
+      d = await dimsOf();
+      check(d.join() === '1080,810', '16  the browser method gives the same size (1080×810)', d.join());
+      /* a preset sets the width in the panel */
+      await act(p, () => p.evaluate(() => [...document.querySelectorAll('.img-preset')].find((b) => /Email/.test(b.textContent)).click()));
+      d = await dimsOf();
+      const wv = await p.$eval('#ic-width', (e) => e.value);
+      check(d.join() === '1600,1200' && wv === '1600', '16  the "Email attachment" preset sets a width of 1600 in the panel (' + d.join() + ')', d.join() + ' ' + wv);
+      errs.push(...p.__errors); await p.close();
+
+      /* per file: one file of a batch at its own width */
+      const b = await open(browser, '/image/image-compressor/');
+      await upload(b, [sample('street.jpg'), sample('food.jpg')]);
+      await act(b, async () => {
+        await b.evaluate(() => { const rows = [...document.querySelectorAll('.tool-io .file-row')]; [...rows[1].querySelectorAll('button')].find((x) => /Own settings/i.test(x.textContent)).click(); });
+        await sleep(200);
+        await b.evaluate(() => { const i = document.querySelectorAll('.tool-io .img-own-panel')[1].querySelector('input[name=width]'); i.value = '640'; i.dispatchEvent(new Event('input', { bubbles: true })); });
+      });
+      const rb = await resultBytes(b);
+      const ws = [];
+      for (const x of rb) ws.push((await pixels(b, x, [[0, 0]])).w);
+      check(ws.length === 2 && ws[1] === 640 && ws[0] > 640, '16  per-file settings carry the width: the second file at 640 px, the first kept (' + ws.join(', ') + ')', ws.join());
+      errs.push(...b.__errors); await b.close();
+
+      /* the converter has the same panel and view; the resizers have the view */
+      const cv = await open(browser, '/image/image-converter/');
+      await upload(cv, [sample('street.jpg')]);
+      await change(cv, 'width', 800);
+      const cr = await resultBytes(cv);
+      const cd = await pixels(cv, cr[0], [[0, 0]]);
+      const cl = await cv.evaluate(() => document.querySelector('.tool-io').classList.contains('img-live') && !!document.querySelector('.img-resize'));
+      check(cl && cd.w === 800 && cd.h === 600, '16  the Image Converter has the Resize panel and the live view (800×600)', cl + ' ' + cd.w + '×' + cd.h);
+      errs.push(...cv.__errors); await cv.close();
+      for (const url of ['/image/image-resizer/', '/image/bulk-image-resizer/']) {
+        const r = await open(browser, url);
+        await upload(r, [sample('street.jpg')]);
+        const r1 = await r.evaluate(() => { window.__box = document.querySelector('.img-compare'); return { box: !!window.__box, cards: document.querySelectorAll('.image-stage .image-card:not(.img-compare-card) img.image-preview').length }; });
+        await change(r, 'quality', 55);
+        const r2 = await r.evaluate(() => ({ same: document.querySelector('.img-compare') === window.__box, cards: document.querySelectorAll('.image-stage .image-card:not(.img-compare-card) img.image-preview').length }));
+        check(r1.box && r1.cards === 1 && r2.same && r2.cards === 1, '16  ' + url + ' shows the before/after view above its result and keeps it through a change', JSON.stringify([r1, r2]));
+        errs.push(...r.__errors); await r.close();
+      }
     }
 
     check(errs.length === 0, 'no page errors on any page', errs.join(' | '));

@@ -593,13 +593,44 @@ module.exports = function ({ claim, manual, kit: K }) {
   /* compressor                                                        */
   /* ================================================================ */
   const CO = '/image/image-compressor/';
-  claim(CO, 'point', 'A max width scales the picture down first with Lanczos3; a narrower photo is never enlarged.', 'max 800 on 1600×1200 → 800×600; max 3000 → 1600×1200', B, async () => within(CO, async (p) => {
-    await K.img.set(p, 'maxWidth', 800);
+  claim(CO, 'point', 'Resize scales the picture first, by a percentage or to a width or height, with Lanczos3 or the browser’s faster scaling; a smaller photo is never enlarged.', 'on 1600×1200: width 800 → 800×600; width 3000 → 1600×1200; 50% → 800×600; height 300 → 400×300; the browser method at width 800 → 800×600', B, async () => within(CO, async (p) => {
+    const dims = async () => { const [b] = await K.img.results(p); const d = await K.img.pixels(p, b); return d.w + '×' + d.h; };
+    await K.img.set(p, 'width', 800);
     await K.img.upload(p, [S('street.jpg')]);
-    let [b] = await K.img.results(p); const a = await K.img.pixels(p, b);
-    await K.img.change(p, 'maxWidth', 3000);
-    [b] = await K.img.results(p); const c = await K.img.pixels(p, b);
-    return [a.w === 800 && a.h === 600 && c.w === 1600 && c.h === 1200, a.w + '×' + a.h + ', ' + c.w + '×' + c.h];
+    const a = await dims();
+    await K.img.change(p, 'width', 3000); const c = await dims();
+    await K.img.change(p, 'width', 0); await K.img.change(p, 'scale', '50'); const d = await dims();
+    await K.img.change(p, 'scale', '100'); await K.img.change(p, 'height', 300); const e = await dims();
+    await K.img.change(p, 'height', 0); await K.img.change(p, 'width', 800); await K.img.change(p, 'resizeMethod', 'browser'); const f = await dims();
+    return [a === '800×600' && c === '1600×1200' && d === '800×600' && e === '400×300' && f === '800×600', [a, c, d, e, f].join(', ')];
+  }));
+  claim(CO, 'tip', 'Under Resize, choose 50% or a width such as 1280, and the line beneath says what the picture will come to.', 'street.jpg: 50% gives 800×600 and the line says 1600×1200 → 800×600; 1280 gives 1280×960 and says so', B, async () => within(CO, async (p) => {
+    const press = (t) => K.img.act(p, () => p.evaluate((t) => [...document.querySelectorAll('.img-resize button')].find((b) => b.textContent.trim() === t).click(), t));
+    const line = () => p.$eval('.img-resize-readout', (e) => e.textContent);
+    const dims = async () => { const [b] = await K.img.results(p); const d = await K.img.pixels(p, b); return d.w + '×' + d.h; };
+    await K.img.upload(p, [S('street.jpg')]);
+    await press('50%'); const a = [await dims(), await line()];
+    await press('1280'); const b = [await dims(), await line()];
+    return [a[0] === '800×600' && /1600×1200 → 800×600/.test(a[1]) && b[0] === '1280×960' && /1600×1200 → 1280×960/.test(b[1]), a.join(' / ') + '; ' + b.join(' / ')];
+  }));
+  claim(CO, 'tip', 'Judge the result in the before/after view: scroll or pinch to zoom from 10% to 1600%, drag to look around, and drag the divider. Change a setting and the new result appears in the same place, at the same zoom.', 'the wheel zooms between 10% and 1600%; at 200% and a pan, a quality change swaps the result in the same view at the same zoom and pan', B, async () => within(CO, async (p) => {
+    await K.img.upload(p, [S('street.jpg')]);
+    const at = await p.$eval('.img-compare-view', (v) => { const r = v.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+    const pct = () => p.$eval('.img-zoom-pct', (e) => parseInt(e.textContent, 10));
+    await p.mouse.move(at.x, at.y);
+    await p.mouse.wheel({ deltaY: 100000 }); await K.sleep(150); const lo = await pct();
+    await p.mouse.wheel({ deltaY: -100000 }); await p.mouse.wheel({ deltaY: -100000 }); await K.sleep(150); const hi = await pct();
+    const before = await p.evaluate(() => { const b = document.querySelector('.img-compare'); window.__cmp = b; b.setZoom(2); const v = b.querySelector('.img-compare-view'); v.scrollLeft = 600; v.scrollTop = 250; return { src: b.querySelector('.img-compare-after').src, l: v.scrollLeft, t: v.scrollTop, z: b.querySelector('.img-zoom-pct').textContent }; });
+    await K.img.change(p, 'quality', 45);
+    const after = await p.evaluate(() => { const b = document.querySelector('.img-compare'), v = b.querySelector('.img-compare-view'); return { same: b === window.__cmp, src: b.querySelector('.img-compare-after').src, l: v.scrollLeft, t: v.scrollTop, z: b.querySelector('.img-zoom-pct').textContent }; });
+    const ok = lo === 10 && hi === 1600 && after.same && after.src !== before.src && after.z === before.z && Math.abs(after.l - before.l) <= 2 && Math.abs(after.t - before.t) <= 2;
+    return [ok, 'zoom ' + lo + '%–' + hi + '%; ' + K.j(before) + ' → ' + K.j(after)];
+  }));
+  claim(CO, 'faq', 'A resized result is shown at the original’s size, so any softness shows where it would be seen.', 'width 800 on 1600×1200: at 100% the view is 1600 px wide and the result label says 800×600; Full screen fixes the tool to the window', B, async () => within(CO, async (p) => {
+    await K.img.set(p, 'width', 800);
+    await K.img.upload(p, [S('street.jpg')]);
+    const r = await p.evaluate(() => { const b = document.querySelector('.img-compare'); b.setZoom(1); const io = document.querySelector('.tool-io'); document.querySelector('.img-full-btn').click(); const full = getComputedStyle(io).position; document.querySelector('.img-full-btn').click(); return { w: Math.round(b.querySelector('.img-compare-frame').getBoundingClientRect().width), tag: b.querySelector('.img-compare-port .is-after').textContent, full }; });
+    return [r.w === 1600 && /800×600/.test(r.tag) && r.full === 'fixed', K.j(r)];
   }));
   claim(CO, 'dfaq', 'By default, yes: a test JPEG with camera, date and GPS tags came out with none.', 'a tagged JPEG compressed to JPEG keeps no EXIF', B, async () => within(CO, async (p) => {
     await K.img.set(p, 'format', 'image/jpeg');
@@ -607,7 +638,7 @@ module.exports = function ({ claim, manual, kit: K }) {
     const [b] = await K.img.results(p);
     return [K.isJpeg(b) && !hasExif(b), hasExif(b) ? 'EXIF kept' : 'no EXIF'];
   }));
-  claim(CO, 'dfaq', 'Not unless you set a max width, or a limit that quality alone cannot meet. Otherwise the street photo stayed 1600×1200.', 'max width 0 keeps the size at quality 30 and 90', B, async () => within(CO, async (p) => {
+  claim(CO, 'dfaq', 'Not unless you set a size under Resize, or a limit that quality alone cannot meet. Otherwise the street photo stayed 1600×1200.', 'no size under Resize keeps 1600×1200 at quality 30 and 90', B, async () => within(CO, async (p) => {
     await K.img.set(p, 'quality', 30);
     await K.img.upload(p, [S('street.jpg')]);
     let [b] = await K.img.results(p); const a = await K.img.pixels(p, b);
@@ -631,6 +662,18 @@ module.exports = function ({ claim, manual, kit: K }) {
     const avif = a && a.slice(4, 12).toString('latin1') === 'ftypavif';
     return [K.isPng(b) && avif, K.kind(b) + '; ' + (a ? a.slice(4, 12).toString('latin1') : 'no result')];
   }));
+
+  /* the resizers: one picture, one size, a before/after view above the result that stays through a change */
+  [['/image/image-resizer/', 'With one size chosen, a before/after view sits above the result: scroll or pinch to zoom up to 1600%, drag to look around, and it stays where you left it when you change a setting.'],
+    ['/image/bulk-image-resizer/', 'With a single picture and a single size, a before/after view sits above the result: scroll or pinch to zoom up to 1600% and drag to look around.']].forEach(([url, quote]) => {
+    claim(url, 'tip', quote, 'street.jpg: the view is above the one result card, zooms to 1600%, and is the same view at the same zoom after a quality change', B, async () => within(url, async (p) => {
+      await K.img.upload(p, [S('street.jpg')]);
+      const a = await p.evaluate(() => { const b = document.querySelector('.img-compare'); window.__cmp = b; const stage = document.querySelector('.tool-io .image-stage'); b.zoomTo(100); return { first: !!b && stage.firstElementChild.contains(b), cards: stage.querySelectorAll('.image-card:not(.img-compare-card) img.image-preview').length, z: b.querySelector('.img-zoom-pct').textContent }; });
+      await K.img.change(p, 'quality', 55);
+      const b = await p.evaluate(() => { const b = document.querySelector('.img-compare'); return { same: b === window.__cmp, z: b.querySelector('.img-zoom-pct').textContent }; });
+      return [a.first && a.cards === 1 && a.z === '1600%' && b.same && b.z === '1600%', K.j([a, b])];
+    }));
+  });
 
   /* ================================================================ */
   /* converter                                                         */
@@ -660,7 +703,16 @@ module.exports = function ({ claim, manual, kit: K }) {
     const [b] = await K.img.results(p); const d = await K.img.pixels(p, b);
     return [d.w === 1067 && d.h === 1600 && !hasExif(b), d.w + '×' + d.h + (hasExif(b) ? ', EXIF kept' : ', no EXIF')];
   }));
-  claim(CV, 'dfaq', 'Not unless you set a longest side. The test photo stayed 1600×1067, except in ICO, which holds at most 256×256.', 'food.jpg 1600×1067 as PNG, JPEG and WebP; the ICO card says 256×256', B, async () => within(CV, async (p) => {
+  claim(CV, 'tip', 'Resize can make the converted picture smaller too: a percentage, a width or a height, with the shape kept unless you unlock it.', 'street.jpg 1600×1200: width 800 → 800×600; 25% → 400×300; unlocked 500 by 500 → 500×500', B, async () => within(CV, async (p) => {
+    const dims = async () => { const [b] = await K.img.results(p); const d = await K.img.pixels(p, b); return d.w + '×' + d.h; };
+    await K.img.set(p, 'width', 800);
+    await K.img.upload(p, [S('street.jpg')]);
+    const a = await dims();
+    await K.img.change(p, 'width', 0); await K.img.change(p, 'scale', '25'); const b = await dims();
+    await K.img.change(p, 'scale', '100'); await K.img.set(p, 'lockAspect', 'no'); await K.img.set(p, 'width', 500); await K.img.change(p, 'height', 500); const c = await dims();
+    return [a === '800×600' && b === '400×300' && c === '500×500', [a, b, c].join(', ')];
+  }));
+  claim(CV, 'dfaq', 'Not unless you set a size under Resize. The test photo stayed 1600×1067, except in ICO, which holds at most 256×256.', 'food.jpg 1600×1067 as PNG, JPEG and WebP; the ICO card says 256×256', B, async () => within(CV, async (p) => {
     await K.img.upload(p, [S('food.jpg')]);
     const out = [];
     for (const f of ['image/png', 'image/jpeg', 'image/webp']) { await K.img.change(p, 'format', f); const [b] = await K.img.results(p); const d = await K.img.pixels(p, b); out.push(K.kind(b) + ' ' + d.w + '×' + d.h); }
@@ -1366,7 +1418,7 @@ module.exports = function ({ claim, manual, kit: K }) {
     const out = await K.img.pixels(p, all, [[400, 300], [1000, 700]]);
     return [K.isPng(a) && K.isPng(all) && a.length * 1.5 < all.length && close(src.px[0], out.px[0], 0) && close(src.px[1], out.px[1], 0), '256 colours ' + KB(a) + ', all colours ' + KB(all) + '; pixels ' + K.j(src.px) + ' vs ' + K.j(out.px)];
   }));
-  claim(CO, 'what', 'A 1600×1200 street photo, already a tight 321.4 KB JPEG, came out at 322.4 KB at quality 80, Keep original format: larger, and the page said so. WebP at 80 gave 277.0 KB, JPEG at 60 185.8 KB, AVIF 188.0 KB. Under 100 KB gave 96.1 KB at 1472×1104 after 12 tries; a max width of 800 gave 92.4 KB. A 2.41 MB PNG fell to 835.3 KB in 256 colours, 1.60 MB with all colours, 1.10 MB as lossless WebP.',
+  claim(CO, 'what', 'A 1600×1200 street photo, already a tight 321.4 KB JPEG, came out at 322.4 KB at quality 80, Keep original format: larger, and the page said so. WebP at 80 gave 277.0 KB, JPEG at 60 185.8 KB, AVIF 188.0 KB. Under 100 KB gave 96.1 KB at 1472×1104 after 12 tries; 800 px wide (50%) gave 92.4 KB, 1280 px wide 211.3 KB. A 2.41 MB PNG fell to 835.3 KB in 256 colours, 1.60 MB with all colours, 1.10 MB as lossless WebP.',
     'street.jpg: each setting; pet.jpg as PNG: 256 colours, all colours, lossless WebP', B, async () => {
       const f = await petPng();
       const r = await within(CO, async (p) => {
@@ -1378,7 +1430,8 @@ module.exports = function ({ claim, manual, kit: K }) {
         await K.img.change(p, 'format', 'image/jpeg'); await K.img.change(p, 'quality', 60); await idle(p); [o.jpg60] = await K.img.results(p);
         await K.img.change(p, 'format', 'same'); await K.img.change(p, 'quality', 80); await idle(p);
         await K.img.change(p, 'target', '100'); await idle(p); [o.under] = await K.img.results(p); o.tries = (await K.img.caps(p)).join(' | ') + ' / ' + K.j(await K.img.stats(p));
-        await K.img.change(p, 'target', '0'); await K.img.change(p, 'maxWidth', 800); await idle(p); [o.w800] = await K.img.results(p);
+        await K.img.change(p, 'target', '0'); await K.img.change(p, 'width', 800); await idle(p); [o.w800] = await K.img.results(p);
+        await K.img.change(p, 'width', 1280); await idle(p); [o.w1280] = await K.img.results(p);
         return o;
       });
       const pg = await within(CO, async (p) => {
@@ -1388,9 +1441,9 @@ module.exports = function ({ claim, manual, kit: K }) {
         await K.img.change(p, 'format', 'image/webp'); await K.img.change(p, 'webpMode', 'lossless'); await idle(p); [o.wl] = await K.img.results(p);
         return o;
       });
-      const ok = near(r.same.length, '322.4 KB') && /larger/i.test(r.msg) && near(r.webp.length, '277.0 KB') && near(r.jpg60.length, '185.8 KB') && near(r.avif.length, '188.0 KB') && near(r.under.length, '96.1 KB') && /12 tries/.test(r.tries) && near(r.w800.length, '92.4 KB')
+      const ok = near(r.same.length, '322.4 KB') && /larger/i.test(r.msg) && near(r.webp.length, '277.0 KB') && near(r.jpg60.length, '185.8 KB') && near(r.avif.length, '188.0 KB') && near(r.under.length, '96.1 KB') && /12 tries/.test(r.tries) && near(r.w800.length, '92.4 KB') && near(r.w1280.length, '211.3 KB')
         && near(pg.srcBytes, '2.41 MB') && near(pg.c256.length, '835.3 KB') && near(pg.all.length, '1.60 MB') && near(pg.wl.length, '1.10 MB');
-      return [ok, 'keep ' + KB(r.same) + ' (' + r.msg + '), WebP ' + KB(r.webp) + ', JPEG 60 ' + KB(r.jpg60) + ', AVIF ' + KB(r.avif) + ', under 100 KB ' + KB(r.under) + ' [' + r.tries + '], 800 wide ' + KB(r.w800) + '; PNG ' + fmtKB(pg.srcBytes) + ' → 256 ' + KB(pg.c256) + ', all ' + KB(pg.all) + ', WebP lossless ' + KB(pg.wl) + ' (2% allowed)'];
+      return [ok, 'keep ' + KB(r.same) + ' (' + r.msg + '), WebP ' + KB(r.webp) + ', JPEG 60 ' + KB(r.jpg60) + ', AVIF ' + KB(r.avif) + ', under 100 KB ' + KB(r.under) + ' [' + r.tries + '], 800 wide ' + KB(r.w800) + ', 1280 wide ' + KB(r.w1280) + '; PNG ' + fmtKB(pg.srcBytes) + ' → 256 ' + KB(pg.c256) + ', all ' + KB(pg.all) + ', WebP lossless ' + KB(pg.wl) + ' (2% allowed)'];
     });
   claim(CV, 'point', 'A link ending ?from=png&to=jpg opens the page set for that pair.', '?from=png&to=jpg sets JPEG; ?to=avif sets AVIF; the link carries no image', B, async () => {
     const a = await within(CV + '?from=png&to=jpg', (p) => p.evaluate(() => [document.getElementById('ic-format').value, location.search]));

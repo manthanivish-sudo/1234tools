@@ -6225,3 +6225,58 @@ footer p > a:not([class]),
 .tool-form .field.is-idle { opacity: 1; }
 .tool-form .field.is-idle label { color: var(--text-3); font-style: italic; }
 /* WAVE-W7SITE end */
+
+/* SQ7 start: the live before/after view and the Resize panel (image shell) */
+.img-compare-port { position: relative; min-width: 0; }
+.img-compare-tag { max-width: calc(50% - 16px); line-height: 1.25; }
+.img-compare-tag-t, .img-compare-tag-s { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.img-compare-tag-s { font-weight: 500; letter-spacing: 0; text-transform: none; font-size: .7rem; opacity: .92; }
+.img-zoom { align-items: center; }
+.img-zoom-pct { min-width: 3.6em; text-align: center; font-size: .78rem; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-2); }
+.img-zoom-step { min-width: 34px; padding-left: 8px; padding-right: 8px; }
+.img-seg-btn:disabled { opacity: .45; cursor: default; }
+.img-compare-busy { align-self: center; font-size: .78rem; color: var(--text-3); }
+.img-compare.is-working .img-compare-after, .img-compare.is-working .img-compare-pane + .img-compare-pane .img-compare-img { opacity: .82; transition: opacity .2s; }
+.img-compare-tail { display: contents; }
+.img-full-btn { margin-left: auto; }
+
+.opt-bar .img-resize { grid-column: 1 / -1; }
+.img-resize { margin: 0; padding: 10px 12px 12px; min-width: 0; display: flex; flex-direction: column; gap: 10px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.img-resize > legend { padding: 0 6px; font-weight: 700; font-size: .9rem; }
+.img-resize-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.img-resize-k { font-size: .8rem; color: var(--text-3); }
+.img-resize-dims { display: flex; align-items: flex-end; gap: 8px; }
+.img-resize-dims > .field { flex: 1 1 0; min-width: 0; margin-bottom: 0; }
+.img-resize > .field { margin-bottom: 0; }
+.img-lock { flex: none; width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.img-lock[aria-pressed="true"] { color: var(--accent); border-color: var(--border-gold); }
+.img-resize-readout { margin: 0; font-size: .85rem; color: var(--text-2); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+/* one picture loaded: the view comes first (phones), or sits beside the settings and stays in sight (wide screens) */
+.tool-io.img-live { display: flex; flex-direction: column; }
+.tool-io.img-live > * { order: 2; min-width: 0; }
+.tool-io.img-live > .dropzone { order: 0; }
+.tool-io.img-live > .image-stage { order: 1; }
+.tool-io.img-live > .image-stage, .tool-io.is-full.img-live > .image-stage { display: block; }
+.tool-io.img-live > .image-stage > .image-card:not(.img-compare-card) { max-width: 280px; margin-top: 12px; }
+@media (min-width: 900px) and (max-width: 1079.98px), (min-width: 1240px) {
+  .tool-io.img-live { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, 1fr); grid-template-rows: repeat(14, auto) 1fr; column-gap: 20px; align-items: start; }
+  .tool-io.img-live > * { grid-column: 2; }
+  .tool-io.img-live > .image-stage { grid-column: 1; grid-row: 1 / -1; position: sticky; top: calc(var(--hdr-h) + 12px); margin-bottom: 0; }
+  .tool-io.img-live .opt-bar { grid-template-columns: 1fr; }
+}
+/* full screen: the view fills the window, the settings in a column beside it (below it on a phone) */
+html.img-full-open { overflow: hidden; }
+.tool-io.is-full.img-live { display: flex; flex-direction: column; position: fixed; inset: 0; z-index: 400; margin: 0; padding: 12px; overflow: auto; background: var(--bg-0); }
+.tool-io.is-full.img-live > .image-stage { position: sticky; top: -12px; z-index: 2; background: var(--bg-0); padding-top: 12px; margin-top: -12px; }
+.tool-io.is-full .img-compare-view, .tool-io.is-full .img-compare-pane { max-height: 52vh; }
+.tool-io.is-full .img-compare-view.is-zoomed, .tool-io.is-full .img-compare-view { touch-action: none; }
+@media (min-width: 900px) {
+  .tool-io.is-full.img-live { display: grid; grid-template-columns: minmax(0, 1fr) 380px; grid-template-rows: repeat(14, auto) 1fr; column-gap: 20px; align-items: start; padding: 16px; }
+  .tool-io.is-full.img-live > * { grid-column: 2; }
+  .tool-io.is-full.img-live > .image-stage { grid-column: 1; grid-row: 1 / -1; position: sticky; top: 0; margin: 0; padding: 0; }
+  .tool-io.is-full .img-compare-view, .tool-io.is-full .img-compare-pane { max-height: calc(100vh - 150px); }
+  .tool-io.is-full.img-live .opt-bar { grid-template-columns: 1fr; }
+}
+/* SQ7 end */
