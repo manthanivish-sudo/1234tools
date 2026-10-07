@@ -196,14 +196,14 @@ module.exports = function ({ claim, manual, kit: K }) {
         return [JSON.stringify(rules[0]) === JSON.stringify(rules[1]) && /#abc/.test(min) && /\.5em/.test(min) && !/\.empty/.test(min), min];
       } finally { await p.close(); }
     });
-  claim(CM, 'tip', 'HTML keeps the text inside pre and textarea exactly, and every attribute value as typed. Spaces between words stay; spaces next to block elements, which a browser does not show, go.',
+  claim(CM, 'tip', 'HTML keeps pre, textarea and code exactly, and every attribute value as typed. White space holding a line break becomes one space, and white space next to block elements, which a browser does not show, goes.',
     'the rendered text (innerText) of a page is the same before and after, and pre is untouched', B, async () => {
-      const html = '<div class="a  b">\n  <h1>  Title   here </h1>\n  <p>Hello   <b>bold</b> <i>and</i>  more\n  text.</p>\n  <!-- note -->\n  <ul>\n    <li> One </li>\n    <li>Two</li>\n  </ul>\n  <pre>  keep\n    this  </pre>\n  <textarea>  a\n b </textarea>\n  <p>a<br>\n   b</p>\n</div>';
+      const html = '<div class="a  b">\n  <h1>  Title   here </h1>\n  <p>Hello   <b>bold</b> <i>and</i>  more\n  text.</p>\n  <!-- note -->\n  <ul>\n    <li> One </li>\n    <li>Two</li>\n  </ul>\n  <pre>  keep\n    this  </pre>\n  <textarea>  a\n b </textarea>\n  <p>a<br>\n   b <code style="white-space:pre">x   =   1</code></p>\n</div>';
       const min = tx('code-minifier', html, { lang: 'html' }).output;
       const p = await K.open(CM);
       try {
         const t = await p.evaluate((a, b) => {
-          const show = (h) => { const d = document.createElement('div'); d.innerHTML = h; document.body.appendChild(d); const r = d.innerText + '|' + d.querySelector('pre').textContent + '|' + d.querySelector('textarea').value + '|' + d.querySelector('div').className; d.remove(); return r; };
+          const show = (h) => { const d = document.createElement('div'); d.innerHTML = h; document.body.appendChild(d); const r = d.innerText + '|' + d.querySelector('pre').textContent + '|' + d.querySelector('textarea').value + '|' + d.querySelector('code').textContent + '|' + d.querySelector('div').className; d.remove(); return r; };
           return [show(a), show(b)];
         }, html, min);
         return [t[0] === t[1] && min.length < html.length, JSON.stringify(min)];
