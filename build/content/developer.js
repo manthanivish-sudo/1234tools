@@ -961,5 +961,280 @@ module.exports = {
       /* the FAQ: the declaration is kept */
       { input: '<?xml version="1.0"?>\n<feed><qty>3</qty></feed>', check: [['output', '<?xml version="1.0"?>']] }
     ]
+  },
+
+  '/developer/unix-timestamp/': {
+    term: 'Unix time',
+    whatIs: [
+      'Unix time counts the seconds since 00:00:00 UTC on 1 January 1970, the epoch, so 1700000000 names one instant everywhere. Databases, logs and APIs store it because one plain number sorts and subtracts easily.',
+      'The number carries no time zone: the same instant is 22:13 in London and 03:43 next morning in Delhi. Many systems count milliseconds instead, hence 13-digit stamps.'
+    ],
+    howItWorks: {
+      text: 'Each line is read on its own, in this page, with the time-zone rules your browser ships.',
+      points: [
+        'A plain number is an epoch value whose unit comes from its digits: up to 11 is seconds, 12 to 14 milliseconds, 15 to 17 microseconds, more is nanoseconds. Whole-number arithmetic keeps every digit.',
+        'Text is read as a date: ISO 8601, RFC 2822, slashed dates, 7 Oct 2026 and web server log stamps.',
+        'A date without an offset is wall-clock time in the chosen zone. The zone’s offset at that moment comes from `Intl.DateTimeFormat`, so summer time is applied on the right dates.',
+        'When the clocks go forward, a skipped time is moved on by the gap; when they go back, the earlier of the two instants is used and the later one is named.'
+      ]
+    },
+    worked: {
+      text: 'Two lines from an access log written in Los Angeles, [10/Oct/2026:13:55:36 -0700] and [10/Oct/2026:14:02:11 -0700], come out as 2026-10-10T20:55:36Z and 2026-10-10T21:02:11Z with ISO 8601 in UTC chosen, and the Span shows 6 min 35 s between them. In Europe/London, 2026-03-29 01:30 does not exist, so it is read as 2026-03-29T02:30:00+01:00; 2026-10-25 01:30 happens twice, and the first, 1792888200, is used.'
+    },
+    uses: [
+      ['Reading logs', 'Turn a column of epoch stamps into dates you can read, in your own zone.'],
+      ['Writing test fixtures', 'Get the exact second for a date in a database seed.'],
+      ['Checking an expiry', 'See whether a cookie’s expiry has passed.']
+    ],
+    mistakes: [
+      'Reading milliseconds as seconds. 1700000000000 read as seconds is tens of thousands of years away; let the digits decide, or set the unit.',
+      'Typing 01:30 in London on the night the clocks go back without saying which one. Add the offset, +01:00 or +00:00, to pick.'
+    ],
+    faq: [
+      { q: 'What is the year 2038 problem?', a: 'A signed 32-bit counter of seconds runs out at 2147483647, which is 2038-01-19T03:14:07Z. Systems still storing time that way wrap round to 1901; the tool flags values outside that range.' },
+      { q: 'Can a Unix timestamp be negative?', a: 'Yes: it counts back from 1970, so -86400 is 31 December 1969.' },
+      { q: 'Why does my date come out an hour out?', a: 'Usually it had no offset and was read in another zone. Set the zone, or write the offset.' }
+    ],
+    runs: [
+      /* Time zone: UTC, Output: ISO 8601 in UTC */
+      { input: '[10/Oct/2026:13:55:36 -0700]\n[10/Oct/2026:14:02:11 -0700]', options: { zone: 'UTC', out: 'utc' }, check: [['output', '2026-10-10T20:55:36Z'], ['output', '2026-10-10T21:02:11Z'], ['stat:Span', '6 min 35 s']] },
+      /* Time zone: Europe/London, Output: ISO 8601 in the zone */
+      { input: '2026-03-29 01:30\n2026-10-25 01:30', options: { zone: 'Europe/London', out: 'iso' }, check: [['output', '2026-03-29T02:30:00+01:00'], ['note', '1792888200']] },
+      /* the FAQ: 2038 */
+      { input: '2147483647', options: { zone: 'UTC', out: 'utc' }, check: [['output', '2038-01-19T03:14:07Z']] }
+    ]
+  },
+
+  '/developer/sql-formatter/': {
+    term: 'SQL formatting',
+    whatIs: [
+      'SQL formatting lays a query out so its shape is visible: each clause such as SELECT, FROM or WHERE on its own line, the columns listed one per line, conditions under each other and subqueries indented inside their brackets.',
+      'A database ignores layout, so formatting is for people: reviewing a query, reading one from a log, or comparing two versions.'
+    ],
+    howItWorks: {
+      text: 'The query is cut into tokens by a tokenizer that knows each dialect’s quoting, then written out again.',
+      points: [
+        'Strings, quoted names and comments are recognised first, so a keyword inside quotes is never touched. MySQL’s # comments, PostgreSQL’s $$ blocks and SQL Server’s [names] are read when that dialect is chosen.',
+        'Clause words start new lines; commas in a column list, and AND or OR in a WHERE, HAVING or join condition, break the line; CASE puts each WHEN on a line of its own.',
+        'Minify writes the same tokens with a space only where two would otherwise run together.',
+        'Before anything is shown, the output is tokenized again and compared with your input. If anything but white space or reserved-word case differs, the tool stops instead.'
+      ]
+    },
+    worked: {
+      text: 'A one-line report query of 173 B, select o.id, sum(l.qty * l.price) as total from orders o join lines l … having sum(l.qty * l.price) > 500;, becomes 11 lines: SELECT and its two columns, FROM orders o, JOIN lines l ON l.order_id = o.id, then WHERE, GROUP BY and HAVING. Minified it is 161 B on one line, and both hold the same 56 tokens.'
+    },
+    uses: [
+      ['Code review', 'Put a long query in a migration or pull request in a shape reviewers can follow.'],
+      ['Debugging from logs', 'Lay out a one-line statement copied from a slow-query log.'],
+      ['Embedding SQL in code', 'Minify a query to one line for a config value or a string constant.']
+    ],
+    mistakes: [
+      'Formatting MySQL with the wrong dialect. In MySQL "vip" is a string, but in standard SQL it is a column name; choose the dialect so comments and quotes are read as your database reads them.',
+      'Expecting it to find errors. A misspelt table or a missing join condition is formatted neatly; the database is the judge of whether the query runs.'
+    ],
+    faq: [
+      { q: 'Does it change my table or column names?', a: 'No. Only reserved words such as SELECT, FROM and JOIN change case, and only if you ask; every name keeps the case you typed, quoted or not.' },
+      { q: 'Are comments kept?', a: 'When formatting, yes, each in its place. When minifying they are removed unless you choose Keep, but /*! … */ hints for MySQL always stay.' },
+      { q: 'Can it format several statements at once?', a: 'Yes. Statements separated by semicolons are laid out one after another with a blank line between them, and the Statements figure counts them.' }
+    ],
+    runs: [
+      { input: "select o.id, sum(l.qty * l.price) as total from orders o join lines l on l.order_id = o.id where o.placed_at >= '2026-01-01' group by o.id having sum(l.qty * l.price) > 500;", check: [['output', 'JOIN lines l ON l.order_id = o.id'], ['outputLines', '11'], ['stat:Input', '173 B'], ['stat:Tokens', '56']] },
+      /* Mode: Minify */
+      { input: "select o.id, sum(l.qty * l.price) as total from orders o join lines l on l.order_id = o.id where o.placed_at >= '2026-01-01' group by o.id having sum(l.qty * l.price) > 500;", options: { mode: 'minify' }, check: [['stat:Output', '161 B'], ['outputLines', '1']] }
+    ]
+  },
+
+  '/developer/code-minifier/': {
+    term: 'minification',
+    whatIs: [
+      'Minification removes what a browser does not need to run code: comments, indentation, line breaks and spaces between tokens. The page loads and parses a smaller file and behaves the same.',
+      'Bundlers go further, renaming variables and rewriting expressions, which needs a full parser to stay correct. Removing white space and comments is safe on any file.'
+    ],
+    howItWorks: {
+      text: 'The code is cut into tokens first, so strings, regular expressions, template literals and comments are known before anything is removed.',
+      points: [
+        'JavaScript: comments go and spaces stay only where two tokens would merge, as in a - -b. A line break is kept wherever automatic semicolon insertion could depend on it, for example before ++ at the start of a line.',
+        'CSS: comments, spaces round braces, colons and commas, the last semicolon in a block and empty rules go; #ffffff becomes #fff and 0.5rem .5rem. Spaces in `calc()` stay, as CSS needs them.',
+        'HTML: comments go, runs of white space become one space, and white space next to block elements such as div, p and li is removed. Inline script and style blocks are minified as JavaScript and CSS.',
+        'Licence comments starting /*! stay unless you untick the box.'
+      ]
+    },
+    worked: {
+      text: 'A small stylesheet of 97 B, a .card rule with `color: #ffffff`, margin 0.5rem 0px, a comment and an empty .empty rule, minifies to 50 B, a saving of 48.5%: `.card{color:#fff;margin:.5rem 0px;padding:0 0 0 0}`. In JavaScript without semicolons, let total=price followed by ++count keeps its line break, as joining them would change what runs.'
+    },
+    uses: [
+      ['Small sites without a build step', 'Shrink a hand-written stylesheet or script before uploading it.'],
+      ['Embeds', 'Fit widget code into a field with a size limit.'],
+      ['Checking the saving', 'See the gzipped sizes before deciding whether a build tool is worth adding.']
+    ],
+    mistakes: [
+      'Editing the minified file. Keep the original as the source and minify again after each change.',
+      'Minifying HTML whose list items or spans are styled as inline blocks. The spaces between them show as gaps in that layout, and removing them closes the gaps; keep comments and spaces there, or check the page after.'
+    ],
+    faq: [
+      { q: 'How much smaller will my file get?', a: 'It depends on how much of it is comments and indentation: well-commented CSS often halves, while code that is already tight saves little. Compare the gzipped figures, as servers compress files anyway.' },
+      { q: 'Can minified JavaScript be turned back?', a: 'The layout can be restored with the Code Beautifier, but removed comments are gone. Keep your original.' },
+      { q: 'Does it support modern JavaScript?', a: 'Yes: template literals, optional chaining, private fields and numeric separators are read as tokens and never rewritten.' }
+    ],
+    runs: [
+      { input: '.card {\n  color: #ffffff;\n  margin: 0.5rem 0px;\n  /* spacing */\n  padding: 0 0 0 0;\n}\n.empty { }\n', check: [['output', '.card{color:#fff;margin:.5rem 0px;padding:0 0 0 0}'], ['stat:Before', '97 B'], ['stat:After', '50 B'], ['stat:Saved', '48.5%']] },
+      { input: 'let total = price\n++count\nconsole.log(total)', check: [['output', 'let total=price'], ['output', '++count']] }
+    ]
+  },
+
+  '/developer/code-beautifier/': {
+    term: 'a code beautifier',
+    whatIs: [
+      'A beautifier, or pretty-printer, lays out minified or generated code with one statement per line and blocks indented by depth.',
+      'It only changes the white space, so the result runs exactly as before. What it cannot restore is what minification threw away: original names that a bundler shortened, and comments.'
+    ],
+    howItWorks: {
+      text: 'The code is cut into tokens, and each token is written out with a layout rule for its kind.',
+      points: [
+        'JavaScript: an opening brace starts an indented block, a semicolon or a closing brace ends a line, commas in an object literal put each property on its own line, and operators get a space on each side.',
+        'Line breaks already in the JavaScript are kept, at most one blank line in a row, because code without semicolons can depend on them.',
+        'CSS: each selector in a list and each declaration goes on its own line, a space follows every colon, and nested @media blocks are indented.',
+        'HTML: block elements open new, indented lines; short runs of inline text and tags stay on the line of their parent, because a line break there could add a visible space. Script and style blocks are laid out as JavaScript and CSS.'
+      ]
+    },
+    worked: {
+      text: 'The 41 B line if(a){b()}else{c()}const x={k:1,v:[1,2]}; comes back as 9 lines: the if block, } else { on one line, the else block, then const x = { with k: 1 and v: [1, 2] each on a line, 67 B in all. A one-line list, <ul><li>One</li><li>Two <b>bold</b></li></ul>, becomes 4 lines, <li>Two <b>bold</b></li> indented under the ul.'
+    },
+    uses: [
+      ['Reading a vendor script', 'Lay out a minified third-party file to see what it does.'],
+      ['Tidying copied code', 'Fix the indentation of a snippet pasted from a chat or a web page.'],
+      ['Debugging generated HTML', 'See the structure of markup a CMS wrote on one line.']
+    ],
+    mistakes: [
+      'Expecting short names to come back. A bundler that renamed totalWithVat to t leaves t, and nothing in the file says what it was.',
+      'Choosing the wrong language. Text that starts with <div> is laid out as HTML; set Language when a file mixes them.'
+    ],
+    faq: [
+      { q: 'Does it work on minified CSS from a framework?', a: 'Yes. A whole framework stylesheet on one line comes back rule by rule.' },
+      { q: 'Can I choose tabs or four spaces?', a: 'Yes, Indent offers 2 spaces, 4 spaces or a tab, and the choice is remembered on this device.' },
+      { q: 'What happens to JSON?', a: 'JSON inside an HTML script block of type application/ld+json is laid out too. For a JSON file on its own, use the JSON Formatter, which also validates it.' }
+    ],
+    runs: [
+      { input: 'if(a){b()}else{c()}const x={k:1,v:[1,2]};', check: [['output', '} else {'], ['output', 'v: [1, 2]'], ['stat:Lines after', '9'], ['stat:Size', '41 B'], ['stat:Size', '67 B']] },
+      { input: '<ul><li>One</li><li>Two <b>bold</b></li></ul>', check: [['output', '<li>Two <b>bold</b></li>'], ['stat:Lines after', '4']] }
+    ]
+  },
+
+  '/developer/yaml-json/': {
+    term: 'YAML',
+    whatIs: [
+      'YAML is a text format for configuration that uses indentation instead of braces: Docker Compose files, Kubernetes manifests, GitHub Actions and many CI systems are written in it. Since version 1.2 it is a superset of JSON, so every JSON document is also valid YAML.',
+      'Programs and APIs often want JSON while people prefer writing YAML; the conversion shows what a program sees once anchors and merge keys are expanded.'
+    ],
+    howItWorks: {
+      text: 'The YAML is read by the site’s own parser, a stated subset of YAML 1.2, and the JSON is written by its own writer.',
+      points: [
+        'Indentation decides nesting; tabs are refused, as the YAML specification requires. Quoted, plain and block scalars (| and >) with their chomping marks are read by the specification’s rules.',
+        'Plain values are typed by the YAML 1.2 core schema: true, false, null, ~, whole numbers including 0x and 0o, and decimals; everything else is a string.',
+        'An anchor (&) stores a value and an alias (*) repeats it; the << merge key copies a mapping’s keys under any written beside it. A duplicate key is an error, with both line numbers.',
+        'Integers are written to JSON from their digits, so values beyond 2^53 are not rounded.'
+      ]
+    },
+    worked: {
+      text: 'A CI file with base: &base holding image node:22 and retries 2, and test: with <<: *base and retries: 5, converts to a test object of image node:22 and retries 5. Its line country: NO stays the string "NO", with a warning that a YAML 1.1 reader returns false, and id: 9007199254740993 keeps every digit. In the other direction, {"version": "1.10", "debug": "no"} becomes version: "1.10" and debug: "no", quoted so no reader turns them into 1.1 or false.'
+    },
+    uses: [
+      ['Kubernetes and Compose', 'See the full JSON a manifest or compose file expands to.'],
+      ['API payloads', 'Write a request body in YAML, send JSON.'],
+      ['Config migrations', 'Move JSON settings to YAML without retyping.']
+    ],
+    mistakes: [
+      'Leaving country codes, versions or yes/no answers unquoted. NO, 1.10 and on mean different things to different YAML readers; quote any value that must stay text.',
+      'Indenting with tabs. YAML forbids them, and the tool names the line rather than guessing what was meant.'
+    ],
+    faq: [
+      { q: 'What does the tool refuse?', a: 'Complex keys written with ?, custom tags such as !Ref or !Sub used by CloudFormation, and %TAG directives. Each refusal names the line, so you know the output is never a guess.' },
+      { q: 'What happens to several documents in one file?', a: 'Documents split by --- become one JSON array, or JSON Lines if chosen.' },
+      { q: 'Is the YAML output valid for older parsers?', a: 'Yes. Strings that YAML 1.1 would read as a boolean, number, date or null are quoted, and a round trip through PyYAML gives back the same JSON.' }
+    ],
+    runs: [
+      { input: 'base: &base\n  image: node:22\n  retries: 2\ntest:\n  <<: *base\n  retries: 5\ncountry: NO\nid: 9007199254740993\n', options: { dir: 'y2j' }, check: [['output', '"NO"'], ['output', '9007199254740993'], ['output', 'node:22'], ['warn', 'false']] },
+      { input: '{"version": "1.10", "debug": "no", "count": 3}', check: [['output', 'version: "1.10"'], ['output', 'debug: "no"']] }
+    ]
+  },
+
+  '/developer/barcode-generator/': {
+    term: 'a linear barcode',
+    whatIs: [
+      'A linear barcode writes a number or text as bars and spaces of set widths, read by a laser or camera scanning across it. EAN-13 and UPC-A carry retail product numbers, ITF-14 marks cartons, and Code 128 and Code 39 carry text for warehouse and asset labels.',
+      'Every retail code ends in a check digit worked out from the others, so a misread digit is caught at the till.'
+    ],
+    howItWorks: {
+      text: 'Each line is encoded on its own by code written from the symbology specifications.',
+      points: [
+        'EAN and UPC: the GS1 check digit (weights 3 and 1 from the right, modulo 10) is added to a short number or tested on a full one; the left digits use the L and G patterns chosen by the first digit, the right digits the R patterns.',
+        'Code 128 starts in code set C for runs of digits, two to a symbol, and switches to set B for letters and A for control characters; the check symbol is the weighted sum modulo 103.',
+        'Code 39 and ITF-14 draw wide elements three times a narrow one, inside the ratio both specifications allow; ITF-14 adds its bearer bars.',
+        'Sizes are in modules of the bar width X, so SVG, PNG and PDF all carry the true printed size.'
+      ]
+    },
+    worked: {
+      text: 'Typed as 501234567890, an EAN-13 gets the check digit 0 and encodes 5012345678900; at X 0.33 mm it measures 37.3 × 25.8 mm with its quiet zones. Typed as 5012345678901 it is refused, because the check digit should be 0. A carton number 1540014128876 as ITF-14 at 0.635 mm becomes 15400141288763, 101.5 × 42.3 mm in its bearer frame, and BOX-0042-A as Code 128 is 145 modules wide.'
+    },
+    uses: [
+      ['Shop shelf labels', 'Print EAN-13 codes for products a supplier sent without them.'],
+      ['Stock and assets', 'Put Code 128 serial numbers on equipment.'],
+      ['Carton marking', 'Make ITF-14 codes for outer cases.']
+    ],
+    mistakes: [
+      'Printing at "fit to page". The sheet is drawn at true size; scaling it shrinks the bars below the size scanners expect.',
+      'Using coloured bars. Red, orange and yellow bars disappear under the red light most scanners use; dark bars on white read best.'
+    ],
+    faq: [
+      { q: 'How small can I print an EAN-13?', a: 'GS1 allows 80% to 200% of nominal size, a bar width of 0.264 mm to 0.66 mm. Ask your retailer before going under 100%.' },
+      { q: 'Are the barcodes checked?', a: 'Each type is tested on this site by decoding the drawn bars with a reader written separately from the standards, and with an open-source scanning library. Still scan a printed sample before ordering labels.' },
+      { q: 'Can I add the two- or five-digit add-on of a magazine?', a: 'Not yet: EAN-2 and EAN-5 add-ons, and GS1-128 application identifiers, are not drawn by this tool.' }
+    ],
+    runs: [
+      { input: '501234567890', check: [['stat:First encodes', '5012345678900'], ['stat:Size', '37.3 × 25.8 mm'], ['stat:Modules', '0.33']] },
+      { input: '5012345678901', check: [['error', 'the check digit should be 0']] },
+      /* Barcode type: ITF-14, Bar width: 0.635 mm */
+      { input: '1540014128876', options: { sym: 'itf14', x: '0.635' }, check: [['stat:First encodes', '15400141288763'], ['stat:Size', '101.5 × 42.3 mm']] },
+      /* Barcode type: Code 128 */
+      { input: 'BOX-0042-A', options: { sym: 'code128' }, check: [['stat:Modules', '145']] }
+    ]
+  },
+
+  '/developer/color-contrast-checker/': {
+    term: 'colour contrast',
+    whatIs: [
+      'Colour contrast, in the Web Content Accessibility Guidelines (WCAG 2), is a ratio from 1:1 for two identical colours to 21:1 for black on white. Text must reach 4.5:1 to pass level AA, or 3:1 when it is large; level AAA asks for 7:1 and 4.5:1.',
+      'About one man in twelve has a colour vision deficiency, and many more read screens in sunlight or with ageing eyes.'
+    ],
+    howItWorks: {
+      text: 'The ratio is worked out by the WCAG 2 formula, with the colour maths of the site’s Colour Converter.',
+      points: [
+        'Each sRGB channel is divided by 255 and linearised: c/12.92 at or below 0.04045, ((c+0.055)/1.055)^2.4 above it. The relative luminance is 0.2126 R + 0.7152 G + 0.0722 B.',
+        'Contrast equals (L1 + 0.05) / (L2 + 0.05), L1 being the lighter luminance, cut to two decimals and never rounded up, so a pair just under a threshold fails here as in an audit.',
+        'A see-through text colour is blended onto the background first; a see-through background is blended onto white.',
+        'The suggested fixes keep the hue and move only the lightness, for the text colour or the background, to the nearest value that passes.'
+      ]
+    },
+    worked: {
+      text: 'The brand gold #f7c948 on white has a relative luminance of 0.6202 and a ratio of only 1.56:1, failing every level. The nearest gold that passes AA for body text is #907319 at 4.51:1. Grey #777777 on white is 4.47:1: large text passes, body text fails, while #595959 reaches 7.00:1, AAA. In the list, rgb(0 0 0 / 54%) on white blends to #757575 and scores 4.60:1.'
+    },
+    uses: [
+      ['Design reviews', 'Check a palette’s text and background pairs before handing it to developers.'],
+      ['Accessibility audits', 'Test a theme’s colour tokens from a pasted list.'],
+      ['Fixing a brand colour', 'Find the darker shade that passes for body text.']
+    ],
+    mistakes: [
+      'Testing placeholder text and hover states at full strength. Check colours as shown, opacity included.',
+      'Checking text on an image against one colour of it. Test against the lightest and the darkest area behind the text.'
+    ],
+    faq: [
+      { q: 'Which threshold applies to icons and buttons?', a: 'WCAG 1.4.11 asks for 3:1 between the parts of an interface component, such as a field border or an icon, and the colours next to them. Text on the button still needs 4.5:1.' },
+      { q: 'Why is the threshold 0.04045 and not 0.03928?', a: 'WCAG 2.0 printed 0.03928; the sRGB standard says 0.04045, and newer WCAG texts follow it. For 8-bit colours no channel value falls between the two, so every result is the same.' },
+      { q: 'Is APCA used?', a: 'No. APCA is a draft method for WCAG 3, not yet a standard; laws and audits refer to WCAG 2.' }
+    ],
+    runs: [
+      { fields: { fg: '#f7c948', bg: '#ffffff' }, check: [['stat:Contrast ratio', '1.56:1'], ['output', '0.6202'], ['output', '#907319'], ['output', '4.51:1']] },
+      { fields: { fg: '#777777', bg: '#ffffff', pairs: '#595959 on #ffffff\nrgb(0 0 0 / 54%) on #ffffff' }, check: [['stat:Contrast ratio', '4.47:1'], ['output', '7.00:1'], ['output', '#757575'], ['output', '4.60:1']] }
+    ]
   }
 };
