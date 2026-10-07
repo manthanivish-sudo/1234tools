@@ -407,14 +407,15 @@ function paths() {
   return D().PAGES.map((p) => p.section + '/' + p.slug + '/');
 }
 
-/** For build-finder.js: one row per landing page on disk, in its index's columns. */
+/** For build-finder.js: one row per landing page on disk, in its index's columns,
+    with no prefill (8th) and 'landing' in a 9th, which engine/finder.js weighs down a little. */
 function finderRows() {
   const { SECTIONS } = require('./build/sections.js');
   const rows = [];
   for (const p of D().PAGES) {
     if (!fs.existsSync(path.join(ROOT, relOf(p)))) continue;
     const t = tool(p.tool);
-    rows.push([p.h1, p.section + '/' + p.slug + '/', t.glyph, SECTIONS['/' + p.section + '/'].name, p.description, (p.keywords || []).join(' | '), p.io]);
+    rows.push([p.finderTitle || p.h1, p.section + '/' + p.slug + '/', t.glyph, SECTIONS['/' + p.section + '/'].name, p.description, (p.keywords || []).join(' | '), p.io, '', 'landing']);
   }
   return rows;
 }

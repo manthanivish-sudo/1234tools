@@ -135,11 +135,13 @@ function staticChecks() {
     if (titles.has(t)) bad('title shared with ' + titles.get(t)); titles.set(t, p.slug);
     if (descs.has(d)) bad('description shared with ' + descs.get(d)); descs.set(d, p.slug);
     const ex = (/<section class="panel landing-example[\s\S]*?<\/section>/.exec(h) || [''])[0];
-    for (const v of Object.values(p.example.shown || {})) if (ex.indexOf(String(v).replace(/&/g, '&amp;').replace(/“/g, '“')) < 0 && ex.indexOf(esc(String(v))) < 0) bad('example does not quote ' + v);
+    for (const k of quoted(p)) { const v = (p.example.shown || {})[k]; if (v === undefined || ex.indexOf(esc(String(v))) < 0) bad('example does not quote {' + k + '} = ' + v); }
     if (!Object.keys(p.example.shown || {}).length) bad('example has no recorded figures');
     check(ok.length === 0, urlOf(p) + ': canonical, hreflang, FAQPage, crumbs, sitemap, hub, finder, own title and description, quoted figures', ok.join('; '));
   }
 }
+/** The figures a page's example text quotes, as {name}. */
+const quoted = (p) => [...String(p.example.text).matchAll(/\{([a-zA-Z0-9]+)\}/g)].map((m) => m[1]);
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /* ------------------------------------------------------------------ */
@@ -389,14 +391,15 @@ function figures(p, r, fx) {
       } else {
         const now = figures(p, r, fx);
         const bad = [];
-        for (const [k, v] of Object.entries(p.example.shown || {})) {
+        for (const k of quoted(p)) {
+          const v = (p.example.shown || {})[k];
           const g = now[k];
           const b1 = bytesOf(v), b2 = bytesOf(g);
           if (!isNaN(b1)) { if (!(Math.abs(b2 - b1) <= b1 * 0.02)) bad.push(k + ' ' + v + ' now ' + g); }
           else if (k === 'q') { if (!(Math.abs(Number(g) - Number(v)) <= 3)) bad.push('quality ' + v + ' now ' + g); }
           else if (String(g) !== String(v)) bad.push(k + ' "' + v + '" now "' + g + '"');
         }
-        check(bad.length === 0, urlOf(p) + ': the example’s ' + Object.keys(p.example.shown || {}).length + ' figure(s) come back', bad.join('; '));
+        check(bad.length === 0, urlOf(p) + ': the example’s ' + quoted(p).length + ' quoted figure(s) come back: ' + quoted(p).map((k) => (p.example.shown || {})[k]).join(', ').slice(0, 120), bad.join('; '));
       }
       await pg.close();
     }

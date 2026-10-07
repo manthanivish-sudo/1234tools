@@ -11,6 +11,9 @@
  *   presetNote           what the preset sets, in words, shown under the tool
  *   group                its heading on the hub and its neighbours in Related
  *   h1, pageTitle, description, lede, answer {h, paras}, steps, faq, keywords, io
+ *   finderTitle          its title in the finder, when the h1 would contain the
+ *                        tool's own generic phrase ("passport photo") and so
+ *                        outrank the tool for the bare query
  *   example              { files, shown, text, date, source }: the run the test
  *                        (build/tests/landing.js) repeats on this page; `files`
  *                        names its fixtures, `shown` the figures it read, and
@@ -254,8 +257,10 @@ function imgSize(o) {
     h1: 'Compress Image to ' + o.label,
     pageTitle: 'Compress Image to ' + o.label + ' — Free, No Upload | 1234Tools',
     stepsTitle: 'How to get an image under ' + o.label,
-    keywords: ['compress image to ' + o.label.toLowerCase().replace(' ', ''), 'compress image to ' + o.label.toLowerCase(), 'reduce photo size to ' + o.label.toLowerCase(), 'image under ' + o.label.toLowerCase()],
-    io: 'Image → under ' + o.label
+    /* no bare "compress image": that query belongs to the compressor itself */
+    keywords: ['image to ' + o.label.toLowerCase().replace(' ', ''), 'photo under ' + o.label.toLowerCase(), 'reduce photo size to ' + o.label.toLowerCase(), o.label.toLowerCase().replace(' ', '') + ' limit'],
+    io: 'Image → under ' + o.label,
+    finderTitle: 'Image under ' + o.label
   }, o, { example: Object.assign({ date: DATE, shown: rec(o.slug) }, o.example) });
 }
 
@@ -372,7 +377,8 @@ function pdfSize(o) {
     pageTitle: 'Compress PDF to ' + o.label + ' — Free, In Your Browser | 1234Tools',
     stepsTitle: 'How to get a PDF under ' + o.label,
     keywords: ['compress pdf to ' + o.label.toLowerCase().replace(' ', ''), 'compress pdf to ' + o.label.toLowerCase(), 'reduce pdf size to ' + o.label.toLowerCase(), 'pdf under ' + o.label.toLowerCase()],
-    io: 'PDF → under ' + o.label
+    io: 'PDF → under ' + o.label,
+    finderTitle: 'PDF under ' + o.label
   }, o, { example: Object.assign({ date: DATE, shown: rec(o.slug) }, o.example) });
 }
 
@@ -482,7 +488,8 @@ function passSize(o) {
     presetNote: p.name + ', ' + sizeWords(p) + ', with a 6 × 4 in print sheet.',
     stepsTitle: 'How to make a ' + o.short + ' photo',
     facts: passFacts(p),
-    io: 'Photo → ' + o.short
+    io: 'Photo → ' + o.short,
+    finderTitle: o.short + ' photo'
   }, o, { example: Object.assign({ date: DATE, shown: rec(o.slug), files: ['passport.jpg'] }, o.example) });
 }
 
@@ -619,6 +626,7 @@ function country(c) {
   return Object.assign(passSize({
     slug: c.key + (/visa$/.test(c.key) ? '' : '-passport') + '-photo', presetId: p.id, short: L.replace(/ photo$/, ''),
     group: COUNTRY,
+    finderTitle: L.replace(/ photo$/, '') + ': photo size ' + sizeWords(p),
     h1: L + ' (' + sizeWords(p) + ')',
     pageTitle: L + ' Size ' + mm(p.w) + 'x' + mm(p.h) + ' mm — Free Maker | 1234Tools',
     description: L + ': ' + sizeWords(p) + ', ' + px(p.w) + ' × ' + px(p.h) + ' px at 300 DPI, ' + p.bg + '. Framed to the guide on your device.',

@@ -203,13 +203,13 @@
   function build() {
     const fi = window.FINDER_INDEX.tools;
     DOCS = fi.map((r) => {
-      const [title, p, glyph, section, desc, kw, io, pf] = r;
+      const [title, p, glyph, section, desc, kw, io, pf, kind] = r;
       const slug = p.replace(/\/+$/, '').split('/').pop().replace(/-/g, ' ');
       const fields = { title: tokens(title), slug: tokens(slug), kw: tokens(kw.replace(/\|/g, ' ')), desc: tokens(desc), section: tokens(section) };
       const tf = Object.create(null);
       const add = (list, w) => { for (const t of list) tf[t] = Math.max(tf[t] || 0, w) + (tf[t] ? 0.15 : 0); };
       add(fields.desc, 1.2); add(fields.section, 1); add(fields.kw, 2.5); add(fields.slug, 3); add(fields.title, 4);
-      return { title, path: p, glyph, section, desc, io: io ? String(io) : '', prefill: prefillOf(pf), tf, titleText: title.toLowerCase(), slugText: slug, kwText: kw.toLowerCase() };
+      return { title, path: p, glyph, section, desc, io: io ? String(io) : '', prefill: prefillOf(pf), landing: kind === 'landing', tf, titleText: title.toLowerCase(), slugText: slug, kwText: kw.toLowerCase() };
     });
     N = DOCS.length;
     DF = Object.create(null); VOCAB = new Set();
@@ -385,6 +385,7 @@
     return null;
   }
 
+  const LANDING_WEIGHT = 0.7;
   function rank(text, pool) {
     const qTokens = tokens(text);
     /* a number is a value, not a word for the job: "tip on 84.50" is one
@@ -422,6 +423,10 @@
       const asked = new Set(plain).size + numbers;
       const coverage = asked ? (matched + numbers) / asked : 1;
       s *= 0.45 + 0.55 * coverage;
+      /* a landing page (9th column, build-landing.js) is one job of a tool:
+         it should win the query that names that job ("png to jpg",
+         "compress image to 50kb") and give way to the tool on the bare one */
+      if (d.landing) s *= LANDING_WEIGHT;
       if (phrase.length > 3 && d.titleText.indexOf(phrase) >= 0) s += 6;
       if (qPlain.length > 1 && qPlain.every((t) => d.tf[t] && d.tf[t] >= 3)) s += 3;
       scored.push({ doc: d, score: s, coverage, why });
