@@ -38,5 +38,54 @@
       "type": "image/png",
       "purpose": "any"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/qr/qr-code-scanner/?share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "files",
+          "accept": [
+            "image/png",
+            ".png",
+            "image/jpeg",
+            ".jpg",
+            ".jpeg",
+            "image/webp",
+            ".webp",
+            "image/gif",
+            ".gif"
+          ]
+        }
+      ]
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "/qr/qr-code-scanner/",
+      "accept": {
+        "image/png": [
+          ".png"
+        ],
+        "image/jpeg": [
+          ".jpg",
+          ".jpeg"
+        ],
+        "image/webp": [
+          ".webp"
+        ],
+        "image/gif": [
+          ".gif"
+        ]
+      }
+    }
+  ],
+  "launch_handler": {
+    "client_mode": [
+      "navigate-existing",
+      "auto"
+    ]
+  }
 }

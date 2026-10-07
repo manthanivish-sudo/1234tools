@@ -38,5 +38,42 @@
       "type": "image/png",
       "purpose": "any"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/developer/csv-to-json/?share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "files",
+          "accept": [
+            "text/csv",
+            ".csv",
+            "text/tab-separated-values",
+            ".tsv"
+          ]
+        }
+      ]
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "/developer/csv-to-json/",
+      "accept": {
+        "text/csv": [
+          ".csv"
+        ],
+        "text/tab-separated-values": [
+          ".tsv"
+        ]
+      }
+    }
+  ],
+  "launch_handler": {
+    "client_mode": [
+      "navigate-existing",
+      "auto"
+    ]
+  }
 }

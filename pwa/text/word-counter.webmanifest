@@ -37,5 +37,40 @@
       "type": "image/png",
       "purpose": "any"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/text/word-counter/?share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "files",
+          "accept": [
+            "text/plain",
+            ".txt"
+          ]
+        }
+      ]
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "/text/word-counter/",
+      "accept": {
+        "text/plain": [
+          ".txt"
+        ]
+      }
+    }
+  ],
+  "launch_handler": {
+    "client_mode": [
+      "navigate-existing",
+      "auto"
+    ]
+  }
 }

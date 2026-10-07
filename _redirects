@@ -1063,8 +1063,12 @@
 /conversions/volume/teaspoon-us-to-quart-us.html /conversions/volume/teaspoon-us-to-quart-us/ 301
 /conversions/volume/teaspoon-us-to-tablespoon-us.html /conversions/volume/teaspoon-us-to-tablespoon-us/ 301
 /design/aspect-ratio.html /design/aspect-ratio/ 301
+/developer/barcode-generator.html /developer/barcode-generator/ 301
 /developer/base64.html /developer/base64/ 301
 /developer/case-converter.html /developer/case-converter/ 301
+/developer/code-beautifier.html /developer/code-beautifier/ 301
+/developer/code-minifier.html /developer/code-minifier/ 301
+/developer/color-contrast-checker.html /developer/color-contrast-checker/ 301
 /developer/color-converter.html /developer/color-converter/ 301
 /developer/cron-parser.html /developer/cron-parser/ 301
 /developer/css-gradient.html /developer/css-gradient/ 301
@@ -1082,9 +1086,12 @@
 /developer/regex-tester.html /developer/regex-tester/ 301
 /developer/robots-txt-generator.html /developer/robots-txt-generator/ 301
 /developer/slug-generator.html /developer/slug-generator/ 301
+/developer/sql-formatter.html /developer/sql-formatter/ 301
+/developer/unix-timestamp.html /developer/unix-timestamp/ 301
 /developer/url-encoder.html /developer/url-encoder/ 301
 /developer/uuid-generator.html /developer/uuid-generator/ 301
 /developer/xml-formatter.html /developer/xml-formatter/ 301
+/developer/yaml-json.html /developer/yaml-json/ 301
 /engineering/ohms-law.html /engineering/ohms-law/ 301
 /finance/compound-interest.html /finance/compound-interest/ 301
 /finance/loan-payment.html /finance/loan-payment/ 301

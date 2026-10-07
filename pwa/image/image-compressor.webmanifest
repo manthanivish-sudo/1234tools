@@ -38,5 +38,64 @@
       "type": "image/png",
       "purpose": "any"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/image/image-compressor/?share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "files",
+          "accept": [
+            "image/png",
+            ".png",
+            "image/jpeg",
+            ".jpg",
+            ".jpeg",
+            "image/webp",
+            ".webp",
+            "image/gif",
+            ".gif",
+            "image/avif",
+            ".avif",
+            "image/bmp",
+            ".bmp"
+          ]
+        }
+      ]
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "/image/image-compressor/",
+      "accept": {
+        "image/png": [
+          ".png"
+        ],
+        "image/jpeg": [
+          ".jpg",
+          ".jpeg"
+        ],
+        "image/webp": [
+          ".webp"
+        ],
+        "image/gif": [
+          ".gif"
+        ],
+        "image/avif": [
+          ".avif"
+        ],
+        "image/bmp": [
+          ".bmp"
+        ]
+      }
+    }
+  ],
+  "launch_handler": {
+    "client_mode": [
+      "navigate-existing",
+      "auto"
+    ]
+  }
 }

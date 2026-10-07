@@ -1,0 +1,42 @@
+{
+  "id": "/developer/sql-formatter.html",
+  "name": "SQL Formatter — 1234Tools",
+  "short_name": "SQL Formatter",
+  "description": "Format or minify SQL for PostgreSQL, MySQL, SQL Server, SQLite and Oracle. Strings, quoted names and comments are kept exactly; only the spacing and the case of reserved words change.",
+  "start_url": "/developer/sql-formatter/?src=pwa",
+  "scope": "/developer/sql-formatter/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "developer",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-sql-formatter.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-sql-formatter-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-sql-formatter-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

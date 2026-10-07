@@ -2,7 +2,7 @@
   "id": "/utilities/tool-finder/",
   "name": "Tool Finder — 1234Tools",
   "short_name": "Tool Finder",
-  "description": "Say what you need in plain words — \"merge two PDFs\", \"km to miles\", \"payslip for one employee\" — and it finds the right tool among 1,321, on your device. If it does not exist yet, ask for it in the same place.",
+  "description": "Say what you need in plain words — \"merge two PDFs\", \"km to miles\", \"payslip for one employee\" — and it finds the right tool among 1,328, on your device. If it does not exist yet, ask for it in the same place.",
   "start_url": "/utilities/tool-finder/?src=pwa",
   "scope": "/utilities/tool-finder/",
   "display": "standalone",

@@ -84,6 +84,7 @@
   "i-average-calculator",
   "i-background-remover",
   "i-bank-recon",
+  "i-barcode-generator",
   "i-base64",
   "i-blur-redact",
   "i-bmi",
@@ -101,6 +102,9 @@
   "i-cgpa",
   "i-challan",
   "i-circle-crop",
+  "i-code-beautifier",
+  "i-code-minifier",
+  "i-color-contrast-checker",
   "i-color-converter",
   "i-color-palette-extractor",
   "i-commission-calculator",
@@ -247,6 +251,7 @@
   "i-social-reframe",
   "i-speed",
   "i-split-pdf",
+  "i-sql-formatter",
   "i-square-footage",
   "i-statistics",
   "i-stopwatch-timer",
@@ -263,6 +268,7 @@
   "i-tip-calculator",
   "i-tool-finder",
   "i-uk-take-home-pay",
+  "i-unix-timestamp",
   "i-unlock-pdf",
   "i-url-encoder",
   "i-uuid-generator",
@@ -282,5 +288,6 @@
   "i-watermark-pdf",
   "i-week-number",
   "i-word-counter",
-  "i-xml-formatter"
+  "i-xml-formatter",
+  "i-yaml-json"
 ]

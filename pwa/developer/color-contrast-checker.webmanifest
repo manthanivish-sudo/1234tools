@@ -1,0 +1,42 @@
+{
+  "id": "/developer/color-contrast-checker.html",
+  "name": "Colour Contrast Checker — 1234Tools",
+  "short_name": "Colour Contrast",
+  "description": "Check text and background colours against WCAG 2 AA and AAA, see them on real text and buttons, get the nearest colours that pass, and check a whole list of pairs at once.",
+  "start_url": "/developer/color-contrast-checker/?src=pwa",
+  "scope": "/developer/color-contrast-checker/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "developer",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-color-contrast-checker.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-color-contrast-checker-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-color-contrast-checker-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

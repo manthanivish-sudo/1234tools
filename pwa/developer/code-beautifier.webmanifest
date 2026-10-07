@@ -1,0 +1,42 @@
+{
+  "id": "/developer/code-beautifier.html",
+  "name": "Code Beautifier — 1234Tools",
+  "short_name": "Code Beautifier",
+  "description": "Make minified or messy JavaScript, CSS and HTML readable again: one statement, rule or block per line, indented as you like. Only white space changes, so the code still works.",
+  "start_url": "/developer/code-beautifier/?src=pwa",
+  "scope": "/developer/code-beautifier/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "developer",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-code-beautifier.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-code-beautifier-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-code-beautifier-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
