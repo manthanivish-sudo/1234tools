@@ -662,6 +662,36 @@
       note.appendChild(reset);
       opts.appendChild(note);
     })();
+    /* ---------- settings from the address ---------- */
+    /* ?<key>=<value> sets a select to one of its own options (an image
+       format may be written jpg, png or webp) or a number to a value inside
+       its own min and max, for this visit, over anything remembered. A
+       spec's fromUrl(query, wanted) may add its own short forms
+       (compress-pdf reads ?kb=). Text, passwords and page ranges are never
+       read from a link, and nothing is saved until the visitor changes a
+       setting. Values a control would not take are ignored. */
+    (function fromAddress() {
+      let q;
+      try { q = new URLSearchParams(location.search); } catch (e) { return; }
+      const want = {};
+      readers.forEach((r) => { if (q.has(r.key)) want[r.key] = q.get(r.key); });
+      if (typeof spec.fromUrl === 'function') { try { spec.fromUrl(q, want); } catch (e) { /* a short form it cannot read */ } }
+      const MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+      Object.keys(want).forEach((k) => {
+        const r = reader(k);
+        if (!r || !r.input) return;
+        const c = r.control;
+        let v = String(want[k]);
+        if (c.type === 'select') {
+          const has = (x) => (c.options || []).some((o) => String(o.value) === x);
+          if (!has(v) && MIME[v.toLowerCase()] && has(MIME[v.toLowerCase()])) v = MIME[v.toLowerCase()];
+          if (has(v)) r.input.value = v;
+        } else if (c.type === 'number') {
+          const n = Number(v);
+          if (v.trim() !== '' && isFinite(n) && !(c.min !== undefined && n < c.min) && !(c.max !== undefined && n > c.max)) r.input.value = String(n);
+        }
+      });
+    })();
     let saveTimer = null;
     const saveSettings = () => {
       clearTimeout(saveTimer);

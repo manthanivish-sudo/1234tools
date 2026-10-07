@@ -163,6 +163,12 @@ function finderIndex() {
     if (JOBS) { row.push(ioOf(p)); const pf = prefillCol(p); if (pf) { row.push(pf); prefilled++; } }
     rows.push(row);
   }
+  /* the landing pages (build-landing.js): not tools, so not in the search
+     index, but each answers one job ("png to jpg", "compress pdf to 200kb")
+     and the finder should open it for that job */
+  if (fs.existsSync(path.join(ROOT, 'build-landing.js'))) {
+    for (const row of require('./build-landing.js').finderRows()) { rows.push(row); if (row[5]) withKeywords++; }
+  }
   return { rows, withKeywords, prefilled };
 }
 /** The eighth column, only on the rows that have one. */

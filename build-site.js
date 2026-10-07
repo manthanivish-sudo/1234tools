@@ -283,6 +283,8 @@ function sitemapPages() {
 
   take('index.html');
   searchIndexPaths().map(fileOf).forEach(take);
+  /* the landing pages build-landing.js writes: not tools, but pages to be found */
+  if (fs.existsSync(path.join(ROOT, 'build-landing.js'))) require('./build-landing.js').paths().map(fileOf).forEach(take);
   SECTIONS.forEach((s) => take(s + '/index.html'));
   Object.keys(META_PAGES).forEach(take);
   [...onDisk].filter((r) => /^conversions\/[^/]+\/index\.html$/.test(r))

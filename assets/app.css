@@ -6082,3 +6082,19 @@ details.jw-panel[open] > summary.jw-h { margin-bottom: 12px; }
   .vk-tool .aiimg-stagecol { position: static; }
 }
 /* WAVE-6 end */
+/* WAVE-W6LAND start: the landing pages (build-landing.js) and their hub block */
+.landing .landing-tool { margin: 0; }
+.landing-preset { margin: 10px 0 22px; font-size: .9rem; color: var(--text-2); }
+.landing-preset strong { color: var(--text-1); }
+.landing-answer p + p { margin-top: 10px; }
+.landing-facts { width: 100%; margin-top: 14px; border-collapse: collapse; font-size: .9rem; }
+.landing-facts th, .landing-facts td { padding: 7px 10px; border-top: 1px solid var(--border); text-align: left; vertical-align: top; }
+.landing-facts th { width: 38%; font-weight: 600; color: var(--text-2); }
+.landing-facts td { overflow-wrap: anywhere; }
+.landing-note { margin-top: 8px; font-size: .82rem; color: var(--text-3); }
+.landing-hub h3 { margin: 16px 0 8px; font-size: .95rem; color: var(--text-2); }
+.landing-links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.landing-links a { display: inline-block; padding: 5px 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-1); font-size: .88rem; text-decoration: none; }
+.landing-links a:hover, .landing-links a:focus-visible { border-color: var(--accent); }
+@media (max-width: 560px) { .landing-facts th { width: 44%; } }
+/* WAVE-W6LAND end */

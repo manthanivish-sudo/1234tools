@@ -1,0 +1,221 @@
+{
+ "png-to-jpg": {
+  "in": "2.91 MB",
+  "out": "419.2 KB",
+  "dims": "1600 × 1200"
+ },
+ "jpg-to-png": {
+  "in": "217.2 KB",
+  "out": "1.36 MB",
+  "dims": "1600 × 1067"
+ },
+ "webp-to-jpg": {
+  "in": "180.5 KB",
+  "out": "254.7 KB",
+  "dims": "1600 × 1063"
+ },
+ "jpg-to-webp": {
+  "in": "214.8 KB",
+  "out": "204.2 KB",
+  "dims": "1600 × 1067"
+ },
+ "png-to-webp": {
+  "in": "2.41 MB",
+  "out": "205.1 KB",
+  "dims": "1600 × 1067"
+ },
+ "avif-to-jpg": {
+  "in": "125.2 KB",
+  "out": "330.1 KB",
+  "dims": "1600 × 1067"
+ },
+ "gif-to-png": {
+  "in": "268.2 KB",
+  "out": "198.3 KB",
+  "dims": "800 × 534"
+ },
+ "bmp-to-jpg": {
+  "in": "4.88 MB",
+  "out": "347.7 KB",
+  "dims": "1600 × 1067"
+ },
+ "svg-to-png": {
+  "in": "1.9 KB",
+  "out": "94.3 KB",
+  "dims": "512 × 512"
+ },
+ "heic-to-jpg": {
+  "in": "362 B",
+  "msg": "None of those files could be decoded. photo.heic is a HEIC photo, which this browser cannot open. On an iPhone, Settings › Camera › Formats › Most Compatible saves JPEG; Safari on a Mac or iPhone opens HEIC, so this page can read it there."
+ },
+ "compress-image-to-20kb": {
+  "in": "264.5 KB",
+  "out": "19.5 KB",
+  "dims": "670 × 446",
+  "q": "33"
+ },
+ "compress-image-to-50kb": {
+  "in": "338.1 KB",
+  "out": "48.6 KB",
+  "dims": "846 × 795",
+  "q": "36"
+ },
+ "compress-image-to-100kb": {
+  "in": "321.4 KB",
+  "out": "96.1 KB",
+  "dims": "1472 × 1104",
+  "q": "32"
+ },
+ "compress-image-to-200kb": {
+  "in": "217.2 KB",
+  "out": "154.2 KB",
+  "dims": "1600 × 1067",
+  "q": "80"
+ },
+ "compress-image-to-500kb": {
+  "in": "1.58 MB",
+  "out": "476.7 KB",
+  "dims": "3200 × 2400",
+  "q": "64"
+ },
+ "compress-image-to-1mb": {
+  "in": "1.29 MB",
+  "out": "346.1 KB",
+  "dims": "3200 × 2126",
+  "q": "80"
+ },
+ "passport-photo-35x45mm": {
+  "in": "238.5 KB",
+  "dims": "413 × 531",
+  "out": "74.8 KB",
+  "sheet": "1800 × 1200, 632.0 KB"
+ },
+ "passport-photo-2x2-inch": {
+  "in": "238.5 KB",
+  "dims": "600 × 600",
+  "out": "97.6 KB",
+  "sheet": "1800 × 1200, 262.0 KB"
+ },
+ "passport-photo-51x51mm": {
+  "in": "238.5 KB",
+  "dims": "602 × 602",
+  "out": "116.8 KB",
+  "sheet": "1800 × 1200, 263.5 KB"
+ },
+ "uk-passport-photo": {
+  "in": "238.5 KB",
+  "dims": "413 × 531",
+  "out": "74.8 KB",
+  "sheet": "1800 × 1200, 632.0 KB"
+ },
+ "india-passport-photo": {
+  "in": "238.5 KB",
+  "dims": "413 × 531",
+  "out": "74.8 KB",
+  "sheet": "1800 × 1200, 632.0 KB"
+ },
+ "schengen-visa-photo": {
+  "in": "238.5 KB",
+  "dims": "413 × 531",
+  "out": "74.8 KB",
+  "sheet": "1800 × 1200, 632.0 KB"
+ },
+ "france-passport-photo": {
+  "in": "238.5 KB",
+  "dims": "413 × 531",
+  "out": "74.8 KB",
+  "sheet": "1800 × 1200, 632.0 KB"
+ },
+ "spain-passport-photo": {
+  "in": "238.5 KB",
+  "dims": "307 × 378",
+  "out": "47.0 KB",
+  "sheet": "1800 × 1200, 749.4 KB"
+ },
+ "netherlands-passport-photo": {
+  "in": "238.5 KB",
+  "dims": "413 × 531",
+  "out": "74.8 KB",
+  "sheet": "1800 × 1200, 632.0 KB"
+ },
+ "turkey-passport-photo": {
+  "in": "238.5 KB",
+  "dims": "591 × 709",
+  "out": "135.9 KB",
+  "sheet": "1800 × 1200, 438.3 KB"
+ },
+ "canada-passport-photo": {
+  "in": "238.5 KB",
+  "dims": "591 × 827",
+  "out": "152.0 KB",
+  "sheet": "1800 × 1200, 485.4 KB"
+ },
+ "brazil-passport-photo": {
+  "in": "238.5 KB",
+  "dims": "591 × 827",
+  "out": "152.0 KB",
+  "sheet": "1800 × 1200, 485.4 KB"
+ },
+ "australia-passport-photo": {
+  "in": "238.5 KB",
+  "dims": "413 × 531",
+  "out": "74.8 KB",
+  "sheet": "1800 × 1200, 632.0 KB"
+ },
+ "china-visa-photo": {
+  "in": "238.5 KB",
+  "dims": "390 × 567",
+  "out": "71.6 KB",
+  "sheet": "1800 × 1200, 624.0 KB"
+ },
+ "hong-kong-passport-photo": {
+  "in": "238.5 KB",
+  "dims": "472 × 591",
+  "out": "88.6 KB",
+  "sheet": "1800 × 1200, 575.9 KB"
+ },
+ "singapore-passport-photo": {
+  "in": "238.5 KB",
+  "dims": "413 × 531",
+  "out": "74.8 KB",
+  "sheet": "1800 × 1200, 632.0 KB"
+ },
+ "compress-pdf-to-100kb": {
+  "in": "975.7 KB",
+  "out": "96.8 KB",
+  "settings": "96 DPI pictures at JPEG quality 50"
+ },
+ "compress-pdf-to-200kb": {
+  "in": "647.6 KB",
+  "out": "121.6 KB",
+  "settings": "120 DPI pictures at JPEG quality 62"
+ },
+ "compress-pdf-to-1mb": {
+  "in": "1.47 MB",
+  "out": "397.6 KB",
+  "settings": "150 DPI pictures at JPEG quality 72"
+ },
+ "compress-pdf-to-2mb": {
+  "in": "4.91 MB",
+  "out": "426.8 KB",
+  "settings": "150 DPI pictures at JPEG quality 72"
+ },
+ "pdf-to-jpg": {
+  "in": "975.7 KB",
+  "dims": "1240 × 1754",
+  "out": "236.8 KB",
+  "n": "4",
+  "total": "625.3 KB"
+ },
+ "pdf-to-png": {
+  "in": "975.7 KB",
+  "dims": "1240 × 1754",
+  "out": "1.28 MB",
+  "n": "4",
+  "total": "4.45 MB"
+ },
+ "jpg-to-pdf": {
+  "in": "538.5 KB",
+  "out": "540.8 KB"
+ }
+}
