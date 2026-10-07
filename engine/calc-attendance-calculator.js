@@ -8,11 +8,16 @@ window.TOOLS["attendance-calculator"] = {
 "keywords": ["attendance calculator","attendance percentage","how many classes can i miss","75 percent attendance","attendance shortage","bunk calculator","minimum attendance"],
 "formula": "Attendance % = classes attended ÷ classes held × 100",
 "inputs": [
-  {"key":"attended","label":"Classes attended","type":"number","default":42},
-  {"key":"held","label":"Classes held so far","type":"number","default":60},
-  {"key":"required","label":"Required minimum","type":"number","unit":"%","default":75},
-  {"key":"remaining","label":"Classes still to come, if you know","type":"number","default":30}
+  {"key":"attended","label":"Classes attended","type":"number","default":42,"min":0,"integer":true},
+  {"key":"held","label":"Classes held so far","type":"number","default":60,"min":0,"integer":true},
+  {"key":"required","label":"Required minimum","type":"number","unit":"%","default":75,"min":0,"max":100},
+  {"key":"remaining","label":"Classes still to come, if you know","type":"number","default":30,"min":0,"integer":true}
 ],
+"validate": (v) => {
+      const e = {};
+      if (Number(v.attended) > Number(v.held)) e.attended = 'You cannot have attended more classes than have been held.';
+      return e;
+    },
 "compute": function (v) {
   const attended = Math.max(0, Number(v.attended) || 0);
   const held = Math.max(0, Number(v.held) || 0);
@@ -92,6 +97,13 @@ window.TOOLS["attendance-calculator"] = {
   {"key":"note","label":"","format":"text"},
   {"key":"caution","label":"","format":"text"}
 ],
+"filled": (v, r, f) => {
+      if (r.current === undefined) return [];
+      const L = ['attendance = ' + f.upto(Number(v.attended), 0) + ' ÷ ' + f.upto(Number(v.held), 0) + ' × 100 = ' + f.pct(r.current)];
+      if (r.canMiss) L.push('can miss = floor(' + f.upto(Number(v.attended), 0) + ' × 100 ÷ ' + f.upto(Number(v.required), 2) + ' − ' + f.upto(Number(v.held), 0) + ') = ' + r.canMiss);
+      if (r.mustAttend) L.push('must attend = ceil((' + f.upto(Number(v.required), 2) + ' × ' + f.upto(Number(v.held), 0) + ' − 100 × ' + f.upto(Number(v.attended), 0) + ') ÷ (100 − ' + f.upto(Number(v.required), 2) + ')) = ' + r.mustAttend);
+      return L;
+    },
 "tips": [
   "\"Classes you can still miss\" assumes you attend nothing else and the total keeps growing. It is the number of future classes you can skip and stay at or above the minimum.",
   "\"Classes you must attend in a row\" assumes a perfect run from here. Miss one during that run and the figure goes up again, which is why recovering from a shortfall is harder than it looks.",

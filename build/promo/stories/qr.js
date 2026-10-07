@@ -9,7 +9,7 @@ module.exports = {
     pain: 'You spell the Wi-Fi password out loud ten times a day, and half the time someone types it wrong.',
     usual: ['QR sites that route scans via their server', 'Codes that stop working after a trial', 'Codes nobody tested before printing'],
     promise: 'Type the link or Wi-Fi details. Get a QR that is scanned back first.',
-    steps: ['Pick link, Wi-Fi or card', 'Style it, check it scans', 'Download SVG or PNG'],
+    steps: ['Pick link, Wi-Fi or card', 'Style it, check it scans', 'Download SVG, PNG, PDF or EPS'],
     proof: ['Free', 'No sign-up', 'Codes never expire'],
     example: { kind: 'qr', text: 'WIFI:T:WPA;S:Harbour Cafe Guest;P:flatwhite2026;;' },
     howTo: 'How to make a QR code for your Wi-Fi',
@@ -21,7 +21,7 @@ module.exports = {
     pain: 'A sticker on the parking meter wants you to scan and pay. You would like to see the address first.',
     usual: ['Camera apps that open links straight away', 'Scanner apps stuffed with adverts', 'Typing a URL from a blurry photo'],
     promise: 'Scan with the camera or a photo. See the real domain before opening.',
-    steps: ['Allow the camera or add a photo', 'Point it at the code', 'Check the domain, then open'],
+    steps: ['Allow the camera or add photos', 'Point it at the code', 'Check the domain, then open'],
     proof: ['Free', 'No sign-up', 'Nothing uploaded'],
     example: {
       kind: 'schematic',
@@ -38,8 +38,8 @@ module.exports = {
     hook: '300 badges need 300 different QR codes.',
     pain: 'Every badge, table or product label needs its own code. Making them one by one would take all week.',
     usual: ['Making codes one at a time', 'Bulk features kept for paid plans', 'Finding a dud code after printing'],
-    promise: 'Paste a list or a CSV. Every code is scanned back, then zipped.',
-    steps: ['Paste the list or CSV', 'Set one style for all', 'Download the checked ZIP'],
+    promise: 'Paste a list or a CSV. Every code is scanned back, then zipped or laid out on labels.',
+    steps: ['Paste the list or CSV', 'Set one style for all', 'Download a ZIP or label sheet'],
     proof: ['Free', 'Nothing uploaded', 'Every code checked'],
     example: {
       kind: 'schematic',

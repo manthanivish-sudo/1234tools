@@ -1,0 +1,42 @@
+{
+  "id": "/social/carousel-maker/",
+  "name": "Carousel Maker — 1234Tools",
+  "short_name": "Carousel Maker",
+  "description": "Make an Instagram or LinkedIn carousel from text slides and photos in your browser: seven templates, your colours and handle, a progress indicator and a swipe cue. Download a ZIP of PNGs or one PDF for LinkedIn. Nothing you add is uploaded.",
+  "start_url": "/social/carousel-maker/?src=pwa",
+  "scope": "/social/carousel-maker/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "social",
+    "photo"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-social-carousel.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-social-carousel-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-social-carousel-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -14,6 +14,28 @@
  *      chosen band, and the MP4 holds two trak boxes (sound preserved);
  *   3. no request left 127.0.0.1.
  *
+ * Wave S added, each against an independent reference:
+ *   - word timing: the synthesiser's own word boundaries (SpeakProgress) are
+ *     the truth; the aligned word starts must be within 0.15 s on average
+ *     (0.3 s at the 90th percentile) and beat the proportional split;
+ *   - ASS: parsed here by a parser of this file's own — section headers, a
+ *     23-field Style Format and Style line, a 10-field Events Format and
+ *     Dialogue lines, times within 10 ms of the VTT's, \k tags that add up
+ *     to each line and one per word, the chosen font and colours in the
+ *     style, a keyword's colour, and \pos after a drag (moved by the arrow
+ *     keys by exactly the step);
+ *   - keywords: a word clicked in the transcript turns up in the keyword
+ *     list and its colour appears on the preview (and not before);
+ *   - looks: the four original looks draw pixel for pixel what the drawing
+ *     code shipped before wave S drew (a copy of it is below); the four new
+ *     ones differ from every other look, light the current word in the
+ *     highlight colour (Word box: on the box around the middle word), and
+ *     One word draws a single word;
+ *   - drag: dragging the captions on the preview moves them there;
+ *   - export, a second time: dragged low, Bold outline, auto emoji on — the
+ *     exported frames carry the captions in the dragged band and the emoji's
+ *     colour, at the same moments the preview does, and not without emoji.
+ *
  *   node build/ai-video/tests/auto-captions.js [--root <export dir>] [--port 8727]
  *        [--wav <speech.wav>] [--out <dir>] [--skip-video] [--recorder]
  *
@@ -57,8 +79,12 @@ function speechSample() {
     '$s = New-Object System.Speech.Synthesis.SpeechSynthesizer',
     '$f = New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(16000, [System.Speech.AudioFormat.AudioBitsPerSample]::Sixteen, [System.Speech.AudioFormat.AudioChannel]::Mono)',
     "$s.SetOutputToWaveFile('" + path.win32.normalize(out) + "', $f)",
+    /* the synthesiser reports where each word starts in the audio: the reference for word timing */
+    '$w = New-Object System.Collections.ArrayList',
+    '$s.add_SpeakProgress([System.EventHandler[System.Speech.Synthesis.SpeakProgressEventArgs]] { param($o, $e) [void]$w.Add([ordered]@{ text = $e.Text; ms = $e.AudioPosition.TotalMilliseconds }) })',
     "$s.Speak('" + SENTENCE.replace(/'/g, "''") + "')",
-    '$s.Dispose()'
+    '$s.Dispose()',
+    "ConvertTo-Json -InputObject @($w) -Compress | Set-Content -Encoding utf8 '" + path.win32.normalize(out.replace(/\.wav$/, '.words.json')) + "'"
   ].join('; ');
   const r = require('child_process').spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf8', timeout: 60000 });
   if (r.status !== 0 || !fs.existsSync(out)) throw new Error('speech synthesis failed: ' + ((r.stderr || r.stdout || '').trim() || 'no output'));
@@ -87,6 +113,138 @@ function parseCues(text, vtt) {
   return cues;
 }
 const { serve } = require('../../tests/serve.js');
+
+/* the synthesiser's word boundaries, when this run spoke the sentence itself */
+function refWords() {
+  const f = WAV.replace(/\.wav$/i, '.words.json');
+  if (!fs.existsSync(f)) return null;
+  try { return JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, '')).map((w) => ({ text: w.text, start: w.ms / 1000 })); } catch (e) { return null; }
+}
+/** Start-time errors of `got` words against the reference, matched in order by their letters. */
+function timingErrors(ref, got) {
+  const n = (s) => String(s).toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+  const errs = [];
+  let j = 0;
+  for (const r of ref) {
+    for (let k = j; k < Math.min(j + 4, got.length); k++) if (n(got[k].text) === n(r.text)) { errs.push(Math.abs(got[k].start - r.start)); j = k + 1; break; }
+  }
+  errs.sort((a, b) => a - b);
+  const mean = errs.reduce((s, e) => s + e, 0) / Math.max(1, errs.length);
+  return { n: errs.length, mean, p90: errs.length ? errs[Math.min(errs.length - 1, Math.floor(errs.length * 0.9))] : Infinity, max: errs.length ? errs[errs.length - 1] : Infinity };
+}
+
+/** An ASS parser of this test's own: sections, Format lines and the fields of every Style and Dialogue line. */
+function parseASS(text) {
+  const out = { sections: {}, info: {}, styleFormat: null, styles: [], eventFormat: null, events: [], bad: [] };
+  let sec = null;
+  for (const raw of text.replace(/^\uFEFF/, '').split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith(';')) continue;
+    const h = /^\[(.+)\]$/.exec(line);
+    if (h) { sec = h[1]; out.sections[sec] = true; continue; }
+    const m = /^([^:]+):\s?(.*)$/.exec(line);
+    if (!m) { out.bad.push(line); continue; }
+    const key = m[1], val = m[2];
+    if (sec === 'Script Info') out.info[key] = val;
+    else if (sec === 'V4+ Styles') {
+      if (key === 'Format') out.styleFormat = val.split(',').map((s) => s.trim());
+      else if (key === 'Style') out.styles.push(val.split(','));
+    } else if (sec === 'Events') {
+      if (key === 'Format') out.eventFormat = val.split(',').map((s) => s.trim());
+      else if (key === 'Dialogue') {
+        /* the Text field is last and may hold commas: split the first nine only */
+        const f = []; let rest = val;
+        for (let i = 0; i < 9; i++) { const k = rest.indexOf(','); if (k < 0) break; f.push(rest.slice(0, k)); rest = rest.slice(k + 1); }
+        f.push(rest);
+        out.events.push(f);
+      }
+    }
+  }
+  return out;
+}
+const assSec = (t) => { const m = /^(\d+):(\d\d):(\d\d)\.(\d\d)$/.exec(String(t).trim()); return m ? Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]) + Number(m[4]) / 100 : NaN; };
+
+/* The caption drawing exactly as shipped before wave S (engine/aivid-auto-captions.js,
+   2026-10-05): the four original looks must still draw these pixels. */
+function legacyDrawFactory() {
+  const MAX_LINE = 42;
+  /** Greedy line fill: arrays of words, each line at most maxChars. */
+  function wrapWords(words, maxChars) {
+    const lines = [];
+    let cur = [], len = 0;
+    for (const w of words) {
+      const add = (cur.length ? 1 : 0) + w.text.length;
+      if (cur.length && len + add > maxChars) { lines.push(cur); cur = [w]; len = w.text.length; }
+      else { cur.push(w); len += add; }
+    }
+    if (cur.length) lines.push(cur);
+    return lines;
+  }
+  const fontFor = (st, px) => (st.preset === 'minimal' ? 600 : 800) + ' ' + px + 'px "' + (st.font || 'Sora') + '", "Inter", Arial, sans-serif';
+  const hexA = (hex, a) => { const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || ''); return m ? 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + a + ')' : 'rgba(0,0,0,' + a + ')'; };
+  function drawCaptions(ctx, W, H, t, cues, st) {
+    let cue = null;
+    for (const c of cues) { if (t >= c.start && t < c.until) { cue = c; break; } }
+    if (!cue) return;
+    const portrait = H > W;
+    const safeW = W * 0.86;
+    let px = Math.max(8, (Number(st.size) || 7) / 100 * W);
+    const words = cue.words;
+    const text = (w) => (st.uppercase ? w.text.toUpperCase() : w.text);
+    ctx.save();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    let lines = cue.lines.length > 1 ? wrapWords(words, MAX_LINE) : [words];
+    const widest = () => { ctx.font = fontFor(st, px); return Math.max(...lines.map((l) => l.reduce((s, w) => s + ctx.measureText(text(w)).width, 0) + (l.length - 1) * px * 0.28)); };
+    for (let k = 0; k < 8 && widest() > safeW; k++) px *= 0.9;
+    ctx.font = fontFor(st, px);
+    const lineH = px * 1.22;
+    const blockH = lineH * lines.length;
+    let cy = st.position === 'top' ? H * (portrait ? 0.16 : 0.13) : st.position === 'middle' ? H * 0.5 : H * (portrait ? 0.78 : 0.86);
+    if (st.maxBottom && st.position !== 'top' && st.position !== 'middle') cy = Math.min(cy, st.maxBottom - blockH / 2 - px * 0.3);
+    const y0 = cy - blockH / 2 + lineH / 2;
+    const strokeW = px * (st.preset === 'outline' ? 0.17 : st.preset === 'minimal' ? 0 : 0.11);
+    lines.forEach((line, li) => {
+      const widths = line.map((w) => ctx.measureText(text(w)).width);
+      const gap = px * 0.28;
+      const lineW = widths.reduce((s, w) => s + w, 0) + gap * (line.length - 1);
+      let x = (W - lineW) / 2;
+      const y = y0 + li * lineH;
+      if (st.preset === 'minimal') {
+        const padX = px * 0.4, padY = px * 0.22, r = px * 0.28;
+        ctx.fillStyle = hexA(st.box || '#0b1020', 0.78);
+        ctx.beginPath();
+        ctx.roundRect(x - padX, y - lineH / 2 + px * 0.02 - padY / 2, lineW + padX * 2, lineH + padY - px * 0.04, r);
+        ctx.fill();
+      }
+      line.forEach((w, i) => {
+        const spoken = t >= w.start, current = t >= w.start && t < w.end;
+        const s = text(w);
+        const wx = x + widths[i] / 2, wy = y;
+        let scale = 1, fill = st.fill || '#ffffff';
+        if (st.preset === 'karaoke' && spoken) fill = st.accent || '#f7c948';
+        if (st.preset === 'pop' && current) { fill = st.accent || '#f7c948'; scale = 1.18; }
+        ctx.save();
+        ctx.translate(wx, wy); ctx.scale(scale, scale);
+        ctx.textAlign = 'center';
+        if (st.preset !== 'minimal') {
+          ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = px * 0.22; ctx.shadowOffsetY = px * 0.05;
+          ctx.fillStyle = fill; ctx.fillText(s, 0, 0);
+          ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+          if (strokeW > 0) { ctx.lineWidth = strokeW * 2; ctx.strokeStyle = st.stroke || '#000000'; ctx.strokeText(s, 0, 0); }
+        }
+        ctx.fillStyle = fill; ctx.fillText(s, 0, 0);
+        ctx.restore();
+        x += widths[i] + gap;
+      });
+    });
+    ctx.restore();
+  }
+  return drawCaptions;
+}
+/* set an <input type=color> or <select> the way a person would, so the page's listeners run */
+const setValue = (page, sel, v) => page.evaluate((sel, v) => { const e = document.querySelector(sel); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); e.dispatchEvent(new Event('change', { bubbles: true })); }, sel, v);
+const fetchLink = (page, ext) => page.evaluate(async (ext) => { const a = document.querySelector('.aiimg-pane[data-pane=words] a[download$=".' + ext + '"]'); return a ? (await (await fetch(a.href)).text()) : ''; }, ext);
+const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
 (async () => {
   const t0 = Date.now();
@@ -175,6 +333,158 @@ const { serve } = require('../../tests/serve.js');
     let mono2 = cues2.length > 0; for (let i = 1; i < cues2.length; i++) if (cues2[i].start < cues2[i - 1].end || cues2[i].end <= cues2[i].start) mono2 = false;
     check(segsAfter >= 4 && mono2, 'nudge + re-split into 4-word segments keeps the SRT monotonic (' + segsAfter + ' segments, ' + cues2.length + ' cues)');
     await page.evaluate(() => { for (const b of document.querySelectorAll('.aivid-splitrow button')) if (/^Restore$/.test(b.textContent)) b.click(); });
+
+    /* ---- wave S: word timing against the synthesiser's own word boundaries ---- */
+    const ref = refWords();
+    const wavB64Timing = fs.readFileSync(WAV).toString('base64');
+    const timed = await page.evaluate(async (b64) => {
+      const bin = atob(b64); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      const Wh = window.AIVidWhisper;
+      const d = await Wh.decodeAudio(new File([u8], 'speech.wav', { type: 'audio/wav' }));
+      const r = await Wh.transcribe(d.samples, { language: 'en' });
+      /* the fallback for comparison: the same segments, split by length */
+      const prop = r.segments.flatMap((s) => Wh.wordsFor({ start: s.start, end: s.end, text: s.text }));
+      return { timing: r.timing, words: r.words.map((w) => ({ text: w.text, start: w.start, end: w.end })), prop: prop.map((w) => ({ text: w.text, start: w.start })) };
+    }, wavB64Timing);
+    check(timed.timing === 'aligned', 'the engine aligns words with the cross-attention (timing ' + timed.timing + ')');
+    const timingNote = await page.$eval('.aivid-timing', (e) => e.textContent).catch(() => '');
+    check(/from the model itself/.test(timingNote), 'the page says the word timings come from the model');
+    if (ref) {
+      const a = timingErrors(ref, timed.words), p = timingErrors(ref, timed.prop);
+      console.log('  word starts vs the synthesiser: aligned ' + a.n + '/' + ref.length + ' words, mean ' + a.mean.toFixed(3) + ' s, p90 ' + a.p90.toFixed(3) + ' s, max ' + a.max.toFixed(3) +
+        ' s | proportional mean ' + p.mean.toFixed(3) + ' s, p90 ' + p.p90.toFixed(3) + ' s, max ' + p.max.toFixed(3) + ' s');
+      check(a.n >= ref.length * 0.7, 'aligned words matched to the reference (' + a.n + ' of ' + ref.length + ')');
+      check(a.mean <= 0.15 && a.p90 <= 0.3, 'aligned word starts within 0.15 s on average and 0.3 s at p90');
+      check(a.mean < p.mean, 'aligned timing beats the proportional split (' + a.mean.toFixed(3) + ' s vs ' + p.mean.toFixed(3) + ' s)');
+    } else console.log('  (no synthesiser word boundaries for --wav input: timing accuracy not measured)');
+
+    /* ---- wave S: ASS, parsed here ---- */
+    const vttNow = await fetchLink(page, 'vtt');
+    const ass1 = await fetchLink(page, 'ass');
+    fs.writeFileSync(path.join(OUT, 'captions.ass'), ass1);
+    const A1 = parseASS(ass1);
+    const vcues = parseCues(vttNow, true);
+    check(A1.sections['Script Info'] && A1.sections['V4+ Styles'] && A1.sections.Events && A1.bad.length === 0, 'ASS has [Script Info], [V4+ Styles], [Events] and nothing unparseable');
+    check(A1.info.ScriptType === 'v4.00+' && Number(A1.info.PlayResX) > 0 && Number(A1.info.PlayResY) > 0, 'ASS Script Info: v4.00+, PlayResX × PlayResY ' + A1.info.PlayResX + '×' + A1.info.PlayResY);
+    check(A1.styleFormat && A1.styleFormat.length === 23 && A1.styles.length >= 1 && A1.styles.every((s) => s.length === 23), 'ASS Style Format has 23 fields and so does every Style line');
+    check(A1.eventFormat && A1.eventFormat.length === 10 && A1.events.length > 0 && A1.events.every((e) => e.length === 10), 'ASS Events Format has 10 fields and so does every Dialogue line');
+    let timesOk = A1.events.length === vcues.length;
+    A1.events.forEach((e, i) => { const v = vcues[i]; if (!v || Math.abs(assSec(e[1]) - v.start) > 0.01 || Math.abs(assSec(e[2]) - v.end) > 0.01) timesOk = false; });
+    check(timesOk, 'ASS times round-trip within 10 ms of the VTT (' + A1.events.length + ' events, ' + vcues.length + ' cues)');
+    let kOk = A1.events.length > 0;
+    for (const e of A1.events) {
+      const ks = [...e[9].matchAll(/\\k(\d+)/g)].map((m) => Number(m[1]));
+      const words = e[9].replace(/\{[^}]*\}/g, '').replace(/\\N/g, ' ').split(/\s+/).filter(Boolean);
+      const dur = Math.round(assSec(e[2]) * 100) - Math.round(assSec(e[1]) * 100);
+      if (ks.length !== words.length || Math.abs(ks.reduce((s, k) => s + k, 0) - dur) > 1) kOk = false;
+    }
+    check(kOk, 'Karaoke: one \\k tag per word, adding up to each line');
+    const fmt = (A) => Object.fromEntries(A.styleFormat.map((k, i) => [k, A.styles[0][i]]));
+    await page.click('.aiimg-tabs [data-pane=style]');
+    await setValue(page, '#aivid-font', 'Georgia');
+    await setValue(page, '#aivid-fill', '#ff0000');
+    await setValue(page, '#aivid-accent', '#00ff00');
+    await pause(500);
+    const S2 = fmt(parseASS(await fetchLink(page, 'ass')));
+    console.log('  ASS style after Georgia / #ff0000 / #00ff00: ' + ['Fontname', 'Fontsize', 'PrimaryColour', 'SecondaryColour', 'OutlineColour', 'Outline', 'Alignment', 'MarginV'].map((k) => k + '=' + S2[k]).join(' '));
+    check(S2.Fontname === 'Georgia' && S2.PrimaryColour === '&H0000FF00' && S2.SecondaryColour === '&H000000FF' && Number(S2.Outline) > 0 && S2.Alignment === '2', 'ASS style carries the chosen font, colours (karaoke: sung in the highlight), outline and bottom alignment');
+    await setValue(page, '#aivid-font', 'Sora');
+    await setValue(page, '#aivid-fill', '#ffffff');
+    await setValue(page, '#aivid-accent', '#f7c948');
+
+    /* ---- wave S: keywords, clicked in the transcript ---- */
+    const scan = () => page.evaluate(async () => {
+      /* the preview at 40 moments through the clip: frames holding the keyword colour (#ff4d6d) */
+      const r = document.querySelector('.aiimg-transport input[type=range]'), c = document.querySelector('.aivid-canvas');
+      let frames = 0;
+      for (let i = 1; i < 40; i++) {
+        r.value = Math.round(i * 1000 / 40); r.dispatchEvent(new Event('input', { bubbles: true }));
+        await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+        let n = 0; for (let k = 0; k < d.length; k += 4) if (Math.abs(d[k] - 255) < 30 && Math.abs(d[k + 1] - 77) < 30 && Math.abs(d[k + 2] - 109) < 30) n++;
+        if (n > 20) frames++;
+      }
+      return frames;
+    });
+    const before = await scan();
+    await page.click('.aiimg-tabs [data-pane=words]');
+    await page.evaluate(() => { for (const b of document.querySelectorAll('.aiimg-pane[data-pane=words] button')) if (/Mark keywords/.test(b.textContent)) b.click(); });
+    const clicked = await page.evaluate(() => { const b = [...document.querySelectorAll('.aivid-word')].find((x) => /^captions/i.test(x.textContent)); if (!b) return null; b.click(); return b.getAttribute('aria-pressed'); });
+    const keyList = await page.$eval('#aivid-keywords', (e) => e.value);
+    const after = await scan();
+    console.log('  keyword: pressed=' + clicked + ', list "' + keyList + '", preview frames in the keyword colour: before ' + before + ', after ' + after);
+    check(clicked === 'true' && /captions/i.test(keyList), 'clicking "captions" in the transcript marks it as a keyword');
+    check(before === 0 && after > 0, 'the keyword colour appears on the preview only once the keyword is marked');
+    const assKey = await fetchLink(page, 'ass');
+    check(/\\1c&H6D4DFF&/.test(assKey), 'ASS colours the keyword (\\1c&H6D4DFF&)');
+    await page.evaluate(() => { for (const b of document.querySelectorAll('.aivid-word.is-key')) b.click(); for (const b of document.querySelectorAll('.aiimg-pane[data-pane=words] button')) if (/Back to editing/.test(b.textContent)) b.click(); });
+
+    /* ---- wave S: the eight looks ---- */
+    const looks = await page.evaluate((legacySrc) => {
+      const AC = window.AIImg.tools['auto-captions'];
+      const legacy = (0, eval)('(' + legacySrc + ')')();
+      const words = [{ text: 'Hello', start: 0, end: 1 }, { text: 'brave', start: 1, end: 2 }, { text: 'world', start: 2, end: 3 }];
+      const cues = [{ start: 0, end: 3, until: 3.35, lines: ['Hello brave world'], words }];
+      const W = 540, H = 960, t = 1.5;
+      const render = (fn, preset, extra) => {
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        const x = c.getContext('2d'); x.fillStyle = '#20304a'; x.fillRect(0, 0, W, H);
+        fn(x, W, H, t, cues, Object.assign({ preset, mode: '3', position: 'bottom', size: 8, font: 'Sora', fill: '#ffffff', accent: '#00e000', stroke: '#000000', box: '#0b1020', uppercase: false }, extra || {}));
+        return x.getImageData(0, 0, W, H).data;
+      };
+      const ids = AC.STYLES.map((s) => s[0]);
+      const img = {}; for (const id of ids) img[id] = render(AC.drawCaptions, id);
+      const same = {}; for (const id of ['karaoke', 'pop', 'outline', 'minimal']) { const a = img[id], b = render(legacy, id); let d = 0; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) d++; same[id] = d; }
+      const diff = (a, b) => { let d = 0; for (let i = 0; i < a.length; i += 4) if (Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]) > 60) d++; return d; };
+      const minDiff = {}; for (const a of ids) { let m = Infinity; for (const b of ids) if (a !== b) m = Math.min(m, diff(img[a], img[b])); minDiff[a] = m; }
+      /* the highlight colour (#00e000), and where it sits */
+      const green = {}; for (const id of ids) { const d = img[id]; let n = 0, sx = 0; for (let i = 0; i < d.length; i += 4) if (d[i] < 90 && d[i + 1] > 170 && d[i + 2] < 90) { n++; sx += (i / 4) % W; } green[id] = { n, cx: n ? sx / n / W : -1 }; }
+      const ink = (d) => { let x0 = W, x1 = -1; for (let i = 0; i < d.length; i += 4) { const l = d[i] + d[i + 1] + d[i + 2]; if (l > 600) { const x = (i / 4) % W; if (x < x0) x0 = x; if (x > x1) x1 = x; } } return x1 - x0; };
+      return { ids, same, minDiff, green, inkStack: ink(img.stack), inkOutline: ink(img.outline) };
+    }, legacyDrawFactory.toString());
+    console.log('  looks: ' + looks.ids.join(', ') + '\n  pixels differing from the pre-wave-S drawing: ' + JSON.stringify(looks.same) + '\n  fewest pixels differing from any other look: ' + JSON.stringify(looks.minDiff) + '\n  highlight pixels (count, centre x): ' + JSON.stringify(looks.green));
+    check(looks.ids.length === 8 && ['box', 'yellow', 'neon', 'stack'].every((k) => looks.ids.includes(k)), 'STYLES lists the eight looks');
+    check(Object.values(looks.same).every((d) => d === 0), 'Karaoke, Pop, Bold outline and Minimal draw exactly what they drew before wave S');
+    check(looks.ids.every((k) => looks.minDiff[k] > 200), 'every look draws differently from every other (at least 200 pixels apart)');
+    check(['karaoke', 'pop', 'box', 'yellow', 'neon'].every((k) => looks.green[k].n > 50), 'Karaoke, Pop, Word box, Bold capitals and Neon light the spoken word in the highlight colour');
+    check(looks.green.box.cx > 0.35 && looks.green.box.cx < 0.65, 'Word box puts the box on the middle (current) word (centre ' + looks.green.box.cx.toFixed(2) + ')');
+    check(looks.inkStack > 0 && looks.inkStack < looks.inkOutline * 0.6, 'One word draws a single word (' + looks.inkStack + ' px wide vs ' + looks.inkOutline + ' px for the line)');
+
+    /* ---- wave S: drag the captions on the preview, then the arrow keys ---- */
+    await page.click('.aiimg-tabs [data-pane=style]');
+    await page.evaluate(() => { const r = document.querySelector('.aiimg-transport input[type=range]'); r.value = 300; r.dispatchEvent(new Event('input', { bubbles: true })); });
+    await pause(300);
+    /* bring the caption band to the middle of the viewport, clear of the consent banner at the bottom */
+    await page.evaluate(() => { const r = document.querySelector('.aivid-canvas').getBoundingClientRect(); window.scrollBy(0, r.top + r.height * 0.6 - window.innerHeight / 2); });
+    await pause(200);
+    const box = await page.$eval('.aivid-canvas', (c) => { const r = c.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
+    const under = await page.evaluate((x, y) => { const e = document.elementFromPoint(x, y); return e ? e.className : ''; }, box.x + box.w / 2, box.y + box.h * 0.78);
+    check(/aivid-canvas/.test(under), 'the caption band of the preview is not covered (' + under + ')');
+    await page.mouse.move(box.x + box.w / 2, box.y + box.h * 0.78);
+    await page.mouse.down();
+    for (let i = 1; i <= 8; i++) await page.mouse.move(box.x + box.w / 2, box.y + box.h * (0.78 - 0.38 * i / 8));
+    await page.mouse.up();
+    await pause(300);
+    const dragged = await page.evaluate(() => {
+      const c = document.querySelector('.aivid-canvas'), x = c.getContext('2d');
+      const band = (y0, y1) => { const d = x.getImageData(0, Math.round(y0 * c.height), c.width, Math.round((y1 - y0) * c.height)).data; let s = 0, s2 = 0; const n = d.length / 4; for (let i = 0; i < d.length; i += 4) { const l = (d[i] + d[i + 1] + d[i + 2]) / 3; s += l; s2 += l * l; } const m = s / n; return Math.sqrt(Math.max(0, s2 / n - m * m)); };
+      return { pos: document.querySelector('#aivid-pos').value, high: band(0.33, 0.47), low: band(0.71, 0.85) };
+    });
+    console.log('  after the drag: position ' + dragged.pos + ', luminance std in the new band ' + dragged.high.toFixed(1) + ', in the old band ' + dragged.low.toFixed(1));
+    check(dragged.pos === 'custom' && dragged.high > 12 && dragged.high > dragged.low * 2, 'dragging the captions on the preview moves them up to where they were dropped');
+    const posOf = (a) => { const m = /\\pos\((\d+),(\d+)\)/.exec(a); return m ? [Number(m[1]), Number(m[2])] : null; };
+    await pause(400);
+    const p0 = posOf(await fetchLink(page, 'ass'));
+    await page.focus('.aivid-canvas');
+    for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowDown');
+    await pause(400);
+    const assPos = await fetchLink(page, 'ass');
+    const p1 = posOf(assPos);
+    const resY = Number(parseASS(assPos).info.PlayResY);
+    console.log('  ASS \\pos after the drag ' + JSON.stringify(p0) + ', after three ArrowDown ' + JSON.stringify(p1) + ' (PlayResY ' + resY + ')');
+    check(!!p0 && !!p1 && Math.abs(p1[1] - p0[1] - resY * 0.03) <= 2 && p1[0] === p0[0], 'ASS carries the dragged position (\\an5\\pos), and three arrow presses move it 3% down');
+    await setValue(page, '#aivid-pos', 'bottom');
+    await pause(200);
 
     /* style pane screenshot */
     await page.click('.aiimg-tabs [data-pane=style]');
@@ -303,6 +613,63 @@ const { serve } = require('../../tests/serve.js');
       else check(/sound/.test(head) && !/silent|no sound/.test(head), 'WebM result says it has sound');
       check(!/silent|no sound/.test(head), 'result head does not say the sound was removed');
       check(out.width === 1080 && out.height === 1920, 'output is 1080x1920');
+
+      /* ---- wave S: a second export, dragged low, Bold outline, auto emoji ---- */
+      await page.click('.aiimg-tabs [data-pane=style]');
+      await page.evaluate(() => { document.querySelector('.aivid-swatch[data-preset=outline]').click(); });
+      await page.evaluate(() => { const r = document.querySelector('.aiimg-transport input[type=range]'); r.value = 300; r.dispatchEvent(new Event('input', { bubbles: true })); });
+      await page.focus('.aivid-canvas');
+      for (let i = 0; i < 3; i++) await page.keyboard.down('Shift'), await page.keyboard.press('ArrowDown'), await page.keyboard.up('Shift');
+      /* the preview at 24 moments, without and with emoji: frames with emoji colour in the dragged band */
+      const sample = (times) => page.evaluate(async (times) => {
+        const c = document.querySelector('.aivid-canvas'), r = document.querySelector('.aiimg-transport input[type=range]');
+        const dur = Number(document.querySelector('.aivid-video').duration) || 10;
+        const out = [];
+        for (const t of times) {
+          r.value = Math.round(t / dur * 1000); r.dispatchEvent(new Event('input', { bubbles: true }));
+          await new Promise((res) => setTimeout(res, 120));
+          await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+          const x = c.getContext('2d'), y0 = Math.round(0.86 * c.height), d = x.getImageData(0, y0, c.width, c.height - y0).data;
+          let n = 0; for (let i = 0; i < d.length; i += 4) { const mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]); if (mx - mn > 90 && mx > 120) n++; }
+          out.push(n / (c.width * (c.height - y0)));
+        }
+        return out;
+      }, times);
+      const dur2 = made.duration;
+      const times = Array.from({ length: 24 }, (_, i) => 0.2 + i * (dur2 - 0.6) / 23);
+      const noEmoji = await sample(times);
+      await page.evaluate(() => { const c = document.querySelector('#aivid-emoji'); if (!c.checked) c.click(); });
+      const withEmoji = await sample(times);
+      const SAT = 0.0005;
+      const prevHits = withEmoji.map((v) => v > SAT);
+      console.log('  preview, colourful share of the dragged band per moment, no emoji: ' + noEmoji.map((v) => (v * 1000).toFixed(1)).join(' ') + '\n  with emoji: ' + withEmoji.map((v) => (v * 1000).toFixed(1)).join(' '));
+      check(noEmoji.every((v) => v <= SAT) && prevHits.filter(Boolean).length >= 2, 'emoji appear on the preview only with Auto emoji on (' + prevHits.filter(Boolean).length + ' of 24 moments)');
+      await page.click('.aiimg-tabs [data-pane=export]');
+      const before2 = await page.$$eval('.aiimg-result', (r) => r.length);
+      await page.evaluate(() => { for (const b of document.querySelectorAll('.aiimg-pane[data-pane=export] button')) if (/Export the captioned video/.test(b.textContent)) b.click(); });
+      await page.waitForFunction((n) => { const st = document.querySelector('.aivid-exstatus'); return document.querySelectorAll('.aiimg-result').length > n || /failed|Cancelled/.test(st ? st.textContent : ''); }, { timeout: 600000, polling: 500 }, before2);
+      const ex2 = await page.evaluate(async (times) => {
+        const v = document.querySelector('.aiimg-result video');
+        const probe = document.createElement('video'); probe.muted = true; probe.playsInline = true; probe.src = v.src;
+        await new Promise((res) => { probe.onloadedmetadata = res; probe.onerror = res; setTimeout(res, 10000); });
+        const c = document.createElement('canvas'); c.width = probe.videoWidth || 1080; c.height = probe.videoHeight || 1920;
+        const x = c.getContext('2d', { willReadFrequently: true });
+        const band = (y0, y1) => { const d = x.getImageData(0, Math.round(y0 * c.height), c.width, Math.round((y1 - y0) * c.height)).data; let s = 0, s2 = 0; const n = d.length / 4; for (let i = 0; i < d.length; i += 4) { const l = (d[i] + d[i + 1] + d[i + 2]) / 3; s += l; s2 += l * l; } const m = s / n; return Math.sqrt(Math.max(0, s2 / n - m * m)); };
+        const sat = [], low = [], old = [];
+        for (const t of times) {
+          await new Promise((res) => { probe.onseeked = () => setTimeout(res, 150); probe.onerror = res; probe.currentTime = t; setTimeout(res, 5000); });
+          x.drawImage(probe, 0, 0, c.width, c.height);
+          const y0 = Math.round(0.86 * c.height), d = x.getImageData(0, y0, c.width, c.height - y0).data;
+          let n = 0; for (let i = 0; i < d.length; i += 4) { const mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]); if (mx - mn > 90 && mx > 120) n++; }
+          sat.push(n / (c.width * (c.height - y0))); low.push(band(0.88, 0.99)); old.push(band(0.70, 0.86));
+        }
+        return { sat, low, old, type: (await (await fetch(v.src)).blob()).type };
+      }, times);
+      const expHits = ex2.sat.map((v) => v > SAT);
+      const agree = prevHits.filter((h, i) => h === expHits[i]).length;
+      console.log('  export, colourful share per moment: ' + ex2.sat.map((v) => (v * 1000).toFixed(1)).join(' ') + '\n  caption band std, dragged band vs the old band (max): ' + Math.max(...ex2.low).toFixed(1) + ' vs ' + Math.max(...ex2.old).toFixed(1) + ' | preview and export agree at ' + agree + ' of 24 moments');
+      check(Math.max(...ex2.low) > 12 && Math.max(...ex2.low) > Math.max(...ex2.old) * 2, 'the export draws the captions where they were dragged (low band), not in the old bottom band');
+      check(expHits.filter(Boolean).length >= 2 && agree >= 20, 'the exported video carries the emoji at the same moments as the preview (' + agree + ' of 24 agree)');
     }
 
     console.log('  third-party requests:', [...new Set(net.map((n) => n.replace(/\?.*$/, '')))].slice(0, 12).join('\n    ') || 'none');

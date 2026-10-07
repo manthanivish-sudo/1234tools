@@ -437,8 +437,36 @@ function scanGray(gray, width, height) {
         }
       }
     }
+
+    /* Several codes in one picture give six, nine or more finder patterns,
+       and the five most confident can all come from different codes. Widen
+       to the top twelve, trying only the triples not tried above whose
+       corner is close to a right angle, so a picture of noise stays cheap. */
+    const wide = Math.min(finders.length, 12);
+    for (let a = 0; a < wide - 2; a++) {
+      for (let b = a + 1; b < wide - 1; b++) {
+        for (let c = b + 1; c < wide; c++) {
+          if (c < limit) continue;
+          if (!nearRightAngle(finders[a], finders[b], finders[c])) continue;
+          const got = readTriple(bits, width, height, finders[a], finders[b], finders[c]);
+          if (got) return got;
+        }
+      }
+    }
   }
   return null;
+}
+
+/* True when the corner of the three (the point opposite the longest side)
+   is between 60 and 120 degrees: what a code's three finders make, even
+   held at a slant. */
+function nearRightAngle(f1, f2, f3) {
+  const ord = orderFinders(f1, f2, f3);
+  const ux = ord.topRight.x - ord.topLeft.x, uy = ord.topRight.y - ord.topLeft.y;
+  const vx = ord.bottomLeft.x - ord.topLeft.x, vy = ord.bottomLeft.y - ord.topLeft.y;
+  const lu = Math.sqrt(ux * ux + uy * uy), lv = Math.sqrt(vx * vx + vy * vy);
+  if (!lu || !lv) return false;
+  return Math.abs((ux * vx + uy * vy) / (lu * lv)) < 0.5;
 }
 
 function readTriple(bits, width, height, f1, f2, f3) {
@@ -534,7 +562,59 @@ function readAtDimension(bits, width, height, ord, dimension, moduleSize) {
   return null;
 }
 
-root.QRDetect = { scan: scanImageData, binarize: binarize, toGray: toGray, findFinders: findFinders };
+/**
+ * Every QR code in a picture, up to `max`. Each code found is painted out
+ * (its corners, pushed out by a fifth, filled with white in a copy of the
+ * pixels) and the picture is read again, so the next-best set of finder
+ * patterns gets its turn. Codes with the same text are reported once.
+ */
+function scanAll(image, options) {
+  const max = (options && options.max) || 8;
+  const width = image.width, height = image.height;
+  const copy = { width: width, height: height, data: new Uint8ClampedArray(image.data) };
+  const out = [];
+  for (let n = 0; n < max; n++) {
+    const got = scanImageData(copy, options);
+    if (!got) break;
+    if (!out.some(function (o) { return o.text === got.text; })) out.push(got);
+    if (!got.corners || got.corners.length !== 4) break;
+    paintOut(copy, got.corners, 1.2);
+  }
+  return out;
+}
+
+/** Fill a quadrilateral, scaled about its centre by k, with white. */
+function paintOut(image, corners, k) {
+  const cx = corners.reduce(function (s, p) { return s + p.x; }, 0) / 4;
+  const cy = corners.reduce(function (s, p) { return s + p.y; }, 0) / 4;
+  const q = corners.map(function (p) { return { x: cx + (p.x - cx) * k, y: cy + (p.y - cy) * k }; });
+  const x0 = Math.max(0, Math.floor(Math.min.apply(null, q.map(function (p) { return p.x; }))));
+  const x1 = Math.min(image.width - 1, Math.ceil(Math.max.apply(null, q.map(function (p) { return p.x; }))));
+  const y0 = Math.max(0, Math.floor(Math.min.apply(null, q.map(function (p) { return p.y; }))));
+  const y1 = Math.min(image.height - 1, Math.ceil(Math.max.apply(null, q.map(function (p) { return p.y; }))));
+  const inside = function (x, y) {
+    let sign = 0;
+    for (let i = 0; i < 4; i++) {
+      const a = q[i], b = q[(i + 1) % 4];
+      const c = (b.x - a.x) * (y - a.y) - (b.y - a.y) * (x - a.x);
+      if (c !== 0) {
+        const s = c > 0 ? 1 : -1;
+        if (sign && s !== sign) return false;
+        sign = s;
+      }
+    }
+    return true;
+  };
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if (!inside(x + 0.5, y + 0.5)) continue;
+      const p = (y * image.width + x) * 4;
+      image.data[p] = image.data[p + 1] = image.data[p + 2] = 255;
+    }
+  }
+}
+
+root.QRDetect = { scan: scanImageData, scanAll: scanAll, binarize: binarize, toGray: toGray, findFinders: findFinders };
 if (typeof module !== 'undefined' && module.exports) module.exports = root.QRDetect;
 
 })(typeof window !== 'undefined' ? window : globalThis);

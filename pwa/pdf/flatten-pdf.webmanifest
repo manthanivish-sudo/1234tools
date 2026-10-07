@@ -1,0 +1,42 @@
+{
+  "id": "/pdf/flatten-pdf/",
+  "name": "Flatten PDF — 1234Tools",
+  "short_name": "Flatten PDF",
+  "description": "Fix form answers, comments and stamps into the page itself, so they print as shown and can no longer be changed, moved or lost. Nothing you add is uploaded.",
+  "start_url": "/pdf/flatten-pdf/?src=pwa",
+  "scope": "/pdf/flatten-pdf/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-flatten-pdf.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-flatten-pdf-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-flatten-pdf-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

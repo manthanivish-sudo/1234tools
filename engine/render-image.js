@@ -195,10 +195,21 @@
     let selection = null;   // {x,y,w,h} in source pixels
     let outputs = [];       // {name, blob}
 
-    const say = (text, kind) => {
-      msg.textContent = text || '';
+    /* The message line: what the run says, then a sentence for each file
+       left out (by name) and for a format the browser could not write.
+       Files that could not be read stay listed until new files are chosen;
+       the rest are worked out again on every run. */
+    let said = { text: '', kind: '' };
+    let loadNotes = [], runNotes = [];
+    const paintMsg = () => {
+      const notes = loadNotes.concat(runNotes);
+      const text = [said.text].concat(notes).filter(Boolean).join(' ');
+      const kind = said.kind === 'error' ? 'error' : notes.length ? 'warn' : said.kind;
+      msg.textContent = text;
       msg.className = 'io-msg' + (kind ? ' is-' + kind : '');
     };
+    const say = (text, kind) => { said = { text: text || '', kind: kind || '' }; paintMsg(); };
+    const problem = (text) => { if (runNotes.indexOf(text) < 0) runNotes.push(text); paintMsg(); };
 
     const readOpts = () => {
       const o = {};
@@ -208,16 +219,28 @@
 
     /* ---- loading ---- */
     function loadFiles(list) {
-      const files = [...list].filter(f => /^image\//.test(f.type) || /\.svg$/i.test(f.name));
+      const isImage = (f) => /^image\//.test(f.type) || /\.svg$/i.test(f.name);
+      const files = [...list].filter(isImage);
       if (!files.length) { say('Those files are not images. Choose PNG, JPEG, WebP, GIF or SVG.', 'error'); return; }
 
       sources.forEach(s => { if (s.url) URL.revokeObjectURL(s.url); });
       sources = [];
       selection = null;
+      loadNotes = [];
+      runNotes = [];
+      const take = spec.multiple ? files : files.slice(0, 1);
+      if (spec.multiple) [...list].filter(f => !isImage(f)).forEach(f => loadNotes.push(`${f.name} is not an image, so it was left out.`));
       say('Reading…', 'note');
 
-      const take = spec.multiple ? files : files.slice(0, 1);
       let pending = take.length;
+      const failed = [];
+      const done = () => {
+        if (--pending) return;
+        sources = sources.filter(Boolean);
+        /* in the order they were chosen */
+        take.forEach((f, i) => { if (failed[i]) loadNotes.push(`${f.name} could not be read as an image, so it was left out.`); });
+        afterLoad();
+      };
 
       take.forEach((f, idx) => {
         const reader = new FileReader();
@@ -227,20 +250,23 @@
           const img = new Image();
           img.onload = () => {
             sources[idx] = { file: f, img, bytes, url };
-            if (--pending === 0) { sources = sources.filter(Boolean); afterLoad(); }
+            done();
           };
           img.onerror = () => {
-            if (--pending === 0) { sources = sources.filter(Boolean); afterLoad(); }
+            URL.revokeObjectURL(url);
+            failed[idx] = true;
+            done();
           };
           img.src = url;
         };
-        reader.onerror = () => { if (--pending === 0) { sources = sources.filter(Boolean); afterLoad(); } };
+        reader.onerror = () => { failed[idx] = true; done(); };
         reader.readAsArrayBuffer(f);
       });
     }
 
     function afterLoad() {
-      if (!sources.length) { say('None of those files could be decoded.', 'error'); return; }
+      /* when nothing could be read, "none of those" names them all */
+      if (!sources.length) { loadNotes = []; say('None of those files could be decoded.', 'error'); return; }
       say('');
       drop.innerHTML = '<strong>' + (sources.length === 1 ? sources[0].file.name : sources.length + ' images')
         + '</strong><span>click to choose ' + (spec.multiple ? 'different files' : 'another image') + '</span>';
@@ -282,15 +308,71 @@
     }
 
     /* ---- encoding ---- */
-    function encode(canvas, o) {
-      const fmt = spec.outputFormat || (o.format === 'same' ? null : o.format) || 'image/png';
-      const q = Math.max(0.1, Math.min(1, (Number(o.quality) || 92) / 100));
-      return new Promise(res => canvas.toBlob(res, fmt, q));
-    }
-
     const extFor = (mime) => ({
       'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp'
     })[mime] || 'png';
+    const FORMAT_NAMES = { 'image/png': 'PNG', 'image/jpeg': 'JPEG', 'image/webp': 'WebP', 'image/gif': 'GIF',
+      'image/svg+xml': 'SVG', 'image/bmp': 'BMP', 'image/avif': 'AVIF', 'image/heic': 'HEIC' };
+    const fmtName = (mime) => FORMAT_NAMES[mime] || String(mime || 'image').replace(/^image\//, '').toUpperCase();
+
+    /* Safari and most phones stop a canvas at 16,777,216 pixels (4096×4096):
+       past that, drawing does nothing and toBlob gives null. A result over
+       that size is made only where this browser shows it can hold one that
+       big (desktop browsers can), by drawing the far corner pixel of a canvas
+       that size and reading it back. */
+    const MAX_PIXELS = 16777216;
+    let provenArea = MAX_PIXELS;
+    function fitsCanvas(w, h) {
+      if (w * h <= provenArea) return true;
+      try {
+        const c = el('canvas');
+        c.width = w; c.height = h;
+        const x = c.getContext('2d');
+        let ok = false;
+        if (x && c.width === w && c.height === h) {
+          x.fillStyle = '#000000'; x.fillRect(w - 1, h - 1, 1, 1);
+          ok = x.getImageData(w - 1, h - 1, 1, 1).data[3] === 255;
+        }
+        c.width = 1; c.height = 1;                    // let the memory go at once
+        if (ok) provenArea = w * h;
+        return ok;
+      } catch (e) { return false; }
+    }
+    const LIMIT_WORDS = '16,777,216 pixels (4096×4096)';
+    const dims = (w, h) => `${w}×${h}`;
+
+    /* Encode a finished canvas as fmt. The blob that comes back says what the
+       browser really wrote: asked for WebP, Safari writes PNG. Every name,
+       extension and figure follows the blob, and the swap is said on screen.
+       A file that cannot be encoded is named in the message and skipped; the
+       rest carry on. */
+    async function encodeAs(canvas, fmt, q, name, opaque) {
+      const w = canvas.width, h = canvas.height;
+      if (w * h > MAX_PIXELS && !fitsCanvas(w, h)) {
+        problem(`${name}: the ${dims(w, h)} result is ${(w * h).toLocaleString('en-GB')} pixels, over the ${LIMIT_WORDS} this browser can draw, so it was skipped. Choose a smaller size.`);
+        return null;
+      }
+      let blob = null;
+      try { blob = await new Promise(r => (opaque ? canvas : flattenFor(canvas, fmt)).toBlob(r, fmt, q)); } catch (e) { blob = null; }
+      if (!blob) {
+        problem(`${name}: this browser could not encode the ${dims(w, h)} result, so it was skipped. Browsers have a size limit — ${LIMIT_WORDS} in Safari and on most phones — so choose a smaller size.`);
+        return null;
+      }
+      if (blob.type && blob.type !== fmt) {
+        if (fmt === 'image/webp') noWebP = true;
+        problem(`This browser cannot write ${fmtName(fmt)}, so ${fmtName(blob.type)} was produced.`);
+      }
+      return blob;
+    }
+    const typeOf = (blob, fmt) => blob.type || fmt;
+    let noWebP = false;                                // this browser was asked for WebP and wrote something else
+
+    /* Object URLs of the result previews: let go when a new run starts or
+       the page is left, so a session of changes does not pile up blobs. */
+    let previewUrls = [];
+    const previewUrl = (blob) => { const u = URL.createObjectURL(blob); previewUrls.push(u); return u; };
+    const revokePreviews = () => { previewUrls.forEach(u => URL.revokeObjectURL(u)); previewUrls = []; };
+    window.addEventListener('pagehide', revokePreviews);
 
     /* JPEG has no alpha channel, and canvas.toBlob turns transparent pixels
        black. Anything saved as JPEG is laid on white first, so a rounded
@@ -311,7 +393,7 @@
        this tool really has. */
     function largerNote(fmt) {
       const canFormat = keys.has('format') && !spec.outputFormat;
-      if (canFormat && fmt === 'image/png') return 'The result is larger than the original: PNG keeps every pixel exactly. For a smaller file, choose JPEG or WebP under “' + labelOf('format') + '”.';
+      if (canFormat && fmt === 'image/png') return 'The result is larger than the original: PNG keeps every pixel exactly. For a smaller file, choose JPEG' + (noWebP ? '' : ' or WebP') + ' under “' + labelOf('format') + '”.';
       if (keys.has('quality') && fmt !== 'image/png') return 'The result is larger than the original. Lower the quality' + (canFormat ? ', or choose another format under “' + labelOf('format') + '”.' : '.');
       return 'The result is larger than the original: it is saved as ' + (fmt === 'image/png' ? 'PNG, which keeps every pixel exactly' : fmt.replace('image/', '').toUpperCase()) + '.';
     }
@@ -326,6 +408,7 @@
        result. A change that arrives mid-run queues one more run, which is
        skipped when the files and settings are what the last run used. */
     let running = null, rerun = false, doneKey = null;
+    let detachSelect = null;                           // the window listeners of the cropper's last run
     const runKey = () => JSON.stringify(readOpts()) + '|' + sources.map(s => s.url).join('|');
     function run() {
       if (running) { rerun = true; return running; }
@@ -344,10 +427,14 @@
     async function runOnce() {
       if (!sources.length) return;
       const o = readOpts();
+      if (detachSelect) { detachSelect(); detachSelect = null; }
+      revokePreviews();
       stage.innerHTML = '';
       actions.innerHTML = '';
       stats.innerHTML = '';
       outputs = [];
+      runNotes = [];
+      paintMsg();
 
       try {
         if (spec.kind === 'analyse') return await runAnalyse(o);
@@ -374,18 +461,19 @@
         else spec.paint(ctx, s.img, o, h);
 
         const fmt = spec.outputFormat || (o.format === 'same' ? s.file.type : o.format) || 'image/png';
-        fmtUsed = fmt;
-        const blob = await new Promise(r => flattenFor(canvas, fmt).toBlob(r, fmt, qualityOf(o, 92)));
-        if (!blob) { say('This browser could not encode that format. Try PNG or JPEG.', 'error'); return; }
+        const blob = await encodeAs(canvas, fmt, qualityOf(o, 92), s.file.name);
+        if (!blob) continue;                             // said by name; the rest carry on
+        const made = typeOf(blob, fmt);
+        fmtUsed = made;
 
-        const name = `${baseName(s)}-${spec.id || 'out'}.${extFor(fmt)}`;
+        const name = `${baseName(s)}-${spec.id || 'out'}.${extFor(made)}`;
         outputs.push({ name, blob });
         total.before += s.file.size;
         total.after += blob.size;
 
         const card = el('div', 'image-card');
         const prev = el('img', 'image-preview');
-        prev.src = URL.createObjectURL(blob);
+        prev.src = previewUrl(blob);
         prev.alt = 'Result preview';
         prev.addEventListener('load', () => setTimeout(() => URL.revokeObjectURL(prev.src), 60000));
         card.appendChild(prev);
@@ -403,7 +491,7 @@
       addBatchActions();
       const delta = total.before - total.after;
       const rows = [
-        ['Images processed', String(sources.length)],
+        ['Images processed', outputs.length === sources.length ? String(sources.length) : outputs.length + ' of ' + sources.length],
         ['Original total', fmtBytes(total.before)],
         ['Result total', fmtBytes(total.after)],
         ['Change', (delta >= 0 ? '−' : '+') + fmtBytes(Math.abs(delta)) +
@@ -470,20 +558,22 @@
         job.paint(ctx, makeHelpers(canvas, ctx));
 
         const fmt = spec.outputFormat || o.format || 'image/png';
-        let blob = await new Promise(r => flattenFor(canvas, fmt).toBlob(r, fmt, qualityOf(o, 90)));
-        if (!blob) continue;
+        const who = job.src ? job.src.file.name : sources[0].file.name + ' (' + (job.label || job.suffix) + ')';
+        let blob = await encodeAs(canvas, fmt, qualityOf(o, 90), who);
+        if (!blob) continue;                             // said by name; the rest carry on
+        const made = typeOf(blob, fmt);
         /* a print file says how big to print it: 300 DPI in the JPEG's JFIF
            header or the PNG's pHYs chunk, so 413 px comes out at 35 mm */
-        if (passport) blob = new Blob([CORE.setDPI(new Uint8Array(await blob.arrayBuffer()), passport.dpi)], { type: fmt });
+        if (passport) blob = new Blob([CORE.setDPI(new Uint8Array(await blob.arrayBuffer()), passport.dpi)], { type: made });
 
         const base = job.src ? baseName(job.src) : baseName(sources[0]);
-        const name = `${base}-${job.suffix}.${extFor(fmt)}`;
+        const name = `${base}-${job.suffix}.${extFor(made)}`;
         outputs.push({ name, blob });
         totalOut += blob.size;
 
         const card = el('div', 'image-card');
         const prev = el('img', 'image-preview');
-        prev.src = URL.createObjectURL(blob);
+        prev.src = previewUrl(blob);
         prev.alt = job.suffix;
         card.appendChild(prev);
         const cap = el('div', 'image-cap');
@@ -673,10 +763,18 @@
 
       view.addEventListener('mousedown', onDown);
       view.addEventListener('touchstart', onDown, { passive: false });
+      /* the drag is followed on window, so it keeps going past the picture's
+         edge; the next run (or a new file) takes these off again */
       window.addEventListener('mousemove', onMove);
       window.addEventListener('touchmove', onMove, { passive: false });
       window.addEventListener('mouseup', onUp);
       window.addEventListener('touchend', onUp);
+      detachSelect = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('touchmove', onMove, { passive: false });
+        window.removeEventListener('mouseup', onUp);
+        window.removeEventListener('touchend', onUp);
+      };
 
       const readout = el('div', 'select-readout');
       const hint = el('p', 'select-hint', 'Drag on the image to set the area.');
@@ -695,13 +793,20 @@
         const h = makeHelpers(canvas, ctx);
         spec.paintSelection(ctx, src.img, selection, oo, h);
         const fmt = spec.outputFormat || oo.format || 'image/png';
-        const blob = await new Promise(r => flattenFor(canvas, fmt).toBlob(r, fmt, qualityOf(oo, 92)));
-        if (!blob) return;
-        outputs = [{ name: `${baseName(src)}-${spec.id}.${extFor(fmt)}`, blob }];
+        runNotes = [];
+        paintMsg();
+        const blob = await encodeAs(canvas, fmt, qualityOf(oo, 92), src.file.name);
+        revokePreviews();                                // the last result's preview, if any
+        if (!blob) {                                     // said by name: no stale result is left to download
+          outputs = [];
+          resultHost.innerHTML = ''; actions.innerHTML = ''; stats.innerHTML = '';
+          return;
+        }
+        outputs = [{ name: `${baseName(src)}-${spec.id}.${extFor(typeOf(blob, fmt))}`, blob }];
 
         resultHost.innerHTML = '';
         const prev = el('img', 'image-preview');
-        prev.src = URL.createObjectURL(blob);
+        prev.src = previewUrl(blob);
         prev.alt = 'Result';
         resultHost.appendChild(prev);
         const cap = el('div', 'image-cap');
@@ -926,8 +1031,9 @@
           cx.fillStyle = '#ffffff';
           cx.fillRect(0, 0, c.width, c.height);
           cx.drawImage(s.img, 0, 0);
-          const blob = await new Promise(r => c.toBlob(r, 'image/jpeg',
-            Math.max(0.4, Math.min(1, (Number(o.quality) || 88) / 100))));
+          const blob = await encodeAs(c, 'image/jpeg',
+            Math.max(0.4, Math.min(1, (Number(o.quality) || 88) / 100)), s.file.name, true);
+          if (!blob) continue;                           // said by name; the other pages carry on
           page = { bytes: new Uint8Array(await blob.arrayBuffer()), width: c.width, height: c.height };
           again++;
         }
@@ -942,6 +1048,7 @@
         stage.appendChild(card);
       }
 
+      if (!pages.length) { say('No page could be made.', 'error'); return; }
       const pdf = CORE.buildPDF(pages, {
         pageSize: o.pageSize, orientation: o.orientation, margin: Number(o.margin)
       });

@@ -1814,8 +1814,8 @@ const GUIDES = [
     howLong: 'Seconds for a clean file. A file that came out of a spreadsheet in another country, or was typed by hand, can take longer — almost always because of the delimiter or an unquoted comma, both of which are quick to spot once you know to look.',
     before: [
       'The CSV, opened in a plain text editor rather than a spreadsheet, so you can see the real delimiters and quote marks.',
-      'A header row. If the file has none, add one: the converter uses the first row as the keys.',
-      'An idea of which columns should end up as numbers, dates or true and false — the converter will not decide that for you.'
+      'A header row, ideally. The converter uses the first row as the keys; if the file has none, set First row is a header to No and the keys become column1, column2 and so on.',
+      'An idea of which columns should end up as numbers, dates or true and false — by default the converter keeps every value as text, and it never guesses dates.'
     ],
     steps: [
       {
@@ -1859,7 +1859,7 @@ const GUIDES = [
       {
         name: 'Turn the strings into the types you need',
         body: [
-          { p: 'CSV has no types: it cannot say whether 29500 is a number or a code that happens to be made of digits. So the converter keeps every value as a string, which is the safe choice — a PIN code of 007 or a phone number starting with 0 survives intact. Where a column really is a number, convert it in the program that reads the JSON, and decide there what an empty string should become: zero, null, or an error.' },
+          { p: 'CSV has no types: it cannot say whether 29500 is a number or a code that happens to be made of digits. So by default the converter keeps every value as a string, which is the safe choice — a PIN code of 007 or a phone number starting with 0 survives intact. Its Infer types option turns plain numbers, true, false and null into JSON types while leaving 007 as text, but it cannot tell a code made of digits from a quantity. Where a column really is a number, convert it in the program that reads the JSON, and decide there what an empty string should become: zero, null, or an error.' },
           { p: 'Keep the trailing zero in mind. "1180.50" as a string still has it; the number 1180.5 does not. For money, that is a formatting question rather than a change of value, but it matters if the figure is later compared as text.' }
         ]
       },
@@ -1879,7 +1879,7 @@ const GUIDES = [
       { name: 'Opening and saving the file in a spreadsheet first', text: 'Spreadsheets can strip leading zeros, turn long numbers into scientific notation and rewrite dates in their own format. If the CSV came from a system, paste it as it is rather than round-tripping it through a spreadsheet.' }
     ],
     faq: [
-      { q: 'Does the CSV need a header row?', a: 'Yes. The first row becomes the keys. If a header cell is empty, the converter names that column column1, column2 and so on by its position.' },
+      { q: 'Does the CSV need a header row?', a: 'No, but it helps. With a header, the first row becomes the keys, and an empty header cell is named column1, column2 and so on by its position. Without one, set First row is a header to No and every column is named that way.' },
       { q: 'Can I convert JSON back to CSV?', a: 'Yes. Set the direction to JSON to CSV. The JSON must be an array of objects; every key that appears in any object becomes a column, so rows with missing fields still line up.' },
       { q: 'Why are my numbers in quotes?', a: 'Because CSV does not say which values are numbers. Keeping them as strings protects codes with leading zeros; convert the real numbers in the program that reads the JSON.' },
       { q: 'Is my data uploaded?', a: 'No. The conversion runs inside the page on your own device, and the text never leaves it — which matters for customer lists and exports with personal details in them.' },

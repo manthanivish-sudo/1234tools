@@ -1,0 +1,42 @@
+{
+  "id": "/social/caption-counter/",
+  "name": "Caption Counter — 1234Tools",
+  "short_name": "Caption Counter",
+  "description": "Check a caption against the limits of Instagram, X, LinkedIn, TikTok, YouTube, Facebook and Threads at once, counted the way each platform counts: X’s weighted count, emoji, hashtags, mentions and links. Fixes Instagram line breaks. Nothing is uploaded.",
+  "start_url": "/social/caption-counter/?src=pwa",
+  "scope": "/social/caption-counter/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "social",
+    "photo"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-social-count.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-social-count-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-social-count-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

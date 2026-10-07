@@ -1187,10 +1187,13 @@ async function captureIn(session, toolPath, spec, opts) {
       page = await newPage(session);
       const c = { session, page, spec, tool, dir, base: session.base, url: session.base + tool, notes };
       session.log('capture ' + tool + ' (' + kind + ')');
+      /* the timer is cleared once the race is decided: left running, it held
+         the process open for its full 25 minutes after every live capture */
+      let raceTimer = null;
       const res = await Promise.race([
         DRIVERS[kind](c),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('timed out after ' + Math.round((opts.timeout || 1500000) / 60000) + ' min')), opts.timeout || 1500000))
-      ]);
+        new Promise((_, rej) => { raceTimer = setTimeout(() => rej(new Error('timed out after ' + Math.round((opts.timeout || 1500000) / 60000) + ' min')), opts.timeout || 1500000); })
+      ]).finally(() => clearTimeout(raceTimer));
       const note = [res.note].concat(notes).filter(Boolean).join('; ');
       Object.assign(out, res, { note, kind: res.kind || out.kind });
       if (page.__errors.length) out.pageErrors = page.__errors.slice(0, 5);

@@ -10,7 +10,7 @@ window.TOOLS["sgpa-to-cgpa"] = {
 "inputs": [
   {"key":"sgpa","label":"SGPA for each semester, separated by commas","type":"text","default":"8.1, 8.6, 7.9, 8.8"},
   {"key":"credits","label":"Credits per semester, same order (optional)","type":"text","default":"22, 24, 20, 24"},
-  {"key":"scaleMax","label":"Maximum on your scale","type":"number","default":10}
+  {"key":"scaleMax","label":"Maximum on your scale","type":"number","default":10,"min":1}
 ],
 "compute": function (v) {
   const parse = function (s) {
@@ -73,6 +73,7 @@ window.TOOLS["sgpa-to-cgpa"] = {
   {"key":"note","label":"","format":"text"},
   {"key":"caution","label":"","format":"text"}
 ],
+"filled": (v, r, f) => r.cgpa === undefined || !isFinite(r.cgpa) ? [] : ['CGPA = Σ(SGPA × credits) ÷ ' + f.upto(r.totalCredits, 4) + ' credits = ' + f.num(r.cgpa, 2)],
 "tips": [
   "Give the credits if you have them. A light semester and a heavy one do not contribute equally, and an unweighted average quietly flatters whichever one went better.",
   "Credits mean the semester's total credit load, not the credits for one subject.",

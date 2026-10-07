@@ -19,7 +19,17 @@ const path = require('path');
 module.exports = function ({ claim, manual, kit: K }) {
   const N = 'node';
   const S = (u) => K.calcSpec(u);
-  const R = (u, inputs) => K.calc(u, inputs);
+  /* Since wave 5 the schedules hold numbers and the page formats them with
+     the reader's currency preferences. These pages' claims read the cells
+     as the engines used to print them (₹, en-IN grouping, whole rupees), so
+     the numbers are printed that way here; the figures are the same. */
+  const PRINTED = new Set(['/india/advance-tax/', '/india/ctc-take-home/', '/india/epf-calculator/', '/india/lumpsum-returns/', '/india/ppf-calculator/']);
+  const printRow = (cols) => (x) => x.map((c, i) => (typeof c === 'number' && cols[i] === 'currency' ? c.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }) : c));
+  const R = (u, inputs) => {
+    const r = K.calc(u, inputs);
+    if (PRINTED.has(u) && r && r._table && Array.isArray(r._table.cols)) r._table = Object.assign({}, r._table, { rows: r._table.rows.map(printRow(r._table.cols)) });
+    return r;
+  };
   const near = (a, b, tol) => Math.abs(a - b) <= (tol === undefined ? 0.005 : tol);
   const src = (u) => fs.readFileSync(path.join(K.ROOT, 'engine', K.calcEngine(u).file), 'utf8');
   const keys = (u) => (S(u).inputs || []).map((i) => i.key);
@@ -324,7 +334,11 @@ module.exports = function ({ claim, manual, kit: K }) {
   /* ================================================================ */
   const IT = '/india/india-income-tax/';
   const it = (o) => R(IT, Object.assign({ gross: 1500000, fy: '2026-27', type: 'salaried', age: 'below60', deductions: 200000 }, o));
-  const itRow = (r, label) => (r._table.rows.find((x) => x[0] === label) || []);
+  /* schedule cells are numbers now, formatted by the page; these claims
+     read them as the page shows them in rupees (whole rupees, en-IN) */
+  const fmtR = (v) => (typeof v === 'number' ? v.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }) : v);
+  const rowR = (row) => (row || []).map((c, i) => (i ? fmtR(c) : c));
+  const itRow = (r, label) => rowR(r._table.rows.find((x) => x[0] === label) || []);
   /* the tax before rebate on a taxable amount, read from the table (type: other, so taxable = gross) */
   const preNew = (x) => K.num(itRow(it({ gross: x, type: 'other' }), 'Tax before rebate')[1]);
   claim(IT, 'lede', 'Compare tax under both regimes for FY 2026-27, including rebate, surcharge, cess and marginal relief.', 'both regimes, each with rebate, relief, surcharge and cess rows', N, async () => {
@@ -332,7 +346,8 @@ module.exports = function ({ claim, manual, kit: K }) {
     return [r.newRebate === 0 && r.newRelief > 0 && s.newSurcharge > 0 && r.newCess > 0 && r.newTotal > 0 && r.oldTotal > 0 && /saves/.test(r.better), r.better + '; relief ' + r.newRelief + '; surcharge on ₹60 lakh ' + s.newSurcharge];
   });
   claim(IT, 'card', 'Compare tax under both regimes for FY 2026-27, including rebate, surcharge, cess and marginal relief.', 'the rebate itself, on ₹10 lakh', N, async () => { const r = it({ gross: 1000000 }); return [r.newRebate > 0 && r.newTotal === 0, 'rebate ' + r.newRebate + ', tax ' + r.newTotal]; });
-  claim(IT, 'why', 'Enter income and deductions. See both regimes side by side.', 'one table, new and old columns', N, async () => { const r = it({}); return [j(r._table.head) === j(['', 'New regime', 'Old regime']) && r._table.rows.length === 10, r._table.head.join(' | ')]; });
+  claim(IT, 'why', 'Enter income and deductions. See both regimes side by side.', 'one table, new and old columns', N, async () => { const r = it({}); const labels = r._table.rows.map((x) => x[0]); return [j(r._table.head) === j(['', 'New regime', 'Old regime']) && ['Taxable income', 'Total tax payable', 'Income after tax'].every((l) => labels.indexOf(l) >= 0), r._table.head.join(' | ') + '; ' + labels.length + ' rows'];
+  });
   claim(IT, 'what', 'The new regime has lower rates and few deductions; the old regime has higher rates but allows 80C, 80D, HRA and home-loan interest.', 'deductions reduce only the old regime', N, async () => {
     const a = it({ deductions: 0 }), b = it({ deductions: 300000 });
     return [a.newTotal === b.newTotal && b.oldTotal < a.oldTotal && /80C, 80D, HRA/.test(input(IT, 'deductions').label), [a.newTotal, b.newTotal, a.oldTotal, b.oldTotal].join(', ')];
@@ -406,9 +421,9 @@ module.exports = function ({ claim, manual, kit: K }) {
     return [ok, [o(300000, 'senior'), o(310000, 'senior'), o(500000, 'super'), o(510000, 'super'), o(260000, 'below60')].join(', ') + '; age option labels ' + input(IT, 'age').options.map((x) => x.label).join(', ')];
   });
   claim(IT, 'dfaq', 'A 65-year-old with ₹9 lakh of pension and ₹2 lakh of deductions pays nothing under the new regime, thanks to the rebate', 'rebate wipes the tax', N, async () => { const r = it({ gross: 900000, age: 'senior' }); return [r.newTotal === 0 && r.newRebate > 0, r.newTotal + ', rebate ' + r.newRebate]; });
-  claim(IT, 'dfaq', 'The tool does not apply marginal relief on surcharge, so check incomes just above ₹50 lakh with a CA.', '₹100 over ₹50 lakh adds a full 10% surcharge', N, async () => {
+  claim(IT, 'dfaq', 'With marginal relief, ₹100 over ₹50 lakh adds just ₹104 of tax.', '₹50,00,000 and ₹50,00,100', N, async () => {
     const a = it({ gross: 5000000, type: 'other' }), b = it({ gross: 5000100, type: 'other' });
-    return [b.newTotal - a.newTotal > 100000, 'tax rises by ' + Math.round(b.newTotal - a.newTotal) + ' on ₹100 more'];
+    return [near(b.newTotal - a.newTotal, 104, 1e-6) && b.newSurcharge > 0, 'tax rises by ' + (b.newTotal - a.newTotal).toFixed(2) + ' on ₹100 more'];
   });
   claim(IT, 'formula', 'tax = slab tax − 87A rebate + surcharge + 4% cess', 'old regime: rebate of up to ₹12,500 to ₹5 lakh', N, async () => {
     const a = it({ gross: 500000, type: 'other', deductions: 0 }), b = it({ gross: 500100, type: 'other', deductions: 0 });
@@ -436,8 +451,25 @@ module.exports = function ({ claim, manual, kit: K }) {
     const a = R(cg, { asset: 'equity', months: 13 }).basis, b = R(cg, { asset: 'equity', months: 6 }).basis;
     return [/u\/s 198 of the 2025 Act \(was 112A\)/.test(a) && /u\/s 196 of the 2025 Act \(was 111A\)/.test(b) && /Rebate \(s\.156, formerly 87A\)/.test(src(IT)), a + ' | ' + b];
   });
-  manual(IT, 'tip', 'The rebate does not apply to special-rate income such as capital gains under sections 196 and 198 of the 2025 Act (formerly 111A and 112A), so those remain taxable even below ₹12 lakh.', 'statement of law; the tool has no special-rate income input (the capital gains calculator charges those gains on their own)');
-  claim(IT, 'tip', 'Marginal relief stops a small rise above ₹12 lakh producing a disproportionate jump in tax. This calculator applies it.', 'relief shown and applied', N, async () => {
+  claim(IT, 'tip', 'The rebate does not apply to special-rate income such as capital gains under sections 196 and 198 of the 2025 Act (formerly 111A and 112A), so those remain taxable even below ₹12 lakh.', '₹10 lakh plus ₹1 lakh of 111A gains: the slab tax is rebated, the 20% on the gains is not', N, async () => {
+    const r = it({ gross: 1000000, type: 'other', stcg: 100000 });
+    return [r.newRebate === slabTax(1000000, NEW) && near(r.newTotal, 20000 * 1.04, 1e-9) && near(r.newGainsTax, 20000, 1e-9), r.newRebate + ', tax ' + r.newTotal];
+  });
+  /* surcharge relief by hand at each threshold, new regime, no deductions:
+     on income T + x the tax and surcharge may exceed those on T by x at most */
+  claim(IT, 'tip', 'and the same relief at each surcharge threshold: ₹50 lakh, ₹1 crore, ₹2 crore and ₹5 crore.', 'just above each threshold, both regimes', N, async () => {
+    const bad = [];
+    const slabT = (y, slabs) => slabTax(y, slabs);
+    for (const [T, rNew, rOld] of [[5000000, 0, 0], [10000000, 0.10, 0.10], [20000000, 0.15, 0.15], [50000000, 0.25, 0.25]]) {
+      const x = 1000;
+      const capNew = (slabT(T, NEW) * (1 + rNew) + x) * 1.04, capOld = (slabT(T, OLD) * (1 + rOld) + x) * 1.04;
+      const r = it({ gross: T + x, type: 'other', deductions: 0 });
+      if (!near(r.newTotal, Math.min(capNew, slabT(T + x, NEW) * 1.04 * (1 + (T >= 50000000 ? 0.25 : T >= 20000000 ? 0.25 : T >= 10000000 ? 0.15 : 0.10))), 1e-6)) bad.push('new ' + T + ': ' + r.newTotal + ' vs ' + capNew);
+      if (!near(r.oldTotal, Math.min(capOld, slabT(T + x, OLD) * 1.04 * (1 + (T >= 50000000 ? 0.37 : T >= 20000000 ? 0.25 : T >= 10000000 ? 0.15 : 0.10))), 1e-6)) bad.push('old ' + T + ': ' + r.oldTotal + ' vs ' + capOld);
+    }
+    return [!bad.length, bad.join('; ') || 'relief at ₹50 lakh, ₹1 crore, ₹2 crore and ₹5 crore'];
+  });
+  claim(IT, 'tip', 'Marginal relief stops a small rise above ₹12 lakh producing a disproportionate jump in tax. This calculator applies it', 'relief shown and applied', N, async () => {
     const r = it({ gross: 1250000, type: 'other' }); return [near(r.newRelief, slabTax(1250000, NEW) - 50000) && near(r.newTotal, 52000), 'relief ' + r.newRelief + ', tax ' + r.newTotal];
   });
   claim(IT, 'tip', 'The old regime only wins when your deductions are large. For a salaried taxpayer under 60 it takes about ₹5.5 lakh of 80C, 80D, HRA and home-loan interest combined on a ₹15 lakh salary, and about ₹7 lakh on ₹20 lakh.', 'the smallest deduction at which the old regime wins', N, async () => {
@@ -454,7 +486,7 @@ module.exports = function ({ claim, manual, kit: K }) {
   const emiRef = (p, ann, yrs) => { const r = ann / 1200, n = yrs * 12; return p * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1); };
   claim(EMI, 'lede', 'Equated monthly instalment for home, car or personal loans, with the full repayment schedule.', 'a row a year to a zero balance', N, async () => {
     const r = emi({}); const last = r._table.rows[r._table.rows.length - 1];
-    return [r._table.rows.length === 15 && last[3] === '₹0' && r.months === 180, r._table.rows.length + ' rows, last balance ' + last[3]];
+    return [r._table.rows.length === 15 && fmtR(last[3]) === '₹0' && r.months === 180, r._table.rows.length + ' rows, last balance ' + fmtR(last[3])];
   });
   claim(EMI, 'card', 'Equated monthly instalment for home, car or personal loans, with the full repayment schedule.', 'schedule principal adds up to the loan', N, async () => {
     const r = emi({ amount: 800000, rate: 10.5, years: 5 }); const sum = r._table.rows.reduce((s, x) => s + K.num(x[1]), 0);
@@ -466,7 +498,7 @@ module.exports = function ({ claim, manual, kit: K }) {
   claim(EMI, 'what', 'Each one pays that month’s interest on the balance first; the rest reduces the principal.', 'year 1 interest = Σ balance × r', N, async () => {
     let b = 2500000, int = 0; const e = emiRef(2500000, 9, 15);
     for (let m = 0; m < 12; m++) { const i = b * 0.0075; int += i; b -= e - i; }
-    const r = emi({}); return [K.num(r._table.rows[0][2]) === Math.round(int), r._table.rows[0][2] + ' vs ' + Math.round(int)];
+    const r = emi({}); return [Math.round(r._table.rows[0][2]) === Math.round(int), fmtR(r._table.rows[0][2]) + ' vs ' + Math.round(int)];
   });
   claim(EMI, 'what', 'early EMIs are mostly interest and later ones mostly principal, even though the amount never changes', 'year 1 vs year 15', N, async () => {
     const r = emi({}); const f = r._table.rows[0], l = r._table.rows[14];
@@ -480,10 +512,10 @@ module.exports = function ({ claim, manual, kit: K }) {
     const bad = cases.filter(([p, a, y]) => !near(emi({ amount: p, rate: a, years: y }).emi, emiRef(p, a, y), 1e-6));
     return [!bad.length, bad.length + ' mismatches'];
   });
-  claim(EMI, 'works', 'r = annual rate ÷ 12 ÷ 100', 'first month\'s interest', N, async () => { const r = emi({ amount: 1200000, rate: 12, years: 1 }); return [K.num(r._table.rows[0][2]) === Math.round(emiRef(1200000, 12, 1) * 12 - 1200000), r._table.rows[0][2]]; });
+  claim(EMI, 'works', 'r = annual rate ÷ 12 ÷ 100', 'first month\'s interest', N, async () => { const r = emi({ amount: 1200000, rate: 12, years: 1 }); const m = r._table.views[1].rows[0]; return [Math.round(r._table.rows[0][2]) === Math.round(emiRef(1200000, 12, 1) * 12 - 1200000) && near(m[2], 1200000 * 12 / 12 / 100, 1e-9), fmtR(r._table.rows[0][2]) + '; month 1 interest ' + m[2]]; });
   claim(EMI, 'works', 'the number of monthly instalments', 'n = years × 12, part years too', N, async () => { const a = emi({ years: 2.5 }), b = emi({ years: 20 }); return [a.months === 30 && b.months === 240, a.months + ', ' + b.months]; });
   claim(EMI, 'worked', 'Of the ₹3,04,280 paid in the first year, ₹2,21,647 goes on interest and only ₹82,633 reduces the loan.', 'the first-year split adds to twelve EMIs', N, async () => {
-    const r = emi({}); const s = K.num(r._table.rows[0][1]) + K.num(r._table.rows[0][2]);
+    const r = emi({}); const s = Math.round(r._table.rows[0][1]) + Math.round(r._table.rows[0][2]);
     return [s === 304280 && Math.abs(r.emi * 12 - 304280) < 10, s + ' (12 × EMI = ' + (r.emi * 12).toFixed(2) + ')'];
   });
   claim(EMI, 'use', 'Compare a 15-year and a 20-year term on both the instalment and the total interest before signing.', 'longer term, lower EMI, more interest', N, async () => {
@@ -503,7 +535,10 @@ module.exports = function ({ claim, manual, kit: K }) {
     let lo = 10, hi = 30; for (let k = 0; k < 60; k++) { const m = (lo + hi) / 2; if (emi({ amount: 500000, rate: m, years: 5 }).emi < flatEmi) lo = m; else hi = m; }
     return [lo > 15, '10% flat = ' + lo.toFixed(2) + '% reducing'];
   });
-  claim(EMI, 'mistake', 'Ignoring processing fees and loan insurance: neither is in the EMI, but both add to the cost.', 'no fee or insurance input', N, async () => [j(keys(EMI)) === j(['amount', 'rate', 'years', 'prepay']), keys(EMI).join(', ')]);
+  claim(EMI, 'mistake', 'Ignoring processing fees and loan insurance: neither is in the EMI, but both add to the cost.', 'a fee leaves the EMI alone and raises the yearly cost', N, async () => {
+    const a = emi({}), b = emi({ feePct: 1.18 });
+    return [a.emi === b.emi && b.fee === 2500000 * 0.0118 && b.apr > (Math.pow(1.0075, 12) - 1) * 100, 'EMI ' + Math.round(b.emi) + ', cost ' + b.apr.toFixed(3) + '%'];
+  });
   claim(EMI, 'dfaq', 'With the reducing-balance formula above, on the outstanding balance each month.', 'interest on the outstanding balance', N, async () => {
     const r = emi({ amount: 4000000, rate: 8.75, years: 25 }); return [near(r.emi, emiRef(4000000, 8.75, 25), 1e-6) && r.months === 300, Math.round(r.emi)];
   });
@@ -717,13 +752,14 @@ module.exports = function ({ claim, manual, kit: K }) {
     const a = gst({}), b = gst({ amount: 11800, mode: 'inclusive', supply: 'inter' });
     return [a.total === 11800 && a.cgst === 900 && a.sgst === 900 && a.igst === 0 && near(b.base, 10000, 1e-9) && near(b.igst, 1800, 1e-9) && b.cgst === 0, a.splitLabel + ' | ' + b.splitLabel];
   });
-  claim(GST, 'card', 'Add or remove GST at current 2026 slabs, with the CGST, SGST and IGST split for your invoice.', 'the six GST 2.0 slabs', N, async () => [optVals(GST, 'rate').join() === '0,0.25,3,5,18,40', optVals(GST, 'rate').join(', ')]);
+  const slabVals = () => optVals(GST, 'rate').filter((v) => v !== 'custom');
+  claim(GST, 'card', 'Add or remove GST at current 2026 slabs, with the CGST, SGST and IGST split for your invoice.', 'the six GST 2.0 slabs, then any other rate', N, async () => [slabVals().join() === '0,0.25,3,5,18,40' && optVals(GST, 'rate').slice(-1)[0] === 'custom', optVals(GST, 'rate').join(', ')]);
   claim(GST, 'why', 'Type the amount and rate. Get taxable value, CGST, SGST or IGST.', 'intra gives CGST + SGST, inter gives IGST', N, async () => {
     const a = gst({ rate: 5 }), b = gst({ rate: 5, supply: 'inter' }); return [a.cgst === 250 && a.sgst === 250 && a.igst === 0 && b.igst === 500 && b.cgst === 0 && a.base === 10000, a.splitLabel + ' | ' + b.splitLabel];
   });
   claim(GST, 'why', 'and 18% off is wrong', '₹11,800 inclusive is ₹10,000 taxable, not ₹9,676', N, async () => { const r = gst({ amount: 11800, mode: 'inclusive' }); return [near(r.base, 10000, 1e-9) && Math.round(11800 * 0.82) !== 10000, r.base]; });
   claim(GST, 'what', 'The seller adds it to the taxable value, collects it from the buyer', 'total = taxable value + GST', N, async () => { const r = gst({ amount: 2500, rate: 3 }); return [r.total === 2575, r.total]; });
-  claim(GST, 'what', 'The calculator offers the six GST 2.0 slabs in force since 22 September 2025: 0%, 0.25%, 3%, 5%, 18% and 40%.', 'the rate options, and the engine\'s date', N, async () => [optVals(GST, 'rate').join() === '0,0.25,3,5,18,40' && /GST 2\.0 — effective 22 September 2025/.test(src(GST)), optVals(GST, 'rate').join(', ')]);
+  claim(GST, 'what', 'The calculator offers the six GST 2.0 slabs in force since 22 September 2025: 0%, 0.25%, 3%, 5%, 18% and 40%.', 'the rate options, and the engine\'s date', N, async () => [slabVals().join() === '0,0.25,3,5,18,40' && /GST 2\.0 — effective 22 September 2025/.test(src(GST)), optVals(GST, 'rate').join(', ')]);
   claim(GST, 'works', 'Removing it divides the inclusive price by one plus the rate, since the tax was charged on the taxable value, not the total.', 'inclusive at every slab', N, async () => {
     const bad = [0, 0.25, 3, 5, 18, 40].filter((rt) => !near(gst({ amount: 50000, mode: 'inclusive', rate: rt }).base, 50000 / (1 + rt / 100), 1e-9)); return [!bad.length, bad.join(', ') || 'all slabs'];
   });
@@ -742,7 +778,7 @@ module.exports = function ({ claim, manual, kit: K }) {
   claim(GST, 'use', 'Work back from the price a customer will pay to the taxable value you keep at each slab.', 'one price, six taxable values', N, async () => {
     const v = [0, 0.25, 3, 5, 18, 40].map((rt) => gst({ amount: 1400, mode: 'inclusive', rate: rt }).base); return [v.every((x, i) => !i || x < v[i - 1]) && v[0] === 1400 && near(v[5], 1000, 1e-9), v.map((x) => x.toFixed(2)).join(', ')];
   });
-  claim(GST, 'mistake', 'Charging CGST and SGST on an inter-state sale, or IGST on a local one.', 'the supply type picks the head', N, async () => [optVals(GST, 'supply').join() === 'intra,inter' && /CGST \+ SGST/.test(input(GST, 'supply').options[0].label) && /IGST/.test(input(GST, 'supply').options[1].label), input(GST, 'supply').options.map((o) => o.label).join(' | ')]);
+  claim(GST, 'mistake', 'Charging CGST and SGST on an inter-state sale, or IGST on a local one.', 'the supply type picks the head', N, async () => [optVals(GST, 'supply').join() === 'intra,inter,ut' && /CGST \+ SGST/.test(input(GST, 'supply').options[0].label) && /IGST/.test(input(GST, 'supply').options[1].label) && /CGST \+ UTGST/.test(input(GST, 'supply').options[2].label), input(GST, 'supply').options.map((o) => o.label).join(' | ')]);
   manual(GST, 'mistake', 'Tax paid under the wrong head is not moved across: it is paid again under the right head and the wrong one refunded.', 'statement of GST law; not something the tool works out');
   claim(GST, 'mistake', 'Leaving an old billing template on 12% or 28%. Neither slab exists under GST 2.0', 'no 12% or 28% option', N, async () => [optVals(GST, 'rate').indexOf('12') < 0 && optVals(GST, 'rate').indexOf('28') < 0, optVals(GST, 'rate').join(', ')]);
   claim(GST, 'dfaq', 'Gold, silver and jewellery are at 3% under GST 2.0.', 'the 3% option names them', N, async () => { const o = input(GST, 'rate').options.find((x) => x.value === 3); return [!!o && /gold, silver, jewellery/.test(o.label), o && o.label]; });
@@ -979,7 +1015,7 @@ module.exports = function ({ claim, manual, kit: K }) {
   claim(SIP, 'works', 'With a step-up, the instalment rises after every twelfth payment.', 'months 12 and 13', N, async () => { const a = sip({ monthly: 1000, rate: 0, years: 1, stepup: 50 }), b = sip({ monthly: 1000, rate: 0, years: 13 / 12, stepup: 50 }); return [a.invested === 12000 && b.invested === 13500, a.invested + ', ' + b.invested]; });
   claim(SIP, 'works', 'FV = P × ((1 + i)ⁿ − 1) ÷ i × (1 + i)', 'several inputs', N, async () => { const bad = [[500, 8, 3], [20000, 12, 15], [10000, 12, 25], [7777, 14.5, 30]].filter(([p, rt, y]) => !near(sip({ monthly: p, rate: rt, years: y }).value, sipRef(p, rt, y), 1e-6)); return [!bad.length, bad.length + ' mismatches']; });
   claim(SIP, 'works', 'with step-up s: instalment in year k = P × (1 + s)ᵏ⁻¹', 'final instalment', N, async () => { const r = sip({ monthly: 15000, years: 10, stepup: 5 }); return [near(r.finalMonthly, 15000 * Math.pow(1.05, 9), 1e-6), r.finalMonthly]; });
-  claim(SIP, 'worked', 'After the first year ₹1,80,000 has gone in and is worth ₹1,91,094.', 'year-1 row', N, async () => { const r = sip({ monthly: 15000, rate: 11, years: 10, stepup: 5 }); return [r._table.rows[0][1] === '₹1,80,000' && r._table.rows[0][2] === '₹1,91,094', r._table.rows[0].join(' | ')]; });
+  claim(SIP, 'worked', 'After the first year ₹1,80,000 has gone in and is worth ₹1,91,094.', 'year-1 row', N, async () => { const r = sip({ monthly: 15000, rate: 11, years: 10, stepup: 5 }); const row = rowR(r._table.rows[0]); return [row[1] === '₹1,80,000' && row[2] === '₹1,91,094', row.join(' | ')]; });
   claim(SIP, 'use', 'Find the monthly amount that reaches a target, such as a home down payment, in a set number of years.', 'value in proportion to the instalment, so the amount scales to the target', N, async () => { const a = sip({ monthly: 10000, years: 5 }), b = sip({ monthly: 25000, years: 5 }); return [near(b.value, 2.5 * a.value, 1e-6), Math.round(a.value) + ', ' + Math.round(b.value)]; });
   claim(SIP, 'use', 'Compare a flat SIP with one that rises 5% or 10% a year before you set it up.', '0, 5, 10%', N, async () => { const v = [0, 5, 10].map((s) => sip({ stepup: s }).value); return [v[0] < v[1] && v[1] < v[2], v.map(Math.round).join(', ')]; });
   claim(SIP, 'use', 'Check whether your fund’s value is ahead of or behind what your assumed return implies.', 'the year-by-year value', N, async () => { const r = sip({}); return [r._table.rows.length === 15 && j(r._table.head) === j(['Year', 'Invested', 'Value', 'Gain']), r._table.head.join(', ')]; });

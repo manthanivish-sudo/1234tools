@@ -74,7 +74,7 @@ jobs:
           fi
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/rates.json
+          git add assets/rates.json assets/rates-history.json
           git commit ${ALLOW_EMPTY:-} -m "$MSG"
           # The concurrency group keeps this job from racing itself, but not from
           # racing a hand push -- and this branch is deployed by hand regularly.

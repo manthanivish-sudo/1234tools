@@ -285,9 +285,9 @@ module.exports = {
       text: 'Both directions run in plain JavaScript; the CSV side reads one character at a time rather than splitting on commas.',
       points: [
         'Quotes are tracked, so a quoted comma or line break stays in its field and "" becomes one quote.',
-        'The first row is the header; every value stays a string, and short rows are padded with empty strings.',
+        'The first row is the header unless set otherwise; values stay strings unless Infer types is on, and short rows are padded with empty strings.',
         'The array is written with `JSON.stringify` at a 2-space indent, though Output measures it without the indent.',
-        'JSON to CSV uses the union of every object’s keys as columns and quotes values containing the delimiter, a quote or a line break.'
+        'JSON to CSV uses the union of every object’s keys as columns, nested objects as dotted names, and quotes values containing the delimiter, a quote or a line break.'
       ]
     },
     worked: {
@@ -299,7 +299,7 @@ module.exports = {
       ['Opening JSON in Excel', 'Flatten an API export into CSV so a colleague can sort and filter it.']
     ],
     mistakes: [
-      'Converting nested JSON to CSV. Arrays become comma-joined text and objects become the literal [object Object]; flatten nested fields into keys of their own first.',
+      'Expecting nested JSON back unchanged. An addr object becomes an addr.city column and returns flat, "addr.city": "York", unless Dotted headers is Nest a.b into objects.',
       'Double-clicking a UTF-8 CSV to open it in Excel, which can garble accents. Import it through Data, From Text/CSV instead.'
     ],
     faq: [
@@ -313,8 +313,9 @@ module.exports = {
       { input: '[{"sku":"BK-101","title":"Oak shelf, 80 cm","qty":4},{"sku":"BK-102","title":"Wall hook \\"S\\" type","price":3.5}]', options: { dir: 'j2c' }, check: [['output', 'sku,title,qty,price'], ['output', '"Oak shelf, 80 cm"'], ['output', '"Wall hook ""S"" type"'], ['stat:Columns', '4'], ['stat:Rows', '2']] },
       /* that CSV pasted back, Direction: CSV → JSON */
       { input: 'sku,title,qty,price\nBK-101,"Oak shelf, 80 cm",4,\nBK-102,"Wall hook ""S"" type",,3.5', check: [['output', '"qty": "4"'], ['output', '"price": ""']] },
-      /* the mistake: nested values, JSON → CSV */
-      { input: '[{"id":7,"tags":["a","b"],"addr":{"city":"York"}}]', options: { dir: 'j2c' }, check: [['output', '[object Object]']] },
+      /* the mistake: a nested object, JSON → CSV, then back with the default settings */
+      { input: '[{"addr":{"city":"York"}}]', options: { dir: 'j2c' }, check: [['output', 'addr.city']] },
+      { input: 'addr.city\nYork', check: [['output', '"addr.city": "York"']] },
       /* the FAQ: a long row and a short row */
       { input: 'a,b\n1,2,3\n4', check: [['stat:Data rows', '2'], ['stat:Columns', '2']] }
     ]
@@ -716,12 +717,12 @@ module.exports = {
       text: 'The file is assembled from the four settings in plain JavaScript; nothing is fetched from your site or checked against it.',
       points: [
         'Block all crawlers writes User-agent: * and Disallow: / and nothing more.',
-        'Allow all writes User-agent: * and Allow: / and ignores the exclusion list. Only Allow, with exclusions below turns each path into a Disallow line, adding a leading / where one is missing.',
+        'Allow all, except the paths below writes User-agent: *, a Disallow line for each excluded path, adding a leading / where one is missing, then Allow: /.',
         'Blocking AI crawlers adds a group with Disallow: / for each of seven agents: GPTBot, CCBot, Google-Extended, anthropic-ai, ClaudeBot, PerplexityBot and Bytespider.'
       ]
     },
     worked: {
-      text: 'A shop wants its basket, internal search and sorted listings out of the crawl. Entering /basket/, search? and /*?sort= under the default policy gives Rules 1 and no Disallow line at all, because the list is used only with Allow, with exclusions below. With that policy and AI crawlers blocked, the file has Rules 11, Named agents 8 and 409 B, and search? is written as Disallow: /search?. The Allow: / line under the exclusions does not cancel them: /basket/ is the longer, more specific match.'
+      text: 'A shop wants its basket, internal search and sorted listings out of the crawl. Entering /basket/, search? and /*?sort= under the default policy gives Rules 4: three Disallow lines and Allow: /. With AI crawlers blocked and the shop’s own sitemap, the file has Rules 11, Named agents 8 and 409 B, and search? is written as Disallow: /search?. The Allow: / line under the exclusions does not cancel them: /basket/ is the longer, more specific match.'
     },
     uses: [
       ['Faceted navigation', 'Stop endless sort and filter URLs eating a shop’s crawl budget.'],
@@ -738,10 +739,10 @@ module.exports = {
       { q: 'Is there a size limit for robots.txt?', a: 'RFC 9309 says a crawler that sets a parsing limit must make it at least 500 kibibytes. Google ignores anything past 500 KiB.' }
     ],
     runs: [
-      /* Default policy: Allow all crawlers, exclusions /basket/, search?, /*?sort=, default sitemap, AI crawlers allowed */
-      { fields: { policy: 'allow', disallow: '/basket/\nsearch?\n/*?sort=' }, check: [['stat:Rules', '1']] },
-      /* Default policy: Allow, with exclusions below; AI training crawlers: Block; Sitemap https://shop.example/sitemap.xml */
-      { fields: { policy: 'custom', disallow: '/basket/\nsearch?\n/*?sort=', aibots: 'block', sitemap: 'https://shop.example/sitemap.xml' }, check: [['stat:Rules', '11'], ['stat:Named agents', '8'], ['stat:Size', '409 B'], ['output', 'Disallow: /search?']] },
+      /* Default policy: Allow all, except the paths below; exclusions /basket/, search?, /*?sort=, default sitemap, AI crawlers allowed */
+      { fields: { policy: 'allow', disallow: '/basket/\nsearch?\n/*?sort=' }, check: [['stat:Rules', '4']] },
+      /* the same; AI training crawlers: Block; Sitemap https://shop.example/sitemap.xml */
+      { fields: { policy: 'allow', disallow: '/basket/\nsearch?\n/*?sort=', aibots: 'block', sitemap: 'https://shop.example/sitemap.xml' }, check: [['stat:Rules', '11'], ['stat:Named agents', '8'], ['stat:Size', '409 B'], ['output', 'Disallow: /search?']] },
       /* the "How it works" point: Block all crawlers with the default sitemap and AI crawlers blocked */
       { fields: { policy: 'block', aibots: 'block' }, check: [['stat:Rules', '1'], ['stat:Named agents', '1']] }
     ]
@@ -799,7 +800,7 @@ module.exports = {
       points: [
         'Component scope uses `encodeURIComponent`, which escapes everything except letters, digits and - _ . ! ~ * \' ( ).',
         'Full URL scope uses `encodeURI`, which also leaves ; , / ? : @ & = + $ # alone.',
-        'Decoding uses `decodeURIComponent` or `decodeURI`. Neither turns + into a space.',
+        'Decoding uses `decodeURIComponent` or `decodeURI`; Treat + as space first turns + into spaces, by default in Component scope only.',
         'A % without two hex digits after it, or bytes that are not valid UTF-8, stop decoding with an error. Input and Output are UTF-8 byte counts.'
       ]
     },
@@ -812,7 +813,7 @@ module.exports = {
       ['Reading logs', 'Decode a request path from an access log to see what was really asked for.']
     ],
     mistakes: [
-      'Expecting + to decode as a space. Decoding follows JavaScript’s decodeURIComponent, so q=fish+chips%20to%20go comes back as q=fish+chips to go; swap + for %20 first when the text came from a form.',
+      'Decoding a form’s address in Full URL scope, which keeps +: q=fish+chips%20to%20go comes back as q=fish+chips to go. Set Treat + as space to Yes for q=fish chips to go.',
       'Decoding text with a bare percent sign. 100% sure is not valid encoding, and the tool stops with "Malformed percent-encoding"; a literal % is written %25.'
     ],
     faq: [
@@ -826,7 +827,8 @@ module.exports = {
       /* Direction: Encode, Scope: Component */
       { input: 'fish & chips', check: [['output', 'fish%20%26%20chips']] },
       /* the mistakes, Direction: Decode */
-      { input: 'q=fish+chips%20to%20go', options: { dir: 'dec' }, check: [['output', 'q=fish+chips to go']] },
+      { input: 'q=fish+chips%20to%20go', options: { dir: 'dec', scope: 'full' }, check: [['output', 'q=fish+chips to go']] },
+      { input: 'q=fish+chips%20to%20go', options: { dir: 'dec', scope: 'full', plus: 'yes' }, check: [['output', 'q=fish chips to go']] },
       { input: '100% sure', options: { dir: 'dec' }, check: [['error', 'Malformed percent-encoding']] },
       /* the FAQ, Component scope */
       { input: 'café ☕', check: [['output', 'caf%C3%A9%20%E2%98%95'], ['stat:Input', '9 B'], ['stat:Output', '21 B']] },

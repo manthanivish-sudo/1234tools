@@ -85,7 +85,7 @@ module.exports = {
     ],
     faq: [
       { q: 'How much does a 1% rise in the rate add to a mortgage payment?', a: 'On £200,000 over 25 years, the payment is £1,111.66 a month at 4.5% and £1,228.17 at 5.5%. Over the full term the interest grows from £133,499.49 to £168,452.50.' },
-      { q: 'What does a 0% loan cost each month?', a: 'The amount divided by the number of months: £18,000 over five years is £300 a month, with nothing added. Check for an arrangement fee, which this tool does not include.' },
+      { q: 'What does a 0% loan cost each month?', a: 'The amount divided by the number of months: £18,000 over five years is £300 a month, with nothing added. Enter any arrangement fee under Fees and APR to see the APR.' },
       { q: 'Can I work out how much I can borrow from a payment I can afford?', a: 'Not directly. Try amounts until the payment matches your budget; at a fixed rate and term the payment scales in proportion, so halving the loan halves it.' }
     ],
     checks: [

@@ -1,5 +1,2102 @@
 (function(){
 /**
+ * PDF Standard Security Handler — opening and writing encrypted PDFs, in pure
+ * synchronous JavaScript with no dependencies.
+ *
+ * Covers the whole of the Standard handler as PDF 1.x and 2.0 define it:
+ *   V1/V2  RC4, 40 to 128 bit (revisions 2 and 3)
+ *   V4     crypt filters: StdCF with CFM V2 (RC4), AESV2 (AES-128) or None,
+ *          the Identity filter, and EncryptMetadata false (revision 4)
+ *   V5     AESV3 (AES-256), revision 5 (the withdrawn Adobe extension) and
+ *          revision 6 (ISO 32000-2, algorithm 2.B)
+ * It writes AES-128 (V4 R4) and AES-256 (V5 R6). RC4 is read but never
+ * written: it has been broken for years.
+ *
+ * Everything works on Uint8Array and is synchronous, because it runs both in
+ * a Web Worker and in Node. AES is table-driven (four 256-entry T-tables for
+ * each direction) and the CBC loops allocate nothing per block, so a 100 MB
+ * document's streams decrypt in well under a second or two.
+ *
+ * This file is concatenated after pdfcore.js into a browser bundle, so all of
+ * it lives inside the single PDFCrypt declaration below.
+ */
+const PDFCrypt = (function () {
+  'use strict';
+
+  /* ============================================================
+     Byte helpers
+     ============================================================ */
+
+  const EMPTY = new Uint8Array(0);
+  const ZERO_IV = new Uint8Array(16);
+
+  function toU8(v) {
+    if (v instanceof Uint8Array) return v;
+    if (v == null) return EMPTY;
+    if (ArrayBuffer.isView(v)) return new Uint8Array(v.buffer, v.byteOffset, v.byteLength);
+    if (v instanceof ArrayBuffer) return new Uint8Array(v);
+    if (Array.isArray(v)) return Uint8Array.from(v);
+    if (typeof v === 'string') {
+      const a = new Uint8Array(v.length);
+      for (let i = 0; i < v.length; i++) a[i] = v.charCodeAt(i) & 0xff;
+      return a;
+    }
+    throw new TypeError('Expected bytes (a Uint8Array)');
+  }
+
+  function concat() {
+    let len = 0;
+    for (let i = 0; i < arguments.length; i++) len += arguments[i].length;
+    const out = new Uint8Array(len);
+    let p = 0;
+    for (let i = 0; i < arguments.length; i++) { out.set(arguments[i], p); p += arguments[i].length; }
+    return out;
+  }
+
+  function sameBytes(a, b, n) {
+    if (a.length < n || b.length < n) return false;
+    let diff = 0;
+    for (let i = 0; i < n; i++) diff |= a[i] ^ b[i];
+    return diff === 0;
+  }
+
+  function hex(bytes) {
+    let s = '';
+    for (let i = 0; i < bytes.length; i++) s += (bytes[i] < 16 ? '0' : '') + bytes[i].toString(16);
+    return s;
+  }
+
+  /* Pads a hash input's tail and feeds it, plus every whole block before it,
+     to a compression function. Whole blocks are read straight from the
+     input, so hashing a large buffer does not copy it. */
+  function runHash(bytes, blockSize, lenBytes, bigEndian, compress, state) {
+    const n = bytes.length;
+    const full = n - (n % blockSize);
+    for (let off = 0; off < full; off += blockSize) compress(state, bytes, off);
+    const rem = n - full;
+    const tailLen = rem + 1 + lenBytes <= blockSize ? blockSize : 2 * blockSize;
+    const tail = new Uint8Array(tailLen);
+    tail.set(bytes.subarray(full));
+    tail[rem] = 0x80;
+    const lo = ((n % 0x20000000) * 8) >>> 0;     // bit length, low 32 bits
+    const hi = Math.floor(n / 0x20000000);       // and the bits above them
+    if (bigEndian) {
+      writeBE(tail, tailLen - 4, lo);
+      writeBE(tail, tailLen - 8, hi);
+    } else {
+      writeLE(tail, tailLen - 8, lo);
+      writeLE(tail, tailLen - 4, hi);
+    }
+    for (let off = 0; off < tailLen; off += blockSize) compress(state, tail, off);
+  }
+
+  function writeBE(b, p, v) { b[p] = v >>> 24; b[p + 1] = (v >>> 16) & 255; b[p + 2] = (v >>> 8) & 255; b[p + 3] = v & 255; }
+  function writeLE(b, p, v) { b[p] = v & 255; b[p + 1] = (v >>> 8) & 255; b[p + 2] = (v >>> 16) & 255; b[p + 3] = v >>> 24; }
+
+  /* ============================================================
+     MD5 (RFC 1321)
+     ============================================================ */
+
+  const MD5_K = Int32Array.from([
+    0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee, 0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
+    0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be, 0x6b901122, 0xfd987193, 0xa679438e, 0x49b40821,
+    0xf61e2562, 0xc040b340, 0x265e5a51, 0xe9b6c7aa, 0xd62f105d, 0x02441453, 0xd8a1e681, 0xe7d3fbc8,
+    0x21e1cde6, 0xc33707d6, 0xf4d50d87, 0x455a14ed, 0xa9e3e905, 0xfcefa3f8, 0x676f02d9, 0x8d2a4c8a,
+    0xfffa3942, 0x8771f681, 0x6d9d6122, 0xfde5380c, 0xa4beea44, 0x4bdecfa9, 0xf6bb4b60, 0xbebfbc70,
+    0x289b7ec6, 0xeaa127fa, 0xd4ef3085, 0x04881d05, 0xd9d4d039, 0xe6db99e5, 0x1fa27cf8, 0xc4ac5665,
+    0xf4292244, 0x432aff97, 0xab9423a7, 0xfc93a039, 0x655b59c3, 0x8f0ccc92, 0xffeff47d, 0x85845dd1,
+    0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1, 0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391
+  ].map(x => x | 0));
+  const MD5_S = [7, 12, 17, 22, 5, 9, 14, 20, 4, 11, 16, 23, 6, 10, 15, 21];
+  const MD5_M = new Int32Array(16);
+
+  function md5Compress(st, b, off) {
+    const M = MD5_M;
+    for (let i = 0; i < 16; i++) {
+      const p = off + 4 * i;
+      M[i] = b[p] | (b[p + 1] << 8) | (b[p + 2] << 16) | (b[p + 3] << 24);
+    }
+    let a = st[0], bb = st[1], c = st[2], d = st[3];
+    for (let i = 0; i < 64; i++) {
+      let f, g;
+      if (i < 16) { f = (bb & c) | (~bb & d); g = i; }
+      else if (i < 32) { f = (d & bb) | (~d & c); g = (5 * i + 1) & 15; }
+      else if (i < 48) { f = bb ^ c ^ d; g = (3 * i + 5) & 15; }
+      else { f = c ^ (bb | ~d); g = (7 * i) & 15; }
+      const x = (a + f + MD5_K[i] + M[g]) | 0;
+      const s = MD5_S[((i >> 4) << 2) | (i & 3)];
+      a = d; d = c; c = bb;
+      bb = (bb + ((x << s) | (x >>> (32 - s)))) | 0;
+    }
+    st[0] = (st[0] + a) | 0; st[1] = (st[1] + bb) | 0;
+    st[2] = (st[2] + c) | 0; st[3] = (st[3] + d) | 0;
+  }
+
+  function md5(input) {
+    const st = Int32Array.from([0x67452301, 0xefcdab89 | 0, 0x98badcfe | 0, 0x10325476]);
+    runHash(toU8(input), 64, 8, false, md5Compress, st);
+    const out = new Uint8Array(16);
+    for (let i = 0; i < 4; i++) writeLE(out, 4 * i, st[i]);
+    return out;
+  }
+
+  /* ============================================================
+     SHA-256, SHA-384, SHA-512 (FIPS 180-4)
+
+     The round constants are the fractional parts of the cube roots of the
+     first 80 primes, and the initial values those of the square roots. They
+     are derived here with exact integer roots rather than typed out, which
+     removes the chance of a transcription slip; SHA-256's constants are the
+     top 32 bits of SHA-512's.
+     ============================================================ */
+
+  let K512 = null, K256 = null, H512 = null, H384 = null, H256 = null;
+  let W512 = null, W256 = null;
+
+  function initSha() {
+    if (K512) return;
+    const B = (x) => BigInt(x);
+    const iroot = (n, k) => {                     // floor(n^(1/k)) by Newton
+      let x = B(1) << B(Math.ceil(n.toString(2).length / k) + 1);
+      const kk = B(k), k1 = B(k - 1);
+      for (;;) {
+        const y = (k1 * x + n / (x ** k1)) / kk;
+        if (y >= x) return x;
+        x = y;
+      }
+    };
+    const primes = [];
+    for (let c = 2; primes.length < 80; c++) {
+      let isPrime = true;
+      for (const p of primes) { if (p * p > c) break; if (c % p === 0) { isPrime = false; break; } }
+      if (isPrime) primes.push(c);
+    }
+    const M32 = B(0xffffffff), M64 = (B(1) << B(64)) - B(1);
+    const split = (arr, i, v) => { arr[2 * i] = Number((v >> B(32)) & M32) | 0; arr[2 * i + 1] = Number(v & M32) | 0; };
+    K512 = new Int32Array(160);
+    K256 = new Int32Array(64);
+    for (let i = 0; i < 80; i++) {
+      const v = iroot(B(primes[i]) << B(192), 3) & M64;
+      split(K512, i, v);
+      if (i < 64) K256[i] = K512[2 * i];
+    }
+    H512 = new Int32Array(16); H384 = new Int32Array(16); H256 = new Int32Array(8);
+    for (let i = 0; i < 8; i++) {
+      split(H512, i, iroot(B(primes[i]) << B(128), 2) & M64);
+      split(H384, i, iroot(B(primes[i + 8]) << B(128), 2) & M64);
+      H256[i] = H512[2 * i];
+    }
+    W512 = new Int32Array(160);
+    W256 = new Int32Array(64);
+  }
+
+  function sha256Compress(st, b, off) {
+    const W = W256, K = K256;
+    for (let t = 0; t < 16; t++) {
+      const p = off + 4 * t;
+      W[t] = (b[p] << 24) | (b[p + 1] << 16) | (b[p + 2] << 8) | b[p + 3];
+    }
+    for (let t = 16; t < 64; t++) {
+      const x = W[t - 15], y = W[t - 2];
+      const s0 = ((x >>> 7) | (x << 25)) ^ ((x >>> 18) | (x << 14)) ^ (x >>> 3);
+      const s1 = ((y >>> 17) | (y << 15)) ^ ((y >>> 19) | (y << 13)) ^ (y >>> 10);
+      W[t] = (W[t - 16] + s0 + W[t - 7] + s1) | 0;
+    }
+    let a = st[0], bb = st[1], c = st[2], d = st[3], e = st[4], f = st[5], g = st[6], h = st[7];
+    for (let t = 0; t < 64; t++) {
+      const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (h + S1 + ch + K[t] + W[t]) | 0;
+      const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+      const maj = (a & bb) ^ (a & c) ^ (bb & c);
+      h = g; g = f; f = e; e = (d + t1) | 0;
+      d = c; c = bb; bb = a; a = (t1 + S0 + maj) | 0;
+    }
+    st[0] = (st[0] + a) | 0; st[1] = (st[1] + bb) | 0; st[2] = (st[2] + c) | 0; st[3] = (st[3] + d) | 0;
+    st[4] = (st[4] + e) | 0; st[5] = (st[5] + f) | 0; st[6] = (st[6] + g) | 0; st[7] = (st[7] + h) | 0;
+  }
+
+  function sha256(input) {
+    initSha();
+    const st = Int32Array.from(H256);
+    runHash(toU8(input), 64, 8, true, sha256Compress, st);
+    const out = new Uint8Array(32);
+    for (let i = 0; i < 8; i++) writeBE(out, 4 * i, st[i]);
+    return out;
+  }
+
+  /* 64-bit words are held as (high, low) pairs of signed 32-bit integers.
+     Sums of low halves are taken as unsigned doubles (exact below 2^53) and
+     the carry moved into the high half. */
+  const TWO32 = 4294967296;
+
+  function sha512Compress(st, b, off) {
+    const W = W512, K = K512;
+    for (let t = 0; t < 32; t++) {
+      const p = off + 4 * t;
+      W[t] = (b[p] << 24) | (b[p + 1] << 16) | (b[p + 2] << 8) | b[p + 3];
+    }
+    for (let t = 16; t < 80; t++) {
+      let xh = W[2 * (t - 15)], xl = W[2 * (t - 15) + 1];
+      const s0h = ((xh >>> 1) | (xl << 31)) ^ ((xh >>> 8) | (xl << 24)) ^ (xh >>> 7);
+      const s0l = ((xl >>> 1) | (xh << 31)) ^ ((xl >>> 8) | (xh << 24)) ^ ((xl >>> 7) | (xh << 25));
+      xh = W[2 * (t - 2)]; xl = W[2 * (t - 2) + 1];
+      const s1h = ((xh >>> 19) | (xl << 13)) ^ ((xl >>> 29) | (xh << 3)) ^ (xh >>> 6);
+      const s1l = ((xl >>> 19) | (xh << 13)) ^ ((xh >>> 29) | (xl << 3)) ^ ((xl >>> 6) | (xh << 26));
+      const lo = (s1l >>> 0) + (W[2 * (t - 7) + 1] >>> 0) + (s0l >>> 0) + (W[2 * (t - 16) + 1] >>> 0);
+      const hi = s1h + W[2 * (t - 7)] + s0h + W[2 * (t - 16)] + Math.floor(lo / TWO32);
+      W[2 * t] = hi | 0;
+      W[2 * t + 1] = lo | 0;
+    }
+    let ah = st[0], al = st[1], bh = st[2], bl = st[3], ch = st[4], cl = st[5], dh = st[6], dl = st[7];
+    let eh = st[8], el = st[9], fh = st[10], fl = st[11], gh = st[12], gl = st[13], hh = st[14], hl = st[15];
+    for (let t = 0; t < 80; t++) {
+      const S1h = ((eh >>> 14) | (el << 18)) ^ ((eh >>> 18) | (el << 14)) ^ ((el >>> 9) | (eh << 23));
+      const S1l = ((el >>> 14) | (eh << 18)) ^ ((el >>> 18) | (eh << 14)) ^ ((eh >>> 9) | (el << 23));
+      const chh = (eh & fh) ^ (~eh & gh), chl = (el & fl) ^ (~el & gl);
+      let lo = (hl >>> 0) + (S1l >>> 0) + (chl >>> 0) + (K[2 * t + 1] >>> 0) + (W[2 * t + 1] >>> 0);
+      const t1h = (hh + S1h + chh + K[2 * t] + W[2 * t] + Math.floor(lo / TWO32)) | 0;
+      const t1l = lo | 0;
+      const S0h = ((ah >>> 28) | (al << 4)) ^ ((al >>> 2) | (ah << 30)) ^ ((al >>> 7) | (ah << 25));
+      const S0l = ((al >>> 28) | (ah << 4)) ^ ((ah >>> 2) | (al << 30)) ^ ((ah >>> 7) | (al << 25));
+      const mjh = (ah & bh) ^ (ah & ch) ^ (bh & ch), mjl = (al & bl) ^ (al & cl) ^ (bl & cl);
+      hh = gh; hl = gl; gh = fh; gl = fl; fh = eh; fl = el;
+      lo = (dl >>> 0) + (t1l >>> 0);
+      eh = (dh + t1h + Math.floor(lo / TWO32)) | 0; el = lo | 0;
+      dh = ch; dl = cl; ch = bh; cl = bl; bh = ah; bl = al;
+      lo = (t1l >>> 0) + (S0l >>> 0) + (mjl >>> 0);
+      ah = (t1h + S0h + mjh + Math.floor(lo / TWO32)) | 0; al = lo | 0;
+    }
+    const add = (i, h, l) => {
+      const lo = (st[i + 1] >>> 0) + (l >>> 0);
+      st[i] = (st[i] + h + Math.floor(lo / TWO32)) | 0;
+      st[i + 1] = lo | 0;
+    };
+    add(0, ah, al); add(2, bh, bl); add(4, ch, cl); add(6, dh, dl);
+    add(8, eh, el); add(10, fh, fl); add(12, gh, gl); add(14, hh, hl);
+  }
+
+  function sha512Family(input, init, outLen) {
+    initSha();
+    const st = Int32Array.from(init);
+    runHash(toU8(input), 128, 16, true, sha512Compress, st);
+    const full = new Uint8Array(64);
+    for (let i = 0; i < 16; i++) writeBE(full, 4 * i, st[i]);
+    return outLen === 64 ? full : full.slice(0, outLen);
+  }
+
+  function sha384(input) { initSha(); return sha512Family(input, H384, 48); }
+  function sha512(input) { initSha(); return sha512Family(input, H512, 64); }
+
+  /* ============================================================
+     RC4
+     ============================================================ */
+
+  function rc4(key, data) {
+    const k = toU8(key), d = toU8(data);
+    if (!k.length) throw new Error('RC4 needs a key of at least one byte');
+    const S = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) S[i] = i;
+    for (let i = 0, j = 0; i < 256; i++) {
+      j = (j + S[i] + k[i % k.length]) & 255;
+      const t = S[i]; S[i] = S[j]; S[j] = t;
+    }
+    const out = new Uint8Array(d.length);
+    let i = 0, j = 0;
+    for (let n = 0; n < d.length; n++) {
+      i = (i + 1) & 255;
+      const si = S[i];
+      j = (j + si) & 255;
+      const sj = S[j];
+      S[i] = sj; S[j] = si;
+      out[n] = d[n] ^ S[(si + sj) & 255];
+    }
+    return out;
+  }
+
+  /* ============================================================
+     AES (FIPS 197) with T-tables, plus CBC and single-block ECB
+
+     State words are big-endian columns. Tables are Int32Array rather than
+     Uint32Array: the values are identical bit for bit, but signed reads keep
+     V8 and SpiderMonkey on their small-integer fast path.
+     ============================================================ */
+
+  let SBOX = null, INV_SBOX = null;
+  let TE0, TE1, TE2, TE3, TD0, TD1, TD2, TD3;
+
+  function initAes() {
+    if (SBOX) return;
+    SBOX = new Uint8Array(256);
+    INV_SBOX = new Uint8Array(256);
+    const exp = new Uint8Array(256), log = new Uint8Array(256);
+    const xtime = (x) => ((x << 1) ^ (x & 0x80 ? 0x1b : 0)) & 0xff;
+    for (let i = 0, p = 1; i < 255; i++) { exp[i] = p; log[p] = i; p ^= xtime(p); }
+    const mul = (a, b) => (a && b) ? exp[(log[a] + log[b]) % 255] : 0;
+    for (let x = 0; x < 256; x++) {
+      const inv = x ? exp[(255 - log[x]) % 255] : 0;
+      let s = inv;
+      for (let r = 1; r <= 4; r++) s ^= ((inv << r) | (inv >>> (8 - r))) & 0xff;
+      s ^= 0x63;
+      SBOX[x] = s;
+      INV_SBOX[s] = x;
+    }
+    TE0 = new Int32Array(256); TE1 = new Int32Array(256); TE2 = new Int32Array(256); TE3 = new Int32Array(256);
+    TD0 = new Int32Array(256); TD1 = new Int32Array(256); TD2 = new Int32Array(256); TD3 = new Int32Array(256);
+    for (let x = 0; x < 256; x++) {
+      const s = SBOX[x];
+      const e = (mul(s, 2) << 24) | (s << 16) | (s << 8) | mul(s, 3);
+      TE0[x] = e; TE1[x] = (e >>> 8) | (e << 24); TE2[x] = (e >>> 16) | (e << 16); TE3[x] = (e >>> 24) | (e << 8);
+      const si = INV_SBOX[x];
+      const d = (mul(si, 14) << 24) | (mul(si, 9) << 16) | (mul(si, 13) << 8) | mul(si, 11);
+      TD0[x] = d; TD1[x] = (d >>> 8) | (d << 24); TD2[x] = (d >>> 16) | (d << 16); TD3[x] = (d >>> 24) | (d << 8);
+    }
+  }
+
+  /* Expanded key: { enc, dec, rounds }. dec is the equivalent-inverse-cipher
+     schedule (round keys reversed, InvMixColumns applied to the inner ones). */
+  function expandKey(keyIn) {
+    initAes();
+    const key = toU8(keyIn);
+    const nk = key.length >> 2;
+    if (key.length !== 16 && key.length !== 24 && key.length !== 32) {
+      throw new Error('An AES key must be 16, 24 or 32 bytes long, not ' + key.length);
+    }
+    const rounds = nk + 6, total = 4 * (rounds + 1);
+    const w = new Int32Array(total);
+    for (let i = 0; i < nk; i++) {
+      w[i] = (key[4 * i] << 24) | (key[4 * i + 1] << 16) | (key[4 * i + 2] << 8) | key[4 * i + 3];
+    }
+    let rcon = 1;
+    for (let i = nk; i < total; i++) {
+      let t = w[i - 1];
+      if (i % nk === 0) {
+        t = (SBOX[(t >>> 16) & 255] << 24) | (SBOX[(t >>> 8) & 255] << 16) | (SBOX[t & 255] << 8) | SBOX[t >>> 24];
+        t ^= rcon << 24;
+        rcon = ((rcon << 1) ^ (rcon & 0x80 ? 0x1b : 0)) & 0xff;
+      } else if (nk > 6 && i % nk === 4) {
+        t = (SBOX[t >>> 24] << 24) | (SBOX[(t >>> 16) & 255] << 16) | (SBOX[(t >>> 8) & 255] << 8) | SBOX[t & 255];
+      }
+      w[i] = w[i - nk] ^ t;
+    }
+    const dk = new Int32Array(total);
+    for (let r = 0; r <= rounds; r++) {
+      for (let j = 0; j < 4; j++) {
+        let v = w[4 * (rounds - r) + j];
+        if (r > 0 && r < rounds) {
+          v = TD0[SBOX[v >>> 24]] ^ TD1[SBOX[(v >>> 16) & 255]] ^ TD2[SBOX[(v >>> 8) & 255]] ^ TD3[SBOX[v & 255]];
+        }
+        dk[4 * r + j] = v;
+      }
+    }
+    return { enc: w, dec: dk, rounds };
+  }
+
+  /* One block in, one block out, through this shared scratch (no allocation). */
+  const BLK = new Int32Array(4);
+
+  function encryptBlock(rk, rounds, s0, s1, s2, s3) {
+    const T0 = TE0, T1 = TE1, T2 = TE2, T3 = TE3;
+    s0 ^= rk[0]; s1 ^= rk[1]; s2 ^= rk[2]; s3 ^= rk[3];
+    let k = 4;
+    for (let r = 1; r < rounds; r++) {
+      const t0 = T0[s0 >>> 24] ^ T1[(s1 >>> 16) & 255] ^ T2[(s2 >>> 8) & 255] ^ T3[s3 & 255] ^ rk[k];
+      const t1 = T0[s1 >>> 24] ^ T1[(s2 >>> 16) & 255] ^ T2[(s3 >>> 8) & 255] ^ T3[s0 & 255] ^ rk[k + 1];
+      const t2 = T0[s2 >>> 24] ^ T1[(s3 >>> 16) & 255] ^ T2[(s0 >>> 8) & 255] ^ T3[s1 & 255] ^ rk[k + 2];
+      const t3 = T0[s3 >>> 24] ^ T1[(s0 >>> 16) & 255] ^ T2[(s1 >>> 8) & 255] ^ T3[s2 & 255] ^ rk[k + 3];
+      s0 = t0; s1 = t1; s2 = t2; s3 = t3; k += 4;
+    }
+    const S = SBOX;
+    BLK[0] = ((S[s0 >>> 24] << 24) | (S[(s1 >>> 16) & 255] << 16) | (S[(s2 >>> 8) & 255] << 8) | S[s3 & 255]) ^ rk[k];
+    BLK[1] = ((S[s1 >>> 24] << 24) | (S[(s2 >>> 16) & 255] << 16) | (S[(s3 >>> 8) & 255] << 8) | S[s0 & 255]) ^ rk[k + 1];
+    BLK[2] = ((S[s2 >>> 24] << 24) | (S[(s3 >>> 16) & 255] << 16) | (S[(s0 >>> 8) & 255] << 8) | S[s1 & 255]) ^ rk[k + 2];
+    BLK[3] = ((S[s3 >>> 24] << 24) | (S[(s0 >>> 16) & 255] << 16) | (S[(s1 >>> 8) & 255] << 8) | S[s2 & 255]) ^ rk[k + 3];
+  }
+
+  function decryptBlock(rk, rounds, s0, s1, s2, s3) {
+    const T0 = TD0, T1 = TD1, T2 = TD2, T3 = TD3;
+    s0 ^= rk[0]; s1 ^= rk[1]; s2 ^= rk[2]; s3 ^= rk[3];
+    let k = 4;
+    for (let r = 1; r < rounds; r++) {
+      const t0 = T0[s0 >>> 24] ^ T1[(s3 >>> 16) & 255] ^ T2[(s2 >>> 8) & 255] ^ T3[s1 & 255] ^ rk[k];
+      const t1 = T0[s1 >>> 24] ^ T1[(s0 >>> 16) & 255] ^ T2[(s3 >>> 8) & 255] ^ T3[s2 & 255] ^ rk[k + 1];
+      const t2 = T0[s2 >>> 24] ^ T1[(s1 >>> 16) & 255] ^ T2[(s0 >>> 8) & 255] ^ T3[s3 & 255] ^ rk[k + 2];
+      const t3 = T0[s3 >>> 24] ^ T1[(s2 >>> 16) & 255] ^ T2[(s1 >>> 8) & 255] ^ T3[s0 & 255] ^ rk[k + 3];
+      s0 = t0; s1 = t1; s2 = t2; s3 = t3; k += 4;
+    }
+    const S = INV_SBOX;
+    BLK[0] = ((S[s0 >>> 24] << 24) | (S[(s3 >>> 16) & 255] << 16) | (S[(s2 >>> 8) & 255] << 8) | S[s1 & 255]) ^ rk[k];
+    BLK[1] = ((S[s1 >>> 24] << 24) | (S[(s0 >>> 16) & 255] << 16) | (S[(s3 >>> 8) & 255] << 8) | S[s2 & 255]) ^ rk[k + 1];
+    BLK[2] = ((S[s2 >>> 24] << 24) | (S[(s1 >>> 16) & 255] << 16) | (S[(s0 >>> 8) & 255] << 8) | S[s3 & 255]) ^ rk[k + 2];
+    BLK[3] = ((S[s3 >>> 24] << 24) | (S[(s2 >>> 16) & 255] << 16) | (S[(s1 >>> 8) & 255] << 8) | S[s0 & 255]) ^ rk[k + 3];
+  }
+
+  const rd32 = (b, p) => (b[p] << 24) | (b[p + 1] << 16) | (b[p + 2] << 8) | b[p + 3];
+
+  /* The two CBC loops below repeat the block functions' rounds inline: they
+     carry nearly all the bytes, and keeping the state in locals (no call, no
+     scratch array) is what makes them quick. */
+
+  /* CBC-encrypt buf[off, off+len) in place; len is a multiple of 16. */
+  function cbcEncryptInPlace(ks, iv, buf, off, len) {
+    const rk = ks.enc, kl = 4 * ks.rounds;
+    const T0 = TE0, T1 = TE1, T2 = TE2, T3 = TE3, S = SBOX;
+    const k0 = rk[0], k1 = rk[1], k2 = rk[2], k3 = rk[3];
+    let p0 = rd32(iv, 0), p1 = rd32(iv, 4), p2 = rd32(iv, 8), p3 = rd32(iv, 12);
+    for (let i = off, end = off + len; i < end; i += 16) {
+      let s0 = ((buf[i] << 24) | (buf[i + 1] << 16) | (buf[i + 2] << 8) | buf[i + 3]) ^ p0 ^ k0;
+      let s1 = ((buf[i + 4] << 24) | (buf[i + 5] << 16) | (buf[i + 6] << 8) | buf[i + 7]) ^ p1 ^ k1;
+      let s2 = ((buf[i + 8] << 24) | (buf[i + 9] << 16) | (buf[i + 10] << 8) | buf[i + 11]) ^ p2 ^ k2;
+      let s3 = ((buf[i + 12] << 24) | (buf[i + 13] << 16) | (buf[i + 14] << 8) | buf[i + 15]) ^ p3 ^ k3;
+      for (let k = 4; k < kl; k += 4) {
+        const t0 = T0[s0 >>> 24] ^ T1[(s1 >>> 16) & 255] ^ T2[(s2 >>> 8) & 255] ^ T3[s3 & 255] ^ rk[k];
+        const t1 = T0[s1 >>> 24] ^ T1[(s2 >>> 16) & 255] ^ T2[(s3 >>> 8) & 255] ^ T3[s0 & 255] ^ rk[k + 1];
+        const t2 = T0[s2 >>> 24] ^ T1[(s3 >>> 16) & 255] ^ T2[(s0 >>> 8) & 255] ^ T3[s1 & 255] ^ rk[k + 2];
+        s3 = T0[s3 >>> 24] ^ T1[(s0 >>> 16) & 255] ^ T2[(s1 >>> 8) & 255] ^ T3[s2 & 255] ^ rk[k + 3];
+        s0 = t0; s1 = t1; s2 = t2;
+      }
+      p0 = ((S[s0 >>> 24] << 24) | (S[(s1 >>> 16) & 255] << 16) | (S[(s2 >>> 8) & 255] << 8) | S[s3 & 255]) ^ rk[kl];
+      p1 = ((S[s1 >>> 24] << 24) | (S[(s2 >>> 16) & 255] << 16) | (S[(s3 >>> 8) & 255] << 8) | S[s0 & 255]) ^ rk[kl + 1];
+      p2 = ((S[s2 >>> 24] << 24) | (S[(s3 >>> 16) & 255] << 16) | (S[(s0 >>> 8) & 255] << 8) | S[s1 & 255]) ^ rk[kl + 2];
+      p3 = ((S[s3 >>> 24] << 24) | (S[(s0 >>> 16) & 255] << 16) | (S[(s1 >>> 8) & 255] << 8) | S[s2 & 255]) ^ rk[kl + 3];
+      buf[i] = p0 >>> 24; buf[i + 1] = p0 >>> 16; buf[i + 2] = p0 >>> 8; buf[i + 3] = p0;
+      buf[i + 4] = p1 >>> 24; buf[i + 5] = p1 >>> 16; buf[i + 6] = p1 >>> 8; buf[i + 7] = p1;
+      buf[i + 8] = p2 >>> 24; buf[i + 9] = p2 >>> 16; buf[i + 10] = p2 >>> 8; buf[i + 11] = p2;
+      buf[i + 12] = p3 >>> 24; buf[i + 13] = p3 >>> 16; buf[i + 14] = p3 >>> 8; buf[i + 15] = p3;
+    }
+  }
+
+  /* CBC-decrypt src[off, off+len) into dst[0, len); len is a multiple of 16.
+     The IV is read from iv[ivOff, ivOff+16). */
+  function cbcDecryptInto(ks, iv, ivOff, src, off, len, dst) {
+    const rk = ks.dec, kl = 4 * ks.rounds;
+    const T0 = TD0, T1 = TD1, T2 = TD2, T3 = TD3, S = INV_SBOX;
+    const k0 = rk[0], k1 = rk[1], k2 = rk[2], k3 = rk[3];
+    let p0 = rd32(iv, ivOff), p1 = rd32(iv, ivOff + 4), p2 = rd32(iv, ivOff + 8), p3 = rd32(iv, ivOff + 12);
+    for (let i = 0; i < len; i += 16) {
+      const q = off + i;
+      const c0 = (src[q] << 24) | (src[q + 1] << 16) | (src[q + 2] << 8) | src[q + 3];
+      const c1 = (src[q + 4] << 24) | (src[q + 5] << 16) | (src[q + 6] << 8) | src[q + 7];
+      const c2 = (src[q + 8] << 24) | (src[q + 9] << 16) | (src[q + 10] << 8) | src[q + 11];
+      const c3 = (src[q + 12] << 24) | (src[q + 13] << 16) | (src[q + 14] << 8) | src[q + 15];
+      let s0 = c0 ^ k0, s1 = c1 ^ k1, s2 = c2 ^ k2, s3 = c3 ^ k3;
+      for (let k = 4; k < kl; k += 4) {
+        const t0 = T0[s0 >>> 24] ^ T1[(s3 >>> 16) & 255] ^ T2[(s2 >>> 8) & 255] ^ T3[s1 & 255] ^ rk[k];
+        const t1 = T0[s1 >>> 24] ^ T1[(s0 >>> 16) & 255] ^ T2[(s3 >>> 8) & 255] ^ T3[s2 & 255] ^ rk[k + 1];
+        const t2 = T0[s2 >>> 24] ^ T1[(s1 >>> 16) & 255] ^ T2[(s0 >>> 8) & 255] ^ T3[s3 & 255] ^ rk[k + 2];
+        s3 = T0[s3 >>> 24] ^ T1[(s2 >>> 16) & 255] ^ T2[(s1 >>> 8) & 255] ^ T3[s0 & 255] ^ rk[k + 3];
+        s0 = t0; s1 = t1; s2 = t2;
+      }
+      const o0 = ((S[s0 >>> 24] << 24) | (S[(s3 >>> 16) & 255] << 16) | (S[(s2 >>> 8) & 255] << 8) | S[s1 & 255]) ^ rk[kl] ^ p0;
+      const o1 = ((S[s1 >>> 24] << 24) | (S[(s0 >>> 16) & 255] << 16) | (S[(s3 >>> 8) & 255] << 8) | S[s2 & 255]) ^ rk[kl + 1] ^ p1;
+      const o2 = ((S[s2 >>> 24] << 24) | (S[(s1 >>> 16) & 255] << 16) | (S[(s0 >>> 8) & 255] << 8) | S[s3 & 255]) ^ rk[kl + 2] ^ p2;
+      const o3 = ((S[s3 >>> 24] << 24) | (S[(s2 >>> 16) & 255] << 16) | (S[(s1 >>> 8) & 255] << 8) | S[s0 & 255]) ^ rk[kl + 3] ^ p3;
+      dst[i] = o0 >>> 24; dst[i + 1] = o0 >>> 16; dst[i + 2] = o0 >>> 8; dst[i + 3] = o0;
+      dst[i + 4] = o1 >>> 24; dst[i + 5] = o1 >>> 16; dst[i + 6] = o1 >>> 8; dst[i + 7] = o1;
+      dst[i + 8] = o2 >>> 24; dst[i + 9] = o2 >>> 16; dst[i + 10] = o2 >>> 8; dst[i + 11] = o2;
+      dst[i + 12] = o3 >>> 24; dst[i + 13] = o3 >>> 16; dst[i + 14] = o3 >>> 8; dst[i + 15] = o3;
+      p0 = c0; p1 = c1; p2 = c2; p3 = c3;
+    }
+  }
+
+  /* Strips PKCS#7 padding when it is well formed; otherwise leaves the data
+     alone. Damaged files often carry slightly wrong padding, and a reader
+     that refused them would be less useful than one that shows a stray byte. */
+  function unpadTolerant(out) {
+    const n = out.length;
+    if (!n) return out;
+    const p = out[n - 1];
+    if (p < 1 || p > 16 || p > n) return out;
+    for (let i = n - p; i < n; i++) if (out[i] !== p) return out;
+    return out.subarray(0, n - p);
+  }
+
+  function checkIv(iv) {
+    const v = toU8(iv);
+    if (v.length !== 16) throw new Error('An AES initialisation vector must be 16 bytes long');
+    return v;
+  }
+
+  function aesEncryptCbc(key, iv, data, pad) {
+    const ks = expandKey(key), v = checkIv(iv), d = toU8(data);
+    let buf;
+    if (pad === false) {
+      if (d.length % 16) throw new Error('Unpadded AES-CBC input must be a multiple of 16 bytes');
+      buf = d.slice();
+    } else {
+      const p = 16 - (d.length % 16);
+      buf = new Uint8Array(d.length + p);
+      buf.set(d);
+      buf.fill(p, d.length);
+    }
+    cbcEncryptInPlace(ks, v, buf, 0, buf.length);
+    return buf;
+  }
+
+  /* A trailing partial block (which a valid file never has) is ignored. */
+  function aesDecryptCbc(key, iv, data, unpad) {
+    const ks = expandKey(key), v = checkIv(iv), d = toU8(data);
+    const len = d.length - (d.length % 16);
+    const out = new Uint8Array(len);
+    cbcDecryptInto(ks, v, 0, d, 0, len, out);
+    return unpad === false ? out : unpadTolerant(out);
+  }
+
+  function aesEncryptEcbBlock(key, block) {
+    const ks = expandKey(key), b = toU8(block);
+    if (b.length !== 16) throw new Error('An AES block is 16 bytes');
+    encryptBlock(ks.enc, ks.rounds, rd32(b, 0), rd32(b, 4), rd32(b, 8), rd32(b, 12));
+    const out = new Uint8Array(16);
+    for (let i = 0; i < 4; i++) writeBE(out, 4 * i, BLK[i]);
+    return out;
+  }
+
+  function aesDecryptEcbBlock(key, block) {
+    const ks = expandKey(key), b = toU8(block);
+    if (b.length !== 16) throw new Error('An AES block is 16 bytes');
+    decryptBlock(ks.dec, ks.rounds, rd32(b, 0), rd32(b, 4), rd32(b, 8), rd32(b, 12));
+    const out = new Uint8Array(16);
+    for (let i = 0; i < 4; i++) writeBE(out, 4 * i, BLK[i]);
+    return out;
+  }
+
+  /* ============================================================
+     Passwords
+     ============================================================ */
+
+  /* Code points PDFDocEncoding places in its 0x18–0x1F and 0x80–0xA0 slots.
+     Everything else at or below U+00FF maps to itself; anything left over
+     cannot be expressed and is dropped. */
+  const PDFDOC = {
+    0x02d8: 0x18, 0x02c7: 0x19, 0x02c6: 0x1a, 0x02d9: 0x1b, 0x02dd: 0x1c, 0x02db: 0x1d, 0x02da: 0x1e, 0x02dc: 0x1f,
+    0x2022: 0x80, 0x2020: 0x81, 0x2021: 0x82, 0x2026: 0x83, 0x2014: 0x84, 0x2013: 0x85, 0x0192: 0x86, 0x2044: 0x87,
+    0x2039: 0x88, 0x203a: 0x89, 0x2212: 0x8a, 0x2030: 0x8b, 0x201e: 0x8c, 0x201c: 0x8d, 0x201d: 0x8e, 0x2018: 0x8f,
+    0x2019: 0x90, 0x201a: 0x91, 0x2122: 0x92, 0xfb01: 0x93, 0xfb02: 0x94, 0x0141: 0x95, 0x0152: 0x96, 0x0160: 0x97,
+    0x0178: 0x98, 0x017d: 0x99, 0x0131: 0x9a, 0x0142: 0x9b, 0x0153: 0x9c, 0x0161: 0x9d, 0x017e: 0x9e, 0x20ac: 0xa0
+  };
+
+  /* Revisions 2–4: PDFDocEncoding bytes, at most 32 of which count. */
+  function legacyPasswordBytes(pw) {
+    const out = [];
+    for (const ch of String(pw == null ? '' : pw)) {
+      const cp = ch.codePointAt(0);
+      if (cp <= 0xff) out.push(cp);
+      else if (PDFDOC[cp] !== undefined) out.push(PDFDOC[cp]);
+      if (out.length === 32) break;
+    }
+    return Uint8Array.from(out);
+  }
+
+  /* Revisions 5–6: UTF-8 of the NFKC form, at most 127 bytes. (The spec asks
+     for SASLprep, whose substance for real passwords is NFKC.) */
+  function utf8PasswordBytes(pw) {
+    let s = String(pw == null ? '' : pw);
+    if (typeof s.normalize === 'function') s = s.normalize('NFKC');
+    const out = [];
+    for (const ch of s) {
+      let cp = ch.codePointAt(0);
+      if (cp >= 0xd800 && cp <= 0xdfff) cp = 0xfffd;          // lone surrogate
+      const bytes = cp < 0x80 ? [cp]
+        : cp < 0x800 ? [0xc0 | (cp >> 6), 0x80 | (cp & 63)]
+        : cp < 0x10000 ? [0xe0 | (cp >> 12), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63)]
+        : [0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 63), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63)];
+      if (out.length + bytes.length > 127) break;              // never split a character
+      for (const b of bytes) out.push(b);
+    }
+    return Uint8Array.from(out);
+  }
+
+  /* ============================================================
+     Revisions 2–4 (algorithms 2–7 of ISO 32000-1, 7.6.3)
+     ============================================================ */
+
+  const PAD = Uint8Array.from([
+    0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64, 0x00, 0x4e, 0x56, 0xff, 0xfa, 0x01, 0x08,
+    0x2e, 0x2e, 0x00, 0xb6, 0xd0, 0x68, 0x3e, 0x80, 0x2f, 0x0c, 0xa9, 0xfe, 0x64, 0x53, 0x69, 0x7a
+  ]);
+
+  function pad32(pw) {
+    const out = new Uint8Array(32);
+    const n = Math.min(32, pw.length);
+    out.set(pw.subarray(0, n));
+    out.set(PAD.subarray(0, 32 - n), n);
+    return out;
+  }
+
+  function le32(v) { const b = new Uint8Array(4); writeLE(b, 0, v); return b; }
+
+  /* Algorithm 2: the file key from a (user) password. */
+  function legacyFileKey(pw, O, P, id0, R, n, encryptMetadata) {
+    const parts = [pad32(pw), O.subarray(0, 32), le32(P), id0];
+    if (R >= 4 && !encryptMetadata) parts.push(Uint8Array.from([0xff, 0xff, 0xff, 0xff]));
+    let h = md5(concat.apply(null, parts));
+    if (R >= 3) for (let i = 0; i < 50; i++) h = md5(h.subarray(0, n));
+    return h.slice(0, n);
+  }
+
+  function xorKey(key, i) {
+    const k = new Uint8Array(key.length);
+    for (let j = 0; j < key.length; j++) k[j] = key[j] ^ i;
+    return k;
+  }
+
+  /* Algorithms 4 and 5: the U value (first 16 bytes significant from R3). */
+  function legacyU(key, R, id0) {
+    if (R === 2) return rc4(key, PAD);
+    let x = rc4(key, md5(concat(PAD, id0)));
+    for (let i = 1; i <= 19; i++) x = rc4(xorKey(key, i), x);
+    return x;
+  }
+
+  /* The RC4 key that algorithm 3 derives from the owner password. */
+  function ownerRc4Key(ownerPw, R, n) {
+    let h = md5(pad32(ownerPw));
+    if (R >= 3) for (let i = 0; i < 50; i++) h = md5(h);
+    return h.slice(0, R === 2 ? 5 : n);
+  }
+
+  /* Algorithm 3: the O value. */
+  function legacyO(ownerPw, userPw, R, n) {
+    const key = ownerRc4Key(ownerPw.length ? ownerPw : userPw, R, n);
+    let x = rc4(key, pad32(userPw));
+    if (R >= 3) for (let i = 1; i <= 19; i++) x = rc4(xorKey(key, i), x);
+    return x;
+  }
+
+  /* Algorithm 6: returns the file key if pw is the user password, else null. */
+  function legacyCheckUser(pw, s) {
+    const key = legacyFileKey(pw, s.O, s.P, s.id0, s.R, s.n, s.encryptMetadata);
+    const u = legacyU(key, s.R, s.id0);
+    return sameBytes(u, s.U, s.R === 2 ? 32 : 16) ? key : null;
+  }
+
+  /* Algorithm 7: recover the padded user password from O, then check it. */
+  function legacyCheckOwner(pw, s) {
+    const key = ownerRc4Key(pw, s.R, s.n);
+    let x = s.O.subarray(0, 32);
+    if (s.R === 2) x = rc4(key, x);
+    else for (let i = 19; i >= 0; i--) x = rc4(xorKey(key, i), x);
+    return legacyCheckUser(x, s);
+  }
+
+  /* ============================================================
+     Revisions 5–6 (algorithms 2.A, 2.B, 8–13 of ISO 32000-2)
+     ============================================================ */
+
+  /* Algorithm 2.B: the revision 6 hash. Revision 5 is its first step only. */
+  function hashR6(pw, salt, udata) {
+    let K = sha256(concat(pw, salt, udata));
+    for (let i = 0; ; ) {
+      const unit = pw.length + K.length + udata.length;
+      const K1 = new Uint8Array(unit * 64);
+      K1.set(pw, 0); K1.set(K, pw.length); K1.set(udata, pw.length + K.length);
+      for (let r = 1; r < 64; r++) K1.copyWithin(r * unit, 0, unit);
+      cbcEncryptInPlace(expandKey(K.subarray(0, 16)), K.subarray(16, 32), K1, 0, K1.length);
+      const E = K1;
+      let sum = 0;
+      for (let j = 0; j < 16; j++) sum += E[j];        // 256 ≡ 1 (mod 3)
+      const m = sum % 3;
+      K = m === 0 ? sha256(E) : m === 1 ? sha384(E) : sha512(E);
+      i++;
+      if (i >= 64 && E[E.length - 1] <= i - 32) break;
+    }
+    return K.subarray(0, 32);
+  }
+
+  function hashV5(R, pw, salt, udata) {
+    return R === 5 ? sha256(concat(pw, salt, udata)) : hashR6(pw, salt, udata);
+  }
+
+  function aesV3CheckUser(pw, s) {
+    if (!sameBytes(hashV5(s.R, pw, s.U.subarray(32, 40), EMPTY), s.U, 32)) return null;
+    const k = hashV5(s.R, pw, s.U.subarray(40, 48), EMPTY);
+    return aesDecryptCbc(k, ZERO_IV, s.UE.subarray(0, 32), false);
+  }
+
+  function aesV3CheckOwner(pw, s) {
+    const u48 = s.U.subarray(0, 48);
+    if (!sameBytes(hashV5(s.R, pw, s.O.subarray(32, 40), u48), s.O, 32)) return null;
+    const k = hashV5(s.R, pw, s.O.subarray(40, 48), u48);
+    return aesDecryptCbc(k, ZERO_IV, s.OE.subarray(0, 32), false);
+  }
+
+  /* Algorithm 13: is the Perms entry consistent with P? Advisory only. */
+  function permsValid(key, perms, P, encryptMetadata) {
+    if (!perms || perms.length < 16) return false;
+    const b = aesDecryptEcbBlock(key, perms.subarray(0, 16));
+    if (b[9] !== 0x61 || b[10] !== 0x64 || b[11] !== 0x62) return false;   // 'adb'
+    const p = b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24);
+    if (p !== (P | 0)) return false;
+    return encryptMetadata ? b[8] === 0x54 : b[8] === 0x46;                // 'T' / 'F'
+  }
+
+  /* ============================================================
+     Opening
+     ============================================================ */
+
+  const fail = (reason, message) => ({ ok: false, reason, message });
+
+  function nameOf(v) {
+    if (v == null) return undefined;
+    if (typeof v === 'string') return v;
+    if (typeof v === 'object' && typeof v.name === 'string') return v.name;   // a pdfcore Name, leniently
+    return String(v);
+  }
+
+  function numOf(v, dflt) {
+    const n = typeof v === 'number' ? v : Number(v);
+    return isFinite(n) ? n : dflt;
+  }
+
+  /* Crypt filter name -> 'RC4' | 'AESV2' | 'AESV3' | 'Identity', or null. */
+  function cryptFilterMethod(enc, name) {
+    if (name === undefined || name === 'Identity') return 'Identity';
+    const cf = enc.CF && enc.CF[name];
+    if (!cf || typeof cf !== 'object') return null;
+    const cfm = nameOf(cf.CFM);
+    if (cfm === undefined || cfm === 'None') return 'Identity';
+    if (cfm === 'V2') return 'RC4';
+    if (cfm === 'AESV2') return 'AESV2';
+    if (cfm === 'AESV3') return 'AESV3';
+    return null;
+  }
+
+  function methodLabel(h) {
+    const used = [h.stmf, h.strf];
+    if (used.includes('AESV3')) return 'AES-256';
+    if (used.includes('AESV2')) return 'AES-128';
+    if (used.includes('RC4')) return 'RC4 ' + (h.key.length * 8) + '-bit';
+    return 'no encryption (Identity crypt filters)';
+  }
+
+  /**
+   * Open the Standard security handler with a password.
+   * opts: { encrypt, id0, password } — see the module notes for the shapes.
+   */
+  function openHandler(opts) {
+    const o = opts || {};
+    const enc = o.encrypt || {};
+    const id0 = toU8(o.id0);
+    const password = o.password == null ? '' : String(o.password);
+
+    const filter = nameOf(enc.Filter);
+    if (filter !== 'Standard') {
+      return fail('unsupported', `This PDF uses the ${filter || 'unnamed'} security handler, which needs ` +
+        'a certificate rather than a password. Only password protection (the Standard handler) can be opened here.');
+    }
+    const V = numOf(enc.V, 0), R = numOf(enc.R, 0);
+    const P = numOf(enc.P, 0) | 0;
+    const encryptMetadata = enc.EncryptMetadata !== false;
+
+    let stmf, strf, eff;
+    if (V === 1 || V === 2) {
+      if (R < 2 || R > 4) return fail('unsupported', `Encryption revision ${R} is not one this reader knows.`);
+      stmf = strf = eff = 'RC4';
+    } else if (V === 4 || V === 5) {
+      if (V === 4 && (R < 2 || R > 4)) return fail('unsupported', `Encryption revision ${R} is not one this reader knows.`);
+      if (V === 5 && R !== 5 && R !== 6) return fail('unsupported', `Encryption revision ${R} is not one this reader knows.`);
+      stmf = cryptFilterMethod(enc, nameOf(enc.StmF));
+      strf = cryptFilterMethod(enc, nameOf(enc.StrF));
+      eff = enc.EFF === undefined ? stmf : cryptFilterMethod(enc, nameOf(enc.EFF));
+      if (!stmf || !strf || !eff) return fail('unsupported', 'This PDF names a crypt filter this reader does not know.');
+    } else {
+      return fail('unsupported', `Encryption version ${V} is not one this reader knows.`);
+    }
+
+    const O = toU8(enc.O), U = toU8(enc.U);
+    let key = null, isOwner = false, permsOk = null;
+
+    if (R <= 4) {
+      let bits = numOf(enc.Length, 0);
+      if (V === 1) bits = 40;
+      else if (!bits) {
+        if (V === 2) bits = 40;
+        else {
+          const cf = enc.CF && enc.CF[nameOf(enc.StmF)] || enc.CF && enc.CF[nameOf(enc.StrF)];
+          bits = cf ? numOf(cf.Length, 0) : 0;
+          if (bits && bits < 40) bits *= 8;           // some writers give bytes
+          if (!bits) bits = 128;
+        }
+      }
+      let n = R === 2 ? 5 : Math.max(5, Math.min(16, Math.floor(bits / 8)));
+      if (stmf === 'AESV2' || strf === 'AESV2') n = 16;
+      if (O.length < 32 || U.length < (R === 2 ? 32 : 16)) {
+        return fail('unsupported', 'The encryption dictionary is damaged (its O or U entry is too short).');
+      }
+      const s = { O, U, P, id0, R, n, encryptMetadata };
+      const pw = legacyPasswordBytes(password);
+      key = legacyCheckUser(pw, s);
+      if (key) {
+        // The same password may also be the owner's (or the owner password may be empty).
+        isOwner = !!legacyCheckOwner(pw, s);
+      } else {
+        key = legacyCheckOwner(pw, s);
+        isOwner = !!key;
+      }
+    } else {
+      const OE = toU8(enc.OE), UE = toU8(enc.UE);
+      if (O.length < 48 || U.length < 48 || OE.length < 32 || UE.length < 32) {
+        return fail('unsupported', 'The encryption dictionary is damaged (an O, U, OE or UE entry is too short).');
+      }
+      const s = { O, U, OE, UE, R };
+      const pw = utf8PasswordBytes(password);
+      key = aesV3CheckUser(pw, s);
+      if (key) {
+        isOwner = !!aesV3CheckOwner(pw, s);
+      } else {
+        key = aesV3CheckOwner(pw, s);
+        isOwner = !!key;
+      }
+      if (key) permsOk = permsValid(key, toU8(enc.Perms), P, encryptMetadata);
+    }
+
+    if (!key) {
+      return fail('password', password ? 'That password is not correct for this PDF.' : 'This PDF needs a password to open.');
+    }
+    const h = {
+      ok: true, isOwner, key, revision: R, version: V,
+      stmf, strf, eff, encryptMetadata, permissions: P,
+      openedWith: isOwner ? 'owner' : password ? 'user' : 'empty',
+      permsValid: permsOk
+    };
+    h.method = methodLabel(h);
+    return h;
+  }
+
+  /* ============================================================
+     Per-object transforms
+     ============================================================ */
+
+  /* Algorithm 1: the object key, for RC4 and AESV2. */
+  function objectKey(h, objNum, gen, aes) {
+    const n = h.key.length;
+    const b = new Uint8Array(n + 5 + (aes ? 4 : 0));
+    b.set(h.key);
+    b[n] = objNum & 255; b[n + 1] = (objNum >>> 8) & 255; b[n + 2] = (objNum >>> 16) & 255;
+    b[n + 3] = gen & 255; b[n + 4] = (gen >>> 8) & 255;
+    if (aes) { b[n + 5] = 0x73; b[n + 6] = 0x41; b[n + 7] = 0x6c; b[n + 8] = 0x54; }   // 'sAlT'
+    return md5(b).subarray(0, Math.min(n + 5, 16));
+  }
+
+  /* kind: 'string' | 'stream', plus two refinements a caller may use:
+     'metadata' for a /Type /Metadata stream (left alone when EncryptMetadata
+     is false) and 'embeddedFile' for an embedded file stream (the EFF filter). */
+  function methodFor(h, kind) {
+    switch (kind) {
+      case 'string': return h.strf;
+      case 'stream': return h.stmf;
+      case 'metadata': return h.encryptMetadata ? h.stmf : 'Identity';
+      case 'embeddedFile': return h.eff;
+      default: throw new TypeError(`Unknown kind '${kind}' (expected 'string' or 'stream')`);
+    }
+  }
+
+  function decryptBytes(h, objNum, gen, bytes, kind) {
+    const data = toU8(bytes);
+    const m = methodFor(h, kind);
+    if (m === 'Identity') return data;
+    if (m === 'RC4') return rc4(objectKey(h, objNum, gen || 0, false), data);
+    if (data.length < 16) return new Uint8Array(0);
+    const key = m === 'AESV3' ? h.key : objectKey(h, objNum, gen || 0, true);
+    const len = (data.length - 16) - ((data.length - 16) % 16);
+    const out = new Uint8Array(len);
+    cbcDecryptInto(expandKey(key), data, 0, data, 16, len, out);
+    return unpadTolerant(out);
+  }
+
+  function defaultRandom(n) {
+    const c = typeof globalThis !== 'undefined' ? globalThis.crypto : undefined;
+    if (!c || typeof c.getRandomValues !== 'function') {
+      throw new Error('No source of random bytes: pass random(n) explicitly.');
+    }
+    return c.getRandomValues(new Uint8Array(n));
+  }
+
+  function randomBytes(random, n) {
+    const r = toU8(random(n));
+    if (r.length !== n) throw new Error(`random(${n}) returned ${r.length} bytes`);
+    return r;
+  }
+
+  function encryptBytes(h, objNum, gen, bytes, kind, random) {
+    const data = toU8(bytes);
+    const m = methodFor(h, kind);
+    if (m === 'Identity') return data;
+    if (m === 'RC4') return rc4(objectKey(h, objNum, gen || 0, false), data);
+    const key = m === 'AESV3' ? h.key : objectKey(h, objNum, gen || 0, true);
+    const iv = randomBytes(random || h.random || defaultRandom, 16);
+    const p = 16 - (data.length % 16);
+    const out = new Uint8Array(16 + data.length + p);
+    out.set(iv);
+    out.set(data, 16);
+    out.fill(p, 16 + data.length);
+    cbcEncryptInPlace(expandKey(key), iv, out, 16, out.length - 16);
+    return out;
+  }
+
+  /* ============================================================
+     Permissions
+     ============================================================ */
+
+  const PERM_BITS = {
+    print: 3, modify: 4, copy: 5, annotate: 6,
+    fillForms: 9, accessibility: 10, assemble: 11, printHighRes: 12
+  };
+
+  /* Bits 7, 8 and 13–32 must be 1; bits 1–2 must be 0. */
+  function pFromPermissions(perms) {
+    const p = perms || {};
+    let v = 0xfffff0c0 | 0;
+    for (const k of Object.keys(PERM_BITS)) {
+      if (p[k] !== false) v |= 1 << (PERM_BITS[k] - 1);
+    }
+    return v | 0;
+  }
+
+  /* With revision 2 the four later bits do not exist; pass it to have them
+     follow the older bits that governed those actions. */
+  function permissionsFromP(P, revision) {
+    const v = P | 0, out = {};
+    for (const k of Object.keys(PERM_BITS)) out[k] = (v & (1 << (PERM_BITS[k] - 1))) !== 0;
+    if (revision === 2) {
+      out.printHighRes = out.print;
+      out.fillForms = out.annotate;
+      out.accessibility = out.copy;
+      out.assemble = out.modify;
+    }
+    return out;
+  }
+
+  /* ============================================================
+     Creating
+     ============================================================ */
+
+  /**
+   * Set up encryption for a new file.
+   * opts: { userPassword, ownerPassword, permissions, method: 'AES-256' | 'AES-128',
+   *         id0, encryptMetadata = true, random(n) -> Uint8Array }
+   * Returns { handler, encryptDict }. When id0 is not given one is generated
+   * and returned as handler.id0, which the trailer's /ID must then carry.
+   */
+  function createHandler(opts) {
+    const o = opts || {};
+    if (typeof o.random !== 'function') throw new Error('createHandler needs random(n), e.g. from crypto.getRandomValues');
+    const rnd = (n) => randomBytes(o.random, n);
+    const method = o.method || 'AES-256';
+    const P = pFromPermissions(o.permissions);
+    const encryptMetadata = o.encryptMetadata !== false;
+    const userPassword = o.userPassword == null ? '' : String(o.userPassword);
+    let ownerPassword = o.ownerPassword == null ? '' : String(o.ownerPassword);
+    if (!ownerPassword) ownerPassword = hex(rnd(16));              // nobody knows it, as Acrobat does
+    const id0 = o.id0 == null ? rnd(16) : toU8(o.id0);
+
+    let handler, encryptDict;
+    if (method === 'AES-256') {
+      const upw = utf8PasswordBytes(userPassword), opw = utf8PasswordBytes(ownerPassword);
+      const key = rnd(32);
+      const us = rnd(16);
+      const U = concat(hashR6(upw, us.subarray(0, 8), EMPTY), us);
+      const UE = aesEncryptCbc(hashR6(upw, us.subarray(8, 16), EMPTY), ZERO_IV, key, false);
+      const os = rnd(16);
+      const O = concat(hashR6(opw, os.subarray(0, 8), U), os);
+      const OE = aesEncryptCbc(hashR6(opw, os.subarray(8, 16), U), ZERO_IV, key, false);
+      const pb = new Uint8Array(16);
+      writeLE(pb, 0, P);
+      pb[4] = pb[5] = pb[6] = pb[7] = 0xff;
+      pb[8] = encryptMetadata ? 0x54 : 0x46;
+      pb[9] = 0x61; pb[10] = 0x64; pb[11] = 0x62;
+      pb.set(rnd(4), 12);
+      const Perms = aesEncryptEcbBlock(key, pb);
+      handler = { key, revision: 6, version: 5, stmf: 'AESV3', strf: 'AESV3', eff: 'AESV3' };
+      encryptDict = {
+        Filter: 'Standard', V: 5, R: 6, Length: 256,
+        CF: { StdCF: { CFM: 'AESV3', AuthEvent: 'DocOpen', Length: 32 } },
+        StmF: 'StdCF', StrF: 'StdCF',
+        O, U, OE, UE, P, Perms
+      };
+    } else if (method === 'AES-128') {
+      const upw = legacyPasswordBytes(userPassword), opw = legacyPasswordBytes(ownerPassword);
+      const O = legacyO(opw, upw, 4, 16);
+      const key = legacyFileKey(upw, O, P, id0, 4, 16, encryptMetadata);
+      const U = concat(legacyU(key, 4, id0), rnd(16));
+      handler = { key, revision: 4, version: 4, stmf: 'AESV2', strf: 'AESV2', eff: 'AESV2' };
+      encryptDict = {
+        Filter: 'Standard', V: 4, R: 4, Length: 128,
+        CF: { StdCF: { CFM: 'AESV2', AuthEvent: 'DocOpen', Length: 16 } },
+        StmF: 'StdCF', StrF: 'StdCF',
+        O, U, P
+      };
+    } else {
+      throw new Error(`Unknown encryption method '${method}' (use 'AES-256' or 'AES-128')`);
+    }
+    if (!encryptMetadata) encryptDict.EncryptMetadata = false;
+    Object.assign(handler, {
+      ok: true, isOwner: true, encryptMetadata, permissions: P, id0,
+      openedWith: 'created', userPasswordEmpty: !userPassword, random: o.random
+    });
+    handler.method = methodLabel(handler);
+    return { handler, encryptDict };
+  }
+
+  function describeHandler(h) {
+    if (!h || !h.ok) return 'not opened';
+    const label = h.method || methodLabel(h);
+    switch (h.openedWith) {
+      case 'owner': return `${label}, opened with the owner password`;
+      case 'user': return `${label}, opened with the user password`;
+      case 'empty': return `${label}, opened without a password (none is needed to read it)`;
+      case 'created': return `${label}, new encryption ` +
+        (h.userPasswordEmpty ? 'that opens without a password' : 'with a password to open');
+      default: return label;
+    }
+  }
+
+  return {
+    md5, sha256, sha384, sha512, rc4,
+    aesEncryptCbc, aesDecryptCbc, aesEncryptEcbBlock, aesDecryptEcbBlock,
+    openHandler, decryptBytes, createHandler, encryptBytes,
+    permissionsFromP, describeHandler,
+    // smaller helpers, exposed for callers and tests
+    pFromPermissions, legacyPasswordBytes, utf8PasswordBytes
+  };
+})();
+
+
+/**
+ * PDFFont — Unicode text for the PDF engine: TrueType parsing, subsetting and
+ * embedding as a Type0 / CIDFontType2 font (Identity-H) with a ToUnicode map.
+ *
+ * pdfcore.js writes only the base-14 fonts, which stop at WinAnsi. This module
+ * embeds a real font instead — Noto Sans for Latin, Greek and Cyrillic, Noto
+ * Sans Devanagari for Hindi — subset to the glyphs a document uses.
+ *
+ * It is concatenated into the browser bundle after pdfcore.js, so everything
+ * lives inside the one declaration below and pdfcore's classes arrive as a
+ * `deps` argument ({ Name, Ref, PDFStream }) rather than by name. Synchronous;
+ * runs in a page, a Web Worker or Node.
+ *
+ * ---------------------------------------------------------------------------
+ * How text is drawn and how it extracts
+ * ---------------------------------------------------------------------------
+ * Glyphs come from shapeSimple() (one glyph per character, for scripts that
+ * need no shaping) or from HarfBuzz through engine/pdf-shaper.js and
+ * fromShaper(). The first glyph of each cluster carries the cluster's source
+ * text as `cl`; the cluster's other glyphs carry ''.
+ *
+ * A complex-script cluster is a run of glyphs that together stand for a run of
+ * characters, and the two orders differ: "कि" is stored क + ि but drawn ि-glyph
+ * then क-glyph; "क्ष" is three characters and one glyph. A per-glyph ToUnicode
+ * map cannot say that. So:
+ *
+ *   - CIDs are not glyph ids. Each distinct (glyph, text, width) gets its own
+ *     CID from a per-font, per-document registry, and a /CIDToGIDMap stream
+ *     maps CIDs back to glyphs. The same glyph can carry different text in
+ *     different places.
+ *   - showGlyphs() deals each cluster's characters out over its glyphs in
+ *     drawing order, so that read in content-stream order — which is what
+ *     every extractor does — the strings concatenate to the logical text. For
+ *     "कि" the i-matra glyph (drawn first) maps to "क" and the consonant glyph
+ *     to "ि".
+ *   - pdf.js judges each glyph by its string (see dealCluster): one containing
+ *     a nonspacing mark (virama, nukta, most matras) is a zero-width diacritic
+ *     whose position is ignored — so "क्ष" mapped whole on its conjunct glyph
+ *     is glued to the end of the previous line. So a glyph that advances the
+ *     pen only ever maps to text with no nonspacing mark; the marks go on
+ *     zero-width glyphs, or on a zero-width "carrier" CID that draws a blank
+ *     glyph: "क्ष" is the conjunct glyph mapped to "क" plus a carrier mapped
+ *     to "्ष". Strings never end in ZWJ/ZWNJ/soft hyphen, which pdf.js skips.
+ *
+ * What was tried and rejected (pdf.js 5 and MuPDF 1.28 both checked):
+ *   - one CID per glyph, mapped to the glyph's own characters: both readers
+ *     return "िक" for "कि" and "कर्" for "र्क";
+ *   - the whole cluster on its first glyph and nothing on the others, whether
+ *     by an empty destination (<>) or by leaving the CID out: both readers
+ *     then emit the raw CID as a control character (U+0002 …);
+ *   - /Span <</ActualText …>> BDC … EMC round each line: pdf.js ignores it
+ *     (same output as one-CID-per-glyph) and MuPDF repeats part of the text.
+ *
+ * Positioning: glyph widths in the CIDFont's /W array are the font's own
+ * advances. Where HarfBuzz's advance differs (kerning, mark zeroing) a TJ
+ * adjustment makes up the difference. A glyph with an x offset (a mark placed
+ * over the previous glyph, such as the reph) gets its own CID whose /W width
+ * is (advance − x offset), preceded by a TJ move of the offset: the pen moves
+ * back, the glyph is drawn, and its width brings the pen back to where
+ * HarfBuzz wants it — no rightward jump, which extractors that look for gaps
+ * could read as a word space. A y offset uses Ts (text rise) around that one
+ * glyph (Noto Sans Devanagari positions its marks with x offsets only).
+ *
+ * ---------------------------------------------------------------------------
+ * API
+ * ---------------------------------------------------------------------------
+ *   parse(bytes)                         → font
+ *   subset(font, gids)                   → Uint8Array (TrueType, glyph ids kept)
+ *   subsetCompact(font, gids)            → { bytes, gidMap } (glyphs renumbered)
+ *   closure(font, gids)                  → Set of gids incl. .notdef and composite parts
+ *   shapeSimple(font, text)              → [{ gid, adv, cl }]
+ *   fromShaper(font, text, shaped)       → [{ gid, adv, dx, dy, cl }]
+ *   createRegistry(font)                 → { font, blankGid, cidFor(gid, text, width?), entries(), gids() }
+ *   showGlyphs(registry, glyphs, size)   → operators to place inside BT … ET
+ *   embedType0(writer, deps, { font, registry, baseName?, ref?, subset? }) → Ref
+ *   measure(font, text, size)            → width in points (simple scripts)
+ *   wrap(font, text, size, maxWidth, measureFn?) → lines
+ *   needsUnicode(text) / scriptOf(text) / pickFont(text, bold)
+ *   toUnicodeCMap(entries) / widthsArray(entries) — exposed for the tests
+ */
+const PDFFont = (function () {
+  'use strict';
+
+  /* ============================================================
+     Reading
+     ============================================================ */
+
+  const tagAt = (b, o) => String.fromCharCode(b[o], b[o + 1], b[o + 2], b[o + 3]);
+
+  function reader(bytes) {
+    const b = bytes;
+    return {
+      u8: (o) => b[o],
+      u16: (o) => (b[o] << 8) | b[o + 1],
+      i16: (o) => { const v = (b[o] << 8) | b[o + 1]; return v & 0x8000 ? v - 0x10000 : v; },
+      u32: (o) => ((b[o] << 24) >>> 0) + ((b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]),
+      i32: (o) => (b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]
+    };
+  }
+
+  function parse(input) {
+    const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
+    const r = reader(bytes);
+    const ver = r.u32(0);
+    if (ver !== 0x00010000 && tagAt(bytes, 0) !== 'true') {
+      if (tagAt(bytes, 0) === 'OTTO') throw new Error('CFF-flavoured OpenType fonts are not supported; use a TrueType (glyf) font.');
+      if (tagAt(bytes, 0) === 'ttcf') throw new Error('Font collections (.ttc) are not supported.');
+      throw new Error('Not a TrueType font.');
+    }
+    const numTables = r.u16(4);
+    const tables = Object.create(null);
+    for (let i = 0; i < numTables; i++) {
+      const o = 12 + i * 16;
+      const tag = tagAt(bytes, o);
+      const offset = r.u32(o + 8), length = r.u32(o + 12);
+      if (offset + length > bytes.length) throw new Error('Font table ' + tag + ' runs past the end of the file.');
+      tables[tag] = { offset, length };
+    }
+    for (const t of ['head', 'hhea', 'maxp', 'hmtx', 'loca', 'glyf', 'cmap']) {
+      if (!tables[t]) throw new Error('The font has no ' + t + ' table.');
+    }
+
+    const head = tables.head.offset;
+    const unitsPerEm = r.u16(head + 18);
+    const bbox = [r.i16(head + 36), r.i16(head + 38), r.i16(head + 40), r.i16(head + 42)];
+    const macStyle = r.u16(head + 44);
+    const indexToLocFormat = r.i16(head + 50);
+
+    const hh = tables.hhea.offset;
+    const hhea = { ascent: r.i16(hh + 4), descent: r.i16(hh + 6), lineGap: r.i16(hh + 8),
+      numberOfHMetrics: r.u16(hh + 34) };
+    const numGlyphs = r.u16(tables.maxp.offset + 4);
+
+    // advances and left side bearings
+    const advances = new Uint16Array(numGlyphs);
+    const lsbs = new Int16Array(numGlyphs);
+    {
+      const o = tables.hmtx.offset, nh = Math.max(1, Math.min(hhea.numberOfHMetrics, numGlyphs));
+      let last = 0;
+      for (let g = 0; g < numGlyphs; g++) {
+        if (g < nh) { last = r.u16(o + g * 4); advances[g] = last; lsbs[g] = r.i16(o + g * 4 + 2); }
+        else {
+          advances[g] = last;
+          const p = o + nh * 4 + (g - nh) * 2;
+          lsbs[g] = p + 2 <= tables.hmtx.offset + tables.hmtx.length ? r.i16(p) : 0;
+        }
+      }
+    }
+
+    // glyph locations
+    const loca = new Uint32Array(numGlyphs + 1);
+    {
+      const o = tables.loca.offset;
+      for (let g = 0; g <= numGlyphs; g++) {
+        loca[g] = indexToLocFormat ? r.u32(o + g * 4) : r.u16(o + g * 2) * 2;
+      }
+    }
+
+    const cmap = parseCmap(bytes, r, tables.cmap.offset);
+
+    // OS/2: weight, cap height, typographic metrics
+    let weight = 400, capHeight = 0, xHeight = 0, typoAscender = null, typoDescender = null, fsSelection = 0;
+    if (tables['OS/2']) {
+      const o = tables['OS/2'].offset, v = r.u16(o);
+      weight = r.u16(o + 4);
+      fsSelection = r.u16(o + 62);
+      typoAscender = r.i16(o + 68); typoDescender = r.i16(o + 70);
+      if (v >= 2 && tables['OS/2'].length >= 90) { xHeight = r.i16(o + 86); capHeight = r.i16(o + 88); }
+    }
+
+    let italicAngle = 0, isFixedPitch = false, underlinePosition = 0, underlineThickness = 0;
+    if (tables.post) {
+      const o = tables.post.offset;
+      italicAngle = r.i32(o + 4) / 65536;
+      underlinePosition = r.i16(o + 8);
+      underlineThickness = r.i16(o + 10);
+      isFixedPitch = r.u32(o + 12) !== 0;
+    }
+
+    const names = tables.name ? parseNames(bytes, r, tables.name.offset) : {};
+    const postScriptName = (names[6] || names[4] || 'Font').replace(/[^\x21-\x7e]|[\[\](){}<>\/%#\s]/g, '');
+
+    const font = {
+      bytes, tables, unitsPerEm, numGlyphs, bbox, macStyle, indexToLocFormat, hhea,
+      advances, lsbs, loca, cmap, weight, fsSelection, italicAngle, isFixedPitch,
+      underlinePosition, underlineThickness, postScriptName,
+      familyName: names[1] || '', fullName: names[4] || '',
+      ascent: hhea.ascent, descent: hhea.descent,
+      typoAscender, typoDescender, xHeight,
+      capHeight: 0, flags: 0,
+      glyphForCodePoint: (cp) => cmap.lookup(cp),
+      advance: (gid) => (gid >= 0 && gid < numGlyphs ? advances[gid] : 0)
+    };
+    // Cap height from OS/2, or measured from the H if the table is too old.
+    font.capHeight = capHeight || glyphYMax(font, cmap.lookup(0x48)) || Math.round(hhea.ascent * 0.7);
+    // PDF FontDescriptor flags: 1 FixedPitch, 4 Symbolic, 64 Italic, 262144 ForceBold.
+    // Symbolic, because the glyph set is not the standard Latin one — which is
+    // what every CIDFontType2 producer writes.
+    font.flags = (isFixedPitch ? 1 : 0) | 4 | (italicAngle !== 0 || (macStyle & 2) ? 64 : 0);
+    return font;
+  }
+
+  function glyphYMax(font, gid) {
+    if (!gid) return 0;
+    const s = font.tables.glyf.offset + font.loca[gid];
+    if (font.loca[gid + 1] - font.loca[gid] < 10) return 0;
+    const b = font.bytes;
+    const v = (b[s + 8] << 8) | b[s + 9];
+    return v & 0x8000 ? v - 0x10000 : v;
+  }
+
+  function parseCmap(bytes, r, base) {
+    const n = r.u16(base + 2);
+    let best = null, bestScore = -1;
+    for (let i = 0; i < n; i++) {
+      const pid = r.u16(base + 4 + i * 8), eid = r.u16(base + 6 + i * 8);
+      const off = base + r.u32(base + 8 + i * 8);
+      const fmt = r.u16(off);
+      let score = -1;
+      if (fmt === 12 && ((pid === 3 && eid === 10) || pid === 0)) score = 4;
+      else if (fmt === 4 && ((pid === 3 && eid === 1) || pid === 0)) score = 3;
+      else if (fmt === 12) score = 2;
+      else if (fmt === 4) score = 1;
+      if (score > bestScore) { best = { off, fmt }; bestScore = score; }
+    }
+    if (!best) throw new Error('The font has no Unicode cmap (format 4 or 12).');
+    const cache = new Map();
+    let lookupRaw;
+
+    if (best.fmt === 12) {
+      const o = best.off, groups = r.u32(o + 12);
+      const starts = new Uint32Array(groups), ends = new Uint32Array(groups), gids = new Uint32Array(groups);
+      for (let i = 0; i < groups; i++) {
+        starts[i] = r.u32(o + 16 + i * 12); ends[i] = r.u32(o + 20 + i * 12); gids[i] = r.u32(o + 24 + i * 12);
+      }
+      lookupRaw = (cp) => {
+        let lo = 0, hi = groups - 1;
+        while (lo <= hi) {
+          const m = (lo + hi) >> 1;
+          if (cp < starts[m]) hi = m - 1;
+          else if (cp > ends[m]) lo = m + 1;
+          else return gids[m] + (cp - starts[m]);
+        }
+        return 0;
+      };
+    } else {
+      const o = best.off, segX2 = r.u16(o + 6), segs = segX2 / 2;
+      const endO = o + 14, startO = endO + segX2 + 2, deltaO = startO + segX2, rangeO = deltaO + segX2;
+      lookupRaw = (cp) => {
+        if (cp > 0xffff) return 0;
+        let lo = 0, hi = segs - 1;
+        while (lo <= hi) {
+          const m = (lo + hi) >> 1;
+          const end = r.u16(endO + m * 2), start = r.u16(startO + m * 2);
+          if (cp > end) lo = m + 1;
+          else if (cp < start) hi = m - 1;
+          else {
+            const delta = r.u16(deltaO + m * 2), ro = r.u16(rangeO + m * 2);
+            if (!ro) return (cp + delta) & 0xffff;
+            const ga = rangeO + m * 2 + ro + (cp - start) * 2;
+            const g = r.u16(ga);
+            return g ? (g + delta) & 0xffff : 0;
+          }
+        }
+        return 0;
+      };
+    }
+    return {
+      format: best.fmt,
+      lookup(cp) {
+        let g = cache.get(cp);
+        if (g === undefined) { g = lookupRaw(cp); cache.set(cp, g); }
+        return g;
+      }
+    };
+  }
+
+  function parseNames(bytes, r, base) {
+    const count = r.u16(base + 2), strBase = base + r.u16(base + 4);
+    const out = {}, rank = {};
+    for (let i = 0; i < count; i++) {
+      const o = base + 6 + i * 12;
+      const pid = r.u16(o), eid = r.u16(o + 2), lang = r.u16(o + 4), id = r.u16(o + 6);
+      const len = r.u16(o + 8), off = strBase + r.u16(o + 10);
+      let s = null, score = 0;
+      if (pid === 3 && (eid === 1 || eid === 0)) {
+        s = '';
+        for (let k = 0; k + 1 < len; k += 2) s += String.fromCharCode(r.u16(off + k));
+        score = lang === 0x409 ? 3 : 2;
+      } else if (pid === 1 && eid === 0) {
+        s = '';
+        for (let k = 0; k < len; k++) s += String.fromCharCode(bytes[off + k]);
+        score = 1;
+      }
+      if (s !== null && (rank[id] || 0) < score) { out[id] = s; rank[id] = score; }
+    }
+    return out;
+  }
+
+  /* ============================================================
+     Subsetting
+     ============================================================ */
+
+  // Composite glyph component flags
+  const ARG_1_AND_2_ARE_WORDS = 0x0001, WE_HAVE_A_SCALE = 0x0008, MORE_COMPONENTS = 0x0020,
+    WE_HAVE_AN_X_AND_Y_SCALE = 0x0040, WE_HAVE_A_TWO_BY_TWO = 0x0080;
+
+  function components(font, gid) {
+    const out = [];
+    const start = font.loca[gid], end = font.loca[gid + 1];
+    if (end - start < 10) return out;
+    const b = font.bytes, base = font.tables.glyf.offset + start;
+    const nc = (b[base] << 8) | b[base + 1];
+    if (!(nc & 0x8000)) return out;                       // simple glyph
+    let p = base + 10;
+    for (let guard = 0; guard < 1000; guard++) {
+      const flags = (b[p] << 8) | b[p + 1];
+      out.push((b[p + 2] << 8) | b[p + 3]);
+      p += 4 + (flags & ARG_1_AND_2_ARE_WORDS ? 4 : 2);
+      if (flags & WE_HAVE_A_SCALE) p += 2;
+      else if (flags & WE_HAVE_AN_X_AND_Y_SCALE) p += 4;
+      else if (flags & WE_HAVE_A_TWO_BY_TWO) p += 8;
+      if (!(flags & MORE_COMPONENTS)) break;
+    }
+    return out;
+  }
+
+  /** The glyph set a subset must keep: what was asked for, .notdef, and every
+      component of every composite glyph, recursively. */
+  function closure(font, gids) {
+    const keep = new Set([0]);
+    const stack = [];
+    for (const g of gids) {
+      const n = g | 0;
+      if (n >= 0 && n < font.numGlyphs && !keep.has(n)) { keep.add(n); stack.push(n); }
+    }
+    stack.push(0);
+    while (stack.length) {
+      for (const c of components(font, stack.pop())) {
+        if (c < font.numGlyphs && !keep.has(c)) { keep.add(c); stack.push(c); }
+      }
+    }
+    return keep;
+  }
+
+  function checksum(bytes, off, len) {
+    let sum = 0;
+    const n = (len + 3) & ~3;
+    for (let i = 0; i < n; i += 4) {
+      const a = off + i;
+      sum = (sum + (((bytes[a] || 0) << 24) >>> 0) + ((bytes[a + 1] || 0) << 16) +
+        ((bytes[a + 2] || 0) << 8) + (bytes[a + 3] || 0)) >>> 0;
+    }
+    return sum >>> 0;
+  }
+
+  const copyTable = (font, tag) => {
+    const t = font.tables[tag];
+    return t ? font.bytes.slice(t.offset, t.offset + t.length) : null;
+  };
+  const put16 = (a, o, v) => { a[o] = (v >> 8) & 255; a[o + 1] = v & 255; };
+  const put32 = (a, o, v) => { a[o] = (v >>> 24) & 255; a[o + 1] = (v >>> 16) & 255; a[o + 2] = (v >>> 8) & 255; a[o + 3] = v & 255; };
+
+  /**
+   * A TrueType file with only the glyphs in `gids` (plus composites' parts and
+   * .notdef). Glyph ids are unchanged: unused glyphs are kept as empty entries
+   * in loca, and the glyph count is cut to the highest glyph kept, so the
+   * metrics and loca tables stop there too.
+   *
+   * Kept: head, hhea, maxp, loca, glyf, hmtx, cvt, fpgm, prep (the tables the
+   * PDF specification lists for an embedded TrueType font), OS/2 (vertical
+   * metrics for viewers that look) and post as format 3 (no glyph names).
+   * Dropped: cmap — a CIDFontType2 reaches glyphs through CIDToGIDMap — and
+   * name, GSUB, GPOS, GDEF, STAT, gasp, kern and the like, which only shaping
+   * and font installers use.
+   */
+  function subset(font, gids) {
+    const keep = closure(font, gids);
+    let maxGid = 0;
+    keep.forEach((g) => { if (g > maxGid) maxGid = g; });
+    const slots = [];
+    for (let g = 0; g <= maxGid; g++) slots.push(keep.has(g) ? g : -1);
+    return buildSfnt(font, slots, null);
+  }
+
+  /**
+   * As subset(), but the kept glyphs are renumbered 0, 1, 2… (in their
+   * original order, so .notdef stays 0) and composite glyphs' references are
+   * rewritten to match. Far smaller for fonts with thousands of glyphs, as
+   * loca and hmtx shrink to the glyphs kept. Returns { bytes, gidMap } where
+   * gidMap maps an original glyph id to its new one. embedType0 uses this,
+   * since its CIDToGIDMap stream can point anywhere.
+   */
+  function subsetCompact(font, gids) {
+    const keep = Array.from(closure(font, gids)).sort((a, b) => a - b);
+    const gidMap = new Map();
+    keep.forEach((g, i) => gidMap.set(g, i));
+    return { bytes: buildSfnt(font, keep, gidMap), gidMap };
+  }
+
+  /** slots[newGid] = original gid, or −1 for an empty glyph. */
+  function buildSfnt(font, slots, gidMap) {
+    const nGlyphs = slots.length;
+    const glyfBase = font.tables.glyf.offset;
+    const lenOf = (g) => (g < 0 ? 0 : font.loca[g + 1] - font.loca[g]);
+
+    // glyf and loca
+    let glyfLen = 0;
+    const offsets = new Uint32Array(nGlyphs + 1);
+    for (let i = 0; i < nGlyphs; i++) {
+      offsets[i] = glyfLen;
+      glyfLen += (lenOf(slots[i]) + 3) & ~3;
+    }
+    offsets[nGlyphs] = glyfLen;
+    const glyf = new Uint8Array(Math.max(glyfLen, 4));   // a zero-length glyf upsets some readers
+    for (let i = 0; i < nGlyphs; i++) {
+      const g = slots[i];
+      if (g < 0 || !lenOf(g)) continue;
+      const s = glyfBase + font.loca[g];
+      glyf.set(font.bytes.subarray(s, s + lenOf(g)), offsets[i]);
+      if (gidMap) remapComponents(glyf, offsets[i], lenOf(g), gidMap);
+    }
+    const longLoca = glyfLen > 0x1fffe;
+    const loca = new Uint8Array((nGlyphs + 1) * (longLoca ? 4 : 2));
+    for (let i = 0; i <= nGlyphs; i++) {
+      if (longLoca) put32(loca, i * 4, offsets[i]);
+      else put16(loca, i * 2, offsets[i] >> 1);
+    }
+
+    // hmtx: empty slots get zero metrics; trailing equal advances collapse
+    const adv = new Uint16Array(nGlyphs), lsb = new Int16Array(nGlyphs);
+    for (let i = 0; i < nGlyphs; i++) {
+      const g = slots[i];
+      if (g >= 0) { adv[i] = font.advances[g]; lsb[i] = font.lsbs[g]; }
+    }
+    let nh = nGlyphs;
+    while (nh > 1 && adv[nh - 2] === adv[nGlyphs - 1]) nh--;
+    const hmtx = new Uint8Array(nh * 4 + (nGlyphs - nh) * 2);
+    for (let i = 0; i < nGlyphs; i++) {
+      if (i < nh) { put16(hmtx, i * 4, adv[i]); put16(hmtx, i * 4 + 2, lsb[i] & 0xffff); }
+      else put16(hmtx, nh * 4 + (i - nh) * 2, lsb[i] & 0xffff);
+    }
+
+    const head = copyTable(font, 'head');
+    put32(head, 8, 0);                                    // checkSumAdjustment, set below
+    put16(head, 50, longLoca ? 1 : 0);
+
+    const hhea = copyTable(font, 'hhea');
+    put16(hhea, 34, nh);
+
+    const maxp = copyTable(font, 'maxp');
+    put16(maxp, 4, nGlyphs);
+
+    const post = new Uint8Array(32);
+    put32(post, 0, 0x00030000);
+    if (font.tables.post) post.set(font.bytes.subarray(font.tables.post.offset + 4, font.tables.post.offset + 16), 4);
+
+    const out = { head, hhea, maxp, loca, glyf, hmtx, post };
+    for (const t of ['cvt ', 'fpgm', 'prep', 'OS/2']) {
+      const c = copyTable(font, t);
+      if (c) out[t] = c;
+    }
+    return assembleSfnt(out);
+  }
+
+  /** Rewrite the glyph references of a composite glyph copied to buf[off…]. */
+  function remapComponents(buf, off, len, gidMap) {
+    if (len < 10 || !(buf[off] & 0x80)) return;             // simple glyph
+    let p = off + 10;
+    for (let guard = 0; guard < 1000 && p + 4 <= off + len; guard++) {
+      const flags = (buf[p] << 8) | buf[p + 1];
+      const old = (buf[p + 2] << 8) | buf[p + 3];
+      const nu = gidMap.get(old);
+      if (nu === undefined) throw new Error('Composite glyph refers to glyph ' + old + ', which the subset lost.');
+      put16(buf, p + 2, nu);
+      p += 4 + (flags & ARG_1_AND_2_ARE_WORDS ? 4 : 2);
+      if (flags & WE_HAVE_A_SCALE) p += 2;
+      else if (flags & WE_HAVE_AN_X_AND_Y_SCALE) p += 4;
+      else if (flags & WE_HAVE_A_TWO_BY_TWO) p += 8;
+      if (!(flags & MORE_COMPONENTS)) break;
+    }
+  }
+
+  function assembleSfnt(tables) {
+    const tags = Object.keys(tables).sort();              // binary order: ASCII sort suffices
+    const n = tags.length;
+    let es = 0;
+    while ((1 << (es + 1)) <= n) es++;
+    const sr = (1 << es) * 16;
+    let size = 12 + n * 16;
+    for (const t of tags) size += (tables[t].length + 3) & ~3;
+    const f = new Uint8Array(size);
+    put32(f, 0, 0x00010000);
+    put16(f, 4, n); put16(f, 6, sr); put16(f, 8, es); put16(f, 10, n * 16 - sr);
+    let off = 12 + n * 16, headAt = -1;
+    tags.forEach((t, i) => {
+      const data = tables[t], rec = 12 + i * 16;
+      for (let k = 0; k < 4; k++) f[rec + k] = t.charCodeAt(k);
+      f.set(data, off);
+      put32(f, rec + 4, checksum(f, off, data.length));
+      put32(f, rec + 8, off);
+      put32(f, rec + 12, data.length);
+      if (t === 'head') headAt = off;
+      off += (data.length + 3) & ~3;
+    });
+    if (headAt >= 0) put32(f, headAt + 8, (0xb1b0afba - checksum(f, 0, f.length)) >>> 0);
+    return f;
+  }
+
+  /* ============================================================
+     Glyphs from text
+     ============================================================ */
+
+  // Default-ignorable characters (ZWJ, ZWNJ, soft hyphen, variation
+  // selectors…). They draw nothing; their text joins the next glyph's cluster.
+  const isIgnorable = (cp) => cp === 0xad || cp === 0x34f || cp === 0x61c ||
+    (cp >= 0x115f && cp <= 0x1160) || (cp >= 0x17b4 && cp <= 0x17b5) || (cp >= 0x180b && cp <= 0x180f) ||
+    (cp >= 0x200b && cp <= 0x200f) || (cp >= 0x202a && cp <= 0x202e) || (cp >= 0x2060 && cp <= 0x206f) ||
+    cp === 0x3164 || (cp >= 0xfe00 && cp <= 0xfe0f) || cp === 0xfeff || cp === 0xffa0 ||
+    (cp >= 0xfff0 && cp <= 0xfff8) || (cp >= 0x1bca0 && cp <= 0x1bca3) ||
+    (cp >= 0x1d173 && cp <= 0x1d17a) || (cp >= 0xe0000 && cp <= 0xe0fff);
+
+  /**
+   * One glyph per character, straight from the cmap — for scripts that need
+   * no shaping. Combining marks keep their own (zero-advance) glyph. Each
+   * glyph's `cl` is its character; tab, CR and LF draw as a space.
+   */
+  function shapeSimple(font, text) {
+    const out = [];
+    let carry = '';
+    for (const ch of String(text)) {
+      const cp = ch.codePointAt(0);
+      let gid = font.glyphForCodePoint(cp);
+      if (cp === 0x0a || cp === 0x0d || cp === 0x09) gid = font.glyphForCodePoint(0x20);
+      // Hidden as HarfBuzz hides them, even where the font has a glyph (a
+      // soft hyphen's glyph is a visible hyphen).
+      if (isIgnorable(cp)) { carry += ch; continue; }
+      out.push({ gid, adv: font.advance(gid), cl: carry + ch });
+      carry = '';
+    }
+    if (carry) {
+      if (out.length) out[out.length - 1].cl += carry;
+      else out.push({ gid: 0, adv: 0, cl: carry, invisible: true });
+    }
+    return out;
+  }
+
+  /**
+   * Shaper output → drawable glyphs. `shaped` is MVRShaper's
+   * [{ g, cl, ax, ay, dx, dy }] or HarfBuzz-style [{ gid|codepoint, cluster,
+   * x_advance, x_offset, y_offset }]; cluster values are UTF-16 indices into
+   * `text`. Left-to-right text only.
+   *
+   * The first glyph of each cluster, in drawing order, carries the whole
+   * cluster's text as `cl`; the other glyphs of the cluster carry ''.
+   * showGlyphs() decides how that text is spread over the glyphs.
+   */
+  function fromShaper(font, text, shaped) {
+    const s = String(text);
+    const norm = shaped.map((g) => ({
+      gid: g.g !== undefined ? g.g : (g.gid !== undefined ? g.gid : g.codepoint),
+      c: g.cl !== undefined ? g.cl : g.cluster,
+      adv: g.ax !== undefined ? g.ax : (g.x_advance !== undefined ? g.x_advance : g.adv),
+      dx: g.dx !== undefined ? g.dx : (g.x_offset || 0),
+      dy: g.dy !== undefined ? g.dy : (g.y_offset || 0)
+    }));
+    const starts = Array.from(new Set(norm.map((g) => g.c))).sort((a, b) => a - b);
+    const endOf = new Map();
+    starts.forEach((c, i) => endOf.set(c, i + 1 < starts.length ? starts[i + 1] : s.length));
+    if (starts.length && starts[0] > 0) {          // text before the first cluster joins it
+      const first = starts[0];
+      endOf.set(0, endOf.get(first)); endOf.delete(first);
+      norm.forEach((g) => { if (g.c === first) g.c = 0; });
+    }
+    return norm.map((g, i) => ({
+      gid: g.gid, adv: g.adv, dx: g.dx || 0, dy: g.dy || 0,
+      cl: i === 0 || norm[i - 1].c !== g.c ? s.slice(g.c, endOf.get(g.c)) : ''
+    }));
+  }
+
+  /* ============================================================
+     CID registry and content-stream operators
+     ============================================================ */
+
+  const wUnits = (font, adv) => Math.round(adv * 1000 / font.unitsPerEm);
+  const num = (v) => {
+    const r = Math.round(v * 1000) / 1000;
+    return Object.is(r, -0) ? '0' : String(r);
+  };
+  const hex4 = (v) => ('000' + v.toString(16).toUpperCase()).slice(-4);
+  const isBlankGlyph = (font, gid) => gid > 0 && gid < font.numGlyphs && font.loca[gid + 1] === font.loca[gid];
+
+  function createRegistry(font) {
+    const byKey = new Map();
+    const list = [{ cid: 0, gid: 0, text: '', width: wUnits(font, font.advance(0)) }];
+    byKey.set('0\u0000\u0000' + list[0].width, 0);
+    // A glyph with no outline, for the zero-width "carrier" CIDs below.
+    let blank = 0;
+    for (const g of [font.glyphForCodePoint(0x200b), font.glyphForCodePoint(0x200c),
+      font.glyphForCodePoint(0x200d), font.glyphForCodePoint(0x20), 1, 2, 3]) {
+      if (isBlankGlyph(font, g)) { blank = g; break; }
+    }
+    return {
+      font,
+      blankGid: blank,
+      /** CID for this glyph standing for this text, drawn with this /W width
+          (in 1/1000 em; defaults to the glyph's own advance). */
+      cidFor(gid, text, width) {
+        const w = width === undefined ? wUnits(font, font.advance(gid)) : Math.round(width);
+        const t = text || '';
+        const key = gid + '\u0000' + t + '\u0000' + w;
+        let cid = byKey.get(key);
+        if (cid === undefined) {
+          cid = list.length;
+          if (cid > 0xffff) throw new Error('Too many distinct glyphs for one embedded font.');
+          list.push({ cid, gid, text: t, width: w });
+          byKey.set(key, cid);
+        }
+        return cid;
+      },
+      entries: () => list.slice(),
+      gids: () => new Set(list.map((e) => e.gid))
+    };
+  }
+
+  /*
+   * Spreading a cluster's text over its glyphs.
+   *
+   * Text extractors read ToUnicode strings in content-stream order, so the
+   * pieces must concatenate to the logical text — but pdf.js also judges each
+   * glyph by its string (pdf.js 5, getCharUnicodeCategory:
+   * /^(\s)|(\p{Mn})|(\p{Cf})$/u): a string containing a nonspacing mark is a
+   * "zero-width diacritic" whose position and width are ignored (so it is
+   * glued to whatever came before — even the previous line), and a string
+   * ending in a format character (ZWJ, ZWNJ, soft hyphen) is skipped outright.
+   * An empty or missing mapping makes both pdf.js and MuPDF emit the raw CID.
+   *
+   * So: every glyph that advances the pen gets a string with no nonspacing
+   * mark; nonspacing marks ride on zero-width glyphs, and where there is none
+   * to carry them, on a "carrier" — a zero-width CID mapped to a blank glyph
+   * that draws nothing; no string ends in a format character (those move on
+   * to the start of the next string).
+   */
+  const MN = /\p{Mn}/u, CF_END = /\p{Cf}+$/u;
+
+  function dealCluster(chars, glyphs, widths, out) {
+    let p = 0;
+    const n = chars.length, m = glyphs.length;
+    const mnRunEnd = (q) => { while (q < n && MN.test(chars[q])) q++; return q; };
+    for (let i = 0; i < m; i++) {
+      const last = i === m - 1;
+      let take = '';
+      if (widths[i] !== 0) {
+        if (p < n && MN.test(chars[p])) {
+          const q = mnRunEnd(p);
+          if (q < n) { out.push({ carrier: true, text: chars.slice(p, q).join('') }); p = q; }
+        }
+        if (p < n) take = chars[p++];
+        if (last) while (p < n && !MN.test(chars[p])) take += chars[p++];
+      } else if (p < n) {
+        take = chars[p++];
+        const q = mnRunEnd(p);
+        take += chars.slice(p, q).join(''); p = q;
+      }
+      out.push({ glyph: glyphs[i], width: widths[i], text: take });
+    }
+    if (p < n) {
+      const rest = chars.slice(p).join('');
+      const tail = out[out.length - 1];
+      if (tail && (tail.carrier || tail.width === 0 || !MN.test(rest))) tail.text += rest;
+      else out.push({ carrier: true, text: rest });
+    }
+  }
+
+  /**
+   * Operators that draw `glyphs` at `size`, for use inside BT … ET after Tf and
+   * the text position have been set. Glyphs are { gid, adv, cl, dx?, dy? } in
+   * font units, from shapeSimple() or fromShaper(): a glyph with non-empty
+   * `cl` starts a cluster and glyphs with '' continue it.
+   */
+  function showGlyphs(registry, glyphs, size) {
+    const font = registry.font, k = 1000 / font.unitsPerEm;
+
+    // 1. widths, clusters, and the text of each piece
+    const items = [];
+    let i = 0;
+    while (i < glyphs.length) {
+      let j = i;
+      while (j + 1 < glyphs.length && !glyphs[j + 1].cl) j++;
+      const group = glyphs.slice(i, j + 1).filter((g) => !g.invisible);
+      const widths = group.map((g) => {
+        const target = (g.adv === undefined ? font.advance(g.gid) : g.adv) * k;
+        return g.dx ? Math.round(target - g.dx * k) : wUnits(font, font.advance(g.gid));
+      });
+      const chars = Array.from(glyphs[i].cl || '');
+      if (group.length) dealCluster(chars, group, widths, items);
+      else if (chars.length) items.push({ carrier: true, text: chars.join('') });
+      i = j + 1;
+    }
+    // 2. no string may end in a format character: move such tails forward
+    let carry = '';
+    for (const it of items) {
+      it.text = carry + it.text;
+      const m = CF_END.exec(it.text);
+      carry = m ? m[0] : '';
+      if (carry) it.text = it.text.slice(0, it.text.length - carry.length);
+    }
+    if (carry) items.push({ carrier: true, text: carry });   // pdf.js drops it; MuPDF keeps it
+
+    // 3. operators
+    let ops = '';
+    let arr = [];               // pending TJ elements: strings of hex, or numbers
+    const pushHex = (h) => {
+      if (arr.length && typeof arr[arr.length - 1] === 'string') arr[arr.length - 1] += h;
+      else arr.push(h);
+    };
+    // A TJ number n moves the pen by −n/1000 em, so a move of m units is −m.
+    const pushNum = (n) => {
+      if (Math.abs(n) < 0.0005) return;
+      if (arr.length && typeof arr[arr.length - 1] === 'number') {
+        arr[arr.length - 1] += n;
+        if (Math.abs(arr[arr.length - 1]) < 0.0005) arr.pop();
+      } else arr.push(n);
+    };
+    // Trailing numbers are kept: they place whatever is drawn next.
+    const flush = () => {
+      if (!arr.length) return;
+      if (arr.length === 1 && typeof arr[0] === 'string') ops += '<' + arr[0] + '> Tj\n';
+      else ops += '[' + arr.map((e) => typeof e === 'number' ? num(e) : '<' + e + '>').join(' ') + '] TJ\n';
+      arr = [];
+    };
+    for (const it of items) {
+      if (it.carrier) {
+        if (it.text) pushHex(hex4(registry.cidFor(registry.blankGid, it.text, 0)));
+        continue;
+      }
+      const g = it.glyph;
+      const target = (g.adv === undefined ? font.advance(g.gid) : g.adv) * k;
+      const dx = (g.dx || 0) * k, dy = (g.dy || 0) * k;
+      if (!it.text && isBlankGlyph(font, g.gid)) {          // nothing to draw, nothing to say
+        pushNum(-target);
+        continue;
+      }
+      // A glyph left with no text (a cluster with more glyphs than characters)
+      // maps to U+200B, which pdf.js skips; an empty mapping would leak the CID.
+      const text = it.text || '\u200b';
+      // With an x offset, move by it, draw, and let this CID's own /W width
+      // land the pen at the shaped advance: no rightward jump after a mark.
+      const cid = dx ? registry.cidFor(g.gid, text, it.width) : registry.cidFor(g.gid, text);
+      pushNum(-dx);
+      if (dy) {
+        flush();
+        ops += num(dy * size / 1000) + ' Ts\n<' + hex4(cid) + '> Tj\n0 Ts\n';
+      } else {
+        pushHex(hex4(cid));
+      }
+      pushNum(-(target - dx - it.width));
+    }
+    flush();
+    return ops;
+  }
+
+  /* ============================================================
+     Embedding
+     ============================================================ */
+
+  function subsetTag(entries) {
+    // Deterministic: the same glyph set gives the same tag.
+    let h = 0x811c9dc5;
+    for (const e of entries) {
+      h ^= e.gid & 0xffff; h = Math.imul(h, 0x01000193) >>> 0;
+      h ^= e.cid & 0xffff; h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    let s = '';
+    for (let i = 0; i < 6; i++) { s += String.fromCharCode(65 + (h % 26)); h = (Math.floor(h / 26) ^ (i * 7919)) >>> 0; }
+    return s;
+  }
+
+  function bytesOfAscii(str) {
+    const a = new Uint8Array(str.length);
+    for (let i = 0; i < str.length; i++) a[i] = str.charCodeAt(i) & 0xff;
+    return a;
+  }
+
+  function utf16Hex(text) {
+    let h = '';
+    for (let i = 0; i < text.length; i++) h += hex4(text.charCodeAt(i));   // surrogates pass through as pairs
+    return h;
+  }
+
+  function widthsArray(entries) {
+    const W = [];
+    let i = 0;
+    while (i < entries.length) {
+      // a run of equal widths over consecutive CIDs: c1 c2 w
+      let j = i;
+      while (j + 1 < entries.length && entries[j + 1].cid === entries[j].cid + 1 &&
+        entries[j + 1].width === entries[i].width) j++;
+      if (j - i >= 2) { W.push(entries[i].cid, entries[j].cid, entries[i].width); i = j + 1; continue; }
+      // otherwise a list: c [w1 w2 …] up to the next long equal run or gap
+      const start = i, ws = [];
+      while (i < entries.length && (i === start || entries[i].cid === entries[i - 1].cid + 1)) {
+        let r = i;
+        while (r + 1 < entries.length && entries[r + 1].cid === entries[r].cid + 1 &&
+          entries[r + 1].width === entries[i].width) r++;
+        if (r - i >= 2 && i !== start) break;
+        ws.push(entries[i].width); i++;
+      }
+      W.push(entries[start].cid, ws);
+    }
+    return W;
+  }
+
+  function toUnicodeCMap(entries) {
+    const mapped = entries.filter((e) => e.text);
+    const single = [], ranges = [];
+    let i = 0;
+    while (i < mapped.length) {
+      // bfrange: consecutive CIDs (same high byte) to consecutive single BMP characters
+      let j = i;
+      const one = (e) => e.text.length === 1;
+      if (one(mapped[i])) {
+        while (j + 1 < mapped.length && one(mapped[j + 1]) &&
+          mapped[j + 1].cid === mapped[j].cid + 1 && (mapped[j + 1].cid >> 8) === (mapped[i].cid >> 8) &&
+          mapped[j + 1].text.charCodeAt(0) === mapped[j].text.charCodeAt(0) + 1 &&
+          (mapped[j + 1].text.charCodeAt(0) & 0xff) !== 0) j++;
+      }
+      if (j - i >= 2) {
+        ranges.push('<' + hex4(mapped[i].cid) + '> <' + hex4(mapped[j].cid) + '> <' + utf16Hex(mapped[i].text) + '>');
+        i = j + 1;
+      } else {
+        single.push('<' + hex4(mapped[i].cid) + '> <' + utf16Hex(mapped[i].text) + '>');
+        i++;
+      }
+    }
+    let s = '/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n' +
+      '/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n' +
+      '/CMapName /Adobe-Identity-UCS def\n/CMapType 2 def\n' +
+      '1 begincodespacerange\n<0000> <FFFF>\nendcodespacerange\n';
+    for (let k = 0; k < single.length; k += 100) {
+      const part = single.slice(k, k + 100);
+      s += part.length + ' beginbfchar\n' + part.join('\n') + '\nendbfchar\n';
+    }
+    for (let k = 0; k < ranges.length; k += 100) {
+      const part = ranges.slice(k, k + 100);
+      s += part.length + ' beginbfrange\n' + part.join('\n') + '\nendbfrange\n';
+    }
+    s += 'endcmap\nCMapName currentdict /CMap defineresource pop\nend\nend\n';
+    return s;
+  }
+
+  /**
+   * Add the font to a pdfcore PDFWriter and return the Ref of its Type0 font
+   * dictionary. Call once per font, after every page that uses the registry
+   * has been drawn. `ref` (a Ref or object number) fills a pre-allocated slot.
+   */
+  function embedType0(writer, deps, opts) {
+    const { Name, Ref, PDFStream } = deps;
+    const font = opts.font, registry = opts.registry;
+    const entries = registry.entries().sort((a, b) => a.cid - b.cid);
+    const k = 1000 / font.unitsPerEm;
+    const sc = (v) => Math.round(v * k);
+    const tag = subsetTag(entries);
+    const base = String(opts.baseName || font.postScriptName || 'Font').replace(/[^\x21-\x7e]|[\[\](){}<>\/%#\s]/g, '');
+    const fontName = opts.subset === false ? base : tag + '+' + base;
+
+    // The font program: by default a compact subset with renumbered glyphs.
+    // { subset: 'ids' } keeps original glyph ids (subset()); { subset: false }
+    // embeds the whole font (for comparison in the tests).
+    let sub, gidOf;
+    if (opts.subset === false) { sub = font.bytes; gidOf = (g) => g; }
+    else if (opts.subset === 'ids') { sub = subset(font, entries.map((e) => e.gid)); gidOf = (g) => g; }
+    else {
+      const c = subsetCompact(font, entries.map((e) => e.gid));
+      sub = c.bytes; gidOf = (g) => c.gidMap.get(g);
+    }
+    const fileDict = Object.create(null);
+    fileDict.Length1 = sub.length;
+    const fileRef = new Ref(writer.add(new PDFStream(fileDict, sub)), 0);
+
+    const desc = Object.create(null);
+    Object.assign(desc, {
+      Type: new Name('FontDescriptor'), FontName: new Name(fontName), Flags: font.flags,
+      FontBBox: font.bbox.map(sc), ItalicAngle: font.italicAngle,
+      Ascent: sc(font.ascent), Descent: sc(font.descent), CapHeight: sc(font.capHeight),
+      StemV: font.weight >= 600 ? 120 : 80, FontFile2: fileRef
+    });
+    if (font.xHeight) desc.XHeight = sc(font.xHeight);
+    const descRef = new Ref(writer.add(desc), 0);
+
+    // CIDToGIDMap: two bytes per CID, CID 0 upwards
+    let maxCid = 0;
+    for (const e of entries) if (e.cid > maxCid) maxCid = e.cid;
+    const map = new Uint8Array((maxCid + 1) * 2);
+    for (const e of entries) { const g = gidOf(e.gid); map[e.cid * 2] = g >> 8; map[e.cid * 2 + 1] = g & 255; }
+    const mapRef = new Ref(writer.add(new PDFStream(Object.create(null), map)), 0);
+
+    const cidFont = Object.create(null);
+    Object.assign(cidFont, {
+      Type: new Name('Font'), Subtype: new Name('CIDFontType2'), BaseFont: new Name(fontName),
+      CIDSystemInfo: { Registry: { __string: bytesOfAscii('Adobe') }, Ordering: { __string: bytesOfAscii('Identity') }, Supplement: 0 },
+      FontDescriptor: descRef, DW: sc(font.advance(0)), W: widthsArray(entries), CIDToGIDMap: mapRef
+    });
+    const cidRef = new Ref(writer.add(cidFont), 0);
+
+    const tuRef = new Ref(writer.add(new PDFStream(Object.create(null), bytesOfAscii(toUnicodeCMap(entries)))), 0);
+
+    const type0 = Object.create(null);
+    Object.assign(type0, {
+      Type: new Name('Font'), Subtype: new Name('Type0'), BaseFont: new Name(fontName),
+      Encoding: new Name('Identity-H'), DescendantFonts: [cidRef], ToUnicode: tuRef
+    });
+    if (opts.ref !== undefined && opts.ref !== null) {
+      const numRef = typeof opts.ref === 'number' ? opts.ref : opts.ref.num;
+      writer.set(numRef, type0);
+      return new Ref(numRef, 0);
+    }
+    return new Ref(writer.add(type0), 0);
+  }
+
+  /* ============================================================
+     Measuring and wrapping
+     ============================================================ */
+
+  function measure(font, text, size) {
+    let units = 0;
+    for (const g of shapeSimple(font, text)) units += g.adv;
+    return units * size / font.unitsPerEm;
+  }
+
+  /** pdfcore's wrapText, measured with the font. For shaped scripts pass a
+      measureFn(text) → points built on the shaper, as conjuncts are narrower
+      than the sum of their parts. */
+  function wrap(font, text, size, maxWidth, measureFn) {
+    const width = measureFn || ((t) => measure(font, t, size));
+    const lines = [];
+    for (const para of String(text).split('\n')) {
+      if (!para.trim()) { lines.push(''); continue; }
+      let line = '';
+      for (const word of para.split(/\s+/)) {
+        const test = line ? line + ' ' + word : word;
+        if (width(test) > maxWidth && line) { lines.push(line); line = word; }
+        else line = test;
+      }
+      if (line) lines.push(line);
+    }
+    return lines;
+  }
+
+  /* ============================================================
+     Choosing a font
+     ============================================================ */
+
+  // pdfcore's WINANSI and FALLBACK keys: what contentEscape can show.
+  const WINANSI_EXTRA = new Set([0x20ac, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021, 0x02c6, 0x2030,
+    0x0160, 0x2039, 0x0152, 0x017d, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014, 0x02dc,
+    0x2122, 0x0161, 0x203a, 0x0153, 0x017e, 0x0178]);
+  const FALLBACK_KEYS = new Set([0x2212, 0x2010, 0x2011, 0x2015, 0x00a0, 0x2009, 0x200a, 0x2002, 0x2003,
+    0x2032, 0x2033, 0x00ad]);
+
+  /** True when pdfcore's contentEscape would print '?' for some character. */
+  function needsUnicode(text) {
+    for (const ch of String(text)) {
+      const c = ch.codePointAt(0);
+      if (c < 256 || WINANSI_EXTRA.has(c) || FALLBACK_KEYS.has(c)) continue;
+      return true;
+    }
+    return false;
+  }
+
+  const isDevanagari = (c) => (c >= 0x0900 && c <= 0x097f) || (c >= 0xa8e0 && c <= 0xa8ff) ||
+    (c >= 0x1cd0 && c <= 0x1cff) || (c >= 0x11b00 && c <= 0x11b5f);
+  // What Noto Sans serves with no shaping: Latin, IPA, Greek, Cyrillic, and the
+  // shared punctuation, symbol and currency blocks.
+  const isLatinish = (c) => c < 0x0530 || (c >= 0x1d00 && c <= 0x1fff) || (c >= 0x2000 && c <= 0x2bff) ||
+    (c >= 0x2c60 && c <= 0x2c7f) || (c >= 0x2de0 && c <= 0x2e7f) || (c >= 0xa640 && c <= 0xa69f) ||
+    (c >= 0xa700 && c <= 0xa7ff) || (c >= 0xab30 && c <= 0xab6f) || (c >= 0xfb00 && c <= 0xfb06) ||
+    (c >= 0xfe00 && c <= 0xfe0f) || (c >= 0xfe20 && c <= 0xfe2f) || c === 0xfeff || (c >= 0xfff0 && c <= 0xfffd);
+
+  /** 'devanagari' if any Devanagari is present, 'latin' if everything is
+      Latin/Greek/Cyrillic/common, otherwise 'other'. */
+  function scriptOf(text) {
+    let other = false;
+    for (const ch of String(text)) {
+      const c = ch.codePointAt(0);
+      if (isDevanagari(c)) return 'devanagari';
+      if (!isLatinish(c)) other = true;
+    }
+    return other ? 'other' : 'latin';
+  }
+
+  // Non-Devanagari code points in NotoSansDevanagari 2.006 (both weights):
+  // ASCII, most of Latin-1, part of Latin Extended-A, common punctuation, € ₹ ™.
+  const NSD_EXTRA = [0xd, 0xd, 0x20, 0x7e, 0xa0, 0xa3, 0xa5, 0xa5, 0xa7, 0xab, 0xad, 0xb0, 0xb4, 0xb4,
+    0xb6, 0xb8, 0xba, 0xbb, 0xbf, 0x107, 0x10a, 0x113, 0x116, 0x11b, 0x11e, 0x123, 0x126, 0x127, 0x12a,
+    0x12b, 0x12e, 0x131, 0x136, 0x137, 0x139, 0x13e, 0x141, 0x148, 0x150, 0x155, 0x158, 0x15b, 0x15e,
+    0x161, 0x164, 0x165, 0x16a, 0x16b, 0x16e, 0x17e, 0x218, 0x21b, 0x237, 0x237, 0x2bc, 0x2bc, 0x2c6,
+    0x2c7, 0x2c9, 0x2c9, 0x2d8, 0x2dd, 0x300, 0x304, 0x306, 0x308, 0x30a, 0x30c, 0x326, 0x328, 0x1e80,
+    0x1e85, 0x1e9e, 0x1e9e, 0x1ef2, 0x1ef3, 0x200b, 0x200d, 0x2010, 0x2010, 0x2013, 0x2014, 0x2018,
+    0x201a, 0x201c, 0x201e, 0x2022, 0x2022, 0x2026, 0x2026, 0x2039, 0x203a, 0x20ac, 0x20ac, 0x20b9,
+    0x20b9, 0x20f0, 0x20f0, 0x2122, 0x2122, 0x2212, 0x2212, 0x25cc, 0x25cc, 0xa830, 0xa839];
+  const inNSD = (c) => {
+    if (isDevanagari(c) || c === 0x09 || c === 0x0a) return true;
+    for (let i = 0; i < NSD_EXTRA.length; i += 2) if (c >= NSD_EXTRA[i] && c <= NSD_EXTRA[i + 1]) return true;
+    return false;
+  };
+
+  /**
+   * Which vendored font serves `text`. Devanagari — alone or mixed with the
+   * Latin that Noto Sans Devanagari also carries (ASCII, most of Latin-1,
+   * common punctuation, ₹ €) — takes Noto Sans Devanagari. Devanagari mixed
+   * with characters it lacks (Greek, Cyrillic, ā ō and other Latin Extended
+   * letters) takes Noto Sans, whose Google Fonts build also contains the full
+   * Devanagari block and its shaping tables.
+   */
+  function pickFont(text, bold) {
+    const w = bold ? 'Bold' : 'Regular';
+    if (scriptOf(text) === 'devanagari') {
+      for (const ch of String(text)) {
+        if (!inNSD(ch.codePointAt(0))) return 'NotoSans-' + w + '.ttf';
+      }
+      return 'NotoSansDevanagari-' + w + '.ttf';
+    }
+    return 'NotoSans-' + w + '.ttf';
+  }
+
+  return {
+    parse, subset, subsetCompact, closure, shapeSimple, fromShaper, createRegistry, showGlyphs, embedType0,
+    measure, wrap, needsUnicode, scriptOf, pickFont,
+    toUnicodeCMap, widthsArray
+  };
+})();
+
+
+/**
  * PDF engine — parse, manipulate and write PDF files with no dependencies.
  *
  * Handles both cross-reference forms: the classic `xref` table and the
@@ -15,6 +2112,21 @@
 /* ============================================================
    Byte helpers
    ============================================================ */
+
+/* The standard security handler (pdfcrypt.js). In the browser bundle it is
+   declared just before this file; in Node it sits beside it. */
+const CRYPT = (function () {
+  try { if (typeof PDFCrypt !== 'undefined') return PDFCrypt; } catch (e) { /* not in this scope */ }
+  try { if (typeof require === 'function') return require('./pdfcrypt.js').PDFCrypt; } catch (e) { /* absent */ }
+  return null;
+})();
+
+/* The TrueType embedder (pdffont.js), the same way. */
+const PFONT = (function () {
+  try { if (typeof PDFFont !== 'undefined') return PDFFont; } catch (e) { /* not in this scope */ }
+  try { if (typeof require === 'function') return require('./pdffont.js').PDFFont; } catch (e) { /* absent */ }
+  return null;
+})();
 
 const WS = new Set([0x00, 0x09, 0x0a, 0x0c, 0x0d, 0x20]);
 const DELIM = new Set([0x28, 0x29, 0x3c, 0x3e, 0x5b, 0x5d, 0x7b, 0x7d, 0x2f, 0x25]);
@@ -48,6 +2160,32 @@ async function inflate(bytes) {
     } catch (e) { /* try the next format */ }
   }
   throw new Error('A compressed stream in this PDF could not be decoded.');
+}
+
+/** zlib-wrapped deflate, the platform's own (FlateDecode's format). */
+async function deflate(bytes) {
+  if (typeof CompressionStream === 'undefined') {
+    throw new Error('This browser cannot compress PDF streams.');
+  }
+  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/* ============================================================
+   Progress and preview hooks
+
+   The worker sets these around a run. Progress is reported per page as
+   assemble writes it; a preview run (the page render before the real run)
+   makes assemble write only the one page being looked at, so a 400-page
+   watermark preview costs one page, not four hundred.
+   ============================================================ */
+
+let PROGRESS = null;
+let PREVIEW = null;
+function setProgress(fn) { PROGRESS = typeof fn === 'function' ? fn : null; }
+function setPreview(p) { PREVIEW = p && typeof p.pageIndex === 'number' ? p : null; }
+function progress(done, total, label) {
+  if (PROGRESS) { try { PROGRESS(done, total, label); } catch (e) { /* a reporter must never break a run */ } }
 }
 
 /* PNG/TIFF predictors, used by xref streams and some image data */
@@ -300,8 +2438,12 @@ class PDFDocument {
     this.warnings = [];
   }
 
-  static async load(bytes) {
+  static async load(bytes, options) {
     const doc = new PDFDocument(bytes);
+    doc._password = (options && options.password) || '';
+    /* decrypt: false reads an encrypted file's objects as they are stored,
+       still encrypted (the security handler's own tests use this) */
+    doc._noDecrypt = !!(options && options.decrypt === false);
     await doc._parse();
     return doc;
   }
@@ -329,9 +2471,8 @@ class PDFDocument {
       this.trailer = this.trailer || Object.create(null);
       this.trailer.Root = found;
     }
-    if (this.trailer && this.trailer.Encrypt) {
-      throw new Error('This PDF is encrypted. Remove the password in the application that created it first.');
-    }
+    if (this.trailer && this.trailer.Encrypt) { if (this._noDecrypt) this.encrypted = true; else await this._decrypt(); }
+    else if (this._deferred) await this._expandDeferred();
   }
 
   async _readXrefChain(offset, seen) {
@@ -417,10 +2558,16 @@ class PDFDocument {
           if (c !== 'obj') continue;
           if (parseInt(a, 10) !== num) continue;
           const v = lex.parse(0);
-          if (v !== undefined) this.objects.set(num, v);
+          if (v !== undefined) { this.objects.set(num, v); this._gen(num, b2); }
         } catch (e) { /* one bad object should not sink the document */ }
       }
       this._offsets = null;
+    }
+    if (this._inObjStm && this._inObjStm.size && this.trailer && this.trailer.Encrypt) {
+      this._deferred = this._deferred || new Map();
+      for (const [num, loc] of this._inObjStm) if (!this._deferred.has(num)) this._deferred.set(num, loc);
+      this._inObjStm = null;
+      return;
     }
     if (this._inObjStm && this._inObjStm.size) {
       const byStm = new Map();
@@ -471,11 +2618,12 @@ class PDFDocument {
       try {
         const lex = new Lexer(this.bytes, m.index + m[0].length);
         const v = lex.parse(0);
-        if (v !== undefined) this.objects.set(num, v);         // later wins
+        if (v !== undefined) { this.objects.set(num, v); this._gen(num, m[2]); }   // later wins
       } catch (e) { /* skip */ }
     }
+    if (this._findEncryptByScan()) { this._scanDeferred = true; }
     // expand any object streams we found
-    for (const [num, v] of [...this.objects]) {
+    for (const [num, v] of (this._scanDeferred ? [] : [...this.objects])) {
       if (v instanceof PDFStream && isName(v.dict.Type, 'ObjStm')) {
         try { await this._expandObjStm(num, null); } catch (e) { /* skip */ }
       }
@@ -489,6 +2637,107 @@ class PDFDocument {
           if (isDict(tr)) { this.trailer = this.trailer || Object.create(null); Object.assign(this.trailer, tr); }
         } catch (e) { /* fall through to catalogue scan */ }
       }
+    }
+  }
+
+  _gen(num, g) {
+    const n = parseInt(g, 10);
+    if (n > 0) { this._gens = this._gens || new Map(); this._gens.set(num, n); }
+  }
+
+  /** A damaged file's trailer may be lost; its Encrypt dictionary is not. */
+  _findEncryptByScan() {
+    if (this.trailer && this.trailer.Encrypt) return true;
+    for (const [num, v] of this.objects) {
+      if (isDict(v) && isName(v.Filter) && v.O !== undefined && v.U !== undefined && v.P !== undefined && v.R !== undefined) {
+        this.trailer = this.trailer || Object.create(null);
+        this.trailer.Encrypt = new Ref(num, 0);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Open an encrypted file with the password given to load(), or with none:
+   * a file protected only against printing or copying has an empty user
+   * password and opens like any other. Every string and stream is decrypted
+   * in place, so the rest of the engine never sees ciphertext and what it
+   * writes is a plain file. doc.security says how it was opened.
+   */
+  async _decrypt() {
+    if (!CRYPT) throw Object.assign(new Error('This PDF is encrypted, and this copy of the engine cannot open encrypted files.'), { code: 'unsupported' });
+    const encRef = this.trailer.Encrypt;
+    const enc = await this.resolve(encRef);
+    if (!isDict(enc)) throw Object.assign(new Error('This PDF says it is encrypted but its encryption dictionary is missing.'), { code: 'damaged' });
+    const plain = (v, depth) => {
+      if (depth > 6) return null;
+      if (v instanceof Ref) return plain(this.objects.get(v.num), depth + 1);
+      if (v instanceof Name) return v.name;
+      if (v && v.__string !== undefined) return v.__string;
+      if (Array.isArray(v)) return v.map((x) => plain(x, depth + 1));
+      if (isDict(v)) { const o = {}; for (const k of Object.keys(v)) o[k] = plain(v[k], depth + 1); return o; }
+      return v;
+    };
+    const ids = await this.resolve(this.trailer.ID);
+    const id0 = Array.isArray(ids) && ids[0] && ids[0].__string ? ids[0].__string : new Uint8Array(0);
+    const h = CRYPT.openHandler({ encrypt: plain(enc, 0), id0, password: this._password || '' });
+    if (!h.ok) {
+      if (h.reason === 'password') {
+        throw Object.assign(new Error(this._password ? 'That password did not open it.' : 'This PDF needs a password to open.'), { code: 'password' });
+      }
+      throw Object.assign(new Error(h.message || 'This PDF uses an encryption method these tools cannot open (a certificate rather than a password, for example).'), { code: 'unsupported' });
+    }
+    const skip = encRef instanceof Ref ? encRef.num : -1;
+    const gens = this._gens || new Map();
+    const walk = (v, num, gen) => {
+      if (!v || typeof v !== 'object') return;
+      if (v.__string !== undefined) { v.__string = CRYPT.decryptBytes(h, num, gen, v.__string, 'string'); return; }
+      if (Array.isArray(v)) { for (const x of v) walk(x, num, gen); return; }
+      if (v instanceof PDFStream) { walk(v.dict, num, gen); return; }
+      if (isDict(v)) for (const k of Object.keys(v)) walk(v[k], num, gen);
+    };
+    for (const [num, v] of this.objects) {
+      if (num === skip) continue;
+      const gen = gens.get(num) || 0;
+      if (v instanceof PDFStream) {
+        const type = v.dict.Type;
+        if (isName(type, 'XRef')) continue;
+        const kind = isName(type, 'Metadata') ? 'metadata' : isName(type, 'EmbeddedFile') ? 'embeddedFile' : 'stream';
+        walk(v.dict, num, gen);
+        v.raw = CRYPT.decryptBytes(h, num, gen, v.raw, kind);
+        v._decoded = null;
+      } else walk(v, num, gen);
+    }
+    this.security = {
+      method: h.method || (h.stmf === 'AESV3' ? 'AES-256' : h.stmf === 'AESV2' ? 'AES-128' : 'RC4'),
+      openedWith: h.openedWith || (this._password ? (h.isOwner ? 'owner' : 'user') : 'empty'),
+      isOwner: !!h.isOwner,
+      permissions: CRYPT.permissionsFromP(h.permissions, h.revision),
+      describe: CRYPT.describeHandler(h)
+    };
+    delete this.trailer.Encrypt;
+    if (this._deferred) await this._expandDeferred();
+    if (this._scanDeferred) {
+      this._scanDeferred = false;
+      for (const [num, v] of [...this.objects]) {
+        if (v instanceof PDFStream && isName(v.dict.Type, 'ObjStm')) {
+          try { await this._expandObjStm(num, null); } catch (e) { /* skip */ }
+        }
+      }
+    }
+  }
+
+  async _expandDeferred() {
+    const byStm = new Map();
+    for (const [num, loc] of this._deferred) {
+      if (!byStm.has(loc.stm)) byStm.set(loc.stm, []);
+      byStm.get(loc.stm).push(num);
+    }
+    this._deferred = null;
+    for (const [stmNum, nums] of byStm) {
+      try { await this._expandObjStm(stmNum, nums); }
+      catch (e) { this.warnings.push(`Object stream ${stmNum} could not be expanded.`); }
     }
   }
 
@@ -679,7 +2928,7 @@ class PDFWriter {
     return 'null';
   }
 
-  build(rootRef, infoRef, version) {
+  build(rootRef, infoRef, version, extraTrailer) {
     const chunks = [];
     let len = 0;
     const push = (x) => { const a = typeof x === 'string' ? bytesOf(x) : x; chunks.push(a); len += a.length; };
@@ -709,10 +2958,12 @@ class PDFWriter {
     push(`xref\n0 ${this.objects.length}\n`);
     push('0000000000 65535 f \n');
     for (let i = 1; i < this.objects.length; i++) {
-      push(String(offsets[i]).padStart(10, '0') + ' 00000 n \n');
+      /* a number left empty (a duplicate folded into another) is free */
+      push(this.objects[i] === undefined ? '0000000000 65535 f \n' : String(offsets[i]).padStart(10, '0') + ' 00000 n \n');
     }
     const trailer = { Size: this.objects.length, Root: rootRef };
     if (infoRef) trailer.Info = infoRef;
+    if (extraTrailer) Object.assign(trailer, extraTrailer);
     push('trailer\n' + this.serialiseValue(trailer) + `\nstartxref\n${xrefAt}\n%%EOF\n`);
 
     const out = new Uint8Array(len);
@@ -747,6 +2998,59 @@ const pdfString = (str) => {
   }
   return { __string: new Uint8Array(out) };
 };
+
+/* ============================================================
+   Pictures: image XObjects for logos, stamps and scans
+   ============================================================ */
+
+/**
+ * Make a picture ready to embed. A JPEG goes in as its own bytes
+ * (DCTDecode); raw pixels are deflated, with their transparency as a soft
+ * mask. Input, from the page's image control or a canvas:
+ *   { kind: 'jpeg', bytes, width, height, components }
+ *   { kind: 'raw', width, height, rgb, alpha | null }      (8 bits per sample)
+ *   { kind: 'grey', width, height, grey }
+ * Async because deflating uses the platform's CompressionStream.
+ */
+async function prepareImage(img) {
+  if (!img || !(img.width > 0) || !(img.height > 0)) throw new Error('That picture has no size.');
+  if (img.prepared) return img;
+  if (img.kind === 'jpeg') {
+    return { prepared: true, width: img.width, height: img.height, filter: 'DCTDecode', data: img.bytes,
+      colorSpace: img.components === 1 ? 'DeviceGray' : img.components === 4 ? 'DeviceCMYK' : 'DeviceRGB', smask: null };
+  }
+  if (img.kind === 'grey') {
+    return { prepared: true, width: img.width, height: img.height, filter: 'FlateDecode', data: await deflate(img.grey), colorSpace: 'DeviceGray', smask: null };
+  }
+  if (img.kind === 'raw') {
+    const out = { prepared: true, width: img.width, height: img.height, filter: 'FlateDecode', data: await deflate(img.rgb), colorSpace: 'DeviceRGB', smask: null };
+    if (img.alpha) out.smask = await deflate(img.alpha);
+    return out;
+  }
+  throw new Error('Unknown picture format.');
+}
+
+/** Add a prepared picture to a writer once, however many pages draw it. */
+function imageRef(writer, prep) {
+  writer._images = writer._images || new Map();
+  if (writer._images.has(prep)) return writer._images.get(prep);
+  const d = Object.create(null);
+  d.Type = new Name('XObject'); d.Subtype = new Name('Image');
+  d.Width = prep.width; d.Height = prep.height;
+  d.ColorSpace = new Name(prep.colorSpace); d.BitsPerComponent = 8;
+  d.Filter = new Name(prep.filter);
+  if (prep.colorSpace === 'DeviceCMYK' && prep.filter === 'DCTDecode') d.Decode = [1, 0, 1, 0, 1, 0, 1, 0];
+  if (prep.smask) {
+    const m = Object.create(null);
+    m.Type = new Name('XObject'); m.Subtype = new Name('Image');
+    m.Width = prep.width; m.Height = prep.height;
+    m.ColorSpace = new Name('DeviceGray'); m.BitsPerComponent = 8; m.Filter = new Name('FlateDecode');
+    d.SMask = new Ref(writer.add(new PDFStream(m, prep.smask)), 0);
+  }
+  const ref = new Ref(writer.add(new PDFStream(d, prep.data)), 0);
+  writer._images.set(prep, ref);
+  return ref;
+}
 
 /* ============================================================
    Page operations
@@ -1062,12 +3366,13 @@ async function rewriteAnnot(doc, st, a) {
 }
 
 /** A kept page's annotations, without the links that lead to a page the output leaves out. */
-async function keptAnnots(doc, st, value) {
+async function keptAnnots(doc, st, value, drop) {
   const arr = await doc.resolve(value);
   if (!Array.isArray(arr)) return undefined;
   const out = [];
   for (const r of arr) {
     if (r instanceof Ref && st.barred.has(r.num)) continue;
+    if (drop && r instanceof Ref && drop.has(r.num)) continue;
     const a = await doc.resolve(r);
     if (!isDict(a)) continue;
     if (isName(await doc.resolve(a.Subtype), 'Link')) {
@@ -1313,7 +3618,15 @@ async function buildForm(writer, states) {
  * upright frame pageFrame() describes.
  */
 async function assemble(items, options) {
-  const opts = options || {};
+  const opts = Object.assign({}, options || {});
+  if (PREVIEW) {
+    /* one page, as it will be written, and nothing a preview cannot show */
+    const want = PREVIEW.pageIndex;
+    const first = items.length ? items[0].doc : null;
+    const hit = items.filter((it) => it.doc === (PREVIEW.doc || first) && it.pageIndex === want).slice(0, 1);
+    items = hit.length ? hit : items.slice(0, 1);
+    opts.outline = 'none'; opts.noForm = true; opts.xmp = null; opts.info = {};
+  }
   const writer = new PDFWriter();
   const catalogNum = writer.alloc();
   const pagesNum = writer.alloc();
@@ -1337,10 +3650,20 @@ async function assemble(items, options) {
   }
   if (!plan.length) throw new Error('No pages were selected.');
   for (const [doc, st] of states) await prepareSource(doc, st);
+  if (opts.replace) {
+    /* compression swaps some objects (pictures) for smaller ones as they are copied */
+    for (const [doc, st] of states) {
+      const swap = opts.replace.get(doc);
+      if (!swap || !st.ctx) continue;
+      const inner = st.ctx.rewrite;
+      st.ctx.rewrite = async (num, v) => swap.has(num) ? swap.get(num) : (inner ? inner(num, v) : v);
+    }
+  }
 
   let isolate = 0;                // one shared "q" stream for every stamped page
   const fmt = (v) => String(Number(Number(v).toFixed(4)));
 
+  let written = 0;
   for (const { item, page, num, st } of plan) {
     const doc = item.doc;
     const map = st.map;
@@ -1353,7 +3676,7 @@ async function assemble(items, options) {
       let v = src[k] !== undefined ? src[k] : page.inherited[k];
       if (v === undefined) continue;
       if (k === 'Annots') {
-        v = await keptAnnots(doc, st, v);
+        v = await keptAnnots(doc, st, v, item.dropAnnots);
         if (!v || !v.length) continue;
       }
       if (k === 'Resources') v = await pruneResources(doc, v, src.Contents);
@@ -1361,6 +3684,11 @@ async function assemble(items, options) {
       if (c !== BARRED && c !== undefined) out[k] = c;
     }
     if (out.MediaBox === undefined) out.MediaBox = [0, 0, 595.28, 841.89];
+    if (Array.isArray(item.cropBox) && item.cropBox.length === 4) {
+      /* a new visible area; the boxes printers use must lie inside it */
+      out.CropBox = item.cropBox.map((v) => Number(Number(v).toFixed(3)));
+      delete out.TrimBox; delete out.BleedBox; delete out.ArtBox;
+    }
     if (out.Resources === undefined) out.Resources = Object.create(null);
 
     const baseRotate = Number(src.Rotate !== undefined ? src.Rotate : page.inherited.Rotate) || 0;
@@ -1399,12 +3727,43 @@ async function assemble(items, options) {
 
       let font = deref(res.Font);
       if (!isDict(font)) { font = Object.create(null); res.Font = font; }
-      if (!font[item.overlay.fontKey]) {
-        font[item.overlay.fontKey] = new Ref(writer.add({
-          Type: new Name('Font'), Subtype: new Name('Type1'),
-          BaseFont: new Name(item.overlay.fontName || 'Helvetica'),
-          Encoding: new Name('WinAnsiEncoding')
-        }), 0);
+      if (item.overlay.fontKey && !font[item.overlay.fontKey]) {
+        /* one font object per face for the whole file, not one per page */
+        const face = item.overlay.fontName || 'Helvetica';
+        writer._base14 = writer._base14 || Object.create(null);
+        if (!writer._base14[face]) {
+          writer._base14[face] = new Ref(writer.add({
+            Type: new Name('Font'), Subtype: new Name('Type1'),
+            BaseFont: new Name(face), Encoding: new Name('WinAnsiEncoding')
+          }), 0);
+        }
+        font[item.overlay.fontKey] = writer._base14[face];
+      }
+      if (item.overlay.xobjects) {
+        /* objects of the source drawn by the overlay (a form field's
+           appearance, when flattening), copied like the rest of the page */
+        let xo = deref(res.XObject);
+        if (!isDict(xo)) { xo = Object.create(null); res.XObject = xo; }
+        for (const [key, src] of Object.entries(item.overlay.xobjects)) {
+          let c = await copyObject(doc, writer, src, st.map, 0, st.ctx);
+          if (c instanceof PDFStream) c = new Ref(writer.add(c), 0);
+          if (c instanceof Ref) xo[key] = c;
+        }
+      }
+      if (item.overlay.gs) {
+        let eg2 = deref(res.ExtGState);
+        if (!isDict(eg2)) { eg2 = Object.create(null); res.ExtGState = eg2; }
+        for (const [key, a] of Object.entries(item.overlay.gs)) {
+          eg2[key] = new Ref(writer.add({ Type: new Name('ExtGState'), ca: a, CA: a }), 0);
+        }
+      }
+      if (item.overlay.images) {
+        let xo = deref(res.XObject);
+        if (!isDict(xo)) { xo = Object.create(null); res.XObject = xo; }
+        for (const [key, prep] of Object.entries(item.overlay.images)) xo[key] = imageRef(writer, prep);
+      }
+      if (item.overlay.fonts) {
+        for (const [key, ref] of Object.entries(item.overlay.fonts)) font[key] = typeof ref === 'function' ? ref(writer) : ref;
       }
       if (item.overlay.needsGS) {
         let eg = deref(res.ExtGState);
@@ -1420,6 +3779,7 @@ async function assemble(items, options) {
     out.Parent = new Ref(pagesNum, 0);
     writer.set(num, out);
     kids.push(new Ref(num, 0));
+    progress(++written, plan.length, 'page');
   }
 
   writer.set(pagesNum, { Type: new Name('Pages'), Kids: kids, Count: kids.length });
@@ -1428,7 +3788,7 @@ async function assemble(items, options) {
   /* bookmarks */
   const top = [];
   let anyOutline = false;
-  for (const [doc, st] of states) {
+  for (const [doc, st] of (opts.outline === 'none' ? [] : states)) {
     const ol = await doc.resolve(st.root.Outlines);
     const entries = isDict(ol) ? await outlineEntries(doc, st, ol.First, 0, new Set()) : [];
     if (entries.length) anyOutline = true;
@@ -1440,7 +3800,7 @@ async function assemble(items, options) {
   if (anyOutline && top.length) catalog.Outlines = new Ref(await writeOutline(writer, top), 0);
 
   /* the form */
-  const form = await buildForm(writer, states);
+  const form = opts.noForm ? null : await buildForm(writer, states);
   if (form) catalog.AcroForm = new Ref(writer.add(form), 0);
 
   const only = states.size === 1 ? states.keys().next().value : null;
@@ -1472,7 +3832,515 @@ async function assemble(items, options) {
     if (Object.keys(info).length) infoRef = new Ref(writer.add(info), 0);
   }
 
+  if (opts.finish) await opts.finish(writer);
+  if (opts.protect) return encryptAndBuild(writer, new Ref(catalogNum, 0), infoRef, opts.protect);
+  if (opts.compact) return compactBuild(writer, new Ref(catalogNum, 0), infoRef);
   return writer.build(new Ref(catalogNum, 0), infoRef, opts.version || '1.7');
+}
+
+/* ============================================================
+   Writing an encrypted file
+   ============================================================ */
+
+function randomBytes(n) {
+  const out = new Uint8Array(n);
+  const c = (typeof crypto !== 'undefined' && crypto.getRandomValues) ? crypto : null;
+  if (!c) throw new Error('This browser has no secure random numbers, so it cannot encrypt.');
+  c.getRandomValues(out);
+  return out;
+}
+const hexOf = (b) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+
+/**
+ * Encrypt every string and stream the writer holds with the standard
+ * security handler, then write the file with /Encrypt and /ID in its
+ * trailer. options: { userPassword, ownerPassword, permissions, method:
+ * 'AES-256' | 'AES-128', encryptMetadata }.
+ */
+function encryptAndBuild(writer, rootRef, infoRef, options) {
+  if (!CRYPT) throw new Error('This copy of the engine cannot encrypt.');
+  const id0 = randomBytes(16);
+  const { handler, encryptDict } = CRYPT.createHandler({
+    userPassword: options.userPassword || '', ownerPassword: options.ownerPassword || '',
+    permissions: options.permissions || {}, method: options.method === 'AES-128' ? 'AES-128' : 'AES-256',
+    id0, encryptMetadata: options.encryptMetadata !== false, random: randomBytes
+  });
+  const walk = (v, num) => {
+    if (!v || typeof v !== 'object') return;
+    if (v.__string !== undefined) { v.__string = CRYPT.encryptBytes(handler, num, 0, v.__string, 'string', randomBytes); return; }
+    if (Array.isArray(v)) { for (const x of v) walk(x, num); return; }
+    if (v instanceof PDFStream) { walk(v.dict, num); return; }
+    if (isDict(v)) for (const k of Object.keys(v)) walk(v[k], num);
+  };
+  for (let num = 1; num < writer.objects.length; num++) {
+    const v = writer.objects[num];
+    if (v === undefined || v === null) continue;
+    if (v instanceof PDFStream) {
+      const kind = isName(v.dict.Type, 'Metadata') ? 'metadata' : isName(v.dict.Type, 'EmbeddedFile') ? 'embeddedFile' : 'stream';
+      walk(v.dict, num);
+      writer.objects[num] = new PDFStream(v.dict, CRYPT.encryptBytes(handler, num, 0, v.raw, kind, randomBytes));
+    } else walk(v, num);
+  }
+  const toCore = (v) => {
+    if (v instanceof Uint8Array) return { __raw: '<' + hexOf(v) + '>' };
+    if (Array.isArray(v)) return v.map(toCore);
+    if (typeof v === 'string') return new Name(v);
+    if (v && typeof v === 'object') { const o = Object.create(null); for (const k of Object.keys(v)) o[k] = toCore(v[k]); return o; }
+    return v;
+  };
+  const encNum = writer.add(toCore(encryptDict));
+  const idHex = { __raw: '<' + hexOf(handler.id0 || id0) + '>' };
+  return writer.build(rootRef, infoRef, '1.7', { Encrypt: new Ref(encNum, 0), ID: [idHex, { __raw: '<' + hexOf(randomBytes(16)) + '>' }] });
+}
+
+/**
+ * The whole document again, every page, its bookmarks, form and metadata,
+ * encrypted with a password (protect), or written plain (unlock: the
+ * document was opened with its password, so it is already decrypted).
+ */
+async function protectDocument(doc, options) {
+  const n = await doc.pageCount();
+  const items = Array.from({ length: n }, (_, i) => ({ doc, pageIndex: i }));
+  return assemble(items, options && options.protect === false ? {} : { protect: options || {} });
+}
+
+/* ============================================================
+   Compression
+   ============================================================ */
+
+/**
+ * The writer's objects as a PDF 1.5 file: every object that is not a stream
+ * packed into compressed object streams, and a compressed cross-reference
+ * stream in place of the table. For a text-heavy file this is where most of
+ * the structure's bytes go: a classic table costs 20 bytes an object and
+ * every dictionary is stored as plain text.
+ */
+async function compactBuild(writer, rootRef, infoRef) {
+  const objs = writer.objects;
+  const size0 = objs.length;
+  const packable = [];
+  for (let i = 1; i < size0; i++) {
+    const v = objs[i];
+    if (v === undefined || v instanceof PDFStream) continue;
+    packable.push(i);
+  }
+  const where = new Map();          /* object number -> [stream number, index] */
+  const streams = [];
+  for (let k = 0; k < packable.length; k += 200) {
+    const group = packable.slice(k, k + 200);
+    const bodies = group.map((i) => writer.serialiseValue(objs[i]));
+    let head = '', off = 0;
+    group.forEach((num, j) => { head += num + ' ' + off + ' '; off += bodies[j].length + 1; });
+    const first = head.length;
+    const data = bytesOf(head + bodies.join('\n') + '\n');
+    const z = await deflate(data);
+    const num = writer.add(null);
+    streams.push({ num, dict: { Type: new Name('ObjStm'), N: group.length, First: first, Filter: new Name('FlateDecode') }, raw: z });
+    group.forEach((i, j) => where.set(i, [num, j]));
+  }
+  for (const st of streams) objs[st.num] = new PDFStream(st.dict, st.raw);
+
+  const chunks = [];
+  let len = 0;
+  const push = (x) => { const a = typeof x === 'string' ? bytesOf(x) : x; chunks.push(a); len += a.length; };
+  push('%PDF-1.7\n%\xE2\xE3\xCF\xD3\n');
+  const offsets = new Map();
+  for (let i = 1; i < objs.length; i++) {
+    const v = objs[i];
+    if (!(v instanceof PDFStream)) continue;
+    offsets.set(i, len);
+    const d = Object.assign(Object.create(null), v.dict);
+    d.Length = v.raw.length;
+    push(i + ' 0 obj\n' + writer.serialiseValue(d) + '\nstream\n');
+    push(v.raw);
+    push('\nendstream\nendobj\n');
+  }
+  const xrefNum = objs.length;
+  const size = xrefNum + 1;
+  const rows = new Uint8Array(size * 7);
+  for (let i = 0; i < size; i++) {
+    const r = i * 7;
+    if (i === 0) { rows[r] = 0; rows[r + 5] = 0xff; rows[r + 6] = 0xff; continue; }
+    if (offsets.has(i) || i === xrefNum) {
+      const off = i === xrefNum ? len : offsets.get(i);
+      rows[r] = 1; rows[r + 1] = (off >>> 24) & 255; rows[r + 2] = (off >>> 16) & 255; rows[r + 3] = (off >>> 8) & 255; rows[r + 4] = off & 255;
+    } else if (where.has(i)) {
+      const [sn, idx] = where.get(i);
+      rows[r] = 2; rows[r + 1] = (sn >>> 24) & 255; rows[r + 2] = (sn >>> 16) & 255; rows[r + 3] = (sn >>> 8) & 255; rows[r + 4] = sn & 255;
+      rows[r + 5] = (idx >>> 8) & 255; rows[r + 6] = idx & 255;
+    }
+  }
+  const z = await deflate(rows);
+  const xd = { Type: new Name('XRef'), Size: size, W: [1, 4, 2], Root: rootRef, Filter: new Name('FlateDecode'), Length: z.length };
+  if (infoRef) xd.Info = infoRef;
+  const xrefAt = len;
+  push(xrefNum + ' 0 obj\n' + writer.serialiseValue(xd) + '\nstream\n');
+  push(z);
+  push('\nendstream\nendobj\nstartxref\n' + xrefAt + '\n%%EOF\n');
+  const out = new Uint8Array(len);
+  let at = 0;
+  for (const c of chunks) { out.set(c, at); at += c.length; }
+  return out;
+}
+
+const mul = (a, b) => [
+  a[0] * b[0] + a[1] * b[2], a[0] * b[1] + a[1] * b[3],
+  a[2] * b[0] + a[3] * b[2], a[2] * b[1] + a[3] * b[3],
+  a[4] * b[0] + a[5] * b[2] + b[4], a[4] * b[1] + a[5] * b[3] + b[5]
+];
+
+async function streamBytes(doc, contents) {
+  const list = await doc.resolve(contents);
+  const parts = [];
+  for (const c of Array.isArray(list) ? list : [list]) {
+    const st = await doc.resolve(c);
+    if (st instanceof PDFStream) { try { parts.push(await doc.decodeStream(st)); } catch (e) { /* unreadable: skip */ } }
+  }
+  const len = parts.reduce((n, x) => n + x.length + 1, 0);
+  const out = new Uint8Array(len);
+  let at = 0;
+  for (const x of parts) { out.set(x, at); at += x.length; out[at++] = 10; }
+  return out;
+}
+
+/**
+ * How large each picture is drawn, in points, the largest use winning:
+ * the page content is walked for q, Q, cm and Do (into forms too), which is
+ * all the geometry a picture's size depends on.
+ */
+async function drawnSizes(doc, res, bytes, ctm, out, depth) {
+  if (depth > 8 || !bytes || !bytes.length) return;
+  const resources = await doc.resolve(res);
+  const xobjects = isDict(resources) ? await doc.resolve(resources.XObject) : null;
+  const lex = new Lexer(bytes, 0);
+  const stack = [];
+  let m = ctm, ops = [];
+  for (let guard = 0; guard < 5e6; guard++) {
+    let v;
+    try { v = lex.parse(0); } catch (e) { lex.p++; ops = []; continue; }
+    if (v === undefined) { if (lex.p >= bytes.length) break; ops = []; continue; }
+    if (!v || v.__keyword === undefined) { ops.push(v); continue; }
+    const op = v.__keyword;
+    if (op === 'q') stack.push(m);
+    else if (op === 'Q') m = stack.length ? stack.pop() : ctm;
+    else if (op === 'cm' && ops.length >= 6) m = mul(ops.slice(-6).map(Number), m);
+    else if (op === 'BI') {
+      /* an inline image: its data is binary, skip to EI */
+      const at = latin1(bytes, lex.p).search(/\sEI[\s]/);
+      lex.p = at < 0 ? bytes.length : lex.p + at + 4;
+    } else if (op === 'Do' && ops.length && xobjects && isDict(xobjects)) {
+      const nm = ops[ops.length - 1];
+      const ref = nm instanceof Name ? xobjects[nm.name] : null;
+      const x = await doc.resolve(ref);
+      if (x instanceof PDFStream) {
+        if (isName(x.dict.Subtype, 'Image') && ref instanceof Ref) {
+          const w = Math.hypot(m[0], m[1]), h = Math.hypot(m[2], m[3]);
+          const was = out.get(ref.num);
+          if (!was || w * h > was.w * was.h) out.set(ref.num, { w, h });
+        } else if (isName(x.dict.Subtype, 'Form')) {
+          const fm = await doc.resolve(x.dict.Matrix);
+          const fmat = Array.isArray(fm) && fm.length === 6 ? fm.map(Number) : [1, 0, 0, 1, 0, 0];
+          let fb = null;
+          try { fb = await doc.decodeStream(x); } catch (e) { fb = null; }
+          await drawnSizes(doc, x.dict.Resources !== undefined ? x.dict.Resources : res, fb, mul(fmat, m), out, depth + 1);
+        }
+      }
+    }
+    ops = [];
+  }
+}
+
+/** A picture, decoded to RGBA for a canvas, or null when it cannot be. */
+async function imageToBitmap(doc, stm) {
+  if (typeof createImageBitmap !== 'function') return null;
+  const d = stm.dict;
+  let filters = await doc.resolve(d.Filter);
+  if (filters && !Array.isArray(filters)) filters = [filters];
+  const names = (filters || []).map((f) => f && f.name);
+  if (names.length && /^(DCTDecode|DCT)$/.test(names[names.length - 1]) &&
+      names.slice(0, -1).every((n) => /^(FlateDecode|Fl|ASCII85Decode|A85|ASCIIHexDecode|AHx)$/.test(n))) {
+    /* a JPEG, possibly wrapped in ASCII85 or Flate (reportlab writes
+       [/ASCII85Decode /DCTDecode]): decodeStream undoes the wrappers and
+       stops at the JPEG */
+    const jpeg = names.length === 1 ? stm.raw : await doc.decodeStream(stm);
+    return createImageBitmap(new Blob([jpeg], { type: 'image/jpeg' }));
+  }
+  if (names.some((n) => !/^(FlateDecode|Fl|ASCII85Decode|A85|ASCIIHexDecode|AHx)$/.test(n))) return null;
+  const W = Number(await doc.resolve(d.Width)), H = Number(await doc.resolve(d.Height));
+  const comps = (await colourComponents(doc, d.ColorSpace));
+  if (!comps || comps === 4) return null;
+  const data = await doc.decodeStream(stm);
+  if (data.length < W * H * comps) return null;
+  const rgba = new Uint8ClampedArray(W * H * 4);
+  for (let i = 0, j = 0; i < W * H; i++, j += comps) {
+    const k = i * 4;
+    if (comps === 1) { rgba[k] = rgba[k + 1] = rgba[k + 2] = data[j]; }
+    else { rgba[k] = data[j]; rgba[k + 1] = data[j + 1]; rgba[k + 2] = data[j + 2]; }
+    rgba[k + 3] = 255;
+  }
+  return createImageBitmap(new ImageData(rgba, W, H));
+}
+async function colourComponents(doc, cs) {
+  const v = await doc.resolve(cs);
+  if (isName(v, 'DeviceRGB') || isName(v, 'CalRGB')) return 3;
+  if (isName(v, 'DeviceGray') || isName(v, 'CalGray')) return 1;
+  if (isName(v, 'DeviceCMYK')) return 4;
+  if (Array.isArray(v) && isName(v[0], 'ICCBased')) {
+    const st = await doc.resolve(v[1]);
+    const n = st instanceof PDFStream ? Number(await doc.resolve(st.dict.N)) : 0;
+    return n === 1 || n === 3 || n === 4 ? n : null;
+  }
+  if (Array.isArray(v) && (isName(v[0], 'CalRGB'))) return 3;
+  if (Array.isArray(v) && (isName(v[0], 'CalGray'))) return 1;
+  return null;
+}
+
+/**
+ * Make a PDF smaller: pictures drawn at more than the chosen resolution are
+ * scaled down and pictures re-encoded as JPEG at the chosen quality (only
+ * where that is actually smaller), uncompressed streams are deflated,
+ * identical streams and fonts are stored once, objects nothing uses are left
+ * out (assemble copies only what the pages reach), and the metadata is
+ * removed on request. Options: { dpi, quality (0.1–1), images: true,
+ * metadata: 'keep' | 'strip', greyscale: false }.
+ * Returns { bytes, report }.
+ */
+async function compressDocument(doc, options) {
+  const o = Object.assign({ dpi: 150, quality: 0.75, images: true, metadata: 'strip' }, options || {});
+  const pages = await doc.getPages();
+  const report = { images: 0, recoded: 0, downsampled: 0, kept: {}, imageBytesBefore: 0, imageBytesAfter: 0, deflated: 0, merged: 0 };
+  const keep = (why) => { report.kept[why] = (report.kept[why] || 0) + 1; };
+
+  /* 1. how big each picture is drawn */
+  const sizes = new Map();
+  for (let i = 0; i < pages.length; i++) {
+    progress(i, pages.length, 'Measuring the pictures on page ' + (i + 1));
+    const pg = pages[i];
+    const res = pg.dict.Resources !== undefined ? pg.dict.Resources : pg.inherited.Resources;
+    let bytes = null;
+    try { bytes = await streamBytes(doc, pg.dict.Contents); } catch (e) { bytes = null; }
+    try { await drawnSizes(doc, res, bytes, [1, 0, 0, 1, 0, 0], sizes, 0); } catch (e) { /* a page we cannot read keeps its pictures */ }
+  }
+
+  /* 2. pictures, re-encoded where it pays */
+  const replace = new Map();
+  const masks = new Set();
+  for (const v of doc.objects.values()) {
+    const d = v instanceof PDFStream ? v.dict : null;
+    if (d && d.SMask instanceof Ref) masks.add(d.SMask.num);
+    if (d && d.Mask instanceof Ref) masks.add(d.Mask.num);
+  }
+  const canEncode = typeof OffscreenCanvas === 'function' && typeof createImageBitmap === 'function';
+  const imgs = [...doc.objects].filter(([n, v]) => v instanceof PDFStream && isName(v.dict.Subtype, 'Image') && !masks.has(n));
+  let done = 0;
+  for (const [num, stm] of imgs) {
+    progress(done++, imgs.length, 'Pictures');
+    report.images++;
+    report.imageBytesBefore += stm.raw.length;
+    const d = stm.dict;
+    const fallback = () => { report.imageBytesAfter += stm.raw.length; };
+    if (!o.images) { keep('pictures left as they are'); fallback(); continue; }
+    if (!canEncode) { keep('this browser cannot re-encode pictures here'); fallback(); continue; }
+    if ((await doc.resolve(d.ImageMask)) === true) { keep('a stencil mask'); fallback(); continue; }
+    if (Number(await doc.resolve(d.BitsPerComponent)) !== 8) { keep('not 8 bits per sample'); fallback(); continue; }
+    if (d.Decode !== undefined || Array.isArray(await doc.resolve(d.Mask))) { keep('a colour key or decode array'); fallback(); continue; }
+    const comps = await colourComponents(doc, d.ColorSpace);
+    if (comps !== 1 && comps !== 3) { keep(comps === 4 ? 'CMYK' : 'an unusual colour space'); fallback(); continue; }
+    const W = Number(await doc.resolve(d.Width)), H = Number(await doc.resolve(d.Height));
+    if (!(W > 0 && H > 0)) { fallback(); continue; }
+    const drawn = sizes.get(num);
+    let scale = 1;
+    if (drawn && drawn.w > 0 && drawn.h > 0) {
+      const tw = drawn.w / 72 * o.dpi, th = drawn.h / 72 * o.dpi;
+      scale = Math.min(1, Math.max(tw / W, th / H));
+      if (scale > 0.87) scale = 1;            /* not worth a generation of loss */
+    }
+    if (scale === 1 && stm.raw.length < 24 * 1024) { keep('already small'); fallback(); continue; }
+    let bmp = null;
+    try { bmp = await imageToBitmap(doc, stm); } catch (e) { bmp = null; }
+    if (!bmp) { keep('a format the browser cannot decode (JPEG 2000, JBIG2, CCITT …)'); fallback(); continue; }
+    const w = Math.max(1, Math.round(W * scale)), h = Math.max(1, Math.round(H * scale));
+    const cv = new OffscreenCanvas(w, h);
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bmp, 0, 0, w, h);
+    bmp.close && bmp.close();
+    let blob;
+    try { blob = await cv.convertToBlob({ type: 'image/jpeg', quality: Math.max(0.1, Math.min(1, o.quality)) }); }
+    catch (e) { keep('could not be encoded'); fallback(); continue; }
+    const jpeg = new Uint8Array(await blob.arrayBuffer());
+    if (blob.type !== 'image/jpeg' || jpeg.length >= stm.raw.length * 0.95) { keep('re-encoding would not make it smaller'); fallback(); continue; }
+    const nd = Object.create(null);
+    for (const k of Object.keys(d)) if (!/^(Filter|DecodeParms|DP|Length|Width|Height|BitsPerComponent|ColorSpace|Intent)$/.test(k)) nd[k] = d[k];
+    nd.Width = w; nd.Height = h; nd.BitsPerComponent = 8;
+    nd.ColorSpace = new Name('DeviceRGB');
+    nd.Filter = new Name('DCTDecode');
+    replace.set(num, new PDFStream(nd, jpeg));
+    report.recoded++;
+    if (scale < 1) report.downsampled++;
+    report.imageBytesAfter += jpeg.length;
+  }
+
+  /* 3. write it again, deflating and folding duplicates on the way out */
+  const finish = async (writer) => {
+    const fnv = (b) => { let h = 2166136261; for (let i = 0; i < b.length; i++) { h ^= b[i]; h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
+    const all = writer.objects;
+    let k = 0;
+    for (let i = 1; i < all.length; i++) {
+      const v = all[i];
+      if (!(v instanceof PDFStream) || v.dict.Filter !== undefined || v.raw.length < 64) continue;
+      if (isName(v.dict.Type, 'Metadata') || isName(v.dict.Type, 'XRef')) continue;
+      if (++k % 50 === 0) progress(i, all.length, 'Compressing streams');
+      const z = await deflate(v.raw);
+      if (z.length < v.raw.length) {
+        const dd = Object.assign(Object.create(null), v.dict);
+        dd.Filter = new Name('FlateDecode');
+        all[i] = new PDFStream(dd, z);
+        report.deflated++;
+      }
+    }
+    /* identical streams, and identical fonts, descriptors and graphics states */
+    const FOLD = new Set(['Font', 'FontDescriptor', 'ExtGState']);
+    for (let pass = 0; pass < 3; pass++) {
+      const seen = new Map(), alias = new Map();
+      for (let i = 1; i < all.length; i++) {
+        const v = all[i];
+        let key = null;
+        if (v instanceof PDFStream) key = 's' + writer.serialiseValue(v.dict) + '|' + v.raw.length + '|' + fnv(v.raw);
+        else if (isDict(v) && v.Type instanceof Name && FOLD.has(v.Type.name)) key = 'd' + writer.serialiseValue(v);
+        if (!key) continue;
+        const first = seen.get(key);
+        if (first === undefined) { seen.set(key, i); continue; }
+        if (v instanceof PDFStream) {
+          const a = all[first].raw, b = v.raw;
+          let same = a.length === b.length;
+          for (let j = 0; same && j < a.length; j++) if (a[j] !== b[j]) same = false;
+          if (!same) continue;
+        }
+        alias.set(i, first);
+      }
+      if (!alias.size) break;
+      const swap = (x) => {
+        if (x instanceof Ref) return alias.has(x.num) ? new Ref(alias.get(x.num), 0) : x;
+        if (Array.isArray(x)) { for (let j = 0; j < x.length; j++) x[j] = swap(x[j]); return x; }
+        if (x instanceof PDFStream) { swap(x.dict); return x; }
+        if (isDict(x)) { for (const key of Object.keys(x)) x[key] = swap(x[key]); return x; }
+        return x;
+      };
+      for (let i = 1; i < all.length; i++) if (all[i] !== undefined && !alias.has(i)) swap(all[i]);
+      for (const i of alias.keys()) { all[i] = undefined; report.merged++; }
+    }
+  };
+
+  const items = pages.map((pg, i) => ({ doc, pageIndex: i }));
+  const strip = o.metadata === 'strip';
+  const bytes = await assemble(items, Object.assign({ replace: new Map([[doc, replace]]), finish, compact: o.compact !== false },
+    strip ? { info: {}, xmp: false } : {}));
+  report.before = doc.bytes.length;
+  report.after = bytes.length;
+  return { bytes, report };
+}
+
+/* ============================================================
+   Flattening: form answers and comments drawn into the page
+   ============================================================ */
+
+/** The field dictionary a widget's value lives in (itself, or a parent). */
+async function fieldValue(doc, a) {
+  let f = a, guard = 0;
+  while (f && guard++ < 10) {
+    const v = await doc.resolve(f.V);
+    const ft = await doc.resolve(f.FT);
+    if (v !== undefined || ft !== undefined) return { v, ft: ft && ft.name, ff: Number(await doc.resolve(f.Ff)) || 0, da: await doc.resolve(f.DA), q: Number(await doc.resolve(f.Q)) || 0, field: f };
+    f = await doc.resolve(f.Parent);
+  }
+  return { v: undefined, ft: undefined };
+}
+
+/**
+ * Draw every form field's answer and every comment into the page content
+ * as it appears now, and remove the live objects, so nothing can be changed
+ * or lost and every printer and viewer shows the same. Links stay links.
+ * options: { forms: true, comments: true }.
+ */
+async function flattenDocument(doc, options) {
+  const o = Object.assign({ forms: true, comments: true }, options || {});
+  const pages = await doc.getPages();
+  const stats = { fields: 0, comments: 0, generated: 0, hidden: 0, links: 0 };
+  const items = [];
+  const fmt = (v) => String(Number(Number(v).toFixed(4)));
+  for (let i = 0; i < pages.length; i++) {
+    progress(i, pages.length, 'Flattening page ' + (i + 1));
+    const pg = pages[i];
+    const arr = await doc.resolve(pg.dict.Annots);
+    const drop = new Set();
+    const xobjects = {};
+    let ops = '';
+    let k = 0;
+    for (const r of Array.isArray(arr) ? arr : []) {
+      const a = await doc.resolve(r);
+      if (!isDict(a)) continue;
+      const sub = (await doc.resolve(a.Subtype)) || {};
+      const name = sub.name || '';
+      if (name === 'Link') { stats.links++; continue; }
+      const widget = name === 'Widget';
+      if (widget ? !o.forms : !o.comments) continue;
+      if (!(r instanceof Ref)) continue;
+      drop.add(r.num);
+      if (name === 'Popup') continue;
+      const flags = Number(await doc.resolve(a.F)) || 0;
+      if (flags & (2 | 32)) { stats.hidden++; continue; }          /* Hidden, NoView: not drawn now, not drawn after */
+      const rect = (await doc.resolve(a.Rect)) || [0, 0, 0, 0];
+      const R = [Math.min(rect[0], rect[2]), Math.min(rect[1], rect[3]), Math.max(rect[0], rect[2]), Math.max(rect[1], rect[3])].map(Number);
+      if (!(R[2] > R[0] && R[3] > R[1])) continue;
+      const ap = await doc.resolve(a.AP);
+      let nRef = isDict(ap) ? ap.N : undefined;
+      let n = await doc.resolve(nRef);
+      if (isDict(n) && !(n instanceof PDFStream)) {
+        const as = await doc.resolve(a.AS);
+        const key = as instanceof Name ? as.name : null;
+        nRef = key ? n[key] : undefined;
+        n = await doc.resolve(nRef);
+      }
+      if (n instanceof PDFStream) {
+        const bb = (await doc.resolve(n.dict.BBox)) || [0, 0, 1, 1];
+        const mm = await doc.resolve(n.dict.Matrix);
+        const M = Array.isArray(mm) && mm.length === 6 ? mm.map(Number) : [1, 0, 0, 1, 0, 0];
+        const pts = [[bb[0], bb[1]], [bb[2], bb[1]], [bb[0], bb[3]], [bb[2], bb[3]]].map(([x, y]) => [M[0] * x + M[2] * y + M[4], M[1] * x + M[3] * y + M[5]]);
+        const bx0 = Math.min(...pts.map((q) => q[0])), bx1 = Math.max(...pts.map((q) => q[0]));
+        const by0 = Math.min(...pts.map((q) => q[1])), by1 = Math.max(...pts.map((q) => q[1]));
+        const sx = (bx1 - bx0) ? (R[2] - R[0]) / (bx1 - bx0) : 1, sy = (by1 - by0) ? (R[3] - R[1]) / (by1 - by0) : 1;
+        const key = 'MVRflat' + (k++);
+        xobjects[key] = nRef;
+        ops += 'q ' + [sx, 0, 0, sy, R[0] - bx0 * sx, R[1] - by0 * sy].map(fmt).join(' ') + ' cm /' + key + ' Do Q\n';
+      } else if (widget) {
+        /* no appearance (a form saved with NeedAppearances): the answer is
+           drawn plainly in Helvetica, so it is not lost */
+        const fv = await fieldValue(doc, a);
+        let text = null;
+        if (fv.v && fv.v.__string !== undefined) text = decodePdfString(fv.v.__string);
+        else if (fv.v instanceof Name && fv.v.name !== 'Off') text = fv.ft === 'Btn' ? 'X' : fv.v.name;
+        else if (Array.isArray(fv.v)) text = fv.v.map((x) => x && x.__string ? decodePdfString(x.__string) : '').join(', ');
+        if (text) {
+          const m = /([\d.]+)\s+Tf/.exec(fv.da && fv.da.__string ? latin1(fv.da.__string) : '');
+          let size = m ? Number(m[1]) : 0;
+          const h = R[3] - R[1];
+          if (!size) size = Math.max(6, Math.min(12, h * 0.7));
+          const w = textWidth(text, 'Helvetica', size);
+          const x = fv.q === 1 ? R[0] + (R[2] - R[0] - w) / 2 : fv.q === 2 ? R[2] - 2 - w : R[0] + 2;
+          const y = R[1] + Math.max(1, (h - size) / 2 + size * 0.22);
+          ops += 'q BT 0 g /MVRflatF ' + fmt(size) + ' Tf ' + fmt(x) + ' ' + fmt(y) + ' Td (' + contentEscape(text) + ') Tj ET Q\n';
+          stats.generated++;
+        }
+      }
+      if (widget) stats.fields++; else stats.comments++;
+    }
+    items.push({ doc, pageIndex: i, dropAnnots: drop, overlay: ops ? { content: ops, fontKey: 'MVRflatF', fontName: 'Helvetica', xobjects, upright: false } : undefined });
+  }
+  const bytes = await assemble(items, { noForm: !!o.forms });
+  return { bytes, stats };
 }
 
 /** Parse "1-3, 5, 8-" style page selections into zero-based indices. */
@@ -1510,6 +4378,169 @@ function parsePageRange(spec, total) {
   if (!out.length) throw new Error('That selection matches no pages in this document.');
   return out;
 }
+
+/* ============================================================
+   Unicode text: Noto Sans subsets, shaped where the script needs it
+
+   Text that WinAnsi can hold is still drawn in the base-14 fonts, which
+   embed nothing. Anything else (Polish, Greek, Cyrillic, the rupee sign,
+   Hindi) is drawn with a subset of a vendored Noto font, embedded as a
+   CIDFontType2 with a ToUnicode map so it can be searched and copied.
+   Devanagari is shaped by HarfBuzz (engine/pdf-shaper.js), loaded the first
+   time a run needs it; the fonts are fetched from engine/vendor/fonts/ the
+   same way, and kept for the rest of the session.
+   ============================================================ */
+
+const UNI = { base: null, loader: null, fonts: new Map(), shaper: null, shaperLoader: null };
+/** Where engine/ is (the worker and the shell set it). */
+function setFontBase(url) { UNI.base = url; }
+/** fn(relativePath) -> Promise<Uint8Array>, for Node and the tests. */
+function setFontLoader(fn, shaperLoader) { UNI.loader = fn; if (shaperLoader) UNI.shaperLoader = shaperLoader; }
+
+async function engineFile(rel) {
+  if (UNI.loader) return UNI.loader(rel);
+  const base = UNI.base || (typeof self !== 'undefined' && self.location ? new URL('./', self.location.href).href : '');
+  const r = await fetch(base + rel);
+  if (!r.ok) throw new Error('The font ' + rel.split('/').pop() + ' could not be loaded (HTTP ' + r.status + ').');
+  return new Uint8Array(await r.arrayBuffer());
+}
+async function fontFile(name) {
+  if (!UNI.fonts.has(name)) {
+    UNI.fonts.set(name, (async () => {
+      const bytes = await engineFile('vendor/fonts/' + name);
+      const font = PFONT.parse(bytes);
+      return { font, bytes };
+    })());
+  }
+  return UNI.fonts.get(name);
+}
+async function shaper() {
+  if (UNI.shaper) return UNI.shaper;
+  let S = null;
+  if (UNI.shaperLoader) S = await UNI.shaperLoader();
+  if (!S) { try { if (typeof MVRShaper !== 'undefined') S = MVRShaper; } catch (e) { /* none */ } }
+  if (!S && typeof importScripts === 'function' && UNI.base) { importScripts(UNI.base + 'pdf-shaper.js'); S = self.MVRShaper; }
+  if (!S) throw new Error('The text shaper for this script could not be loaded.');
+  UNI.shaper = await S.load(UNI.base || undefined);
+  return UNI.shaper;
+}
+
+/**
+ * The fonts one output document draws Unicode text with. Prepare every
+ * string first (async: fonts and the shaper load on demand), then draw with
+ * show(), which is synchronous; finish(writer) embeds each font used, once,
+ * as a subset of exactly the glyphs drawn.
+ */
+class TextFonts {
+  /* force: every string in a Noto font, not only those WinAnsi cannot hold,
+     so a document that needs one non-Latin line reads as one typeface */
+  constructor(options) { this.cache = new Map(); this.used = new Map(); this.force = !!(options && options.force); }
+  wants(text) { const t = String(text == null ? '' : text); return this.force ? !!PFONT && t.trim() !== '' : TextFonts.needs(t); }
+  static needs(text) { return !!PFONT && PFONT.needsUnicode(String(text == null ? '' : text)); }
+  key(text, bold) { return (bold ? 'B' : 'R') + '\u0000' + text; }
+  has(text, bold) { return this.cache.has(this.key(String(text), !!bold)); }
+  async prepare(text, bold) {
+    text = String(text == null ? '' : text);
+    if (!this.wants(text)) return null;
+    const k = this.key(text, !!bold);
+    if (this.cache.has(k)) return this.cache.get(k);
+    const file = PFONT.pickFont(text, !!bold);
+    const { font, bytes } = await fontFile(file);
+    let glyphs;
+    if (PFONT.scriptOf(text) === 'latin') glyphs = PFONT.shapeSimple(font, text);
+    else {
+      const sh = await shaper();
+      glyphs = PFONT.fromShaper(font, text, sh.shape(bytes, text, {}));
+    }
+    const rec = { file, font, glyphs, em: glyphs.reduce((sum, g) => sum + (g.adv || 0), 0) / font.unitsPerEm };
+    /* characters neither Noto font has (Chinese, Arabic, emoji …) draw as
+       empty boxes; they are collected so the tool can say so */
+    for (const ch of text) {
+      const cp = ch.codePointAt(0);
+      if (cp > 0x20 && !/\p{Mn}|\p{Cf}|\s/u.test(ch) && font.glyphForCodePoint(cp) === 0) (this.missingChars = this.missingChars || new Set()).add(ch);
+    }
+    this.cache.set(k, rec);
+    return rec;
+  }
+  /** characters drawn as empty boxes, for a warning */
+  missing() { return this.missingChars ? [...this.missingChars] : []; }
+  async prepareAll(texts, bold) { for (const t of texts) await this.prepare(t, bold); return this; }
+  /** points, after prepare() (base-14 metrics for text that needs no font) */
+  widthSync(text, size, bold, base14) {
+    const r = this.cache.get(this.key(String(text), !!bold));
+    return r ? r.em * size : textWidth(text, base14 || (bold ? 'Helvetica-Bold' : 'Helvetica'), size);
+  }
+  async width(text, size, bold, base14) { await this.prepare(text, bold); return this.widthSync(text, size, bold, base14); }
+  /** "/MVRuN size Tf" and the glyphs, inside BT … ET at the current point */
+  show(text, size, bold) {
+    const r = this.cache.get(this.key(String(text), !!bold));
+    if (!r) throw new Error('Text was drawn before it was prepared.');
+    let u = this.used.get(r.file);
+    if (!u) { u = { font: r.font, registry: PFONT.createRegistry(r.font), key: 'MVRu' + this.used.size, refs: new Map() }; this.used.set(r.file, u); }
+    return { key: u.key, ops: '/' + u.key + ' ' + n(size) + ' Tf\n' + PFONT.showGlyphs(u.registry, r.glyphs, size) };
+  }
+  /** the Ref a page's /Font entry names, allocated now and filled by finish() */
+  refFor(writer, key) {
+    for (const u of this.used.values()) {
+      if (u.key !== key) continue;
+      if (!u.refs.has(writer)) u.refs.set(writer, new Ref(writer.alloc(), 0));
+      return u.refs.get(writer);
+    }
+    throw new Error('Unknown font ' + key);
+  }
+  /** { MVRu0: (writer) => Ref, … } for an assemble overlay */
+  overlayFonts() {
+    const out = {};
+    for (const u of this.used.values()) out[u.key] = (writer) => this.refFor(writer, u.key);
+    return out;
+  }
+  finish(writer) {
+    for (const u of this.used.values()) {
+      const ref = u.refs.get(writer);
+      if (!ref) continue;
+      PFONT.embedType0(writer, { Name, Ref, PDFStream }, { font: u.font, registry: u.registry, ref });
+    }
+  }
+  /** pdfcore's wrapText, measured with the right font for each line */
+  async wrap(text, size, bold, maxWidth, base14) {
+    /* each word is measured once and a line is the sum of its words and
+       spaces: shaping never joins across a space, and measuring every
+       growing line would cost the square of a paragraph's length */
+    const lines = [];
+    const words = new Map();
+    const wordWidth = async (w) => {
+      if (!words.has(w)) words.set(w, await this.width(w, size, bold, base14));
+      return words.get(w);
+    };
+    const space = await wordWidth(' ');
+    for (const para of String(text).split('\n')) {
+      if (!para.trim()) { lines.push(''); continue; }
+      let line = '', lw = 0;
+      for (const word of para.split(/\s+/)) {
+        const ww = await wordWidth(word);
+        if (line && lw + space + ww > maxWidth) { lines.push(line); line = word; lw = ww; }
+        else { line = line ? line + ' ' + word : word; lw = line === word ? ww : lw + space + ww; }
+      }
+      if (line) lines.push(line);
+    }
+    for (const l of lines) await this.prepare(l, bold);
+    return lines;
+  }
+}
+
+/** A text helper for specs: textRun(...) -> new TextFonts() */
+function textRun() { return new TextFonts(); }
+
+/** createPDF, with every op's text prepared first so any script can be drawn. */
+async function createDocument(pages, opts) {
+  const tf = (opts && opts.text) || new TextFonts();
+  for (const pg of pages) for (const op of pg.ops || []) {
+    if (op.text !== undefined && tf.wants(op.text)) await tf.prepare(op.text, /Bold/.test(op.font || ''));
+  }
+  return createPDF(pages, Object.assign({}, opts || {}, { text: tf.used.size || tf.cache.size ? tf : null }));
+}
+
+const unicodeFonts = { setFontBase, setFontLoader, TextFonts, needs: (t) => TextFonts.needs(t) };
 
 /* ============================================================
    Base-14 text: widths, wrapping, page building
@@ -1637,6 +4668,8 @@ function createPDF(pages, opts) {
   for (const page of pages) {
     const [W, H] = page.size || PAGE_SIZES[o.pageSize || 'a4'];
     const used = new Set();
+    const usedImages = Object.create(null);
+    const usedUnicode = Object.create(null);
     let cs = '';
 
     for (const op of page.ops || []) {
@@ -1647,6 +4680,24 @@ function createPDF(pages, opts) {
       } else if (op.line) {
         const [x1, y1, x2, y2] = op.line;
         cs += `${rgb(op.stroke || '#000000')} RG\n${n(op.lineWidth || 1)} w\n${n(x1)} ${n(y1)} m ${n(x2)} ${n(y2)} l S\n`;
+      } else if (op.image) {
+        const key = 'Im' + imageRef(writer, op.image).num;
+        usedImages[key] = imageRef(writer, op.image);
+        const w = op.w, h = op.h !== undefined ? op.h : op.w * op.image.height / op.image.width;
+        cs += `q\n${n(w)} 0 0 ${n(h)} ${n(op.x)} ${n(op.y)} cm\n/${key} Do\nQ\n`;
+      } else if (op.raw !== undefined) {
+        cs += op.raw + '\n';
+      } else if (op.text !== undefined && o.text && o.text.has(op.text, /Bold/.test(op.font || ''))) {
+        /* text outside WinAnsi: a Noto subset, shaped where the script needs it */
+        const size = op.size || 11;
+        const bold = /Bold/.test(op.font || '');
+        const w = o.text.widthSync(op.text, size, bold);
+        let x = op.x || 0;
+        if (op.align === 'center') x = op.x - w / 2;
+        else if (op.align === 'right') x = op.x - w;
+        const shown = o.text.show(op.text, size, bold);
+        usedUnicode[shown.key] = true;
+        cs += `BT\n${rgb(op.colour || '#000000')} rg\n${n(x)} ${n(op.y)} Td\n${shown.ops}\nET\n`;
       } else if (op.text !== undefined) {
         const fk = fontKeyFor(op.font || 'Helvetica');
         used.add(fk);
@@ -1663,7 +4714,15 @@ function createPDF(pages, opts) {
     const res = Object.create(null);
     const fdict = Object.create(null);
     used.forEach(k => { fdict[k.replace(/[^A-Za-z0-9]/g, '')] = fontRefs[k]; });
+    for (const key of page.unicodeKeys || []) usedUnicode[key] = true;
+    for (const key of Object.keys(usedUnicode)) fdict[key] = o.text.refFor(writer, key);
     if (Object.keys(fdict).length) res.Font = fdict;
+    if (Object.keys(usedImages).length) res.XObject = usedImages;
+    if (page.gs) {
+      const gs = Object.create(null);
+      for (const [k, v] of Object.entries(page.gs)) gs[k] = { Type: new Name('ExtGState'), ca: v, CA: v };
+      res.ExtGState = gs;
+    }
 
     const contentNum = writer.add(new PDFStream(Object.create(null), bytesOf(cs)));
     const pageNum = writer.alloc();
@@ -1676,6 +4735,7 @@ function createPDF(pages, opts) {
 
   writer.set(pagesNum, { Type: new Name('Pages'), Kids: kids, Count: kids.length });
   writer.set(catalogNum, { Type: new Name('Catalog'), Pages: new Ref(pagesNum, 0) });
+  if (o.text) o.text.finish(writer);
 
   let infoRef = null;
   if (o.info) {
@@ -1696,5 +4756,6 @@ function rgb(hex) {
 }
 
 
-window.MVRPdfCore={PDFDocument:PDFDocument,assemble:assemble,pageFrame:pageFrame,parsePageRange:parsePageRange,createPDF:createPDF,textWidth:textWidth,wrapText:wrapText,contentEscape:contentEscape,PAGE_SIZES:PAGE_SIZES,FONTS:FONTS,latin1:latin1,isDict:isDict,isName:isName};
+
+window.MVRPdfCore={PDFDocument:PDFDocument,assemble:assemble,pageFrame:pageFrame,parsePageRange:parsePageRange,createPDF:createPDF,textWidth:textWidth,wrapText:wrapText,contentEscape:contentEscape,PAGE_SIZES:PAGE_SIZES,FONTS:FONTS,latin1:latin1,isDict:isDict,isName:isName,setProgress:setProgress,setPreview:setPreview,PDFWriter:PDFWriter,PDFStream:PDFStream,Name:Name,Ref:Ref,pdfString:pdfString,decodePdfString:decodePdfString,bytesOf:bytesOf,isRef:isRef,inflate:inflate,deflate:deflate,copyObject:copyObject,prepareImage:prepareImage,compressDocument:compressDocument,protectDocument:protectDocument,flattenDocument:flattenDocument,unicodeFonts:unicodeFonts,textRun:textRun,createDocument:createDocument,TextFonts:TextFonts,compactBuild:compactBuild};
 })();

@@ -335,7 +335,7 @@ module.exports = {
     faq: [
       { q: 'Can the old regime still come out cheaper?', a: 'Yes, with large deductions. On a ₹24 lakh salary with ₹8 lakh of deductions, the old regime costs ₹2,88,600 and the new ₹2,92,500, a saving of ₹3,900.' },
       { q: 'How is tax worked out for senior citizens?', a: 'In the old regime the tax-free slab rises to ₹3 lakh at 60 and ₹5 lakh at 80; the new regime has no age-based slabs. A 65-year-old with ₹9 lakh of pension and ₹2 lakh of deductions pays nothing under the new regime, thanks to the rebate, against ₹41,600 under the old.' },
-      { q: 'When does surcharge apply?', a: 'Once taxable income passes ₹50 lakh. On a ₹60 lakh salary the new regime adds ₹1,35,750 of surcharge, for a total of ₹15,52,980. The tool does not apply marginal relief on surcharge, so check incomes just above ₹50 lakh with a CA.' }    ],
+      { q: 'When does surcharge apply?', a: 'Once taxable income passes ₹50 lakh. On a ₹60 lakh salary the new regime adds ₹1,35,750 of surcharge, for a total of ₹15,52,980. With marginal relief, ₹100 over ₹50 lakh adds just ₹104 of tax.' }    ],
     checks: [
       { inputs: { gross: 1300000, fy: '2026-27', type: 'other', age: 'below60', deductions: 250000 }, key: 'newTotal', shown: '₹78,000' },
       { inputs: { gross: 2400000, fy: '2026-27', type: 'salaried', age: 'below60', deductions: 800000 }, key: 'oldTotal', shown: '₹2,88,600' },

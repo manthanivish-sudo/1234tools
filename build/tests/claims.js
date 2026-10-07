@@ -58,7 +58,7 @@ kit.init({ ROOT, OUT, PORT });
 const claims = [];
 const manuals = [];
 const SECTIONS = ['pdf', 'image', 'developer', 'text', 'qr',
-  'india', 'business', 'finance', 'health', 'time', 'education', 'mathematics', 'utilities', 'engineering', 'design', 'conversions'];
+  'india', 'business', 'finance', 'health', 'time', 'education', 'mathematics', 'utilities', 'engineering', 'design', 'conversions', 'social'];
 const sectionOf = (page) => page.split('/')[1];
 
 /**
@@ -82,7 +82,7 @@ const api = { claim, manual, kit };
 /* the file and text tools, then the calculators and conversions; a file not
    written yet is skipped, so sections can be added one at a time */
 for (const f of ['pdf.js', 'image.js', 'developer.js', 'text.js', 'qr.js',
-  'examples.js', 'calc-privacy.js', 'calc-india.js', 'calc-business.js', 'calc-everyday.js', 'calc-maths.js', 'conversions.js']) {
+  'examples.js', 'calc-privacy.js', 'calc-india.js', 'calc-business.js', 'calc-everyday.js', 'time.js', 'calc-maths.js', 'conversions.js', 'social.js']) {
   if (fs.existsSync(path.join(__dirname, 'claims', f))) require('./claims/' + f)(api);
 }
 

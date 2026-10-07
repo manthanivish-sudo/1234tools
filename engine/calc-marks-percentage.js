@@ -22,7 +22,7 @@ window.TOOLS["marks-percentage"] = {
 "inputs": [
   {"key":"marks","label":"Marks obtained, separated by commas","type":"text","default":"78, 65, 91, 54, 83"},
   {"key":"max","label":"Maximum per subject (one value, or one per subject)","type":"text","default":"100"},
-  {"key":"pass","label":"Pass mark per subject","type":"number","unit":"%","default":40}
+  {"key":"pass","label":"Pass mark per subject","type":"number","unit":"%","default":40,"min":0,"max":100}
 ],
 "compute": function (v) {
   const parse = function (s) {
@@ -93,6 +93,7 @@ window.TOOLS["marks-percentage"] = {
   {"key":"note","label":"","format":"text"},
   {"key":"caution","label":"","format":"text"}
 ],
+"filled": (v, r, f) => r.percentage === undefined ? [] : ['percentage = ' + r.scored.replace(' of ', ' ÷ ') + ' × 100 = ' + f.pct(r.percentage)],
 "tips": [
   "Where subjects are out of different totals, give one maximum per subject in the same order. A 50-mark practical counted as though it were out of 100 will pull the percentage down by a lot.",
   "Passing overall is not the same as passing everything. Most boards require both, which is why the failed-subject count is shown separately.",

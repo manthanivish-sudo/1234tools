@@ -30,14 +30,17 @@ function pageEngine(url, root) {
   let s;
   while ((s = re.exec(html))) scripts.push(s[1]);
   const file = scripts.find((f) => f === 'calc-' + slug + '.js') || ('calc-' + slug + '.js');
-  return { slug, file: path.join(base, 'engine', file) };
+  /* engine/holidays.js is data the date tools' specs read (window.HOLIDAYS):
+     a page that loads it gets it in the same context, before the spec */
+  const pre = /<script src="\/engine\/holidays\.js"/.test(html) ? [path.join(base, 'engine', 'holidays.js')] : [];
+  return { slug, file: path.join(base, 'engine', file), pre };
 }
 
-function load(file) {
+function load(file, pre) {
   if (cache.has(file)) return cache.get(file);
   const window = { TOOLS: {} };
   const ctx = vm.createContext({ window, console, Intl, Math, Date, Number, String, Array, Object, JSON, isFinite, isNaN, parseFloat, parseInt });
-  vm.runInContext(fs.readFileSync(file, 'utf8'), ctx, { filename: file });
+  for (const f of (pre || []).concat(file)) vm.runInContext(fs.readFileSync(f, 'utf8'), ctx, { filename: f });
   cache.set(file, window.TOOLS);
   return window.TOOLS;
 }
@@ -45,7 +48,7 @@ function load(file) {
 /** The tool spec (title, inputs, outputs, compute …) a page mounts. */
 function tool(url, root) {
   const e = pageEngine(url, root);
-  const t = load(e.file)[e.slug];
+  const t = load(e.file, e.pre)[e.slug];
   if (!t) throw new Error('_engine.js: ' + path.basename(e.file) + ' defines no TOOLS["' + e.slug + '"]');
   return t;
 }

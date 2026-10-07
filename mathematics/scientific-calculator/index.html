@@ -44,8 +44,7 @@
 <script>if(/[?&]embed=1(?:&|$)/.test(location.search))document.documentElement.classList.add('is-embed');</script>
 <script src="/assets/share.js" defer></script>
 <!-- /SHARE-HEAD -->
-<script src="/engine/live.bundle.js" defer></script>
-<script src="/engine/render-live.js" defer></script>
+<script src="/engine/sci-calc.js" defer></script>
 <script>/* set theme before first paint so there is no flash */
 (function(){try{var t=localStorage.getItem('1234tools-theme');document.documentElement.setAttribute('data-theme',t==='light'||t==='system'?t:'dark');}catch(e){}})();</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Scientific Calculator","description":"A full scientific calculator with trigonometry, logarithms, powers, roots and constants.","url":"https://www.1234tools.com/mathematics/scientific-calculator/","applicationCategory":"UtilitiesApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://www.1234tools.com/"},{"@type":"ListItem","position":2,"name":"Mathematics","item":"https://www.1234tools.com/mathematics/"},{"@type":"ListItem","position":3,"name":"Scientific Calculator","item":"https://www.1234tools.com/mathematics/scientific-calculator/"}]},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Why does sin(90) give 1 in one mode and 0.894 in another?","acceptedAnswer":{"@type":"Answer","text":"Because 90 degrees is a right angle but 90 radians is about 14 full turns. Check the angle mode indicator — it is the most common source of confusion with any scientific calculator."}},{"@type":"Question","name":"How precise is it?","acceptedAnswer":{"@type":"Answer","text":"It uses double-precision floating point, giving about 15–17 significant digits. That means 0.1 + 0.2 shows as 0.30000000000000004 if you ask for full precision — a property of binary floating point, not a bug."}}]}]}</script>
@@ -59,7 +58,7 @@
 
 <header class="site-header">
   <div class="container nav-wrap">
-    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,283+ free tools</small></span></a>
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,301+ free tools</small></span></a>
 
     <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navlinks">
       <span></span><span></span><span></span>
@@ -67,7 +66,7 @@
 
     <div class="header-tools">
       <div class="search-wrap">
-        <input id="q" type="search" placeholder="Search 1,283 tools…" autocomplete="off" aria-label="Search tools">
+        <input id="q" type="search" placeholder="Search 1,301 tools…" autocomplete="off" aria-label="Search tools">
         <div id="results" class="search-results" hidden></div>
       </div>
       <a class="hdr-prefs" href="/settings/" title="Settings — currency, dates, paper size" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 14.5a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.6 1.6 0 0 0 4.6 15a1.6 1.6 0 0 0-1.47-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.6 1.6 0 0 0 9 4.6h.07A1.6 1.6 0 0 0 10 3.13V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.6 1.6 0 0 0 19.4 9v.07a1.6 1.6 0 0 0 1.47 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1.43z"/></svg></a>
@@ -95,7 +94,7 @@
 
 <div class="layout container">
   <button class="sidebar-open" id="sidebarOpen" aria-expanded="false" aria-controls="sidebar">
-    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,283 tools</span>
+    <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span>All 1,301 tools</span>
   </button>
 
   <aside class="sidebar" id="sidebar" aria-label="Tool categories">
@@ -112,7 +111,7 @@
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-home"></use></svg><span class="side-name">Home</span>
       </a>
       <a class="side-link" href="/tools/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span class="side-name">All tools</span><span class="side-count">1,283</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-grid"></use></svg><span class="side-name">All tools</span><span class="side-count">1,301</span>
       </a>
       <a class="side-link" href="/for/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-collections"></use></svg><span class="side-name">Collections</span>
@@ -198,7 +197,7 @@
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-ai"></use></svg><span class="side-name">AI for Business</span><span class="side-count">49</span>
       </a>
       <a class="side-link" href="/pdf/">
-        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-pdf"></use></svg><span class="side-name">PDF Tools</span><span class="side-count">22</span>
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-pdf"></use></svg><span class="side-name">PDF Tools</span><span class="side-count">33</span>
       </a>
       <a class="side-link" href="/education/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-education"></use></svg><span class="side-name">Education &amp; Exams</span><span class="side-count">9</span>
@@ -214,6 +213,9 @@
       </a>
       <a class="side-link" href="/ai-image/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-ai-image"></use></svg><span class="side-name">AI Image Tools</span><span class="side-count">12</span>
+      </a>
+      <a class="side-link" href="/social/">
+        <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-social"></use></svg><span class="side-name">Social Media Tools</span><span class="side-count">7</span>
       </a>
       <a class="side-link" href="/text/">
         <svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#i-text"></use></svg><span class="side-name">Text &amp; Writing Tools</span><span class="side-count">9</span>
@@ -324,14 +326,14 @@
   <!-- PROOF: generated by build-proof.js, do not edit -->
   <section class="panel proof proof-why" aria-labelledby="proof-why-h"><div class="proof-head"><h2 id="proof-why-h">Why people use it</h2><span class="proof-badge">For students without their calculator</span></div><p class="proof-pain">Homework needs sin, log and powers, and the phone calculator hides them sideways.</p><div class="proof-vs"><div class="proof-usual"><h3>The usual way</h3><ul><li><span class="proof-x" aria-hidden="true">✗</span>Phone calculators with hidden functions</li><li><span class="proof-x" aria-hidden="true">✗</span>Degree and radian mix-ups</li><li><span class="proof-x" aria-hidden="true">✗</span>Calculator sites full of pop-ups</li></ul></div><div class="proof-fix"><h3>With this tool</h3><p><span class="proof-check" aria-hidden="true">✓</span>Type the expression or tap the keys. Trig, logs, powers and roots.</p></div></div><ol class="proof-steps" aria-label="How it works"><li><span class="proof-n" aria-hidden="true">1</span>Type or tap the expression</li><li><span class="proof-n" aria-hidden="true">2</span>Set degrees or radians</li><li><span class="proof-n" aria-hidden="true">3</span>Read the result</li></ol><p class="proof-cta"><a class="btn-ghost proof-go" href="#main" data-proof-try="tool">Open the calculator ↑</a></p></section>
   <!-- /PROOF -->
-  <section class="panel"><h2>Privacy</h2><p class="privacy-line">Everything runs in your browser. Nothing you enter is transmitted, logged or stored, and the page keeps working with the network off.</p></section>
-  <section class="panel"><h2>Tips</h2><ul class="tips"><li>Type expressions directly or use the keypad — both feed the same parser, so 2+3*4 correctly gives 14, not 20.</li><li>Supported functions: sin, cos, tan and their inverses and hyperbolics, ln, log, log2, sqrt, cbrt, abs, exp, floor, ceil, round, sign. Use ! for factorial.</li><li>Constants pi, e, tau and phi can be used anywhere a number can.</li><li>The angle mode applies to trigonometric functions only, and is shown next to the display so it cannot be mistaken.</li><li>Expressions are parsed with a proper tokeniser, not eval, so a typo produces a useful message rather than a broken page.</li></ul></section><section class="panel"><h2>Frequently asked questions</h2><details><summary>Why does sin(90) give 1 in one mode and 0.894 in another?</summary><p>Because 90 degrees is a right angle but 90 radians is about 14 full turns. Check the angle mode indicator — it is the most common source of confusion with any scientific calculator.</p></details><details><summary>How precise is it?</summary><p>It uses double-precision floating point, giving about 15–17 significant digits. That means 0.1 + 0.2 shows as 0.30000000000000004 if you ask for full precision — a property of binary floating point, not a bug.</p></details></section>
+  <section class="panel"><h2>Privacy</h2><p class="privacy-line">Everything runs in your browser. Nothing you enter is transmitted or logged, and the page keeps working with the network off. The last 20 lines of history, the memory and the angle mode are kept in this browser only, so they are there next time; Clear removes the history.</p></section>
+  <section class="panel"><h2>Tips</h2><ul class="tips"><li>Type expressions directly or use the keypad — both feed the same parser, so 2+3*4 correctly gives 14, not 20.</li><li>Supported functions: sin, cos, tan and their inverses and hyperbolics, ln, log, log2, sqrt, cbrt, abs, exp, floor, ceil, round, sign. Use ! for factorial.</li><li>Constants pi, e, tau and phi can be used anywhere a number can, and Ans is the last answer: press = and the result becomes Ans for the next sum.</li><li>% means percent, so 15% × 80 gives 12. The remainder is mod(17, 5), which gives 2; nCr and nPr are ncr(n, r) and npr(n, r).</li><li>EE types a power of ten: 6.02 EE 23 is 6.02 × 10²³. x², 1/x and 10ˣ are one key each.</li><li>M+ and M− add the result on screen to memory or take it away, MR puts the memory into the expression and MC clears it.</li><li>a/b shows the result as a fraction, 0.375 as 3/8, whenever there is one with a denominator up to a million.</li><li>The angle mode applies to trigonometric functions only, and is shown next to the display so it cannot be mistaken. It is remembered, with the last 20 lines of history, on this device.</li><li>Expressions are parsed with a proper tokeniser, not eval, so a typo produces a useful message rather than a broken page.</li></ul></section><section class="panel"><h2>Frequently asked questions</h2><details><summary>Why does sin(90) give 1 in one mode and 0.894 in another?</summary><p>Because 90 degrees is a right angle but 90 radians is about 14 full turns. Check the angle mode indicator — it is the most common source of confusion with any scientific calculator.</p></details><details><summary>How precise is it?</summary><p>It uses double-precision floating point, giving about 15–17 significant digits. That means 0.1 + 0.2 shows as 0.30000000000000004 if you ask for full precision — a property of binary floating point, not a bug.</p></details></section>
   <section class="panel"><h2>Related tools</h2><ul class="related"><li><a href="/time/timezone-converter/">Time Zone Converter</a></li><li><a href="/time/countdown-timer/">Countdown Timer</a></li><li><a href="/time/stopwatch-timer/">Stopwatch, Timer &amp; Pomodoro</a></li><!--related: generated by build-site.js, edit above this line--><li><a href="/mathematics/average-calculator/">Average Calculator (Mean, Median, Mode)</a></li><li><a href="/mathematics/fraction-calculator/">Fraction Calculator</a></li><li><a href="/mathematics/geometry-calculator/">Area &amp; Volume Calculator</a></li></ul></section>
 </article>
 <script>
 document.addEventListener('DOMContentLoaded',function(){
   var root = document.querySelector('.tool');
-  try { MVRTool.mountCalculator(root); }
+  try { MVRTool.mountScientific(root); }
   catch (e) {
     root.querySelector('.tool-io').innerHTML =
       '<div class="io-msg is-error">This tool needs browser features yours does not support. Try a current version of Chrome, Firefox, Edge or Safari.</div>';
@@ -346,8 +348,8 @@ document.addEventListener('DOMContentLoaded',function(){
   <div class="container">
     <div class="footer-grid">
       <div class="footer-about">
-        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,283+ free tools</small></span></a>
-        <p>1,283+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services, almost all of them running entirely in your browser. The exceptions are the <a href="/ai/">AI for Business</a> tools, which send what you give them through our server to Anthropic’s API, and the tool request, contact and showcase forms, which send what you type to us, as the <a href="/privacy/">privacy policy</a> explains.</p>
+        <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="1234Tools logo" width="42" height="42"><span>1234Tools<small>1,301+ free tools</small></span></a>
+        <p>1,301+ free calculators and converters for finance, mathematics, engineering, health and everyday work — built by MVR IT Services, almost all of them running entirely in your browser. The exceptions are the <a href="/ai/">AI for Business</a> tools, which send what you give them through our server to Anthropic’s API, and the tool request, contact and showcase forms, which send what you type to us, as the <a href="/privacy/">privacy policy</a> explains.</p>
       </div>
       <div>
         <h4>1234Tools</h4>

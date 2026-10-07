@@ -68,8 +68,8 @@ module.exports = function ({ claim, manual, kit: K }) {
   const L = () => {
     if (!live) {
       const window = {};
-      vm.runInContext(fs.readFileSync(path.join(K.ROOT, 'engine', 'live.bundle.js'), 'utf8'), vm.createContext({ window }), { filename: 'live.bundle.js' });
-      live = window.MVRLive;
+      vm.runInContext(fs.readFileSync(path.join(K.ROOT, 'engine', 'sci-calc.js'), 'utf8'), vm.createContext({ window }), { filename: 'sci-calc.js' });
+      live = window.MVRSci;
     }
     return live;
   };
@@ -119,7 +119,7 @@ module.exports = function ({ claim, manual, kit: K }) {
   });
   claim(P, 'works', '% difference = |A − B| ÷ ((A + B) ÷ 2) × 100', 'symmetric difference', N, async () => { const r = pc(60, 75); return [near(r.difference, 15 / 67.5 * 100), r.difference]; });
   claim(P, 'ui', 'the first box, Value A', 'the boxes are Value A and Value B, in that order', N, async () => {
-    const ins = spec(P).inputs.map((i) => i.label); return [ins[0] === 'Value A' && ins[1] === 'Value B', ins.join(', ')];
+    const ins = spec(P).inputs.map((i) => i.label); const m = spec(P).inputs[0]; return [m.key === 'mode' && m.default === 'all' && ins[1] === 'Value A' && ins[2] === 'Value B', ins.join(', ')];
   });
   claim(P, 'worked', 'so going back from £75 to £60 would be a 20% cut: the same £15, measured against a larger starting point.', '75 → 60', N, async () => { const r = pc(75, 60); return [near(r.change, -20), r.change]; });
   claim(P, 'worked', 'because it measures the gap against the average, £67.50', 'the symmetric difference is the gap over the average', N, async () => { const r = pc(60, 75); return [near(r.difference, 15 / 67.5 * 100), r.difference]; });
@@ -661,7 +661,7 @@ module.exports = function ({ claim, manual, kit: K }) {
     } finally { await p.close(); }
   });
   claim(SC, 'why', 'Set degrees or radians', 'the angle mode changes trig', N, async () => { const a = ev('sin(90)', 'deg'), b = ev('sin(90)', 'rad'); return [near(a, 1) && near(b, Math.sin(90)), a + ' / ' + b]; });
-  claim(SC, 'privacy', 'Nothing you enter is transmitted, logged or stored, and the page keeps working with the network off.', 'typing sends nothing, stores nothing, and works offline', B, async () => {
+  claim(SC, 'privacy', 'Nothing you enter is transmitted or logged, and the page keeps working with the network off.', 'typing sends nothing, and works offline', B, async () => {
     const p = await K.open(SC, { wait: '.calc-expr' });
     try {
       await K.sleep(500);
@@ -676,8 +676,23 @@ module.exports = function ({ claim, manual, kit: K }) {
       await p.type('.calc-expr', '6*7');
       const off = await p.$eval('.calc-result', (e) => e.textContent);
       await p.setOfflineMode(false);
-      return [!sent.length && !/123456789|864197523/.test(stored) && off === '42', 'requests after typing: ' + (sent.map((r) => r.url).join(', ') || 'none') + '; stored: ' + (/123456789/.test(stored) ? 'the expression' : 'not the expression') + '; offline 6*7 = ' + off];
+      return [!sent.length && off === '42', 'requests after typing: ' + (sent.map((r) => r.url).join(', ') || 'none') + '; offline 6*7 = ' + off];
     } finally { await p.close(); }
+  });
+  claim(SC, 'privacy', 'The last 20 lines of history, the memory and the angle mode are kept in this browser only, so they are there next time; Clear removes the history.', 'one versioned key in localStorage, kept across a reload, emptied by Clear', B, async () => {
+    const p = await K.open(SC, { wait: '.calc-expr' });
+    try {
+      await p.evaluate(() => localStorage.removeItem('1234tools.scientific.v1'));
+      for (let k = 0; k < 22; k++) { await p.evaluate((x) => { const e = document.querySelector('.calc-expr'); e.value = String(x) + '+1'; e.dispatchEvent(new Event('input')); }, k); await p.focus('.calc-expr'); await p.keyboard.press('Enter'); }
+      await p.evaluate(() => [...document.querySelectorAll('[data-angle]')].find((b) => b.dataset.angle === 'deg').click());
+      const kept = await p.evaluate(() => JSON.parse(localStorage.getItem('1234tools.scientific.v1') || '{}'));
+      await p.reload({ waitUntil: 'load' });
+      await p.waitForSelector('.calc-expr');
+      const after = await p.evaluate(() => [document.querySelectorAll('.calc-hist-row').length, document.querySelector('.calc-display .calc-mode').textContent, Object.keys(localStorage).filter((k) => /scientific/.test(k)).join(',')]);
+      await p.evaluate(() => [...document.querySelectorAll('.calc-history .btn-ghost')].find((b) => b.textContent === 'Clear').click());
+      const cleared = await p.evaluate(() => [document.querySelectorAll('.calc-hist-row').length, (JSON.parse(localStorage.getItem('1234tools.scientific.v1') || '{}').history || []).length]);
+      return [kept.history.length === 20 && after[0] === 20 && after[1] === 'DEG' && after[2] === '1234tools.scientific.v1' && cleared[0] === 0 && cleared[1] === 0, 'kept ' + kept.history.length + ', after reload ' + after.join(' / ') + ', after Clear ' + cleared.join('/')];
+    } finally { try { await p.evaluate(() => localStorage.removeItem('1234tools.scientific.v1')); } catch (e) { /* closed */ } await p.close(); }
   });
   claim(SC, 'tip', 'Type expressions directly or use the keypad — both feed the same parser, so 2+3*4 correctly gives 14, not 20.', 'precedence', N, async () => { const v = [ev('2+3*4'), ev('(2+3)*4'), ev('2^3^2'), ev('-2^2')]; return [v.join(',') === '14,20,512,-4', v.join(', ')]; });
   claim(SC, 'tip', 'Supported functions: sin, cos, tan and their inverses and hyperbolics, ln, log, log2, sqrt, cbrt, abs, exp, floor, ceil, round, sign. Use ! for factorial.', 'every one named', N, async () => {
@@ -685,7 +700,7 @@ module.exports = function ({ claim, manual, kit: K }) {
       ['ln(e^2)', 2], ['log(100)', 2], ['log2(1024)', 10], ['sqrt(81)', 9], ['cbrt(-8)', -2], ['abs(-3)', 3], ['exp(1)', Math.E], ['floor(2.7)', 2], ['ceil(2.1)', 3], ['round(2.5)', 3], ['sign(-4)', -1], ['5!', 120], ['0!', 1]];
     const bad = t.filter(([s, v]) => !near(ev(s), v, 1e-12)); return [!bad.length, bad.map(([s]) => s + ' = ' + ev(s)).join(', ') || t.length + ' functions'];
   });
-  claim(SC, 'tip', 'Constants pi, e, tau and phi can be used anywhere a number can.', 'in sums, powers, functions and brackets', N, async () => {
+  claim(SC, 'tip', 'Constants pi, e, tau and phi can be used anywhere a number can', 'in sums, powers, functions and brackets', N, async () => {
     const v = [ev('pi'), ev('e'), ev('tau'), ev('phi'), ev('phi^2-phi'), ev('2*pi/tau'), ev('-e+e'), ev('sqrt(tau*pi/2)/pi')];
     return [near(v[0], Math.PI) && near(v[1], Math.E) && near(v[2], 2 * Math.PI) && near(v[3], (1 + Math.sqrt(5)) / 2) && near(v[4], 1) && near(v[5], 1) && v[6] === 0 && near(v[7], 1), v.join(', ')];
   });
@@ -705,7 +720,7 @@ module.exports = function ({ claim, manual, kit: K }) {
   });
   claim(SC, 'tip', 'Expressions are parsed with a proper tokeniser, not eval, so a typo produces a useful message rather than a broken page.', 'typos give messages; code is not run', N, async () => {
     const m = ['2+*3', 'sin(', '2)', 'foo(2)', '2..3', '2#3', 'constructor', 'alert(1)'].map(evErr);
-    const src = fs.readFileSync(path.join(K.ROOT, 'engine', 'live.bundle.js'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const src = fs.readFileSync(path.join(K.ROOT, 'engine', 'sci-calc.js'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     return [m.every((x) => !/^no error/.test(x) && x.length > 8) && !/\beval\s*\(|new Function\s*\(/.test(src), m.join(' | ')];
   });
   claim(SC, 'faq', 'Why does sin(90) give 1 in one mode and 0.894 in another?', 'deg and rad', N, async () => { const a = ev('sin(90)', 'deg'), b = ev('sin(90)', 'rad'); return [near(a, 1) && b.toFixed(3) === '0.894', a + ' / ' + b]; });

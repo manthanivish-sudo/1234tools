@@ -30,7 +30,8 @@ window.PDF_TOOLS["watermark-pdf"] = {
 "multiple": false,
 "description": "Stamp text across every page — DRAFT, CONFIDENTIAL, a name or a date — at any angle and opacity.",
 "keywords": ["watermark pdf","add text to pdf","stamp pdf","draft watermark","confidential pdf"],
-"controls": [{"key":"text","label":"Watermark text","type":"text","default":"DRAFT"},{"key":"size","label":"Font size","type":"number","default":60,"min":6,"max":300},{"key":"angle","label":"Angle","type":"select","default":"45","options":[{"value":"0","label":"Horizontal"},{"value":"45","label":"45° diagonal"},{"value":"90","label":"Vertical"},{"value":"315","label":"−45° diagonal"}]},{"key":"colour","label":"Colour","type":"color","default":"#ff0000"},{"key":"opacity","label":"Opacity %","type":"number","default":20,"min":5,"max":100},{"key":"position","label":"Position","type":"select","default":"center","options":[{"value":"center","label":"Centre"},{"value":"tile","label":"Tiled across the page"},{"value":"bottom","label":"Bottom of the page"}]},{"key":"pages","label":"Pages","type":"text","default":"all"}],
+"livePreview": true,
+"controls": [{"key":"text","label":"Watermark text","type":"text","default":"DRAFT","remember":true},{"key":"size","label":"Font size","type":"number","default":60,"min":6,"max":300},{"key":"angle","label":"Angle","type":"select","default":"45","options":[{"value":"0","label":"Horizontal"},{"value":"45","label":"45° diagonal"},{"value":"90","label":"Vertical"},{"value":"315","label":"−45° diagonal"}]},{"key":"colour","label":"Colour","type":"color","default":"#ff0000"},{"key":"opacity","label":"Opacity %","type":"number","default":20,"min":5,"max":100},{"key":"position","label":"Position","type":"select","default":"center","options":[{"value":"center","label":"Centre"},{"value":"tile","label":"Tiled across the page"},{"value":"bottom","label":"Bottom of the page"}]},{"key":"pages","label":"Pages","type":"text","default":"all"}],
 "run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
@@ -95,7 +96,7 @@ window.PDF_TOOLS["watermark-pdf"] = {
         ]
       };
     },
-"tips": ["A watermark added this way sits on top of the page content and can be removed by anyone with a PDF editor. It signals status; it does not protect anything.","Tiled watermarks are much harder to crop out than a single central one, which matters for documents that might be screenshotted.","Keep opacity around 15–25%. Higher and it fights the text; lower and it vanishes when printed.","The text is drawn with a standard font, so no font file is embedded and the file barely grows."],
+"tips": ["The preview shows a page as it will be saved: it is drawn from the real output for that page and redrawn as you change the text, size, angle or opacity. Use the arrows to look at other pages.","Your settings are kept on this device for next time, the watermark text included; the Reset link under the settings puts the defaults back.","A watermark added this way sits on top of the page content and can be removed by anyone with a PDF editor. It signals status; it does not protect anything.","Tiled watermarks are much harder to crop out than a single central one, which matters for documents that might be screenshotted.","Keep opacity around 15–25%. Higher and it fights the text; lower and it vanishes when printed.","The text is drawn with a standard font, so no font file is embedded and the file barely grows."],
 "faq": [{"q":"Can the watermark be removed?","a":"Yes, by anyone reasonably determined — it is a content layer, not a security feature. If a document genuinely must not be redistributed, watermarking is a deterrent and an audit aid, not a control."}]
 };
 })();

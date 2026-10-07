@@ -12,8 +12,8 @@ window.TOOLS["percentile-rank"] = {
     {"value":"toPercentile","label":"Percentile, from my rank"},
     {"value":"toRank","label":"Rank, from my percentile"}
   ]},
-  {"key":"value","label":"Your rank, or your percentile","type":"number","default":12500},
-  {"key":"total","label":"Total candidates who sat the exam","type":"number","default":330000},
+  {"key":"value","label":"Your rank, or your percentile","type":"number","default":12500,"min":0},
+  {"key":"total","label":"Total candidates who sat the exam","type":"number","default":330000,"min":1,"integer":true},
   {"key":"method","label":"Formula","type":"select","default":"nta","options":[
     {"value":"nta","label":"NTA style — your own place counts"},
     {"value":"plain","label":"Standard — strictly below you"}
@@ -78,6 +78,9 @@ window.TOOLS["percentile-rank"] = {
   {"key":"method","label":"Formula used","format":"text"},
   {"key":"caution","label":"","format":"text"}
 ],
+"filled": (v, r, f) => r.percentile === undefined ? [] : [v.method === 'plain'
+      ? 'percentile = (' + f.upto(Number(v.total), 0) + ' − rank) ÷ ' + f.upto(Number(v.total), 0) + ' × 100 = ' + f.upto(r.percentile, 7)
+      : 'percentile = (' + f.upto(Number(v.total), 0) + ' − rank + 1) ÷ ' + f.upto(Number(v.total), 0) + ' × 100 = ' + f.upto(r.percentile, 7), 'rank ' + f.upto(r.rank, 0)],
 "tips": [
   "Percentile is not percentage. A 99 percentile means you did better than 99% of the people who sat the exam, and says nothing about how many marks you scored.",
   "The two formulas differ by exactly one candidate. On a large national exam that is invisible; on a small one it is worth matching whichever your exam body publishes.",

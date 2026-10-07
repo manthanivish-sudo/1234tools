@@ -2,7 +2,7 @@
   "id": "/pdf/invoice-pdf.html",
   "name": "Invoice Generator (PDF) — 1234Tools",
   "short_name": "Invoice Generator",
-  "description": "Create a clean, professional invoice PDF with line items, tax and totals calculated for you.",
+  "description": "Make an invoice PDF in three layouts, with your logo, GST (CGST and SGST, or IGST) or VAT at each line’s rate, a discount, shipping and a PAID stamp. Nothing you add is uploaded.",
   "start_url": "/pdf/invoice-pdf/?src=pwa",
   "scope": "/pdf/invoice-pdf/",
   "display": "standalone",

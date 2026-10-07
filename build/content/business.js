@@ -601,12 +601,12 @@ module.exports = {
     ],
     mistakes: [
       'Using the rate the wrong way round. 1 EUR = £0.85 and £1 = €1.1765 describe the same rate; multiplying by one where you need the other gives a figure that is badly wrong, so check the direction in the result line.',
-      'Treating the converted figure as the amount that will arrive. A transfer service converts at its own rate and may add a fixed fee, so the sum received is lower.'
+      'Treating the converted figure as the amount that will arrive. A transfer service converts at its own rate and may add a fixed fee, so the sum received is lower. The fee box shows roughly what arrives.'
     ],
     faq: [
       { q: 'How do I work out the margin my bank charged?', a: 'Divide the difference between what you paid and the mid-market amount by the mid-market amount. Paying £4,176.00 for €4,800 when the mid-market rate gives £4,080.00 is a £96 margin, about 2.35%.' },
       { q: 'Why does converting back not give my original amount?', a: 'At the mid-market rate it does: €4,800 at £0.85 is £4,080, and £4,080 divided by 0.85 is €4,800 again. A provider takes a margin on each conversion, so a round trip loses money twice.' },
-      { q: 'Can I convert at a rate from a past date?', a: 'No. The converter shows the latest daily rate and its date. For an older transaction, use the rate your bank applied or the one your accounting policy names.' }
+      { q: 'Can I convert at a rate from a past date?', a: 'Not directly: it converts at the latest daily rate. Show the chart draws each day’s rate, up to the last 90. For an older transaction, use the rate your bank applied.' }
     ]
   }
 };

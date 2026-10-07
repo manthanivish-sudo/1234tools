@@ -2,7 +2,7 @@
   "id": "/ai-video/auto-captions/",
   "name": "Auto Captions (offline) — 1234Tools",
   "short_name": "Auto Captions",
-  "description": "Add word-by-word animated captions to a video, free and offline. Whisper runs in your browser — nothing is uploaded. Edit the words, pick a style, export MP4 with sound, plus SRT and VTT.",
+  "description": "Add word-by-word animated captions to a video, free and offline. English is the most accurate of the 13 languages offered. Whisper runs in your browser — nothing is uploaded. MP4, SRT, VTT and ASS.",
   "start_url": "/ai-video/auto-captions/?src=pwa",
   "scope": "/ai-video/auto-captions/",
   "display": "standalone",

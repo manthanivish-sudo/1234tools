@@ -72,6 +72,12 @@ K.core = () => {
     const w = {};
     new Function('window', fs.readFileSync(path.join(K.ROOT, 'engine/pdfcore.bundle.js'), 'utf8'))(w);
     K._core = w.MVRPdfCore;
+    /* the worker fetches the Noto fonts and the shaper from /engine/; in Node
+       they are read from the site's own copies */
+    if (K._core.unicodeFonts) {
+      K._core.unicodeFonts.setFontLoader(async (rel) => new Uint8Array(fs.readFileSync(path.join(K.ROOT, 'engine', rel))),
+        async () => require(path.join(K.ROOT, 'engine/pdf-shaper.js')));
+    }
   }
   return K._core;
 };
@@ -79,8 +85,16 @@ K.pkg = () => K._pkg || (K._pkg = require(path.join(K.ROOT, 'build/pdf-package/e
 const pdfSpecs = new Map();
 K.pdfSpec = (id) => {
   if (!pdfSpecs.has(id)) {
-    const w = {};
+    let w = {};
     new Function('window', fs.readFileSync(path.join(K.ROOT, 'engine/pdf-' + id + '.js'), 'utf8'))(w);
+    /* a spec that reuses another engine's code at run time (the invoice reads
+       its lines with the quotation's reader) is loaded with the files its
+       worker loads, together, as the worker does */
+    const ws = w.PDF_TOOLS[id] && w.PDF_TOOLS[id].workerScripts;
+    if (Array.isArray(ws) && ws.length > 1) {
+      w = {};
+      for (const s of ws) new Function('window', fs.readFileSync(path.join(K.ROOT, 'engine', s), 'utf8'))(w);
+    }
     pdfSpecs.set(id, w.PDF_TOOLS[id]);
   }
   return pdfSpecs.get(id);
@@ -94,7 +108,7 @@ K.pdfDefaults = (id) => {
 K.runPdf = async (id, files, opts, text) => {
   const core = K.core();
   const docs = [];
-  for (const f of files || []) docs.push({ doc: await core.PDFDocument.load(f.bytes), name: f.name, size: f.bytes.length });
+  for (const f of files || []) docs.push({ doc: await core.PDFDocument.load(f.bytes, { password: f.password || '' }), name: f.name, size: f.bytes.length });
   return (await K.pdfSpec(id).run({ docs, text, opts: Object.assign(K.pdfDefaults(id), opts || {}), core })) || {};
 };
 K.pdfOut = (res, i) => (res.files && res.files[i || 0] ? res.files[i || 0].bytes : null);
@@ -314,7 +328,10 @@ K.calcEngine = (url) => {
   const re = /<script src="\/engine\/((?:calc|tool)[^"]*\.js)"/g;
   let s;
   while ((s = re.exec(html))) scripts.push(s[1]);
-  return { slug: m[1], file: scripts.find((f) => f === 'calc-' + m[1] + '.js') || ('calc-' + m[1] + '.js') };
+  /* engine/holidays.js is data the date tools' specs read (window.HOLIDAYS):
+     a page that loads it gets it in the same context, before the spec */
+  const pre = /<script src="\/engine\/holidays\.js"/.test(html) ? ['holidays.js'] : [];
+  return { slug: m[1], file: scripts.find((f) => f === 'calc-' + m[1] + '.js') || ('calc-' + m[1] + '.js'), pre };
 };
 /** A Date whose "now" is held at `now` (ISO string or ms); every other use is the real Date. */
 K.heldDate = (now) => {
@@ -338,7 +355,7 @@ K.calcSpec = (url, opts) => {
   if (!calcCache.has(key)) {
     const window = { TOOLS: {} };
     const ctx = vm.createContext({ window, console, Intl, Math, Date: now ? K.heldDate(now) : Date, Number, String, Array, Object, JSON, isFinite, isNaN, parseFloat, parseInt });
-    vm.runInContext(fs.readFileSync(path.join(K.ROOT, 'engine', e.file), 'utf8'), ctx, { filename: e.file });
+    for (const f of e.pre.concat(e.file)) vm.runInContext(fs.readFileSync(path.join(K.ROOT, 'engine', f), 'utf8'), ctx, { filename: f });
     calcCache.set(key, window.TOOLS);
   }
   const t = calcCache.get(key)[e.slug];
@@ -511,12 +528,17 @@ K.stopBrowser = async () => {
 };
 
 /** Open a page of the site with downloads recorded, every blob URL kept, and outside requests refused and noted.
- *  opts.consent: the analytics choice already made ('denied', the default, or 'granted'). */
+ *  opts.consent: the analytics choice already made ('denied', the default, or 'granted').
+ *  opts.intercept: false records requests without intercepting them. Interception pauses a
+ *  dedicated worker's own requests (Tesseract's core and language data) and never releases
+ *  them, so the OCR pages hang under it; there, an outside request is still recorded and
+ *  fails the run, it is only not refused. */
 K.open = async (url, opts) => {
   const o = opts || {};
   const p = await K.browser.newPage();
   await p.setViewport({ width: 1280, height: 1000 });
-  await p.setRequestInterception(true);
+  const icpt = o.intercept !== false;
+  if (icpt) await p.setRequestInterception(true);
   p.__requests = [];
   p.on('request', (r) => {
     const u = r.url();
@@ -524,8 +546,8 @@ K.open = async (url, opts) => {
     /* with consent granted the analytics scripts are expected to be asked
        for: still refused (no test ever reaches Google or Clarity), kept on
        the page's own list, left out of the run's "outside requests" */
-    if (!u.startsWith(K.BASE) && !/^(data|blob):/.test(u)) { if (o.consent !== 'granted') outside.push(url + ' -> ' + u); return r.abort(); }
-    r.continue();
+    if (!u.startsWith(K.BASE) && !/^(data|blob):/.test(u)) { if (o.consent !== 'granted') outside.push(url + ' -> ' + u); return icpt ? r.abort() : undefined; }
+    if (icpt) r.continue();
   });
   p.__errors = [];
   p.on('pageerror', (e) => p.__errors.push(String(e && e.message || e)));
@@ -610,7 +632,7 @@ K.img.makePng = async (p, w, h, draw) => Buffer.from(await p.evaluate((w, h, src
 
 /* ---------- PDF pages ---------- */
 K.pdf = {};
-K.pdf.open = (url) => K.open(url, { wait: '.pdf-run .btn-primary' });
+K.pdf.open = (url, opts) => K.open(url, Object.assign({ wait: '.pdf-run .btn-primary' }, opts || {}));
 K.pdf.set = async (p, c) => {
   const missing = await p.evaluate((c) => Object.keys(c).filter((k) => {
     const el = document.getElementById('pc-' + k);
@@ -629,6 +651,8 @@ K.pdf.upload = async (p, files) => {
     await input.uploadFile(f);
     await p.waitForFunction((k) => document.querySelectorAll('.file-list .file-row').length > k, { timeout: 30000 }, n);
   }
+  /* a row is drawn while its file is read and again once it is open */
+  await p.waitForFunction(() => !document.querySelector('.file-list .file-row.is-loading'), { timeout: 60000 });
 };
 K.pdf.press = async (p) => {
   await p.click('.pdf-run .btn-primary');

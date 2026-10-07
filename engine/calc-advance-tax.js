@@ -1,137 +1,4 @@
 (function(){
-/* ---------- UK tax tables ----------
-   England, Wales and Northern Ireland only — Scotland operates its own
-   income tax bands and is handled separately in the tool.
-   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
-   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
-   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
-   every £2 of adjusted net income over £100,000; on taxable income (after
-   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
-   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
-   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
-   Employment Allowance £10,500. Same figures in both years. */
-const UK_TAX = {
-  '2026/27': {
-    personalAllowance: 12570,
-    taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate on taxable income (after PA) above `from`
-      { from: 0,      rate: 0.20 },
-      { from: 37700,  rate: 0.40 },
-      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
-    ],
-    ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
-    employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
-  },
-  '2025/26': {
-    personalAllowance: 12570,
-    taperStart: 100000,
-    bands: [
-      { from: 0,      rate: 0.20 },
-      { from: 37700,  rate: 0.40 },
-      { from: 125140, rate: 0.45 }
-    ],
-    ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
-    employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
-  }
-};
-
-
-/* currency formatter used inside schedule tables */
-function fmtC(v) {
-  if (!isFinite(v)) return '—';
-  return v.toLocaleString('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 2 });
-}
-
-
-/* ---------- Income tax, verified against the Income Tax Department position
-   for AY 2027-28. Budget 2026 announced no change to slabs, so FY 2026-27
-   carries forward the Budget 2025 reset. ---------- */
-const IN_TAX = {
-  '2026-27': {
-    label: 'FY 2026-27 (AY 2027-28)',
-    new: {
-      slabs: [
-        { upto: 400000,  rate: 0 },
-        { upto: 800000,  rate: 0.05 },
-        { upto: 1200000, rate: 0.10 },
-        { upto: 1600000, rate: 0.15 },
-        { upto: 2000000, rate: 0.20 },
-        { upto: 2400000, rate: 0.25 },
-        { upto: Infinity, rate: 0.30 }
-      ],
-      standardDeduction: 75000,
-      rebateLimit: 1200000,
-      rebateMax: 60000,
-      surcharge: [[5000000, 0], [10000000, 0.10], [20000000, 0.15], [Infinity, 0.25]]
-    },
-    old: {
-      slabs: [
-        { upto: 250000,  rate: 0 },
-        { upto: 500000,  rate: 0.05 },
-        { upto: 1000000, rate: 0.20 },
-        { upto: Infinity, rate: 0.30 }
-      ],
-      seniorExemption: 300000,
-      superSeniorExemption: 500000,
-      standardDeduction: 50000,
-      rebateLimit: 500000,
-      rebateMax: 12500,
-      surcharge: [[5000000, 0], [10000000, 0.10], [20000000, 0.15], [50000000, 0.25], [Infinity, 0.37]]
-    },
-    cess: 0.04
-  }
-};
-IN_TAX['2025-26'] = Object.assign({}, IN_TAX['2026-27'], { label: 'FY 2025-26 (AY 2026-27)' });
-
-/* GST 2.0 — effective 22 September 2025. The 12% and 28% slabs were removed. */
-const GST_SLABS = [
-  { value: 0,    label: '0% — nil rated (essentials)' },
-  { value: 0.25, label: '0.25% — rough diamonds' },
-  { value: 3,    label: '3% — gold, silver, jewellery' },
-  { value: 5,    label: '5% — everyday & essential goods' },
-  { value: 18,   label: '18% — standard rate (most goods & services)' },
-  { value: 40,   label: '40% — luxury & sin goods' }
-];
-
-const fmtR = (v) => isFinite(v)
-  ? v.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
-  : '—';
-
-/* Progressive slab tax on an amount. */
-function slabTax(amount, slabs) {
-  let tax = 0, lower = 0;
-  for (const s of slabs) {
-    if (amount <= lower) break;
-    tax += (Math.min(amount, s.upto) - lower) * s.rate;
-    lower = s.upto;
-  }
-  return tax;
-}
-
-function surchargeRate(income, table) {
-  for (const [upto, rate] of table) if (income <= upto) return rate;
-  return table[table.length - 1][1];
-}
-
-
-function countWeekdays(a, b) {
-  const MS = 86400000;
-  const start = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
-  const end = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
-  const days = Math.max(0, Math.round((end - start) / MS));
-
-  const whole = Math.floor(days / 7);
-  let count = whole * 5;
-
-  let dow = new Date(start).getUTCDay();
-  for (let i = 0; i < days % 7; i++) {
-    if (dow !== 0 && dow !== 6) count++;
-    dow = (dow + 1) % 7;
-  }
-  return count;
-}
-
-
 /* ---------- Interest on advance tax, Income-tax Act, 2025 ----------
    Read 2026-10-04 in the Act as published in the Gazette of India on
    21 August 2025 (https://egazette.gov.in/WriteReadData/2025/265620.pdf).
@@ -164,6 +31,9 @@ const AT_MONTHS = ['April', 'May', 'June', 'July', 'August', 'September', 'Octob
 const down100 = (x) => Math.max(0, Math.floor((x + 1e-6) / 100) * 100);
 
 window.TOOLS = window.TOOLS || {};
+/* a schedule cell: the number itself; the page formats it with the reader's currency, grouping and decimals */
+const cell = (v) => v;
+
 window.TOOLS["advance-tax"] = {
 "currencyLocked": true,
 "currencyNote": "Indian income-tax rules",
@@ -211,8 +81,8 @@ window.TOOLS["advance-tax"] = {
         i425 += interest;
         rows.push([
           d.when + (single ? ' (100%, single instalment)' : ' (' + (d.pct * 100) + '%)'),
-          fmtR(due), fmtR(paid[i]), fmtR(short), String(d.months),
-          spare ? 'Nil, ' + (d.spare * 100) + '% paid' : fmtR(interest)
+          cell(due), cell(paid[i]), cell(short), String(d.months),
+          spare ? 'Nil, ' + (d.spare * 100) + '% paid' : cell(interest)
         ]);
       });
 
@@ -223,8 +93,8 @@ window.TOOLS["advance-tax"] = {
       const i424 = short424 * months / 100;
       rows.push([
         '1 April to ' + AT_MONTHS[months - 1] + ' (s.424)',
-        fmtR(net), fmtR(paid[3]), fmtR(short424), String(months),
-        !liable ? 'Nil' : under90 ? fmtR(i424) : 'Nil, 90% paid'
+        cell(net), cell(paid[3]), cell(short424), String(months),
+        !liable ? 'Nil' : under90 ? cell(i424) : 'Nil, 90% paid'
       ]);
 
       const note = [];
@@ -252,10 +122,17 @@ window.TOOLS["advance-tax"] = {
         interest424: i424,
         interestTotal: i425 + i424,
         interestNote: note.join(' '),
-        _table: { head: ['Due date', 'Due by then', 'Paid by then', 'Shortfall', 'Months at 1%', 'Interest'], rows }
+        _table: { head: ['Due date', 'Due by then', 'Paid by then', 'Shortfall', 'Months at 1%', 'Interest'], cols: ['text', 'currency', 'currency', 'currency', 'text', 'currency'], rows }
       };
     },
 "outputs": [{"key":"liable","label":"Liability","format":"text","primary":true},{"key":"netLiability","label":"Net tax payable","format":"currency"},{"key":"q1","label":"Instalment 1 (15 Jun)","format":"currency"},{"key":"q2","label":"Instalment 2 (15 Sep)","format":"currency"},{"key":"q3","label":"Instalment 3 (15 Dec)","format":"currency"},{"key":"q4","label":"Instalment 4 (15 Mar)","format":"currency"},{"key":"outstanding","label":"Still to pay","format":"currency"},{"key":"interest425","label":"Interest on late instalments, s.425 (formerly 234C)","format":"currency"},{"key":"interest424","label":"Interest for paying under 90%, s.424 (formerly 234B)","format":"currency"},{"key":"interestTotal","label":"Total interest","format":"currency"},{"key":"interestNote","label":"","format":"text"}],
+"filled": (v, r, f) => {
+      if (r.netLiability === undefined) return [];
+      const n = r.netLiability;
+      return ['net tax = ' + f.money(Number(v.taxLiability) || 0) + ' − ' + f.money(Number(v.tdsPaid) || 0) + ' TDS = ' + f.money(n),
+        v.scheme === 'presumptive' ? 'all of it by 15 March: ' + f.money(r.q4) : 'instalments (15%, 45%, 75% and 100% by each date): ' + f.money(r.q1) + ' by 15 June, ' + f.money(r.q2) + ' by 15 September, ' + f.money(r.q3) + ' by 15 December, ' + f.money(r.q4) + ' by 15 March',
+        'interest = ' + f.money(r.interest425) + ' (s.425) + ' + f.money(r.interest424) + ' (s.424) = ' + f.money(r.interestTotal)];
+    },
 "tips": ["Advance tax applies once net liability after TDS reaches ₹10,000 for the year (section 404 of the Income-tax Act, 2025, formerly 208). The four instalment dates are set by section 408 (formerly 211).","Section 425 of the Income-tax Act, 2025 (formerly 234C) charges 3% of the shortfall against 15%, 45% and 75% of the tax at 15 June, 15 September and 15 December, and 1% of the shortfall at 15 March. There is none for June if you paid at least 12% by then, and none for September if you paid at least 36%.","Section 424 (formerly 234B) applies if the advance tax paid by the end of the year is under 90% of the tax: 1% for every month or part of a month from 1 April on the unpaid balance, until you pay it. Payments made from 16 to 31 March count as advance tax for this test but miss the 15 March instalment; the tool counts only what you enter for 15 March, so it can overstate section 424 interest if you paid in that fortnight.","Each shortfall is rounded down to a multiple of ₹100 before interest is worked out, the procedure in rule 119A of the Income-tax Rules, 1962. The tool assumes your return shows the tax you enter and that you pay the whole balance in the month you choose. Interest for filing the return late, section 423 (formerly 234A), is not included.","No section 425 interest is charged on a shortfall caused by capital gains, dividends or newly started business income you could not foresee, if you pay the tax on it in the remaining instalments or by 31 March (s.425(4)). The tool does not apply that relief, so in that case it overstates the interest.","Resident senior citizens (60 or over) with no business or professional income are exempt from advance tax entirely: s.403(3), formerly 207(2).","Businesses and professionals declaring presumptive income under s.58 (formerly 44AD and 44ADA) pay the whole amount in a single instalment by 15 March, under s.408(2); choose that option and the only section 425 interest is 1% of any shortfall at 15 March (s.425(3)). Goods-carriage operators taxed under the same section (formerly 44AE) still pay in four instalments."],
 "faq": [{"q":"How is advance tax interest calculated?","a":"As two charges, each on a shortfall rounded down to ₹100. Take ₹1,50,000 of net tax with ₹15,000 paid by 15 June, ₹50,000 by 15 September, ₹90,000 by 15 December and ₹1,20,000 by 15 March, and the rest paid in July. Section 425 (formerly 234C) charges 3% of the June, September and December shortfalls of ₹7,500, ₹17,500 and ₹22,500, and 1% of the ₹30,000 March shortfall: ₹1,725. Only 80% was paid by March, under the 90% line, so section 424 (formerly 234B) adds 1% a month on ₹30,000 from April to July: ₹1,200. The total is ₹2,925."},{"q":"Are sections 234B and 234C still charged?","a":"From tax year 2026-27 the same charges are sections 424 and 425 of the Income-tax Act, 2025, which replaced the 1961 Act on 1 April 2026. The due dates, the 3% and 1% rates, and the 12%, 36% and 90% tests are the same. FY 2025-26 and earlier years stay under 234B and 234C."},{"q":"What if my income is unpredictable?","a":"Estimate conservatively and revise at each instalment — the schedule is cumulative, so an increased estimate can be caught up at the next date. Capital gains, dividends and new business income you could not foresee are treated specially: no section 425 interest is charged on the shortfall they cause if the tax on them is paid in the remaining instalments or by 31 March."}]
 };

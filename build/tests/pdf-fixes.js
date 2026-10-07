@@ -479,8 +479,11 @@ function hook() {
   const blobs = [];
   const orig = URL.createObjectURL;
   URL.createObjectURL = function (o) { const u = orig.call(URL, o); try { if (o && typeof o.size === 'number') blobs.push(o); } catch (e) { /* */ } return u; };
+  const names = [];
+  const click = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function () { if (this.download) names.push(this.download); return click.call(this); };
   window.__h = {
-    blobs,
+    blobs, names,
     b64: (i) => new Promise((res) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.readAsDataURL(blobs[i]); }),
     set(el, v) {
       if (!el) return false;
@@ -515,10 +518,11 @@ async function upload(page, files) {
     await input.uploadFile(f);
     await page.waitForFunction((k) => document.querySelectorAll('.file-list .file-row').length > k, { timeout: 30000 }, n);
   }
+  await page.waitForFunction(() => !document.querySelector('.file-list .file-row.is-loading'), { timeout: 60000 });
 }
 async function press(page) {
   await page.click('.pdf-run .btn-primary');
-  await page.waitForFunction(() => { const s = document.querySelector('.pdf-summary'); const m = document.querySelector('.tool-io > .io-msg'); return (s && !s.hidden) || (m && m.classList.contains('is-error')); }, { timeout: 120000 });
+  await page.waitForFunction(() => { const s = document.querySelector('.pdf-summary'); const m = document.querySelector('.tool-io > .io-msg'); return (s && !s.hidden) || (m && m.classList.contains('is-error')); }, { timeout: 180000, polling: 250 });
   return page.evaluate(() => { const m = document.querySelector('.tool-io > .io-msg'); return { cls: m.className, msg: m.textContent }; });
 }
 async function download(page) {
@@ -587,7 +591,7 @@ async function browserPart() {
   const puppeteer = loadPuppeteer();
   const { serve } = require('./serve.js');
   server = await serve(ROOT, PORT);
-  browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox'], protocolTimeout: 90000 });
+  browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox'], protocolTimeout: 300000 });
   const requests = new Set();
 
   const probe = await open('/pdf/merge-pdf/');
@@ -670,9 +674,8 @@ async function browserPart() {
   const three = path.join(OUT, 'three.pdf');
   fs.writeFileSync(three, plain(3));
   const og = await open('/pdf/pdf-organise/');
-  check(!/rendered on demand as you scroll/.test(await og.content()), 'the page no longer claims thumbnails render as you scroll');
   await upload(og, [three]);
-  await og.click('.pdf-run .btn-primary');
+  /* the grid comes with the file now: no button to press first */
   await og.waitForFunction(() => document.querySelectorAll('.page-card').length === 3, { timeout: 60000 });
   const order = () => og.$$eval('.page-card .page-num', (l) => l.map((x) => x.textContent).join(','));
   /* the whole grid on screen (under the sticky header), so the pointer can reach both cards */
@@ -692,7 +695,7 @@ async function browserPart() {
   await og.waitForFunction(() => document.querySelectorAll('.page-card .page-num')[2].textContent === '1', { timeout: 10000 }).catch(() => {});
   const focused = await og.evaluate(() => document.activeElement && document.activeElement.getAttribute('aria-label'));
   check((await order()) === '3,2,1' && focused === 'Move later, page 1', 'Enter on "Move later" moves page 1 one place and the focus stays on it', (await order()) + ' / ' + focused);
-  await og.$eval('.pdf-actions .btn-primary', (b) => b.click());
+  await og.$eval('.pdf-run .btn-primary', (b) => b.click());
   await og.waitForFunction(() => { const s = document.querySelector('.pdf-summary'); return s && !s.hidden; }, { timeout: 60000 });
   const orr = await pdfjs(probe, await download(og));
   check(orr.pages.map((p) => (p.items.find((i) => /ORDER-PAGE/.test(i.str)) || {}).str).join() === 'ORDER-PAGE-3,ORDER-PAGE-2,ORDER-PAGE-1', 'the built PDF has that order');
@@ -726,6 +729,314 @@ async function browserPart() {
   const db = await analyse(await download(dp));
   check(db.pages.length === 2 && db.pageObjs === 2 && !/MARKER-A2/.test(db.text), 'deleted on the page: no trace of page 2 in the downloaded file');
   await dp.close();
+
+  /* ================================================================ */
+  group('11 shell v2: page grids, drag, progress, cancel, previews, guards, memory');
+
+  /* 11a: every PDF-to-images card saves its own page (the Save buttons all
+     used the last page's name) */
+  const five = path.join(OUT, 'five.pdf');
+  fs.writeFileSync(five, plain(5));
+  const pi = await open('/pdf/pdf-to-images/');
+  await upload(pi, [five]);
+  await setControls(pi, { pages: '1-3', dpi: '72', format: 'image/png' });
+  await pi.click('.pdf-run .btn-primary');
+  await pi.waitForFunction(() => document.querySelectorAll('.pdf-results .pdf-file-card button').length === 3, { timeout: 60000 });
+  const names = [];
+  for (let k = 0; k < 3; k++) {
+    const n0 = await pi.evaluate(() => window.__h.names.length);
+    await pi.evaluate((k) => document.querySelectorAll('.pdf-results .pdf-file-card button')[k].click(), k);
+    await pi.waitForFunction((n) => window.__h.names.length > n, { timeout: 10000 }, n0);
+    names.push(await pi.evaluate(() => window.__h.names[window.__h.names.length - 1]));
+  }
+  check(names.join() === 'five-p1.png,five-p2.png,five-p3.png', 'PDF to images: each card\'s Save downloads its own page under its own name', names.join());
+  await pi.close();
+
+  /* 11b: the delete grid and the Pages box are the same selection */
+  const twelve = path.join(OUT, 'twelve.pdf');
+  fs.writeFileSync(twelve, plain(12));
+  const dg = await open('/pdf/delete-pdf-pages/');
+  await upload(dg, [twelve]);
+  await dg.waitForFunction(() => document.querySelectorAll('.page-card').length === 12, { timeout: 30000 });
+  const pagesBox = () => dg.$eval('#pc-pages', (e) => e.value);
+  const chosen = () => dg.$$eval('.page-card.is-selected', (l) => l.map((c) => Number(c.dataset.index) + 1).join(','));
+  await dg.click('.page-card[data-index="0"]');
+  check(await pagesBox() === '' && await chosen() === '', 'clicking the chosen page 1 unchooses it, and the box empties', await pagesBox());
+  await dg.click('.page-card[data-index="1"]');
+  await dg.keyboard.down('Shift'); await dg.click('.page-card[data-index="3"]'); await dg.keyboard.up('Shift');
+  check(await pagesBox() === '2-4' && await chosen() === '2,3,4', 'click page 2, shift-click page 4: "2-4" in the box, three cards marked', await pagesBox() + ' / ' + await chosen());
+  /* along the second row of the grid, so the pointer passes only those cards */
+  const k = await dg.$$eval('.page-card', (l) => l.filter((c) => c.offsetTop === l[0].offsetTop).length);
+  await dg.$eval('.page-card[data-index="' + k + '"]', (c) => c.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  const c6 = await (await dg.$('.page-card[data-index="' + k + '"]')).boundingBox();
+  const c8 = await (await dg.$('.page-card[data-index="' + (k + 2) + '"]')).boundingBox();
+  await dg.mouse.move(c6.x + c6.width / 2, c6.y + c6.height / 2);
+  await dg.mouse.down();
+  await dg.mouse.move(c8.x + c8.width / 2, c8.y + c8.height / 2, { steps: 10 });
+  await dg.mouse.up();
+  check(await pagesBox() === '2-4, ' + (k + 1) + '-' + (k + 3), 'dragging across three pages of the next row adds them', await pagesBox());
+  await setControls(dg, { pages: '1, 12' });
+  check(await chosen() === '1,12', 'typing "1, 12" in the box marks those two cards', await chosen());
+  await dg.focus('.page-card[data-index="0"]');
+  await dg.keyboard.press('ArrowRight');
+  await dg.keyboard.press('Space');
+  const kb = await pagesBox();
+  await dg.keyboard.press('ArrowRight');
+  await dg.keyboard.down('Shift'); await dg.keyboard.press('ArrowRight'); await dg.keyboard.up('Shift');
+  check(kb === '1, 12, 2' && await pagesBox() === '1, 12, 2, 4', 'keyboard: arrow then Space chooses page 2; Shift+arrow adds page 4 (the box keeps the order chosen)', kb + ' → ' + await pagesBox());
+  const roles = await dg.evaluate(() => ({ grid: document.querySelector('.page-grid').getAttribute('role'), multi: document.querySelector('.page-grid').getAttribute('aria-multiselectable'), sel: document.querySelector('.page-card[data-index="0"]').getAttribute('aria-selected') }));
+  check(roles.grid === 'listbox' && roles.multi === 'true' && roles.sel === 'true', 'the grid is a multi-select listbox and each card says whether it is chosen', JSON.stringify(roles));
+  await setControls(dg, { pages: '2, 5' });
+  const r11b = await press(dg);
+  const d11b = await analyse(await download(dg));
+  check(!/is-error/.test(r11b.cls) && d11b.pages.length === 10 && !/ORDER-PAGE-2\)|ORDER-PAGE-5\)/.test(d11b.text), 'the file keeps the ten pages not chosen', d11b.pages.length + ' pages');
+  await dg.close();
+
+  /* 11c: thumbnails are drawn as their cards come near the screen */
+  const eighty = path.join(OUT, 'eighty.pdf');
+  fs.writeFileSync(eighty, plain(80));
+  const lz = await open('/pdf/extract-pdf-pages/');
+  await upload(lz, [eighty]);
+  await lz.waitForFunction(() => document.querySelectorAll('.page-card').length === 80 && document.querySelectorAll('.page-card canvas').length > 4, { timeout: 60000 });
+  await new Promise((r) => setTimeout(r, 1500));
+  const drawn0 = await lz.$$eval('.page-card canvas', (l) => l.length);
+  const lastBefore = await lz.$eval('.page-card[data-index="79"]', (c) => !!c.querySelector('canvas'));
+  await lz.$eval('.page-grid', (g) => { g.scrollTop = g.scrollHeight; });
+  await lz.waitForFunction(() => !!document.querySelector('.page-card[data-index="79"] canvas'), { timeout: 30000 }).catch(() => {});
+  const lastAfter = await lz.$eval('.page-card[data-index="79"]', (c) => !!c.querySelector('canvas'));
+  check(drawn0 < 80 && !lastBefore && lastAfter, 'an 80-page file: ' + drawn0 + ' thumbnails drawn at first, page 80 only once the grid scrolls to it', 'drawn ' + drawn0 + ', last before ' + lastBefore + ', after ' + lastAfter);
+  await lz.close();
+
+  /* 11d: a page turned on its own card is saved turned */
+  const rt = await open('/pdf/rotate-pdf/');
+  await upload(rt, [five]);
+  await rt.waitForFunction(() => document.querySelectorAll('.page-card').length === 5, { timeout: 30000 });
+  await setControls(rt, { pages: '1' });
+  await rt.$eval('.page-card[data-index="2"] .page-rot', (b) => b.click());
+  await rt.$eval('.page-card[data-index="2"] .page-rot', (b) => b.click());
+  await press(rt);
+  const rta = await analyse(await download(rt));
+  const rots = [];
+  for (const pg of rta.pages) rots.push(Number(await rta.doc.resolve(pg.dict.Rotate)) || 0);
+  check(rots.join() === '90,0,180,0,0', 'rotate: page 1 by the angle, page 3 by its own button twice', rots.join());
+  await rt.close();
+
+  /* 11e: merge — drag a file above another, and take some pages of one */
+  const fa = path.join(OUT, 'alpha.pdf'), fb = path.join(OUT, 'beta.pdf');
+  fs.writeFileSync(fa, core.createPDF([1, 2, 3].map((i) => ({ ops: [{ text: 'ALPHA-' + i, x: 72, y: 760, size: 20 }] })), {}));
+  fs.writeFileSync(fb, core.createPDF([1, 2].map((i) => ({ ops: [{ text: 'BETA-' + i, x: 72, y: 760, size: 20 }] })), {}));
+  const mg2 = await open('/pdf/merge-pdf/');
+  await upload(mg2, [fa, fb]);
+  const rows = await mg2.$$('.file-list .file-row');
+  const rb = await rows[1].boundingBox(), ra = await rows[0].boundingBox();
+  await mg2.mouse.move(rb.x + rb.width * 0.5, rb.y + rb.height / 2);
+  await mg2.mouse.down();
+  await mg2.mouse.move(ra.x + ra.width * 0.5, ra.y + 3, { steps: 10 });
+  await mg2.mouse.up();
+  const order2 = await mg2.$$eval('.file-list .file-row .file-name', (l) => l.map((x) => x.textContent).join(','));
+  check(order2 === 'beta.pdf,alpha.pdf', 'dragging the second file above the first puts it first', order2);
+  await mg2.$eval('.file-row[data-pos="1"] .file-pages-btn', (b) => b.click());
+  await mg2.waitForFunction(() => document.querySelectorAll('.file-pages .page-card').length === 3, { timeout: 30000 });
+  await mg2.click('.file-pages .page-card[data-index="0"]');
+  await mg2.click('.file-pages .page-card[data-index="2"]');
+  const rangesNow = await mg2.$eval('#pc-ranges', (e) => e.value);
+  check(rangesNow === 'all | 2', 'choosing pages on alpha.pdf\'s grid (unchoosing 1 and 3) writes "all | 2"', rangesNow);
+  /* drag alpha back to the top: its pages go with it */
+  const rows2 = await mg2.$$('.file-list .file-row');
+  const q1 = await rows2[1].boundingBox(), q0 = await rows2[0].boundingBox();
+  await mg2.mouse.move(q1.x + 30, q1.y + q1.height / 2); await mg2.mouse.down();
+  await mg2.mouse.move(q0.x + 30, q0.y + 3, { steps: 10 }); await mg2.mouse.up();
+  const ranges2 = await mg2.$eval('#pc-ranges', (e) => e.value);
+  await press(mg2);
+  const sumName = await mg2.$eval('.pdf-summary-name', (e) => e.textContent);
+  const mt2 = (await pdfjs(probe, await download(mg2))).pages.map((p) => p.items.map((i) => i.str).join(' ')).join(',');
+  check(ranges2 === '2 | all' && mt2 === 'ALPHA-2,BETA-1,BETA-2', 'moved back to the top, alpha.pdf keeps its page choice: "2 | all", merged as ALPHA-2, BETA-1, BETA-2', ranges2 + ' / ' + mt2);
+  check(sumName === 'alpha-merged.pdf', 'the merged file is named after the first file', sumName);
+  await mg2.close();
+
+  /* 11f: a long merge shows progress, leaves the page responsive, and Cancel stops it */
+  const big = path.join(OUT, 'big.pdf');
+  fs.writeFileSync(big, plain(9999));
+  const cx = await open('/pdf/merge-pdf/');
+  /* six files of 9,999 pages: long enough on a fast machine to catch the bar
+     and press Cancel while the writer is still going */
+  await upload(cx, [big, big, big, big, big, big]);
+  await cx.evaluate(() => {
+    window.__gap = 0; let last = performance.now();
+    const tick = () => { const t = performance.now(); window.__gap = Math.max(window.__gap, t - last); last = t; if (!window.__stopTick) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  });
+  await cx.click('.pdf-run .btn-primary');
+  await cx.waitForFunction(() => { const p = document.querySelector('.pdf-progress'); return p && !p.hidden && /Writing page \d+ of 59994/.test(p.textContent); }, { timeout: 120000, polling: 'raf' });
+  const label1 = await cx.$eval('.pdf-progress-label', (e) => e.textContent);
+  const gap = await cx.evaluate(() => window.__gap);
+  await cx.click('.pdf-progress-cancel');
+  await cx.waitForFunction(() => /Cancelled/.test(document.querySelector('.tool-io > .io-msg').textContent), { timeout: 20000 });
+  const after = await cx.evaluate(() => ({ summary: !document.querySelector('.pdf-summary').hidden, prog: !document.querySelector('.pdf-progress').hidden, btn: document.querySelector('.pdf-run .btn-primary').disabled }));
+  check(/Writing page \d+ of 59994/.test(label1) && gap < 250, 'a 59,994-page merge reports "Writing page n of 59994" and the page keeps drawing (longest frame gap ' + Math.round(gap) + ' ms)', label1);
+  check(!after.summary && !after.prog && !after.btn, 'Cancel stops it: no result, the bar gone, the button back', JSON.stringify(after));
+  await cx.evaluate(() => { window.__stopTick = true; });
+  await setControls(cx, { ranges: '1-3 | 1 | 2 | 1 | 1 | 1' });
+  const again = await press(cx);
+  check(!/is-error/.test(again.cls) && /8 pages/.test(await cx.$eval('.pdf-summary', (e) => e.textContent)), 'after a Cancel the next run works (the files are sent to a new worker)', again.msg);
+  await cx.close();
+
+  /* 11g: the watermark preview is the real output, and follows the controls */
+  const wm = await open('/pdf/watermark-pdf/');
+  await upload(wm, [five]);
+  const inkOfLive = () => wm.$eval('.live-canvas', (c) => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] > 150 && d[i + 1] < 120 && d[i + 2] < 120) n++; return n; });
+  await wm.waitForFunction(() => /real output/.test((document.querySelector('.live-note') || {}).textContent || ''), { timeout: 60000 });
+  await setControls(wm, { opacity: 100, text: 'X' });
+  await new Promise((r) => setTimeout(r, 1500));
+  const small = await inkOfLive();
+  await setControls(wm, { text: 'CONFIDENTIAL WATERMARK' });
+  await new Promise((r) => setTimeout(r, 1500));
+  const large = await inkOfLive();
+  check(small > 50 && large > small * 3, 'the live preview redraws from the real output as the text changes (red ink ' + small + ' → ' + large + ' px)');
+  await wm.close();
+
+  /* 11h: the editor — drag, resize from the corner, nudge, two items */
+  const ed2 = await open('/pdf/pdf-editor/');
+  const two = path.join(OUT, 'two.pdf');
+  fs.writeFileSync(two, plain(2));
+  await upload(ed2, [two]);
+  await ed2.waitForSelector('.place-canvas', { timeout: 60000 });
+  await setControls(ed2, { text: 'DRAG-ME', x: 100, y: 700, size: 20 });
+  await ed2.waitForSelector('.place-box.is-current', { timeout: 10000 });
+  await ed2.$eval('.place-stage', (e) => window.scrollTo({ top: e.getBoundingClientRect().top + window.scrollY - 120, behavior: 'instant' }));
+  const scale = await ed2.$eval('.place-canvas', (c) => c.getBoundingClientRect().width / 595.28);
+  let bb = await (await ed2.$('.place-box.is-current')).boundingBox();
+  await ed2.mouse.move(bb.x + 10, bb.y + 10); await ed2.mouse.down();
+  await ed2.mouse.move(bb.x + 10 + 100 * scale, bb.y + 10 + 50 * scale, { steps: 8 }); await ed2.mouse.up();
+  const xy = [Number(await ed2.$eval('#pc-x', (e) => e.value)), Number(await ed2.$eval('#pc-y', (e) => e.value))];
+  check(near(xy[0], 200, 1.5) && near(xy[1], 650, 1.5), 'dragging the box 100 points right and 50 down moves X 100 → 200 and Y 700 → 650', xy.join(', '));
+  bb = await (await ed2.$('.place-box.is-current .place-handle-se')).boundingBox();
+  await ed2.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2); await ed2.mouse.down();
+  const boxH = (await (await ed2.$('.place-box.is-current')).boundingBox()).height;
+  await ed2.mouse.move(bb.x + bb.width / 2 + 40, bb.y + bb.height / 2 + boxH, { steps: 8 }); await ed2.mouse.up();
+  const sz = Number(await ed2.$eval('#pc-size', (e) => e.value));
+  check(sz > 30 && sz < 50, 'pulling the corner down by the box\'s own height roughly doubles the size (20 → ' + sz + ')');
+  await ed2.focus('.place-box.is-current');
+  const x0 = Number(await ed2.$eval('#pc-x', (e) => e.value));
+  await ed2.keyboard.press('ArrowRight');
+  await ed2.keyboard.down('Shift'); await ed2.keyboard.press('ArrowLeft'); await ed2.keyboard.up('Shift');
+  const x1 = Number(await ed2.$eval('#pc-x', (e) => e.value));
+  await ed2.keyboard.press('-');
+  const sz2 = Number(await ed2.$eval('#pc-size', (e) => e.value));
+  check(near(x1, x0 - 18, 0.01) && near(sz2, Math.round(sz / 1.1 * 10) / 10, 0.11), 'with the box focused: → +2, Shift+← −20, minus shrinks by a tenth', x0 + ' → ' + x1 + '; size ' + sz + ' → ' + sz2);
+  await ed2.click('.place-items-add');
+  await setControls(ed2, { text: 'SECOND-PAGE-TEXT', x: 80, y: 400, pages: '2', size: 14 });
+  await press(ed2);
+  const edOut = await pdfjs(probe, await download(ed2));
+  const e1 = edOut.pages[0].items.find((i) => i.str === 'DRAG-ME'), e2 = edOut.pages[1].items.find((i) => i.str === 'SECOND-PAGE-TEXT');
+  check(e1 && e2 && near(e1.m[4], x1, 0.6) && !edOut.pages[1].items.some((i) => i.str === 'DRAG-ME'), 'two items: the dragged one on page 1 where it was left, the second on page 2 only', e1 && e1.m.join(' '));
+  await ed2.close();
+
+  /* 11i: signature — a banked one on every page, another on the last */
+  const sg2 = await open('/pdf/pdf-signature/');
+  await upload(sg2, [path.join(OUT, 'three.pdf')]);
+  await sg2.waitForSelector('.place-items-add', { timeout: 60000 });
+  await setControls(sg2, { signatureText: 'INITIALS-AB', date: 'no', x: 500, y: 40, pages: 'all' });
+  await sg2.click('.place-items-add');
+  await setControls(sg2, { signatureText: 'FULL-SIGNATURE', date: 'yes', x: 300, y: 120, pages: 'last' });
+  await press(sg2);
+  const so = await pdfjs(probe, await download(sg2));
+  const per = so.pages.map((p) => p.items.map((i) => i.str).filter((x) => /INITIALS|FULL|Date/.test(x)).join('+'));
+  check(per[0] === 'INITIALS-AB' && per[1] === 'INITIALS-AB' && /INITIALS-AB/.test(per[2]) && /FULL-SIGNATURE/.test(per[2]) && /Date:/.test(per[2]), 'initials on every page, the full signature and date on the last', per.join(' | '));
+  await sg2.close();
+
+  /* 11j: guards: too many pages, too many bytes for this device */
+  const many = path.join(OUT, 'too-many.pdf');
+  fs.writeFileSync(many, core.createPDF(Array.from({ length: 10001 }, () => ({ ops: [] })), {}));
+  const gd = await open('/pdf/rotate-pdf/');
+  await upload(gd, [many]);
+  const gmsg = await gd.$eval('.file-list', (e) => e.textContent);
+  check(/10,001 pages is more than these tools work on in one go/.test(gmsg) && !(await gd.$('.page-card')), 'a 10,001-page file is turned away with a message, not a hang', gmsg.slice(0, 160));
+  await gd.close();
+  const gp = await browser.newPage();
+  driving = gp;
+  await gp.evaluateOnNewDocument(() => { Object.defineProperty(Navigator.prototype, 'deviceMemory', { get: () => 1 }); });
+  await gp.evaluateOnNewDocument(hook);
+  await gp.goto(BASE + '/pdf/merge-pdf/', { waitUntil: 'load' });
+  await gp.waitForSelector('.pdf-run .btn-primary');
+  const t0 = Date.now();
+  await gp.evaluate(() => {
+    const f = new File([new Uint8Array(300 * 1048576)], 'huge.pdf', { type: 'application/pdf' });
+    const dt = new DataTransfer(); dt.items.add(f);
+    document.querySelector('.dropzone').dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+  });
+  await gp.waitForFunction(() => /huge\.pdf/.test((document.querySelector('.file-error') || {}).textContent || ''), { timeout: 20000 });
+  const bigMsg = await gp.$eval('.file-error', (e) => e.textContent);
+  check(/huge\.pdf: At 300\.00 MB this is more than a browser tab can safely work on here \(the limit on this device is 256\.00 MB\)/.test(bigMsg) && Date.now() - t0 < 5000, 'on a 1 GB device a 300 MB file is refused by name, at once, before it is read', bigMsg.slice(0, 140));
+  await gp.close();
+
+  /* 11k: settings are remembered on the device, and can be reset */
+  const rm1 = await open('/pdf/watermark-pdf/');
+  await rm1.evaluate(() => localStorage.removeItem('1234tools-pdf-watermark-pdf-v1'));
+  await setControls(rm1, { size: 90, angle: '0', text: 'COPY' });
+  await new Promise((r) => setTimeout(r, 700));
+  const stored = await rm1.evaluate(() => localStorage.getItem('1234tools-pdf-watermark-pdf-v1'));
+  await rm1.reload({ waitUntil: 'load' });
+  await rm1.waitForSelector('.pdf-run .btn-primary');
+  const back = await rm1.evaluate(() => ({ size: document.getElementById('pc-size').value, angle: document.getElementById('pc-angle').value, text: document.getElementById('pc-text').value, note: !!document.querySelector('.pdf-remembered') }));
+  check(back.size === '90' && back.angle === '0' && back.text === 'COPY' && back.note, 'size, angle and watermark text come back after a reload, with a note saying so', JSON.stringify(back));
+  check(stored && !/"pages"/.test(stored), 'the page range is not remembered (it belongs to one document)', stored);
+  await rm1.click('.pdf-remembered .btn-link');
+  const reset = await rm1.evaluate(() => ({ size: document.getElementById('pc-size').value, key: localStorage.getItem('1234tools-pdf-watermark-pdf-v1') }));
+  check(reset.size === '60' && reset.key === null, 'Reset puts the defaults back and forgets the saved settings', JSON.stringify(reset));
+  await rm1.close();
+  const rs = await open('/pdf/pdf-signature/');
+  await setControls(rs, { signatureText: 'PRIVATE NAME', x: 77 });
+  await new Promise((r) => setTimeout(r, 700));
+  const sgStored = await rs.evaluate(() => localStorage.getItem('1234tools-pdf-pdf-signature-v1') || '');
+  check(!/PRIVATE NAME/.test(sgStored), 'a typed signature is never stored', sgStored);
+  await rs.close();
+
+  /* 11l: a 390 px phone: nothing wider than the screen */
+  for (const [tool, files] of [['/pdf/delete-pdf-pages/', [twelve]], ['/pdf/merge-pdf/', [fa, fb]], ['/pdf/pdf-editor/', [two]], ['/pdf/split-pdf/', [five]]]) {
+    const ph = await browser.newPage();
+    driving = ph;
+    await ph.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+    await ph.evaluateOnNewDocument(hook);
+    await ph.goto(BASE + tool, { waitUntil: 'load' });
+    await ph.evaluate(() => { const b = document.querySelector('.cc'); if (b) b.remove(); });
+    await ph.waitForSelector('.pdf-run .btn-primary');
+    await upload(ph, files);
+    await new Promise((r) => setTimeout(r, 1200));
+    const w = await ph.evaluate(() => {
+      const wide = [...document.querySelectorAll('.tool-io *')].filter((n) => { const r = n.getBoundingClientRect(); return r.width && r.right > window.innerWidth + 1; }).map((n) => n.className || n.tagName).slice(0, 4);
+      return { sw: document.documentElement.scrollWidth, wide };
+    });
+    check(w.sw <= 390 && !w.wide.length, tool + ' at 390 px with files loaded: no horizontal scroll', JSON.stringify(w));
+    await ph.close();
+  }
+
+  /* 11m: the result viewer asked to paint while it is still painting (three
+     quick page turns, then resizes): pdf.js refuses two renders into one
+     canvas, so the newer must cancel the older; no error, and the last page
+     asked for is the one drawn */
+  {
+    const rv = await open('/pdf/rotate-pdf/');
+    const errs = [];
+    rv.on('pageerror', (e) => errs.push(String(e && e.message || e)));
+    await rv.evaluate(() => { window.__rej = []; window.addEventListener('unhandledrejection', (e) => window.__rej.push(String(e.reason && e.reason.message || e.reason))); });
+    await upload(rv, [five]);
+    await press(rv);
+    await rv.waitForFunction(() => /Page 1 of 5/.test((document.querySelector('.pdf-view .place-page-num') || {}).textContent || ''), { timeout: 60000 });
+    await rv.evaluate(() => { const n = document.querySelector('.pdf-view button[aria-label="Next page"]'); n.click(); n.click(); n.click(); });
+    for (const w of [900, 1280, 700, 1280]) { await rv.setViewport({ width: w, height: 1000 }); await new Promise((r) => setTimeout(r, 170)); }
+    await rv.waitForFunction(() => /Page 4 of 5/.test((document.querySelector('.pdf-view .place-page-num') || {}).textContent || ''), { timeout: 30000 }).catch(() => {});
+    await new Promise((r) => setTimeout(r, 600));
+    const st = await rv.evaluate(() => {
+      const c = document.querySelector('.pdf-view canvas');
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      let ink = 0; for (let i = 0; i < d.length; i += 4) if (d[i] < 128) ink++;
+      return { label: document.querySelector('.pdf-view .place-page-num').textContent, ink, rej: window.__rej };
+    });
+    const all = errs.concat(st.rej).filter((m) => /canvas|render/i.test(m));
+    check(!all.length && st.label === 'Page 4 of 5' && st.ink > 0, 'the result viewer turned three pages at once and resized: no render error, page 4 drawn', JSON.stringify({ label: st.label, ink: st.ink, errors: all }));
+    await rv.close();
+  }
 
   const foreign = [...requests].filter((h) => !/^127\.0\.0\.1(:\d+)?$/.test(h));
   check(!foreign.length, 'no request left 127.0.0.1', foreign.join(', '));

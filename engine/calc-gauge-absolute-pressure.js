@@ -130,6 +130,10 @@ window.TOOLS["gauge-absolute-pressure"] = {
   {"key":"atma","label":"Standard atmospheres, absolute","format":"number","unit":"atm"},
   {"key":"note","label":"","format":"text"}
 ],
+"filled": (v, r, f) => {
+      if (!r.answer) return [];
+      return [v.ref === 'gauge' ? 'absolute = gauge + atmospheric: ' + r.answer : 'gauge = absolute − atmospheric: ' + r.answer];
+    },
 "tips": ["Tyre, compressor and boiler gauges read gauge pressure: zero on the dial means the same pressure as the air around it, not zero pressure.","A car’s MAP sensor reads absolute pressure. Choose Absolute for its reading, and the psig or barg row is what a boost gauge would show.","For a precise answer away from sea level or in unusual weather, enter today’s local barometric pressure in place of the standard atmosphere."],
 "faq": [
   {"q":"What is the difference between gauge and absolute pressure?","a":"Absolute pressure is measured from a perfect vacuum, so it is never negative. Gauge pressure is measured from the air around the gauge, so it reads zero when open to the air and goes negative under a vacuum. Absolute pressure is gauge pressure plus the atmospheric pressure."},

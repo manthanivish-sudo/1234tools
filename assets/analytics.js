@@ -65,7 +65,13 @@
     '#recent-tools',
     '.io-pane', '.io-msg', '.pdf-file-name', '.page-grid', '.stat-val',
     /* a calculator's schedule table: fertile-window dates, loan balances */
-    '.tool-table'
+    '.tool-table',
+    /* the calculator shell (render-core.js) and its siblings: charts, saved
+       scenarios, recent results, the formula filled in with the visitor's
+       numbers, the worked steps, the print header, the converters' batch and
+       live tables, the currency grid and the scientific calculator's history */
+    '.tool-chart', '.calc-recent', '.calc-compare', '.formula-filled', '.working',
+    '.print-head', '.conv-batch', '.conv-live', '.fx-grid', '.calc-history'
   ].join(',');
 
   function mask(root) {

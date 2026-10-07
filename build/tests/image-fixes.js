@@ -46,6 +46,15 @@
  *      and as big as the drag allows, and the crop is exactly that
  *      rectangle; 1:1 past the street photo's bottom edge is a square (it
  *      was 1121×1080); touch drags do the same
+ *  10  (2026-10-06) names come from what was produced: a browser that writes
+ *      PNG when asked for WebP (Safari, stood in for) gets .png files, in
+ *      the compressor, the bulk resizer's cards and ZIP, and the cropper,
+ *      and is told so once; files that cannot be read are named and the
+ *      rest are made; a result toBlob refuses is named with the
+ *      16,777,216-pixel limit, as is one over that limit on a phone (stood
+ *      in for), while desktop Chrome still makes 5000×4000; preview URLs
+ *      are revoked by the next run and on pagehide; the cropper keeps one
+ *      set of window listeners however many runs
  *   and, through all of it, not one request to anything but 127.0.0.1.
  */
 'use strict';
@@ -158,7 +167,9 @@ function colourConverter() {
 /* browser helpers                                                    */
 /* ------------------------------------------------------------------ */
 const outside = [];
-async function open(browser, url) {
+/** init, when given, runs in the page before any of its scripts (a browser
+ *  stand-in: Safari's toBlob, a phone's canvas limit, listener counting). */
+async function open(browser, url, init) {
   const p = await browser.newPage();
   await p.setViewport({ width: 1280, height: 900 });
   await p.setRequestInterception(true);
@@ -178,6 +189,7 @@ async function open(browser, url) {
     };
     try { localStorage.setItem('1234tools-consent', 'declined'); } catch (e) { /* none */ }
   });
+  if (init) await p.evaluateOnNewDocument(init);
   await p.goto(BASE + url, { waitUntil: 'load' });
   await p.waitForSelector('.tool-io > *', { timeout: 20000 });
   return p;
@@ -705,6 +717,198 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
       check(touched.every((x) => x.good), '9  touch drags past the edges of the 900×1500 picture keep 16:9, 9:16 and 1:1 inside it', touched.map((x) => x.s).join(' | '));
       check(!p.__errors.length, '9  no page errors (touch)', p.__errors.join(' | '));
       await p.close();
+    }
+
+    /* ============ 10 names from what was produced; failures named; previews and listeners let go ============ */
+    {
+      const street = path.join(SAMPLES, 'street.jpg'), food = path.join(SAMPLES, 'food.jpg');
+      /* Safari has no WebP encoder: asked for image/webp, its toBlob writes a PNG. This stand-in does the same. */
+      const SAFARI = () => {
+        const orig = HTMLCanvasElement.prototype.toBlob;
+        HTMLCanvasElement.prototype.toBlob = function (cb, type, q) { return orig.call(this, cb, type === 'image/webp' ? 'image/png' : type, q); };
+      };
+      /* a browser whose toBlob gives null above a pixel count */
+      const NULL_ABOVE = (limit) => '(() => { const orig = HTMLCanvasElement.prototype.toBlob; HTMLCanvasElement.prototype.toBlob = function (cb, type, q) { if (this.width * this.height > ' + limit + ') { setTimeout(() => cb(null), 0); return; } return orig.call(this, cb, type, q); }; })();';
+      /* a phone: a canvas over 16,777,216 pixels gets no buffer, so it reads back empty and encodes to null */
+      const PHONE = () => {
+        const LIMIT = 16777216;
+        const gid = CanvasRenderingContext2D.prototype.getImageData;
+        CanvasRenderingContext2D.prototype.getImageData = function (x, y, w, h) { return this.canvas.width * this.canvas.height > LIMIT ? new ImageData(w, h) : gid.call(this, x, y, w, h); };
+        const tb = HTMLCanvasElement.prototype.toBlob;
+        HTMLCanvasElement.prototype.toBlob = function (cb, type, q) { if (this.width * this.height > LIMIT) { setTimeout(() => cb(null), 0); return; } return tb.call(this, cb, type, q); };
+      };
+      /* the window listeners a page holds, by type */
+      const LISTEN = () => {
+        const live = window.__live = {};
+        const add = window.addEventListener, rem = window.removeEventListener;
+        window.addEventListener = function (t, f, o) { (live[t] = live[t] || new Set()).add(f); return add.call(this, t, f, o); };
+        window.removeEventListener = function (t, f, o) { if (live[t]) live[t].delete(f); return rem.call(this, t, f, o); };
+      };
+      const SWAP = 'This browser cannot write WebP, so PNG was produced.';
+      const LIMIT_RE = /16,777,216 pixels \(4096×4096\)/;
+      const clickAll = async (p, sel) => {
+        await p.evaluate(() => { window.__downloads = []; });
+        await p.$$eval(sel, (l) => l.forEach((b) => b.click()));
+        for (let k = 0; k < 40 && !(await p.evaluate(() => window.__downloads.length)); k++) await sleep(100);
+        await sleep(300);
+        return (await downloads(p)).map((d) => { const b = Buffer.from(d.bytes); return { name: d.name, b, png: isPng(b), webp: isWebp(b), jpeg: isJpeg(b) }; });
+      };
+      /* the names in a ZIP, read from its local file headers */
+      const zipNames = (b) => { const out = []; let i = 0; while (i + 30 <= b.length && b.readUInt32LE(i) === 0x04034b50) { const n = b.readUInt16LE(i + 26), x = b.readUInt16LE(i + 28), size = b.readUInt32LE(i + 18); out.push(b.slice(i + 30, i + 30 + n).toString('utf8')); i += 30 + n + x + size; } return out; };
+      const alive = (p, urls) => p.evaluate((l) => Promise.all(l.map((u) => fetch(u).then(() => true, () => false))), urls);
+      const smallPng = path.join(OUT, 'small-300x200.png');
+      const errs = [];
+      const engineSrc = fs.readFileSync(path.join(ROOT, 'engine', 'render-image.js'), 'utf8');
+      check(!/function encode\s*\(/.test(engineSrc) && !/extFor\(fmt\)/.test(engineSrc), '10  render-image.js: the unused encode() is gone, and no file name takes its extension from the requested format');
+
+      /* 10a  a browser that writes PNG when asked for WebP */
+      let p = await open(browser, '/image/image-compressor/', SAFARI);
+      await upload(p, [street, food]);
+      let outs = await resultBytes(p);
+      let m = await msg(p);
+      let dl = await clickAll(p, '.tool-io .image-stage .image-card button');
+      check(outs.length === 2 && outs.every(isPng), '10  compressor, WebP asked of a browser that writes PNG instead: both results are PNG bytes', outs.map((b) => b.slice(0, 4).toString('hex')).join());
+      check(dl.length === 2 && dl.every((d) => d.png) && dl.map((d) => d.name).join() === 'street-image-compressor.png,food-image-compressor.png',
+        '10  …saved as street-image-compressor.png and food-image-compressor.png, not .webp', dl.map((d) => d.name).join());
+      check(m.text.split(SWAP).length === 2 && /is-warn/.test(m.cls), '10  …and the message says, once: "' + SWAP + '"', m.text);
+      check(!/or WebP/.test(m.text), '10  …and the advice for a larger result no longer offers WebP in that browser', m.text);
+      fs.writeFileSync(smallPng, Buffer.from(await p.evaluate(() => { const c = document.createElement('canvas'); c.width = 300; c.height = 200; const x = c.getContext('2d'); x.fillStyle = '#2a9d8f'; x.fillRect(0, 0, 300, 200); return c.toDataURL('image/png').split(',')[1]; }), 'base64'));
+      errs.push(...p.__errors); await p.close();
+      /* where WebP can be written, it still is */
+      p = await open(browser, '/image/image-compressor/');
+      await upload(p, [street]);
+      outs = await resultBytes(p);
+      dl = await clickAll(p, '.tool-io .image-stage .image-card button');
+      m = await msg(p);
+      check(outs.length === 1 && isWebp(outs[0]) && dl.length === 1 && dl[0].webp && dl[0].name === 'street-image-compressor.webp' && m.text.indexOf('cannot write') < 0,
+        '10  in a browser that writes WebP: street-image-compressor.webp, WebP bytes, no swap message', dl.map((d) => d.name).join() + ' | ' + m.text);
+      errs.push(...p.__errors); await p.close();
+      /* the bulk resizer: every card and every name in the ZIP */
+      p = await open(browser, '/image/bulk-image-resizer/', SAFARI);
+      await setCtl(p, 'value', 800);
+      await upload(p, [street, food]);
+      outs = await resultBytes(p);
+      dl = await clickAll(p, '.tool-io .image-stage .image-card button');
+      const zip = await clickAll(p, '.tool-io .image-actions .btn-primary');
+      const inZip = zip.length === 1 ? zipNames(zip[0].b) : [];
+      m = await msg(p);
+      check(outs.length === 2 && outs.every(isPng) && dl.length === 2 && dl.every((d) => d.png && /^(street|food)-.*\.png$/.test(d.name)),
+        '10  bulk resizer, WebP asked, PNG written: each saved file is PNG bytes named .png', dl.map((d) => d.name).join());
+      check(inZip.length === 2 && inZip.every((n) => /\.png$/.test(n)) && inZip.join() === dl.map((d) => d.name).join(), '10  …and so is every name inside the ZIP', inZip.join());
+      check(m.text.split(SWAP).length === 2, '10  …and the message says so once', m.text);
+      errs.push(...p.__errors); await p.close();
+      /* the cropper, WebP chosen */
+      p = await open(browser, '/image/image-cropper/', SAFARI);
+      await setCtl(p, 'format', 'image/webp');
+      await upload(p, [street]);
+      dl = await clickAll(p, '.tool-io .image-actions .btn-primary');
+      m = await msg(p);
+      check(dl.length === 1 && dl[0].png && dl[0].name === 'street-image-cropper.png' && m.text.indexOf(SWAP) >= 0,
+        '10  cropper, WebP chosen, PNG written: street-image-cropper.png, PNG bytes, and the message says so', dl.map((d) => d.name).join() + ' | ' + m.text);
+      errs.push(...p.__errors); await p.close();
+
+      /* 10b  files that cannot be read are named, and the rest go on */
+      const broken = path.join(OUT, 'broken.png');
+      fs.writeFileSync(broken, Buffer.from('this is not a picture at all, whatever its name says'));
+      const notes = path.join(OUT, 'notes.txt');
+      fs.writeFileSync(notes, 'a shopping list');
+      p = await open(browser, '/image/bulk-image-resizer/');
+      await setCtl(p, 'value', 800);
+      await upload(p, [street, broken, notes, food]);
+      outs = await resultBytes(p);
+      m = await msg(p);
+      check(outs.length === 2 && /broken\.png could not be read as an image, so it was left out\./.test(m.text) && /notes\.txt is not an image, so it was left out\./.test(m.text) && /is-warn/.test(m.cls),
+        '10  bulk resizer: a broken .png and a .txt among two photos are each named in the message, and both photos are resized', outs.length + ' | ' + m.text);
+      await change(p, 'value', 600);
+      m = await msg(p);
+      check(/broken\.png could not be read/.test(m.text), '10  …the names stay on screen when a setting changes', m.text);
+      errs.push(...p.__errors); await p.close();
+      p = await open(browser, '/image/image-compressor/');
+      await upload(p, [broken, street]);
+      outs = await resultBytes(p);
+      m = await msg(p);
+      check(outs.length === 1 && /broken\.png could not be read as an image, so it was left out\./.test(m.text) && stat(await stats(p), 'Images processed') === '1',
+        '10  compressor: the broken file is named, the photo is compressed', m.text);
+      errs.push(...p.__errors); await p.close();
+
+      /* 10c  a result the browser cannot encode is named with the size limit; the rest go on */
+      p = await open(browser, '/image/image-compressor/', NULL_ABOVE(1000000));
+      await upload(p, [street, smallPng]);
+      outs = await resultBytes(p);
+      m = await msg(p);
+      check(outs.length === 1 && /street\.jpg: this browser could not encode the 1600×1200 result, so it was skipped\./.test(m.text) && LIMIT_RE.test(m.text) && !/could not encode that format/.test(m.text),
+        '10  compressor, toBlob null for the 1600×1200 photo: named, with the size limit, and the 300×200 one is still made', m.text);
+      check(stat(await stats(p), 'Images processed') === '1 of 2', '10  …"Images processed" says 1 of 2', stat(await stats(p), 'Images processed'));
+      errs.push(...p.__errors); await p.close();
+      p = await open(browser, '/image/bulk-image-resizer/', NULL_ABOVE(4000000));
+      await setCtl(p, 'value', 2400);
+      await setCtl(p, 'enlarge', 'yes');
+      await upload(p, [street, food]);
+      outs = await resultBytes(p);
+      const dims = await Promise.all(outs.map((b) => pixels(p, b, [[0, 0]])));
+      m = await msg(p);
+      check(dims.map((d) => d.w + '×' + d.h).join() === '2400×1601' && /street\.jpg: this browser could not encode the 2400×1800 result, so it was skipped\./.test(m.text) && LIMIT_RE.test(m.text),
+        '10  bulk resizer, toBlob null over 4,000,000 px: street.jpg at 2400×1800 is named, food.jpg at 2400×1601 is made', dims.map((d) => d.w + '×' + d.h).join() + ' | ' + m.text);
+      errs.push(...p.__errors); await p.close();
+
+      /* 10d  over 16,777,216 pixels: made where the browser can hold it, named with the limit where it cannot */
+      const bigRun = async (init, w, h) => {
+        const q = await open(browser, '/image/bulk-image-resizer/', init);
+        await setCtl(q, 'mode', 'exact'); await setCtl(q, 'value', w); await setCtl(q, 'height', h);
+        await setCtl(q, 'enlarge', 'yes'); await setCtl(q, 'format', 'image/jpeg');
+        const inp = await q.$('.tool-io input[type=file]');
+        await inp.uploadFile(food);
+        await q.waitForFunction(() => { const m = document.querySelector('.tool-io .io-msg'); return document.querySelector('.tool-io .image-stage img.image-preview') || (m && /pixels/.test(m.textContent)); }, { timeout: 60000, polling: 200 }).catch(() => null);   // neither: judged below
+        await sleep(500);
+        const got = await resultBytes(q);
+        const d = got.length ? await pixels(q, got[0], [[0, 0]]) : null;
+        const mm = await msg(q);
+        errs.push(...q.__errors); await q.close();
+        return { d, m: mm.text };
+      };
+      let r = await bigRun(null, 5000, 4000);
+      check(r.d && r.d.w === 5000 && r.d.h === 4000 && !LIMIT_RE.test(r.m), '10  desktop Chrome: a 5000×4000 (20,000,000 px) result is still made', JSON.stringify(r.d) + ' ' + r.m);
+      r = await bigRun(PHONE, 5000, 4000);
+      check(!r.d && /food\.jpg: the 5000×4000 result is 20,000,000 pixels, over the 16,777,216 pixels \(4096×4096\) this browser can draw, so it was skipped\./.test(r.m) && !/could not encode that format/.test(r.m),
+        '10  a phone (no canvas over 16,777,216 px): the 5000×4000 result is refused with a message naming the limit', r.m);
+      r = await bigRun(PHONE, 4096, 4096);
+      check(r.d && r.d.w === 4096 && r.d.h === 4096 && !LIMIT_RE.test(r.m), '10  …and 4096×4096, exactly the limit, is still made there', JSON.stringify(r.d) + ' ' + r.m);
+
+      /* 10e  preview object URLs are let go on the next run and when the page is left */
+      p = await open(browser, '/image/bulk-image-resizer/');
+      await setCtl(p, 'value', 800);
+      await upload(p, [street, food]);
+      const first = await previews(p);
+      await change(p, 'value', 600);
+      const second = await previews(p);
+      const a1 = await alive(p, first), a2 = await alive(p, second);
+      check(first.length === 2 && a1.every((x) => !x) && second.length === 2 && a2.every(Boolean), '10  bulk resizer: the last run\'s two preview URLs are revoked by the next run; the new ones work', JSON.stringify([a1, a2]));
+      await p.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false })));
+      const a3 = await alive(p, second);
+      check(a3.every((x) => !x), '10  …and on pagehide the current ones are revoked too', JSON.stringify(a3));
+      errs.push(...p.__errors); await p.close();
+
+      /* 10f  the cropper holds one set of window listeners however many runs */
+      p = await open(browser, '/image/image-cropper/', LISTEN);
+      await p.setViewport({ width: 1400, height: 1600 });
+      await upload(p, [street]);
+      const count = () => p.evaluate(() => ['mousemove', 'touchmove', 'mouseup', 'touchend'].map((t) => (window.__live[t] || new Set()).size).join(','));
+      const c1 = await count();
+      const firstCrop = await previews(p);
+      for (const ratio of ['1:1', '4:3', '16:9', '3:2', 'free']) await change(p, 'ratio', ratio);
+      const c6 = await count();
+      check(c1 === c6, '10  cropper: after five more runs the window holds the same mousemove, touchmove, mouseup and touchend listeners (' + c1 + '), not one more set per run', c1 + ' → ' + c6);
+      check((await alive(p, firstCrop)).every((x) => !x), '10  …and the first run\'s result preview was revoked');
+      /* a drag still works, and its new result revokes the one before */
+      const before = await previews(p);
+      const box = await p.$eval('.select-canvas', (e) => { e.scrollIntoView({ block: 'center' }); const b = e.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; });
+      await p.mouse.move(box.x + box.w * 0.2, box.y + box.h * 0.2); await p.mouse.down();
+      await p.mouse.move(box.x + box.w * 0.6, box.y + box.h * 0.7, { steps: 5 }); await p.mouse.up();
+      await p.waitForFunction((old) => { const i = document.querySelector('.tool-io .image-stage img.image-preview'); return i && i.src.startsWith('blob:') && old.indexOf(i.src) < 0; }, { timeout: 15000, polling: 50 }, before);
+      const ro = await p.$eval('.select-readout', (e) => e.textContent);
+      check(/^\d+ × \d+ px/.test(ro) && (await alive(p, before)).every((x) => !x) && (await count()) === c1, '10  …a drag still crops (' + ro.trim() + '), revokes the result before it, and adds no listener');
+      errs.push(...p.__errors); await p.close();
+      check(!errs.length, '10  no page errors', errs.join(' | '));
     }
 
     check(outside.length === 0, 'not one request outside ' + BASE + ' on any page', outside.join(' | '));

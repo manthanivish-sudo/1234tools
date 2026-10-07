@@ -1,0 +1,42 @@
+{
+  "id": "/social/social-post-maker/",
+  "name": "Social Post Maker — 1234Tools",
+  "short_name": "Social Post Maker",
+  "description": "Make quote and announcement posts in your brand colours, logo and fonts, then download them in every platform size at once: Instagram, stories, X, LinkedIn, Facebook, Pinterest and YouTube. Nine templates; nothing you add is uploaded.",
+  "start_url": "/social/social-post-maker/?src=pwa",
+  "scope": "/social/social-post-maker/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "social",
+    "photo"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-social-post.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-social-post-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-social-post-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -231,6 +231,7 @@ window.DEV_TOOLS["htaccess-generator"] = {
 "keywords": ["htaccess generator","apache redirect","force https","www redirect","htaccess cache"],
 "inputLabel": null,
 "outputLabel": "Add to .htaccess",
+"filename": ".htaccess",
 "fields": [{"key":"https","label":"Force HTTPS","type":"select","default":"yes","options":[{"value":"yes","label":"Yes"},{"value":"no","label":"No"}]},{"key":"www","label":"Domain form","type":"select","default":"www","options":[{"value":"www","label":"Force www"},{"value":"root","label":"Force non-www"},{"value":"none","label":"Leave alone"}]},{"key":"domain","label":"Domain","type":"text","default":"1234tools.com"},{"key":"cache","label":"Static asset caching","type":"select","default":"yes","options":[{"value":"yes","label":"Yes (1 year)"},{"value":"no","label":"No"}]},{"key":"gzip","label":"Compression","type":"select","default":"yes","options":[{"value":"yes","label":"Yes"},{"value":"no","label":"No"}]},{"key":"security","label":"Security headers","type":"select","default":"yes","options":[{"value":"yes","label":"Yes"},{"value":"no","label":"No"}]}],
 "generate": (f) => {
       const d = String(f.domain || 'example.com').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
@@ -285,7 +286,7 @@ window.DEV_TOOLS["htaccess-generator"] = {
         warn: 'Back up your existing .htaccess first. A syntax error here returns HTTP 500 for the entire site.'
       };
     },
-"tips": ["Apply Strict-Transport-Security only once HTTPS is working everywhere. Browsers remember it for a year and will refuse plain HTTP.","Order matters: put redirect rules before caching and header blocks.","These directives are Apache-specific. On Nginx or IIS the equivalent configuration lives elsewhere."],
+"tips": ["Apply Strict-Transport-Security only once HTTPS is working everywhere. Browsers remember it for a year and will refuse plain HTTP.","Order matters: put redirect rules before caching and header blocks.","These directives are Apache-specific. On Nginx or IIS the equivalent configuration lives elsewhere.","Download asks for the name .htaccess, but most browsers will not save a file whose name starts with a dot: Chrome and Edge save htaccess.txt. Rename it to .htaccess when you upload it."],
 "faq": [{"q":"Nothing happens after I upload it. Why?","a":"Most often AllowOverride is set to None in the server config, which makes Apache ignore .htaccess entirely, or the required module (mod_rewrite, mod_headers, mod_expires) is not enabled."}]
 };
 })();

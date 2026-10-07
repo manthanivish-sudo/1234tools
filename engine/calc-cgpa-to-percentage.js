@@ -30,7 +30,7 @@ window.TOOLS["cgpa-to-percentage"] = {
     {"value":"toPercent","label":"CGPA to percentage"},
     {"value":"toCgpa","label":"Percentage to CGPA"}
   ]},
-  {"key":"value","label":"Value to convert","type":"number","default":8.2},
+  {"key":"value","label":"Value to convert","type":"number","default":8.2,"min":0},
   {"key":"scheme","label":"Formula","type":"select","default":"ten","options":[
     {"value":"ten","label":"Ten-point (CGPA × 10)"},
     {"value":"cbse","label":"CBSE (CGPA × 9.5)"},
@@ -40,7 +40,7 @@ window.TOOLS["cgpa-to-percentage"] = {
   ]},
   {"key":"mult","label":"Custom multiplier","type":"number","default":9.5},
   {"key":"off","label":"Custom offset subtracted from CGPA","type":"number","default":0},
-  {"key":"scaleMax","label":"Maximum CGPA on your scale","type":"number","default":10}
+  {"key":"scaleMax","label":"Maximum CGPA on your scale","type":"number","default":10,"min":1}
 ],
 "compute": function (v) {
   const scheme = SCHEMES[v.scheme] || SCHEMES.ten;
@@ -92,6 +92,12 @@ window.TOOLS["cgpa-to-percentage"] = {
   {"key":"note","label":"","format":"text"},
   {"key":"caution","label":"","format":"text"}
 ],
+"filled": (v, r, f) => {
+      if (r.percentage === undefined) return [];
+      return [v.direction === 'toCgpa'
+        ? 'CGPA = ' + f.upto(Number(v.value), 4) + ' ÷ multiplier + offset = ' + f.num(r.cgpa, 2) + ' (' + r.used + ')'
+        : r.used + ': CGPA ' + f.upto(Number(v.value), 4) + ' gives ' + f.pct(r.percentage)];
+    },
 "tips": [
   "Check your university handbook before trusting any conversion, including this one. The formula is usually printed on the back of the marksheet or in the examination regulations.",
   "CBSE's × 9.5 rule comes from the board itself and applies to the class 10 and 12 CGPA, not to a degree CGPA.",

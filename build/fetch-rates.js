@@ -143,6 +143,9 @@ async function fetchRates(wanted) {
   fs.writeFileSync(OUT, next);
   console.log(`wrote assets/rates.json — ${got.date}, ` +
               `${Object.keys(got.rates).length} currencies, via ${got.source}`);
+
+  /* the converter's 90-day chart: the same file, kept one a day */
+  if (require('./rates-history.js').update()) console.log('updated assets/rates-history.json');
 })().catch((e) => {
   console.error('\nfetch-rates.js failed: ' + (e && e.message || e) + '\n');
   process.exit(1);

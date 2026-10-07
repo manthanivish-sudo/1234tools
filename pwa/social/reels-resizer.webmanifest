@@ -1,0 +1,42 @@
+{
+  "id": "/social/reels-resizer/",
+  "name": "Reels Resizer — 1234Tools",
+  "short_name": "Reels Resizer",
+  "description": "Turn a landscape video into a vertical 9:16 MP4 for Reels, Shorts and TikTok, or a 1:1 or 4:5 one: fit it over a blurred copy or a colour, or crop it to fill around the part that matters. Add a title; the sound is kept. Nothing is uploaded.",
+  "start_url": "/social/reels-resizer/?src=pwa",
+  "scope": "/social/reels-resizer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "social",
+    "photo"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-social-reframe.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-social-reframe-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-social-reframe-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

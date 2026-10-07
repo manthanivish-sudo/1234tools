@@ -152,9 +152,9 @@ function lint(text, ctx) {
   }
 
   // 10. no-watermark is a media claim
-  if (ctx.section && !['pdf', 'image', 'ai-image', 'ai-video'].includes(ctx.section)) {
+  if (ctx.section && !['pdf', 'image', 'ai-image', 'ai-video', 'social'].includes(ctx.section)) {
     m = t.match(/\bno watermarks?\b|#nowatermark/i);
-    if (m) err('watermark', '"No watermark" only for media tools (pdf, image, ai-image, ai-video).', m[0]);
+    if (m) err('watermark', '"No watermark" only for media tools (pdf, image, ai-image, ai-video, social).', m[0]);
   }
 
   // 10b. another site's own rules

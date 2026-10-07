@@ -142,7 +142,7 @@ const CATEGORY = {
   qr: ['utilities', 'productivity'], image: ['photo', 'utilities'],
   pdf: ['productivity', 'utilities'], text: ['productivity'], time: ['utilities'],
   utilities: ['utilities'], design: ['graphics'], 'ai-image': ['photo', 'graphics'],
-  'ai-video': ['video', 'photo']
+  'ai-video': ['video', 'photo'], social: ['social', 'photo']
 };
 
 function manifestFor(tool, meta) {

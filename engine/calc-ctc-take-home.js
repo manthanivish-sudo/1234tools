@@ -133,6 +133,9 @@ function countWeekdays(a, b) {
 
 
 window.TOOLS = window.TOOLS || {};
+/* a schedule cell: the number itself; the page formats it with the reader's currency, grouping and decimals */
+const cell = (v) => v;
+
 window.TOOLS["ctc-take-home"] = {
 "currencyLocked": true,
 "currencyNote": "Indian payroll and income-tax rules",
@@ -176,21 +179,26 @@ window.TOOLS["ctc-take-home"] = {
         tax, ptax: Number(ptax) || 0,
         _table: {
           head: ['Component', 'Annual', 'Monthly'],
+          cols: ['text', 'currency', 'currency'],
           rows: [
-            ['Cost to company', fmtR(c), fmtR(c / 12)],
-            ['Less: employer PF', fmtR(-employerPF), fmtR(-employerPF / 12)],
-            ['Less: gratuity accrual', fmtR(-gratuityAccrual), fmtR(-gratuityAccrual / 12)],
-            ['Gross salary', fmtR(gross), fmtR(gross / 12)],
-            ['Less: employee PF', fmtR(-employeePF), fmtR(-employeePF / 12)],
+            ['Cost to company', cell(c), cell(c / 12)],
+            ['Less: employer PF', cell(-employerPF), cell(-employerPF / 12)],
+            ['Less: gratuity accrual', cell(-gratuityAccrual), cell(-gratuityAccrual / 12)],
+            ['Gross salary', cell(gross), cell(gross / 12)],
+            ['Less: employee PF', cell(-employeePF), cell(-employeePF / 12)],
             /* "|| 0": a nil line reads ₹0, not -₹0 */
-            ['Less: professional tax', fmtR(-(Number(ptax) || 0) || 0), fmtR(-(Number(ptax) || 0) / 12 || 0)],
-            ['Less: income tax', fmtR(-tax || 0), fmtR(-tax / 12 || 0)],
-            ['In-hand salary', fmtR(annualInHand), fmtR(annualInHand / 12)]
+            ['Less: professional tax', cell(-(Number(ptax) || 0) || 0), cell(-(Number(ptax) || 0) / 12 || 0)],
+            ['Less: income tax', cell(-tax || 0), cell(-tax / 12 || 0)],
+            ['In-hand salary', cell(annualInHand), cell(annualInHand / 12)]
           ]
         }
       };
     },
 "outputs": [{"key":"monthly","label":"Monthly in-hand","format":"currency","primary":true},{"key":"annualInHand","label":"Annual in-hand","format":"currency"},{"key":"gross","label":"Gross salary","format":"currency"},{"key":"basic","label":"Basic pay","format":"currency"},{"key":"employerPF","label":"Employer PF (in CTC, not paid to you)","format":"currency"},{"key":"employeePF","label":"Your PF deduction","format":"currency"},{"key":"tax","label":"Income tax + cess","format":"currency"},{"key":"ptax","label":"Professional tax","format":"currency"}],
+"filled": (v, r, f) => [
+      'gross = ' + f.money(Number(v.ctc)) + ' − employer PF ' + f.money(r.employerPF) + ' − gratuity ' + f.money(r.gratuityAccrual) + ' = ' + f.money(r.gross),
+      'in hand = ' + f.money(r.gross) + ' − PF ' + f.money(r.employeePF) + ' − professional tax ' + f.money(r.ptax) + ' − income tax ' + f.money(r.tax) + ' = ' + f.money(r.annualInHand) + ' a year',
+      'a month: ' + f.money(r.annualInHand) + ' ÷ 12 = ' + f.money(r.monthly)],
 "tips": ["CTC is what you cost the employer, not what you receive. Employer PF, gratuity accrual and insurance premiums sit inside CTC but never reach your account.","A higher basic increases PF and gratuity — better long-term savings, lower monthly cash.","Professional tax is levied by state and capped at ₹2,500 a year. Some states, including Delhi and Haryana, do not levy it at all.","Variable pay and joining bonuses are usually included in CTC but paid conditionally, which is the most common reason in-hand differs from expectation."],
 "faq": [{"q":"Why is my in-hand so much lower than CTC ÷ 12?","a":"Typically 15–25% of CTC never reaches you: employer PF, gratuity accrual, insurance and any variable component, before income tax and your own PF are deducted."}]
 };

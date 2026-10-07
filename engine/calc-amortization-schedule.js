@@ -1,138 +1,8 @@
 (function(){
-/* ---------- UK tax tables ----------
-   England, Wales and Northern Ireland only — Scotland operates its own
-   income tax bands and is handled separately in the tool.
-   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
-   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
-   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
-   every £2 of adjusted net income over £100,000; on taxable income (after
-   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
-   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
-   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
-   Employment Allowance £10,500. Same figures in both years. */
-const UK_TAX = {
-  '2026/27': {
-    personalAllowance: 12570,
-    taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate on taxable income (after PA) above `from`
-      { from: 0,      rate: 0.20 },
-      { from: 37700,  rate: 0.40 },
-      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
-    ],
-    ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
-    employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
-  },
-  '2025/26': {
-    personalAllowance: 12570,
-    taperStart: 100000,
-    bands: [
-      { from: 0,      rate: 0.20 },
-      { from: 37700,  rate: 0.40 },
-      { from: 125140, rate: 0.45 }
-    ],
-    ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
-    employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
-  }
-};
-
-
-/* currency formatter used inside schedule tables */
-function fmtC(v) {
-  if (!isFinite(v)) return '—';
-  return v.toLocaleString('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 2 });
-}
-
-
-/* ---------- Income tax, verified against the Income Tax Department position
-   for AY 2027-28. Budget 2026 announced no change to slabs, so FY 2026-27
-   carries forward the Budget 2025 reset. ---------- */
-const IN_TAX = {
-  '2026-27': {
-    label: 'FY 2026-27 (AY 2027-28)',
-    new: {
-      slabs: [
-        { upto: 400000,  rate: 0 },
-        { upto: 800000,  rate: 0.05 },
-        { upto: 1200000, rate: 0.10 },
-        { upto: 1600000, rate: 0.15 },
-        { upto: 2000000, rate: 0.20 },
-        { upto: 2400000, rate: 0.25 },
-        { upto: Infinity, rate: 0.30 }
-      ],
-      standardDeduction: 75000,
-      rebateLimit: 1200000,
-      rebateMax: 60000,
-      surcharge: [[5000000, 0], [10000000, 0.10], [20000000, 0.15], [Infinity, 0.25]]
-    },
-    old: {
-      slabs: [
-        { upto: 250000,  rate: 0 },
-        { upto: 500000,  rate: 0.05 },
-        { upto: 1000000, rate: 0.20 },
-        { upto: Infinity, rate: 0.30 }
-      ],
-      seniorExemption: 300000,
-      superSeniorExemption: 500000,
-      standardDeduction: 50000,
-      rebateLimit: 500000,
-      rebateMax: 12500,
-      surcharge: [[5000000, 0], [10000000, 0.10], [20000000, 0.15], [50000000, 0.25], [Infinity, 0.37]]
-    },
-    cess: 0.04
-  }
-};
-IN_TAX['2025-26'] = Object.assign({}, IN_TAX['2026-27'], { label: 'FY 2025-26 (AY 2026-27)' });
-
-/* GST 2.0 — effective 22 September 2025. The 12% and 28% slabs were removed. */
-const GST_SLABS = [
-  { value: 0,    label: '0% — nil rated (essentials)' },
-  { value: 0.25, label: '0.25% — rough diamonds' },
-  { value: 3,    label: '3% — gold, silver, jewellery' },
-  { value: 5,    label: '5% — everyday & essential goods' },
-  { value: 18,   label: '18% — standard rate (most goods & services)' },
-  { value: 40,   label: '40% — luxury & sin goods' }
-];
-
-const fmtR = (v) => isFinite(v)
-  ? v.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
-  : '—';
-
-/* Progressive slab tax on an amount. */
-function slabTax(amount, slabs) {
-  let tax = 0, lower = 0;
-  for (const s of slabs) {
-    if (amount <= lower) break;
-    tax += (Math.min(amount, s.upto) - lower) * s.rate;
-    lower = s.upto;
-  }
-  return tax;
-}
-
-function surchargeRate(income, table) {
-  for (const [upto, rate] of table) if (income <= upto) return rate;
-  return table[table.length - 1][1];
-}
-
-
-function countWeekdays(a, b) {
-  const MS = 86400000;
-  const start = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
-  const end = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
-  const days = Math.max(0, Math.round((end - start) / MS));
-
-  const whole = Math.floor(days / 7);
-  let count = whole * 5;
-
-  let dow = new Date(start).getUTCDay();
-  for (let i = 0; i < days % 7; i++) {
-    if (dow !== 0 && dow !== 6) count++;
-    dow = (dow + 1) % 7;
-  }
-  return count;
-}
-
-
 window.TOOLS = window.TOOLS || {};
+/* a schedule cell: the number itself; the page formats it with the reader's currency, grouping and decimals */
+const cell = (v) => v;
+
 window.TOOLS["amortization-schedule"] = {
 "currency": "GBP",
 "title": "Loan Amortisation Schedule",
@@ -140,7 +10,7 @@ window.TOOLS["amortization-schedule"] = {
 "description": "Principal, interest and balance month by month for five years or year by year to the end, with overpayments.",
 "keywords": ["amortization schedule","amortisation calculator","loan schedule","mortgage schedule","principal and interest breakdown"],
 "formula": "M = P · [r(1+r)ⁿ] / [(1+r)ⁿ − 1]",
-"inputs": [{"key":"amount","label":"Loan amount","type":"number","unit":"£","default":200000,"min":0},{"key":"rate","label":"Annual interest rate","type":"number","unit":"%","default":5.5,"step":0.01},{"key":"years","label":"Term","type":"number","unit":"years","default":25,"min":0,"max":100},{"key":"overpay","label":"Extra payment each month","type":"number","unit":"£","default":0,"min":0},{"key":"view","label":"Schedule detail","type":"select","options":[{"value":"annual","label":"Annual summary"},{"value":"monthly","label":"Monthly (first 5 years)"}],"default":"annual"}],
+"inputs": [{"key":"amount","label":"Loan amount","type":"number","unit":"£","default":200000,"min":0},{"key":"rate","label":"Annual interest rate","type":"number","unit":"%","default":5.5,"step":0.01,"min":0,"max":100,"slider":[1,15]},{"key":"years","label":"Term","type":"number","unit":"years","default":25,"min":0,"max":100,"slider":[1,40]},{"key":"overpay","label":"Extra payment each month","type":"number","unit":"£","default":0,"min":0},{"key":"view","label":"Schedule detail","type":"select","options":[{"value":"annual","label":"Annual summary"},{"value":"monthly","label":"Monthly (first 5 years)"}],"default":"annual"}],
 "compute": ({ amount, rate, years, overpay, view }) => {
       if (!amount || !years) return { note: 'Enter a loan amount and a term.' };
       const r = rate / 100 / 12;
@@ -149,7 +19,7 @@ window.TOOLS["amortization-schedule"] = {
       const pay = base + (Number(overpay) || 0);
 
       let balance = amount, totalInterest = 0, months = 0;
-      const rows = [];
+      const rows = [], yearly = [], monthly = [];
       let yInt = 0, yPrin = 0;
 
       while (balance > 0.005 && months < 1200) {
@@ -163,11 +33,14 @@ window.TOOLS["amortization-schedule"] = {
         yInt += interest; yPrin += principal;
         months++;
 
-        if (view === 'monthly' && months <= 60) {
-          rows.push([String(months), fmtC(interest + principal), fmtC(principal), fmtC(interest), fmtC(balance)]);
-        }
-        if (view === 'annual' && (months % 12 === 0 || balance <= 0.005)) {
-          rows.push([String(Math.ceil(months / 12)), fmtC(yPrin + yInt), fmtC(yPrin), fmtC(yInt), fmtC(balance)]);
+        /* every month for the page's monthly view; the first five years, as
+           before, when the Schedule detail asks for months */
+        monthly.push([String(months), cell(interest + principal), cell(principal), cell(interest), cell(balance)]);
+        if (view === 'monthly' && months <= 60) rows.push(monthly[monthly.length - 1]);
+        if (months % 12 === 0 || balance <= 0.005) {
+          const y = [String(Math.ceil(months / 12)), cell(yPrin + yInt), cell(yPrin), cell(yInt), cell(balance)];
+          yearly.push(y);
+          if (view === 'annual') rows.push(y);
           yInt = 0; yPrin = 0;
         }
       }
@@ -187,11 +60,32 @@ window.TOOLS["amortization-schedule"] = {
           head: view === 'monthly'
             ? ['Month', 'Payment', 'Principal', 'Interest', 'Balance']
             : ['Year', 'Paid', 'Principal', 'Interest', 'Balance'],
-          rows
-        }
+          cols: ['text', 'currency', 'currency', 'currency', 'currency'],
+          rows,
+          foot: ['Total', amount + totalInterest, amount, totalInterest, 0],
+          views: (function () {
+            const cols = ['text', 'currency', 'currency', 'currency', 'currency'], foot = ['Total', amount + totalInterest, amount, totalInterest, 0];
+            const y = { id: 'yearly', label: 'Yearly', head: ['Year', 'Paid', 'Principal', 'Interest', 'Balance'], cols, rows: yearly, foot };
+            const m = { id: 'monthly', label: 'Monthly', head: ['Month', 'Payment', 'Principal', 'Interest', 'Balance'], cols, rows: monthly, foot };
+            return view === 'monthly' ? [m, y] : [y, m];
+          })()
+        },
+        _chart: [
+          { type: 'bar', title: 'Principal and interest each year', format: 'currency', xLabel: 'Year', labels: yearly.map((x) => Number(x[0])), totalLabel: 'Paid that year',
+            series: [{ name: 'Principal', values: yearly.map((x) => x[2]) }, { name: 'Interest', values: yearly.map((x) => x[3]), c: 3 }] },
+          { type: 'line', title: 'Balance left', format: 'currency', xLabel: 'End of year', labels: yearly.map((x) => Number(x[0])), series: [{ name: 'Balance', values: yearly.map((x) => x[4]), area: true }] }
+        ]
       };
     },
 "outputs": [{"key":"monthly","label":"Contractual monthly payment","format":"currency","primary":true},{"key":"withOverpay","label":"Payment including overpayment","format":"currency"},{"key":"totalInterest","label":"Total interest","format":"currency"},{"key":"totalPaid","label":"Total repaid","format":"currency"},{"key":"payoffYears","label":"Paid off in","format":"number","unit":"years"},{"key":"interestSaved","label":"Interest saved by overpaying","format":"currency"},{"key":"monthsSaved","label":"Months saved","format":"number"},{"key":"note","label":"","format":"text"}],
+"filled": (v, r, f) => {
+      const P = Number(v.amount) || 0, i = (Number(v.rate) || 0) / 1200, n = Math.round((Number(v.years) || 0) * 12);
+      if (!P || !n || r.monthly === undefined) return [];
+      const L = ['r = ' + f.upto(Number(v.rate) || 0, 4) + '% ÷ 12 = ' + f.upto(i, 8) + '      n = ' + n];
+      L.push(i === 0 ? 'M = ' + f.money(P) + ' ÷ ' + n + ' = ' + f.money(r.monthly) : 'M = ' + f.money(P) + ' × ' + f.upto(i, 8) + ' × (1 + ' + f.upto(i, 8) + ')^' + n + ' ÷ ((1 + ' + f.upto(i, 8) + ')^' + n + ' − 1) = ' + f.money(r.monthly));
+      if (Number(v.overpay) > 0) L.push('with the overpayment: ' + f.money(r.monthly) + ' + ' + f.money(Number(v.overpay)) + ' = ' + f.money(r.withOverpay) + ' a month, paid off in ' + r.months + ' months');
+      return L;
+    },
 "tips": ["Early payments are mostly interest because interest is charged on the outstanding balance, which is highest at the start.","An overpayment goes entirely to principal, so it removes all the future interest that principal would have accrued. Small, early overpayments do the most work.","Check for early repayment charges before overpaying. Many fixed-rate deals cap annual overpayments at 10%."],
 "faq": [{"q":"Should I shorten the term or reduce the payment?","a":"Shortening the term saves far more interest, because the balance falls faster. Reducing the payment improves monthly cash flow instead. Which is right depends on whether your constraint is total cost or monthly affordability."}]
 };

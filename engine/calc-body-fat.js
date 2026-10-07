@@ -1,137 +1,4 @@
 (function(){
-/* ---------- UK tax tables ----------
-   England, Wales and Northern Ireland only — Scotland operates its own
-   income tax bands and is handled separately in the tool.
-   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
-   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
-   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
-   every £2 of adjusted net income over £100,000; on taxable income (after
-   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
-   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
-   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
-   Employment Allowance £10,500. Same figures in both years. */
-const UK_TAX = {
-  '2026/27': {
-    personalAllowance: 12570,
-    taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate on taxable income (after PA) above `from`
-      { from: 0,      rate: 0.20 },
-      { from: 37700,  rate: 0.40 },
-      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
-    ],
-    ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
-    employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
-  },
-  '2025/26': {
-    personalAllowance: 12570,
-    taperStart: 100000,
-    bands: [
-      { from: 0,      rate: 0.20 },
-      { from: 37700,  rate: 0.40 },
-      { from: 125140, rate: 0.45 }
-    ],
-    ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
-    employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
-  }
-};
-
-
-/* currency formatter used inside schedule tables */
-function fmtC(v) {
-  if (!isFinite(v)) return '—';
-  return v.toLocaleString('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 2 });
-}
-
-
-/* ---------- Income tax, verified against the Income Tax Department position
-   for AY 2027-28. Budget 2026 announced no change to slabs, so FY 2026-27
-   carries forward the Budget 2025 reset. ---------- */
-const IN_TAX = {
-  '2026-27': {
-    label: 'FY 2026-27 (AY 2027-28)',
-    new: {
-      slabs: [
-        { upto: 400000,  rate: 0 },
-        { upto: 800000,  rate: 0.05 },
-        { upto: 1200000, rate: 0.10 },
-        { upto: 1600000, rate: 0.15 },
-        { upto: 2000000, rate: 0.20 },
-        { upto: 2400000, rate: 0.25 },
-        { upto: Infinity, rate: 0.30 }
-      ],
-      standardDeduction: 75000,
-      rebateLimit: 1200000,
-      rebateMax: 60000,
-      surcharge: [[5000000, 0], [10000000, 0.10], [20000000, 0.15], [Infinity, 0.25]]
-    },
-    old: {
-      slabs: [
-        { upto: 250000,  rate: 0 },
-        { upto: 500000,  rate: 0.05 },
-        { upto: 1000000, rate: 0.20 },
-        { upto: Infinity, rate: 0.30 }
-      ],
-      seniorExemption: 300000,
-      superSeniorExemption: 500000,
-      standardDeduction: 50000,
-      rebateLimit: 500000,
-      rebateMax: 12500,
-      surcharge: [[5000000, 0], [10000000, 0.10], [20000000, 0.15], [50000000, 0.25], [Infinity, 0.37]]
-    },
-    cess: 0.04
-  }
-};
-IN_TAX['2025-26'] = Object.assign({}, IN_TAX['2026-27'], { label: 'FY 2025-26 (AY 2026-27)' });
-
-/* GST 2.0 — effective 22 September 2025. The 12% and 28% slabs were removed. */
-const GST_SLABS = [
-  { value: 0,    label: '0% — nil rated (essentials)' },
-  { value: 0.25, label: '0.25% — rough diamonds' },
-  { value: 3,    label: '3% — gold, silver, jewellery' },
-  { value: 5,    label: '5% — everyday & essential goods' },
-  { value: 18,   label: '18% — standard rate (most goods & services)' },
-  { value: 40,   label: '40% — luxury & sin goods' }
-];
-
-const fmtR = (v) => isFinite(v)
-  ? v.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
-  : '—';
-
-/* Progressive slab tax on an amount. */
-function slabTax(amount, slabs) {
-  let tax = 0, lower = 0;
-  for (const s of slabs) {
-    if (amount <= lower) break;
-    tax += (Math.min(amount, s.upto) - lower) * s.rate;
-    lower = s.upto;
-  }
-  return tax;
-}
-
-function surchargeRate(income, table) {
-  for (const [upto, rate] of table) if (income <= upto) return rate;
-  return table[table.length - 1][1];
-}
-
-
-function countWeekdays(a, b) {
-  const MS = 86400000;
-  const start = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
-  const end = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
-  const days = Math.max(0, Math.round((end - start) / MS));
-
-  const whole = Math.floor(days / 7);
-  let count = whole * 5;
-
-  let dow = new Date(start).getUTCDay();
-  for (let i = 0; i < days % 7; i++) {
-    if (dow !== 0 && dow !== 6) count++;
-    dow = (dow + 1) % 7;
-  }
-  return count;
-}
-
-
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["body-fat"] = {
 "title": "Body Fat Percentage Estimator",
@@ -139,6 +6,7 @@ window.TOOLS["body-fat"] = {
 "description": "Estimate body fat percentage from tape measurements using the US Navy circumference method.",
 "keywords": ["body fat calculator","body fat percentage","navy method body fat","lean mass calculator"],
 "formula": "US Navy circumference method — a logarithmic fit to tape measurements",
+"unitSystem": {"key":"system","imperial":"imperial","scale":{"height":0.393700787402,"neck":0.393700787402,"waist":0.393700787402,"hip":0.393700787402,"weight":2.20462262185},"dp":1},
 "inputs": [{"key":"sex","label":"Sex assigned at birth","type":"select","options":[{"value":"male","label":"Male"},{"value":"female","label":"Female"}],"default":"male"},{"key":"system","label":"Units","type":"select","options":[{"value":"metric","label":"Metric (cm, kg)"},{"value":"imperial","label":"Imperial (in, lb)"}],"default":"metric"},{"key":"height","label":"Height","type":"number","default":175,"min":0},{"key":"neck","label":"Neck circumference","type":"number","default":38,"min":0},{"key":"waist","label":"Waist circumference (at the navel)","type":"number","default":85,"min":0},{"key":"hip","label":"Hip circumference (widest point, female only)","type":"number","default":95,"min":0},{"key":"weight","label":"Weight (optional, for lean mass)","type":"number","default":70,"min":0}],
 "compute": ({ sex, system, height, neck, waist, hip, weight }) => {
       const f = system === 'imperial' ? 2.54 : 1;
@@ -173,7 +41,15 @@ window.TOOLS["body-fat"] = {
       };
     },
 "outputs": [{"key":"bodyFat","label":"Estimated body fat","format":"percent","primary":true},{"key":"range","label":"Likely range (±3.5 points)","format":"text"},{"key":"fatMass","label":"Estimated fat mass","format":"number","unit":"kg"},{"key":"leanMass","label":"Estimated lean mass","format":"number","unit":"kg"},{"key":"waistHeight","label":"Waist-to-height ratio","format":"number"},{"key":"note","label":"","format":"text"}],
-"tips": ["The Navy method is accurate to roughly ±3.5 percentage points against a DEXA scan, and can be further out for very lean or very heavy people. Treat the range as the real answer, not the single figure.","Measure at the same time of day, unclothed at the measurement point, with the tape snug but not compressing. Small differences in tape placement move the result more than most real change does.","Waist-to-height ratio is a simpler measure with better evidence behind it for health risk. Below 0.5 is the usual guidance, and it needs only two measurements.","Body fat percentage is one descriptive number among many. It says nothing about fitness, strength, blood markers or how you feel, and a single reading says nothing at all about a trend."],
+"filled": (v, r, f) => {
+      if (r.bodyFat === undefined) return [];
+      const k = v.system === 'imperial' ? 2.54 : 1;
+      const h = Number(v.height) * k, n = Number(v.neck) * k, w = Number(v.waist) * k, hp = Number(v.hip) * k;
+      return v.sex === 'male'
+        ? ['body fat = 495 ÷ (1.0324 − 0.19077 × log₁₀(' + f.upto(w, 2) + ' − ' + f.upto(n, 2) + ') + 0.15456 × log₁₀(' + f.upto(h, 2) + ')) − 450 = ' + f.pct(r.bodyFat, 1)]
+        : ['body fat = 495 ÷ (1.29579 − 0.35004 × log₁₀(' + f.upto(w, 2) + ' + ' + f.upto(hp, 2) + ' − ' + f.upto(n, 2) + ') + 0.22100 × log₁₀(' + f.upto(h, 2) + ')) − 450 = ' + f.pct(r.bodyFat, 1)];
+    },
+"tips": ["It opens in metric or imperial as set in Settings, and switching the units converts the figures already entered, so 70 kg becomes 154.3 lb rather than 70 lb.","The Navy method is accurate to roughly ±3.5 percentage points against a DEXA scan, and can be further out for very lean or very heavy people. Treat the range as the real answer, not the single figure.","Measure at the same time of day, unclothed at the measurement point, with the tape snug but not compressing. Small differences in tape placement move the result more than most real change does.","Waist-to-height ratio is a simpler measure with better evidence behind it for health risk. Below 0.5 is the usual guidance, and it needs only two measurements.","Body fat percentage is one descriptive number among many. It says nothing about fitness, strength, blood markers or how you feel, and a single reading says nothing at all about a trend."],
 "faq": [{"q":"What is a healthy body fat percentage?","a":"Ranges published by fitness organisations vary widely and are not clinical thresholds. Essential fat is roughly 3% for men and 12% for women, below which health is compromised. Beyond that, there is no single healthy figure — it depends on age, sex, genetics and context. A clinician can interpret it alongside things that matter more."},{"q":"Why does my result differ from a smart scale?","a":"Bioelectrical impedance scales estimate from body water, which swings with hydration, food, exercise and time of day. Neither method is a direct measurement. Both are more useful for tracking a direction over months than for a single number today."}]
 };
 })();

@@ -230,6 +230,8 @@ function kindOf(html) {
   if (/mountCurrency\(/.test(html)) return 'currency';
   if (/mountCode\(/.test(html)) return 'code';
   if (/mountQR\(/.test(html)) return 'qr';
+  /* the time zone converter, countdown and stopwatch: settings, not figures */
+  if (/mount(?:Timezone|Countdown|Stopwatch)\(/.test(html)) return 'live';
   return 'io';
 }
 

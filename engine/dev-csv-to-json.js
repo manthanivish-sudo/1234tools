@@ -221,6 +221,88 @@ function contrastRatio(a, b) {
 }
 
 
+/* Which delimiter a pasted table uses, worked out from the text: the
+   counting rule of parseDelimited in render-dev.js (characters outside
+   quotes in the first 20 lines; tab wins ties, then comma over semicolon),
+   with the pipe added, chosen only when it outnumbers all three. */
+function detectDelimiter(text) {
+  const sample = String(text).replace(/\r\n?/g, '\n').split('\n').slice(0, 20).join('\n');
+  const counts = { '\t': 0, ',': 0, ';': 0, '|': 0 };
+  let quoted = false;
+  for (let i = 0; i < sample.length; i++) {
+    const c = sample[i];
+    if (c === '"') quoted = !quoted;
+    else if (!quoted && counts[c] !== undefined) counts[c]++;
+  }
+  if (counts['|'] > counts['\t'] && counts['|'] > counts[','] && counts['|'] > counts[';']) return '|';
+  if (counts['\t'] > 0 && counts['\t'] >= counts[','] && counts['\t'] >= counts[';']) return '\t';
+  if (counts[';'] > counts[',']) return ';';
+  return ',';
+}
+const DELIM_NAME = { ',': 'Comma', ';': 'Semicolon', '\t': 'Tab', '|': 'Pipe' };
+
+/* A cell's value when Infer types is on: JSON's own number syntax (so 007,
+   1,000 and +5 stay text, and a whole number past 2^53 stays text rather
+   than lose digits), true and false in any case, and null. Empty stays "". */
+function inferType(s) {
+  if (/^-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$/.test(s)) {
+    const n = Number(s);
+    if (!isFinite(n)) return s;
+    if (/^-?\d+$/.test(s) && !Number.isSafeInteger(n)) return s;
+    return n;
+  }
+  if (/^(true|false)$/i.test(s)) return s.toLowerCase() === 'true';
+  if (s === 'null') return null;
+  return s;
+}
+
+/* JSON → CSV: one row object to [column, value] pairs. Nested objects
+   flatten to dotted columns (a.b.c); arrays, and an empty object, are
+   written as JSON text. */
+function flattenRow(o, prefix, into) {
+  for (const k of Object.keys(o)) {
+    const key = prefix ? prefix + '.' + k : k;
+    const v = o[k];
+    if (v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length) flattenRow(v, key, into);
+    else into.push([key, v]);
+  }
+  return into;
+}
+function cellText(v) {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'object') return JSON.stringify(v);
+  return String(v);
+}
+
+/* CSV → JSON with Nest dotted headers: "a.b.c" becomes { a: { b: { c } } }.
+   A header that would clash with another (a and a.b both present) stays a
+   flat key, as written. A cell holding a JSON array or object becomes it. */
+function nestRow(pairs) {
+  const o = {};
+  const clash = [];
+  for (const [key, v] of pairs) {
+    const parts = key.split('.');
+    if (parts.length < 2 || parts.some((p) => p === '')) { if (key in o) clash.push(key); o[key] = v; continue; }
+    let at = o, ok = true;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const p = parts[i];
+      if (!(p in at)) at[p] = {};
+      else if (!at[p] || typeof at[p] !== 'object' || Array.isArray(at[p])) { ok = false; break; }
+      at = at[p];
+    }
+    const last = parts[parts.length - 1];
+    if (ok && !(last in at)) at[last] = v;
+    else { clash.push(key); o[key] = v; }
+  }
+  return { o, clash };
+}
+function arrayCell(v) {
+  if (typeof v !== 'string' || !/^(\[[\s\S]*\]|\{[\s\S]*\})$/.test(v)) return v;
+  try { const a = JSON.parse(v); return a && typeof a === 'object' ? a : v; } catch (e) { return v; }
+}
+
+let lastDir = 'c2j';
+
 window.DEV_TOOLS = window.DEV_TOOLS || {};
 window.DEV_TOOLS["csv-to-json"] = {
 "title": "CSV to JSON Converter",
@@ -233,35 +315,62 @@ window.DEV_TOOLS["csv-to-json"] = {
 "outputLabel": "Converted output",
 "placeholder": "name,role,city\nPriya,Engineer,Reading\nSam,Designer,London",
 "sample": "name,role,city\nPriya,Engineer,Reading\nSam,Designer,London\n\"Patel, R.\",Manager,Birmingham",
-"options": [{"key":"dir","label":"Direction","type":"select","default":"c2j","options":[{"value":"c2j","label":"CSV → JSON"},{"value":"j2c","label":"JSON → CSV"}]},{"key":"delim","label":"Delimiter","type":"select","default":",","options":[{"value":",","label":"Comma"},{"value":";","label":"Semicolon"},{"value":"\t","label":"Tab"},{"value":"|","label":"Pipe"}]}],
-"transform": (text, { dir, delim }) => {
+/* Download saves JSON as .json and CSV as .csv: render-dev.js reads ext and
+   type when the button is pressed, after the last conversion set lastDir. */
+"download": { get ext() { return lastDir === 'j2c' ? 'csv' : 'json'; }, get type() { return lastDir === 'j2c' ? 'text/csv' : 'application/json'; }, suffix: '' },
+"options": [{"key":"dir","label":"Direction","type":"select","default":"c2j","options":[{"value":"c2j","label":"CSV → JSON"},{"value":"j2c","label":"JSON → CSV"}]},{"key":"delim","label":"Delimiter","type":"select","default":"auto","options":[{"value":"auto","label":"Detect (comma for JSON → CSV)"},{"value":",","label":"Comma"},{"value":";","label":"Semicolon"},{"value":"\t","label":"Tab"},{"value":"|","label":"Pipe"}]},{"key":"header","label":"First row is a header","type":"select","default":"yes","options":[{"value":"yes","label":"Yes"},{"value":"no","label":"No: column1, column2 …"}]},{"key":"types","label":"Infer types (CSV → JSON)","type":"select","default":"off","options":[{"value":"off","label":"Off: every value is text"},{"value":"on","label":"On: numbers, true/false, null"}]},{"key":"nest","label":"Dotted headers (CSV → JSON)","type":"select","default":"flat","options":[{"value":"flat","label":"Keep a.b as one key"},{"value":"nest","label":"Nest a.b into objects"}]}],
+"transform": (text, { dir, delim, header, types, nest }) => {
+      lastDir = dir === 'j2c' ? 'j2c' : 'c2j';
       if (!text.trim()) return { output: '', note: 'Paste CSV or JSON above.' };
-      const d = delim === '\\t' ? '\t' : delim;
-      if (dir === 'c2j') {
-        const rows = parseCSV(text, d);
+      const picked = delim === '\\t' ? '\t' : delim;
+      const auto = !picked || picked === 'auto';
+      const withHeader = header !== 'no';
+      if (dir !== 'j2c') {
+        const d = auto ? detectDelimiter(text) : picked;
+        const rows = parseCSV(text, d).filter(r => r.some(c => c !== ''));
         if (rows.length < 1) return { error: 'No rows found.' };
-        const head = rows[0];
-        const objs = rows.slice(1)
-          .filter(r => r.some(c => c !== ''))
-          .map(r => head.reduce((o, h, i) => (o[h || `column${i + 1}`] = r[i] ?? '', o), {}));
-        return {
-          output: JSON.stringify(objs, null, 2),
-          stats: [['Columns', String(head.length)], ['Data rows', String(objs.length)], ['Output', bytes(JSON.stringify(objs))]]
-        };
+        const width = withHeader ? rows[0].length : Math.max(...rows.map(r => r.length));
+        const head = withHeader ? rows[0].map((h, i) => h || `column${i + 1}`) : Array.from({ length: width }, (x, i) => `column${i + 1}`);
+        const body = withHeader ? rows.slice(1) : rows;
+        const val = (c) => types === 'on' ? inferType(c) : c;
+        const clashes = new Set();
+        const objs = body.map(r => {
+          const pairs = head.map((h, i) => [h, val(r[i] ?? '')]);
+          if (nest !== 'nest') return pairs.reduce((o, [h, v]) => (o[h] = v, o), {});
+          const n = nestRow(pairs.map(([h, v]) => [h, arrayCell(v)]));
+          n.clash.forEach(k => clashes.add(k));
+          return n.o;
+        });
+        const stats = [['Columns', String(head.length)], ['Data rows', String(objs.length)], ['Delimiter', DELIM_NAME[d] + (auto ? ' (detected)' : '')], ['Output', bytes(JSON.stringify(objs))]];
+        const res = { output: JSON.stringify(objs, null, 2), stats };
+        if (clashes.size) res.warn = 'Kept as flat keys, because another column already uses the name: ' + [...clashes].join(', ') + '.';
+        return res;
       }
+      const d = auto ? ',' : picked;
       let data;
       try { data = JSON.parse(text); } catch (e) { return { error: describeJsonError(e, text) }; }
       if (!Array.isArray(data)) return { error: 'JSON → CSV needs an array of objects at the top level.' };
       if (!data.length) return { output: '', note: 'Empty array.' };
-      const cols = [...new Set(data.flatMap(o => Object.keys(o || {})))];
+      const flat = data.map(o => (o && typeof o === 'object' && !Array.isArray(o)) ? flattenRow(o, '', []) : []);
+      const cols = [...new Set(flat.flatMap(p => p.map(x => x[0])))];
+      const dupes = new Set();
+      const maps = flat.map(p => { const m = new Map(); p.forEach(([k, v]) => { if (m.has(k)) dupes.add(k); m.set(k, v); }); return m; });
       const q = v => {
-        const s = v === null || v === undefined ? '' : String(v);
+        const s = cellText(v);
         return /["\n\r]|^\s|\s$/.test(s) || s.includes(d) ? '"' + s.replace(/"/g, '""') + '"' : s;
       };
-      const out = [cols.join(d), ...data.map(o => cols.map(c => q(o?.[c])).join(d))].join('\n');
-      return { output: out, stats: [['Columns', String(cols.length)], ['Rows', String(data.length)], ['Output', bytes(out)]] };
+      const lines = maps.map(m => cols.map(c => q(m.get(c))).join(d));
+      if (withHeader) lines.unshift(cols.map(q).join(d));
+      const out = lines.join('\n');
+      const nested = cols.filter(c => c.includes('.')).length;
+      const stats = [['Columns', String(cols.length)], ['Rows', String(data.length)]];
+      if (nested) stats.push(['Dotted columns', String(nested)]);
+      stats.push(['Output', bytes(out)]);
+      const res = { output: out, stats };
+      if (dupes.size) res.warn = 'Two fields write to the same column, and the later one is kept: ' + [...dupes].join(', ') + '.';
+      return res;
     },
-"tips": ["Fields containing the delimiter, a quote or a line break are wrapped in double quotes, and inner quotes are doubled — the RFC 4180 convention Excel expects.","Excel exports in some European locales use semicolons rather than commas. Switch the delimiter if columns do not split.","Going JSON → CSV, the column set is the union of every object’s keys, so rows with missing fields still line up."],
-"faq": [{"q":"Are numbers preserved as numbers?","a":"CSV has no types, so every value becomes a string when converting to JSON. Cast them afterwards if your consumer needs real numbers."}]
+"tips": ["Fields containing the delimiter, a quote or a line break are wrapped in double quotes, and inner quotes are doubled — the RFC 4180 convention Excel expects.","Excel exports in some European locales use semicolons rather than commas. Detect, the default, counts commas, semicolons, tabs and pipes outside quotes in the first 20 lines and names its choice in the Delimiter row; pick one yourself if it guesses wrong.","Going JSON → CSV, the column set is the union of every object’s keys, so rows with missing fields still line up. Nested objects become dotted columns such as addr.city, and arrays are written as JSON text.","Nest a.b into objects turns dotted columns back into nested objects, and a cell holding JSON such as [\"a\",\"b\"] back into an array."],
+"faq": [{"q":"Are numbers preserved as numbers?","a":"Only with Infer types on. CSV has no types, so by default every value stays a string. Infer types turns numbers written as JSON writes them into numbers, true and false into booleans and null into null; 007, 1,000, +5 and whole numbers past 9007199254740991 stay text, so no digit is lost. Empty cells stay empty strings."}]
 };
 })();

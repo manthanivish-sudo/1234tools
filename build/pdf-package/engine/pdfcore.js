@@ -15,6 +15,21 @@
    Byte helpers
    ============================================================ */
 
+/* The standard security handler (pdfcrypt.js). In the browser bundle it is
+   declared just before this file; in Node it sits beside it. */
+const CRYPT = (function () {
+  try { if (typeof PDFCrypt !== 'undefined') return PDFCrypt; } catch (e) { /* not in this scope */ }
+  try { if (typeof require === 'function') return require('./pdfcrypt.js').PDFCrypt; } catch (e) { /* absent */ }
+  return null;
+})();
+
+/* The TrueType embedder (pdffont.js), the same way. */
+const PFONT = (function () {
+  try { if (typeof PDFFont !== 'undefined') return PDFFont; } catch (e) { /* not in this scope */ }
+  try { if (typeof require === 'function') return require('./pdffont.js').PDFFont; } catch (e) { /* absent */ }
+  return null;
+})();
+
 const WS = new Set([0x00, 0x09, 0x0a, 0x0c, 0x0d, 0x20]);
 const DELIM = new Set([0x28, 0x29, 0x3c, 0x3e, 0x5b, 0x5d, 0x7b, 0x7d, 0x2f, 0x25]);
 const isWS = (c) => WS.has(c);
@@ -47,6 +62,32 @@ async function inflate(bytes) {
     } catch (e) { /* try the next format */ }
   }
   throw new Error('A compressed stream in this PDF could not be decoded.');
+}
+
+/** zlib-wrapped deflate, the platform's own (FlateDecode's format). */
+async function deflate(bytes) {
+  if (typeof CompressionStream === 'undefined') {
+    throw new Error('This browser cannot compress PDF streams.');
+  }
+  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/* ============================================================
+   Progress and preview hooks
+
+   The worker sets these around a run. Progress is reported per page as
+   assemble writes it; a preview run (the page render before the real run)
+   makes assemble write only the one page being looked at, so a 400-page
+   watermark preview costs one page, not four hundred.
+   ============================================================ */
+
+let PROGRESS = null;
+let PREVIEW = null;
+function setProgress(fn) { PROGRESS = typeof fn === 'function' ? fn : null; }
+function setPreview(p) { PREVIEW = p && typeof p.pageIndex === 'number' ? p : null; }
+function progress(done, total, label) {
+  if (PROGRESS) { try { PROGRESS(done, total, label); } catch (e) { /* a reporter must never break a run */ } }
 }
 
 /* PNG/TIFF predictors, used by xref streams and some image data */
@@ -299,8 +340,12 @@ class PDFDocument {
     this.warnings = [];
   }
 
-  static async load(bytes) {
+  static async load(bytes, options) {
     const doc = new PDFDocument(bytes);
+    doc._password = (options && options.password) || '';
+    /* decrypt: false reads an encrypted file's objects as they are stored,
+       still encrypted (the security handler's own tests use this) */
+    doc._noDecrypt = !!(options && options.decrypt === false);
     await doc._parse();
     return doc;
   }
@@ -328,9 +373,8 @@ class PDFDocument {
       this.trailer = this.trailer || Object.create(null);
       this.trailer.Root = found;
     }
-    if (this.trailer && this.trailer.Encrypt) {
-      throw new Error('This PDF is encrypted. Remove the password in the application that created it first.');
-    }
+    if (this.trailer && this.trailer.Encrypt) { if (this._noDecrypt) this.encrypted = true; else await this._decrypt(); }
+    else if (this._deferred) await this._expandDeferred();
   }
 
   async _readXrefChain(offset, seen) {
@@ -416,10 +460,16 @@ class PDFDocument {
           if (c !== 'obj') continue;
           if (parseInt(a, 10) !== num) continue;
           const v = lex.parse(0);
-          if (v !== undefined) this.objects.set(num, v);
+          if (v !== undefined) { this.objects.set(num, v); this._gen(num, b2); }
         } catch (e) { /* one bad object should not sink the document */ }
       }
       this._offsets = null;
+    }
+    if (this._inObjStm && this._inObjStm.size && this.trailer && this.trailer.Encrypt) {
+      this._deferred = this._deferred || new Map();
+      for (const [num, loc] of this._inObjStm) if (!this._deferred.has(num)) this._deferred.set(num, loc);
+      this._inObjStm = null;
+      return;
     }
     if (this._inObjStm && this._inObjStm.size) {
       const byStm = new Map();
@@ -470,11 +520,12 @@ class PDFDocument {
       try {
         const lex = new Lexer(this.bytes, m.index + m[0].length);
         const v = lex.parse(0);
-        if (v !== undefined) this.objects.set(num, v);         // later wins
+        if (v !== undefined) { this.objects.set(num, v); this._gen(num, m[2]); }   // later wins
       } catch (e) { /* skip */ }
     }
+    if (this._findEncryptByScan()) { this._scanDeferred = true; }
     // expand any object streams we found
-    for (const [num, v] of [...this.objects]) {
+    for (const [num, v] of (this._scanDeferred ? [] : [...this.objects])) {
       if (v instanceof PDFStream && isName(v.dict.Type, 'ObjStm')) {
         try { await this._expandObjStm(num, null); } catch (e) { /* skip */ }
       }
@@ -488,6 +539,107 @@ class PDFDocument {
           if (isDict(tr)) { this.trailer = this.trailer || Object.create(null); Object.assign(this.trailer, tr); }
         } catch (e) { /* fall through to catalogue scan */ }
       }
+    }
+  }
+
+  _gen(num, g) {
+    const n = parseInt(g, 10);
+    if (n > 0) { this._gens = this._gens || new Map(); this._gens.set(num, n); }
+  }
+
+  /** A damaged file's trailer may be lost; its Encrypt dictionary is not. */
+  _findEncryptByScan() {
+    if (this.trailer && this.trailer.Encrypt) return true;
+    for (const [num, v] of this.objects) {
+      if (isDict(v) && isName(v.Filter) && v.O !== undefined && v.U !== undefined && v.P !== undefined && v.R !== undefined) {
+        this.trailer = this.trailer || Object.create(null);
+        this.trailer.Encrypt = new Ref(num, 0);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Open an encrypted file with the password given to load(), or with none:
+   * a file protected only against printing or copying has an empty user
+   * password and opens like any other. Every string and stream is decrypted
+   * in place, so the rest of the engine never sees ciphertext and what it
+   * writes is a plain file. doc.security says how it was opened.
+   */
+  async _decrypt() {
+    if (!CRYPT) throw Object.assign(new Error('This PDF is encrypted, and this copy of the engine cannot open encrypted files.'), { code: 'unsupported' });
+    const encRef = this.trailer.Encrypt;
+    const enc = await this.resolve(encRef);
+    if (!isDict(enc)) throw Object.assign(new Error('This PDF says it is encrypted but its encryption dictionary is missing.'), { code: 'damaged' });
+    const plain = (v, depth) => {
+      if (depth > 6) return null;
+      if (v instanceof Ref) return plain(this.objects.get(v.num), depth + 1);
+      if (v instanceof Name) return v.name;
+      if (v && v.__string !== undefined) return v.__string;
+      if (Array.isArray(v)) return v.map((x) => plain(x, depth + 1));
+      if (isDict(v)) { const o = {}; for (const k of Object.keys(v)) o[k] = plain(v[k], depth + 1); return o; }
+      return v;
+    };
+    const ids = await this.resolve(this.trailer.ID);
+    const id0 = Array.isArray(ids) && ids[0] && ids[0].__string ? ids[0].__string : new Uint8Array(0);
+    const h = CRYPT.openHandler({ encrypt: plain(enc, 0), id0, password: this._password || '' });
+    if (!h.ok) {
+      if (h.reason === 'password') {
+        throw Object.assign(new Error(this._password ? 'That password did not open it.' : 'This PDF needs a password to open.'), { code: 'password' });
+      }
+      throw Object.assign(new Error(h.message || 'This PDF uses an encryption method these tools cannot open (a certificate rather than a password, for example).'), { code: 'unsupported' });
+    }
+    const skip = encRef instanceof Ref ? encRef.num : -1;
+    const gens = this._gens || new Map();
+    const walk = (v, num, gen) => {
+      if (!v || typeof v !== 'object') return;
+      if (v.__string !== undefined) { v.__string = CRYPT.decryptBytes(h, num, gen, v.__string, 'string'); return; }
+      if (Array.isArray(v)) { for (const x of v) walk(x, num, gen); return; }
+      if (v instanceof PDFStream) { walk(v.dict, num, gen); return; }
+      if (isDict(v)) for (const k of Object.keys(v)) walk(v[k], num, gen);
+    };
+    for (const [num, v] of this.objects) {
+      if (num === skip) continue;
+      const gen = gens.get(num) || 0;
+      if (v instanceof PDFStream) {
+        const type = v.dict.Type;
+        if (isName(type, 'XRef')) continue;
+        const kind = isName(type, 'Metadata') ? 'metadata' : isName(type, 'EmbeddedFile') ? 'embeddedFile' : 'stream';
+        walk(v.dict, num, gen);
+        v.raw = CRYPT.decryptBytes(h, num, gen, v.raw, kind);
+        v._decoded = null;
+      } else walk(v, num, gen);
+    }
+    this.security = {
+      method: h.method || (h.stmf === 'AESV3' ? 'AES-256' : h.stmf === 'AESV2' ? 'AES-128' : 'RC4'),
+      openedWith: h.openedWith || (this._password ? (h.isOwner ? 'owner' : 'user') : 'empty'),
+      isOwner: !!h.isOwner,
+      permissions: CRYPT.permissionsFromP(h.permissions, h.revision),
+      describe: CRYPT.describeHandler(h)
+    };
+    delete this.trailer.Encrypt;
+    if (this._deferred) await this._expandDeferred();
+    if (this._scanDeferred) {
+      this._scanDeferred = false;
+      for (const [num, v] of [...this.objects]) {
+        if (v instanceof PDFStream && isName(v.dict.Type, 'ObjStm')) {
+          try { await this._expandObjStm(num, null); } catch (e) { /* skip */ }
+        }
+      }
+    }
+  }
+
+  async _expandDeferred() {
+    const byStm = new Map();
+    for (const [num, loc] of this._deferred) {
+      if (!byStm.has(loc.stm)) byStm.set(loc.stm, []);
+      byStm.get(loc.stm).push(num);
+    }
+    this._deferred = null;
+    for (const [stmNum, nums] of byStm) {
+      try { await this._expandObjStm(stmNum, nums); }
+      catch (e) { this.warnings.push(`Object stream ${stmNum} could not be expanded.`); }
     }
   }
 
@@ -678,7 +830,7 @@ class PDFWriter {
     return 'null';
   }
 
-  build(rootRef, infoRef, version) {
+  build(rootRef, infoRef, version, extraTrailer) {
     const chunks = [];
     let len = 0;
     const push = (x) => { const a = typeof x === 'string' ? bytesOf(x) : x; chunks.push(a); len += a.length; };
@@ -708,10 +860,12 @@ class PDFWriter {
     push(`xref\n0 ${this.objects.length}\n`);
     push('0000000000 65535 f \n');
     for (let i = 1; i < this.objects.length; i++) {
-      push(String(offsets[i]).padStart(10, '0') + ' 00000 n \n');
+      /* a number left empty (a duplicate folded into another) is free */
+      push(this.objects[i] === undefined ? '0000000000 65535 f \n' : String(offsets[i]).padStart(10, '0') + ' 00000 n \n');
     }
     const trailer = { Size: this.objects.length, Root: rootRef };
     if (infoRef) trailer.Info = infoRef;
+    if (extraTrailer) Object.assign(trailer, extraTrailer);
     push('trailer\n' + this.serialiseValue(trailer) + `\nstartxref\n${xrefAt}\n%%EOF\n`);
 
     const out = new Uint8Array(len);
@@ -746,6 +900,59 @@ const pdfString = (str) => {
   }
   return { __string: new Uint8Array(out) };
 };
+
+/* ============================================================
+   Pictures: image XObjects for logos, stamps and scans
+   ============================================================ */
+
+/**
+ * Make a picture ready to embed. A JPEG goes in as its own bytes
+ * (DCTDecode); raw pixels are deflated, with their transparency as a soft
+ * mask. Input, from the page's image control or a canvas:
+ *   { kind: 'jpeg', bytes, width, height, components }
+ *   { kind: 'raw', width, height, rgb, alpha | null }      (8 bits per sample)
+ *   { kind: 'grey', width, height, grey }
+ * Async because deflating uses the platform's CompressionStream.
+ */
+async function prepareImage(img) {
+  if (!img || !(img.width > 0) || !(img.height > 0)) throw new Error('That picture has no size.');
+  if (img.prepared) return img;
+  if (img.kind === 'jpeg') {
+    return { prepared: true, width: img.width, height: img.height, filter: 'DCTDecode', data: img.bytes,
+      colorSpace: img.components === 1 ? 'DeviceGray' : img.components === 4 ? 'DeviceCMYK' : 'DeviceRGB', smask: null };
+  }
+  if (img.kind === 'grey') {
+    return { prepared: true, width: img.width, height: img.height, filter: 'FlateDecode', data: await deflate(img.grey), colorSpace: 'DeviceGray', smask: null };
+  }
+  if (img.kind === 'raw') {
+    const out = { prepared: true, width: img.width, height: img.height, filter: 'FlateDecode', data: await deflate(img.rgb), colorSpace: 'DeviceRGB', smask: null };
+    if (img.alpha) out.smask = await deflate(img.alpha);
+    return out;
+  }
+  throw new Error('Unknown picture format.');
+}
+
+/** Add a prepared picture to a writer once, however many pages draw it. */
+function imageRef(writer, prep) {
+  writer._images = writer._images || new Map();
+  if (writer._images.has(prep)) return writer._images.get(prep);
+  const d = Object.create(null);
+  d.Type = new Name('XObject'); d.Subtype = new Name('Image');
+  d.Width = prep.width; d.Height = prep.height;
+  d.ColorSpace = new Name(prep.colorSpace); d.BitsPerComponent = 8;
+  d.Filter = new Name(prep.filter);
+  if (prep.colorSpace === 'DeviceCMYK' && prep.filter === 'DCTDecode') d.Decode = [1, 0, 1, 0, 1, 0, 1, 0];
+  if (prep.smask) {
+    const m = Object.create(null);
+    m.Type = new Name('XObject'); m.Subtype = new Name('Image');
+    m.Width = prep.width; m.Height = prep.height;
+    m.ColorSpace = new Name('DeviceGray'); m.BitsPerComponent = 8; m.Filter = new Name('FlateDecode');
+    d.SMask = new Ref(writer.add(new PDFStream(m, prep.smask)), 0);
+  }
+  const ref = new Ref(writer.add(new PDFStream(d, prep.data)), 0);
+  writer._images.set(prep, ref);
+  return ref;
+}
 
 /* ============================================================
    Page operations
@@ -1061,12 +1268,13 @@ async function rewriteAnnot(doc, st, a) {
 }
 
 /** A kept page's annotations, without the links that lead to a page the output leaves out. */
-async function keptAnnots(doc, st, value) {
+async function keptAnnots(doc, st, value, drop) {
   const arr = await doc.resolve(value);
   if (!Array.isArray(arr)) return undefined;
   const out = [];
   for (const r of arr) {
     if (r instanceof Ref && st.barred.has(r.num)) continue;
+    if (drop && r instanceof Ref && drop.has(r.num)) continue;
     const a = await doc.resolve(r);
     if (!isDict(a)) continue;
     if (isName(await doc.resolve(a.Subtype), 'Link')) {
@@ -1312,7 +1520,15 @@ async function buildForm(writer, states) {
  * upright frame pageFrame() describes.
  */
 async function assemble(items, options) {
-  const opts = options || {};
+  const opts = Object.assign({}, options || {});
+  if (PREVIEW) {
+    /* one page, as it will be written, and nothing a preview cannot show */
+    const want = PREVIEW.pageIndex;
+    const first = items.length ? items[0].doc : null;
+    const hit = items.filter((it) => it.doc === (PREVIEW.doc || first) && it.pageIndex === want).slice(0, 1);
+    items = hit.length ? hit : items.slice(0, 1);
+    opts.outline = 'none'; opts.noForm = true; opts.xmp = null; opts.info = {};
+  }
   const writer = new PDFWriter();
   const catalogNum = writer.alloc();
   const pagesNum = writer.alloc();
@@ -1336,10 +1552,20 @@ async function assemble(items, options) {
   }
   if (!plan.length) throw new Error('No pages were selected.');
   for (const [doc, st] of states) await prepareSource(doc, st);
+  if (opts.replace) {
+    /* compression swaps some objects (pictures) for smaller ones as they are copied */
+    for (const [doc, st] of states) {
+      const swap = opts.replace.get(doc);
+      if (!swap || !st.ctx) continue;
+      const inner = st.ctx.rewrite;
+      st.ctx.rewrite = async (num, v) => swap.has(num) ? swap.get(num) : (inner ? inner(num, v) : v);
+    }
+  }
 
   let isolate = 0;                // one shared "q" stream for every stamped page
   const fmt = (v) => String(Number(Number(v).toFixed(4)));
 
+  let written = 0;
   for (const { item, page, num, st } of plan) {
     const doc = item.doc;
     const map = st.map;
@@ -1352,7 +1578,7 @@ async function assemble(items, options) {
       let v = src[k] !== undefined ? src[k] : page.inherited[k];
       if (v === undefined) continue;
       if (k === 'Annots') {
-        v = await keptAnnots(doc, st, v);
+        v = await keptAnnots(doc, st, v, item.dropAnnots);
         if (!v || !v.length) continue;
       }
       if (k === 'Resources') v = await pruneResources(doc, v, src.Contents);
@@ -1360,6 +1586,11 @@ async function assemble(items, options) {
       if (c !== BARRED && c !== undefined) out[k] = c;
     }
     if (out.MediaBox === undefined) out.MediaBox = [0, 0, 595.28, 841.89];
+    if (Array.isArray(item.cropBox) && item.cropBox.length === 4) {
+      /* a new visible area; the boxes printers use must lie inside it */
+      out.CropBox = item.cropBox.map((v) => Number(Number(v).toFixed(3)));
+      delete out.TrimBox; delete out.BleedBox; delete out.ArtBox;
+    }
     if (out.Resources === undefined) out.Resources = Object.create(null);
 
     const baseRotate = Number(src.Rotate !== undefined ? src.Rotate : page.inherited.Rotate) || 0;
@@ -1398,12 +1629,43 @@ async function assemble(items, options) {
 
       let font = deref(res.Font);
       if (!isDict(font)) { font = Object.create(null); res.Font = font; }
-      if (!font[item.overlay.fontKey]) {
-        font[item.overlay.fontKey] = new Ref(writer.add({
-          Type: new Name('Font'), Subtype: new Name('Type1'),
-          BaseFont: new Name(item.overlay.fontName || 'Helvetica'),
-          Encoding: new Name('WinAnsiEncoding')
-        }), 0);
+      if (item.overlay.fontKey && !font[item.overlay.fontKey]) {
+        /* one font object per face for the whole file, not one per page */
+        const face = item.overlay.fontName || 'Helvetica';
+        writer._base14 = writer._base14 || Object.create(null);
+        if (!writer._base14[face]) {
+          writer._base14[face] = new Ref(writer.add({
+            Type: new Name('Font'), Subtype: new Name('Type1'),
+            BaseFont: new Name(face), Encoding: new Name('WinAnsiEncoding')
+          }), 0);
+        }
+        font[item.overlay.fontKey] = writer._base14[face];
+      }
+      if (item.overlay.xobjects) {
+        /* objects of the source drawn by the overlay (a form field's
+           appearance, when flattening), copied like the rest of the page */
+        let xo = deref(res.XObject);
+        if (!isDict(xo)) { xo = Object.create(null); res.XObject = xo; }
+        for (const [key, src] of Object.entries(item.overlay.xobjects)) {
+          let c = await copyObject(doc, writer, src, st.map, 0, st.ctx);
+          if (c instanceof PDFStream) c = new Ref(writer.add(c), 0);
+          if (c instanceof Ref) xo[key] = c;
+        }
+      }
+      if (item.overlay.gs) {
+        let eg2 = deref(res.ExtGState);
+        if (!isDict(eg2)) { eg2 = Object.create(null); res.ExtGState = eg2; }
+        for (const [key, a] of Object.entries(item.overlay.gs)) {
+          eg2[key] = new Ref(writer.add({ Type: new Name('ExtGState'), ca: a, CA: a }), 0);
+        }
+      }
+      if (item.overlay.images) {
+        let xo = deref(res.XObject);
+        if (!isDict(xo)) { xo = Object.create(null); res.XObject = xo; }
+        for (const [key, prep] of Object.entries(item.overlay.images)) xo[key] = imageRef(writer, prep);
+      }
+      if (item.overlay.fonts) {
+        for (const [key, ref] of Object.entries(item.overlay.fonts)) font[key] = typeof ref === 'function' ? ref(writer) : ref;
       }
       if (item.overlay.needsGS) {
         let eg = deref(res.ExtGState);
@@ -1419,6 +1681,7 @@ async function assemble(items, options) {
     out.Parent = new Ref(pagesNum, 0);
     writer.set(num, out);
     kids.push(new Ref(num, 0));
+    progress(++written, plan.length, 'page');
   }
 
   writer.set(pagesNum, { Type: new Name('Pages'), Kids: kids, Count: kids.length });
@@ -1427,7 +1690,7 @@ async function assemble(items, options) {
   /* bookmarks */
   const top = [];
   let anyOutline = false;
-  for (const [doc, st] of states) {
+  for (const [doc, st] of (opts.outline === 'none' ? [] : states)) {
     const ol = await doc.resolve(st.root.Outlines);
     const entries = isDict(ol) ? await outlineEntries(doc, st, ol.First, 0, new Set()) : [];
     if (entries.length) anyOutline = true;
@@ -1439,7 +1702,7 @@ async function assemble(items, options) {
   if (anyOutline && top.length) catalog.Outlines = new Ref(await writeOutline(writer, top), 0);
 
   /* the form */
-  const form = await buildForm(writer, states);
+  const form = opts.noForm ? null : await buildForm(writer, states);
   if (form) catalog.AcroForm = new Ref(writer.add(form), 0);
 
   const only = states.size === 1 ? states.keys().next().value : null;
@@ -1471,7 +1734,515 @@ async function assemble(items, options) {
     if (Object.keys(info).length) infoRef = new Ref(writer.add(info), 0);
   }
 
+  if (opts.finish) await opts.finish(writer);
+  if (opts.protect) return encryptAndBuild(writer, new Ref(catalogNum, 0), infoRef, opts.protect);
+  if (opts.compact) return compactBuild(writer, new Ref(catalogNum, 0), infoRef);
   return writer.build(new Ref(catalogNum, 0), infoRef, opts.version || '1.7');
+}
+
+/* ============================================================
+   Writing an encrypted file
+   ============================================================ */
+
+function randomBytes(n) {
+  const out = new Uint8Array(n);
+  const c = (typeof crypto !== 'undefined' && crypto.getRandomValues) ? crypto : null;
+  if (!c) throw new Error('This browser has no secure random numbers, so it cannot encrypt.');
+  c.getRandomValues(out);
+  return out;
+}
+const hexOf = (b) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+
+/**
+ * Encrypt every string and stream the writer holds with the standard
+ * security handler, then write the file with /Encrypt and /ID in its
+ * trailer. options: { userPassword, ownerPassword, permissions, method:
+ * 'AES-256' | 'AES-128', encryptMetadata }.
+ */
+function encryptAndBuild(writer, rootRef, infoRef, options) {
+  if (!CRYPT) throw new Error('This copy of the engine cannot encrypt.');
+  const id0 = randomBytes(16);
+  const { handler, encryptDict } = CRYPT.createHandler({
+    userPassword: options.userPassword || '', ownerPassword: options.ownerPassword || '',
+    permissions: options.permissions || {}, method: options.method === 'AES-128' ? 'AES-128' : 'AES-256',
+    id0, encryptMetadata: options.encryptMetadata !== false, random: randomBytes
+  });
+  const walk = (v, num) => {
+    if (!v || typeof v !== 'object') return;
+    if (v.__string !== undefined) { v.__string = CRYPT.encryptBytes(handler, num, 0, v.__string, 'string', randomBytes); return; }
+    if (Array.isArray(v)) { for (const x of v) walk(x, num); return; }
+    if (v instanceof PDFStream) { walk(v.dict, num); return; }
+    if (isDict(v)) for (const k of Object.keys(v)) walk(v[k], num);
+  };
+  for (let num = 1; num < writer.objects.length; num++) {
+    const v = writer.objects[num];
+    if (v === undefined || v === null) continue;
+    if (v instanceof PDFStream) {
+      const kind = isName(v.dict.Type, 'Metadata') ? 'metadata' : isName(v.dict.Type, 'EmbeddedFile') ? 'embeddedFile' : 'stream';
+      walk(v.dict, num);
+      writer.objects[num] = new PDFStream(v.dict, CRYPT.encryptBytes(handler, num, 0, v.raw, kind, randomBytes));
+    } else walk(v, num);
+  }
+  const toCore = (v) => {
+    if (v instanceof Uint8Array) return { __raw: '<' + hexOf(v) + '>' };
+    if (Array.isArray(v)) return v.map(toCore);
+    if (typeof v === 'string') return new Name(v);
+    if (v && typeof v === 'object') { const o = Object.create(null); for (const k of Object.keys(v)) o[k] = toCore(v[k]); return o; }
+    return v;
+  };
+  const encNum = writer.add(toCore(encryptDict));
+  const idHex = { __raw: '<' + hexOf(handler.id0 || id0) + '>' };
+  return writer.build(rootRef, infoRef, '1.7', { Encrypt: new Ref(encNum, 0), ID: [idHex, { __raw: '<' + hexOf(randomBytes(16)) + '>' }] });
+}
+
+/**
+ * The whole document again, every page, its bookmarks, form and metadata,
+ * encrypted with a password (protect), or written plain (unlock: the
+ * document was opened with its password, so it is already decrypted).
+ */
+async function protectDocument(doc, options) {
+  const n = await doc.pageCount();
+  const items = Array.from({ length: n }, (_, i) => ({ doc, pageIndex: i }));
+  return assemble(items, options && options.protect === false ? {} : { protect: options || {} });
+}
+
+/* ============================================================
+   Compression
+   ============================================================ */
+
+/**
+ * The writer's objects as a PDF 1.5 file: every object that is not a stream
+ * packed into compressed object streams, and a compressed cross-reference
+ * stream in place of the table. For a text-heavy file this is where most of
+ * the structure's bytes go: a classic table costs 20 bytes an object and
+ * every dictionary is stored as plain text.
+ */
+async function compactBuild(writer, rootRef, infoRef) {
+  const objs = writer.objects;
+  const size0 = objs.length;
+  const packable = [];
+  for (let i = 1; i < size0; i++) {
+    const v = objs[i];
+    if (v === undefined || v instanceof PDFStream) continue;
+    packable.push(i);
+  }
+  const where = new Map();          /* object number -> [stream number, index] */
+  const streams = [];
+  for (let k = 0; k < packable.length; k += 200) {
+    const group = packable.slice(k, k + 200);
+    const bodies = group.map((i) => writer.serialiseValue(objs[i]));
+    let head = '', off = 0;
+    group.forEach((num, j) => { head += num + ' ' + off + ' '; off += bodies[j].length + 1; });
+    const first = head.length;
+    const data = bytesOf(head + bodies.join('\n') + '\n');
+    const z = await deflate(data);
+    const num = writer.add(null);
+    streams.push({ num, dict: { Type: new Name('ObjStm'), N: group.length, First: first, Filter: new Name('FlateDecode') }, raw: z });
+    group.forEach((i, j) => where.set(i, [num, j]));
+  }
+  for (const st of streams) objs[st.num] = new PDFStream(st.dict, st.raw);
+
+  const chunks = [];
+  let len = 0;
+  const push = (x) => { const a = typeof x === 'string' ? bytesOf(x) : x; chunks.push(a); len += a.length; };
+  push('%PDF-1.7\n%\xE2\xE3\xCF\xD3\n');
+  const offsets = new Map();
+  for (let i = 1; i < objs.length; i++) {
+    const v = objs[i];
+    if (!(v instanceof PDFStream)) continue;
+    offsets.set(i, len);
+    const d = Object.assign(Object.create(null), v.dict);
+    d.Length = v.raw.length;
+    push(i + ' 0 obj\n' + writer.serialiseValue(d) + '\nstream\n');
+    push(v.raw);
+    push('\nendstream\nendobj\n');
+  }
+  const xrefNum = objs.length;
+  const size = xrefNum + 1;
+  const rows = new Uint8Array(size * 7);
+  for (let i = 0; i < size; i++) {
+    const r = i * 7;
+    if (i === 0) { rows[r] = 0; rows[r + 5] = 0xff; rows[r + 6] = 0xff; continue; }
+    if (offsets.has(i) || i === xrefNum) {
+      const off = i === xrefNum ? len : offsets.get(i);
+      rows[r] = 1; rows[r + 1] = (off >>> 24) & 255; rows[r + 2] = (off >>> 16) & 255; rows[r + 3] = (off >>> 8) & 255; rows[r + 4] = off & 255;
+    } else if (where.has(i)) {
+      const [sn, idx] = where.get(i);
+      rows[r] = 2; rows[r + 1] = (sn >>> 24) & 255; rows[r + 2] = (sn >>> 16) & 255; rows[r + 3] = (sn >>> 8) & 255; rows[r + 4] = sn & 255;
+      rows[r + 5] = (idx >>> 8) & 255; rows[r + 6] = idx & 255;
+    }
+  }
+  const z = await deflate(rows);
+  const xd = { Type: new Name('XRef'), Size: size, W: [1, 4, 2], Root: rootRef, Filter: new Name('FlateDecode'), Length: z.length };
+  if (infoRef) xd.Info = infoRef;
+  const xrefAt = len;
+  push(xrefNum + ' 0 obj\n' + writer.serialiseValue(xd) + '\nstream\n');
+  push(z);
+  push('\nendstream\nendobj\nstartxref\n' + xrefAt + '\n%%EOF\n');
+  const out = new Uint8Array(len);
+  let at = 0;
+  for (const c of chunks) { out.set(c, at); at += c.length; }
+  return out;
+}
+
+const mul = (a, b) => [
+  a[0] * b[0] + a[1] * b[2], a[0] * b[1] + a[1] * b[3],
+  a[2] * b[0] + a[3] * b[2], a[2] * b[1] + a[3] * b[3],
+  a[4] * b[0] + a[5] * b[2] + b[4], a[4] * b[1] + a[5] * b[3] + b[5]
+];
+
+async function streamBytes(doc, contents) {
+  const list = await doc.resolve(contents);
+  const parts = [];
+  for (const c of Array.isArray(list) ? list : [list]) {
+    const st = await doc.resolve(c);
+    if (st instanceof PDFStream) { try { parts.push(await doc.decodeStream(st)); } catch (e) { /* unreadable: skip */ } }
+  }
+  const len = parts.reduce((n, x) => n + x.length + 1, 0);
+  const out = new Uint8Array(len);
+  let at = 0;
+  for (const x of parts) { out.set(x, at); at += x.length; out[at++] = 10; }
+  return out;
+}
+
+/**
+ * How large each picture is drawn, in points, the largest use winning:
+ * the page content is walked for q, Q, cm and Do (into forms too), which is
+ * all the geometry a picture's size depends on.
+ */
+async function drawnSizes(doc, res, bytes, ctm, out, depth) {
+  if (depth > 8 || !bytes || !bytes.length) return;
+  const resources = await doc.resolve(res);
+  const xobjects = isDict(resources) ? await doc.resolve(resources.XObject) : null;
+  const lex = new Lexer(bytes, 0);
+  const stack = [];
+  let m = ctm, ops = [];
+  for (let guard = 0; guard < 5e6; guard++) {
+    let v;
+    try { v = lex.parse(0); } catch (e) { lex.p++; ops = []; continue; }
+    if (v === undefined) { if (lex.p >= bytes.length) break; ops = []; continue; }
+    if (!v || v.__keyword === undefined) { ops.push(v); continue; }
+    const op = v.__keyword;
+    if (op === 'q') stack.push(m);
+    else if (op === 'Q') m = stack.length ? stack.pop() : ctm;
+    else if (op === 'cm' && ops.length >= 6) m = mul(ops.slice(-6).map(Number), m);
+    else if (op === 'BI') {
+      /* an inline image: its data is binary, skip to EI */
+      const at = latin1(bytes, lex.p).search(/\sEI[\s]/);
+      lex.p = at < 0 ? bytes.length : lex.p + at + 4;
+    } else if (op === 'Do' && ops.length && xobjects && isDict(xobjects)) {
+      const nm = ops[ops.length - 1];
+      const ref = nm instanceof Name ? xobjects[nm.name] : null;
+      const x = await doc.resolve(ref);
+      if (x instanceof PDFStream) {
+        if (isName(x.dict.Subtype, 'Image') && ref instanceof Ref) {
+          const w = Math.hypot(m[0], m[1]), h = Math.hypot(m[2], m[3]);
+          const was = out.get(ref.num);
+          if (!was || w * h > was.w * was.h) out.set(ref.num, { w, h });
+        } else if (isName(x.dict.Subtype, 'Form')) {
+          const fm = await doc.resolve(x.dict.Matrix);
+          const fmat = Array.isArray(fm) && fm.length === 6 ? fm.map(Number) : [1, 0, 0, 1, 0, 0];
+          let fb = null;
+          try { fb = await doc.decodeStream(x); } catch (e) { fb = null; }
+          await drawnSizes(doc, x.dict.Resources !== undefined ? x.dict.Resources : res, fb, mul(fmat, m), out, depth + 1);
+        }
+      }
+    }
+    ops = [];
+  }
+}
+
+/** A picture, decoded to RGBA for a canvas, or null when it cannot be. */
+async function imageToBitmap(doc, stm) {
+  if (typeof createImageBitmap !== 'function') return null;
+  const d = stm.dict;
+  let filters = await doc.resolve(d.Filter);
+  if (filters && !Array.isArray(filters)) filters = [filters];
+  const names = (filters || []).map((f) => f && f.name);
+  if (names.length && /^(DCTDecode|DCT)$/.test(names[names.length - 1]) &&
+      names.slice(0, -1).every((n) => /^(FlateDecode|Fl|ASCII85Decode|A85|ASCIIHexDecode|AHx)$/.test(n))) {
+    /* a JPEG, possibly wrapped in ASCII85 or Flate (reportlab writes
+       [/ASCII85Decode /DCTDecode]): decodeStream undoes the wrappers and
+       stops at the JPEG */
+    const jpeg = names.length === 1 ? stm.raw : await doc.decodeStream(stm);
+    return createImageBitmap(new Blob([jpeg], { type: 'image/jpeg' }));
+  }
+  if (names.some((n) => !/^(FlateDecode|Fl|ASCII85Decode|A85|ASCIIHexDecode|AHx)$/.test(n))) return null;
+  const W = Number(await doc.resolve(d.Width)), H = Number(await doc.resolve(d.Height));
+  const comps = (await colourComponents(doc, d.ColorSpace));
+  if (!comps || comps === 4) return null;
+  const data = await doc.decodeStream(stm);
+  if (data.length < W * H * comps) return null;
+  const rgba = new Uint8ClampedArray(W * H * 4);
+  for (let i = 0, j = 0; i < W * H; i++, j += comps) {
+    const k = i * 4;
+    if (comps === 1) { rgba[k] = rgba[k + 1] = rgba[k + 2] = data[j]; }
+    else { rgba[k] = data[j]; rgba[k + 1] = data[j + 1]; rgba[k + 2] = data[j + 2]; }
+    rgba[k + 3] = 255;
+  }
+  return createImageBitmap(new ImageData(rgba, W, H));
+}
+async function colourComponents(doc, cs) {
+  const v = await doc.resolve(cs);
+  if (isName(v, 'DeviceRGB') || isName(v, 'CalRGB')) return 3;
+  if (isName(v, 'DeviceGray') || isName(v, 'CalGray')) return 1;
+  if (isName(v, 'DeviceCMYK')) return 4;
+  if (Array.isArray(v) && isName(v[0], 'ICCBased')) {
+    const st = await doc.resolve(v[1]);
+    const n = st instanceof PDFStream ? Number(await doc.resolve(st.dict.N)) : 0;
+    return n === 1 || n === 3 || n === 4 ? n : null;
+  }
+  if (Array.isArray(v) && (isName(v[0], 'CalRGB'))) return 3;
+  if (Array.isArray(v) && (isName(v[0], 'CalGray'))) return 1;
+  return null;
+}
+
+/**
+ * Make a PDF smaller: pictures drawn at more than the chosen resolution are
+ * scaled down and pictures re-encoded as JPEG at the chosen quality (only
+ * where that is actually smaller), uncompressed streams are deflated,
+ * identical streams and fonts are stored once, objects nothing uses are left
+ * out (assemble copies only what the pages reach), and the metadata is
+ * removed on request. Options: { dpi, quality (0.1–1), images: true,
+ * metadata: 'keep' | 'strip', greyscale: false }.
+ * Returns { bytes, report }.
+ */
+async function compressDocument(doc, options) {
+  const o = Object.assign({ dpi: 150, quality: 0.75, images: true, metadata: 'strip' }, options || {});
+  const pages = await doc.getPages();
+  const report = { images: 0, recoded: 0, downsampled: 0, kept: {}, imageBytesBefore: 0, imageBytesAfter: 0, deflated: 0, merged: 0 };
+  const keep = (why) => { report.kept[why] = (report.kept[why] || 0) + 1; };
+
+  /* 1. how big each picture is drawn */
+  const sizes = new Map();
+  for (let i = 0; i < pages.length; i++) {
+    progress(i, pages.length, 'Measuring the pictures on page ' + (i + 1));
+    const pg = pages[i];
+    const res = pg.dict.Resources !== undefined ? pg.dict.Resources : pg.inherited.Resources;
+    let bytes = null;
+    try { bytes = await streamBytes(doc, pg.dict.Contents); } catch (e) { bytes = null; }
+    try { await drawnSizes(doc, res, bytes, [1, 0, 0, 1, 0, 0], sizes, 0); } catch (e) { /* a page we cannot read keeps its pictures */ }
+  }
+
+  /* 2. pictures, re-encoded where it pays */
+  const replace = new Map();
+  const masks = new Set();
+  for (const v of doc.objects.values()) {
+    const d = v instanceof PDFStream ? v.dict : null;
+    if (d && d.SMask instanceof Ref) masks.add(d.SMask.num);
+    if (d && d.Mask instanceof Ref) masks.add(d.Mask.num);
+  }
+  const canEncode = typeof OffscreenCanvas === 'function' && typeof createImageBitmap === 'function';
+  const imgs = [...doc.objects].filter(([n, v]) => v instanceof PDFStream && isName(v.dict.Subtype, 'Image') && !masks.has(n));
+  let done = 0;
+  for (const [num, stm] of imgs) {
+    progress(done++, imgs.length, 'Pictures');
+    report.images++;
+    report.imageBytesBefore += stm.raw.length;
+    const d = stm.dict;
+    const fallback = () => { report.imageBytesAfter += stm.raw.length; };
+    if (!o.images) { keep('pictures left as they are'); fallback(); continue; }
+    if (!canEncode) { keep('this browser cannot re-encode pictures here'); fallback(); continue; }
+    if ((await doc.resolve(d.ImageMask)) === true) { keep('a stencil mask'); fallback(); continue; }
+    if (Number(await doc.resolve(d.BitsPerComponent)) !== 8) { keep('not 8 bits per sample'); fallback(); continue; }
+    if (d.Decode !== undefined || Array.isArray(await doc.resolve(d.Mask))) { keep('a colour key or decode array'); fallback(); continue; }
+    const comps = await colourComponents(doc, d.ColorSpace);
+    if (comps !== 1 && comps !== 3) { keep(comps === 4 ? 'CMYK' : 'an unusual colour space'); fallback(); continue; }
+    const W = Number(await doc.resolve(d.Width)), H = Number(await doc.resolve(d.Height));
+    if (!(W > 0 && H > 0)) { fallback(); continue; }
+    const drawn = sizes.get(num);
+    let scale = 1;
+    if (drawn && drawn.w > 0 && drawn.h > 0) {
+      const tw = drawn.w / 72 * o.dpi, th = drawn.h / 72 * o.dpi;
+      scale = Math.min(1, Math.max(tw / W, th / H));
+      if (scale > 0.87) scale = 1;            /* not worth a generation of loss */
+    }
+    if (scale === 1 && stm.raw.length < 24 * 1024) { keep('already small'); fallback(); continue; }
+    let bmp = null;
+    try { bmp = await imageToBitmap(doc, stm); } catch (e) { bmp = null; }
+    if (!bmp) { keep('a format the browser cannot decode (JPEG 2000, JBIG2, CCITT …)'); fallback(); continue; }
+    const w = Math.max(1, Math.round(W * scale)), h = Math.max(1, Math.round(H * scale));
+    const cv = new OffscreenCanvas(w, h);
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bmp, 0, 0, w, h);
+    bmp.close && bmp.close();
+    let blob;
+    try { blob = await cv.convertToBlob({ type: 'image/jpeg', quality: Math.max(0.1, Math.min(1, o.quality)) }); }
+    catch (e) { keep('could not be encoded'); fallback(); continue; }
+    const jpeg = new Uint8Array(await blob.arrayBuffer());
+    if (blob.type !== 'image/jpeg' || jpeg.length >= stm.raw.length * 0.95) { keep('re-encoding would not make it smaller'); fallback(); continue; }
+    const nd = Object.create(null);
+    for (const k of Object.keys(d)) if (!/^(Filter|DecodeParms|DP|Length|Width|Height|BitsPerComponent|ColorSpace|Intent)$/.test(k)) nd[k] = d[k];
+    nd.Width = w; nd.Height = h; nd.BitsPerComponent = 8;
+    nd.ColorSpace = new Name('DeviceRGB');
+    nd.Filter = new Name('DCTDecode');
+    replace.set(num, new PDFStream(nd, jpeg));
+    report.recoded++;
+    if (scale < 1) report.downsampled++;
+    report.imageBytesAfter += jpeg.length;
+  }
+
+  /* 3. write it again, deflating and folding duplicates on the way out */
+  const finish = async (writer) => {
+    const fnv = (b) => { let h = 2166136261; for (let i = 0; i < b.length; i++) { h ^= b[i]; h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
+    const all = writer.objects;
+    let k = 0;
+    for (let i = 1; i < all.length; i++) {
+      const v = all[i];
+      if (!(v instanceof PDFStream) || v.dict.Filter !== undefined || v.raw.length < 64) continue;
+      if (isName(v.dict.Type, 'Metadata') || isName(v.dict.Type, 'XRef')) continue;
+      if (++k % 50 === 0) progress(i, all.length, 'Compressing streams');
+      const z = await deflate(v.raw);
+      if (z.length < v.raw.length) {
+        const dd = Object.assign(Object.create(null), v.dict);
+        dd.Filter = new Name('FlateDecode');
+        all[i] = new PDFStream(dd, z);
+        report.deflated++;
+      }
+    }
+    /* identical streams, and identical fonts, descriptors and graphics states */
+    const FOLD = new Set(['Font', 'FontDescriptor', 'ExtGState']);
+    for (let pass = 0; pass < 3; pass++) {
+      const seen = new Map(), alias = new Map();
+      for (let i = 1; i < all.length; i++) {
+        const v = all[i];
+        let key = null;
+        if (v instanceof PDFStream) key = 's' + writer.serialiseValue(v.dict) + '|' + v.raw.length + '|' + fnv(v.raw);
+        else if (isDict(v) && v.Type instanceof Name && FOLD.has(v.Type.name)) key = 'd' + writer.serialiseValue(v);
+        if (!key) continue;
+        const first = seen.get(key);
+        if (first === undefined) { seen.set(key, i); continue; }
+        if (v instanceof PDFStream) {
+          const a = all[first].raw, b = v.raw;
+          let same = a.length === b.length;
+          for (let j = 0; same && j < a.length; j++) if (a[j] !== b[j]) same = false;
+          if (!same) continue;
+        }
+        alias.set(i, first);
+      }
+      if (!alias.size) break;
+      const swap = (x) => {
+        if (x instanceof Ref) return alias.has(x.num) ? new Ref(alias.get(x.num), 0) : x;
+        if (Array.isArray(x)) { for (let j = 0; j < x.length; j++) x[j] = swap(x[j]); return x; }
+        if (x instanceof PDFStream) { swap(x.dict); return x; }
+        if (isDict(x)) { for (const key of Object.keys(x)) x[key] = swap(x[key]); return x; }
+        return x;
+      };
+      for (let i = 1; i < all.length; i++) if (all[i] !== undefined && !alias.has(i)) swap(all[i]);
+      for (const i of alias.keys()) { all[i] = undefined; report.merged++; }
+    }
+  };
+
+  const items = pages.map((pg, i) => ({ doc, pageIndex: i }));
+  const strip = o.metadata === 'strip';
+  const bytes = await assemble(items, Object.assign({ replace: new Map([[doc, replace]]), finish, compact: o.compact !== false },
+    strip ? { info: {}, xmp: false } : {}));
+  report.before = doc.bytes.length;
+  report.after = bytes.length;
+  return { bytes, report };
+}
+
+/* ============================================================
+   Flattening: form answers and comments drawn into the page
+   ============================================================ */
+
+/** The field dictionary a widget's value lives in (itself, or a parent). */
+async function fieldValue(doc, a) {
+  let f = a, guard = 0;
+  while (f && guard++ < 10) {
+    const v = await doc.resolve(f.V);
+    const ft = await doc.resolve(f.FT);
+    if (v !== undefined || ft !== undefined) return { v, ft: ft && ft.name, ff: Number(await doc.resolve(f.Ff)) || 0, da: await doc.resolve(f.DA), q: Number(await doc.resolve(f.Q)) || 0, field: f };
+    f = await doc.resolve(f.Parent);
+  }
+  return { v: undefined, ft: undefined };
+}
+
+/**
+ * Draw every form field's answer and every comment into the page content
+ * as it appears now, and remove the live objects, so nothing can be changed
+ * or lost and every printer and viewer shows the same. Links stay links.
+ * options: { forms: true, comments: true }.
+ */
+async function flattenDocument(doc, options) {
+  const o = Object.assign({ forms: true, comments: true }, options || {});
+  const pages = await doc.getPages();
+  const stats = { fields: 0, comments: 0, generated: 0, hidden: 0, links: 0 };
+  const items = [];
+  const fmt = (v) => String(Number(Number(v).toFixed(4)));
+  for (let i = 0; i < pages.length; i++) {
+    progress(i, pages.length, 'Flattening page ' + (i + 1));
+    const pg = pages[i];
+    const arr = await doc.resolve(pg.dict.Annots);
+    const drop = new Set();
+    const xobjects = {};
+    let ops = '';
+    let k = 0;
+    for (const r of Array.isArray(arr) ? arr : []) {
+      const a = await doc.resolve(r);
+      if (!isDict(a)) continue;
+      const sub = (await doc.resolve(a.Subtype)) || {};
+      const name = sub.name || '';
+      if (name === 'Link') { stats.links++; continue; }
+      const widget = name === 'Widget';
+      if (widget ? !o.forms : !o.comments) continue;
+      if (!(r instanceof Ref)) continue;
+      drop.add(r.num);
+      if (name === 'Popup') continue;
+      const flags = Number(await doc.resolve(a.F)) || 0;
+      if (flags & (2 | 32)) { stats.hidden++; continue; }          /* Hidden, NoView: not drawn now, not drawn after */
+      const rect = (await doc.resolve(a.Rect)) || [0, 0, 0, 0];
+      const R = [Math.min(rect[0], rect[2]), Math.min(rect[1], rect[3]), Math.max(rect[0], rect[2]), Math.max(rect[1], rect[3])].map(Number);
+      if (!(R[2] > R[0] && R[3] > R[1])) continue;
+      const ap = await doc.resolve(a.AP);
+      let nRef = isDict(ap) ? ap.N : undefined;
+      let n = await doc.resolve(nRef);
+      if (isDict(n) && !(n instanceof PDFStream)) {
+        const as = await doc.resolve(a.AS);
+        const key = as instanceof Name ? as.name : null;
+        nRef = key ? n[key] : undefined;
+        n = await doc.resolve(nRef);
+      }
+      if (n instanceof PDFStream) {
+        const bb = (await doc.resolve(n.dict.BBox)) || [0, 0, 1, 1];
+        const mm = await doc.resolve(n.dict.Matrix);
+        const M = Array.isArray(mm) && mm.length === 6 ? mm.map(Number) : [1, 0, 0, 1, 0, 0];
+        const pts = [[bb[0], bb[1]], [bb[2], bb[1]], [bb[0], bb[3]], [bb[2], bb[3]]].map(([x, y]) => [M[0] * x + M[2] * y + M[4], M[1] * x + M[3] * y + M[5]]);
+        const bx0 = Math.min(...pts.map((q) => q[0])), bx1 = Math.max(...pts.map((q) => q[0]));
+        const by0 = Math.min(...pts.map((q) => q[1])), by1 = Math.max(...pts.map((q) => q[1]));
+        const sx = (bx1 - bx0) ? (R[2] - R[0]) / (bx1 - bx0) : 1, sy = (by1 - by0) ? (R[3] - R[1]) / (by1 - by0) : 1;
+        const key = 'MVRflat' + (k++);
+        xobjects[key] = nRef;
+        ops += 'q ' + [sx, 0, 0, sy, R[0] - bx0 * sx, R[1] - by0 * sy].map(fmt).join(' ') + ' cm /' + key + ' Do Q\n';
+      } else if (widget) {
+        /* no appearance (a form saved with NeedAppearances): the answer is
+           drawn plainly in Helvetica, so it is not lost */
+        const fv = await fieldValue(doc, a);
+        let text = null;
+        if (fv.v && fv.v.__string !== undefined) text = decodePdfString(fv.v.__string);
+        else if (fv.v instanceof Name && fv.v.name !== 'Off') text = fv.ft === 'Btn' ? 'X' : fv.v.name;
+        else if (Array.isArray(fv.v)) text = fv.v.map((x) => x && x.__string ? decodePdfString(x.__string) : '').join(', ');
+        if (text) {
+          const m = /([\d.]+)\s+Tf/.exec(fv.da && fv.da.__string ? latin1(fv.da.__string) : '');
+          let size = m ? Number(m[1]) : 0;
+          const h = R[3] - R[1];
+          if (!size) size = Math.max(6, Math.min(12, h * 0.7));
+          const w = textWidth(text, 'Helvetica', size);
+          const x = fv.q === 1 ? R[0] + (R[2] - R[0] - w) / 2 : fv.q === 2 ? R[2] - 2 - w : R[0] + 2;
+          const y = R[1] + Math.max(1, (h - size) / 2 + size * 0.22);
+          ops += 'q BT 0 g /MVRflatF ' + fmt(size) + ' Tf ' + fmt(x) + ' ' + fmt(y) + ' Td (' + contentEscape(text) + ') Tj ET Q\n';
+          stats.generated++;
+        }
+      }
+      if (widget) stats.fields++; else stats.comments++;
+    }
+    items.push({ doc, pageIndex: i, dropAnnots: drop, overlay: ops ? { content: ops, fontKey: 'MVRflatF', fontName: 'Helvetica', xobjects, upright: false } : undefined });
+  }
+  const bytes = await assemble(items, { noForm: !!o.forms });
+  return { bytes, stats };
 }
 
 /** Parse "1-3, 5, 8-" style page selections into zero-based indices. */
@@ -1509,6 +2280,169 @@ function parsePageRange(spec, total) {
   if (!out.length) throw new Error('That selection matches no pages in this document.');
   return out;
 }
+
+/* ============================================================
+   Unicode text: Noto Sans subsets, shaped where the script needs it
+
+   Text that WinAnsi can hold is still drawn in the base-14 fonts, which
+   embed nothing. Anything else (Polish, Greek, Cyrillic, the rupee sign,
+   Hindi) is drawn with a subset of a vendored Noto font, embedded as a
+   CIDFontType2 with a ToUnicode map so it can be searched and copied.
+   Devanagari is shaped by HarfBuzz (engine/pdf-shaper.js), loaded the first
+   time a run needs it; the fonts are fetched from engine/vendor/fonts/ the
+   same way, and kept for the rest of the session.
+   ============================================================ */
+
+const UNI = { base: null, loader: null, fonts: new Map(), shaper: null, shaperLoader: null };
+/** Where engine/ is (the worker and the shell set it). */
+function setFontBase(url) { UNI.base = url; }
+/** fn(relativePath) -> Promise<Uint8Array>, for Node and the tests. */
+function setFontLoader(fn, shaperLoader) { UNI.loader = fn; if (shaperLoader) UNI.shaperLoader = shaperLoader; }
+
+async function engineFile(rel) {
+  if (UNI.loader) return UNI.loader(rel);
+  const base = UNI.base || (typeof self !== 'undefined' && self.location ? new URL('./', self.location.href).href : '');
+  const r = await fetch(base + rel);
+  if (!r.ok) throw new Error('The font ' + rel.split('/').pop() + ' could not be loaded (HTTP ' + r.status + ').');
+  return new Uint8Array(await r.arrayBuffer());
+}
+async function fontFile(name) {
+  if (!UNI.fonts.has(name)) {
+    UNI.fonts.set(name, (async () => {
+      const bytes = await engineFile('vendor/fonts/' + name);
+      const font = PFONT.parse(bytes);
+      return { font, bytes };
+    })());
+  }
+  return UNI.fonts.get(name);
+}
+async function shaper() {
+  if (UNI.shaper) return UNI.shaper;
+  let S = null;
+  if (UNI.shaperLoader) S = await UNI.shaperLoader();
+  if (!S) { try { if (typeof MVRShaper !== 'undefined') S = MVRShaper; } catch (e) { /* none */ } }
+  if (!S && typeof importScripts === 'function' && UNI.base) { importScripts(UNI.base + 'pdf-shaper.js'); S = self.MVRShaper; }
+  if (!S) throw new Error('The text shaper for this script could not be loaded.');
+  UNI.shaper = await S.load(UNI.base || undefined);
+  return UNI.shaper;
+}
+
+/**
+ * The fonts one output document draws Unicode text with. Prepare every
+ * string first (async: fonts and the shaper load on demand), then draw with
+ * show(), which is synchronous; finish(writer) embeds each font used, once,
+ * as a subset of exactly the glyphs drawn.
+ */
+class TextFonts {
+  /* force: every string in a Noto font, not only those WinAnsi cannot hold,
+     so a document that needs one non-Latin line reads as one typeface */
+  constructor(options) { this.cache = new Map(); this.used = new Map(); this.force = !!(options && options.force); }
+  wants(text) { const t = String(text == null ? '' : text); return this.force ? !!PFONT && t.trim() !== '' : TextFonts.needs(t); }
+  static needs(text) { return !!PFONT && PFONT.needsUnicode(String(text == null ? '' : text)); }
+  key(text, bold) { return (bold ? 'B' : 'R') + '\u0000' + text; }
+  has(text, bold) { return this.cache.has(this.key(String(text), !!bold)); }
+  async prepare(text, bold) {
+    text = String(text == null ? '' : text);
+    if (!this.wants(text)) return null;
+    const k = this.key(text, !!bold);
+    if (this.cache.has(k)) return this.cache.get(k);
+    const file = PFONT.pickFont(text, !!bold);
+    const { font, bytes } = await fontFile(file);
+    let glyphs;
+    if (PFONT.scriptOf(text) === 'latin') glyphs = PFONT.shapeSimple(font, text);
+    else {
+      const sh = await shaper();
+      glyphs = PFONT.fromShaper(font, text, sh.shape(bytes, text, {}));
+    }
+    const rec = { file, font, glyphs, em: glyphs.reduce((sum, g) => sum + (g.adv || 0), 0) / font.unitsPerEm };
+    /* characters neither Noto font has (Chinese, Arabic, emoji …) draw as
+       empty boxes; they are collected so the tool can say so */
+    for (const ch of text) {
+      const cp = ch.codePointAt(0);
+      if (cp > 0x20 && !/\p{Mn}|\p{Cf}|\s/u.test(ch) && font.glyphForCodePoint(cp) === 0) (this.missingChars = this.missingChars || new Set()).add(ch);
+    }
+    this.cache.set(k, rec);
+    return rec;
+  }
+  /** characters drawn as empty boxes, for a warning */
+  missing() { return this.missingChars ? [...this.missingChars] : []; }
+  async prepareAll(texts, bold) { for (const t of texts) await this.prepare(t, bold); return this; }
+  /** points, after prepare() (base-14 metrics for text that needs no font) */
+  widthSync(text, size, bold, base14) {
+    const r = this.cache.get(this.key(String(text), !!bold));
+    return r ? r.em * size : textWidth(text, base14 || (bold ? 'Helvetica-Bold' : 'Helvetica'), size);
+  }
+  async width(text, size, bold, base14) { await this.prepare(text, bold); return this.widthSync(text, size, bold, base14); }
+  /** "/MVRuN size Tf" and the glyphs, inside BT … ET at the current point */
+  show(text, size, bold) {
+    const r = this.cache.get(this.key(String(text), !!bold));
+    if (!r) throw new Error('Text was drawn before it was prepared.');
+    let u = this.used.get(r.file);
+    if (!u) { u = { font: r.font, registry: PFONT.createRegistry(r.font), key: 'MVRu' + this.used.size, refs: new Map() }; this.used.set(r.file, u); }
+    return { key: u.key, ops: '/' + u.key + ' ' + n(size) + ' Tf\n' + PFONT.showGlyphs(u.registry, r.glyphs, size) };
+  }
+  /** the Ref a page's /Font entry names, allocated now and filled by finish() */
+  refFor(writer, key) {
+    for (const u of this.used.values()) {
+      if (u.key !== key) continue;
+      if (!u.refs.has(writer)) u.refs.set(writer, new Ref(writer.alloc(), 0));
+      return u.refs.get(writer);
+    }
+    throw new Error('Unknown font ' + key);
+  }
+  /** { MVRu0: (writer) => Ref, … } for an assemble overlay */
+  overlayFonts() {
+    const out = {};
+    for (const u of this.used.values()) out[u.key] = (writer) => this.refFor(writer, u.key);
+    return out;
+  }
+  finish(writer) {
+    for (const u of this.used.values()) {
+      const ref = u.refs.get(writer);
+      if (!ref) continue;
+      PFONT.embedType0(writer, { Name, Ref, PDFStream }, { font: u.font, registry: u.registry, ref });
+    }
+  }
+  /** pdfcore's wrapText, measured with the right font for each line */
+  async wrap(text, size, bold, maxWidth, base14) {
+    /* each word is measured once and a line is the sum of its words and
+       spaces: shaping never joins across a space, and measuring every
+       growing line would cost the square of a paragraph's length */
+    const lines = [];
+    const words = new Map();
+    const wordWidth = async (w) => {
+      if (!words.has(w)) words.set(w, await this.width(w, size, bold, base14));
+      return words.get(w);
+    };
+    const space = await wordWidth(' ');
+    for (const para of String(text).split('\n')) {
+      if (!para.trim()) { lines.push(''); continue; }
+      let line = '', lw = 0;
+      for (const word of para.split(/\s+/)) {
+        const ww = await wordWidth(word);
+        if (line && lw + space + ww > maxWidth) { lines.push(line); line = word; lw = ww; }
+        else { line = line ? line + ' ' + word : word; lw = line === word ? ww : lw + space + ww; }
+      }
+      if (line) lines.push(line);
+    }
+    for (const l of lines) await this.prepare(l, bold);
+    return lines;
+  }
+}
+
+/** A text helper for specs: textRun(...) -> new TextFonts() */
+function textRun() { return new TextFonts(); }
+
+/** createPDF, with every op's text prepared first so any script can be drawn. */
+async function createDocument(pages, opts) {
+  const tf = (opts && opts.text) || new TextFonts();
+  for (const pg of pages) for (const op of pg.ops || []) {
+    if (op.text !== undefined && tf.wants(op.text)) await tf.prepare(op.text, /Bold/.test(op.font || ''));
+  }
+  return createPDF(pages, Object.assign({}, opts || {}, { text: tf.used.size || tf.cache.size ? tf : null }));
+}
+
+const unicodeFonts = { setFontBase, setFontLoader, TextFonts, needs: (t) => TextFonts.needs(t) };
 
 /* ============================================================
    Base-14 text: widths, wrapping, page building
@@ -1636,6 +2570,8 @@ function createPDF(pages, opts) {
   for (const page of pages) {
     const [W, H] = page.size || PAGE_SIZES[o.pageSize || 'a4'];
     const used = new Set();
+    const usedImages = Object.create(null);
+    const usedUnicode = Object.create(null);
     let cs = '';
 
     for (const op of page.ops || []) {
@@ -1646,6 +2582,24 @@ function createPDF(pages, opts) {
       } else if (op.line) {
         const [x1, y1, x2, y2] = op.line;
         cs += `${rgb(op.stroke || '#000000')} RG\n${n(op.lineWidth || 1)} w\n${n(x1)} ${n(y1)} m ${n(x2)} ${n(y2)} l S\n`;
+      } else if (op.image) {
+        const key = 'Im' + imageRef(writer, op.image).num;
+        usedImages[key] = imageRef(writer, op.image);
+        const w = op.w, h = op.h !== undefined ? op.h : op.w * op.image.height / op.image.width;
+        cs += `q\n${n(w)} 0 0 ${n(h)} ${n(op.x)} ${n(op.y)} cm\n/${key} Do\nQ\n`;
+      } else if (op.raw !== undefined) {
+        cs += op.raw + '\n';
+      } else if (op.text !== undefined && o.text && o.text.has(op.text, /Bold/.test(op.font || ''))) {
+        /* text outside WinAnsi: a Noto subset, shaped where the script needs it */
+        const size = op.size || 11;
+        const bold = /Bold/.test(op.font || '');
+        const w = o.text.widthSync(op.text, size, bold);
+        let x = op.x || 0;
+        if (op.align === 'center') x = op.x - w / 2;
+        else if (op.align === 'right') x = op.x - w;
+        const shown = o.text.show(op.text, size, bold);
+        usedUnicode[shown.key] = true;
+        cs += `BT\n${rgb(op.colour || '#000000')} rg\n${n(x)} ${n(op.y)} Td\n${shown.ops}\nET\n`;
       } else if (op.text !== undefined) {
         const fk = fontKeyFor(op.font || 'Helvetica');
         used.add(fk);
@@ -1662,7 +2616,15 @@ function createPDF(pages, opts) {
     const res = Object.create(null);
     const fdict = Object.create(null);
     used.forEach(k => { fdict[k.replace(/[^A-Za-z0-9]/g, '')] = fontRefs[k]; });
+    for (const key of page.unicodeKeys || []) usedUnicode[key] = true;
+    for (const key of Object.keys(usedUnicode)) fdict[key] = o.text.refFor(writer, key);
     if (Object.keys(fdict).length) res.Font = fdict;
+    if (Object.keys(usedImages).length) res.XObject = usedImages;
+    if (page.gs) {
+      const gs = Object.create(null);
+      for (const [k, v] of Object.entries(page.gs)) gs[k] = { Type: new Name('ExtGState'), ca: v, CA: v };
+      res.ExtGState = gs;
+    }
 
     const contentNum = writer.add(new PDFStream(Object.create(null), bytesOf(cs)));
     const pageNum = writer.alloc();
@@ -1675,6 +2637,7 @@ function createPDF(pages, opts) {
 
   writer.set(pagesNum, { Type: new Name('Pages'), Kids: kids, Count: kids.length });
   writer.set(catalogNum, { Type: new Name('Catalog'), Pages: new Ref(pagesNum, 0) });
+  if (o.text) o.text.finish(writer);
 
   let infoRef = null;
   if (o.info) {
@@ -1700,6 +2663,8 @@ if (typeof module !== 'undefined' && module.exports) {
     assemble, parsePageRange, copyObject, pageFrame,
     createPDF, textWidth, wrapText, contentEscape, PAGE_SIZES, FONTS,
     pdfString, decodePdfString, inflate, applyPredictor, ascii85Decode,
-    latin1, bytesOf, isDict, isName, isRef
+    latin1, bytesOf, isDict, isName, isRef,
+    deflate, setProgress, setPreview, protectDocument, prepareImage, imageRef,
+    compressDocument, unicodeFonts, textRun, createDocument, TextFonts, flattenDocument
   };
 }

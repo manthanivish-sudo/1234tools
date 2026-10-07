@@ -1,136 +1,63 @@
 (function(){
-/* ---------- UK tax tables ----------
-   England, Wales and Northern Ireland only — Scotland operates its own
-   income tax bands and is handled separately in the tool.
-   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
-   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
-   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
-   every £2 of adjusted net income over £100,000; on taxable income (after
-   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
-   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
-   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
-   Employment Allowance £10,500. Same figures in both years. */
-const UK_TAX = {
-  '2026/27': {
-    personalAllowance: 12570,
-    taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate on taxable income (after PA) above `from`
-      { from: 0,      rate: 0.20 },
-      { from: 37700,  rate: 0.40 },
-      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
-    ],
-    ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
-    employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
-  },
-  '2025/26': {
-    personalAllowance: 12570,
-    taperStart: 100000,
-    bands: [
-      { from: 0,      rate: 0.20 },
-      { from: 37700,  rate: 0.40 },
-      { from: 125140, rate: 0.45 }
-    ],
-    ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
-    employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
-  }
+/* Body mass index, with what the NHS and NICE add to the bare number.
+
+   Adults (18 and over): BMI = kg ÷ m². Bands: below 18.5, 18.5 to 24.9,
+   25 to 29.9, 30 and over; for people of South Asian, Chinese, other Asian,
+   Middle Eastern, Black African or African-Caribbean family background the
+   overweight and obesity thresholds are 23 and 27.5 (NICE guideline NG246,
+   2025, which carries over PH46, 2013; the same figures on nhs.uk, "BMI
+   calculator"). Healthy weight for a height is 18.5 × m² to the upper
+   threshold × m². BMI prime is BMI ÷ 25. Waist-to-height ratio (NICE NG246
+   1.2.21): below 0.5 no increased risk, 0.5 to 0.59 increased, 0.6 or more
+   high.
+
+   Children (2 to 17): BMI against the CDC 2000 BMI-for-age reference, the
+   L, M and S values of bmiagerev.csv (CDC National Center for Health
+   Statistics, https://www.cdc.gov/growthcharts/, a US Government work in the
+   public domain), by sex and age in months at the half month, the CDC
+   convention; between published ages they are interpolated. z = ((BMI ÷ M)^L
+   − 1) ÷ (L × S), centile = Φ(z). Bands, CDC: below the 5th centile
+   underweight, 5th to below 85th healthy, 85th to below 95th overweight, 95th
+   and over obesity. The NHS uses the UK90 charts (Child Growth Foundation),
+   which are not openly licensed, so they are not built in; the page says
+   which reference it uses. */
+const CDC_LMS = {
+  male: "24,-2.011181,16.57503,0.08059247;24.5,-1.982374,16.54777,0.08012743;25.5,-1.9241,16.49443,0.07923399;26.5,-1.865498,16.4426,0.07838936;27.5,-1.807262,16.39224,0.0775935;28.5,-1.750119,16.34334,0.07684646;29.5,-1.694816,16.29584,0.07614831;30.5,-1.642107,16.24972,0.07549913;31.5,-1.592744,16.20495,0.07489899;32.5,-1.547442,16.1615,0.074348;33.5,-1.506903,16.11933,0.07384614;34.5,-1.47177,16.07843,0.07339337;35.5,-1.442629,16.03876,0.07298955;36.5,-1.419991,16.0003,0.07263443;37.5,-1.404278,15.96304,0.07232765;38.5,-1.395863,15.92695,0.07206864;39.5,-1.394935,15.89203,0.0718568;40.5,-1.401672,15.85824,0.07169128;41.5,-1.4161,15.82559,0.07157109;42.5,-1.438165,15.79406,0.07149511;43.5,-1.467669,15.76364,0.07146211;44.5,-1.504376,15.73434,0.07147065;45.5,-1.547943,15.70614,0.07151922;46.5,-1.597896,15.67904,0.07160628;47.5,-1.653732,15.65305,0.07173017;48.5,-1.714869,15.62817,0.07188921;49.5,-1.780673,15.60441,0.07208174;50.5,-1.850468,15.58176,0.07230608;51.5,-1.923552,15.56025,0.07256064;52.5,-1.99922,15.53987,0.07284384;53.5,-2.076707,15.52065,0.07315432;54.5,-2.155348,15.50258,0.07349067;55.5,-2.234439,15.48569,0.07385167;56.5,-2.313322,15.46998,0.07423623;57.5,-2.391381,15.45546,0.07464337;58.5,-2.468032,15.44214,0.07507226;59.5,-2.542782,15.43003,0.0755221;60.5,-2.615166,15.41914,0.07599225;61.5,-2.68479,15.40947,0.07648213;62.5,-2.751317,15.40103,0.07699123;63.5,-2.814459,15.39382,0.07751915;64.5,-2.874025,15.38783,0.07806539;65.5,-2.92984,15.38307,0.07862959;66.5,-2.981797,15.37953,0.07921137;67.5,-3.029831,15.37721,0.07981033;68.5,-3.073924,15.37609,0.08042609;69.5,-3.114093,15.37618,0.08105821;70.5,-3.15039,15.37745,0.08170625;71.5,-3.182893,15.37991,0.08236974;72.5,-3.211705,15.38353,0.08304818;73.5,-3.236948,15.38831,0.08374102;74.5,-3.25876,15.39423,0.0844477;75.5,-3.277282,15.40127,0.08516765;76.5,-3.292684,15.40943,0.08590018;77.5,-3.305124,15.41869,0.08664467;78.5,-3.314769,15.42902,0.08740042;79.5,-3.321786,15.44042,0.08816674;80.5,-3.326346,15.45288,0.0889429;81.5,-3.328603,15.46636,0.0897282;82.5,-3.328725,15.48087,0.09052188;83.5,-3.32687,15.49637,0.09132316;84.5,-3.323189,15.51287,0.0921313;85.5,-3.317827,15.53034,0.09294554;86.5,-3.310924,15.54876,0.09376512;87.5,-3.302612,15.56812,0.09458927;88.5,-3.293018,15.58841,0.09541725;89.5,-3.282261,15.60961,0.0962483;90.5,-3.270455,15.63171,0.09708169;91.5,-3.257704,15.65469,0.0979167;92.5,-3.244108,15.67853,0.09875259;93.5,-3.229762,15.70323,0.09958868;94.5,-3.214751,15.72877,0.1004243;95.5,-3.199158,15.75513,0.1012586;96.5,-3.183058,15.78231,0.1020912;97.5,-3.166521,15.81029,0.1029212;98.5,-3.14961,15.83905,0.1037482;99.5,-3.13239,15.86858,0.1045714;100.5,-3.114911,15.89888,0.1053903;101.5,-3.097226,15.92992,0.1062043;102.5,-3.079383,15.96169,0.1070128;103.5,-3.061424,15.99419,0.1078153;104.5,-3.043386,16.02741,0.1086114;105.5,-3.02531,16.06132,0.1094004;106.5,-3.007226,16.09591,0.1101819;107.5,-2.989165,16.13119,0.1109555;108.5,-2.971148,16.16712,0.1117207;109.5,-2.953208,16.20371,0.1124771;110.5,-2.935364,16.24094,0.1132242;111.5,-2.917635,16.2788,0.1139617;112.5,-2.90004,16.31728,0.1146893;113.5,-2.882594,16.35637,0.1154065;114.5,-2.865311,16.39606,0.1161131;115.5,-2.848205,16.43633,0.1168087;116.5,-2.831285,16.47718,0.117493;117.5,-2.814562,16.5186,0.1181658;118.5,-2.798043,16.56057,0.1188268;119.5,-2.781737,16.60309,0.1194758;120.5,-2.765648,16.64614,0.1201125;121.5,-2.749782,16.68972,0.1207367;122.5,-2.734142,16.73381,0.1213482;123.5,-2.718733,16.7784,0.1219468;124.5,-2.703556,16.8235,0.1225325;125.5,-2.688612,16.86907,0.123105;126.5,-2.673903,16.91512,0.1236642;127.5,-2.659429,16.96164,0.12421;128.5,-2.645191,17.00862,0.1247422;129.5,-2.631186,17.05604,0.1252609;130.5,-2.617414,17.1039,0.1257659;131.5,-2.603872,17.15218,0.1262571;132.5,-2.59056,17.20089,0.1267346;133.5,-2.577474,17.25,0.1271983;134.5,-2.564612,17.29951,0.1276481;135.5,-2.55197,17.34942,0.128084;136.5,-2.53954,17.3997,0.1285062;137.5,-2.527326,17.45036,0.1289145;138.5,-2.51532,17.50138,0.129309;139.5,-2.503519,17.55276,0.1296897;140.5,-2.491919,17.60448,0.1300568;141.5,-2.480514,17.65653,0.1304101;142.5,-2.4693,17.70892,0.1307499;143.5,-2.458273,17.76162,0.1310762;144.5,-2.447426,17.81463,0.131389;145.5,-2.436756,17.86795,0.1316886;146.5,-2.426256,17.92155,0.1319749;147.5,-2.415922,17.97544,0.1322481;148.5,-2.405748,18.02961,0.1325084;149.5,-2.395728,18.08404,0.1327558;150.5,-2.385858,18.13873,0.1329906;151.5,-2.376131,18.19367,0.1332128;152.5,-2.366543,18.24884,0.1334226;153.5,-2.357087,18.30426,0.1336202;154.5,-2.347758,18.35989,0.1338058;155.5,-2.33855,18.41574,0.1339795;156.5,-2.329457,18.4718,0.1341415;157.5,-2.320475,18.52805,0.134292;158.5,-2.311596,18.5845,0.1344313;159.5,-2.302817,18.64113,0.1345594;160.5,-2.294131,18.69793,0.1346767;161.5,-2.285533,18.75489,0.1347834;162.5,-2.277017,18.81202,0.1348796;163.5,-2.268579,18.86929,0.1349656;164.5,-2.260212,18.9267,0.1350417;165.5,-2.251912,18.98424,0.135108;166.5,-2.243673,19.04191,0.1351649;167.5,-2.235492,19.0997,0.1352125;168.5,-2.227362,19.15759,0.1352511;169.5,-2.21928,19.21558,0.135281;170.5,-2.21124,19.27366,0.1353024;171.5,-2.203239,19.33182,0.1353156;172.5,-2.195272,19.39006,0.1353208;173.5,-2.187336,19.44837,0.1353184;174.5,-2.179426,19.50673,0.1353086;175.5,-2.171539,19.56514,0.1352917;176.5,-2.163672,19.6236,0.1352679;177.5,-2.155821,19.68208,0.1352376;178.5,-2.147985,19.7406,0.135201;179.5,-2.14016,19.79912,0.1351584;180.5,-2.132345,19.85766,0.1351102;181.5,-2.124537,19.9162,0.1350565;182.5,-2.116736,19.97473,0.1349978;183.5,-2.108939,20.03324,0.1349343;184.5,-2.101147,20.09172,0.1348663;185.5,-2.093359,20.15017,0.1347941;186.5,-2.085574,20.20858,0.1347181;187.5,-2.077795,20.26694,0.1346385;188.5,-2.070021,20.32524,0.1345557;189.5,-2.062253,20.38346,0.1344699;190.5,-2.054495,20.44162,0.1343816;191.5,-2.046748,20.49968,0.1342909;192.5,-2.039015,20.55765,0.1341983;193.5,-2.0313,20.61551,0.1341041;194.5,-2.023607,20.67326,0.1340086;195.5,-2.015942,20.73089,0.1339121;196.5,-2.008306,20.78839,0.133815;197.5,-2.000706,20.84574,0.1337176;198.5,-1.99315,20.90294,0.1336202;199.5,-1.985644,20.95999,0.1335232;200.5,-1.978195,21.01686,0.133427;201.5,-1.97081,21.07356,0.1333319;202.5,-1.9635,21.13007,0.1332382;203.5,-1.956271,21.18638,0.1331464;204.5,-1.949135,21.24248,0.1330567;205.5,-1.9421,21.29836,0.1329695;206.5,-1.935177,21.35402,0.1328853;207.5,-1.928377,21.40944,0.1328043;208.5,-1.921712,21.46461,0.132727;209.5,-1.915193,21.51952,0.1326537;210.5,-1.908831,21.57417,0.1325848;211.5,-1.902639,21.62854,0.1325207;212.5,-1.89663,21.68262,0.1324618;213.5,-1.890816,21.7364,0.1324086;214.5,-1.88521,21.78988,0.1323613;215.5,-1.879824,21.84304,0.1323204;216.5,-1.87467,21.89587,0.1322864;217.5,-1.86976,21.94836,0.1322596;218.5,-1.865113,22.00051,0.1322404;219.5,-1.860735,22.05229,0.1322293;220.5,-1.856634,22.10371,0.1322268;221.5,-1.852827,22.15476,0.1322332;222.5,-1.849323,22.20541,0.132249;223.5,-1.846132,22.25567,0.1322746;224.5,-1.843261,22.30553,0.1323105;225.5,-1.84072,22.35497,0.1323572;226.5,-1.838515,22.40399,0.1324151;227.5,-1.836656,22.45257,0.1324846;228.5,-1.835138,22.50072,0.1325664;229.5,-1.833972,22.54841,0.1326607;230.5,-1.833158,22.59565,0.1327682;231.5,-1.832696,22.64243,0.1328892;232.5,-1.832584,22.68873,0.1330244;233.5,-1.832821,22.73456,0.1331741;234.5,-1.833401,22.7799,0.133339;235.5,-1.834317,22.82474,0.1335195;236.5,-1.835558,22.86909,0.1337162;237.5,-1.837119,22.91293,0.1339295;238.5,-1.838987,22.95626,0.1341601;239.5,-1.841146,22.99908,0.1344084;240,-1.84233,23.02029,0.1345394;240.5,-1.843581,23.04138,0.134675",
+  female: "24,-0.9866085,16.4234,0.08545179;24.5,-1.024497,16.38804,0.08502584;25.5,-1.102698,16.31897,0.08421405;26.5,-1.183966,16.25208,0.08345512;27.5,-1.268071,16.18735,0.08274828;28.5,-1.354752,16.12475,0.08209274;29.5,-1.44369,16.06429,0.08148772;30.5,-1.534542,16.00593,0.08093245;31.5,-1.626928,15.94967,0.08042618;32.5,-1.720435,15.89548,0.07996818;33.5,-1.814635,15.84336,0.07955774;34.5,-1.909076,15.79329,0.07919419;35.5,-2.003296,15.74526,0.0788769;36.5,-2.096829,15.69924,0.07860525;37.5,-2.189212,15.65523,0.0783787;38.5,-2.279992,15.61321,0.07819667;39.5,-2.368733,15.57317,0.07805867;40.5,-2.455021,15.53508,0.07796417;41.5,-2.538472,15.49893,0.07791268;42.5,-2.618733,15.4647,0.07790372;43.5,-2.695489,15.43238,0.07793676;44.5,-2.768465,15.40193,0.07801131;45.5,-2.837427,15.37335,0.07812682;46.5,-2.902178,15.34661,0.07828274;47.5,-2.96258,15.32168,0.07847845;48.5,-3.018522,15.29855,0.07871333;49.5,-3.069937,15.27719,0.07898669;50.5,-3.116796,15.25757,0.07929784;51.5,-3.159107,15.23967,0.07964601;52.5,-3.196911,15.22347,0.08003039;53.5,-3.230277,15.20894,0.08045015;54.5,-3.2593,15.19606,0.08090439;55.5,-3.2841,15.1848,0.0813922;56.5,-3.304814,15.17513,0.08191262;57.5,-3.321597,15.16703,0.08246466;58.5,-3.334616,15.16047,0.08304729;59.5,-3.344048,15.15543,0.08365948;60.5,-3.350078,15.15188,0.08430014;61.5,-3.352894,15.1498,0.0849682;62.5,-3.352691,15.14917,0.08566254;63.5,-3.349664,15.14995,0.08638203;64.5,-3.343999,15.15213,0.08712559;65.5,-3.33589,15.15567,0.08789205;66.5,-3.325522,15.16056,0.08868026;67.5,-3.313078,15.16678,0.08948911;68.5,-3.298733,15.17429,0.09031743;69.5,-3.282654,15.18309,0.09116412;70.5,-3.265004,15.19313,0.09202803;71.5,-3.245938,15.20441,0.09290805;72.5,-3.225607,15.2169,0.09380303;73.5,-3.204146,15.23058,0.09471192;74.5,-3.18169,15.24543,0.0956336;75.5,-3.158363,15.26142,0.09656699;76.5,-3.134283,15.27854,0.09751105;77.5,-3.109558,15.29676,0.09846471;78.5,-3.084291,15.31607,0.09942695;79.5,-3.058577,15.33644,0.1003968;80.5,-3.032505,15.35785,0.1013732;81.5,-3.006158,15.38029,0.1023552;82.5,-2.979609,15.40374,0.1033418;83.5,-2.952931,15.42817,0.1043321;84.5,-2.926187,15.45357,0.1053253;85.5,-2.899435,15.47991,0.1063203;86.5,-2.872731,15.50718,0.1073164;87.5,-2.846124,15.53537,0.1083127;88.5,-2.819658,15.56444,0.1093084;89.5,-2.793374,15.59439,0.1103026;90.5,-2.76731,15.6252,0.1112945;91.5,-2.741499,15.65684,0.1122835;92.5,-2.715971,15.6893,0.1132688;93.5,-2.690753,15.72257,0.1142496;94.5,-2.66587,15.75662,0.1152253;95.5,-2.641343,15.79143,0.1161952;96.5,-2.617192,15.827,0.1171587;97.5,-2.593431,15.86329,0.1181151;98.5,-2.570076,15.9003,0.1190638;99.5,-2.547141,15.93802,0.1200043;100.5,-2.524635,15.97641,0.120936;101.5,-2.50257,16.01546,0.1218584;102.5,-2.480952,16.05517,0.1227709;103.5,-2.459786,16.09551,0.1236731;104.5,-2.43908,16.13646,0.1245645;105.5,-2.418838,16.17801,0.1254446;106.5,-2.399064,16.22014,0.1263131;107.5,-2.379757,16.26284,0.1271695;108.5,-2.360921,16.30609,0.1280135;109.5,-2.342558,16.34988,0.1288446;110.5,-2.324663,16.39418,0.1296626;111.5,-2.307241,16.43899,0.1304671;112.5,-2.290288,16.48428,0.1312579;113.5,-2.273804,16.53005,0.1320345;114.5,-2.257782,16.57627,0.1327968;115.5,-2.242228,16.62293,0.1335445;116.5,-2.227133,16.67002,0.1342774;117.5,-2.212496,16.71751,0.1349953;118.5,-2.198313,16.7654,0.135698;119.5,-2.184581,16.81368,0.1363853;120.5,-2.171296,16.86231,0.137057;121.5,-2.158454,16.9113,0.137713;122.5,-2.146052,16.96062,0.1383533;123.5,-2.134084,17.01026,0.1389775;124.5,-2.122548,17.06021,0.1395858;125.5,-2.111437,17.11045,0.1401779;126.5,-2.100749,17.16097,0.1407539;127.5,-2.090479,17.21174,0.1413137;128.5,-2.080621,17.26277,0.1418572;129.5,-2.071173,17.31403,0.1423844;130.5,-2.062129,17.36551,0.1428953;131.5,-2.053484,17.41719,0.14339;132.5,-2.045235,17.46907,0.1438683;133.5,-2.037377,17.52112,0.1443305;134.5,-2.029907,17.57333,0.1447764;135.5,-2.022818,17.6257,0.1452061;136.5,-2.016107,17.6782,0.1456198;137.5,-2.00977,17.73082,0.1460175;138.5,-2.003802,17.78356,0.1463992;139.5,-1.9982,17.83638,0.1467652;140.5,-1.992958,17.88929,0.1471154;141.5,-1.988074,17.94227,0.14745;142.5,-1.983542,17.99531,0.1477691;143.5,-1.979359,18.04838,0.1480729;144.5,-1.975521,18.10149,0.1483615;145.5,-1.972024,18.15461,0.1486351;146.5,-1.968864,18.20774,0.1488938;147.5,-1.966038,18.26085,0.1491378;148.5,-1.963541,18.31395,0.1493673;149.5,-1.961369,18.36701,0.1495824;150.5,-1.95952,18.42002,0.1497835;151.5,-1.957989,18.47298,0.1499706;152.5,-1.956772,18.52586,0.150144;153.5,-1.955867,18.57866,0.1503039;154.5,-1.955268,18.63136,0.1504506;155.5,-1.954973,18.68396,0.1505843;156.5,-1.954978,18.73643,0.1507051;157.5,-1.955279,18.78878,0.1508135;158.5,-1.955873,18.84098,0.1509095;159.5,-1.956756,18.89302,0.1509936;160.5,-1.957923,18.9449,0.1510659;161.5,-1.959373,18.9966,0.1511267;162.5,-1.9611,19.04811,0.1511764;163.5,-1.9631,19.09942,0.1512151;164.5,-1.965371,19.15052,0.1512432;165.5,-1.967908,19.20139,0.151261;166.5,-1.970707,19.25204,0.1512689;167.5,-1.973763,19.30243,0.151267;168.5,-1.977074,19.35257,0.1512557;169.5,-1.980633,19.40245,0.1512354;170.5,-1.984438,19.45204,0.1512063;171.5,-1.988483,19.50136,0.1511689;172.5,-1.992764,19.55037,0.1511234;173.5,-1.997276,19.59907,0.1510702;174.5,-2.002014,19.64746,0.1510096;175.5,-2.006973,19.69552,0.150942;176.5,-2.012148,19.74325,0.1508678;177.5,-2.017533,19.79062,0.1507872;178.5,-2.023123,19.83764,0.1507008;179.5,-2.028912,19.88429,0.1506088;180.5,-2.034893,19.93057,0.1505116;181.5,-2.041061,19.97646,0.1504097;182.5,-2.047409,20.02195,0.1503034;183.5,-2.053929,20.06704,0.1501932;184.5,-2.060617,20.11172,0.1500793;185.5,-2.067462,20.15598,0.1499623;186.5,-2.07446,20.19981,0.1498425;187.5,-2.0816,20.2432,0.1497204;188.5,-2.088876,20.28614,0.1495964;189.5,-2.096278,20.32862,0.149471;190.5,-2.103799,20.37064,0.1493444;191.5,-2.111428,20.41219,0.1492173;192.5,-2.119157,20.45326,0.1490901;193.5,-2.126975,20.49383,0.1489631;194.5,-2.134873,20.53392,0.1488369;195.5,-2.14284,20.57349,0.148712;196.5,-2.150865,20.61256,0.1485888;197.5,-2.158937,20.65111,0.1484677;198.5,-2.167045,20.68912,0.1483493;199.5,-2.175177,20.72661,0.1482341;200.5,-2.183317,20.76355,0.1481226;201.5,-2.191458,20.79994,0.1480152;202.5,-2.199584,20.83578,0.1479126;203.5,-2.207682,20.87105,0.1478151;204.5,-2.215738,20.90576,0.1477233;205.5,-2.22374,20.93988,0.1476378;206.5,-2.231668,20.97343,0.1475591;207.5,-2.239512,21.00638,0.1474877;208.5,-2.247257,21.03874,0.1474242;209.5,-2.254885,21.07049,0.1473692;210.5,-2.262382,21.10163,0.1473231;211.5,-2.269732,21.13216,0.1472867;212.5,-2.276917,21.16206,0.1472604;213.5,-2.283925,21.19134,0.1472448;214.5,-2.290731,21.21997,0.1472407;215.5,-2.297324,21.24797,0.1472485;216.5,-2.303688,21.27532,0.1472688;217.5,-2.3098,21.30202,0.1473023;218.5,-2.315652,21.32805,0.1473495;219.5,-2.321217,21.35343,0.1474112;220.5,-2.326482,21.37812,0.147488;221.5,-2.331428,21.40215,0.1475805;222.5,-2.336038,21.42548,0.1476893;223.5,-2.340295,21.44813,0.1478152;224.5,-2.344182,21.47008,0.1479587;225.5,-2.34768,21.49134,0.1481206;226.5,-2.350773,21.51188,0.1483016;227.5,-2.353445,21.53171,0.1485024;228.5,-2.355678,21.55082,0.1487235;229.5,-2.357456,21.56921,0.1489659;230.5,-2.358764,21.58686,0.1492301;231.5,-2.359585,21.60378,0.149517;232.5,-2.359906,21.61996,0.1498272;233.5,-2.35971,21.63539,0.1501615;234.5,-2.35898,21.65006,0.1505207;235.5,-2.357715,21.66397,0.1509054;236.5,-2.355892,21.67712,0.1513165;237.5,-2.353501,21.68949,0.1517548;238.5,-2.350529,21.70108,0.1522211;239.5,-2.346962,21.71189,0.1527162;240,-2.344958,21.717,0.1529747;240.5,-2.342797,21.72191,0.1532409"
 };
 
-
-/* currency formatter used inside schedule tables */
-function fmtC(v) {
-  if (!isFinite(v)) return '—';
-  return v.toLocaleString('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 2 });
-}
-
-
-/* ---------- Income tax, verified against the Income Tax Department position
-   for AY 2027-28. Budget 2026 announced no change to slabs, so FY 2026-27
-   carries forward the Budget 2025 reset. ---------- */
-const IN_TAX = {
-  '2026-27': {
-    label: 'FY 2026-27 (AY 2027-28)',
-    new: {
-      slabs: [
-        { upto: 400000,  rate: 0 },
-        { upto: 800000,  rate: 0.05 },
-        { upto: 1200000, rate: 0.10 },
-        { upto: 1600000, rate: 0.15 },
-        { upto: 2000000, rate: 0.20 },
-        { upto: 2400000, rate: 0.25 },
-        { upto: Infinity, rate: 0.30 }
-      ],
-      standardDeduction: 75000,
-      rebateLimit: 1200000,
-      rebateMax: 60000,
-      surcharge: [[5000000, 0], [10000000, 0.10], [20000000, 0.15], [Infinity, 0.25]]
-    },
-    old: {
-      slabs: [
-        { upto: 250000,  rate: 0 },
-        { upto: 500000,  rate: 0.05 },
-        { upto: 1000000, rate: 0.20 },
-        { upto: Infinity, rate: 0.30 }
-      ],
-      seniorExemption: 300000,
-      superSeniorExemption: 500000,
-      standardDeduction: 50000,
-      rebateLimit: 500000,
-      rebateMax: 12500,
-      surcharge: [[5000000, 0], [10000000, 0.10], [20000000, 0.15], [50000000, 0.25], [Infinity, 0.37]]
-    },
-    cess: 0.04
+/* LMS row for an age in months, linearly between the published rows */
+const LMS_ROWS = {};
+function lmsAt(sex, months) {
+  if (!LMS_ROWS[sex]) LMS_ROWS[sex] = CDC_LMS[sex].split(';').map((r) => r.split(',').map(Number));
+  const rows = LMS_ROWS[sex];
+  if (months < rows[0][0] || months > rows[rows.length - 1][0]) return null;
+  for (let k = 1; k < rows.length; k++) {
+    if (months <= rows[k][0]) {
+      const a = rows[k - 1], b = rows[k], f = (months - a[0]) / (b[0] - a[0]);
+      return [a[1] + f * (b[1] - a[1]), a[2] + f * (b[2] - a[2]), a[3] + f * (b[3] - a[3])];
+    }
   }
+  return rows[0].slice(1);
+}
+/* the normal distribution: Φ(z) from erf (Abramowitz & Stegun 7.1.26,
+   error below 1.5 × 10⁻⁷), and z from a centile by bisection */
+function phi(z) {
+  const t = 1 / (1 + 0.3275911 * Math.abs(z) / Math.SQRT2);
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z / 2);
+  return z >= 0 ? (1 + y) / 2 : (1 - y) / 2;
+}
+function zOf(p) { let lo = -8, hi = 8; for (let i = 0; i < 80; i++) { const m = (lo + hi) / 2; if (phi(m) < p) lo = m; else hi = m; } return (lo + hi) / 2; }
+const zFromLms = (x, L, M, S) => (L === 0 ? Math.log(x / M) / S : (Math.pow(x / M, L) - 1) / (L * S));
+const xFromLms = (z, L, M, S) => (L === 0 ? M * Math.exp(S * z) : M * Math.pow(1 + L * S * z, 1 / L));
+const ord = (n) => { const k = Math.round(n); const s = (k % 100 >= 11 && k % 100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' })[k % 10] || 'th'; return k + s; };
+/* a weight in kg as kilograms and as stones and pounds */
+const kgText = (kg) => {
+  const lb = kg / 0.45359237;
+  let st = Math.floor(lb / 14), rest = Math.round(lb - st * 14);
+  if (rest === 14) { st += 1; rest = 0; }
+  return kg.toFixed(1) + ' kg (' + st + ' st ' + rest + ' lb)';
 };
-IN_TAX['2025-26'] = Object.assign({}, IN_TAX['2026-27'], { label: 'FY 2025-26 (AY 2026-27)' });
-
-/* GST 2.0 — effective 22 September 2025. The 12% and 28% slabs were removed. */
-const GST_SLABS = [
-  { value: 0,    label: '0% — nil rated (essentials)' },
-  { value: 0.25, label: '0.25% — rough diamonds' },
-  { value: 3,    label: '3% — gold, silver, jewellery' },
-  { value: 5,    label: '5% — everyday & essential goods' },
-  { value: 18,   label: '18% — standard rate (most goods & services)' },
-  { value: 40,   label: '40% — luxury & sin goods' }
-];
-
-const fmtR = (v) => isFinite(v)
-  ? v.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
-  : '—';
-
-/* Progressive slab tax on an amount. */
-function slabTax(amount, slabs) {
-  let tax = 0, lower = 0;
-  for (const s of slabs) {
-    if (amount <= lower) break;
-    tax += (Math.min(amount, s.upto) - lower) * s.rate;
-    lower = s.upto;
-  }
-  return tax;
-}
-
-function surchargeRate(income, table) {
-  for (const [upto, rate] of table) if (income <= upto) return rate;
-  return table[table.length - 1][1];
-}
-
-
-function countWeekdays(a, b) {
-  const MS = 86400000;
-  const start = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
-  const end = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
-  const days = Math.max(0, Math.round((end - start) / MS));
-
-  const whole = Math.floor(days / 7);
-  let count = whole * 5;
-
-  let dow = new Date(start).getUTCDay();
-  for (let i = 0; i < days % 7; i++) {
-    if (dow !== 0 && dow !== 6) count++;
-    dow = (dow + 1) % 7;
-  }
-  return count;
-}
-
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["bmi"] = {
@@ -140,22 +67,73 @@ window.TOOLS["bmi"] = {
 "description": "Calculate Body Mass Index from height and weight, in metric or imperial units.",
 "keywords": ["BMI calculator","body mass index","BMI chart"],
 "formula": "BMI = weight(kg) / height(m)²",
-"inputs": [{"key":"system","label":"Unit System","type":"select","options":[{"value":"metric","label":"Metric (kg, cm)"},{"value":"imperial","label":"Imperial (lb, in)"}],"default":"metric"},{"key":"weight","label":"Weight","type":"number","default":70,"min":0},{"key":"height","label":"Height","type":"number","default":175,"min":0}],
-"compute": ({ system, weight, height }) => {
+"inputs": [{"key":"weight","label":"Weight","type":"weight","default":70,"min":0},{"key":"height","label":"Height","type":"height","default":175,"min":0},{"key":"age","label":"Age","type":"number","unit":"years","default":30,"min":2,"max":120,"hint":"Under 18, BMI is read against centiles for age and sex: give a child’s age with a decimal, such as 10.5 for ten and a half."},{"key":"sex","label":"Sex","type":"select","options":[{"value":"male","label":"Male"},{"value":"female","label":"Female"}],"default":"male"},{"key":"background","label":"Family background","type":"select","options":[{"value":"general","label":"White, or any background not listed below"},{"value":"asian","label":"South Asian, Chinese, other Asian, Middle Eastern, Black African or African-Caribbean"}],"default":"general"},{"key":"waist","label":"Waist (optional)","type":"length","default":null,"optional":true,"min":0}],
+"linkUpgrade": (p) => {
+      /* links from before the units became part of each field carried
+         ?system=imperial with pounds and inches */
+      if (p.system === 'imperial') {
+        if (p.weight !== undefined && p.weight !== '') p.weight = String(Number(p.weight) * 0.45359237);
+        if (p.height !== undefined && p.height !== '') p.height = String(Number(p.height) * 2.54);
+      }
+      delete p.system;
+      return p;
+    },
+"compute": ({ system, weight, height, age, sex, background, waist }) => {
       let kg = Number(weight), m;
       if (system === 'imperial') { kg = weight * 0.45359237; m = height * 0.0254; }
       else { m = height / 100; }
       if (!m) return {};
       const bmi = kg / (m * m);
-      const category =
-        bmi < 18.5 ? 'Below the healthy range' :
-        bmi < 25   ? 'Within the healthy range' :
-        bmi < 30   ? 'Above the healthy range' :
-                     'Well above the healthy range';
-      return { bmi, category };
+      const a = age === undefined || age === null ? 30 : Number(age);
+      const asian = background === 'asian';
+      const out = { bmi };
+      const band = (lo, hi) => kgText(lo * m * m) + ' to ' + kgText(hi * m * m);
+      if (a >= 18) {
+        const over = asian ? 23 : 25, obese = asian ? 27.5 : 30;
+        out.category =
+          bmi < 18.5 ? 'Below the healthy range' :
+          bmi < over ? 'Within the healthy range' :
+          bmi < obese ? 'Above the healthy range' :
+                        'Well above the healthy range';
+        out.healthyRange = band(18.5, over) ;
+        out.prime = bmi / 25;
+        out._chart = { type: 'scale', title: 'Where ' + bmi.toFixed(1) + ' sits' + (asian ? ' (thresholds for your background)' : ''), min: 12, max: 42, value: bmi, valueLabel: 'BMI ' + bmi.toFixed(1),
+          bands: [{ to: 18.5, name: 'Below 18.5', c: 2 }, { to: over, name: '18.5 to ' + (over - 0.1).toFixed(1), c: 4 }, { to: obese, name: over + ' to ' + (obese === 30 ? '29.9' : '27.4'), c: 3 }, { to: 42, name: obese + ' and over', c: 1 }] };
+      } else {
+        const months = Math.floor(a * 12) + 0.5;
+        const lms = lmsAt(sex === 'female' ? 'female' : 'male', months);
+        if (!lms) return { bmi, category: 'Outside the age range', note: 'Centiles for BMI start at 2 years.' };
+        const z = zFromLms(bmi, lms[0], lms[1], lms[2]);
+        const c = phi(z) * 100;
+        out.centile = c < 0.1 ? 'below the 0.1st centile' : c > 99.9 ? 'above the 99.9th centile' : 'the ' + ord(c) + ' centile';
+        out.category =
+          c < 5 ? 'Below the healthy range for age' :
+          c < 85 ? 'Within the healthy range for age' :
+          c < 95 ? 'Above the healthy range for age' :
+                   'Well above the healthy range for age';
+        const b5 = xFromLms(zOf(0.05), lms[0], lms[1], lms[2]), b85 = xFromLms(zOf(0.85), lms[0], lms[1], lms[2]);
+        out.healthyRange = band(b5, b85);
+        out.note = 'For ' + (sex === 'female' ? 'girls' : 'boys') + ' aged ' + a + ': BMI ' + bmi.toFixed(1) + ' is ' + out.centile + ' on the CDC 2000 BMI-for-age reference. Healthy is the 5th to below the 85th centile; the NHS uses the UK90 charts, whose cut-offs differ a little, so ask a GP or school nurse.';
+        out._chart = { type: 'scale', title: 'Centile for age', min: 0, max: 100, value: c, valueLabel: ord(c) + ' centile', unit: 'centile',
+          bands: [{ to: 5, name: 'Below the 5th', c: 2 }, { to: 85, name: '5th to 85th', c: 4 }, { to: 95, name: '85th to 95th', c: 3 }, { to: 100, name: '95th and over', c: 1 }] };
+      }
+      const w = Number(waist);
+      if (waist !== null && waist !== undefined && waist !== '' && w > 0) {
+        out.whtr = w / (m * 100);
+        out.whtrNote = out.whtr < 0.4 ? 'Below 0.4: ask a GP whether your weight is too low' : out.whtr < 0.5 ? 'Below 0.5: no increased health risk' : out.whtr < 0.6 ? '0.5 to 0.59: increased health risk' : '0.6 or more: high health risk';
+      }
+      return out;
     },
-"outputs": [{"key":"bmi","label":"Body Mass Index","format":"number","primary":true},{"key":"category","label":"Standard Category","format":"text"}],
-"tips": ["BMI is a population-level screening measure, not a diagnosis or a measure of health.","It does not distinguish muscle from fat, so it misclassifies athletes and very muscular people.","It is also less applicable to children, pregnant people, and older adults, and its thresholds vary across ethnic groups.","Treat any result as a prompt for a conversation with a clinician rather than a conclusion in itself."],
-"faq": [{"q":"Is BMI a reliable measure of health?","a":"On its own, no. It is a cheap and quick population-level indicator. Waist circumference, body composition, blood markers, fitness, and clinical history all say considerably more about an individual’s health than BMI does."}]
+"outputs": [{"key":"bmi","label":"Body Mass Index","format":"number","primary":true},{"key":"category","label":"Standard Category","format":"text"},{"key":"centile","label":"Centile for age and sex","format":"text"},{"key":"healthyRange","label":"Healthy weight for your height","format":"text"},{"key":"prime","label":"BMI prime (BMI ÷ 25)","format":"number"},{"key":"whtr","label":"Waist-to-height ratio","format":"number"},{"key":"whtrNote","label":"What the waist ratio means","format":"text"},{"key":"note","label":"","format":"text"}],
+"filled": (v, r, f) => {
+      const kg = Number(v.weight), m = Number(v.height) / 100;
+      if (!m || r.bmi === undefined) return [];
+      const L = ['BMI = ' + f.upto(kg, 2) + ' kg ÷ (' + f.upto(m, 4) + ' m)² = ' + f.upto(kg, 2) + ' ÷ ' + f.upto(m * m, 4) + ' = ' + f.num(r.bmi, 1)];
+      if (r.prime !== undefined) L.push('BMI prime = ' + f.num(r.bmi, 1) + ' ÷ 25 = ' + f.num(r.prime, 2));
+      if (r.whtr !== undefined) L.push('waist-to-height = ' + f.upto(Number(v.waist), 1) + ' cm ÷ ' + f.upto(m * 100, 1) + ' cm = ' + f.num(r.whtr, 2));
+      return L;
+    },
+"tips": ["BMI is a population-level screening measure, not a diagnosis or a measure of health.","It does not distinguish muscle from fat, so it misclassifies athletes and very muscular people.","For people of South Asian, Chinese, other Asian, Middle Eastern, Black African or African-Caribbean background the NHS and NICE use lower thresholds: overweight from 23 and obesity from 27.5. Choose that background to apply them.","Under 18, a BMI is read against centiles for age and sex. This calculator uses the CDC 2000 BMI-for-age reference; the NHS uses the UK90 charts, so a GP’s answer can differ a little near a cut-off.","A waist measurement more than half your height means increased health risk whatever the BMI, which is why the waist-to-height ratio is shown when you give one.","Weight and height can be entered in kilograms or stones and pounds, and in centimetres or feet and inches; the units preference in Settings sets which opens first.","The healthy weight for your height is shown as 18.5 × height² up to 25 × height² (23 for the backgrounds above), in kilograms and in stones and pounds.","Treat any result as a prompt for a conversation with a clinician rather than a conclusion in itself."],
+"faq": [{"q":"Is BMI a reliable measure of health?","a":"On its own, no. It is a cheap and quick population-level indicator. Waist circumference, body composition, blood markers, fitness, and clinical history all say considerably more about an individual’s health than BMI does."},{"q":"Which growth reference does it use for children?","a":"The US Centers for Disease Control and Prevention’s 2000 BMI-for-age charts, from 2 to 18 years, by sex. They are used here because the CDC publishes them in the public domain. The NHS uses the UK90 charts; near the cut-offs the two can differ by a centile or two."}]
 };
 })();

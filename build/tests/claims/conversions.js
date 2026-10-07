@@ -1341,7 +1341,7 @@ module.exports = function ({ claim, manual, kit: K }) {
         return all([is(s[0] === b && s[1] === a, 'now ' + s.join(' → ')), is(near(valIn(shown, U[a].sym), R(fam, 3, b, a)), '3 ' + U[b].sym + ' = ' + shown)]);
       } finally { await p.close(); }
     });
-    claim(url, 'tip', 'The full table below the result shows the same value in every ' + E().UNITS[fam].label.toLowerCase() + ' unit at once.', 'Chrome: every other unit, each right', BR, async () => {
+    claim(url, 'tip', 'Under the result, the same value is listed in every ' + E().UNITS[fam].label.toLowerCase() + ' unit at once', 'Chrome: every other unit, each right', BR, async () => {
       const p = await open();
       try {
         await setVal(p, '#u-value', '3');

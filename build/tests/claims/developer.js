@@ -207,14 +207,39 @@ module.exports = function ({ claim, manual, kit: K }) {
   claim(CJ, 'tip', 'Going JSON → CSV, the column set is the union of every object\'s keys, so rows with missing fields still line up.', 'union of keys', N, async () => {
     const r = out(K.tx(csv(), JSON.stringify([{ a: 1 }, { b: 2 }]), { dir: 'j2c' })); return [r === 'a,b\n1,\n,2', K.j(r)];
   });
-  claim(CJ, 'faq', 'CSV has no types, so every value becomes a string when converting to JSON.', '1 and true stay strings', N, async () => {
+  claim(CJ, 'faq', 'Only with Infer types on. CSV has no types, so by default every value stays a string.', '1 and true stay strings by default', N, async () => {
     const j = JSON.parse(out(K.tx(csv(), 'n,b\n1,true'))); return [j[0].n === '1' && j[0].b === 'true', K.j(j)];
   });
+  claim(CJ, 'faq', 'Infer types turns numbers written as JSON writes them into numbers, true and false into booleans and null into null; 007, 1,000, +5 and whole numbers past 9007199254740991 stay text, so no digit is lost. Empty cells stay empty strings.',
+    'each case, written out by hand', N, async () => {
+      const cells = ['12', '-3.5', '1e3', 'TRUE', 'false', 'null', '007', '"1,000"', '+5', '9007199254740993', '9007199254740991'];
+      const j = JSON.parse(out(K.tx(csv(), 'v\n' + cells.join('\n') + '\n', { types: 'on' })));
+      const got = j.map((o) => o.v);
+      // a blank line is skipped as a row, so the empty cell is checked beside a filled one
+      const e = JSON.parse(out(K.tx(csv(), 'a,b\n1,', { types: 'on' })))[0].b;
+      const want = [12, -3.5, 1000, true, false, null, '007', '1,000', '+5', '9007199254740993', 9007199254740991];
+      return [JSON.stringify(got) === JSON.stringify(want) && e === '', K.j(got) + ' empty=' + K.j(e)];
+    });
   claim(CJ, 'point', 'Quotes are tracked, so a quoted comma or line break stays in its field and "" becomes one quote.', 'quoted comma, newline and ""', N, async () => {
     const j = JSON.parse(out(K.tx(csv(), 'a,b\n"x,y","l1\nl2 ""q"""'))); return [j[0].a === 'x,y' && j[0].b === 'l1\nl2 "q"', K.j(j)];
   });
-  claim(CJ, 'point', 'The first row is the header; every value stays a string, and short rows are padded with empty strings.', 'short row padded', N, async () => {
-    const j = JSON.parse(out(K.tx(csv(), 'a,b,c\n1'))); return [j[0].b === '' && j[0].c === '', K.j(j)];
+  claim(CJ, 'point', 'The first row is the header unless set otherwise; values stay strings unless Infer types is on, and short rows are padded with empty strings.', 'short row padded; header No', N, async () => {
+    const j = JSON.parse(out(K.tx(csv(), 'a,b,c\n1'))); const h = JSON.parse(out(K.tx(csv(), 'a,b\n1,2', { header: 'no' })));
+    return [j[0].b === '' && j[0].c === '' && K.j(h) === '[{"column1":"a","column2":"b"},{"column1":"1","column2":"2"}]', K.j(j) + ' | ' + K.j(h)];
+  });
+  claim(CJ, 'point', 'JSON to CSV uses the union of every object\'s keys as columns, nested objects as dotted names', 'a.b.c', N, async () => {
+    const r = out(K.tx(csv(), JSON.stringify([{ a: { b: { c: 1 } }, d: 2 }]), { dir: 'j2c' })); return [r === 'a.b.c,d\n1,2', K.j(r)];
+  });
+  claim(CJ, 'tip', 'Detect, the default, counts commas, semicolons, tabs and pipes outside quotes in the first 20 lines and names its choice in the Delimiter row', 'four files, one per delimiter, each with a quoted comma', N, async () => {
+    const files = { Comma: 'a,b\n"x,y",2', Semicolon: 'a;b\n"x,y";2', Tab: 'a\tb\n"x,y"\t2', Pipe: 'a|b\n"x,y"|2' };
+    const seen = Object.keys(files).map((k) => { const r = K.tx(csv(), files[k]); const j = JSON.parse(r.output); return k + ':' + (K.stat(r, 'Delimiter') === k + ' (detected)' && j[0].a === 'x,y' && j[0].b === '2'); });
+    return [seen.every((x) => /true$/.test(x)), seen.join(' ')];
+  });
+  claim(CJ, 'tip', 'Nested objects become dotted columns such as addr.city, and arrays are written as JSON text.', 'nested object and array', N, async () => {
+    const r = out(K.tx(csv(), JSON.stringify([{ addr: { city: 'York' }, tags: ['a', 'b'] }]), { dir: 'j2c' })); return [r === 'addr.city,tags\nYork,"[""a"",""b""]"', K.j(r)];
+  });
+  claim(CJ, 'tip', 'Nest a.b into objects turns dotted columns back into nested objects, and a cell holding JSON such as ["a","b"] back into an array.', 'the CSV above, back', N, async () => {
+    const j = JSON.parse(out(K.tx(csv(), 'addr.city,tags\nYork,"[""a"",""b""]"', { nest: 'nest' }))); return [K.j(j) === '[{"addr":{"city":"York"},"tags":["a","b"]}]', K.j(j)];
   });
   claim(CJ, 'dfaq', 'The extra fields are dropped, because only header columns become keys.', 'a long row loses its extras', N, async () => {
     const j = JSON.parse(out(K.tx(csv(), 'a\n1,2,3'))); return [K.j(j) === '[{"a":"1"}]', K.j(j)];
@@ -223,8 +248,10 @@ module.exports = function ({ claim, manual, kit: K }) {
     const r = K.tx(csv(), 'a,b\n1,2'); const flat = JSON.stringify(JSON.parse(r.output));
     return [/^\[\n  \{\n    "a"/.test(r.output) && K.stat(r, 'Output') === Buffer.byteLength(flat) + ' B', K.stat(r, 'Output') + ' vs ' + Buffer.byteLength(flat) + ' B unindented, ' + Buffer.byteLength(r.output) + ' B as shown'];
   });
-  claim(CJ, 'mistake', 'Arrays become comma-joined text and objects become the literal [object Object]', 'nested JSON to CSV', N, async () => {
-    const r = out(K.tx(csv(), JSON.stringify([{ a: [1, 2], b: { c: 1 } }]), { dir: 'j2c' })); return [r === 'a,b\n"1,2",[object Object]', K.j(r)];
+  claim(CJ, 'mistake', 'An addr object becomes an addr.city column and returns flat, "addr.city": "York", unless Dotted headers is Nest a.b into objects.', 'there and back, flat and nested', N, async () => {
+    const c = out(K.tx(csv(), JSON.stringify([{ addr: { city: 'York' } }]), { dir: 'j2c' }));
+    const flat = JSON.parse(out(K.tx(csv(), c))), nest = JSON.parse(out(K.tx(csv(), c, { nest: 'nest' })));
+    return [c === 'addr.city\nYork' && K.j(flat) === '[{"addr.city":"York"}]' && K.j(nest) === '[{"addr":{"city":"York"}}]', K.j([c, flat, nest])];
   });
   claim(CJ, 'dfaq', 'they become JSON keys exactly as written, such as "Unit price"', 'a header with a space', N, async () => {
     const j = JSON.parse(out(K.tx(csv(), 'Unit price\n5'))); return [j[0]['Unit price'] === '5', K.j(j)];
@@ -639,10 +666,11 @@ module.exports = function ({ claim, manual, kit: K }) {
     const a = robots({ policy: 'block', aibots: 'allow', sitemap: 'https://shop.example/sitemap.xml' }).output, b = robots({ policy: 'block', aibots: 'block', disallow: '/admin/' }).output;
     return [a === 'User-agent: *\nDisallow: /\n' && b === a, K.j(a) + ' | ' + K.j(b)];
   });
-  claim(RB, 'point', 'Allow all writes User-agent: * and Allow: / and ignores the exclusion list. Only Allow, with exclusions below turns each path into a Disallow line, adding a leading / where one is missing.',
-    'allow vs custom', N, async () => {
-      const a = robots({ policy: 'allow', disallow: 'admin/' }).output, c = robots({ policy: 'custom', disallow: 'admin/\n/cart/' }).output;
-      return [/User-agent: \*\nAllow: \//.test(a) && !/Disallow/.test(a) && /Disallow: \/admin\//.test(c) && /Disallow: \/cart\//.test(c), K.j(a.split('\n').slice(0, 3)) + ' | ' + K.j(c.split('\n').slice(0, 4))];
+  claim(RB, 'point', 'Allow all, except the paths below writes User-agent: *, a Disallow line for each excluded path, adding a leading / where one is missing, then Allow: /.',
+    'the exact group, and an old policy=custom link', N, async () => {
+      const a = robots({ policy: 'allow', disallow: 'admin/\n /cart/ \n\n', aibots: 'allow', sitemap: '' }).output, c = robots({ policy: 'custom', disallow: 'admin/\n/cart/', aibots: 'allow', sitemap: '' }).output;
+      const want = 'User-agent: *\nDisallow: /admin/\nDisallow: /cart/\nAllow: /\n';
+      return [a === want && c === want, K.j(a) + ' | ' + K.j(c)];
     });
   claim(RB, 'point', 'Blocking AI crawlers adds a group with Disallow: / for each of seven agents: GPTBot, CCBot, Google-Extended, anthropic-ai, ClaudeBot, PerplexityBot and Bytespider.', 'the AI agent list', N, async () => {
     const o = robots({ aibots: 'block' }).output;
@@ -672,8 +700,21 @@ module.exports = function ({ claim, manual, kit: K }) {
   claim(UE, 'point', 'Full URL scope uses encodeURI, which also leaves ; , / ? : @ & = + $ # alone.', 'full scope', N, async () => {
     const s = 'https://x.y/a b?q=1&r=é#h'; const r = out(ue(s, { scope: 'full' })); return [r === encodeURI(s), r];
   });
-  claim(UE, 'mistake', 'q=fish+chips%20to%20go comes back as q=fish+chips to go', 'the example', N, async () => {
-    const r = out(ue('q=fish+chips%20to%20go', { dir: 'dec' })); return [r === 'q=fish+chips to go', r];
+  claim(UE, 'mistake', 'Full URL scope, which keeps +: q=fish+chips%20to%20go comes back as q=fish+chips to go.', 'the example, Full URL scope', N, async () => {
+    const r = out(ue('q=fish+chips%20to%20go', { dir: 'dec', scope: 'full' })); return [r === 'q=fish+chips to go', r];
+  });
+  claim(UE, 'mistake', 'Set Treat + as space to Yes for q=fish chips to go.', 'Full URL scope, Yes', N, async () => {
+    const r = out(ue('q=fish+chips%20to%20go', { dir: 'dec', scope: 'full', plus: 'yes' })); return [r === 'q=fish chips to go', r];
+  });
+  claim(UE, 'tip', 'Decoding, Treat + as space reads each + as a space (Auto: yes in Component scope, no in Full URL scope). An encoded plus, %2B, never becomes a space.', 'Auto in both scopes, %2B', N, async () => {
+    // a form-encoded value, decoded by hand: + is a space, %2B a plus, %3D an equals sign
+    const comp = out(ue('2+%2B+2%3D4', { dir: 'dec' }));
+    const full = out(ue('https://x.example/?q=2+%2B+2', { dir: 'dec', scope: 'full' }));
+    return [comp === '2 + 2=4' && full === 'https://x.example/?q=2+%2B+2', comp + ' | ' + full];
+  });
+  claim(UE, 'point', 'Treat + as space first turns + into spaces, by default in Component scope only.', 'the default is Auto and No keeps +', N, async () => {
+    const auto = out(ue('a+b', { dir: 'dec' })), no = out(ue('a+b', { dir: 'dec', plus: 'no' })), enc = out(ue('a b'));
+    return [auto === 'a b' && no === 'a+b' && enc === 'a%20b', auto + ' | ' + no + ' | ' + enc];
   });
   claim(UE, 'mistake', '100% sure is not valid encoding, and the tool stops with "Malformed percent-encoding"', 'the example', N, async () => {
     const r = ue('100% sure', { dir: 'dec' }); return [/Malformed percent-encoding/.test(r.error || ''), r.error || r.output];
@@ -854,6 +895,8 @@ module.exports = function ({ claim, manual, kit: K }) {
   /* ---------- manual ---------- */
   manual(CO, 'tip', 'WCAG AA needs 4.5:1 for body text and 3:1 for large text (18pt, or 14pt bold). AAA raises these to 7:1 and 4.5:1.', 'WCAG 2 thresholds; check against the W3C text (the grading itself is checked above).');
   manual(HG, 'tip', 'MD5 has been collision-broken since 2004 and SHA-1 since 2017.', 'Cryptography history; needs sources.');
+  manual('/developer/htaccess-generator/', 'tip', 'most browsers will not save a file whose name starts with a dot: Chrome and Edge save htaccess.txt',
+    'browser download naming; build/tests/dev-fixes.js (14, 15) runs it in Chrome: the page asks for .htaccess and Chrome saves htaccess.txt. Edge is the same Chromium code; not run here.');
   manual(RB, 'faq', 'Blocking Google-Extended opts you out of Gemini training without affecting Google Search crawling or ranking', 'Google policy; needs Google\'s documentation with a date.');
   manual(RB, 'dfaq', 'Crawlers must read at least the first 500 kibibytes under RFC 9309, and Google ignores anything beyond that.', 'RFC 9309 and Google documentation.');
   manual(GR, 'dfaq', 'In every current one. Chrome and Safari added them first and Firefox followed in 2020.', 'Browser support history; needs a source (MDN / caniuse).');

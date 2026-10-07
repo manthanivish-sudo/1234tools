@@ -25,3 +25,8 @@ engine/vendor/ort/** -text
 # models (and their 20 MiB .partN pieces) are binary: no line-ending
 # conversion, no text diff, and release.js's 0x08 scan skips them
 engine/models/** binary
+# The PDF tools' OCR engine, shaper and fonts, stored as published, so the
+# sha256 sums in their READMEs keep matching.
+engine/vendor/tesseract/** -text
+engine/vendor/harfbuzz/** -text
+engine/vendor/fonts/** binary

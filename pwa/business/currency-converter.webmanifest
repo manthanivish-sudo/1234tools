@@ -2,7 +2,7 @@
   "id": "/business/currency-converter.html",
   "name": "Currency Converter — 1234Tools",
   "short_name": "Currency Converter",
-  "description": "Convert between 160+ world currencies using daily reference rates. Rates are cached so it keeps working offline.",
+  "description": "Convert between 150+ world currencies using daily reference rates. Rates are cached so it keeps working offline.",
   "start_url": "/business/currency-converter/?src=pwa",
   "scope": "/business/currency-converter/",
   "display": "standalone",

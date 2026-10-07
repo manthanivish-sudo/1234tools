@@ -557,7 +557,29 @@ function pairPage(html, fam, rel) {
   }
   const block = pairBlock(fam, a, b);
   out = out.slice(0, at) + '\n  ' + block + out.slice(at);
+  out = out.replace(TIPS_RE, (m0, open, close) => open + pairTips(fam).map((t) => '\n    <li>' + esc(t) + '</li>').join('') + close);
   return { html: out, kind: 'pair', bytes: Buffer.byteLength(block) };
+}
+
+/* The pair page's Tips panel, written here since the converter changed
+   under it: "the full table below the result" was the list of every other
+   unit, not a table, and the value box now reads fractions, feet and
+   inches, stones and pounds, and a pasted list. */
+const TIPS_RE = /(<section class="panel"><h2>Tips<\/h2><ul class="tips">)[\s\S]*?(\n?[ \t]*<\/ul><\/section>)/;
+function pairTips(fam) {
+  const word = D().fams[fam].label.toLowerCase();
+  const typed = fam === 'length'
+    ? 'Type fractions and feet and inches as you would write them: 5 3/4, 11 3/8″ or 5′ 11″. Inches come back to the nearest 1/16, and feet as feet and inches.'
+    : fam === 'mass'
+      ? 'Type stones and pounds as you would write them, 11 st 4 lb or 154 lb 8 oz, and fractions such as 2 1/2. Stones come back as stones and pounds.'
+      : 'Fractions such as 2 1/2 or 3/4 are read as well as decimals and powers of ten such as 1.2e3.';
+  return [
+    'Use the swap button to reverse the direction — every converter here works both ways.',
+    'Under the result, the same value is listed in every ' + word + ' unit at once, and a table under the converter runs through values around the one you entered.',
+    typed,
+    'Set the precision to a fixed number of decimal places or significant figures, or open “Convert a list” and paste a column of values to convert them all at once.',
+    'All arithmetic happens in your browser, so results are instant and work offline.'
+  ];
 }
 
 /* ---------- hubs ---------- */

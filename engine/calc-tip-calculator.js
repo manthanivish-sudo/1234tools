@@ -1,136 +1,19 @@
 (function(){
-/* ---------- UK tax tables ----------
-   England, Wales and Northern Ireland only — Scotland operates its own
-   income tax bands and is handled separately in the tool.
-   Checked 2026-10-04 against https://www.gov.uk/income-tax-rates and
-   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
-   (and ...-2025-to-2026): personal allowance £12,570, reduced by £1 for
-   every £2 of adjusted net income over £100,000; on taxable income (after
-   the allowance) basic 20% up to £37,700, higher 40% from £37,701 to
-   £125,140, additional 45% above £125,140; NI primary threshold £12,570,
-   upper earnings limit £50,270, 8% / 2%; employer 15% above £5,000;
-   Employment Allowance £10,500. Same figures in both years. */
-const UK_TAX = {
-  '2026/27': {
-    personalAllowance: 12570,
-    taperStart: 100000,          // PA reduces £1 for every £2 above this
-    bands: [                     // rate on taxable income (after PA) above `from`
-      { from: 0,      rate: 0.20 },
-      { from: 37700,  rate: 0.40 },
-      { from: 125140, rate: 0.45 }  // the additional rate threshold is £125,140 of taxable income, not 112,570
-    ],
-    ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
-    employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
-  },
-  '2025/26': {
-    personalAllowance: 12570,
-    taperStart: 100000,
-    bands: [
-      { from: 0,      rate: 0.20 },
-      { from: 37700,  rate: 0.40 },
-      { from: 125140, rate: 0.45 }
-    ],
-    ni: { primary: 12570, upper: 50270, main: 0.08, upper_rate: 0.02 },
-    employerNI: { secondary: 5000, rate: 0.15, employmentAllowance: 10500 }
-  }
-};
+/* A tip, and the bill split.
 
+   tip = base × rate, where the base is the whole bill or, with "tax before
+   tip", the bill less the tax printed on it (tipping on the pre-tax
+   subtotal, the stricter reading). Rounding: each share up to the next whole
+   unit, or the total up.
 
-/* currency formatter used inside schedule tables */
-function fmtC(v) {
-  if (!isFinite(v)) return '—';
-  return v.toLocaleString('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 2 });
+   An uneven split: list what each person had (one amount each, separated by
+   commas or new lines). Each pays their own items plus a share of the tip
+   and of anything not itemised (service, tax already in the bill but not in
+   the items), in proportion to what they had. When the items add up to more
+   than the bill, the bill is what is shared, in the same proportions. */
+function amounts(text) {
+  return String(text || '').split(/[\n,;]+/).map((s) => s.replace(/[^0-9.\-]/g, '')).filter((s) => s !== '' && s !== '-' && s !== '.').map(Number).filter((n) => Number.isFinite(n) && n >= 0);
 }
-
-
-/* ---------- Income tax, verified against the Income Tax Department position
-   for AY 2027-28. Budget 2026 announced no change to slabs, so FY 2026-27
-   carries forward the Budget 2025 reset. ---------- */
-const IN_TAX = {
-  '2026-27': {
-    label: 'FY 2026-27 (AY 2027-28)',
-    new: {
-      slabs: [
-        { upto: 400000,  rate: 0 },
-        { upto: 800000,  rate: 0.05 },
-        { upto: 1200000, rate: 0.10 },
-        { upto: 1600000, rate: 0.15 },
-        { upto: 2000000, rate: 0.20 },
-        { upto: 2400000, rate: 0.25 },
-        { upto: Infinity, rate: 0.30 }
-      ],
-      standardDeduction: 75000,
-      rebateLimit: 1200000,
-      rebateMax: 60000,
-      surcharge: [[5000000, 0], [10000000, 0.10], [20000000, 0.15], [Infinity, 0.25]]
-    },
-    old: {
-      slabs: [
-        { upto: 250000,  rate: 0 },
-        { upto: 500000,  rate: 0.05 },
-        { upto: 1000000, rate: 0.20 },
-        { upto: Infinity, rate: 0.30 }
-      ],
-      seniorExemption: 300000,
-      superSeniorExemption: 500000,
-      standardDeduction: 50000,
-      rebateLimit: 500000,
-      rebateMax: 12500,
-      surcharge: [[5000000, 0], [10000000, 0.10], [20000000, 0.15], [50000000, 0.25], [Infinity, 0.37]]
-    },
-    cess: 0.04
-  }
-};
-IN_TAX['2025-26'] = Object.assign({}, IN_TAX['2026-27'], { label: 'FY 2025-26 (AY 2026-27)' });
-
-/* GST 2.0 — effective 22 September 2025. The 12% and 28% slabs were removed. */
-const GST_SLABS = [
-  { value: 0,    label: '0% — nil rated (essentials)' },
-  { value: 0.25, label: '0.25% — rough diamonds' },
-  { value: 3,    label: '3% — gold, silver, jewellery' },
-  { value: 5,    label: '5% — everyday & essential goods' },
-  { value: 18,   label: '18% — standard rate (most goods & services)' },
-  { value: 40,   label: '40% — luxury & sin goods' }
-];
-
-const fmtR = (v) => isFinite(v)
-  ? v.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
-  : '—';
-
-/* Progressive slab tax on an amount. */
-function slabTax(amount, slabs) {
-  let tax = 0, lower = 0;
-  for (const s of slabs) {
-    if (amount <= lower) break;
-    tax += (Math.min(amount, s.upto) - lower) * s.rate;
-    lower = s.upto;
-  }
-  return tax;
-}
-
-function surchargeRate(income, table) {
-  for (const [upto, rate] of table) if (income <= upto) return rate;
-  return table[table.length - 1][1];
-}
-
-
-function countWeekdays(a, b) {
-  const MS = 86400000;
-  const start = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
-  const end = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
-  const days = Math.max(0, Math.round((end - start) / MS));
-
-  const whole = Math.floor(days / 7);
-  let count = whole * 5;
-
-  let dow = new Date(start).getUTCDay();
-  for (let i = 0; i < days % 7; i++) {
-    if (dow !== 0 && dow !== 6) count++;
-    dow = (dow + 1) % 7;
-  }
-  return count;
-}
-
 
 window.TOOLS = window.TOOLS || {};
 window.TOOLS["tip-calculator"] = {
@@ -140,26 +23,71 @@ window.TOOLS["tip-calculator"] = {
 "description": "Work out a tip and split a bill between any number of people, with optional rounding.",
 "keywords": ["tip calculator","split bill","gratuity calculator","bill splitter","how much to tip"],
 "formula": "tip = bill × rate  ·  each = (bill + tip) / people",
-"inputs": [{"key":"bill","label":"Bill amount","type":"number","unit":"£","default":85,"min":0},{"key":"tip","label":"Tip","type":"number","unit":"%","default":12.5,"min":0,"step":0.5},{"key":"people","label":"Split between","type":"number","default":4,"min":1},{"key":"round","label":"Rounding","type":"select","options":[{"value":"none","label":"Exact"},{"value":"up","label":"Round each share up"},{"value":"total","label":"Round the total up"}],"default":"none"}],
-"compute": ({ bill, tip, people, round }) => {
+"inputs": [{"key":"bill","label":"Bill amount","type":"number","unit":"£","default":85,"min":0},{"key":"tip","label":"Tip","type":"number","unit":"%","default":12.5,"min":0,"max":100,"step":0.5,"presets":[10,12.5,15,18,20]},{"key":"people","label":"Split between","type":"number","default":4,"min":1,"max":1000,"integer":true},{"key":"round","label":"Rounding","type":"select","options":[{"value":"none","label":"Exact"},{"value":"up","label":"Round each share up"},{"value":"total","label":"Round the total up"}],"default":"none"},
+  {"key":"tax","label":"Tax included in the bill","type":"number","unit":"£","default":0,"min":0,"group":"Tax and an uneven split","hint":"Sales tax or VAT shown on the bill, if you tip on the amount before it."},{"key":"tipOn","label":"Work the tip out on","type":"select","options":[{"value":"total","label":"The whole bill"},{"value":"pretax","label":"The bill before tax"}],"default":"total","group":"Tax and an uneven split"},{"key":"items","label":"What each person had (uneven split)","type":"text","default":"","placeholder":"e.g. 32.50, 20, 18, 14.50","group":"Tax and an uneven split","hint":"One amount for each person. Leave empty to split equally."}],
+"validate": (v) => {
+      const e = {};
+      if ((Number(v.tax) || 0) > (Number(v.bill) || 0)) e.tax = 'The tax cannot be more than the bill.';
+      if (String(v.items || '').trim() && !amounts(v.items).length) e.items = 'List amounts such as 32.50, 20, 18.';
+      return e;
+    },
+"compute": ({ bill, tip, people, round, tax, tipOn, items }) => {
       const b = Number(bill) || 0;
-      const n = Math.max(1, Math.round(Number(people) || 1));
-      let tipAmt = b * ((Number(tip) || 0) / 100);
+      const T = Math.min(b, Number(tax) || 0);
+      const base = tipOn === 'pretax' ? b - T : b;
+      const list = amounts(items);
+      const n = list.length ? list.length : Math.max(1, Math.round(Number(people) || 1));
+      let tipAmt = base * ((Number(tip) || 0) / 100);
       let total = b + tipAmt;
 
       if (round === 'total') { total = Math.ceil(total); tipAmt = total - b; }
       let each = total / n;
-      if (round === 'up') { each = Math.ceil(each); total = each * n; tipAmt = total - b; }
+      if (round === 'up' && !list.length) { each = Math.ceil(each); total = each * n; tipAmt = total - b; }
 
-      return {
+      const out = {
         each, total, tipAmt,
         tipEach: tipAmt / n,
         billEach: b / n,
         effectiveTip: b ? (tipAmt / b) * 100 : 0
       };
+      if (T > 0 || tipOn === 'pretax') out.tipBase = base;
+      if (list.length) {
+        const sum = list.reduce((a, x) => a + x, 0);
+        if (sum > 0) {
+          const rows = list.map((x, k) => {
+            const share = x / sum;
+            let pays = total * share;
+            if (round === 'up') pays = Math.ceil(pays);
+            /* the tip share is what this person pays over their part of the bill, so the column adds up to the tip even after rounding */
+            return [k + 1, x, pays - b * share, pays];
+          });
+          if (round === 'up') { out.total = rows.reduce((a, r) => a + r[3], 0); out.tipAmt = out.total - b; }
+          out.each = undefined;
+          out.most = Math.max.apply(null, rows.map((r) => r[3]));
+          out.least = Math.min.apply(null, rows.map((r) => r[3]));
+          out.itemsTotal = sum;
+          if (Math.abs(sum - b) > 0.005) out.note = sum < b
+            ? 'The items add up to less than the bill: the difference is shared in the same proportions.'
+            : 'The items add up to more than the bill: the bill is shared in the same proportions.';
+          out._table = { title: 'Who pays what', head: ['Person', 'Had', 'Tip share', 'Pays'], cols: ['int', 'currency', 'currency', 'currency'], rows,
+            foot: ['Total', sum, out.tipAmt, out.total] };
+          out._chart = { type: 'donut', title: 'Who pays what', format: 'currency', center: { label: 'Total', value: out.total }, slices: rows.map((r, k) => ({ name: 'Person ' + r[0], value: r[3], c: k % 6 })) };
+        }
+      }
+      return out;
     },
-"outputs": [{"key":"each","label":"Each person pays","format":"currency","primary":true},{"key":"total","label":"Total including tip","format":"currency"},{"key":"tipAmt","label":"Tip amount","format":"currency"},{"key":"billEach","label":"Bill share each","format":"currency"},{"key":"tipEach","label":"Tip share each","format":"currency"},{"key":"effectiveTip","label":"Effective tip rate","format":"percent"}],
-"tips": ["Tipping norms vary enormously: around 15–20% is customary in the US, 10–15% in the UK, and tipping is unusual or even unwelcome in Japan.","Check whether service is already included before adding a tip — many restaurants add 12.5% automatically for larger tables.","Rounding each share up is the practical option when people are paying cash and nobody wants to hunt for change."],
-"faq": [{"q":"Should I tip on the pre-tax or post-tax amount?","a":"Either is accepted. Tipping on the pre-tax subtotal is the stricter reading, since tax is not part of the service. The difference is small, and nobody will comment on it."}]
+"outputs": [{"key":"each","label":"Each person pays","format":"currency","primary":true},{"key":"most","label":"Most anyone pays","format":"currency","primary":true},{"key":"least","label":"Least anyone pays","format":"currency"},{"key":"total","label":"Total including tip","format":"currency"},{"key":"tipAmt","label":"Tip amount","format":"currency"},{"key":"tipBase","label":"Tip worked out on","format":"currency"},{"key":"billEach","label":"Bill share each","format":"currency"},{"key":"tipEach","label":"Tip share each","format":"currency"},{"key":"effectiveTip","label":"Effective tip rate","format":"percent"},{"key":"itemsTotal","label":"Items add up to","format":"currency"},{"key":"note","label":"","format":"text"}],
+"filled": (v, r, f) => {
+      const b = Number(v.bill) || 0, T = Math.min(b, Number(v.tax) || 0);
+      const base = v.tipOn === 'pretax' ? b - T : b;
+      const L = [];
+      if (v.tipOn === 'pretax') L.push('before tax = ' + f.money(b) + ' − ' + f.money(T) + ' = ' + f.money(base));
+      L.push('tip = ' + f.money(base) + ' × ' + f.upto(Number(v.tip) || 0, 4) + '% = ' + f.money(base * (Number(v.tip) || 0) / 100) + (v.round !== 'none' ? ' (then rounded)' : ''));
+      if (r.each !== undefined) L.push('each = (' + f.money(b) + ' + ' + f.money(r.tipAmt) + ') ÷ ' + Math.round(r.total / r.each) + ' = ' + f.money(r.each));
+      else L.push('each person pays their share of ' + f.money(r.total) + ', in proportion to what they had');
+      return L;
+    },
+"tips": ["Tipping norms vary enormously: around 15–20% is customary in the US, 10–15% in the UK, and tipping is unusual or even unwelcome in Japan.","Check whether service is already included before adding a tip — many restaurants add 12.5% automatically for larger tables.","Rounding each share up is the practical option when people are paying cash and nobody wants to hunt for change.","Tap a common rate, or type any other.","For an uneven split, list what each person had: each pays their own share of the bill and of the tip, in proportion."],
+"faq": [{"q":"Should I tip on the pre-tax or post-tax amount?","a":"Either is accepted. Tipping on the pre-tax subtotal is the stricter reading, since tax is not part of the service. The difference is small, and nobody will comment on it. Enter the tax shown on the bill and choose the bill before tax to tip that way."}]
 };
 })();

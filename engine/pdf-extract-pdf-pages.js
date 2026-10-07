@@ -30,6 +30,7 @@ window.PDF_TOOLS["extract-pdf-pages"] = {
 "multiple": false,
 "description": "Pull specific pages out of a PDF into a new document, keeping the order you specify.",
 "keywords": ["extract pdf pages","select pdf pages","pdf page extractor","get pages from pdf","copy pdf pages"],
+"pageGrid": { "key": "pages", "mode": "select", "marks": "keep", "rotate": true, "title": "Click the pages to keep, in the order you want them; shift-click for a run, or drag across" },
 "controls": [{"key":"pages","label":"Pages to keep","type":"text","default":"1-3","hint":"e.g. 1-3, 7, 10-"},{"key":"order","label":"Order","type":"select","default":"asis","options":[{"value":"asis","label":"As listed"},{"value":"sorted","label":"Sorted by page number"},{"value":"reverse","label":"Reversed"}]}],
 "run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
@@ -41,7 +42,8 @@ window.PDF_TOOLS["extract-pdf-pages"] = {
       if (opts.order === 'sorted') idx = idx.slice().sort((a, b) => a - b);
       if (opts.order === 'reverse') idx = idx.slice().reverse();
 
-      const bytes = await core.assemble(idx.map(p => ({ doc, pageIndex: p })), {});
+      const turns = opts.turns || {};
+      const bytes = await core.assemble(idx.map(p => ({ doc, pageIndex: p, rotate: Number(turns[p]) || 0 })), {});
       const base = docs[0].name.replace(/\.pdf$/i, '');
       return {
         files: [{ name: `${base}-extract.pdf`, bytes }],
@@ -53,7 +55,7 @@ window.PDF_TOOLS["extract-pdf-pages"] = {
         ]
       };
     },
-"tips": ["Page selections accept ranges, single pages and open-ended forms: \"1-3, 7, 10-\" takes pages 1 to 3, page 7, and everything from 10 onward.","Order \"as listed\" respects what you typed, so \"5, 1, 3\" produces those pages in that order — useful for reordering as you extract.","A page can appear twice. \"1, 1, 2\" duplicates the first page, which is occasionally what you want for a cover sheet."],
+"tips": ["The pages appear as thumbnails once the file is open. Click the pages to keep in the order you want them: the box fills with that order, so clicking 5, then 1, then 3 gives \"5, 1, 3\". Shift-click chooses a run of pages and dragging across the thumbnails chooses every page you pass; from the keyboard the arrow keys move between pages and Space chooses one.","Page selections accept ranges, single pages and open-ended forms: \"1-3, 7, 10-\" takes pages 1 to 3, page 7, and everything from 10 onward.","Order \"as listed\" respects what you typed, so \"5, 1, 3\" produces those pages in that order — useful for reordering as you extract.","A page can appear twice. \"1, 1, 2\" duplicates the first page, which is occasionally what you want for a cover sheet."],
 "faq": [{"q":"What happens to pages I do not select?","a":"They are simply not copied. The original file on your device is untouched — this always produces a new document."}]
 };
 })();

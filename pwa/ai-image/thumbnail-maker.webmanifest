@@ -2,7 +2,7 @@
   "id": "/ai-image/thumbnail-maker/",
   "name": "YouTube Thumbnail Maker — 1234Tools",
   "short_name": "YouTube Thumbnail",
-  "description": "Face cut out with a glow, background punched up, a bold title on top; export 1280×720 PNG or JPEG under 2 MB, three variants in one click. Nothing is uploaded.",
+  "description": "Face cut out with a glow, nine templates, text layers, emoji and arrows; YouTube, Shorts and Instagram sizes, three A/B variants. Nothing is uploaded.",
   "start_url": "/ai-image/thumbnail-maker/?src=pwa",
   "scope": "/ai-image/thumbnail-maker/",
   "display": "standalone",

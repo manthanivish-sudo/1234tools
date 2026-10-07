@@ -9,10 +9,10 @@ window.TOOLS["exam-countdown"] = {
 "formula": "Hours a day = (topics × hours per topic) ÷ study days remaining",
 "inputs": [
   {"key":"date","label":"Exam date","type":"date","default":""},
-  {"key":"topics","label":"Topics or chapters to cover","type":"number","default":40},
-  {"key":"hoursPer","label":"Hours each topic needs","type":"number","default":2.5},
-  {"key":"daysPerWeek","label":"Days a week you can study","type":"number","default":6},
-  {"key":"revision","label":"Days to keep free at the end for revision","type":"number","default":7}
+  {"key":"topics","label":"Topics or chapters to cover","type":"number","default":40,"min":1,"integer":true},
+  {"key":"hoursPer","label":"Hours each topic needs","type":"number","default":2.5,"min":0},
+  {"key":"daysPerWeek","label":"Days a week you can study","type":"number","default":6,"min":1,"max":7,"integer":true},
+  {"key":"revision","label":"Days to keep free at the end for revision","type":"number","default":7,"min":0}
 ],
 "compute": function (v) {
   if (!v.date) return { note: 'Pick your exam date.' };
@@ -84,6 +84,8 @@ window.TOOLS["exam-countdown"] = {
   {"key":"note","label":"","format":"text"},
   {"key":"caution","label":"","format":"text"}
 ],
+"filled": (v, r, f) => r.perDay === undefined ? [] : ['study hours = ' + f.upto(Number(v.topics), 2) + ' topics × ' + f.upto(Number(v.hoursPer), 2) + ' h = ' + f.upto(r.totalHours, 2) + ' h',
+      'a day = ' + f.upto(r.totalHours, 2) + ' h ÷ ' + r.studyDays + ' study days = ' + f.upto(r.perDay, 2) + ' h'],
 "tips": [
   "Reserve the revision days before you plan anything else. A syllabus finished the night before is a syllabus you have read once, and reading once is not knowing.",
   "Be honest about hours per topic. Most people take roughly twice as long on the first pass as they expect, and the estimate is the part of this calculation you control.",

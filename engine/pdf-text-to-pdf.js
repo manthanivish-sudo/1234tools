@@ -42,7 +42,12 @@ window.PDF_TOOLS["text-to-pdf"] = {
       const font = core.FONTS[opts.font] ? opts.font : 'Helvetica';
       const maxW = W - m * 2;
 
-      const lines = core.wrapText(body, font, size, maxW);
+      /* Text WinAnsi cannot hold is set in Noto Sans (embedded, only the
+         characters used), and then so is the rest, so the page reads as
+         one typeface; Courier keeps its WinAnsi lines in Courier. */
+      const uni = !!(core.unicodeFonts && core.unicodeFonts.needs(body));
+      const tf = uni ? new core.TextFonts({ force: font !== 'Courier' }) : null;
+      const lines = uni ? await tf.wrap(body, size, false, maxW, font) : core.wrapText(body, font, size, maxW);
       const perPage = Math.max(1, Math.floor((H - m * 2) / lead));
       const pages = [];
 
@@ -58,11 +63,15 @@ window.PDF_TOOLS["text-to-pdf"] = {
         pages.push({ size: [W, H], ops });
       }
 
-      const bytes = core.createPDF(pages, {
+      const make = uni ? (pg, o) => core.createDocument(pg, Object.assign({ text: tf }, o)) : async (pg, o) => core.createPDF(pg, o);
+      const miss = tf && tf.missing ? tf.missing() : [];
+      const missWarn = miss.length ? 'These characters are not in the fonts this tool embeds and show as empty boxes: ' + miss.slice(0, 12).join(' ') + (miss.length > 12 ? ' …' : '') + '. Noto Sans covers Latin, Greek, Cyrillic and Devanagari.' : undefined;
+      const bytes = await make(pages, {
         pageSize: opts.pageSize,
         info: opts.title ? { Title: opts.title } : null
       });
       return {
+        warn: missWarn,
         files: [{ name: (opts.title ? slug(opts.title) : 'document') + '.pdf', bytes }],
         stats: [
           ['Characters', body.length.toLocaleString('en-GB')],
@@ -74,7 +83,7 @@ window.PDF_TOOLS["text-to-pdf"] = {
         ]
       };
     },
-"tips": ["Text is wrapped using the real font metrics, so lines break where they actually would rather than at a guessed character count.","Only the standard PDF fonts are used — Helvetica, Times and Courier — which means no font file is embedded and the file stays tiny.","Characters outside Western European ranges cannot be represented without embedding a font, and appear as \"?\". For other scripts, use a word processor.","Blank lines in your text are preserved as blank lines in the output."],
-"faq": [{"q":"Why do accented characters work but not Chinese or Arabic?","a":"The standard PDF fonts cover WinAnsi encoding, which includes Western European accents. Other scripts need an embedded font with those glyphs, and embedding a CJK font would add several megabytes to every page of this site."}]
+"tips": ["Text is wrapped using the real font metrics, so lines break where they actually would rather than at a guessed character count.","Text the standard fonts can hold stays in Helvetica, Times or Courier, with nothing embedded, so the file stays tiny.","Any other script (Hindi, Greek, Cyrillic, Polish, the rupee sign) is set in Noto Sans, and then the whole document is, so it reads as one typeface; only the characters used are embedded. Courier keeps its plain lines in Courier.","Blank lines in your text are preserved as blank lines in the output."],
+"faq": [{"q":"Which languages can I convert?","a":"Anything in the Latin, Greek, Cyrillic and Devanagari scripts, so English, French, Polish, Russian and Hindi among many others. Hindi is shaped properly, conjuncts included. Chinese, Japanese, Korean and Arabic are not covered: the fonts this tool embeds have no characters for them, and the page lists any that would come out as empty boxes."},{"q":"How big is the PDF?","a":"Plain English text makes a very small file, because the standard fonts need nothing embedded. With another script, a subset of the font is embedded, only the characters you used, which usually adds a few tens of kilobytes rather than the whole font."}]
 };
 })();

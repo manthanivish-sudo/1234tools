@@ -178,22 +178,21 @@ function hubPage(parts, all) {
   const sec = SECTIONS['/' + SECTION + '/'];
   const n = all.length;
   const title = 'AI Video Tools — Free, Private, Run in Your Browser | 1234Tools';
-  const description = 'Free AI video tools that run on your own device: a reel maker that turns a script into a 9:16 MP4 with text, your voice or a generated one, music and captions, and automatic word-by-word captions with SRT and VTT. No upload, no account, no forced watermark.';
+  const description = 'Free AI video tools that run on your own device: a reel maker that turns a script into a 9:16 MP4 with text, your voice or a generated one, music and captions, and automatic word-by-word captions with SRT, VTT and ASS. No upload, no account, no forced watermark.';
   const cards = all.map((t) => '<a class="card" href="/' + SECTION + '/' + t.slug + '/"><span class="card-icon">' + icon(t.spec.glyph) + '</span><strong>' + esc(t.spec.title) + '</strong><span class="card-desc">' + esc(t.spec.description) + '</span></a>').join('');
   const body =
     crumbs.render([], sec.hub || sec.name) + '\n' +
     '<p class="eyebrow">' + esc(sec.name) + '</p>\n' +
     '<h1>' + icon('i-ai-video', 'ico ico-title') + esc(sec.name) + '</h1>\n' +
-    '<p class="lede">Video making and editing that happens on your own device: turn a script into a Reel, or caption a clip with a speech model that is downloaded into your browser once. Your video never leaves it. ' + n + ' tool' + (n === 1 ? '' : 's') + ' so far, free, with no account and no forced watermark.</p>\n' +
+    '<p class="lede">Video making and editing that happens on your own device: turn a script into a Reel cut to the beat of your music, or caption a clip with a speech model that is downloaded into your browser once — English comes out best, and twelve more languages can be picked, with each one’s tested accuracy stated on the page. Your video never leaves it. ' + n + ' tool' + (n === 1 ? '' : 's') + ' so far, free, with no account and no forced watermark.</p>\n' +
     '<div class="grid">' + cards + '</div>\n' +
     '<section class="panel ai-how"><h2>How these differ from the AI for Business tools</h2>' +
     '<p>The <a href="/ai/">AI for Business</a> tools send your text to a language model on a server, say so on every page, and count calls against a monthly allowance. These do not. The models here are small enough to run inside a browser — the speech recogniser is 41 MB, the voice that reads a script aloud 92 MB — so they are served from this site, kept by your browser after the first visit, and run on your own processor through WebAssembly. The video is decoded, redrawn and re-encoded by the browser’s own media engine. No third-party server is contacted.</p>' +
     '<p>That is why there is no sign-in and no limit: there is no server bill to cover. It is also why the first run on a device takes a moment longer than the rest, and why a long clip takes about as long as it lasts.</p></section>\n' +
     '<section class="panel"><h2>What is coming to this section</h2><ul class="tips">' +
-    '<li><strong>More languages for captions</strong> — the same model understands 99; they arrive once the English result has been proven.</li>' +
     '<li><strong>Silence and filler cuts</strong> — find the pauses and the ums from the transcript and cut them, with the words as the edit list.</li>' +
     '<li><strong>Clip from a long recording</strong> — pick a sentence in the transcript and export that stretch as a 9:16 clip with captions.</li>' +
-    '<li><strong>Video compressor and GIF maker</strong> — re-encode on the device to a size a chat or a page will take.</li></ul>' +
+    '<li><strong>Video compressor</strong> — re-encode on the device to a size a chat or a page will take. (A GIF maker and a 16:9 to 9:16 resizer are in <a href="/social/">Social Media Tools</a>.)</li></ul>' +
     '<p>The order depends on what people ask for. <a href="/contact/">The contact page</a> works, and so does the finder at the top of this page: describe the tool you want, and when it is not here the finder offers a request form. The <a href="/utilities/tool-finder/">Tool Finder</a> takes requests too.</p></section>\n' +
     '<section class="panel"><h2>Frequently asked questions</h2>' +
     '<details><summary>Is anything uploaded?</summary><p>No. Two downloads happen on first use — the model and the runtime, both from this site — and your browser keeps both. Your video is opened, transcribed, drawn and re-encoded on your device. We never receive it and could not look at it if we wanted to.</p></details>' +

@@ -29,7 +29,7 @@ module.exports = {
         'A cheapest-path search splits the text into numeric, alphanumeric and byte segments; byte mode writes UTF-8.',
         'The smallest version that fits the chosen level is used, and each data block gets Reed-Solomon codewords over GF(256) before the blocks are interleaved.',
         'All eight masks are scored with the standard’s four penalty rules, and the lowest wins.',
-        'The SVG is decoded by the scanner’s own reader at 10 and then 4 pixels a module; only both passes earn Verified. The PNG is the SVG redrawn with `toBlob`.'
+        'The SVG, frame included, is decoded by the scanner’s own reader at 10 and then 4 pixels a module; only both passes earn Verified. The PNG, PDF and EPS are drawn from that SVG.'
       ]
     },
     worked: {
@@ -69,7 +69,7 @@ module.exports = {
       'It then reads the format bits, removes the mask, collects the codewords and lets Reed-Solomon repair the damage. The result is plain text, judged by its prefix: https:, WIFI: or BEGIN:VCARD.'
     ],
     howItWorks: {
-      text: 'If the browser offers `BarcodeDetector` for QR codes it looks first; otherwise the site’s own reader, engine/qr-detect.js, does the work.',
+      text: 'If the browser offers `BarcodeDetector` it looks first; otherwise the site’s own readers, engine/qr-detect.js and engine/qr-barcode.js, do the work.',
       points: [
         'The camera opens through `getUserMedia`, asking for the rear camera at up to 1920 × 1080, with autofocus and a torch where available.',
         'About every 80 milliseconds a frame is read, alternating between the whole frame at 800 pixels and its central 62% in detail.',
@@ -93,7 +93,7 @@ module.exports = {
     faq: [
       { q: 'Can I scan a QR code from a screenshot?', a: 'Yes. Choose it in the picture area below the camera, or paste it on a computer.' },
       { q: 'Why does a code from Japan show garbled text?', a: 'The site’s own reader decodes byte-mode data as UTF-8 and ignores character-set markers, so Shift JIS text is garbled; Kanji mode is not read at all.' },
-      { q: 'Does it read ordinary barcodes too?', a: 'No. It asks only for QR codes, so EAN product barcodes are ignored.' }
+      { q: 'Does it read ordinary barcodes too?', a: 'Yes. EAN-13, EAN-8, UPC-A and Code 128 must pass their check digit; Code 39 must read alike on two lines.' }
     ],
     runs: [
       /* /qr/qr-code-generator/: #qr-type = url, #f-url = https://www.example.com@login.example.net/pay, #qr-ec = M, PNG 600 px ("Version: 4 (33 x 33 modules)", mask 7, Verified); Download PNG saved trick-M.png */
@@ -120,7 +120,7 @@ module.exports = {
       points: [
         'Tabs, commas or semicolons are detected from the first 20 lines, and quoted fields are handled.',
         'A first row is a header when at least half its cells name a field or a file-name column (name, label, filename, id, ref). One-field types without a header are read line by line, so commas in a URL survive.',
-        'Each of up to 500 codes is decoded from its SVG at 10 and 4 pixels a module, then again on download from the exact PNG or SVG bytes, before the site’s ZIP writer stores it uncompressed.'
+        'Each of up to 2,000 codes is decoded from its SVG at 10 and 4 pixels a module, then again on download from the exact PNG or SVG bytes, before the site’s ZIP writer stores it uncompressed.'
       ]
     },
     worked: {
@@ -133,7 +133,7 @@ module.exports = {
     ],
     mistakes: [
       'Pasting contact cards without a header. Columns then follow field order, so a name, phone, email list puts the phone number in the last-name field.',
-      'Mixing content types. The type applies to every row, so links and contact cards need separate runs.'
+      'Mixing content types without a type column. Without one, the type chosen at the top applies to every row.'
     ],
     faq: [
       { q: 'Can I make QR codes from an Excel file?', a: 'Paste the copied cells, which arrive as tab-separated text, or save the sheet as CSV; .xlsx files are not read.' },

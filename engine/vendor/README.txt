@@ -18,3 +18,26 @@ mp4-muxer.mjs            mp4-muxer 5.2.2 (MIT, LICENSE-mp4-muxer.txt)
 ort/                     ONNX Runtime Web 1.30.0 (MIT) — see ort/README.txt.
 
 pdfjs/                   pdf.js (Apache-2.0) — see the licence file in that folder.
+
+fonts/                   Noto Sans (Regular, Bold) and Noto Sans Devanagari (Regular, Bold),
+                         SIL OFL 1.1 — see fonts/README.md and the OFL files beside them.
+                         Subset into PDFs by build/pdf-package/engine/pdffont.js for text the
+                         standard PDF fonts cannot hold; fetched only when such text is drawn.
+
+harfbuzz/                HarfBuzz shaping (Old MIT) built as harfbuzzjs 1.6.3 (MIT) — see
+                         harfbuzz/README.md. Shapes Devanagari for the PDF tools, driven by
+                         engine/pdf-shaper.js; the ES-module loader is not shipped.
+
+tesseract/               Tesseract.js 6.0.1 and tesseract.js-core 6.1.2 (Apache-2.0), LSTM
+                         builds only — see tesseract/README.md. The core links Leptonica
+                         (BSD-2), libpng, libtiff, zlib, libwebp (BSD-3), giflib (MIT) and IJG
+                         libjpeg 9a (IJG licence, attribution in THIRD-PARTY-NOTICES.txt).
+                         Language data in engine/models/tessdata/.
+                         This software is based in part on the work of the Independent JPEG Group.
+
+noto-emoji/              336 of Google's Noto Emoji (Apache-2.0, noto-emoji/LICENSE), as SVG bodies
+                         in one JSON file (noto-subset.json, 1.0 MB), cut from @iconify-json/noto 1.2.9
+                         (https://registry.npmjs.org/@iconify-json/noto/-/noto-1.2.9.tgz) by
+                         build/ai-image/make-noto-subset.js. Not byte-for-byte: a subset, with each
+                         icon's SVG ids prefixed so several can be inlined together. Fetched only
+                         when a sticker picker is opened (Thumbnail Maker, Reel Maker).

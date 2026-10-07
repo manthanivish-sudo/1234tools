@@ -5,10 +5,12 @@
  * read-only; skipped loudly when git or the commit is not there) and then
  * proved on the engine as it is now.
  *
- *   node build/tests/dev-fixes.js [--root DIR] [--port 8680] [--out DIR] [--node-only]
+ *   node build/tests/dev-fixes.js [--root DIR] [--port 8680] [--out DIR] [--repo DIR] [--node-only]
  *
  * --root is the site to test (default: the one this file sits in); it is
  * served on --port (ports 8680-8689 are this test's) for the browser part.
+ * --repo is the git checkout the "before" engines are read from (default:
+ * the one this file sits in), for a run from a copy of the site.
  * Exit code 2 when a case fails, 1 when the run itself breaks.
  *
  *  1  Markdown: link and image addresses are escaped and limited to http(s),
@@ -40,7 +42,24 @@
  * 12  Generator defaults: no default, sample or placeholder of a developer
  *     or text tool, and no engine script, names mvritservices.com; the
  *     robots.txt, .htaccess and meta-tag defaults are 1234Tools ones
+ * 13  (2026-10-06) The QR renderers live in engine/render-qr.js: it registers
+ *     mountQR, mountQRBulk and mountQRScanner and render-dev.js no longer
+ *     does; every function of the QR section of render-dev.js at 364240974
+ *     is in render-qr.js (moved verbatim, since extended by wave 4: see
+ *     build/tests/qr-fixes.js), render-dev.js is otherwise unchanged, and the helpers
+ *     render-qr.js keeps a copy of match render-dev.js's; the three QR pages
+ *     load render-qr.js and not render-dev.js, every developer and text page
+ *     still loads render-dev.js; in the browser the three pages mount with
+ *     no script error and never fetch render-dev.js (browser)
  * and the published examples of these tools still match their engines.
+ *
+ * Wave 0-B (reproduced on BASE2, the engines before it):
+ * 13  URL encoder: Treat + as space, Auto by scope; %2B stays a plus
+ * 14  CSV to JSON: nested objects flatten to dotted columns and back, the
+ *     delimiter is detected, header row and type inference are options, and
+ *     the download is .json or .csv by direction
+ * 15  robots.txt: typed exclusions are kept under every policy but Block
+ *     all; robots.txt and .htaccess download under those names
  */
 'use strict';
 const fs = require('fs');
@@ -54,11 +73,12 @@ const { webcrypto } = require('crypto');
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const i = argv.indexOf(k); return i >= 0 && argv[i + 1] ? argv[i + 1] : d; };
 const ROOT = path.resolve(arg('--root', path.join(__dirname, '..', '..')));
-const REPO = path.join(__dirname, '..', '..');
+const REPO = path.resolve(arg('--repo', path.join(__dirname, '..', '..')));   // the git checkout "before" is read from
 const PORT = Number(arg('--port', 8680));
 const OUT = path.resolve(arg('--out', path.join(os.tmpdir(), '1234tools-dev-fixes')));
 const NODE_ONLY = argv.includes('--node-only');
 const BASE = 'ca32a154a';                       // the engines before these fixes
+const BASE2 = '364240974';                      // the engines before wave 0-B
 const BASE_URL = 'http://127.0.0.1:' + PORT;
 const CHROME = process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 fs.mkdirSync(OUT, { recursive: true });
@@ -86,15 +106,22 @@ function context(extra) {
 function runIn(ctx, src, name) { vm.runInContext(src, ctx, { filename: name }); return ctx; }
 function current(rel, extra) { return runIn(context(extra), fs.readFileSync(path.join(ROOT, rel), 'utf8'), rel); }
 let gitOk = null;
-function oldSrc(rel) {
-  try { return execFileSync('git', ['-C', REPO, 'show', BASE + ':' + rel], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); }
+function oldSrcAt(commit, rel) {
+  try { return execFileSync('git', ['-C', REPO, 'show', commit + ':' + rel], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 }); }
   catch (e) { return null; }
 }
+function oldSrc(rel) { return oldSrcAt(BASE, rel); }
 function before(rel, extra) {
   const src = oldSrc(rel);
   if (src === null) { if (gitOk !== false) skip('git show ' + BASE + ' is not available: the "before" reproductions are skipped'); gitOk = false; return null; }
   gitOk = true;
   return runIn(context(extra), src, BASE + ':' + rel);
+}
+function beforeAt(commit, rel, extra) {
+  let src = null;
+  try { src = execFileSync('git', ['-C', REPO, 'show', commit + ':' + rel], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); } catch (e) { /* none */ }
+  if (src === null) { skip('git show ' + commit + ':' + rel + ' is not available: its "before" reproduction is skipped'); return null; }
+  return runIn(context(extra), src, commit + ':' + rel);
 }
 function defaults(list) { const o = {}; (list || []).forEach((x) => { o[x.key] = x.default; }); return o; }
 function transform(spec, input, opts) { return spec.transform(String(input), Object.assign(defaults(spec.options), opts || {})) || {}; }
@@ -782,7 +809,7 @@ function testDefaults() {
   }
   check(specs >= files.length && values > 0 && bad.length === 0,
     'no default, sample or placeholder in ' + specs + ' developer and text tool specs (' + values + ' values) contains mvritservices', bad.join(' | '));
-  // and no engine script at all, which covers the QR generators' tuple defaults and bulk examples in render-dev.js
+  // and no engine script at all, which covers the QR generators' tuple defaults and bulk examples in render-qr.js
   const scripts = fs.readdirSync(path.join(ROOT, 'engine')).filter((f) => /\.js$/.test(f));
   const hits = scripts.filter((f) => /mvritservices/i.test(fs.readFileSync(path.join(ROOT, 'engine', f), 'utf8')));
   check(hits.length === 0, 'none of the ' + scripts.length + ' engine scripts mentions mvritservices', hits.join(', '));
@@ -800,6 +827,157 @@ function testDefaults() {
     'meta tags: the default form writes 14 tags with a title and description of good length', (mr.stats || []).join(' | '));
 }
 
+/* ======================================================================
+   13  URL encoder: + as a space
+   ====================================================================== */
+
+function testUrlPlus() {
+  section('13  URL encoder: Treat + as space');
+  const spec = current('engine/dev-url-encoder.js').DEV_TOOLS['url-encoder'];
+  const opt = (spec.options || []).find((o) => o.key === 'plus');
+  check(opt && opt.default === 'auto' && opt.options.map((o) => o.value).join() === 'auto,yes,no', 'the option exists: Auto (default), Yes, No', opt && JSON.stringify(opt.options));
+  // expected values written out by hand from the form-encoding rules (WHATWG application/x-www-form-urlencoded)
+  const CASES = [
+    // [input, options, expected]
+    ['salt+%2B+pepper', { dir: 'dec' }, 'salt + pepper'],                                   // Auto, Component: + is a space, %2B a plus
+    ['salt+%2B+pepper', { dir: 'dec', plus: 'no' }, 'salt+++pepper'],                       // No: + kept, %2B decoded
+    ['https://x.example/a+b?q=fish+chips', { dir: 'dec', scope: 'full' }, 'https://x.example/a+b?q=fish+chips'],   // Auto, Full URL: kept
+    ['https://x.example/?q=fish+chips%20to%20go', { dir: 'dec', scope: 'full', plus: 'yes' }, 'https://x.example/?q=fish chips to go'],
+    ['https://x.example/?q=1%2B1', { dir: 'dec', scope: 'full', plus: 'yes' }, 'https://x.example/?q=1%2B1'],    // decodeURI keeps reserved %2B
+    ['caf%C3%A9+au+lait', { dir: 'dec' }, 'café au lait'],
+    ['a b+c', { dir: 'enc' }, 'a%20b%2Bc'],                                                   // encoding never writes +
+    ['a b+c', { dir: 'enc', plus: 'yes' }, 'a%20b%2Bc']
+  ];
+  for (const [inp, o, want] of CASES) {
+    const r = transform(spec, inp, o);
+    check(r.output === want, JSON.stringify(inp) + ' ' + JSON.stringify(o) + ' -> ' + JSON.stringify(want), r.output || r.error);
+  }
+  // against the platform's own form decoder, on random form strings
+  let agree = 0, n = 0;
+  const alphabet = 'ab +%2B%20é&=';
+  for (let i = 0; i < 300; i++) {
+    let t = ''; const len = 1 + (i % 9);
+    for (let k = 0; k < len; k++) { const pick = (i * 7 + k * 13 + (i >> 2)) % 8; t += ['a', 'b', '+', '%2B', '%20', '%C3%A9', '%26', '%3D'][pick]; }
+    n++;
+    const want = new URLSearchParams('v=' + t).get('v');
+    if (transform(spec, t, { dir: 'dec' }).output === want) agree++;
+  }
+  check(agree === n, 'Component scope, Auto: agrees with URLSearchParams on ' + n + ' form-encoded values', agree + '/' + n);
+  check(stat(transform(spec, 'a+b+c', { dir: 'dec' }), 'Plus signs') === '2 read as spaces' && stat(transform(spec, 'a+b', { dir: 'dec', plus: 'no' }), 'Plus signs') === '1 kept as +' && stat(transform(spec, 'a+b', { dir: 'dec' }), 'Plus signs') === '1 read as a space',
+    'the Plus signs row counts them and says what happened');
+  const tip = (spec.tips || []).join(' ');
+  check(!/Both decode to a space/.test(tip) && /Treat \+ as space/.test(tip), 'the tip no longer says both decode to a space, and names the option', tip);
+  const old = beforeAt(BASE2, 'engine/dev-url-encoder.js');
+  if (old) {
+    const os = old.DEV_TOOLS['url-encoder'];
+    check(transform(os, 'salt+%2B+pepper', { dir: 'dec' }).output === 'salt+++pepper' && /Both decode to a space/.test(os.tips.join(' ')),
+      'BEFORE: reproduced — + never became a space, while the tip said both decode to a space');
+  }
+}
+
+/* ======================================================================
+   14  CSV to JSON: nested data, delimiters, header, types, download
+   ====================================================================== */
+
+function testCsv() {
+  section('14  CSV to JSON: nested objects, delimiter, header, types');
+  const spec = current('engine/dev-csv-to-json.js').DEV_TOOLS['csv-to-json'];
+  const j = (r) => { try { return JSON.parse(r.output); } catch (e) { return { unparsed: r.output || r.error }; } };
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+  // JSON -> CSV: nested objects flatten with dots, arrays and {} as JSON text (expected CSV written by hand)
+  const DATA = [
+    { id: 1, user: { name: 'Ann', address: { city: 'Leeds', zip: 'LS1' } }, tags: ['x', 'y'], meta: {} },
+    { id: 2, user: { name: 'Bo, Jr', address: { city: 'York' } }, tags: [], ok: true, note: null }
+  ];
+  const WANT = 'id,user.name,user.address.city,user.address.zip,tags,meta,ok,note\n' +
+    '1,Ann,Leeds,LS1,"[""x"",""y""]",{},,\n' +
+    '2,"Bo, Jr",York,,[],,true,';
+  const c = transform(spec, JSON.stringify(DATA), { dir: 'j2c' });
+  check(c.output === WANT, 'JSON -> CSV: nested keys become a.b.c columns, arrays and {} JSON text, null empty', JSON.stringify(c.output));
+  check(!/object Object/.test(c.output), 'JSON -> CSV: no [object Object] anywhere');
+  check(stat(c, 'Dotted columns') === '3' && stat(c, 'Columns') === '8' && stat(c, 'Rows') === '2', 'JSON -> CSV: Columns 8, Rows 2, Dotted columns 3', (c.stats || []).join(' | '));
+  check(transform(spec, JSON.stringify([{ a: 'x;y', b: 1 }]), { dir: 'j2c', delim: ';' }).output === 'a;b\n"x;y";1', 'JSON -> CSV with a semicolon: a value holding it is quoted');
+  check(transform(spec, JSON.stringify([{ 'a,b': 1 }]), { dir: 'j2c' }).output === '"a,b"\n1', 'JSON -> CSV: a header holding the delimiter is quoted too');
+  check(transform(spec, JSON.stringify([{ a: 1, b: 2 }]), { dir: 'j2c', header: 'no' }).output === '1,2', 'JSON -> CSV, First row is a header No: no header line');
+
+  // and back: Nest + Infer types restores the original objects, except where CSV cannot say (missing vs empty, null)
+  const back = j(transform(spec, WANT, { nest: 'nest', types: 'on' }));
+  const WANT_BACK = [
+    { id: 1, user: { name: 'Ann', address: { city: 'Leeds', zip: 'LS1' } }, tags: ['x', 'y'], meta: {}, ok: '', note: '' },
+    { id: 2, user: { name: 'Bo, Jr', address: { city: 'York', zip: '' } }, tags: [], meta: '', ok: true, note: '' }
+  ];
+  check(same(back, WANT_BACK), 'CSV -> JSON with Nest and Infer types: the nested objects and arrays come back', JSON.stringify(back));
+  const flat = j(transform(spec, WANT));
+  check(flat[0]['user.address.city'] === 'Leeds' && flat[0].id === '1' && flat[0].tags === '["x","y"]', 'CSV -> JSON by default: dotted headers stay flat keys, values text', JSON.stringify(flat[0]));
+  const clash = transform(spec, 'a,a.b\n1,2', { nest: 'nest' });
+  check(same(j(clash), [{ a: '1', 'a.b': '2' }]) && /a\.b/.test(clash.warn || ''), 'Nest: a.b beside a plain a stays a flat key, with a warning', JSON.stringify(clash));
+
+  // delimiter detection: each file holds the other delimiters inside quotes
+  const FILES = [
+    ['Semicolon', 'name;price\n"Tea, green";"2,50"\nCoffee;3', [{ name: 'Tea, green', price: '2,50' }, { name: 'Coffee', price: '3' }]],
+    ['Comma', 'name,note\nA,"x;y;z"\nB,"p;q"', [{ name: 'A', note: 'x;y;z' }, { name: 'B', note: 'p;q' }]],
+    ['Tab', 'a\tb\n"1,2"\t3', [{ a: '1,2', b: '3' }]],
+    ['Pipe', 'a|b|c\n1|2|"x,y"\n4|5|6', [{ a: '1', b: '2', c: 'x,y' }, { a: '4', b: '5', c: '6' }]]
+  ];
+  for (const [name, text, want] of FILES) {
+    const r = transform(spec, text);
+    check(same(j(r), want) && stat(r, 'Delimiter') === name + ' (detected)', 'Detect: a ' + name.toLowerCase() + ' file', JSON.stringify(r.output) + ' ' + stat(r, 'Delimiter'));
+  }
+  check(stat(transform(spec, 'a;b\n1;2', { delim: ',' }), 'Delimiter') === 'Comma', 'a delimiter picked by hand is used as it is, and not called detected');
+  check(defaults(spec.options).delim === 'auto', 'Detect is the default');
+
+  // header toggle
+  check(same(j(transform(spec, 'a,b\n1,2,3', { header: 'no' })), [{ column1: 'a', column2: 'b', column3: '' }, { column1: '1', column2: '2', column3: '3' }]),
+    'First row is a header No: every row is data, keyed column1.. by the widest row');
+
+  // type inference, off by default (expected values by hand)
+  const CELLS = ['42', '-0.5', '6.02e23', 'true', 'FALSE', 'null', 'NULL', '007', '+1', '1.', '.5', '12345678901234567890', '0x1F', 'yes'];
+  const WANT_T = [42, -0.5, 6.02e23, true, false, null, 'NULL', '007', '+1', '1.', '.5', '12345678901234567890', '0x1F', 'yes'];
+  const typed = j(transform(spec, 'v\n' + CELLS.join('\n'), { types: 'on' })).map((o) => o.v);
+  check(same(typed, WANT_T), 'Infer types: JSON numbers, true/false in any case, null; 007, +1, 1., .5, 0x1F and a 20-digit id stay text', JSON.stringify(typed));
+  check(j(transform(spec, 'v\n42\ntrue')).every((o) => typeof o.v === 'string') && defaults(spec.options).types === 'off', 'Infer types is off by default: every value a string');
+
+  // the download follows the direction
+  transform(spec, 'a\n1');
+  const d1 = spec.download && [spec.download.ext, spec.download.type].join(' ');
+  transform(spec, '[{"a":1}]', { dir: 'j2c' });
+  const d2 = spec.download && [spec.download.ext, spec.download.type].join(' ');
+  check(d1 === 'json application/json' && d2 === 'csv text/csv', 'download: JSON saves as .json, CSV as .csv', d1 + ' / ' + d2);
+
+  const old = beforeAt(BASE2, 'engine/dev-csv-to-json.js');
+  if (old) {
+    const os = old.DEV_TOOLS['csv-to-json'];
+    check(/\[object Object\]/.test(transform(os, JSON.stringify(DATA), { dir: 'j2c' }).output), 'BEFORE: reproduced — nested objects were written as [object Object]');
+    check(Object.keys(JSON.parse(transform(os, FILES[0][1]).output)[0]).length === 1 && !os.download, 'BEFORE: reproduced — a semicolon file came out as one column, and the download was a .txt');
+  }
+}
+
+/* ======================================================================
+   15  robots.txt exclusions under every policy; download names
+   ====================================================================== */
+
+function testRobotsExclusions() {
+  section('15  robots.txt: exclusions under every policy; robots.txt and .htaccess file names');
+  const spec = current('engine/dev-robots-txt-generator.js').DEV_TOOLS['robots-txt-generator'];
+  const F = { disallow: 'admin/\n /cart/ \n\n/*.json$', sitemap: '', aibots: 'allow' };
+  const WANT = 'User-agent: *\nDisallow: /admin/\nDisallow: /cart/\nDisallow: /*.json$\nAllow: /\n';
+  check(generate(spec, Object.assign({ policy: 'allow' }, F)).output === WANT, 'Allow all: the typed exclusions are written, a / added where missing');
+  check(generate(spec, Object.assign({ policy: 'custom' }, F)).output === WANT, 'an old link\'s policy=custom gives the same file');
+  check(generate(spec, Object.assign({ policy: 'block' }, F)).output === 'User-agent: *\nDisallow: /\n', 'Block all: still exactly two lines (Disallow: / already covers every exclusion)');
+  check(generate(spec, { policy: 'allow', disallow: '', sitemap: '', aibots: 'allow' }).output === 'User-agent: *\nAllow: /\n', 'Allow all with no exclusions: User-agent: * and Allow: /');
+  const vals = (spec.fields.find((f) => f.key === 'policy') || {}).options.map((o) => o.value).join();
+  check(vals === 'allow,block', 'the policy list is Allow all (except the paths below) and Block all', vals);
+  check(spec.filename === 'robots.txt', 'robots.txt downloads as robots.txt', spec.filename);
+  const ht = current('engine/dev-htaccess-generator.js').DEV_TOOLS['htaccess-generator'];
+  check(ht.filename === '.htaccess', '.htaccess downloads as .htaccess', ht.filename);
+  const old = beforeAt(BASE2, 'engine/dev-robots-txt-generator.js');
+  if (old) {
+    const o = generate(old.DEV_TOOLS['robots-txt-generator'], Object.assign({ policy: 'allow' }, F)).output;
+    check(!/Disallow/.test(o) && !old.DEV_TOOLS['robots-txt-generator'].filename, 'BEFORE: reproduced — Allow all dropped the typed exclusions, and the file saved as output.txt');
+  }
+}
+
 let exCache = null;
 function examples() {
   if (exCache) return exCache;
@@ -808,6 +986,101 @@ function examples() {
   if (fs.existsSync(f)) new Function('window', fs.readFileSync(f, 'utf8'))(w);
   exCache = w.TOOL_EXAMPLES || {};
   return exCache;
+}
+
+/* ======================================================================
+   13  the QR renderers moved out of render-dev.js into render-qr.js
+   ====================================================================== */
+
+const SPLIT_BASE = '364240974';                 // render-dev.js with the QR code still in it
+const QR_START = '  /* ---------------- QR ---------------- */\n';
+const QR_END = '  /* ---------------- file in, images out ---------------- */\n';
+const QR_HELPERS = ['el', 'copyButton', 'downloadButton', 'buildField', 'linkParams', 'announce', 'renderStats', 'loadZip'];
+
+/** A top-level helper's text: from its declaration (with the comment just
+ *  above it) to the line that closes it at the same indent. */
+function helperText(src, name) {
+  const lines = src.split('\n');
+  const at = lines.findIndex((l) => new RegExp('^  (async )?function ' + name + '\\b|^  (const|let) ' + name + '\\b').test(l));
+  if (at < 0) return null;
+  let from = at;
+  while (from > 0 && /^  (\/\*|   |\*\/| \*)/.test(lines[from - 1]) && !/^  \}/.test(lines[from - 1])) from--;
+  let to = at;
+  if (!/;\s*$/.test(lines[at]) || /\{\s*$/.test(lines[at])) { while (to < lines.length && lines[to] !== '  }') to++; }
+  return lines.slice(from, to + 1).join('\n');
+}
+/** What a renderer registers on window.MVRTool, run in a vm with a stub window. */
+function registers(rel) {
+  const ctx = context({ MVRTool: undefined, document: { addEventListener() {} } });
+  ctx.MVRTool = undefined;
+  runIn(ctx, fs.readFileSync(path.join(ROOT, rel), 'utf8'), rel);
+  return Object.keys(ctx.MVRTool || {}).sort();
+}
+/** Every page of the site that calls one of these mounts: rel path → html. */
+function pagesCalling(re) {
+  const out = {};
+  const walk = (dir) => {
+    for (const d of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (d.isDirectory()) { if (!/^(\.|node_modules$|engine$|build$|assets$)/.test(d.name)) walk(path.join(dir, d.name)); }
+      else if (d.name.endsWith('.html')) {
+        const f = path.join(dir, d.name), html = fs.readFileSync(f, 'utf8');
+        if (re.test(html)) out[path.relative(ROOT, f).replace(/\\/g, '/')] = html;
+      }
+    }
+  };
+  walk(ROOT);
+  return out;
+}
+const loads = (html, file) => new RegExp('<script src="/engine/' + file.replace('.', '\\.') + '"').test(html);
+
+function testQrSplit() {
+  section('13  QR renderers: their own file, moved verbatim');
+  const dev = fs.readFileSync(path.join(ROOT, 'engine/render-dev.js'), 'utf8');
+  const qrPath = path.join(ROOT, 'engine/render-qr.js');
+  if (!fs.existsSync(qrPath)) { check(false, 'engine/render-qr.js exists'); return; }
+  const qr = fs.readFileSync(qrPath, 'utf8');
+
+  // what each registers, run in Node
+  let r1 = [], r2 = [];
+  try { r1 = registers('engine/render-qr.js'); } catch (e) { check(false, 'render-qr.js loads in Node', e.message); }
+  try { r2 = registers('engine/render-dev.js'); } catch (e) { check(false, 'render-dev.js loads in Node', e.message); }
+  check(r1.join() === 'mountQR,mountQRBulk,mountQRScanner', 'render-qr.js registers mountQR, mountQRBulk and mountQRScanner, and nothing else', r1.join());
+  check(r2.join() === '_zipStore,mountCode,mountFile,mountGenerate', 'render-dev.js registers mountCode, mountGenerate, mountFile and _zipStore, and no QR mount', r2.join());
+  check(!/function mountQR|QR_TYPES|function svgToPngBlob|BULK_LIMIT|classifyPayload/.test(dev), 'render-dev.js holds none of the QR code');
+
+  // verbatim: the QR section of render-dev.js as it was, inside render-qr.js unchanged
+  const old = oldSrcAt(SPLIT_BASE, 'engine/render-dev.js');
+  if (old === null) skip('git show ' + SPLIT_BASE + ':engine/render-dev.js is not available: the verbatim checks are skipped');
+  else {
+    const a = old.indexOf(QR_START), b = old.indexOf(QR_END);
+    const block = a >= 0 && b > a ? old.slice(a, b).replace(/\n+$/, '\n') : null;
+    /* The move itself was verbatim (wave 0-A, 6 October 2026); wave 4 then
+       extended render-qr.js (PDF/EPS, frames, barcodes, label sheets), so
+       the check is now that every top-level function of the old section is
+       still there, by name, rather than the old text byte for byte. The
+       render-dev.js side below still proves exactly that section left it. */
+    const fnNames = block ? (block.match(/^  (?:async )?function ([A-Za-z0-9_]+)/gm) || []).map((l) => l.replace(/^  (?:async )?function /, '')) : [];
+    const lost = fnNames.filter((n) => !new RegExp('^  (?:async )?function ' + n + '\\b', 'm').test(qr));
+    check(block && block.length > 100000 && fnNames.length >= 10 && lost.length === 0,
+      'every top-level function of the QR section of render-dev.js at ' + SPLIT_BASE + ' (' + fnNames.length + ', mountQR through svgToPngBlob) is still in render-qr.js', lost.join(', ') || (block ? block.length : 'markers not found'));
+    // and render-dev.js is what it was, less that section, its three exports and the header lines naming them
+    const strip = (s) => s.replace(/^[\s\S]*?\(function \(\) \{/, '').replace(/^  window\.MVRTool\.mountQR(Scanner|Bulk)? = mountQR(Scanner|Bulk)?;\n/gm, '');
+    const oldLess = block ? strip(old.slice(0, a) + old.slice(b)) : null;
+    check(oldLess !== null && strip(dev) === oldLess, 'render-dev.js is otherwise unchanged: its old text less the QR section and the three QR exports, line for line', 'differs');
+    // the helpers the QR code calls are copies of render-dev.js's, identical to the old ones and to today's
+    const bad = QR_HELPERS.filter((n) => { const x = helperText(qr, n); return !x || x !== helperText(dev, n) || x !== helperText(old, n); });
+    check(bad.length === 0, 'the ' + QR_HELPERS.length + ' helpers render-qr.js keeps a copy of (' + QR_HELPERS.join(', ') + ') are identical to render-dev.js\'s', bad.join(', '));
+  }
+
+  // the pages: QR mounts load render-qr.js and not render-dev.js; the developer mounts still load render-dev.js
+  const qrPages = pagesCalling(/MVRTool\.mountQR(Scanner|Bulk)?\(/);
+  const qrNames = Object.keys(qrPages).sort();
+  check(qrNames.join() === 'qr/qr-bulk-generator/index.html,qr/qr-code-generator/index.html,qr/qr-code-scanner/index.html' &&
+    qrNames.every((f) => loads(qrPages[f], 'render-qr.js') && !loads(qrPages[f], 'render-dev.js')),
+    'the three QR pages, and only they, mount a QR renderer; each loads /engine/render-qr.js and not /engine/render-dev.js', qrNames.map((f) => f + ' qr=' + loads(qrPages[f], 'render-qr.js') + ' dev=' + loads(qrPages[f], 'render-dev.js')).join(' | '));
+  const devPages = pagesCalling(/MVRTool\.mount(Code|Generate|File)\(/);
+  const missing = Object.keys(devPages).filter((f) => !loads(devPages[f], 'render-dev.js'));
+  check(Object.keys(devPages).length >= 30 && missing.length === 0, 'all ' + Object.keys(devPages).length + ' pages that mount a developer or text renderer still load /engine/render-dev.js', missing.join(', '));
 }
 
 /* ======================================================================
@@ -872,6 +1145,8 @@ async function browserPart() {
     await testPreview(browser, watch);
     await testFavicon(browser, watch);
     await testQrBrowser(browser, watch);
+    await testQrPages(browser, watch);
+    await testDownloads(browser, watch);
     check(offsite.length === 0, 'browser: not one request to anything but 127.0.0.1', offsite.slice(0, 5).join(' '));
   } finally {
     await browser.close();
@@ -903,6 +1178,58 @@ async function newPage(browser, watch, opts) {
   });
   watch(page);
   return { page, dialogs, errors, requests };
+}
+
+/* ---------- 14, 15  what the Download buttons save ---------- */
+
+async function downloadOne(page, dir, label) {
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.mkdirSync(dir, { recursive: true });
+  const cdp = await page.createCDPSession();
+  await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: dir });
+  await page.evaluate((l) => { [...document.querySelectorAll('button')].find((x) => x.textContent === l).click(); }, label);
+  for (let i = 0; i < 50; i++) {
+    const f = fs.readdirSync(dir).filter((n) => !/\.crdownload$/.test(n));
+    if (f.length && !fs.readdirSync(dir).some((n) => /\.crdownload$/.test(n))) return { name: f[0], body: fs.readFileSync(path.join(dir, f[0]), 'utf8') };
+    await sleep(100);
+  }
+  return null;
+}
+
+async function testDownloads(browser, watch) {
+  section('14, 15  Downloads in the browser: .json / .csv, robots.txt, .htaccess');
+  const dir = path.join(OUT, 'downloads');
+  const { page, errors } = await newPage(browser, watch);
+  await page.goto(BASE_URL + '/developer/csv-to-json/', { waitUntil: 'load' });
+  await page.waitForSelector('.code-area');
+  const setText = (t) => page.evaluate((v) => { const a = document.querySelector('.code-area'); a.value = v; a.dispatchEvent(new Event('input', { bubbles: true })); }, t);
+  const setOpt = (k, v) => page.evaluate((key, val) => { const s = document.getElementById('f-' + key); s.value = val; s.dispatchEvent(new Event('change', { bubbles: true })); }, k, v);
+  await setText('name;price\n"Tea, green";"2,50"');
+  let got = await downloadOne(page, dir, 'Download');
+  check(got && got.name === 'csv-to-json-output.json' && JSON.parse(got.body)[0].price === '2,50', 'CSV -> JSON (semicolons detected) saves csv-to-json-output.json', got && got.name + ' ' + got.body.slice(0, 80));
+  await setOpt('dir', 'j2c');
+  await setText('[{"a":{"b":1}}]');
+  got = await downloadOne(page, dir, 'Download');
+  check(got && got.name === 'csv-to-json-output.csv' && got.body === 'a.b\n1', 'JSON -> CSV saves csv-to-json-output.csv holding a.b / 1', got && got.name + ' ' + JSON.stringify(got.body));
+  check(errors.length === 0, 'CSV to JSON: no page errors', errors.join(' | '));
+  await page.close();
+  /* Chrome will not save a name that starts with a dot: it drops the dot and,
+     with no extension left, adds .txt for text/plain. The page asks for
+     .htaccess (the link's download attribute) and its tip says what arrives. */
+  for (const [url, asked, saved, head] of [['/developer/robots-txt-generator/', 'robots.txt', 'robots.txt', 'User-agent: *\nDisallow: /admin/'],
+    ['/developer/htaccess-generator/', '.htaccess', 'htaccess.txt', '# Redirects']]) {
+    const p = await newPage(browser, watch);
+    await p.page.goto(BASE_URL + url, { waitUntil: 'load' });
+    await p.page.waitForFunction(() => (document.querySelector('.code-out') || {}).textContent, { timeout: 10000 });
+    await p.page.evaluate(() => {
+      const orig = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function () { window.__asked = this.download; return orig.call(this); };
+    });
+    const g = await downloadOne(p.page, dir, 'Download');
+    const askedFor = await p.page.evaluate(() => window.__asked);
+    check(askedFor === asked && g && g.name === saved && g.body.indexOf(head) === 0, url + ' asks for ' + asked + ' and Chrome saves ' + saved, askedFor + ' -> ' + (g && g.name) + ' ' + JSON.stringify(g && g.body.slice(0, 40)));
+    await p.page.close();
+  }
 }
 
 /* ---------- 1  the Markdown preview ---------- */
@@ -1234,6 +1561,30 @@ async function testQrBrowser(browser, watch) {
   await cam.page.close();
 }
 
+/* ---------- 13  the QR pages in the browser ---------- */
+
+async function testQrPages(browser, watch) {
+  section('13  QR pages in the browser: render-qr.js, not render-dev.js');
+  const PAGES = [
+    ['/qr/qr-code-generator/', 'the generator draws a code and reads it back ("Verified")', () => /Verified: this exact image was scanned and read back correctly/.test(document.querySelector('.tool-io').textContent) && !!document.querySelector('.qr-stage svg')],
+    ['/qr/qr-bulk-generator/', 'the bulk generator shows its list box', () => !!document.querySelector('.tool-io .bulk-input')],
+    ['/qr/qr-code-scanner/', 'the scanner shows its picture input and camera button', () => !!document.querySelector('.scan-drop input[type=file]') && !!document.querySelector('button[data-act=start]')]
+  ];
+  for (const [url, what, ready] of PAGES) {
+    const { page, errors, requests } = await newPage(browser, watch);
+    await page.goto(BASE_URL + url, { waitUntil: 'load' });
+    let ok = true;
+    try { await page.waitForFunction(ready, { timeout: 15000, polling: 100 }); } catch (e) { ok = false; }
+    const mounts = await page.evaluate(() => ['mountQR', 'mountQRBulk', 'mountQRScanner', 'mountCode', 'mountFile'].map((k) => k + ':' + typeof (window.MVRTool || {})[k]).join(' '));
+    check(ok, url + ': ' + what, mounts + ' | ' + errors.join(' | '));
+    const got = requests.filter((u) => /\/engine\/render-(qr|dev)\.js/.test(u)).map((u) => u.replace(/^.*\/engine\//, ''));
+    check(got.join() === 'render-qr.js' && /mountQR:function mountQRBulk:function mountQRScanner:function mountCode:undefined mountFile:undefined/.test(mounts),
+      url + ': fetched render-qr.js and not render-dev.js; the QR mounts are there and the developer ones are not', got.join() + ' | ' + mounts);
+    check(errors.length === 0, url + ': no script errors', errors.join(' | '));
+    await page.close();
+  }
+}
+
 /* ---------- run ---------- */
 
 (async () => {
@@ -1251,6 +1602,10 @@ async function testQrBrowser(browser, watch) {
   testQrNode();
   testBase64();
   testDefaults();
+  testQrSplit();
+  testUrlPlus();
+  testCsv();
+  testRobotsExclusions();
   if (!NODE_ONLY) await browserPart();
   console.log('\n' + pass + ' passed, ' + fail + ' failed' + (skipped ? ', ' + skipped + ' skipped' : ''));
   process.exit(fail ? 2 : 0);

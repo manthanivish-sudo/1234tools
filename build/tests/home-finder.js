@@ -62,7 +62,8 @@ const CASES = [
   ['payslip for one employee', 'business/payroll-run/'],
   ['qr code for my wifi', 'qr/qr-code-generator/'],
   ['put text behind a person in a photo', 'ai-image/text-behind-image/'],
-  ['gst on an invoice', 'india/gst-calculator/|business/einvoice-json/'],
+  /* the invoice generator works out GST per line (CGST/SGST or IGST) since the PDF wave, so it is a right answer too */
+  ['gst on an invoice', 'india/gst-calculator/|business/einvoice-json/|pdf/invoice-pdf/'],
   ['how many days until my exam', 'education/exam-countdown/'],
   ['shrink a jpeg so it emails', 'image/image-compressor/'],
   ['count the words in my essay', 'text/word-counter/'],
@@ -409,7 +410,7 @@ const registerTotal = () => {
     return page.evaluate(() => {
       const vals = {};
       document.querySelectorAll('.tool-form [name]').forEach((e) => { vals[e.name] = e.value; });
-      return { vals, primary: (document.querySelector('.tool-results .result-primary .result-value') || {}).textContent || '', html: document.querySelector('.tool').innerHTML, used: window.__toolUsed, today: new Date().toISOString().slice(0, 10) };
+      return { vals, primary: (document.querySelector('.tool-results .result-primary .result-value') || {}).textContent || '', html: document.querySelector('.tool').innerHTML, used: window.__toolUsed, today: ((n) => n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0'))(new Date()) /* the local date, as render-core's TODAY */ };
     });
   };
   const loanPlain = await calcAt('/finance/loan-payment/');

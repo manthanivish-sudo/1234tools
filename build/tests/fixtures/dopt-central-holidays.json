@@ -1,0 +1,781 @@
+{
+ "about": "Holidays to be observed in Central Government administrative offices at Delhi / New Delhi (Annexure-I of each year's DoPT Office Memorandum): the 14 compulsory holidays and the 3 chosen for Delhi. Transcribed from the OM page images on 2026-10-06; dates changed later by a DoPT OM carry the printed date in \"printed\". Additional holidays declared by separate orders (e.g. Dr B. R. Ambedkar's birthday) are not part of Annexure-I and are not listed.",
+ "years": {
+  "2021": {
+   "holidays": [
+    {
+     "date": "2021-01-26",
+     "weekday": "Tuesday",
+     "name": "Republic Day",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2021-03-29",
+     "weekday": "Monday",
+     "name": "Holi",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2021-04-02",
+     "weekday": "Friday",
+     "name": "Good Friday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2021-04-21",
+     "weekday": "Wednesday",
+     "name": "Ram Navami",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2021-04-25",
+     "weekday": "Sunday",
+     "name": "Mahavir Jayanti",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2021-05-14",
+     "weekday": "Friday",
+     "name": "Id-ul-Fitr",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2021-05-26",
+     "weekday": "Wednesday",
+     "name": "Budha Purnima",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2021-07-21",
+     "weekday": "Wednesday",
+     "name": "Id-ul-Zuha (Bakrid)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2021-08-15",
+     "weekday": "Sunday",
+     "name": "Independence Day",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2021-08-20",
+     "weekday": "Friday",
+     "name": "Muharram",
+     "kind": "compulsory",
+     "printed": {
+      "date": "2021-08-19",
+      "weekday": "Thursday"
+     },
+     "changedBy": "OM No.12/13/2016-JCA-2 of 11 August 2021",
+     "changeUrl": "https://documents.doptcirculars.nic.in/D2/D02est/MuharramhiZm8.PDF"
+    },
+    {
+     "date": "2021-08-30",
+     "weekday": "Monday",
+     "name": "Janmashtami",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2021-10-02",
+     "weekday": "Saturday",
+     "name": "Mahatma Gandhi's Birthday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2021-10-15",
+     "weekday": "Friday",
+     "name": "Dussehra",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2021-10-19",
+     "weekday": "Tuesday",
+     "name": "Milad-un-Nabi or Id-e-Milad (Birthday of Prophet Mohammad)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2021-11-04",
+     "weekday": "Thursday",
+     "name": "Diwali (Deepavali)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2021-11-19",
+     "weekday": "Friday",
+     "name": "Guru Nanak's Birthday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2021-12-25",
+     "weekday": "Saturday",
+     "name": "Christmas Day",
+     "kind": "compulsory"
+    }
+   ],
+   "om": "F.No.12/9/2020-JCA-2",
+   "dated": "2020-06-10",
+   "url": "https://documents.doptcirculars.nic.in/D2/D02est/HolidaylistKKLde.pdf"
+  },
+  "2022": {
+   "holidays": [
+    {
+     "date": "2022-01-26",
+     "weekday": "Wednesday",
+     "name": "Republic Day",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2022-03-01",
+     "weekday": "Tuesday",
+     "name": "Maha Shivratri",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2022-03-18",
+     "weekday": "Friday",
+     "name": "Holi",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2022-04-14",
+     "weekday": "Thursday",
+     "name": "Mahavir Jayanti",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2022-04-15",
+     "weekday": "Friday",
+     "name": "Good Friday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2022-05-03",
+     "weekday": "Tuesday",
+     "name": "Id-ul-Fitr",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2022-05-16",
+     "weekday": "Monday",
+     "name": "Budha Purnima",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2022-07-10",
+     "weekday": "Sunday",
+     "name": "Id-ul-Zuha (Bakrid)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2022-08-09",
+     "weekday": "Tuesday",
+     "name": "Muharram",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2022-08-15",
+     "weekday": "Monday",
+     "name": "Independence Day",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2022-08-19",
+     "weekday": "Friday",
+     "name": "Janmashtami",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2022-10-02",
+     "weekday": "Sunday",
+     "name": "Mahatma Gandhi's Birthday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2022-10-05",
+     "weekday": "Wednesday",
+     "name": "Dussehra",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2022-10-09",
+     "weekday": "Sunday",
+     "name": "Milad-un-Nabi or Id-e-Milad (Birthday of Prophet Mohammad)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2022-10-24",
+     "weekday": "Monday",
+     "name": "Diwali (Deepavali)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2022-11-08",
+     "weekday": "Tuesday",
+     "name": "Guru Nanak's Birthday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2022-12-25",
+     "weekday": "Sunday",
+     "name": "Christmas Day",
+     "kind": "compulsory"
+    }
+   ],
+   "om": "F.No.12/5/2021-JCA-2",
+   "dated": "2021-06-08",
+   "url": "https://documents.doptcirculars.nic.in/D2/D02est/holiday%20list%2020220rsMX.pdf"
+  },
+  "2023": {
+   "holidays": [
+    {
+     "date": "2023-01-26",
+     "weekday": "Thursday",
+     "name": "Republic Day",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2023-03-08",
+     "weekday": "Wednesday",
+     "name": "Holi",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2023-03-30",
+     "weekday": "Thursday",
+     "name": "Ram Navami",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2023-04-04",
+     "weekday": "Tuesday",
+     "name": "Mahavir Jayanti",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2023-04-07",
+     "weekday": "Friday",
+     "name": "Good Friday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2023-04-22",
+     "weekday": "Saturday",
+     "name": "Id-ul-Fitr",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2023-05-05",
+     "weekday": "Friday",
+     "name": "Budha Purnima",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2023-06-29",
+     "weekday": "Thursday",
+     "name": "Id-ul-Zuha (Bakrid)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2023-07-29",
+     "weekday": "Saturday",
+     "name": "Muharram",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2023-08-15",
+     "weekday": "Tuesday",
+     "name": "Independence Day",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2023-09-07",
+     "weekday": "Thursday",
+     "name": "Janmashtami (Vaishnva)",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2023-09-28",
+     "weekday": "Thursday",
+     "name": "Milad-un-Nabi or Id-e-Milad (Birthday of Prophet Mohammad)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2023-10-02",
+     "weekday": "Monday",
+     "name": "Mahatma Gandhi's Birthday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2023-10-24",
+     "weekday": "Tuesday",
+     "name": "Dussehra",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2023-11-12",
+     "weekday": "Sunday",
+     "name": "Diwali (Deepavali)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2023-11-27",
+     "weekday": "Monday",
+     "name": "Guru Nanak's Birthday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2023-12-25",
+     "weekday": "Monday",
+     "name": "Christmas Day",
+     "kind": "compulsory"
+    }
+   ],
+   "om": "F.No.12/5/2022-JCA",
+   "dated": "2022-06-16",
+   "url": "https://documents.doptcirculars.nic.in/D2/D02est/Naresh_NIC_1_20220616164953373JH62n.pdf"
+  },
+  "2024": {
+   "holidays": [
+    {
+     "date": "2024-01-26",
+     "weekday": "Friday",
+     "name": "Republic Day",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2024-03-25",
+     "weekday": "Monday",
+     "name": "Holi",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2024-03-29",
+     "weekday": "Friday",
+     "name": "Good Friday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2024-04-11",
+     "weekday": "Thursday",
+     "name": "Id-ul-Fitr",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2024-04-17",
+     "weekday": "Wednesday",
+     "name": "Ram Navami",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2024-04-21",
+     "weekday": "Sunday",
+     "name": "Mahavir Jayanti",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2024-05-23",
+     "weekday": "Thursday",
+     "name": "Budha Purnima",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2024-06-17",
+     "weekday": "Monday",
+     "name": "Id-ul-Zuha (Bakrid)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2024-07-17",
+     "weekday": "Wednesday",
+     "name": "Muharram",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2024-08-15",
+     "weekday": "Thursday",
+     "name": "Independence Day",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2024-08-26",
+     "weekday": "Monday",
+     "name": "Janmashtami (Vaishnva)",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2024-09-16",
+     "weekday": "Monday",
+     "name": "Milad-un-Nabi or Id-e-Milad (Birthday of Prophet Mohammad)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2024-10-02",
+     "weekday": "Wednesday",
+     "name": "Mahatma Gandhi's Birthday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2024-10-12",
+     "weekday": "Saturday",
+     "name": "Dussehra",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2024-10-31",
+     "weekday": "Thursday",
+     "name": "Diwali (Deepavali)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2024-11-15",
+     "weekday": "Friday",
+     "name": "Guru Nanak's Birthday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2024-12-25",
+     "weekday": "Wednesday",
+     "name": "Christmas Day",
+     "kind": "compulsory"
+    }
+   ],
+   "om": "F.No.12/2/2023-JCA",
+   "dated": "2023-07-03",
+   "url": "https://documents.doptcirculars.nic.in/D2/D02est/Holiday%20to%20be%20observed%20in%20Central%20government%20offices%20during%20the%20year%202024kFtwz.PDF"
+  },
+  "2025": {
+   "holidays": [
+    {
+     "date": "2025-01-26",
+     "weekday": "Sunday",
+     "name": "Republic Day",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2025-02-26",
+     "weekday": "Wednesday",
+     "name": "Maha Shivaratri",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2025-03-14",
+     "weekday": "Friday",
+     "name": "Holi",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2025-03-31",
+     "weekday": "Monday",
+     "name": "Id-ul-Fitr",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2025-04-10",
+     "weekday": "Thursday",
+     "name": "Mahavir Jayanti",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2025-04-18",
+     "weekday": "Friday",
+     "name": "Good Friday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2025-05-12",
+     "weekday": "Monday",
+     "name": "Budha Purnima",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2025-06-07",
+     "weekday": "Saturday",
+     "name": "Id-ul-Zuha (Bakrid)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2025-07-06",
+     "weekday": "Sunday",
+     "name": "Muharram",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2025-08-15",
+     "weekday": "Friday",
+     "name": "Independence Day",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2025-08-16",
+     "weekday": "Saturday",
+     "name": "Janmashtami",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2025-09-05",
+     "weekday": "Friday",
+     "name": "Milad-un-Nabi or Id-e-Milad (Birthday of Prophet Mohammad)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2025-10-02",
+     "weekday": "Thursday",
+     "name": "Mahatma Gandhi's Birthday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2025-10-02",
+     "weekday": "Thursday",
+     "name": "Dussehra",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2025-10-20",
+     "weekday": "Monday",
+     "name": "Diwali (Deepavali)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2025-11-05",
+     "weekday": "Wednesday",
+     "name": "Guru Nanak's Birthday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2025-12-25",
+     "weekday": "Thursday",
+     "name": "Christmas Day",
+     "kind": "compulsory"
+    }
+   ],
+   "om": "F.No.12/2/2023-JCA",
+   "dated": "2024-07-09",
+   "url": "https://documents.doptcirculars.nic.in/D2/D02est/List%20of%20holidays%202025KtKLw.pdf"
+  },
+  "2026": {
+   "holidays": [
+    {
+     "date": "2026-01-26",
+     "weekday": "Monday",
+     "name": "Republic Day",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2026-03-04",
+     "weekday": "Wednesday",
+     "name": "Holi",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2026-03-21",
+     "weekday": "Saturday",
+     "name": "Id-ul-Fitr",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2026-03-26",
+     "weekday": "Thursday",
+     "name": "Ram Navami",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2026-03-31",
+     "weekday": "Tuesday",
+     "name": "Mahavir Jayanti",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2026-04-03",
+     "weekday": "Friday",
+     "name": "Good Friday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2026-05-01",
+     "weekday": "Friday",
+     "name": "Budha Purnima",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2026-05-28",
+     "weekday": "Thursday",
+     "name": "Id-ul-Zuha (Bakrid)",
+     "kind": "compulsory",
+     "printed": {
+      "date": "2026-05-27",
+      "weekday": "Wednesday"
+     },
+     "changedBy": "OM F.No.12/3/2023-JCA of 22 May 2026",
+     "changeUrl": "https://www.icmr.gov.in/icmrobject/uploads/Circular/1779704410_changeofdateofholidayonaccountofid-u-zuha.pdf"
+    },
+    {
+     "date": "2026-06-26",
+     "weekday": "Friday",
+     "name": "Muharram",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2026-08-15",
+     "weekday": "Saturday",
+     "name": "Independence Day",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2026-08-26",
+     "weekday": "Wednesday",
+     "name": "Milad-un-Nabi or Id-e-Milad (Birthday of Prophet Mohammad)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2026-09-04",
+     "weekday": "Friday",
+     "name": "Janmashtami (Vaishnva)",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2026-10-02",
+     "weekday": "Friday",
+     "name": "Mahatma Gandhi's Birthday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2026-10-20",
+     "weekday": "Tuesday",
+     "name": "Dussehra",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2026-11-08",
+     "weekday": "Sunday",
+     "name": "Diwali (Deepavali)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2026-11-24",
+     "weekday": "Tuesday",
+     "name": "Guru Nanak's Birthday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2026-12-25",
+     "weekday": "Friday",
+     "name": "Christmas Day",
+     "kind": "compulsory"
+    }
+   ],
+   "om": "F.No.12/2/2023-JCA",
+   "dated": "2025-07-03",
+   "url": "https://documents.doptcirculars.nic.in/D2/D02est/Holidays%20to%20be%20observed%20in%20Central%20Government%20Offices%20during%20the%20year%2020265vgBs.pdf"
+  },
+  "2027": {
+   "holidays": [
+    {
+     "date": "2027-01-26",
+     "weekday": "Tuesday",
+     "name": "Republic Day",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2027-03-10",
+     "weekday": "Wednesday",
+     "name": "Id-ul-Fitr",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2027-03-23",
+     "weekday": "Tuesday",
+     "name": "Holi",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2027-03-26",
+     "weekday": "Friday",
+     "name": "Good Friday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2027-04-15",
+     "weekday": "Thursday",
+     "name": "Ram Navami",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2027-04-19",
+     "weekday": "Monday",
+     "name": "Mahavir Jayanti",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2027-05-17",
+     "weekday": "Monday",
+     "name": "Id-ul-Zuha (Bakrid)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2027-05-20",
+     "weekday": "Thursday",
+     "name": "Budha Purnima",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2027-06-16",
+     "weekday": "Wednesday",
+     "name": "Muharram",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2027-08-15",
+     "weekday": "Sunday",
+     "name": "Independence Day",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2027-08-15",
+     "weekday": "Sunday",
+     "name": "Milad-un-Nabi or Id-e-Milad (Prophet Mohammad's Birthday)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2027-08-25",
+     "weekday": "Wednesday",
+     "name": "Janmashtami (Vaishnav)",
+     "kind": "delhi-extra"
+    },
+    {
+     "date": "2027-10-02",
+     "weekday": "Saturday",
+     "name": "Mahatma Gandhi's Birthday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2027-10-09",
+     "weekday": "Saturday",
+     "name": "Dussehra (Vijaya Dashmi)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2027-10-29",
+     "weekday": "Friday",
+     "name": "Diwali (Deepavali)",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2027-11-14",
+     "weekday": "Sunday",
+     "name": "Guru Nanak's Birthday",
+     "kind": "compulsory"
+    },
+    {
+     "date": "2027-12-25",
+     "weekday": "Saturday",
+     "name": "Christmas Day",
+     "kind": "compulsory"
+    }
+   ],
+   "om": "F.No.12/2/2023-JCA",
+   "dated": "2026-07-16",
+   "url": "https://utilities.cept.gov.in/dop/pdfbind.ashx?id=15435",
+   "note": "the OM as forwarded in full by the Department of Posts, letter Y-21/2/2026-PE-II-DOP of 8 September 2026"
+  }
+ }
+}

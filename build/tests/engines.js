@@ -2,7 +2,7 @@
 /**
  * Calculator engine arithmetic — no browser.
  *
- *   node build/tests/engines.js [--root DIR]
+ *   node build/tests/engines.js [--root DIR] [--repo GIT_DIR]
  *
  * Each engine (engine/calc-*.js) is run in a fresh vm context with a stub
  * window, exactly as build/content/_engine.js does, and its compute() is
@@ -19,6 +19,10 @@
  *      stood at BASE, read with `git show` (read-only); if git or that
  *      commit is not available the regression checks are skipped, loudly.
  *
+ *   4. The shared preamble (UK and Indian tax tables, helpers) is only in
+ *      the engines that use it: build/strip-calc-preamble.js removed it
+ *      from the rest.
+ *
  * Random inputs come from a seeded generator, so a failure reproduces.
  */
 'use strict';
@@ -34,13 +38,17 @@ const TZ = arg('--tz') || 'Europe/London';
 process.env.TZ = TZ;                      // before any Date is made
 const DATES_ONLY = argv.includes('--dates-only');
 const ROOT = path.resolve(arg('--root') || path.join(__dirname, '..', '..'));
-const REPO = path.join(__dirname, '..', '..');
+const REPO = path.resolve(arg('--repo') || path.join(__dirname, '..', '..'));   // the git checkout BASE is read from
 const BASE = 'e1fa0b279';                 // engines before the October 2026 fixes
 
 /* ---------- loading ---------- */
+const HOLIDAYS_FILE = path.join(ROOT, 'engine', 'holidays.js');
+const HOLIDAYS_SRC = fs.existsSync(HOLIDAYS_FILE) ? fs.readFileSync(HOLIDAYS_FILE, 'utf8') : '';
 function run(src, filename) {
   const window = { TOOLS: {} };
   const ctx = vm.createContext({ window, console, Intl, Math, Date, Number, String, Array, Object, JSON, isFinite, isNaN, parseFloat, parseInt });
+  /* the holiday calendars the date tools read, loaded first as their pages do */
+  if (HOLIDAYS_SRC) vm.runInContext(HOLIDAYS_SRC, ctx, { filename: 'holidays.js' });
   vm.runInContext(src, ctx, { filename });
   return window.TOOLS;
 }
@@ -129,7 +137,17 @@ function same(slug, inputs, label, skip) {
   const before = was(slug, inputs);
   if (!before) return;
   const after = now(slug, inputs);
-  const drop = new Set(skip || []);
+  /* Schedules hold numbers since wave 5 and the page formats them; the
+     engines before wrote ₹ / £ text. Compare them as the old text, so a
+     moved figure still shows. */
+  const tool = engine(slug);
+  if (after && after._table && Array.isArray(after._table.cols) && before && before._table) {
+    const inr = tool && tool.currency === 'INR';
+    const money = (v) => isFinite(v) ? v.toLocaleString(inr ? 'en-IN' : 'en-GB', { style: 'currency', currency: inr ? 'INR' : 'GBP', maximumFractionDigits: inr ? 0 : 2 }) : '—';
+    const cols = after._table.cols;
+    after._table = { head: after._table.head, rows: after._table.rows.map((r) => r.map((c, i) => (typeof c !== 'number' ? c : cols[i] === 'currency' ? money(c) : String(c)))) };
+  }
+  const drop = new Set((skip || []).concat(['_chart']));   // charts are new presentation data, not figures
   const pick = (o) => JSON.stringify(Object.keys(o).filter((k) => !drop.has(k)).sort().map((k) => [k, o[k]]));
   ok(pick(before) === pick(after), 'regression ' + slug + ' ' + label, { inputs, before: pick(before).slice(0, 300), after: pick(after).slice(0, 300) });
 }
@@ -175,6 +193,22 @@ function diffYMD(a, b) {                     // a <= b; months then days, clamp 
   return [Math.floor(total / 12), total % 12, dfc(...b) - addYMD(a, 0, total, 0)];
 }
 const randDay = (y0, y1) => cfd(int(dfc(y0, 1, 1), dfc(y1, 12, 31)));
+/* US federal holidays from 5 U.S.C. 6103(a), observed on the Friday before a
+   Saturday (6103(b)) and the Monday after a Sunday (E.O. 11582 s.3(a));
+   Juneteenth from 2021. Inauguration Day (Washington DC area only) is left
+   out, as the tool leaves it out. A set of ISO dates. */
+function usFederal(y0, y1) {
+  const out = new Set();
+  const nth = (y, m, wd, n) => { let z = dfc(y, m, 1); while (dow(z) !== wd) z++; return z + 7 * (n - 1); };
+  const last = (y, m, wd) => { let z = dfc(y, m, dim(y, m)); while (dow(z) !== wd) z--; return z; };
+  const obs = (z) => (dow(z) === 6 ? z - 1 : dow(z) === 0 ? z + 1 : z);
+  for (let y = y0; y <= y1; y++) {
+    [obs(dfc(y, 1, 1)), nth(y, 1, 1, 3), nth(y, 2, 1, 3), last(y, 5, 1)].concat(y >= 2021 ? [obs(dfc(y, 6, 19))] : [],
+      [obs(dfc(y, 7, 4)), nth(y, 9, 1, 1), nth(y, 10, 1, 2), obs(dfc(y, 11, 11)), nth(y, 11, 4, 4), obs(dfc(y, 12, 25))])
+      .forEach((z) => out.add(isoOf(cfd(z))));
+  }
+  return out;
+}
 
 /* =====================================================================
    Date tools — run in every time zone
@@ -238,6 +272,48 @@ function dateTests() {
     let z = z0, c = 0; while (c < n) { z++; if (dow(z) !== 0 && dow(z) !== 6 && !hs.has(isoOf(cfd(z)))) c++; }
     const r2 = bd({ start: isoOf(a), mode: 'add', add: n, holidays: hols.join(', ') });
     ok(r2.iso === isoOf(cfd(z)) && r2.result === longDate(z), '3 business days oracle (add)' + Z, { a: isoOf(a), n, hols, want: isoOf(cfd(z)), got: r2.iso });
+  }
+
+  /* 3b. Business days and date difference with the built-in holiday
+     calendars (engine/holidays.js), each against a list from somewhere
+     else: the three UK lists from the saved GOV.UK feed, the US list from
+     the statutory rules worked below in plain arithmetic, India's from the
+     DoPT lists transcribed into build/tests/fixtures (whose weekdays and
+     counts the claims check against the Office Memoranda). Every weekend. */
+  const FIX = path.join(ROOT, 'build', 'tests', 'fixtures');
+  const calSets = {};
+  try {
+    const uk = JSON.parse(fs.readFileSync(path.join(FIX, 'gov-uk-bank-holidays-2026-10-06.json'), 'utf8'));
+    for (const [id, div] of [['uk-ew', 'england-and-wales'], ['uk-sco', 'scotland'], ['uk-ni', 'northern-ireland']]) {
+      const ys = uk[div].events.map((e) => +e.date.slice(0, 4));
+      calSets[id] = { set: new Set(uk[div].events.map((e) => e.date)), from: Math.min(...ys), to: Math.max(...ys) };
+    }
+  } catch (e) { ok(false, '3b the GOV.UK fixture is readable', e.message); }
+  calSets['us-federal'] = { set: usFederal(2012, 2030), from: 2012, to: 2030 };
+  try {
+    const dopt = JSON.parse(fs.readFileSync(path.join(FIX, 'dopt-central-holidays.json'), 'utf8')).years;
+    const ys = Object.keys(dopt).map(Number);
+    calSets['in-central'] = { set: new Set([].concat(...ys.map((y) => dopt[y].holidays.map((h) => h.date)))), from: Math.min(...ys), to: Math.max(...ys) };
+  } catch (e) { ok(false, '3b the DoPT fixture is readable', e.message); }
+  const OFF = { 'sat-sun': [6, 0], 'fri-sat': [5, 6], 'sun': [0] };
+  for (const [id, c] of Object.entries(calSets)) {
+    for (let k = 0; k < 12; k++) {
+      const wkend = pick(Object.keys(OFF)), off = OFF[wkend];
+      const z0 = int(dfc(c.from, 3, 1), dfc(c.to, 9, 1)), len = int(0, 120), z1 = z0 + len;
+      let work = 0, hol = 0;
+      for (let z = z0; z < z1; z++) { if (off.indexOf(dow(z)) >= 0) continue; if (c.set.has(isoOf(cfd(z)))) hol++; else work++; }
+      const r = bd({ start: isoOf(cfd(z0)), end: isoOf(cfd(z1)), calendar: id, weekend: wkend });
+      ok(r.businessDays === work && r.holidaysUsed === hol && r.weekendDays === len - work - hol,
+         '3b business days with ' + id + ' (count)' + Z, { a: isoOf(cfd(z0)), len, wkend, want: [work, hol], got: [r.businessDays, r.holidaysUsed] });
+      const d2 = now('date-difference', { start: isoOf(cfd(z0)), end: isoOf(cfd(z1)), calendar: id, weekend: wkend });
+      ok(d2.businessDays === work && d2.holidaysOff === hol, '3b date difference business days with ' + id + Z, { a: isoOf(cfd(z0)), len, wkend, want: [work, hol], got: [d2.businessDays, d2.holidaysOff] });
+      const sub = rnd() < 0.5, n = int(0, 40);
+      let z = z0, cnt = 0;
+      while (cnt < n) { z += sub ? -1 : 1; if (off.indexOf(dow(z)) >= 0 || c.set.has(isoOf(cfd(z)))) continue; cnt++; }
+      const r2 = bd({ start: isoOf(cfd(z0)), mode: sub ? 'sub' : 'add', add: n, calendar: id, weekend: wkend });
+      ok(r2.iso === isoOf(cfd(z)) && r2.result === longDate(z), '3b business days with ' + id + (sub ? ' (subtract)' : ' (add)') + Z,
+         { a: isoOf(cfd(z0)), n, wkend, want: isoOf(cfd(z)), got: r2.iso });
+    }
   }
 
   /* 4. Date difference and age: never negative, and adding the answer back
@@ -352,7 +428,7 @@ function otherTests() {
   for (let k = 0; k < N; k++) {
     const d = isoOf(randDay(1995, 2050));
     same('ovulation-calculator', { lastPeriod: d, cycle: int(20, 45), luteal: int(9, 17), cycles: int(1, 12) }, d, ['cycleDay']);
-    same('week-number', { date: d }, d);
+    same('week-number', { date: d }, d, ['weeksInYear', '_table']);   // both new since BASE
   }
 
   /* 2. Square footage: the price follows the unit being measured */
@@ -408,7 +484,7 @@ function otherTests() {
   eq(sip({ stepup: 0, years: 15 }).finalMonthly, 10000, '7 SIP: no step-up');
   for (let k = 0; k < N; k++) {
     const v = { monthly: int(500, 100000), rate: int(0, 200) / 10, years: int(0, 40), stepup: rnd() < 0.5 ? 0 : int(1, 20) };
-    same('sip-calculator', v, 'stepup ' + v.stepup, v.stepup ? ['finalMonthly'] : []);
+    same('sip-calculator', v, 'stepup ' + v.stepup, (v.stepup ? ['finalMonthly'] : []).concat(['_table', '_chart']));   // tables are numbers now, formatted by the page
   }
 
   /* 8. GST: the half rate keeps its third decimal */
@@ -419,12 +495,13 @@ function otherTests() {
   eq(gst(3).splitLabel, 'CGST 1.50% + SGST 1.50%', '8 GST 3% label unchanged');
   eq(gst(0.25, 'inter').splitLabel, 'IGST 0.25%', '8 GST 0.25% IGST');
   for (let k = 0; k < N; k++) {
-    same('gst-calculator', { amount: int(0, 1e6) / pick([1, 100]), mode: pick(['exclusive', 'inclusive']), rate: pick([0, 3, 5, 18, 40]), supply: pick(['intra', 'inter']), qty: int(1, 20) }, 'slab');
+    same('gst-calculator', { amount: int(0, 1e6) / pick([1, 100]), mode: pick(['exclusive', 'inclusive']), rate: pick([0, 3, 5, 18, 40]), supply: pick(['intra', 'inter']), qty: int(1, 20) }, 'slab', ['utgst']);   // UTGST is a new output, 0 outside a Union territory
   }
 
   /* 9. Depreciation: DDB switches to straight line */
   const dep = (o) => now('depreciation', Object.assign({ method: 'ddb', cost: 10000, salvage: 0, life: 5, dbRate: 25 }, o));
-  const charges = (r) => r._table.rows.map((x) => x[1]);
+  /* the schedule holds numbers now; read as the page used to print them */
+  const charges = (r) => r._table.rows.map((x) => typeof x[1] === 'number' ? x[1].toLocaleString('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 2 }) : x[1]);
   eq(charges(dep({})).join(' | '), '£4,000.00 | £2,400.00 | £1,440.00 | £1,080.00 | £1,080.00', '9 DDB 10,000 / 0 / 5 years switches in year 4');
   eq(dep({}).finalBook, 0, '9 DDB reaches the residual value');
   eq(dep({}).note, 'Switches to straight line from year 4, when that gives the larger charge.', '9 DDB says when it switched');
@@ -436,7 +513,8 @@ function otherTests() {
     const method = pick(['sl', 'db', 'syd', 'ddb']);
     const cost = int(1000, 200000), v = { method, cost, salvage: int(0, Math.floor(cost / 2)), life: int(1, 30), dbRate: int(5, 50) };
     if (method === 'ddb' && now('depreciation', v).note) continue;   // the bug's domain
-    same('depreciation', v, method);
+    same('depreciation', v, method, ['firstYear']);   // firstYear was read back from the rounded £ text; it is the exact charge now
+    { const r = now('depreciation', v); if (r._table) ok(Math.abs(r.firstYear - r._table.rows[0][1]) < 1e-9 && Math.abs(r.firstYear - (was('depreciation', v) || r).firstYear) <= 0.005 + 1e-9, 'depreciation firstYear is the first charge, within a penny of the old rounded one', v); }
   }
 
   /* A. UK income tax: 45% on taxable income above £125,140 (gov.uk) */
@@ -468,7 +546,7 @@ function otherTests() {
     same('uk-take-home-pay', v, 'below £100k ' + year + ' ' + v.student, ['note']);
     same('employer-cost', { salary: int(0, 300000), year, pension: int(0, 10), allowance: pick(['yes', 'no']), overheads: int(0, 9000), recruitment: int(0, 9000) }, 'employer cost');
     /* beforeRise / beforeCut (reverse percentages) are new since BASE */
-    same('percentage', { mode: 'of', value: int(0, 100), total: int(0, 1e5) }, 'shares the UK table', ['beforeRise', 'beforeCut']);
+    same('percentage', { mode: 'all', value: int(0, 100), total: int(0, 1e5) }, 'shares the UK table', ['beforeRise', 'beforeCut']);
   }
 
   /* F. Late payment interest: reference rate + 8% */
@@ -559,10 +637,10 @@ function indiaTests() {
      s.424: 1,20,000 < 90% (1,35,000); 30,000 × 1% × 4 (Apr–Jul) = 1,200
      total 2,925 — the figures the FAQ quotes */
   const atFaq = at({ paidJun: 15000, paidSep: 50000, paidDec: 90000, paidMar: 120000 });
-  eq(atFaq._table.rows[0][5], '₹225', 'F s.425 June: 3% of ₹7,500');
-  eq(atFaq._table.rows[1][5], '₹525', 'F s.425 September: 3% of ₹17,500');
-  eq(atFaq._table.rows[2][5], '₹675', 'F s.425 December: 3% of ₹22,500');
-  eq(atFaq._table.rows[3][5], '₹300', 'F s.425 March: 1% of ₹30,000');
+  eq(atFaq._table.rows[0][5], 225, 'F s.425 June: 3% of ₹7,500');
+  eq(atFaq._table.rows[1][5], 525, 'F s.425 September: 3% of ₹17,500');
+  eq(atFaq._table.rows[2][5], 675, 'F s.425 December: 3% of ₹22,500');
+  eq(atFaq._table.rows[3][5], 300, 'F s.425 March: 1% of ₹30,000');
   eq(atFaq.interest425, 1725, 'F s.425 total ₹1,725');
   eq(atFaq.interest424, 1200, 'F s.424: 1% × 4 months on ₹30,000');
   eq(atFaq.interestTotal, 2925, 'F total interest ₹2,925');
@@ -572,7 +650,7 @@ function indiaTests() {
      and March paid in full; 1,50,000 paid, so no s.424 */
   const atSpare = at({ paidJun: 18000, paidSep: 54000, paidDec: 112500, paidMar: 150000 });
   eq(atSpare.interest425, 0, 'F s.425(2): 12% by June and 36% by September, no interest');
-  eq(atSpare._table.rows[0][3], '₹4,500', 'F s.425(2): the June shortfall is still shown');
+  eq(atSpare._table.rows[0][3], 4500, 'F s.425(2): the June shortfall is still shown');
   eq(atSpare._table.rows[0][5], 'Nil, 12% paid', 'F s.425(2): June spared at 12%');
   eq(atSpare._table.rows[1][5], 'Nil, 36% paid', 'F s.425(2): September spared at 36%');
   /* One rupee under 12% (17,999): 22,500 − 17,999 = 4,501 → ₹4,500 × 3% = 135 */
@@ -609,8 +687,8 @@ function indiaTests() {
        Mar 1,23,456 − 1,00,000 = 23,456    → 23,400 × 1% = 234   s.425 = 1,329
        s.424: 23,400 × 1% × 6 = 1,404 */
   const atRound = now('advance-tax', { taxLiability: 123456, tdsPaid: 0, paidSoFar: 0, scheme: 'four', paidJun: 10000, paidSep: 40000, paidDec: 80000, paidMar: 100000, balanceMonth: '6' });
-  eq(atRound._table.rows[0][3], '₹8,500', 'F rounding: ₹8,518.40 shortfall becomes ₹8,500');
-  eq(atRound._table.rows[3][3], '₹23,400', 'F rounding: ₹23,456 shortfall becomes ₹23,400');
+  eq(atRound._table.rows[0][3], 8500, 'F rounding: ₹8,518.40 shortfall becomes ₹8,500');
+  eq(atRound._table.rows[3][3], 23400, 'F rounding: ₹23,456 shortfall becomes ₹23,400');
   eq(atRound.interest425, 1329, 'F rounding: s.425 on rounded shortfalls, ₹1,329');
   eq(atRound.interest424, 1404, 'F rounding: s.424 on ₹23,400 for six months, ₹1,404');
   /* Below ₹10,000 (s.404): 60,000 − 52,000 = 8,000, no interest at all */
@@ -621,13 +699,14 @@ function indiaTests() {
   eq(at({}).interest424, 6000, 'F nothing paid: s.424 ₹6,000');
   /* A blank date carries the last total forward: 30,000 by June, nothing more
      → September 67,500 − 30,000 = 37,500 × 3% = 1,125 */
-  eq(at({ paidJun: 30000 })._table.rows[1][5], '₹1,125', 'F a blank date means nothing more was paid');
+  eq(at({ paidJun: 30000 })._table.rows[1][5], 1125, 'F a blank date means nothing more was paid');
 
   /* D. Wording only: these engines' figures must not move */
   for (let k = 0; k < N; k++) {
     same('advance-tax', { taxLiability: int(0, 2e6), tdsPaid: int(0, 5e5), paidSoFar: int(0, 5e5) }, 'figures', ['_table', 'interest425', 'interest424', 'interestTotal', 'interestNote']);
     const fy = pick(['2026-27', '2025-26']);
-    same('india-income-tax', { fy, gross: int(0, 6e6), type: pick(['salaried', 'other']), age: pick(['below60', 'senior', 'super']), deductions: int(0, 5e5) }, 'figures', fy === '2025-26' ? [] : ['_table']);
+    /* up to ₹50 lakh: above it the surcharge's marginal relief, new in wave 5, changes the figures (checked by hand in calc-wave5.js) */
+    same('india-income-tax', { fy, gross: int(0, 5e6), type: pick(['salaried', 'other']), age: pick(['below60', 'senior', 'super']), deductions: int(0, 5e5) }, 'figures', ['_table', '_chart']);   // the table holds numbers now
     same('india-capital-gains', { asset: pick(['equity', 'debt', 'property', 'other']), sale: int(0, 5e6), cost: int(0, 5e6), expenses: int(0, 1e5), months: int(0, 120), slabRate: pick([0, 5, 20, 30]) }, 'figures', ['basis']);
   }
 }
@@ -709,14 +788,43 @@ function pressureTests() {
   }
 }
 
+/* ---------- the shared preamble ----------
+   build/strip-calc-preamble.js took the template's UK and Indian tax tables
+   and helpers out of every engine that never used them. None may carry the
+   block unused again, and an engine that keeps it must name one of its
+   identifiers outside it (the proof that removal changed no result is
+   build/tests/calc-preamble.js). */
+function preambleTests() {
+  const script = path.join(ROOT, 'build', 'strip-calc-preamble.js');
+  if (!fs.existsSync(script)) { ok(false, 'build/strip-calc-preamble.js is in the site under test'); return; }
+  const { analyse } = require(script);
+  const files = fs.readdirSync(path.join(ROOT, 'engine')).filter((f) => /^calc-.*\.js$/.test(f));
+  let kept = 0;
+  for (const f of files) {
+    const src = fs.readFileSync(path.join(ROOT, 'engine', f), 'utf8');
+    const a = analyse(src);
+    if (!a.has) continue;
+    kept++;
+    ok(!a.remove && a.used.length > 0, 'preamble: ' + f + ' keeps the block only because it uses ' + (a.used.join(', ') || 'nothing'));
+    // what it uses is really defined in the block it keeps
+    a.used.forEach((n) => ok(a.names.indexOf(n) >= 0, 'preamble: ' + f + ' uses ' + n + ', which the block defines'));
+  }
+  ok(kept < files.length / 2, 'preamble: fewer than half the ' + files.length + ' calculator engines still carry it (' + kept + ')', kept);
+  // the block, where it is kept, still loads and its tables still hold the checked figures
+  const emp = engine('employer-cost');
+  ok(emp && typeof emp.compute === 'function', 'preamble: an engine that keeps the block (employer-cost) still loads');
+}
+
 /* ---------- run ---------- */
 dateTests();
 if (!DATES_ONLY) {
   otherTests();
   pressureTests();
+  preambleTests();
   for (const tz of ['America/New_York', 'Asia/Kolkata', 'Pacific/Auckland']) {
     const extra = ['--tz', tz, '--dates-only', '--json'];
     if (arg('--root')) extra.push('--root', ROOT);
+    if (arg('--repo')) extra.push('--repo', REPO);
     const r = spawnSync(process.execPath, [__filename, ...extra], { encoding: 'utf8' });
     let res;
     try { res = JSON.parse(r.stdout.trim().split('\n').pop()); } catch (e) { res = { pass: 0, fail: 1, failures: ['child ' + tz + ' failed: ' + (r.stderr || r.stdout).slice(0, 500)] }; }

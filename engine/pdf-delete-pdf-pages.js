@@ -30,6 +30,7 @@ window.PDF_TOOLS["delete-pdf-pages"] = {
 "multiple": false,
 "description": "Remove unwanted pages from a PDF — blank scans, cover sheets, or anything else.",
 "keywords": ["delete pdf pages","remove pages from pdf","pdf page remover","erase pdf page"],
+"pageGrid": { "key": "pages", "mode": "select", "marks": "remove", "rotate": true, "title": "Click the pages to remove; shift-click for a run, or drag across" },
 "controls": [{"key":"pages","label":"Pages to remove","type":"text","default":"1","hint":"e.g. 1, 4-6, 10-"}],
 "run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
@@ -41,7 +42,8 @@ window.PDF_TOOLS["delete-pdf-pages"] = {
       const keep = Array.from({ length: total }, (_, i) => i).filter(i => !drop.has(i));
       if (!keep.length) return { error: 'That would remove every page. Leave at least one.' };
 
-      const bytes = await core.assemble(keep.map(p => ({ doc, pageIndex: p })), {});
+      const turns = opts.turns || {};
+      const bytes = await core.assemble(keep.map(p => ({ doc, pageIndex: p, rotate: Number(turns[p]) || 0 })), {});
       const base = docs[0].name.replace(/\.pdf$/i, '');
       return {
         files: [{ name: `${base}-trimmed.pdf`, bytes }],
@@ -54,7 +56,7 @@ window.PDF_TOOLS["delete-pdf-pages"] = {
         ]
       };
     },
-"tips": ["Check the page numbers against the PDF’s own numbering, not any printed numbers on the page — a document with a cover often has them offset by one.","The inspector tool lists page count and sizes if you are unsure which page is which.","Nothing is destroyed. A new file is produced and your original stays as it is."],
+"tips": ["The pages appear as thumbnails as soon as the file is open: click the ones to remove and they are struck through. Shift-click chooses a run of pages and dragging across the thumbnails chooses every page you pass; from the keyboard the arrow keys move between pages and Space chooses one.","The thumbnails and the box above them are one list: typing \"1, 4-6\" marks those pages, and clicking a page adds it to the box.","Each thumbnail has a turn button, so a page scanned sideways can be put right in the same pass as the deletions.","Check the page numbers against the PDF’s own numbering, not any printed numbers on the page — a document with a cover often has them offset by one.","The inspector tool lists page count and sizes if you are unsure which page is which.","Nothing is destroyed. A new file is produced and your original stays as it is."],
 "faq": [{"q":"Can I get a deleted page back?","a":"From the output, no. Keep the original file until you have checked the result — which is why this never overwrites anything."}]
 };
 })();

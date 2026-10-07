@@ -266,3 +266,108 @@ function totalConversionPairs() {
 
 
 window.UNITS=UNITS;window.convert=convert;window.convertAll=convertAll;
+/**
+ * Reading what people type, and writing answers the way a unit is read.
+ *
+ *   UNIT_PARSE.parse(text, family, fromKey) -> { value, note } | null
+ *     a plain number (12, -0.5, .5, 1,234.5, 1.2e3), a fraction or mixed
+ *     number (3/4, 5 3/4, 5¾), and, in their families, feet and inches
+ *     (5' 11", 5 ft 11 in, 5ft11, 11 3/8") and stones and pounds (11 st 4 lb,
+ *     11st 4). A composite is turned into the From unit, and the note says
+ *     how it was read.
+ *   UNIT_PARSE.compound(family, toKey, value) -> text | null
+ *     feet as feet and inches, inches to the nearest 1/16, stones as stones
+ *     and pounds, pounds as pounds and ounces.
+ *   UNIT_PARSE.ukName(unit) -> the unit's name in British spelling
+ *     (metre, litre), for display; the page addresses keep the old names.
+ */
+const UNIT_PARSE = (function () {
+  const VULGAR = { '½': ' 1/2', '¼': ' 1/4', '¾': ' 3/4', '⅛': ' 1/8', '⅜': ' 3/8', '⅝': ' 5/8', '⅞': ' 7/8', '⅓': ' 1/3', '⅔': ' 2/3', '⅕': ' 1/5', '⅙': ' 1/6', '⅚': ' 5/6' };
+  const NUM = '(?:\\d+(?:\\.\\d*)?|\\.\\d+)';
+  const MIXED = '(?:' + NUM + '(?:\\s+\\d+\\/\\d+)?|\\d+\\/\\d+)';
+  function clean(t) {
+    let s = String(t).trim();
+    s = s.replace(/[½¼¾⅛⅜⅝⅞⅓⅔⅕⅙⅚]/g, (c) => VULGAR[c]);
+    s = s.replace(/[’′‘`]/g, "'").replace(/[”″“]/g, '"').replace(/''/g, '"');
+    s = s.replace(/[\u00a0\u202f]/g, ' ').replace(/\s+/g, ' ').trim();
+    return s;
+  }
+  /* 5, 5.75, 3/4, 5 3/4 -> number */
+  function mixed(s) {
+    s = s.trim();
+    let m;
+    if ((m = /^(-?)(\d+)\s+(\d+)\/(\d+)$/.exec(s))) { const d = Number(m[4]); if (!d) return null; return (m[1] ? -1 : 1) * (Number(m[2]) + Number(m[3]) / d); }
+    if ((m = /^(-?)(\d+)\/(\d+)$/.exec(s))) { const d = Number(m[3]); if (!d) return null; return (m[1] ? -1 : 1) * Number(m[2]) / d; }
+    if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s = s.replace(/,/g, '');
+    if (/^-?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(s)) return Number(s);
+    return null;
+  }
+  const r6 = (x) => Number(x.toPrecision(10));
+  function parse(text, fam, from) {
+    const s = clean(text);
+    if (s === '') return null;
+    const plain = mixed(s);
+    if (plain !== null && isFinite(plain)) return { value: plain, note: /\//.test(s) ? 'Read as ' + r6(plain) + '.' : '' };
+    const U = UNITS[fam] && UNITS[fam].units;
+    if (!U || !U[from]) return null;
+    const neg = /^-/.test(s) ? -1 : 1;
+    const body = s.replace(/^-\s*/, '');
+    let m;
+    if (fam === 'length') {
+      const re = new RegExp('^(' + MIXED + ")\\s*(?:'|ft|feet|foot)\\s*(?:(" + MIXED + ')\\s*(?:"|in|inch|inches)?)?$', 'i');
+      if ((m = re.exec(body))) {
+        const ft = mixed(m[1]), inch = m[2] ? mixed(m[2]) : 0;
+        if (ft === null || inch === null) return null;
+        const metres = neg * (ft * 0.3048 + inch * 0.0254);
+        return { value: Number((metres / U[from].factor).toPrecision(12)), note: 'Read as ' + r6(ft) + ' ft ' + r6(inch) + ' in = ' + r6(ft * 12 + inch) + ' in.' };
+      }
+      const ri = new RegExp('^(' + MIXED + ')\\s*(?:"|in|inch|inches)$', 'i');
+      if ((m = ri.exec(body))) {
+        const inch = mixed(m[1]);
+        if (inch === null) return null;
+        return { value: Number((neg * inch * 0.0254 / U[from].factor).toPrecision(12)), note: 'Read as ' + r6(inch) + ' in.' };
+      }
+    }
+    if (fam === 'mass') {
+      const re = new RegExp('^(' + MIXED + ')\\s*(?:st|stone|stones)\\s*(?:(' + MIXED + ')\\s*(?:lb|lbs|pounds?)?)?$', 'i');
+      if ((m = re.exec(body))) {
+        const st = mixed(m[1]), lb = m[2] ? mixed(m[2]) : 0;
+        if (st === null || lb === null) return null;
+        const kg = neg * (st * 14 + lb) * 0.45359237;
+        return { value: Number((kg / U[from].factor).toPrecision(12)), note: 'Read as ' + r6(st) + ' st ' + r6(lb) + ' lb = ' + r6(st * 14 + lb) + ' lb.' };
+      }
+      const rl = new RegExp('^(' + MIXED + ')\\s*(?:lb|lbs|pounds?)\\s*(?:(' + MIXED + ')\\s*(?:oz|ounces?)?)?$', 'i');
+      if ((m = rl.exec(body))) {
+        const lb = mixed(m[1]), oz = m[2] ? mixed(m[2]) : 0;
+        if (lb === null || oz === null) return null;
+        return { value: Number((neg * (lb + oz / 16) * 0.45359237 / U[from].factor).toPrecision(12)), note: 'Read as ' + r6(lb) + ' lb ' + r6(oz) + ' oz.' };
+      }
+    }
+    return null;
+  }
+  const gcd = (a, b) => { while (b) { const t = a % b; a = b; b = t; } return a; };
+  const trim2 = (x) => String(Number(x.toFixed(2)));
+  function compound(fam, to, v) {
+    if (!isFinite(v)) return null;
+    const neg = v < 0 ? '−' : '', a = Math.abs(v);
+    const two = (big, small, per, u1, u2) => {
+      let B = Math.floor(a / 1 + 1e-12), S = Number(((a - B) * per).toFixed(2));
+      if (S >= per) { B += 1; S = 0; }
+      return neg + B + ' ' + u1 + ' ' + trim2(S) + ' ' + u2;
+    };
+    if (fam === 'length' && to === 'ft' && a >= 1 && Math.abs(a - Math.round(a)) > 1e-9) return two(0, 0, 12, 'ft', 'in');
+    if (fam === 'length' && to === 'in' && Math.abs(a - Math.round(a)) > 1e-9) {
+      let w = Math.floor(a), n = Math.round((a - w) * 16);
+      if (n === 16) { w += 1; n = 0; }
+      if (!n) return neg + w + ' in, to the nearest 1/16';
+      const g = gcd(n, 16);
+      return neg + (w ? w + ' ' : '') + (n / g) + '/' + (16 / g) + ' in, to the nearest 1/16';
+    }
+    if (fam === 'mass' && to === 'st' && a >= 1 && Math.abs(a - Math.round(a)) > 1e-9) return two(0, 0, 14, 'st', 'lb');
+    if (fam === 'mass' && to === 'lb' && a >= 1 && Math.abs(a - Math.round(a)) > 1e-9) return two(0, 0, 16, 'lb', 'oz');
+    return null;
+  }
+  function ukName(u) { return String(u && u.name || '').replace(/meter/g, 'metre').replace(/Meter/g, 'Metre').replace(/liter/g, 'litre').replace(/Liter/g, 'Litre'); }
+  return { parse, compound, ukName, mixed };
+})();
+window.UNIT_PARSE = UNIT_PARSE;

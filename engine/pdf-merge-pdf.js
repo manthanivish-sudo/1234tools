@@ -30,6 +30,7 @@ window.PDF_TOOLS["merge-pdf"] = {
 "multiple": true,
 "description": "Combine several PDFs into one, in any order, without uploading anything.",
 "keywords": ["merge pdf","combine pdf","join pdf files","pdf merger","concatenate pdf"],
+"perFilePages": "ranges",
 "controls": [{"key":"ranges","label":"Pages to take from each file","type":"text","default":"all","hint":"all, or per-file like: 1-3 | all | 2,5"},{"key":"keepMeta","label":"Metadata","type":"select","default":"strip","options":[{"value":"strip","label":"Strip all metadata"},{"value":"first","label":"Keep metadata from the first file"}]},{"key":"title","label":"Document title (optional)","type":"text","default":""}],
 "run": async ({ docs, opts, core }) => {
       if (docs.length < 2) return { error: 'Choose at least two PDFs to merge.' };
@@ -61,7 +62,7 @@ window.PDF_TOOLS["merge-pdf"] = {
         xmp: opts.keepMeta === 'first' && !opts.title ? docs[0].doc : false
       });
       return {
-        files: [{ name: 'merged.pdf', bytes }],
+        files: [{ name: docs[0].name.replace(/\.pdf$/i, '') + '-merged.pdf', bytes }],
         stats: [
           ['Files merged', String(docs.length)],
           ['Total pages', String(items.length)],
@@ -70,7 +71,7 @@ window.PDF_TOOLS["merge-pdf"] = {
         ]
       };
     },
-"tips": ["Files merge in the order listed. Use the arrows in the file list to reorder before merging.","Give one page range to apply to every file, or separate them with | to set each file individually — for example \"1-3 | all | 2,5\".","Metadata is stripped by default, since a merged document inheriting one source file’s author and title is usually wrong.","Links, comments and form fields travel with their page. A link to another page of the same file lands on that page in the merged document; a link to a page you left out is removed rather than pointed somewhere wrong."],
+"tips": ["Files merge in the order listed. Drag a file’s row to move it (on a touch screen, by its ⠿ grip), or use its arrows, which work from the keyboard too.","Press \"Pages: all\" on a file to see its pages as thumbnails and click the ones to take, in the order you click them. The choice stays with the file when you move it.","Give one page range to apply to every file, or separate them with | to set each file individually — for example \"1-3 | all | 2,5\".","Metadata is stripped by default, since a merged document inheriting one source file’s author and title is usually wrong.","Links, comments and form fields travel with their page. A link to another page of the same file lands on that page in the merged document; a link to a page you left out is removed rather than pointed somewhere wrong."],
 "faq": [{"q":"Are my files uploaded?","a":"No. The PDFs are parsed and rewritten by your own browser. Nothing is transmitted, which is why this works offline and why it is safe for contracts and financial documents."},{"q":"What happens to bookmarks and form fields?","a":"When any of the files has bookmarks, the merged file gets one top-level bookmark per file, named after it and opening at its first page, with that file’s own bookmarks underneath; a bookmark whose page you left out is dropped. Form fields stay fillable. Two files can both have a field called “name”, and a reader treats fields with one name as one field, so the later file’s copy is renamed name_2 rather than filling in both at once."}]
 };
 })();

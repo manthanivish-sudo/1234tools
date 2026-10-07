@@ -233,20 +233,29 @@ window.DEV_TOOLS["url-encoder"] = {
 "outputLabel": "Result",
 "placeholder": "https://example.com/search?q=hello world&lang=en-GB",
 "sample": "https://www.1234tools.com/utilities/tool-finder/?q=merge two PDFs&lang=en-GB",
-"options": [{"key":"dir","label":"Direction","type":"select","default":"enc","options":[{"value":"enc","label":"Encode →"},{"value":"dec","label":"← Decode"}]},{"key":"scope","label":"Scope","type":"select","default":"component","options":[{"value":"component","label":"Component (a single value)"},{"value":"full","label":"Full URL (keeps :/?#&= intact)"}]}],
-"transform": (text, { dir, scope }) => {
+"options": [{"key":"dir","label":"Direction","type":"select","default":"enc","options":[{"value":"enc","label":"Encode →"},{"value":"dec","label":"← Decode"}]},{"key":"scope","label":"Scope","type":"select","default":"component","options":[{"value":"component","label":"Component (a single value)"},{"value":"full","label":"Full URL (keeps :/?#&= intact)"}]},{"key":"plus","label":"Treat + as space (decoding)","type":"select","default":"auto","options":[{"value":"auto","label":"Auto: yes in Component, no in Full URL"},{"value":"yes","label":"Yes: + is a space"},{"value":"no","label":"No: + stays +"}]}],
+"transform": (text, { dir, scope, plus }) => {
       if (!text.trim()) return { output: '', note: 'Type or paste something above.' };
+      /* A + is a space only in form-encoded text (a query string sent by an
+         HTML form); RFC 3986 and decodeURIComponent leave it alone. So when
+         decoding, + is read as a space first if the option says so (Auto:
+         yes for a single value, no for a whole address), which also keeps
+         %2B as a real plus sign. Encoding never writes +. */
+      const plusSpace = dir !== 'enc' && (plus === 'yes' || (plus !== 'no' && scope !== 'full'));
+      const plusCount = dir !== 'enc' ? (text.match(/\+/g) || []).length : 0;
       try {
         const fn = dir === 'enc'
           ? (scope === 'full' ? encodeURI : encodeURIComponent)
           : (scope === 'full' ? decodeURI : decodeURIComponent);
-        const output = fn(text);
-        return { output, stats: [['Input', bytes(text)], ['Output', bytes(output)]] };
+        const output = fn(plusSpace ? text.replace(/\+/g, ' ') : text);
+        const stats = [['Input', bytes(text)], ['Output', bytes(output)]];
+        if (plusCount) stats.push(['Plus signs', plusCount + (plusSpace ? (plusCount === 1 ? ' read as a space' : ' read as spaces') : ' kept as +')]);
+        return { output, stats };
       } catch (e) {
         return { error: 'Malformed percent-encoding — check for a stray % not followed by two hex digits.' };
       }
     },
-"tips": ["Use Component scope for a single query value. Full URL scope leaves :/?#&= alone so the address stays usable.","A space becomes %20 in a path but may appear as + in a query string. Both decode to a space.","Encoding an already-encoded string double-encodes it: % becomes %25. Decode first if in doubt."],
+"tips": ["Use Component scope for a single query value. Full URL scope leaves :/?#&= alone so the address stays usable.","A space is %20 in a path but + in a query string sent by a form. Decoding, Treat + as space reads each + as a space (Auto: yes in Component scope, no in Full URL scope). An encoded plus, %2B, never becomes a space.","Encoding an already-encoded string double-encodes it: % becomes %25. Decode first if in doubt."],
 "faq": [{"q":"Which characters actually need encoding?","a":"Anything outside A–Z, a–z, 0–9 and - _ . ~ is unsafe in a URL component. Reserved characters such as & = ? # / must be encoded when they appear inside a value rather than as separators."}]
 };
 })();

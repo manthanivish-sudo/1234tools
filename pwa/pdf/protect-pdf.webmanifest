@@ -1,0 +1,42 @@
+{
+  "id": "/pdf/protect-pdf/",
+  "name": "Protect PDF with a Password — 1234Tools",
+  "short_name": "Protect PDF with a",
+  "description": "Encrypt a PDF with a password in your browser, AES-256 by default, and choose whether people may print, copy or change it. The file is never uploaded.",
+  "start_url": "/pdf/protect-pdf/?src=pwa",
+  "scope": "/pdf/protect-pdf/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-protect-pdf.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-protect-pdf-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-protect-pdf-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

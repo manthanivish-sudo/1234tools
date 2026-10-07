@@ -25,21 +25,15 @@ const PDF_TOOLS = {
   /* ===================== MANIPULATE ===================== */
 
   'merge-pdf': {
-    title: 'Merge PDF Files',
-    kind: 'transform', action: 'Merge PDFs', multiple: true,
-    description: 'Combine several PDFs into one, in any order, without uploading anything.',
-    keywords: ['merge pdf', 'combine pdf', 'join pdf files', 'pdf merger', 'concatenate pdf'],
-    controls: [
-      { key: 'ranges', label: 'Pages to take from each file', type: 'text', default: 'all',
-        hint: 'all, or per-file like: 1-3 | all | 2,5' },
-      { key: 'keepMeta', label: 'Metadata', type: 'select', default: 'strip',
-        options: [
-          { value: 'strip', label: 'Strip all metadata' },
-          { value: 'first', label: 'Keep metadata from the first file' }
-        ]},
-      { key: 'title', label: 'Document title (optional)', type: 'text', default: '' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Merge PDF Files",
+"kind": "transform",
+"action": "Merge PDFs",
+"multiple": true,
+"description": "Combine several PDFs into one, in any order, without uploading anything.",
+"keywords": ["merge pdf","combine pdf","join pdf files","pdf merger","concatenate pdf"],
+"perFilePages": "ranges",
+"controls": [{"key":"ranges","label":"Pages to take from each file","type":"text","default":"all","hint":"all, or per-file like: 1-3 | all | 2,5"},{"key":"keepMeta","label":"Metadata","type":"select","default":"strip","options":[{"value":"strip","label":"Strip all metadata"},{"value":"first","label":"Keep metadata from the first file"}]},{"key":"title","label":"Document title (optional)","type":"text","default":""}],
+"run": async ({ docs, opts, core }) => {
       if (docs.length < 2) return { error: 'Choose at least two PDFs to merge.' };
       const specs = String(opts.ranges || 'all').split('|').map(s => s.trim());
       const items = [];
@@ -69,7 +63,7 @@ const PDF_TOOLS = {
         xmp: opts.keepMeta === 'first' && !opts.title ? docs[0].doc : false
       });
       return {
-        files: [{ name: 'merged.pdf', bytes }],
+        files: [{ name: docs[0].name.replace(/\.pdf$/i, '') + '-merged.pdf', bytes }],
         stats: [
           ['Files merged', String(docs.length)],
           ['Total pages', String(items.length)],
@@ -78,35 +72,21 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'Files merge in the order listed. Use the arrows in the file list to reorder before merging.',
-      'Give one page range to apply to every file, or separate them with | to set each file individually — for example "1-3 | all | 2,5".',
-      'Metadata is stripped by default, since a merged document inheriting one source file\u2019s author and title is usually wrong.',
-      'Links, comments and form fields travel with their page. A link to another page of the same file lands on that page in the merged document; a link to a page you left out is removed rather than pointed somewhere wrong.'
-    ],
-    faq: [
-      { q: 'Are my files uploaded?', a: 'No. The PDFs are parsed and rewritten by your own browser. Nothing is transmitted, which is why this works offline and why it is safe for contracts and financial documents.' },
-      { q: 'What happens to bookmarks and form fields?', a: 'When any of the files has bookmarks, the merged file gets one top-level bookmark per file, named after it and opening at its first page, with that file’s own bookmarks underneath; a bookmark whose page you left out is dropped. Form fields stay fillable. Two files can both have a field called “name”, and a reader treats fields with one name as one field, so the later file’s copy is renamed name_2 rather than filling in both at once.' }
-    ]
-  },
+"tips": ["Files merge in the order listed. Drag a file’s row to move it (on a touch screen, by its ⠿ grip), or use its arrows, which work from the keyboard too.","Press \"Pages: all\" on a file to see its pages as thumbnails and click the ones to take, in the order you click them. The choice stays with the file when you move it.","Give one page range to apply to every file, or separate them with | to set each file individually — for example \"1-3 | all | 2,5\".","Metadata is stripped by default, since a merged document inheriting one source file’s author and title is usually wrong.","Links, comments and form fields travel with their page. A link to another page of the same file lands on that page in the merged document; a link to a page you left out is removed rather than pointed somewhere wrong."],
+"faq": [{"q":"Are my files uploaded?","a":"No. The PDFs are parsed and rewritten by your own browser. Nothing is transmitted, which is why this works offline and why it is safe for contracts and financial documents."},{"q":"What happens to bookmarks and form fields?","a":"When any of the files has bookmarks, the merged file gets one top-level bookmark per file, named after it and opening at its first page, with that file’s own bookmarks underneath; a bookmark whose page you left out is dropped. Form fields stay fillable. Two files can both have a field called “name”, and a reader treats fields with one name as one field, so the later file’s copy is renamed name_2 rather than filling in both at once."}]
+},
 
   'split-pdf': {
-    title: 'Split PDF',
-    kind: 'transform', action: 'Split PDF', multiple: false,
-    description: 'Split one PDF into several files — by page count, by ranges, or one file per page.',
-    keywords: ['split pdf', 'separate pdf pages', 'divide pdf', 'pdf splitter', 'break up pdf'],
-    controls: [
-      { key: 'mode', label: 'Split', type: 'select', default: 'each',
-        options: [
-          { value: 'each', label: 'One file per page' },
-          { value: 'every', label: 'Every N pages' },
-          { value: 'ranges', label: 'By explicit ranges' },
-          { value: 'half', label: 'In half' }
-        ]},
-      { key: 'n', label: 'Pages per file', type: 'number', default: 2, min: 1, max: 500 },
-      { key: 'ranges', label: 'Ranges, one output per group', type: 'text', default: '1-3 | 4-6 | 7-' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Split PDF",
+"kind": "transform",
+"action": "Split PDF",
+"multiple": false,
+"description": "Split one PDF into several files — by page count, by ranges, or one file per page.",
+"keywords": ["split pdf","separate pdf pages","divide pdf","pdf splitter","break up pdf"],
+"pageGrid": { "mode": "split", "rotate": true, "rangesKey": "ranges", "title": "Click a page to split after it; each colour is one file" },
+"zipSuffix": "split",
+"controls": [{"key":"mode","label":"Split","type":"select","default":"each","options":[{"value":"each","label":"One file per page"},{"value":"every","label":"Every N pages"},{"value":"ranges","label":"By explicit ranges"},{"value":"half","label":"In half"}]},{"key":"n","label":"Pages per file","type":"number","default":2,"min":1,"max":500},{"key":"ranges","label":"Ranges, one output per group","type":"text","default":"1-3 | 4-6 | 7-"}],
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
       const base = docs[0].name.replace(/\.pdf$/i, '');
@@ -135,7 +115,7 @@ const PDF_TOOLS = {
 
       const files = [];
       for (let g = 0; g < groups.length; g++) {
-        const bytes = await core.assemble(groups[g].map(p => ({ doc, pageIndex: p })), {});
+        const bytes = await core.assemble(groups[g].map(p => ({ doc, pageIndex: p, rotate: Number((opts.turns || {})[p]) || 0 })), {});
         const label = groups[g].length === 1
           ? `p${groups[g][0] + 1}`
           : `p${groups[g][0] + 1}-${groups[g][groups[g].length - 1] + 1}`;
@@ -151,32 +131,20 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'One file per page is the right choice for scanned batches where each page is a separate document.',
-      'Explicit ranges give you full control: "1-3 | 4-6 | 7-" produces three files, with the last taking everything from page 7 onward.',
-      'Several output files are offered as a ZIP so you get them in one download.'
-    ],
-    faq: [
-      { q: 'Do the split files keep the original quality?', a: 'Yes. Page content streams and embedded images are copied byte for byte — nothing is re-encoded or recompressed.' }
-    ]
-  },
+"tips": ["One file per page is the right choice for scanned batches where each page is a separate document.","Explicit ranges give you full control: \"1-3 | 4-6 | 7-\" produces three files, with the last taking everything from page 7 onward.","Several output files are offered as a ZIP so you get them in one download.","The pages appear as thumbnails with each output file in its own shade. Click a page, or its scissors button, to split after it; the ranges box fills in to match, and a page can be turned before it is split off."],
+"faq": [{"q":"Do the split files keep the original quality?","a":"Yes. Page content streams and embedded images are copied byte for byte — nothing is re-encoded or recompressed."}]
+},
 
   'extract-pdf-pages': {
-    title: 'Extract PDF Pages',
-    kind: 'transform', action: 'Extract pages', multiple: false,
-    description: 'Pull specific pages out of a PDF into a new document, keeping the order you specify.',
-    keywords: ['extract pdf pages', 'select pdf pages', 'pdf page extractor', 'get pages from pdf', 'copy pdf pages'],
-    controls: [
-      { key: 'pages', label: 'Pages to keep', type: 'text', default: '1-3',
-        hint: 'e.g. 1-3, 7, 10-' },
-      { key: 'order', label: 'Order', type: 'select', default: 'asis',
-        options: [
-          { value: 'asis', label: 'As listed' },
-          { value: 'sorted', label: 'Sorted by page number' },
-          { value: 'reverse', label: 'Reversed' }
-        ]}
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Extract PDF Pages",
+"kind": "transform",
+"action": "Extract pages",
+"multiple": false,
+"description": "Pull specific pages out of a PDF into a new document, keeping the order you specify.",
+"keywords": ["extract pdf pages","select pdf pages","pdf page extractor","get pages from pdf","copy pdf pages"],
+"pageGrid": { "key": "pages", "mode": "select", "marks": "keep", "rotate": true, "title": "Click the pages to keep, in the order you want them; shift-click for a run, or drag across" },
+"controls": [{"key":"pages","label":"Pages to keep","type":"text","default":"1-3","hint":"e.g. 1-3, 7, 10-"},{"key":"order","label":"Order","type":"select","default":"asis","options":[{"value":"asis","label":"As listed"},{"value":"sorted","label":"Sorted by page number"},{"value":"reverse","label":"Reversed"}]}],
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
       let idx;
@@ -186,7 +154,8 @@ const PDF_TOOLS = {
       if (opts.order === 'sorted') idx = idx.slice().sort((a, b) => a - b);
       if (opts.order === 'reverse') idx = idx.slice().reverse();
 
-      const bytes = await core.assemble(idx.map(p => ({ doc, pageIndex: p })), {});
+      const turns = opts.turns || {};
+      const bytes = await core.assemble(idx.map(p => ({ doc, pageIndex: p, rotate: Number(turns[p]) || 0 })), {});
       const base = docs[0].name.replace(/\.pdf$/i, '');
       return {
         files: [{ name: `${base}-extract.pdf`, bytes }],
@@ -198,25 +167,20 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'Page selections accept ranges, single pages and open-ended forms: "1-3, 7, 10-" takes pages 1 to 3, page 7, and everything from 10 onward.',
-      'Order "as listed" respects what you typed, so "5, 1, 3" produces those pages in that order — useful for reordering as you extract.',
-      'A page can appear twice. "1, 1, 2" duplicates the first page, which is occasionally what you want for a cover sheet.'
-    ],
-    faq: [
-      { q: 'What happens to pages I do not select?', a: 'They are simply not copied. The original file on your device is untouched — this always produces a new document.' }
-    ]
-  },
+"tips": ["The pages appear as thumbnails once the file is open. Click the pages to keep in the order you want them: the box fills with that order, so clicking 5, then 1, then 3 gives \"5, 1, 3\". Shift-click chooses a run of pages and dragging across the thumbnails chooses every page you pass; from the keyboard the arrow keys move between pages and Space chooses one.","Page selections accept ranges, single pages and open-ended forms: \"1-3, 7, 10-\" takes pages 1 to 3, page 7, and everything from 10 onward.","Order \"as listed\" respects what you typed, so \"5, 1, 3\" produces those pages in that order — useful for reordering as you extract.","A page can appear twice. \"1, 1, 2\" duplicates the first page, which is occasionally what you want for a cover sheet."],
+"faq": [{"q":"What happens to pages I do not select?","a":"They are simply not copied. The original file on your device is untouched — this always produces a new document."}]
+},
 
   'delete-pdf-pages': {
-    title: 'Delete PDF Pages',
-    kind: 'transform', action: 'Delete pages', multiple: false,
-    description: 'Remove unwanted pages from a PDF — blank scans, cover sheets, or anything else.',
-    keywords: ['delete pdf pages', 'remove pages from pdf', 'pdf page remover', 'erase pdf page'],
-    controls: [
-      { key: 'pages', label: 'Pages to remove', type: 'text', default: '1', hint: 'e.g. 1, 4-6, 10-' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Delete PDF Pages",
+"kind": "transform",
+"action": "Delete pages",
+"multiple": false,
+"description": "Remove unwanted pages from a PDF — blank scans, cover sheets, or anything else.",
+"keywords": ["delete pdf pages","remove pages from pdf","pdf page remover","erase pdf page"],
+"pageGrid": { "key": "pages", "mode": "select", "marks": "remove", "rotate": true, "title": "Click the pages to remove; shift-click for a run, or drag across" },
+"controls": [{"key":"pages","label":"Pages to remove","type":"text","default":"1","hint":"e.g. 1, 4-6, 10-"}],
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
       let drop;
@@ -226,7 +190,8 @@ const PDF_TOOLS = {
       const keep = Array.from({ length: total }, (_, i) => i).filter(i => !drop.has(i));
       if (!keep.length) return { error: 'That would remove every page. Leave at least one.' };
 
-      const bytes = await core.assemble(keep.map(p => ({ doc, pageIndex: p })), {});
+      const turns = opts.turns || {};
+      const bytes = await core.assemble(keep.map(p => ({ doc, pageIndex: p, rotate: Number(turns[p]) || 0 })), {});
       const base = docs[0].name.replace(/\.pdf$/i, '');
       return {
         files: [{ name: `${base}-trimmed.pdf`, bytes }],
@@ -239,80 +204,63 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'Check the page numbers against the PDF\u2019s own numbering, not any printed numbers on the page — a document with a cover often has them offset by one.',
-      'The inspector tool lists page count and sizes if you are unsure which page is which.',
-      'Nothing is destroyed. A new file is produced and your original stays as it is.'
-    ],
-    faq: [
-      { q: 'Can I get a deleted page back?', a: 'From the output, no. Keep the original file until you have checked the result — which is why this never overwrites anything.' }
-    ]
-  },
+"tips": ["The pages appear as thumbnails as soon as the file is open: click the ones to remove and they are struck through. Shift-click chooses a run of pages and dragging across the thumbnails chooses every page you pass; from the keyboard the arrow keys move between pages and Space chooses one.","The thumbnails and the box above them are one list: typing \"1, 4-6\" marks those pages, and clicking a page adds it to the box.","Each thumbnail has a turn button, so a page scanned sideways can be put right in the same pass as the deletions.","Check the page numbers against the PDF’s own numbering, not any printed numbers on the page — a document with a cover often has them offset by one.","The inspector tool lists page count and sizes if you are unsure which page is which.","Nothing is destroyed. A new file is produced and your original stays as it is."],
+"faq": [{"q":"Can I get a deleted page back?","a":"From the output, no. Keep the original file until you have checked the result — which is why this never overwrites anything."}]
+},
 
   'rotate-pdf': {
-    title: 'Rotate PDF Pages',
-    kind: 'transform', action: 'Rotate pages', multiple: false,
-    description: 'Rotate every page or selected pages by 90, 180 or 270 degrees, permanently.',
-    keywords: ['rotate pdf', 'turn pdf pages', 'pdf orientation', 'fix sideways pdf', 'rotate pdf permanently'],
-    controls: [
-      { key: 'angle', label: 'Rotate by', type: 'select', default: '90',
-        options: [
-          { value: '90', label: '90° clockwise' },
-          { value: '180', label: '180°' },
-          { value: '270', label: '90° anticlockwise' }
-        ]},
-      { key: 'pages', label: 'Pages', type: 'text', default: 'all', hint: 'all, or 1-3, 7' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Rotate PDF Pages",
+"kind": "transform",
+"action": "Rotate pages",
+"multiple": false,
+"description": "Rotate every page or selected pages by 90, 180 or 270 degrees, permanently.",
+"keywords": ["rotate pdf","turn pdf pages","pdf orientation","fix sideways pdf","rotate pdf permanently"],
+"pageGrid": { "key": "pages", "mode": "select", "marks": "mark", "rotate": true, "angleKey": "angle", "title": "Click the pages to turn by the angle above, or turn any one page with its own button" },
+"controls": [{"key":"angle","label":"Rotate by","type":"select","default":"90","options":[{"value":"90","label":"90° clockwise"},{"value":"180","label":"180°"},{"value":"270","label":"90° anticlockwise"}]},{"key":"pages","label":"Pages","type":"text","default":"all","hint":"all, or 1-3, 7"}],
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
       let sel;
-      try { sel = new Set(core.parsePageRange(opts.pages, total)); }
+      /* an empty box means no page takes the angle (the grid's "None"), so
+         only the pages turned one by one change */
+      const want = String(opts.pages == null ? 'all' : opts.pages).trim();
+      try { sel = new Set(want ? core.parsePageRange(want, total) : []); }
       catch (e) { return { error: e.message }; }
+      if (!sel.size && !Object.keys(opts.turns || {}).length) return { error: 'Choose the pages to rotate: type them in Pages, or click them in the grid.' };
 
       const angle = Number(opts.angle) || 90;
+      /* the grid's per-page turns come on top of the angle for the chosen
+         pages, so one page can go a quarter turn and the rest a half */
+      const turns = opts.turns || {};
       const items = Array.from({ length: total }, (_, i) => ({
-        doc, pageIndex: i, rotate: sel.has(i) ? angle : 0
+        doc, pageIndex: i, rotate: ((sel.has(i) ? angle : 0) + (Number(turns[i]) || 0)) % 360
       }));
+      const turned = items.filter((x) => x.rotate).length;
       const bytes = await core.assemble(items, {});
       const base = docs[0].name.replace(/\.pdf$/i, '');
       return {
         files: [{ name: `${base}-rotated.pdf`, bytes }],
         stats: [
           ['Pages', String(total)],
-          ['Pages rotated', String(sel.size)],
+          ['Pages rotated', String(turned)],
           ['Rotation applied', angle + '°'],
           ['Output size', fmtBytes(bytes.length)]
         ]
       };
     },
-    tips: [
-      'Rotation is written into the page itself, so every viewer shows it the same way. Rotating in a reader without saving only changes your own view.',
-      'Rotation is additive: a page already at 90° rotated by another 90° ends at 180°.',
-      'A scanned page that looks sideways but reports no rotation was scanned that way — rotating fixes it properly here.'
-    ],
-    faq: [
-      { q: 'Does rotating reduce quality?', a: 'No. The page content is untouched; only a rotation flag changes. There is no re-rendering and no loss.' }
-    ]
-  },
+"tips": ["Click the pages to turn by the angle above, or press the turn button on any one page to give it its own quarter turn; each thumbnail shows the page the way it will be saved.","Rotation is written into the page itself, so every viewer shows it the same way. Rotating in a reader without saving only changes your own view.","Rotation is additive: a page already at 90° rotated by another 90° ends at 180°.","A scanned page that looks sideways but reports no rotation was scanned that way — rotating fixes it properly here."],
+"faq": [{"q":"Does rotating reduce quality?","a":"No. The page content is untouched; only a rotation flag changes. There is no re-rendering and no loss."}]
+},
 
   'pdf-metadata': {
-    title: 'PDF Metadata Editor & Remover',
-    kind: 'transform', action: 'Apply to metadata', multiple: false,
-    description: 'View, change or completely strip the hidden metadata in a PDF — author, title, software.',
-    keywords: ['pdf metadata', 'remove pdf metadata', 'edit pdf properties', 'pdf author remove', 'anonymise pdf'],
-    controls: [
-      { key: 'action', label: 'Action', type: 'select', default: 'strip',
-        options: [
-          { value: 'strip', label: 'Remove all metadata' },
-          { value: 'edit', label: 'Set the fields below' }
-        ]},
-      { key: 'Title', label: 'Title', type: 'text', default: '' },
-      { key: 'Author', label: 'Author', type: 'text', default: '' },
-      { key: 'Subject', label: 'Subject', type: 'text', default: '' },
-      { key: 'Keywords', label: 'Keywords', type: 'text', default: '' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "PDF Metadata Editor & Remover",
+"kind": "transform",
+"action": "Apply to metadata",
+"multiple": false,
+"description": "View, change or completely strip the hidden metadata in a PDF — author, title, software.",
+"keywords": ["pdf metadata","remove pdf metadata","edit pdf properties","pdf author remove","anonymise pdf"],
+"controls": [{"key":"action","label":"Action","type":"select","default":"strip","options":[{"value":"strip","label":"Remove all metadata"},{"value":"edit","label":"Set the fields below"}]},{"key":"Title","label":"Title","type":"text","default":""},{"key":"Author","label":"Author","type":"text","default":""},{"key":"Subject","label":"Subject","type":"text","default":""},{"key":"Keywords","label":"Keywords","type":"text","default":""}],
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const before = await doc.getInfo();
       const total = await doc.pageCount();
@@ -340,24 +288,18 @@ const PDF_TOOLS = {
           ? `Removed: ${found.map(([k]) => k).join(', ')}. The original file on your device still contains them.` : ''
       };
     },
-    tips: [
-      'PDFs routinely carry the author\u2019s name, their organisation, the software used and creation timestamps. It is a common and unintended disclosure when sending documents externally.',
-      'This rewrites the document without the metadata dictionary rather than blanking fields, so nothing survives in the file.',
-      'Some PDFs also carry an XMP metadata stream. Rebuilding the document drops that too.',
-      'Text inside the page content is not metadata and is left alone. Redacting visible text needs a different approach.'
-    ],
-    faq: [
-      { q: 'Is stripping metadata the same as redacting?', a: 'No, and the difference matters. This removes document properties. It does not remove text or images from the page, and it does not remove content hidden under a black box. For genuine redaction, the content itself must be deleted before the file is produced.' }
-    ]
-  },
+"tips": ["PDFs routinely carry the author’s name, their organisation, the software used and creation timestamps. It is a common and unintended disclosure when sending documents externally.","This rewrites the document without the metadata dictionary rather than blanking fields, so nothing survives in the file.","Some PDFs also carry an XMP metadata stream. Rebuilding the document drops that too.","Text inside the page content is not metadata and is left alone. Redacting visible text needs a different approach."],
+"faq": [{"q":"Is stripping metadata the same as redacting?","a":"No, and the difference matters. This removes document properties. It does not remove text or images from the page, and it does not remove content hidden under a black box. For genuine redaction, the content itself must be deleted before the file is produced."}]
+},
 
   'pdf-inspector': {
-    title: 'PDF Inspector',
-    kind: 'inspect', multiple: false,
-    description: 'Examine a PDF: page count, sizes, rotation, fonts, images, metadata and structure.',
-    keywords: ['pdf inspector', 'pdf info', 'pdf properties', 'analyse pdf', 'pdf page size checker'],
-    controls: [],
-    run: async ({ docs, core }) => {
+"title": "PDF Inspector",
+"kind": "inspect",
+"multiple": false,
+"description": "Examine a PDF: page count, sizes, rotation, fonts, images, metadata and structure.",
+"keywords": ["pdf inspector","pdf info","pdf properties","analyse pdf","pdf page size checker"],
+"controls": [],
+"run": async ({ docs, core }) => {
       const doc = docs[0].doc;
       const pages = await doc.getPages();
       const info = await doc.getInfo();
@@ -417,36 +359,20 @@ const PDF_TOOLS = {
       const report = rows.map(([k, v]) => `${k.padEnd(22)} ${v}`).join('\n');
       return { files: [], report, stats: rows };
     },
-    tips: [
-      'Page sizes are given in points and millimetres. A4 is 595 × 842 pt; US Letter is 612 × 792.',
-      'Mixed page sizes in one document are a common cause of printing problems — this shows them grouped so a stray page stands out.',
-      'Fonts listed with a prefix like ABCDEF+Arial are subsetted, meaning only the glyphs actually used are embedded.',
-      'The metadata section is worth checking before sending a document externally. Author names and software versions are disclosed more often than people expect.'
-    ],
-    faq: [
-      { q: 'Why does the object count differ from other tools?', a: 'Counting depends on whether objects inside compressed object streams are expanded and whether unreferenced objects are included. This expands object streams and counts everything it can reach.' }
-    ]
-  },
+"tips": ["Page sizes are given in points and millimetres. A4 is 595 × 842 pt; US Letter is 612 × 792.","Mixed page sizes in one document are a common cause of printing problems — this shows them grouped so a stray page stands out.","Fonts listed with a prefix like ABCDEF+Arial are subsetted, meaning only the glyphs actually used are embedded.","The metadata section is worth checking before sending a document externally. Author names and software versions are disclosed more often than people expect."],
+"faq": [{"q":"Why does the object count differ from other tools?","a":"Counting depends on whether objects inside compressed object streams are expanded and whether unreferenced objects are included. This expands object streams and counts everything it can reach."}]
+},
 
   'watermark-pdf': {
-    title: 'Add Watermark to PDF',
-    kind: 'transform', action: 'Add watermark', multiple: false,
-    description: 'Stamp text across every page — DRAFT, CONFIDENTIAL, a name or a date — at any angle and opacity.',
-    keywords: ['watermark pdf', 'add text to pdf', 'stamp pdf', 'draft watermark', 'confidential pdf'],
-    controls: [
-      { key: 'text', label: 'Watermark text', type: 'text', default: 'DRAFT' },
-      { key: 'size', label: 'Font size', type: 'number', default: 60, min: 6, max: 300 },
-      { key: 'angle', label: 'Angle', type: 'select', default: '45',
-        options: [{ value: '0', label: 'Horizontal' }, { value: '45', label: '45° diagonal' },
-                  { value: '90', label: 'Vertical' }, { value: '315', label: '−45° diagonal' }] },
-      { key: 'colour', label: 'Colour', type: 'color', default: '#ff0000' },
-      { key: 'opacity', label: 'Opacity %', type: 'number', default: 20, min: 5, max: 100 },
-      { key: 'position', label: 'Position', type: 'select', default: 'center',
-        options: [{ value: 'center', label: 'Centre' }, { value: 'tile', label: 'Tiled across the page' },
-                  { value: 'bottom', label: 'Bottom of the page' }] },
-      { key: 'pages', label: 'Pages', type: 'text', default: 'all' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Add Watermark to PDF",
+"kind": "transform",
+"action": "Add watermark",
+"multiple": false,
+"description": "Stamp text across every page — DRAFT, CONFIDENTIAL, a name or a date — at any angle and opacity.",
+"keywords": ["watermark pdf","add text to pdf","stamp pdf","draft watermark","confidential pdf"],
+"livePreview": true,
+"controls": [{"key":"text","label":"Watermark text","type":"text","default":"DRAFT","remember":true},{"key":"size","label":"Font size","type":"number","default":60,"min":6,"max":300},{"key":"angle","label":"Angle","type":"select","default":"45","options":[{"value":"0","label":"Horizontal"},{"value":"45","label":"45° diagonal"},{"value":"90","label":"Vertical"},{"value":"315","label":"−45° diagonal"}]},{"key":"colour","label":"Colour","type":"color","default":"#ff0000"},{"key":"opacity","label":"Opacity %","type":"number","default":20,"min":5,"max":100},{"key":"position","label":"Position","type":"select","default":"center","options":[{"value":"center","label":"Centre"},{"value":"tile","label":"Tiled across the page"},{"value":"bottom","label":"Bottom of the page"}]},{"key":"pages","label":"Pages","type":"text","default":"all"}],
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
       let sel;
@@ -510,44 +436,20 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'A watermark added this way sits on top of the page content and can be removed by anyone with a PDF editor. It signals status; it does not protect anything.',
-      'Tiled watermarks are much harder to crop out than a single central one, which matters for documents that might be screenshotted.',
-      'Keep opacity around 15–25%. Higher and it fights the text; lower and it vanishes when printed.',
-      'The text is drawn with a standard font, so no font file is embedded and the file barely grows.'
-    ],
-    faq: [
-      { q: 'Can the watermark be removed?', a: 'Yes, by anyone reasonably determined — it is a content layer, not a security feature. If a document genuinely must not be redistributed, watermarking is a deterrent and an audit aid, not a control.' }
-    ]
-  },
+"tips": ["The preview shows a page as it will be saved: it is drawn from the real output for that page and redrawn as you change the text, size, angle or opacity. Use the arrows to look at other pages.","Your settings are kept on this device for next time, the watermark text included; the Reset link under the settings puts the defaults back.","A watermark added this way sits on top of the page content and can be removed by anyone with a PDF editor. It signals status; it does not protect anything.","Tiled watermarks are much harder to crop out than a single central one, which matters for documents that might be screenshotted.","Keep opacity around 15–25%. Higher and it fights the text; lower and it vanishes when printed.","The text is drawn with a standard font, so no font file is embedded and the file barely grows."],
+"faq": [{"q":"Can the watermark be removed?","a":"Yes, by anyone reasonably determined — it is a content layer, not a security feature. If a document genuinely must not be redistributed, watermarking is a deterrent and an audit aid, not a control."}]
+},
 
   'pdf-page-numbers': {
-    title: 'Add Page Numbers to PDF',
-    kind: 'transform', action: 'Add page numbers', multiple: false,
-    description: 'Stamp page numbers, headers or footers onto an existing PDF.',
-    keywords: ['add page numbers to pdf', 'pdf page numbering', 'pdf header footer', 'number pdf pages'],
-    controls: [
-      { key: 'format', label: 'Format', type: 'select', default: 'n',
-        options: [
-          { value: 'n', label: '1' },
-          { value: 'n-of-t', label: '1 of 10' },
-          { value: 'page-n', label: 'Page 1' },
-          { value: 'page-n-of-t', label: 'Page 1 of 10' },
-          { value: 'dash', label: '– 1 –' }
-        ]},
-      { key: 'position', label: 'Position', type: 'select', default: 'bc',
-        options: [
-          { value: 'bl', label: 'Bottom left' }, { value: 'bc', label: 'Bottom centre' },
-          { value: 'br', label: 'Bottom right' }, { value: 'tl', label: 'Top left' },
-          { value: 'tc', label: 'Top centre' }, { value: 'tr', label: 'Top right' }
-        ]},
-      { key: 'start', label: 'Start numbering at', type: 'number', default: 1, min: 0 },
-      { key: 'skip', label: 'Skip first N pages', type: 'number', default: 0, min: 0 },
-      { key: 'size', label: 'Font size', type: 'number', default: 10, min: 5, max: 48 },
-      { key: 'colour', label: 'Colour', type: 'color', default: '#333333' },
-      { key: 'extra', label: 'Header or footer text (optional)', type: 'text', default: '' }
-    ],
-    run: async ({ docs, opts, core }) => {
+"title": "Add Page Numbers to PDF",
+"kind": "transform",
+"action": "Add page numbers",
+"multiple": false,
+"description": "Stamp page numbers, headers or footers onto an existing PDF.",
+"keywords": ["add page numbers to pdf","pdf page numbering","pdf header footer","number pdf pages"],
+"livePreview": true,
+"controls": [{"key":"format","label":"Format","type":"select","default":"n","options":[{"value":"n","label":"1"},{"value":"n-of-t","label":"1 of 10"},{"value":"page-n","label":"Page 1"},{"value":"page-n-of-t","label":"Page 1 of 10"},{"value":"dash","label":"– 1 –"}]},{"key":"position","label":"Position","type":"select","default":"bc","options":[{"value":"bl","label":"Bottom left"},{"value":"bc","label":"Bottom centre"},{"value":"br","label":"Bottom right"},{"value":"tl","label":"Top left"},{"value":"tc","label":"Top centre"},{"value":"tr","label":"Top right"}]},{"key":"start","label":"Start numbering at","type":"number","default":1,"min":0},{"key":"skip","label":"Skip first N pages","type":"number","default":0,"min":0},{"key":"size","label":"Font size","type":"number","default":10,"min":5,"max":48},{"key":"colour","label":"Colour","type":"color","default":"#333333"},{"key":"extra","label":"Header or footer text (optional)","type":"text","default":""}],
+"run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
       const pages = await doc.getPages();
@@ -608,41 +510,19 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'Skip the first page when the document has a cover, and start numbering at 1 on the page after it.',
-      'Numbers are placed 32 points — about 11 mm — from the page edge, inside the printable area of virtually every printer.',
-      'If the document already has printed page numbers, these will sit alongside them. Check a page before committing to a long document.',
-      'Mixed page sizes are handled: the position is computed per page from the part of that page a reader sees, turned the way it is shown, so a landscape page stored sideways or a cropped scan is numbered upright and inside its visible edge.'
-    ],
-    faq: [
-      { q: 'Can I use Roman numerals for a preface?', a: 'Not in one pass. Split the document, number the preface separately with a different format, then merge — which is exactly what the split and merge tools are for.' }
-    ]
-  },
-
-  /* ===================== CREATE ===================== */
+"tips": ["The preview shows a page as it will be saved, drawn from the real output and redrawn as you change the format, position or size; use the arrows to check the pages after a skipped cover.","Skip the first page when the document has a cover, and start numbering at 1 on the page after it.","Numbers are placed 32 points — about 11 mm — from the page edge, inside the printable area of virtually every printer.","If the document already has printed page numbers, these will sit alongside them. Check a page before committing to a long document.","Mixed page sizes are handled: the position is computed per page from the part of that page a reader sees, turned the way it is shown, so a landscape page stored sideways or a cropped scan is numbered upright and inside its visible edge."],
+"faq": [{"q":"Can I use Roman numerals for a preface?","a":"Not in one pass. Split the document, number the preface separately with a different format, then merge — which is exactly what the split and merge tools are for."}]
+},
 
   'text-to-pdf': {
-    title: 'Text to PDF Converter',
-    kind: 'create', multiple: false,
-    description: 'Turn plain text into a properly paginated PDF with margins, wrapping and page numbers.',
-    keywords: ['text to pdf', 'txt to pdf', 'create pdf from text', 'convert text to pdf', 'make a pdf'],
-    inputLabel: 'Your text',
-    controls: [
-      { key: 'pageSize', label: 'Page size', type: 'select', default: 'a4',
-        options: [{ value: 'a4', label: 'A4' }, { value: 'letter', label: 'US Letter' },
-                  { value: 'a5', label: 'A5' }, { value: 'legal', label: 'Legal' }] },
-      { key: 'font', label: 'Font', type: 'select', default: 'Helvetica',
-        options: [{ value: 'Helvetica', label: 'Helvetica (sans)' },
-                  { value: 'Times-Roman', label: 'Times (serif)' },
-                  { value: 'Courier', label: 'Courier (monospace)' }] },
-      { key: 'size', label: 'Font size', type: 'number', default: 11, min: 6, max: 36 },
-      { key: 'leading', label: 'Line spacing', type: 'number', default: 1.4, min: 1, max: 3, step: 0.1 },
-      { key: 'margin', label: 'Margin (mm)', type: 'number', default: 20, min: 5, max: 60 },
-      { key: 'numbers', label: 'Page numbers', type: 'select', default: 'yes',
-        options: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }] },
-      { key: 'title', label: 'Document title', type: 'text', default: '' }
-    ],
-    run: async ({ text, opts, core }) => {
+"title": "Text to PDF Converter",
+"kind": "create",
+"multiple": false,
+"description": "Turn plain text into a properly paginated PDF with margins, wrapping and page numbers.",
+"keywords": ["text to pdf","txt to pdf","create pdf from text","convert text to pdf","make a pdf"],
+"inputLabel": "Your text",
+"controls": [{"key":"pageSize","label":"Page size","type":"select","default":"a4","options":[{"value":"a4","label":"A4"},{"value":"letter","label":"US Letter"},{"value":"a5","label":"A5"},{"value":"legal","label":"Legal"}]},{"key":"font","label":"Font","type":"select","default":"Helvetica","options":[{"value":"Helvetica","label":"Helvetica (sans)"},{"value":"Times-Roman","label":"Times (serif)"},{"value":"Courier","label":"Courier (monospace)"}]},{"key":"size","label":"Font size","type":"number","default":11,"min":6,"max":36},{"key":"leading","label":"Line spacing","type":"number","default":1.4,"min":1,"max":3,"step":0.1},{"key":"margin","label":"Margin (mm)","type":"number","default":20,"min":5,"max":60},{"key":"numbers","label":"Page numbers","type":"select","default":"yes","options":[{"value":"yes","label":"Yes"},{"value":"no","label":"No"}]},{"key":"title","label":"Document title","type":"text","default":""}],
+"run": async ({ text, opts, core }) => {
       const body = String(text || '');
       if (!body.trim()) return { error: 'Enter or paste some text to convert.' };
 
@@ -653,7 +533,12 @@ const PDF_TOOLS = {
       const font = core.FONTS[opts.font] ? opts.font : 'Helvetica';
       const maxW = W - m * 2;
 
-      const lines = core.wrapText(body, font, size, maxW);
+      /* Text WinAnsi cannot hold is set in Noto Sans (embedded, only the
+         characters used), and then so is the rest, so the page reads as
+         one typeface; Courier keeps its WinAnsi lines in Courier. */
+      const uni = !!(core.unicodeFonts && core.unicodeFonts.needs(body));
+      const tf = uni ? new core.TextFonts({ force: font !== 'Courier' }) : null;
+      const lines = uni ? await tf.wrap(body, size, false, maxW, font) : core.wrapText(body, font, size, maxW);
       const perPage = Math.max(1, Math.floor((H - m * 2) / lead));
       const pages = [];
 
@@ -669,11 +554,15 @@ const PDF_TOOLS = {
         pages.push({ size: [W, H], ops });
       }
 
-      const bytes = core.createPDF(pages, {
+      const make = uni ? (pg, o) => core.createDocument(pg, Object.assign({ text: tf }, o)) : async (pg, o) => core.createPDF(pg, o);
+      const miss = tf && tf.missing ? tf.missing() : [];
+      const missWarn = miss.length ? 'These characters are not in the fonts this tool embeds and show as empty boxes: ' + miss.slice(0, 12).join(' ') + (miss.length > 12 ? ' …' : '') + '. Noto Sans covers Latin, Greek, Cyrillic and Devanagari.' : undefined;
+      const bytes = await make(pages, {
         pageSize: opts.pageSize,
         info: opts.title ? { Title: opts.title } : null
       });
       return {
+        warn: missWarn,
         files: [{ name: (opts.title ? slug(opts.title) : 'document') + '.pdf', bytes }],
         stats: [
           ['Characters', body.length.toLocaleString('en-GB')],
@@ -685,185 +574,917 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'Text is wrapped using the real font metrics, so lines break where they actually would rather than at a guessed character count.',
-      'Only the standard PDF fonts are used — Helvetica, Times and Courier — which means no font file is embedded and the file stays tiny.',
-      'Characters outside Western European ranges cannot be represented without embedding a font, and appear as "?". For other scripts, use a word processor.',
-      'Blank lines in your text are preserved as blank lines in the output.'
-    ],
-    faq: [
-      { q: 'Why do accented characters work but not Chinese or Arabic?', a: 'The standard PDF fonts cover WinAnsi encoding, which includes Western European accents. Other scripts need an embedded font with those glyphs, and embedding a CJK font would add several megabytes to every page of this site.' }
-    ]
-  },
+"tips": ["Text is wrapped using the real font metrics, so lines break where they actually would rather than at a guessed character count.","Text the standard fonts can hold stays in Helvetica, Times or Courier, with nothing embedded, so the file stays tiny.","Any other script (Hindi, Greek, Cyrillic, Polish, the rupee sign) is set in Noto Sans, and then the whole document is, so it reads as one typeface; only the characters used are embedded. Courier keeps its plain lines in Courier.","Blank lines in your text are preserved as blank lines in the output."],
+"faq": [{"q":"Which languages can I convert?","a":"Anything in the Latin, Greek, Cyrillic and Devanagari scripts, so English, French, Polish, Russian and Hindi among many others. Hindi is shaped properly, conjuncts included. Chinese, Japanese, Korean and Arabic are not covered: the fonts this tool embeds have no characters for them, and the page lists any that would come out as empty boxes."},{"q":"How big is the PDF?","a":"Plain English text makes a very small file, because the standard fonts need nothing embedded. With another script, a subset of the font is embedded, only the characters you used, which usually adds a few tens of kilobytes rather than the whole font."}]
+},
 
   'invoice-pdf': {
-    title: 'Invoice Generator (PDF)',
-    kind: 'create', multiple: false,
-    description: 'Create a clean, professional invoice PDF with line items, tax and totals calculated for you.',
-    keywords: ['invoice generator', 'create invoice pdf', 'free invoice template', 'make an invoice', 'invoice maker'],
-    controls: [
-      { key: 'from', label: 'Your business (name, address)', type: 'textarea', default: 'MVR IT Services LTD\nReading, United Kingdom\nCompany No. 10251131' },
-      { key: 'to', label: 'Bill to', type: 'textarea', default: 'Client Name Ltd\n1 Example Street\nLondon, EC1A 1AA' },
-      { key: 'number', label: 'Invoice number', type: 'text', default: 'INV-0001' },
-      { key: 'date', label: 'Invoice date', type: 'date', default: 'TODAY' },
-      { key: 'due', label: 'Payment terms', type: 'select', default: '30',
-        options: [{ value: '0', label: 'Due on receipt' }, { value: '7', label: 'Net 7' },
-                  { value: '14', label: 'Net 14' }, { value: '30', label: 'Net 30' },
-                  { value: '60', label: 'Net 60' }] },
-      { key: 'items', label: 'Line items — description, qty, unit price (one per line)', type: 'textarea',
-        default: 'Website design and build, 1, 4500\nHosting and support (12 months), 12, 45\nDomain registration, 1, 15' },
-      { key: 'currency', label: 'Currency', type: 'select', default: 'GBP',
-        options: [{ value: 'GBP', label: 'GBP £' }, { value: 'USD', label: 'USD $' },
-                  { value: 'EUR', label: 'EUR €' }, { value: 'INR', label: 'INR Rs' }] },
-      { key: 'tax', label: 'Tax rate %', type: 'number', default: 20, min: 0, max: 100, step: 0.5 },
-      { key: 'taxLabel', label: 'Tax label', type: 'text', default: 'VAT' },
-      { key: 'notes', label: 'Notes / payment details', type: 'textarea', default: 'Payment by bank transfer.\nThank you for your business.' },
-      { key: 'accent', label: 'Accent colour', type: 'color', default: '#f7c948' }
-    ],
-    run: async ({ opts, core }) => {
-      const SYM = { GBP: '\u00a3', USD: '$', EUR: '\u20ac', INR: 'Rs ' };
-      const sym = SYM[opts.currency] || '';
-      const rows = [];
-      for (const line of String(opts.items || '').split('\n')) {
-        if (!line.trim()) continue;
-        const r = readItemLine(line.trim());
+"title": "Invoice Generator (PDF)",
+"kind": "create",
+"multiple": false,
+"description": "Make an invoice PDF in three layouts, with your logo, GST (CGST and SGST, or IGST) or VAT at each line’s rate, a discount, shipping and a PAID stamp. Nothing you add is uploaded.",
+"keywords": ["invoice generator","create invoice pdf","free invoice template","make an invoice","invoice maker","gst invoice format","vat invoice template","tax invoice generator"],
+"action": "Create invoice",
+"workerScripts": ["pdf-quotation-pdf.js", "pdf-invoice-pdf.js"],
+"controls": [
+  {"key":"fromName","label":"Your business — name","type":"text","default":"MVR IT Services LTD"},
+  {"key":"fromAddress","label":"Your business — address","type":"textarea","rows":3,"default":"Reading, United Kingdom\nCompany No. 10251131"},
+  {"key":"fromTax","label":"Your VAT number or GSTIN","type":"text","default":""},
+  {"key":"fromContact","label":"Your phone or email","type":"text","default":""},
+  {"key":"logo","label":"Your logo (optional)","type":"image","maxSide":480,"button":"Choose a logo","hint":"PNG, JPEG, WebP or GIF; nothing is uploaded"},
+
+  {"key":"toName","label":"Bill to — name","type":"text","default":"Client Name Ltd"},
+  {"key":"toAddress","label":"Bill to — address","type":"textarea","rows":3,"default":"1 Example Street\nLondon, EC1A 1AA"},
+  {"key":"toTax","label":"Client VAT number or GSTIN","type":"text","default":""},
+
+  {"key":"number","label":"Invoice number","type":"text","default":"INV-0001","hint":"Goes up by one after each download"},
+  {"key":"date","label":"Invoice date","type":"date","default":"TODAY"},
+  {"key":"due","label":"Payment terms","type":"select","default":"30","options":[
+    {"value":"0","label":"Due on receipt"},{"value":"7","label":"Net 7"},{"value":"14","label":"Net 14"},{"value":"15","label":"Net 15"},
+    {"value":"30","label":"Net 30"},{"value":"45","label":"Net 45"},{"value":"60","label":"Net 60"},{"value":"90","label":"Net 90"}]},
+
+  {"key":"items","label":"Line items — description, quantity, unit price (one per line)","type":"textarea","rows":6,"wide":true,
+   "hint":"Or: description, HSN/SAC, quantity, unit, rate, discount%, GST 18%","default":"Website design and build, 1, 4500\nHosting and support (12 months), 12, 45\nDomain registration, 1, 15"},
+
+  {"key":"currency","label":"Currency","type":"select","default":"GBP","options":[
+    {"value":"GBP","label":"Pound sterling (£)"},{"value":"USD","label":"US dollar ($)"},{"value":"EUR","label":"Euro (€)"},
+    {"value":"INR","label":"Indian rupee (Rs)"},{"value":"AED","label":"UAE dirham (AED)"},{"value":"SGD","label":"Singapore dollar (S$)"},
+    {"value":"AUD","label":"Australian dollar (A$)"},{"value":"CAD","label":"Canadian dollar (C$)"},{"value":"ZAR","label":"South African rand (R)"}]},
+  {"key":"taxMode","label":"Tax","type":"select","default":"vat","options":[
+    {"value":"vat","label":"VAT or sales tax — one rate, or each line’s own"},
+    {"value":"gst","label":"GST — CGST + SGST or IGST, by place of supply"},
+    {"value":"none","label":"No tax"}]},
+  {"key":"tax","label":"Tax rate % (lines without their own)","type":"number","default":20,"min":0,"max":100,"step":0.25,"hint":"A line ending “GST 5%” or “VAT 0%” keeps its own rate"},
+  {"key":"taxLabel","label":"Tax name","type":"text","default":"VAT","remember":true},
+  {"key":"sellerState","label":"Your state (GST)","type":"select","default":"auto","options":[
+    {"value":"auto","label":"From your GSTIN"},
+    {"value":"01","label":"01 — Jammu and Kashmir"},{"value":"02","label":"02 — Himachal Pradesh"},{"value":"03","label":"03 — Punjab"},
+    {"value":"04","label":"04 — Chandigarh"},{"value":"05","label":"05 — Uttarakhand"},{"value":"06","label":"06 — Haryana"},
+    {"value":"07","label":"07 — Delhi"},{"value":"08","label":"08 — Rajasthan"},{"value":"09","label":"09 — Uttar Pradesh"},
+    {"value":"10","label":"10 — Bihar"},{"value":"11","label":"11 — Sikkim"},{"value":"12","label":"12 — Arunachal Pradesh"},
+    {"value":"13","label":"13 — Nagaland"},{"value":"14","label":"14 — Manipur"},{"value":"15","label":"15 — Mizoram"},
+    {"value":"16","label":"16 — Tripura"},{"value":"17","label":"17 — Meghalaya"},{"value":"18","label":"18 — Assam"},
+    {"value":"19","label":"19 — West Bengal"},{"value":"20","label":"20 — Jharkhand"},{"value":"21","label":"21 — Odisha"},
+    {"value":"22","label":"22 — Chhattisgarh"},{"value":"23","label":"23 — Madhya Pradesh"},{"value":"24","label":"24 — Gujarat"},
+    {"value":"26","label":"26 — Dadra and Nagar Haveli and Daman and Diu"},{"value":"27","label":"27 — Maharashtra"},
+    {"value":"29","label":"29 — Karnataka"},{"value":"30","label":"30 — Goa"},{"value":"31","label":"31 — Lakshadweep"},
+    {"value":"32","label":"32 — Kerala"},{"value":"33","label":"33 — Tamil Nadu"},{"value":"34","label":"34 — Puducherry"},
+    {"value":"35","label":"35 — Andaman and Nicobar Islands"},{"value":"36","label":"36 — Telangana"},{"value":"37","label":"37 — Andhra Pradesh"},
+    {"value":"38","label":"38 — Ladakh"},{"value":"97","label":"97 — Other Territory"}]},
+  {"key":"placeOfSupply","label":"Place of supply (GST)","type":"select","default":"auto","options":[
+    {"value":"auto","label":"From the client’s GSTIN"},
+    {"value":"01","label":"01 — Jammu and Kashmir"},{"value":"02","label":"02 — Himachal Pradesh"},{"value":"03","label":"03 — Punjab"},
+    {"value":"04","label":"04 — Chandigarh"},{"value":"05","label":"05 — Uttarakhand"},{"value":"06","label":"06 — Haryana"},
+    {"value":"07","label":"07 — Delhi"},{"value":"08","label":"08 — Rajasthan"},{"value":"09","label":"09 — Uttar Pradesh"},
+    {"value":"10","label":"10 — Bihar"},{"value":"11","label":"11 — Sikkim"},{"value":"12","label":"12 — Arunachal Pradesh"},
+    {"value":"13","label":"13 — Nagaland"},{"value":"14","label":"14 — Manipur"},{"value":"15","label":"15 — Mizoram"},
+    {"value":"16","label":"16 — Tripura"},{"value":"17","label":"17 — Meghalaya"},{"value":"18","label":"18 — Assam"},
+    {"value":"19","label":"19 — West Bengal"},{"value":"20","label":"20 — Jharkhand"},{"value":"21","label":"21 — Odisha"},
+    {"value":"22","label":"22 — Chhattisgarh"},{"value":"23","label":"23 — Madhya Pradesh"},{"value":"24","label":"24 — Gujarat"},
+    {"value":"26","label":"26 — Dadra and Nagar Haveli and Daman and Diu"},{"value":"27","label":"27 — Maharashtra"},
+    {"value":"29","label":"29 — Karnataka"},{"value":"30","label":"30 — Goa"},{"value":"31","label":"31 — Lakshadweep"},
+    {"value":"32","label":"32 — Kerala"},{"value":"33","label":"33 — Tamil Nadu"},{"value":"34","label":"34 — Puducherry"},
+    {"value":"35","label":"35 — Andaman and Nicobar Islands"},{"value":"36","label":"36 — Telangana"},{"value":"37","label":"37 — Andhra Pradesh"},
+    {"value":"38","label":"38 — Ladakh"},{"value":"97","label":"97 — Other Territory"},{"value":"96","label":"96 — Outside India (export)"}]},
+
+  {"key":"discount","label":"Discount — a percentage or an amount","type":"text","default":""},
+  {"key":"discountType","label":"The discount is","type":"select","default":"percent","options":[
+    {"value":"percent","label":"A percentage of the items"},{"value":"amount","label":"An amount off the items"}]},
+  {"key":"shipping","label":"Shipping or delivery charge","type":"text","default":""},
+  {"key":"shippingTax","label":"Shipping is","type":"select","default":"taxable","options":[
+    {"value":"taxable","label":"Taxed at the default rate"},{"value":"exempt","label":"Not taxed"}]},
+  {"key":"rounding","label":"Round the total","type":"select","default":"none","options":[
+    {"value":"none","label":"Do not round"},{"value":"near","label":"To the nearest whole unit"},
+    {"value":"up","label":"Up to the whole unit"},{"value":"down","label":"Down to the whole unit"}]},
+  {"key":"words","label":"Total in words","type":"select","default":"auto","options":[
+    {"value":"auto","label":"For rupees only"},{"value":"yes","label":"Always"},{"value":"no","label":"Never"}]},
+
+  {"key":"bank","label":"Payment details (bank, UPI, sort code)","type":"textarea","rows":3,"default":""},
+  {"key":"notes","label":"Notes","type":"textarea","rows":3,"default":"Payment by bank transfer.\nThank you for your business."},
+
+  {"key":"paid","label":"Mark as paid (adds a PAID stamp)","type":"checkbox","default":false},
+  {"key":"paidDate","label":"Paid on","type":"date","default":"TODAY"},
+  {"key":"paidMethod","label":"Paid by","type":"text","default":"Bank transfer"},
+
+  {"key":"template","label":"Layout","type":"select","default":"modern","options":[
+    {"value":"modern","label":"Modern — a colour band across the top"},
+    {"value":"classic","label":"Classic — a ruled table, serif type"},
+    {"value":"compact","label":"Compact — small type for long invoices"}]},
+  {"key":"accent","label":"Accent colour","type":"color","default":"#1f3a5f"},
+  {"key":"pageSize","label":"Page size","type":"select","default":"a4","options":[
+    {"value":"a4","label":"A4"},{"value":"letter","label":"US Letter"},{"value":"legal","label":"US Legal"}]}
+],
+"run": async ({ opts, core }) => {
+      const L = lib();
+      const o = opts || {};
+      const curCode = CURRENCY[o.currency] ? o.currency : 'GBP';
+      const CUR = CURRENCY[curCode];
+      const amt = (v) => L.amt(v, CUR);
+      const money = (v) => L.money(v, CUR);
+      const q = (v) => L.qtyText(v);
+      const toNum = (s) => Number(String(s).trim().replace(/,/g, ''));
+      const short = (s) => { const t = String(s); return t.length > 60 ? t.slice(0, 57) + '…' : t; };
+
+      /* ---------- tax mode and the default rate ---------- */
+      const mode = ['vat', 'gst', 'none'].indexOf(o.taxMode) >= 0 ? o.taxMode : 'vat';
+      const defRate = Number(o.tax);
+      if (mode !== 'none' && !(isFinite(defRate) && defRate >= 0 && defRate <= 100)) {
+        return { error: 'The tax rate must be a number from 0 to 100.' };
+      }
+      const label = mode === 'gst' ? 'GST' : (String(o.taxLabel || '').trim() || 'VAT');
+
+      /* ---------- the lines, read by the quotation's reader ---------- */
+      const rows = [], ignoredTax = [];
+      const lines = String(o.items || '').split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const n = i + 1;
+        let rate = null, body = line;
+        const t = TAX_AT_END.exec(line);
+        if (t) { rate = Number(t[1] || t[2]); body = line.slice(0, t.index); }
+        const p = L.parseLineItems(body, '');
         /* a line that could mean two prices is shown, not guessed at */
-        if (r.message) return { error: r.message };
-        if (!r.row) {
-          return { error: `Could not read "${line.slice(0, 40)}". Use: description, quantity, unit price` };
+        if (p.ambiguous.length) return { error: 'Line ' + n + ': ' + p.ambiguous[0].message };
+        if (!p.rows.length) {
+          return { error: 'Line ' + n + ', “' + short(line) + '”, could not be read. Write each item as description, quantity, unit price — or description, HSN/SAC, quantity, unit, rate, discount%, GST 18% — where only the quantity and the price are required.' };
         }
-        rows.push(r.row);
+        const r = p.rows[0];
+        if (!(r.qty > 0)) return { error: 'Line ' + n + ', “' + short(line) + '”: the quantity must be more than 0.' };
+        if (r.rate < 0) return { error: 'Line ' + n + ', “' + short(line) + '”: the price is negative. Put a reduction in the Discount box; money owed back belongs on a credit note.' };
+        if (r.disc < 0 || r.disc > 100) return { error: 'Line ' + n + ', “' + short(line) + '”: a line discount runs from 0% to 100%.' };
+        if (rate !== null && rate > 100) return { error: 'Line ' + n + ', “' + short(line) + '”: a tax rate of ' + q(rate) + '% is more than 100%.' };
+        if (mode === 'none' && rate !== null) ignoredTax.push(n);
+        r.taxRate = mode === 'none' ? 0 : (rate === null ? defRate : rate);
+        r.n = n;
+        rows.push(r);
       }
       if (!rows.length) return { error: 'Add at least one line item.' };
+      if (rows.length > 300) return { error: 'That is more than 300 line items. Split it into two invoices.' };
+      const fromName = String(o.fromName || '').trim();
+      const toName = String(o.toName || '').trim();
+      if (!fromName) return { error: 'Enter your business name.' };
+      if (!toName) return { error: 'Enter who the invoice is to, under Bill to.' };
 
-      const money = (v) => sym + v.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      const sub = rows.reduce((s, r) => s + r.total, 0);
-      const taxRate = Math.max(0, Number(opts.tax) || 0);
-      const taxAmt = sub * taxRate / 100;
-      const grand = sub + taxAmt;
-
-      const [W, H] = core.PAGE_SIZES.a4;
-      const m = 48;
-      const ops = [];
-
-      ops.push({ rect: [0, H - 8, W, 8], fill: opts.accent });
-      ops.push({ text: 'INVOICE', x: m, y: H - 70, size: 30, font: 'Helvetica-Bold' });
-      ops.push({ text: opts.number || '', x: W - m, y: H - 70, size: 13, font: 'Helvetica-Bold', align: 'right' });
-
-      const d0 = new Date(opts.date);
-      const due = new Date(d0); due.setDate(due.getDate() + (Number(opts.due) || 0));
-      const fmtD = (d) => isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-      ops.push({ text: 'Date: ' + fmtD(d0), x: W - m, y: H - 90, size: 10, align: 'right', colour: '#555555' });
-      ops.push({ text: 'Due: ' + fmtD(due), x: W - m, y: H - 105, size: 10, align: 'right', colour: '#555555' });
-
-      let y = H - 140;
-      ops.push({ text: 'FROM', x: m, y, size: 8, font: 'Helvetica-Bold', colour: '#888888' });
-      ops.push({ text: 'BILL TO', x: W / 2, y, size: 8, font: 'Helvetica-Bold', colour: '#888888' });
-      y -= 16;
-      const fromLines = String(opts.from || '').split('\n');
-      const toLines = String(opts.to || '').split('\n');
-      const blockLines = Math.max(fromLines.length, toLines.length);
-      for (let i = 0; i < blockLines; i++) {
-        if (fromLines[i]) ops.push({ text: fromLines[i], x: m, y: y - i * 14, size: 10 });
-        if (toLines[i]) ops.push({ text: toLines[i], x: W / 2, y: y - i * 14, size: 10 });
-      }
-      y -= blockLines * 14 + 26;
-
-      ops.push({ rect: [m, y - 4, W - m * 2, 22], fill: '#f2f2f2' });
-      ops.push({ text: 'DESCRIPTION', x: m + 8, y: y + 3, size: 8, font: 'Helvetica-Bold', colour: '#555555' });
-      ops.push({ text: 'QTY', x: W - m - 190, y: y + 3, size: 8, font: 'Helvetica-Bold', colour: '#555555', align: 'right' });
-      ops.push({ text: 'UNIT', x: W - m - 100, y: y + 3, size: 8, font: 'Helvetica-Bold', colour: '#555555', align: 'right' });
-      ops.push({ text: 'AMOUNT', x: W - m - 8, y: y + 3, size: 8, font: 'Helvetica-Bold', colour: '#555555', align: 'right' });
-      y -= 26;
-
-      for (const r of rows) {
-        const wrapped = core.wrapText(r.desc, 'Helvetica', 10, W - m * 2 - 210);
-        wrapped.forEach((ln, k) => ops.push({ text: ln, x: m + 8, y: y - k * 13, size: 10 }));
-        ops.push({ text: String(r.qty), x: W - m - 190, y, size: 10, align: 'right' });
-        ops.push({ text: money(r.price), x: W - m - 100, y, size: 10, align: 'right' });
-        ops.push({ text: money(r.total), x: W - m - 8, y, size: 10, align: 'right', font: 'Helvetica-Bold' });
-        y -= Math.max(1, wrapped.length) * 13 + 8;
-        ops.push({ line: [m, y + 6, W - m, y + 6], stroke: '#e8e8e8', lineWidth: 0.5 });
-        y -= 6;
-      }
-
-      y -= 12;
-      const totalRow = (label, val, bold, big) => {
-        ops.push({ text: label, x: W - m - 110, y, size: big ? 12 : 10, align: 'right',
-                   font: bold ? 'Helvetica-Bold' : 'Helvetica' });
-        ops.push({ text: val, x: W - m - 8, y, size: big ? 12 : 10, align: 'right',
-                   font: bold ? 'Helvetica-Bold' : 'Helvetica' });
-        y -= big ? 22 : 16;
+      /* ---------- discount and shipping ---------- */
+      const itemsTotal = rows.reduce((s, r) => s + r.amount, 0);
+      const moneyField = (v, what) => {
+        const s = String(v == null ? '' : v).trim().replace(CUR.sym.trim(), '').replace(/%$/, '').trim();
+        if (!s) return { value: 0 };
+        if (!L.isNumTok(s)) return { error: 'The ' + what + ', “' + short(v) + '”, is not a number. Write 1250 or 1,250.' };
+        const x = toNum(s);
+        if (x < 0) return { error: 'The ' + what + ' cannot be negative.' };
+        return { value: x };
       };
-      totalRow('Subtotal', money(sub));
-      if (taxRate) totalRow(`${opts.taxLabel || 'Tax'} ${taxRate}%`, money(taxAmt));
-      ops.push({ rect: [W - m - 220, y - 4, 220, 26], fill: opts.accent });
-      totalRow('TOTAL DUE', money(grand), true, true);
+      const dIn = moneyField(o.discount, 'discount');
+      if (dIn.error) return { error: dIn.error };
+      let discount = 0, discLabel = 'Discount';
+      if (dIn.value) {
+        if (o.discountType === 'amount') {
+          discount = r2(dIn.value);
+          if (discount > r2(itemsTotal)) return { error: 'The discount, ' + money(discount) + ', is more than the items come to (' + money(itemsTotal) + ').' };
+        } else {
+          if (dIn.value > 100) return { error: 'A percentage discount runs from 0 to 100.' };
+          discount = r2(itemsTotal * dIn.value / 100);
+          discLabel = 'Discount ' + q(dIn.value) + '%';
+        }
+      }
+      const sIn = moneyField(o.shipping, 'shipping charge');
+      if (sIn.error) return { error: sIn.error };
+      const shipping = r2(sIn.value);
+      const shipTaxed = shipping > 0 && mode !== 'none' && o.shippingTax !== 'exempt';
 
-      if (opts.notes) {
-        y -= 20;
-        ops.push({ text: 'NOTES', x: m, y, size: 8, font: 'Helvetica-Bold', colour: '#888888' });
-        y -= 14;
-        core.wrapText(opts.notes, 'Helvetica', 9, W - m * 2).forEach((ln, k) => {
-          ops.push({ text: ln, x: m, y: y - k * 12, size: 9, colour: '#555555' });
-        });
+      /* ---------- GST: which state supplies which ---------- */
+      let intra = true, sellerCode = null, posCode = null;
+      const stateName = (code) => {
+        const c = ownControl('placeOfSupply');
+        const hit = c && c.options.find((x) => x.value === code);
+        return hit ? hit.label.replace(/^\d+\s*—\s*/, '') : code;
+      };
+      const known = (code) => { const c = ownControl('placeOfSupply'); return !!(code && c && c.options.some((x) => x.value === code && x.value !== 'auto')); };
+      if (mode === 'gst') {
+        sellerCode = o.sellerState && o.sellerState !== 'auto' ? o.sellerState : gstinState(o.fromTax);
+        posCode = o.placeOfSupply && o.placeOfSupply !== 'auto' ? o.placeOfSupply : gstinState(o.toTax);
+        if (!known(sellerCode) || sellerCode === '96') return { error: 'Choose your state under “Your state (GST)”: GST needs it, and ' + (String(o.fromTax || '').trim() ? 'your GSTIN does not start with a state code this tool knows.' : 'there is no GSTIN to read it from.') };
+        if (!known(posCode)) return { error: 'Choose the place of supply: ' + (String(o.toTax || '').trim() ? 'the client’s GSTIN does not start with a state code this tool knows' : 'the client has no GSTIN to read it from') + ', and it decides between CGST + SGST and IGST.' };
+        intra = sellerCode === posCode;
       }
 
-      const bytes = core.createPDF([{ size: [W, H], ops }], {
-        info: { Title: `Invoice ${opts.number || ''}`.trim(), Author: fromLines[0] || '' }
+      /* ---------- the arithmetic ----------
+         The invoice discount is shared across the lines in proportion to
+         their value, so each rate is charged on its share of the discounted
+         total; taxable shipping joins the default rate. Each tax figure is
+         rounded to the penny once, on its rate's whole taxable value. */
+      const share = itemsTotal > 0 ? discount / itemsTotal : 0;
+      const groups = new Map();
+      const addTo = (rate, v) => groups.set(rate, (groups.get(rate) || 0) + v);
+      rows.forEach((r) => addTo(r.taxRate, r.amount * (1 - share)));
+      if (shipTaxed) addTo(defRate, shipping);
+      const rates = Array.from(groups.keys()).sort((a, b) => b - a);
+      const multi = rates.length > 1;
+      const taxLines = [];
+      if (mode !== 'none' && !(rates.length === 1 && rates[0] === 0)) {
+        for (const rate of rates) {
+          const base = groups.get(rate);
+          if (mode === 'gst' && intra) {
+            const half = r2(base * rate / 200);
+            taxLines.push({ name: 'CGST', rate: rate / 2, base, amount: half });
+            taxLines.push({ name: 'SGST', rate: rate / 2, base, amount: half });
+          } else {
+            taxLines.push({ name: mode === 'gst' ? 'IGST' : label, rate, base, amount: r2(base * rate / 100) });
+          }
+        }
+      }
+      const taxTotal = r2(taxLines.reduce((s, t) => s + t.amount, 0));
+      const taxable = r2(Array.from(groups.values()).reduce((s, v) => s + v, 0));
+      const net = r2(itemsTotal) - discount + shipping;
+      const raw = r2(net + taxTotal);
+      const rounded = o.rounding === 'near' ? Math.round(raw)
+        : o.rounding === 'up' ? Math.ceil(raw - 1e-9)
+        : o.rounding === 'down' ? Math.floor(raw + 1e-9) : raw;
+      const roundOff = r2(rounded - raw);
+      const total = rounded;
+      const showWords = o.words === 'yes' || (o.words !== 'no' && curCode === 'INR');
+      const words = L.amountWords(total, CUR);
+
+      /* ---------- dates ---------- */
+      const dueDays = Math.max(0, Number(o.due) || 0);
+      const dueIso = addDays(o.date, dueDays);
+      const terms = dueDays ? 'Net ' + dueDays : 'Due on receipt';
+      const paid = o.paid === true || o.paid === 'true';
+      const paidDate = paid ? L.fmtDate(o.paidDate) : '';
+      const paidMethod = paid ? String(o.paidMethod || '').trim() : '';
+
+      /* ---------- the page: every word goes through T(), so a font is
+         changed in one place (FONT) ---------- */
+      const FONT = { r: 'Helvetica', b: 'Helvetica-Bold', serif: 'Times-Roman', mono: 'Courier' };
+      /* names, addresses and items WinAnsi cannot hold (Hindi, Polish, ₹ …)
+         are drawn in embedded Noto subsets by createDocument below */
+      const tf = core.textRun ? core.textRun() : null;
+      const tw = (s, st, size) => core.textWidth(String(s), FONT[st] || FONT.r, size);
+      const wrap = (s, st, size, w) => core.wrapText(String(s), FONT[st] || FONT.r, size, w);
+      const fit = (s, st, size, w) => {
+        let t = String(s == null ? '' : s);
+        if (tw(t, st, size) <= w) return t;
+        while (t.length > 1 && tw(t + '…', st, size) > w) t = t.slice(0, -1);
+        return t + '…';
+      };
+      /** the size, at most `size`, at which a figure fits: amounts are shrunk, never cut */
+      const fitSize = (s, st, size, w) => { let z = size; while (z > 6 && tw(s, st, z) > w) z -= 0.5; return z; };
+      const lowerFirst = (s) => /^[A-Z][a-z]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s;
+      let ops = [];
+      const INK ='#111111', GREY = '#5f6670', RULE = '#dfe2e6';
+      const T = (text, x, y, size, st, colour, align) => ops.push({ text: String(text), x, y, size, font: FONT[st] || FONT.r, colour: colour || INK, align: align || 'left' });
+
+      const tpl = ['modern', 'classic', 'compact'].indexOf(o.template) >= 0 ? o.template : 'modern';
+      const [W, H] = core.PAGE_SIZES[o.pageSize] || core.PAGE_SIZES.a4;
+      const accent = /^#[0-9a-f]{6}$/i.test(o.accent || '') ? o.accent : '#1f3a5f';
+      const ink = L.onAccent(accent);
+      const accentText = luminance(accent) > 0.55 ? shade(accent, 0.55) : accent;
+      const S = {
+        modern:  { m: 42, body: 'r', num: 'r', size: 9, lead: 11.5, pad: 5, headFill: accent, headInk: ink, zebra: '#f5f6f8', rule: null },
+        classic: { m: 50, body: 'serif', num: 'serif', size: 10, lead: 12, pad: 4, headFill: '#ececec', headInk: INK, zebra: null, rule: '#9a9a9a' },
+        compact: { m: 34, body: 'r', num: 'mono', size: 8, lead: 9.8, pad: 3, headFill: null, headInk: accentText, zebra: null, rule: '#d9dce0', strip: 5 }
+      }[tpl];
+      const m = S.m, inner = W - 2 * m, BOTTOM = 62;
+
+      const logo = o.logo ? await core.prepareImage(o.logo) : null;
+      const logoFit = (maxW, maxH) => {
+        const s = Math.min(maxW / logo.width, maxH / logo.height);
+        return [logo.width * s, logo.height * s];
+      };
+      let logoAt = null;
+      const drawLogo = (x, y, w, h) => { ops.push({ image: logo, x, y, w, h }); logoAt = [x, y, w, h]; };
+
+      const textLines = (s) => String(s == null ? '' : s).split('\n').map((x) => x.trim()).filter(Boolean);
+      const number = String(o.number || '').trim();
+      const title = mode === 'gst' ? 'TAX INVOICE' : 'INVOICE';
+      const idLabel = mode === 'gst' ? 'GSTIN' : mode === 'vat' ? (label === 'VAT' ? 'VAT No.' : label + ' No.') : 'Tax ID';
+      const sellerLines = textLines(o.fromAddress);
+      if (String(o.fromTax || '').trim()) sellerLines.push(idLabel + ': ' + String(o.fromTax).trim());
+      if (String(o.fromContact || '').trim()) sellerLines.push(String(o.fromContact).trim());
+      const clientLines = textLines(o.toAddress);
+      if (String(o.toTax || '').trim()) clientLines.push(idLabel + ': ' + String(o.toTax).trim());
+      const dateText = L.fmtDate(o.date) || '—';
+      const dueText = L.fmtDate(dueIso) || '—';
+      const meta = [['Invoice no.', number || '—'], ['Invoice date', dateText], ['Due date', dueText], ['Terms', terms]];
+      if (mode === 'gst') meta.push(['Place of supply', posCode + ' — ' + stateName(posCode)]);
+
+      const pages = [];
+      let y = 0;
+
+      /* ---------- the three tops ---------- */
+      function topModern() {
+        const bh = logo ? 112 : 96;
+        ops.push({ rect: [0, H - bh, W, bh], fill: accent });
+        let x = m;
+        if (logo) {
+          const [lw, lh] = logoFit(120, 56);
+          const ly = H - bh / 2 - lh / 2;
+          ops.push({ rect: [m - 6, ly - 6, lw + 12, lh + 12], fill: '#ffffff' });
+          drawLogo(m, ly, lw, lh);
+          x = m + lw + 22;
+        }
+        const nameW = W * 0.6 - x;
+        T(fit(fromName, 'b', 16, nameW), x, H - bh / 2 + 7, 16, 'b', ink);
+        wrap(sellerLines.join('  ·  '), 'r', 8, nameW).slice(0, 3)
+          .forEach((ln, i) => T(ln, x, H - bh / 2 - 8 - i * 10, 8, 'r', ink));
+        T(title, W - m, H - bh / 2 + 4, 24, 'b', ink, 'right');
+        if (number) T(fit(number, 'r', 10, W * 0.35), W - m, H - bh / 2 - 13, 10, 'r', ink, 'right');
+        y = H - bh - 26;
+        const cw = inner / 3;
+        let a = y, b = y, c = y;
+        T('BILL TO', m, a, 7, 'b', accentText); a -= 15;
+        T(fit(toName, 'b', 10.5, cw - 14), m, a, 10.5, 'b'); a -= 12.5;
+        clientLines.forEach((ln) => { T(fit(ln, 'r', 8.5, cw - 14), m, a, 8.5, 'r', '#333333'); a -= 11; });
+        const x2 = m + cw + 6;
+        T('DETAILS', x2, b, 7, 'b', accentText); b -= 15;
+        meta.forEach(([k, v]) => { T(k, x2, b, 8, 'r', GREY); T(fit(v, 'b', 8.5, cw - 82), m + 2 * cw - 10, b, 8.5, 'b', INK, 'right'); b -= 12.5; });
+        T(paid ? 'AMOUNT PAID' : 'AMOUNT DUE', W - m, c, 7, 'b', accentText, 'right'); c -= 22;
+        T(money(total), W - m, c, fitSize(money(total), 'b', 18, cw - 6), 'b', accentText, 'right'); c -= 14;
+        T(paid ? 'Paid' + (paidDate ? ' ' + paidDate : '') : 'Due ' + dueText, W - m, c, 8.5, 'r', GREY, 'right'); c -= 11;
+        y = Math.min(a, b, c) - 14;
+      }
+      function topClassic() {
+        let ly = H - m;
+        if (logo) {
+          const [lw, lh] = logoFit(150, 54);
+          drawLogo(m, ly - lh, lw, lh);
+          ly -= lh + 14;
+        }
+        T(fit(fromName, 'serif', 17, W * 0.52), m, ly - 14, 17, 'serif'); ly -= 14 + 14;
+        sellerLines.forEach((ln) => { T(fit(ln, 'serif', 9.5, W * 0.5), m, ly, 9.5, 'serif', '#333333'); ly -= 12; });
+        let ry = H - m;
+        T(title, W - m, ry - 24, 28, 'serif', accentText, 'right'); ry -= 24 + 20;
+        meta.forEach(([k, v]) => {
+          T(k.toUpperCase(), W - m - 205, ry, 7, 'b', GREY);
+          T(fit(v, 'serif', 10, 120), W - m, ry, 10, 'serif', INK, 'right');
+          ry -= 13.5;
+        });
+        y = Math.min(ly, ry) - 6;
+        ops.push({ line: [m, y, W - m, y], stroke: INK, lineWidth: 1.4 });
+        ops.push({ line: [m, y - 3, W - m, y - 3], stroke: INK, lineWidth: 0.5 });
+        y -= 24;
+        T('BILL TO', m, y, 7, 'b', GREY); y -= 15;
+        T(fit(toName, 'serif', 13, W * 0.6), m, y, 13, 'serif'); y -= 13.5;
+        clientLines.forEach((ln) => { T(fit(ln, 'serif', 10, W * 0.6), m, y, 10, 'serif', '#333333'); y -= 12; });
+        y -= 12;
+      }
+      function topCompact() {
+        const top = H - m;
+        let x = m, lh = 0;
+        if (logo) {
+          const f = logoFit(80, 30);
+          lh = f[1];
+          drawLogo(m, top - lh, f[0], lh);
+          x = m + f[0] + 10;
+        }
+        T(fit(fromName, 'b', 11, W * 0.58 - x), x, top - 10, 11, 'b');
+        const sl = wrap(sellerLines.join(' · '), 'r', 7, W * 0.6 - x).slice(0, 3);
+        sl.forEach((ln, i) => T(ln, x, top - 21 - i * 8.5, 7, 'r', GREY));
+        T(title, W - m, top - 11, 13, 'b', accentText, 'right');
+        if (number) T(fit(number, 'mono', 9, W * 0.3), W - m, top - 23, 9, 'mono', INK, 'right');
+        y = top - Math.max(lh, 21 + 8.5 * Math.max(1, sl.length), 26) - 6;
+        ops.push({ line: [m, y, W - m, y], stroke: INK, lineWidth: 0.6 });
+        y -= 13;
+        const cells = [['BILL TO', [toName].concat(clientLines)]].concat(meta.slice(1).map(([k, v]) => [k.toUpperCase(), [v]]));
+        const firstW = inner * 0.38, restW = (inner - firstW) / (cells.length - 1);
+        let deepest = 0;
+        cells.forEach(([k, vals], i) => {
+          const x0 = i === 0 ? m : m + firstW + (i - 1) * restW;
+          const w0 = (i === 0 ? firstW : restW) - 8;
+          T(k, x0, y, 6.5, 'b', GREY);
+          vals.slice(0, 6).forEach((v, j) => T(fit(v, j === 0 ? 'b' : 'r', 8, w0), x0, y - 10 - j * 9.5, 8, j === 0 ? 'b' : 'r'));
+          deepest = Math.max(deepest, Math.min(6, vals.length));
+        });
+        y -= 10 + deepest * 9.5 + 2;
+        ops.push({ line: [m, y, W - m, y], stroke: RULE, lineWidth: 0.5 });
+        y -= 14;
+      }
+      function topNext() {
+        const top = H - m + 4;
+        if (tpl === 'modern') ops.push({ rect: [0, H - 8, W, 8], fill: accent });
+        T(fit(fromName, 'b', 9, W * 0.5), m, top - 12, 9, 'b');
+        T('Invoice ' + (number || '') + ' · continued', W - m, top - 12, 8.5, S.body === 'serif' ? 'serif' : 'r', GREY, 'right');
+        ops.push({ line: [m, top - 19, W - m, top - 19], stroke: RULE, lineWidth: 0.6 });
+        y = top - 36;
+      }
+      function newPage(first) {
+        ops = [];
+        pages.push({ size: [W, H], ops });
+        if (S.strip) ops.push({ rect: [0, 0, S.strip, H], fill: accent });
+        if (!first) topNext();
+        else if (tpl === 'classic') topClassic();
+        else if (tpl === 'compact') topCompact();
+        else topModern();
+      }
+      function need(h) { if (y - h < BOTTOM) { newPage(false); return true; } return false; }
+      newPage(true);
+
+      /* ---------- the item table ---------- */
+      const sz = S.size;
+      const showHsn = rows.some((r) => r.hsn), showUnit = rows.some((r) => r.unit), showDisc = rows.some((r) => r.disc);
+      const lineRates = Array.from(new Set(rows.map((r) => r.taxRate)));
+      const showTax = mode !== 'none' && (mode === 'gst' || lineRates.length > 1);
+      const sym = CUR.sym.trim();
+      const widest = (list, st, size) => list.reduce((w, s) => Math.max(w, tw(s, st, size)), 0);
+      const cols = [{ k: 'n', l: '#', w: 20, a: 'left' }, { k: 'desc', l: 'DESCRIPTION', w: 0, a: 'left' }];
+      if (showHsn) cols.push({ k: 'hsn', l: 'HSN/SAC', w: Math.max(46, widest(rows.map((r) => r.hsn), S.num, sz) + 12), a: 'left' });
+      cols.push({ k: 'qty', l: 'QTY', w: Math.max(34, widest(rows.map((r) => q(r.qty)), S.num, sz) + 12), a: 'right' });
+      if (showUnit) cols.push({ k: 'unit', l: 'UNIT', w: 38, a: 'left' });
+      cols.push({ k: 'rate', l: 'RATE (' + sym + ')', w: Math.max(58, widest(rows.map((r) => amt(r.rate)), S.num, sz) + 12), a: 'right' });
+      if (showDisc) cols.push({ k: 'disc', l: 'DISC %', w: 38, a: 'right' });
+      if (showTax) cols.push({ k: 'tax', l: (mode === 'gst' ? 'GST' : label.toUpperCase().slice(0, 8)) + ' %', w: 40, a: 'right' });
+      cols.push({ k: 'amt', l: 'AMOUNT (' + sym + ')', w: Math.max(70, widest(rows.map((r) => amt(r.amount)), S.num, sz) + 12), a: 'right' });
+      const fixed = cols.reduce((s, c) => s + c.w, 0);
+      cols[1].w = Math.max(110, inner - fixed);
+      let cx = m;
+      cols.forEach((c) => { c.x = cx; cx += c.w; });
+      const cellX = (c) => c.a === 'right' ? c.x + c.w - 6 : c.x + 6;
+      const descW = cols[1].w - 12;
+      let tableTop = 0;
+
+      function tableHead() {
+        const hh = 19;
+        if (S.headFill) ops.push({ rect: [m, y - hh, inner, hh], fill: S.headFill });
+        cols.forEach((c) => T(c.l, cellX(c), y - 12.5, 6.8, 'b', S.headInk, c.a));
+        tableTop = y;
+        y -= hh;
+        if (tpl === 'compact') ops.push({ line: [m, y, W - m, y], stroke: INK, lineWidth: 0.7 });
+      }
+      function closeTable() {
+        if (tpl !== 'classic') return;
+        ops.push({ rect: [m, y, inner, tableTop - y], stroke: INK, lineWidth: 0.8 });
+        cols.slice(1).forEach((c) => ops.push({ line: [c.x, tableTop, c.x, y], stroke: S.rule, lineWidth: 0.4 }));
+      }
+      need(19 + 40);
+      tableHead();
+      rows.forEach((r, i) => {
+        const wl = wrap(r.desc, S.body, sz, descW);
+        const rowH = Math.max(1, wl.length) * S.lead + S.pad * 2;
+        if (y - rowH < BOTTOM) { closeTable(); newPage(false); tableHead(); }
+        if (S.zebra && i % 2 === 1) ops.push({ rect: [m, y - rowH, inner, rowH], fill: S.zebra });
+        const top = y - S.pad - sz * 0.82;
+        T(String(i + 1), cellX(cols[0]), top, sz - 0.5, S.body, GREY);
+        wl.forEach((ln, k) => T(ln, cols[1].x + 6, top - k * S.lead, sz, S.body));
+        const put = (k, text, st) => {
+          const c = cols.find((x) => x.k === k);
+          if (c) T(text, cellX(c), top, sz, st || S.num, INK, c.a);
+        };
+        put('hsn', r.hsn || '—');
+        put('qty', q(r.qty));
+        put('unit', fit(r.unit || '', S.body, sz, 30), S.body);
+        put('rate', amt(r.rate));
+        put('disc', r.disc ? q(r.disc) : '—');
+        put('tax', q(r.taxRate));
+        put('amt', amt(r.amount), S.num === 'mono' ? 'mono' : 'b');
+        y -= rowH;
+        if (S.rule) ops.push({ line: [m, y, W - m, y], stroke: S.rule, lineWidth: 0.4 });
+        else ops.push({ line: [m, y, W - m, y], stroke: RULE, lineWidth: 0.5 });
       });
+      closeTable();
+      y -= 14;
+
+      /* ---------- totals ---------- */
+      const tRows = [['Subtotal', amt(itemsTotal)]];
+      if (discount) tRows.push([discLabel, '-' + amt(discount)]);
+      if (shipping) tRows.push([mode === 'none' ? 'Shipping' : 'Shipping (' + (shipTaxed ? 'taxed at ' + q(defRate) + '%' : 'not taxed') + ')', amt(shipping)]);
+      if (taxLines.length && (discount || shipping || multi)) tRows.push(['Taxable value', amt(taxable)]);
+      taxLines.forEach((t) => tRows.push([t.name + ' ' + q(t.rate) + '%' + (multi ? ' on ' + amt(t.base) : ''), amt(t.amount)]));
+      if (Math.abs(roundOff) >= 0.005) tRows.push(['Rounding', (roundOff > 0 ? '+' : '-') + amt(Math.abs(roundOff))]);
+      const totW = tpl === 'compact' ? 230 : 260, totX = W - m - totW;
+      const rh = S.lead + 3;
+      const wordsLines = showWords ? wrap('Amount in words: ' + words, 'b', 8.5, inner) : [];
+      need(tRows.length * rh + 52);
+      const totalsTop = y, totalsPage = pages.length;
+      tRows.forEach(([k, v], i) => {
+        const ty = y - 10 - i * rh;
+        T(fit(k, S.body, sz, totW - 100), totX + 8, ty, sz, S.body, '#333333');
+        T(v, W - m - 8, ty, sz, S.num, INK, 'right');
+      });
+      y = y - 10 - (tRows.length - 1) * rh - 9;
+      const bandLabel = paid ? 'TOTAL PAID' : 'TOTAL DUE';
+      if (tpl === 'modern') {
+        ops.push({ rect: [totX, y - 26, totW, 26], fill: accent });
+        T(bandLabel, totX + 10, y - 17, 10.5, 'b', ink);
+        T(money(total), W - m - 10, y - 17.5, 12, 'b', ink, 'right');
+        y -= 26 + 16;
+      } else if (tpl === 'classic') {
+        ops.push({ line: [totX, y, W - m, y], stroke: INK, lineWidth: 1 });
+        T(bandLabel, totX + 8, y - 16, 10.5, 'b');
+        T(money(total), W - m - 8, y - 16, 12, 'b', INK, 'right');
+        ops.push({ line: [totX, y - 24, W - m, y - 24], stroke: INK, lineWidth: 0.6 });
+        ops.push({ line: [totX, y - 26.5, W - m, y - 26.5], stroke: INK, lineWidth: 0.6 });
+        y -= 26.5 + 18;
+      } else {
+        T(bandLabel, totX + 8, y - 12, 9, 'b');
+        T(money(total), W - m - 8, y - 12, 10, 'b', accentText, 'right');
+        ops.push({ line: [totX, y - 18, W - m, y - 18], stroke: accent, lineWidth: 1.6 });
+        y -= 18 + 16;
+      }
+      /* the stamp goes in the empty space beside the totals, when they are on the first page */
+      const stampAt = totalsPage === 1 ? [m + (totX - m) / 2, (totalsTop + y) / 2] : [W * 0.64, H * 0.6];
+      if (paid) {
+        T('Paid in full' + (paidDate ? ' on ' + paidDate : '') + (paidMethod ? ' by ' + lowerFirst(paidMethod) : '') + '. Balance due: ' + money(0),
+          W - m, y, 8.5, 'b', '#1e6b37', 'right');
+        y -= 16;
+      }
+      if (wordsLines.length) {
+        need(wordsLines.length * 11 + 8);
+        wordsLines.forEach((ln, i) => T(ln, m, y - i * 11, 8.5, 'b', '#333333'));
+        y -= wordsLines.length * 11 + 10;
+      }
+
+      /* ---------- payment details and notes ---------- */
+      const bankLines = textLines(o.bank);
+      if (bankLines.length) {
+        const bh = bankLines.length * 11.5 + 26;
+        need(bh + 10);
+        if (tpl === 'modern') ops.push({ rect: [m, y - bh, inner, bh], fill: '#f4f5f7' });
+        else if (tpl === 'classic') ops.push({ rect: [m, y - bh, inner, bh], stroke: '#777777', lineWidth: 0.6 });
+        else ops.push({ line: [m, y - bh, W - m, y - bh], stroke: RULE, lineWidth: 0.5 });
+        T('PAYMENT DETAILS', m + 10, y - 14, 7, 'b', GREY);
+        bankLines.forEach((ln, i) => T(fit(ln, S.body, 9, inner - 20), m + 10, y - 28 - i * 11.5, 9, S.body));
+        y -= bh + 16;
+      }
+      const noteText = String(o.notes || '').trim();
+      if (noteText) {
+        const nl = wrap(noteText, S.body, 8.5, inner);
+        need(Math.min(nl.length, 3) * 11 + 18);
+        T('NOTES', m, y, 7, 'b', GREY);
+        y -= 13;
+        nl.forEach((ln) => { if (y - 11 < BOTTOM) newPage(false); T(ln, m, y, 8.5, S.body, '#333333'); y -= 11; });
+      }
+
+      /* ---------- the PAID stamp: rotated, translucent, on the first page ---------- */
+      if (paid) {
+        const p = pages[0];
+        const sub = [paidDate, paidMethod].filter(Boolean).join(' · ').toUpperCase();
+        const big = 46, small = 8.5;
+        const uniSub = !!(sub && tf && core.unicodeFonts.needs(sub));
+        if (uniSub) await tf.prepare(sub, true);
+        const w1 = tw('PAID', 'b', big), w2 = sub ? (uniSub ? tf.widthSync(sub, small, true) : tw(sub, 'b', small)) : 0;
+        const bw = Math.max(w1, w2) + 36, bh = big * 0.72 + (sub ? small + 12 : 0) + 26;
+        const ang = 18 * Math.PI / 180, cs = Math.cos(ang), sn = Math.sin(ang);
+        const [cxs, cys] = stampAt;
+        const f = (v) => String(Math.round(v * 1000) / 1000);
+        const RED = '0.776 0.157 0.157';
+        const fk = FONT.b.replace(/[^A-Za-z0-9]/g, '');
+        p.gs = Object.assign({}, p.gs || {}, { GS1: 0.32 });
+        /* the raw text below needs the bold font in the page's resources */
+        p.ops.push({ text: '', x: 0, y: 0, size: 1, font: FONT.b });
+        const cmds = ['q', '/GS1 gs', [cs, sn, -sn, cs, cxs, cys].map(f).join(' ') + ' cm', RED + ' RG', RED + ' rg',
+          '3 w', [-bw / 2, -bh / 2, bw, bh].map(f).join(' ') + ' re S',
+          '1 w', [-bw / 2 + 5, -bh / 2 + 5, bw - 10, bh - 10].map(f).join(' ') + ' re S',
+          'BT /' + fk + ' ' + big + ' Tf ' + f(-w1 / 2) + ' ' + f(-bh / 2 + 13 + (sub ? small + 12 : 0)) + ' Td (' + core.contentEscape('PAID') + ') Tj ET'];
+        if (sub && uniSub) {
+          const shown = tf.show(sub, small, true);
+          p.unicodeKeys = (p.unicodeKeys || []).concat([shown.key]);
+          cmds.push('BT ' + f(-w2 / 2) + ' ' + f(-bh / 2 + 15) + ' Td ' + shown.ops + ' ET');
+        } else if (sub) cmds.push('BT /' + fk + ' ' + small + ' Tf ' + f(-w2 / 2) + ' ' + f(-bh / 2 + 15) + ' Td (' + core.contentEscape(sub) + ') Tj ET');
+        cmds.push('Q');
+        p.ops.push({ raw: cmds.join('\n') });
+      }
+
+      /* ---------- footers, once the page count is known ---------- */
+      const footLeft = fit(fromName + ' · Invoice ' + (number || ''), 'r', 7.5, inner - 120);
+      pages.forEach((p, i) => {
+        ops = p.ops;
+        ops.push({ line: [m, 46, W - m, 46], stroke: RULE, lineWidth: 0.5 });
+        T(footLeft, m, 34, 7.5, 'r', GREY);
+        T('Page ' + (i + 1) + ' of ' + pages.length, W - m, 34, 7.5, 'r', GREY, 'right');
+      });
+
+      const bytes = await (core.createDocument ? core.createDocument : core.createPDF)(pages, {
+        text: tf,
+        info: { Title: ('Invoice ' + number).trim(), Author: fromName, Subject: 'Invoice for ' + toName }
+      });
+
+      const warns = [];
+      if (ignoredTax.length) warns.push('Tax is set to none, so the rate on line' + (ignoredTax.length > 1 ? 's ' : ' ') + ignoredTax.join(', ') + ' was not charged.');
+      if (mode === 'gst' && !String(o.fromTax || '').trim()) warns.push('Your GSTIN is blank; a GST tax invoice must show it.');
+      if (mode === 'gst' && o.sellerState !== 'auto' && gstinState(o.fromTax) && gstinState(o.fromTax) !== sellerCode) warns.push('Your GSTIN starts with ' + gstinState(o.fromTax) + ', but your state is set to ' + sellerCode + '. The invoice uses ' + sellerCode + '.');
+      if (mode === 'gst' && o.placeOfSupply !== 'auto' && gstinState(o.toTax) && gstinState(o.toTax) !== posCode) warns.push('The client’s GSTIN starts with ' + gstinState(o.toTax) + ', but the place of supply is set to ' + posCode + '. The invoice uses ' + posCode + '.');
+      if (paid && !String(o.paidDate || '').trim()) warns.push('Marked as paid with no date: the stamp shows the method only.');
+
+      const stats = [
+        ['Layout', tpl.charAt(0).toUpperCase() + tpl.slice(1)],
+        ['Line items', String(rows.length)],
+        ['Subtotal', money(itemsTotal)]
+      ];
+      if (discount) stats.push([discLabel, '-' + money(discount)]);
+      if (shipping) stats.push(['Shipping', money(shipping) + (mode === 'none' ? '' : shipTaxed ? ' (taxed)' : ' (not taxed)')]);
+      if (taxLines.length && (discount || shipping || multi)) stats.push(['Taxable value', money(taxable)]);
+      if (mode === 'gst') stats.push(['Supply', intra ? 'Intra-state, ' + stateName(sellerCode) : 'Inter-state, ' + stateName(sellerCode) + ' to ' + stateName(posCode)]);
+      taxLines.forEach((t) => stats.push([t.name + ' ' + q(t.rate) + '%', money(t.amount)]));
+      if (Math.abs(roundOff) >= 0.005) stats.push(['Rounding', (roundOff > 0 ? '+' : '-') + money(Math.abs(roundOff))]);
+      stats.push(['Total due', money(total)]);
+      if (showWords) stats.push(['In words', words]);
+      stats.push(['Due date', dueText]);
+      if (paid) stats.push(['Status', 'Paid' + (paidDate ? ' on ' + paidDate : '') + (paidMethod ? ' by ' + paidMethod : '')]);
+      stats.push(['Pages', String(pages.length)]);
+      stats.push(['Output size', fmtBytes(bytes.length)]);
+
       return {
-        files: [{ name: `${slug(opts.number || 'invoice')}.pdf`, bytes }],
-        stats: [
-          ['Line items', String(rows.length)],
-          ['Subtotal', money(sub)],
-          [`${opts.taxLabel || 'Tax'} ${taxRate}%`, money(taxAmt)],
-          ['Total due', money(grand)],
-          ['Due date', fmtD(due)],
-          ['Output size', fmtBytes(bytes.length)]
-        ]
+        files: [{ name: fileStem(number) + '.pdf', bytes }],
+        warn: warns.length ? warns.join(' ') : undefined,
+        stats
       };
     },
-    tips: [
-      'Line items take the form "description, quantity, unit price". The description may contain commas — only the last two values are read as numbers.',
-      'Prices may keep their thousands commas, western or Indian: "Consulting, 1, 1,200" is 1 at 1,200 and "Fit-out, 1, 1,25,000" is 1 at 1,25,000, because a comma followed by a space separates fields and one between digits does not. "Consulting x2 @ 1,200" works too. When a line could mean two different prices, the tool says so and asks, rather than picking one.',
-      'A UK VAT invoice must show your VAT number, the tax point date and the rate applied. Add your VAT number to the business details block.',
-      'Invoice numbers should be sequential with no gaps. Tax authorities in most jurisdictions expect to see an unbroken series.',
-      'Everything is generated on your device, so client names and amounts never leave it.'
-    ],
-    faq: [
-      { q: 'Is this a legally compliant invoice?', a: 'It produces the layout. Whether it is compliant depends on your jurisdiction and what you include — VAT registration number, tax point, reverse charge wording where relevant. Check the requirements for your country, or ask your accountant, before issuing.' }
-    ]
-  },
+"mountExtras": (api) => {
+      const { root, el, btn, store } = api;
+      const spec = window.PDF_TOOLS['invoice-pdf'];
+      const controls = spec.controls;
+      const io = root.parentNode || root;
+      const KEY = { form: api.storageKey('form'), logo: api.storageKey('logo'), customers: api.storageKey('customers'), issued: api.storageKey('issued') };
+      const today = () => new Date().toISOString().slice(0, 10);
+      const SELLER = ['fromName', 'fromAddress', 'fromTax', 'fromContact', 'logo', 'bank', 'notes', 'currency', 'taxMode', 'tax', 'taxLabel',
+        'sellerState', 'discountType', 'shippingTax', 'rounding', 'words', 'due', 'paidMethod', 'template', 'accent', 'pageSize'];
+
+      /* ---------- the panel: saved clients, and this invoice ---------- */
+      const bar = el('div', 'opt-bar inv-extras');
+      const fC = el('div', 'field');
+      const lC = el('label', null, 'Saved clients');
+      lC.htmlFor = 'inv-clients';
+      const pick = el('select', 'control');
+      pick.id = 'inv-clients';
+      const rowC = el('div', 'io-actions');
+      rowC.style.marginTop = '8px';
+      const saveC = btn('Save the client above', 'btn-ghost');
+      saveC.id = 'inv-save-client';
+      const delC = btn('Delete', 'btn-ghost', 'Delete the chosen client');
+      delC.id = 'inv-delete-client';
+      rowC.appendChild(saveC); rowC.appendChild(delC);
+      fC.appendChild(lC); fC.appendChild(pick); fC.appendChild(rowC);
+
+      const fI = el('div', 'field');
+      const lI = el('label', null, 'This invoice');
+      const rowI = el('div', 'io-actions');
+      const fresh = btn('Start a new invoice', 'btn-ghost');
+      fresh.id = 'inv-new';
+      lI.htmlFor = 'inv-new';
+      const exp = btn('Export as JSON', 'btn-ghost');
+      exp.id = 'inv-export';
+      const imp = btn('Import JSON', 'btn-ghost');
+      imp.id = 'inv-import';
+      const file = el('input', 'visually-hidden');
+      file.type = 'file'; file.accept = '.json,application/json'; file.id = 'inv-import-file'; file.tabIndex = -1;
+      file.setAttribute('aria-hidden', 'true');
+      rowI.appendChild(fresh); rowI.appendChild(exp); rowI.appendChild(imp); rowI.appendChild(file);
+      fI.appendChild(lI); fI.appendChild(rowI);
+
+      const status = el('p', 'pdf-remembered inv-status');
+      status.setAttribute('role', 'status');
+      status.setAttribute('aria-live', 'polite');
+      const forget = btn('Forget what this device keeps', 'btn-link');
+      forget.id = 'inv-forget';
+      const tell = (text, action) => {
+        status.textContent = text ? text + ' ' : '';
+        if (action) status.appendChild(action);
+        status.appendChild(document.createTextNode(text ? ' · ' : ''));
+        status.appendChild(forget);
+      };
+      bar.appendChild(fC); bar.appendChild(fI); bar.appendChild(status);
+      root.appendChild(bar);
+      tell('');
+
+      /* ---------- which fields matter for which choices ---------- */
+      const show = (k, on) => { const r = api.reader(k); if (r && r.wrap) r.wrap.hidden = !on; };
+      const sync = () => {
+        const o = api.get();
+        show('taxLabel', o.taxMode === 'vat');
+        show('sellerState', o.taxMode === 'gst');
+        show('placeOfSupply', o.taxMode === 'gst');
+        show('tax', o.taxMode !== 'none');
+        show('shippingTax', o.taxMode !== 'none');
+        show('paidDate', !!o.paid);
+        show('paidMethod', !!o.paid);
+      };
+      let lastMode = api.get().taxMode;
+      const modeChanged = () => {
+        const o = api.get();
+        /* the usual standard rate for the system just chosen */
+        if (o.taxMode === 'gst' && lastMode !== 'gst' && String(o.tax) === '20') api.set({ tax: '18' });
+        if (o.taxMode === 'vat' && lastMode === 'gst' && String(o.tax) === '18') api.set({ tax: '20' });
+        lastMode = o.taxMode;
+      };
+
+      /* ---------- the form on this device ---------- */
+      const snapshot = () => {
+        const o = api.get();
+        const f = {};
+        controls.forEach((c) => { if (c.type !== 'image') f[c.key] = c.type === 'checkbox' ? !!o[c.key] : String(o[c.key] == null ? '' : o[c.key]); });
+        return f;
+      };
+      let quiet = false, paused = false, timer = null;
+      const saveForm = () => { if (!paused) store.set(KEY.form, { format: FORMAT, version: 1, fields: snapshot() }); };
+      const saveLogo = () => {
+        if (paused) return;
+        const v = api.get().logo;
+        if (!v) { store.del(KEY.logo); return; }
+        if (!store.set(KEY.logo, packLogo(v))) tell('The logo is too large to keep on this device; everything else is saved. A smaller picture will be kept.');
+      };
+      const logoReader = api.reader('logo');
+      io.addEventListener('input', (e) => {
+        if (quiet) return;
+        if (logoReader && e.target === logoReader.input) saveLogo();
+        if (e.target && (e.target.id === 'pc-taxMode' || e.target.id === 'pc-paid')) { if (e.target.id === 'pc-taxMode') modeChanged(); sync(); }
+        clearTimeout(timer);
+        timer = setTimeout(saveForm, 350);
+      });
+      io.addEventListener('change', (e) => {
+        if (e.target && (e.target.id === 'pc-taxMode' || e.target.id === 'pc-paid')) { if (e.target.id === 'pc-taxMode') modeChanged(); sync(); }
+      });
+
+      const fill = (values, keep) => {
+        quiet = true;
+        try { api.set(values); } finally { quiet = false; }
+        lastMode = api.get().taxMode;
+        sync();
+        if (keep !== false) saveForm();
+      };
+
+      const saved = store.get(KEY.form);
+      let restored = false;
+      if (saved && saved.format === FORMAT && saved.fields) {
+        const c = cleanFields(saved.fields, controls);
+        if (c.values) { fill(c.values, false); restored = true; }
+      }
+      const lp = store.get(KEY.logo);
+      if (lp) {
+        const u = unpackLogo(lp);
+        if (u.value) { quiet = true; try { logoReader.set(u.value); } finally { quiet = false; } restored = true; }
+      }
+      if (!restored) {
+        /* first visit: the site's preferences, where the visitor chose them
+           and has not since changed the setting on this page */
+        const P = window.Prefs;
+        const kept = store.get(api.storageKey('')) || {};
+        const pre = {};
+        if (P) {
+          try {
+            const region = P.taxRegion && P.taxRegion();
+            if (region === 'in' && kept.taxMode === undefined) { pre.taxMode = 'gst'; if (kept.tax === undefined) pre.tax = '18'; }
+            if (region === 'uk' && kept.taxMode === undefined) pre.taxMode = 'vat';
+            const cur = P.chosen && P.chosen('currency') ? P.currency() : (region === 'in' ? 'INR' : null);
+            if (cur && kept.currency === undefined && ownControl('currency').options.some((x) => x.value === cur)) pre.currency = cur;
+            const paper = { A4: 'a4', Letter: 'letter', Legal: 'legal' }[P.paper && P.paper()];
+            if (paper && P.chosen && P.chosen('paper') && kept.pageSize === undefined) pre.pageSize = paper;
+          } catch (e) { /* preferences are a convenience */ }
+        }
+        if (Object.keys(pre).length) fill(pre, false);
+        else sync();
+      } else {
+        const again = btn('Start a new invoice', 'btn-link');
+        again.addEventListener('click', () => fresh.click());
+        tell('Your invoice from last time is back.', again);
+      }
+
+      /* ---------- saved clients ---------- */
+      const clients = () => { const l = store.get(KEY.customers); return Array.isArray(l) ? l.filter((c) => c && typeof c.name === 'string') : []; };
+      const listClients = (selected) => {
+        const l = clients();
+        pick.innerHTML = '';
+        const none = el('option', null, l.length ? 'Choose a saved client…' : 'No saved clients yet');
+        none.value = '';
+        pick.appendChild(none);
+        l.forEach((c, i) => { const op = el('option', null, c.name); op.value = String(i); if (c.name === selected) op.selected = true; pick.appendChild(op); });
+        delC.disabled = !l.length;
+      };
+      listClients();
+      pick.addEventListener('change', () => {
+        const c = clients()[Number(pick.value)];
+        if (!pick.value || !c) return;
+        const v = { toName: c.name, toAddress: String(c.address || ''), toTax: String(c.tax || '') };
+        const pos = ownControl('placeOfSupply');
+        if (c.place && pos.options.some((x) => x.value === c.place)) v.placeOfSupply = c.place;
+        fill(v);
+        tell('Filled the client from your saved list: ' + c.name + '.');
+      });
+      saveC.addEventListener('click', () => {
+        const o = api.get();
+        const name = String(o.toName || '').trim();
+        if (!name) { tell('Type the client’s name under Bill to first.'); return; }
+        const l = clients().filter((c) => c.name.toLowerCase() !== name.toLowerCase());
+        l.push({ name, address: String(o.toAddress || ''), tax: String(o.toTax || ''), place: o.placeOfSupply || 'auto' });
+        l.sort((a, b) => a.name.localeCompare(b.name));
+        if (!store.set(KEY.customers, l.slice(0, 500))) { tell('This browser would not keep the list; it may be in private mode.'); return; }
+        listClients(name);
+        tell('Saved ' + name + ' on this device.');
+      });
+      delC.addEventListener('click', () => {
+        const l = clients();
+        const c = l[Number(pick.value)];
+        if (!pick.value || !c) { tell('Choose a saved client to delete.'); pick.focus(); return; }
+        l.splice(Number(pick.value), 1);
+        store.set(KEY.customers, l);
+        listClients();
+        tell('Deleted ' + c.name + ' from this device.');
+      });
+
+      /* ---------- numbers: the next one after each download ---------- */
+      let runNumber = null;
+      document.addEventListener('click', (e) => {
+        const b = e.target && e.target.closest ? e.target.closest('button') : null;
+        if (!b) return;
+        if (b.closest('.pdf-run, .pdf-run-sticky')) { runNumber = String(api.get().number || '').trim(); return; }
+        if (b.closest('.pdf-summary-actions') && io.contains(b)) {
+          const issued = runNumber !== null ? runNumber : String(api.get().number || '').trim();
+          if (!issued) return;
+          store.set(KEY.issued, issued);
+          if (String(api.get().number || '').trim() === issued) {
+            const next = nextNumber(issued);
+            fill({ number: next });
+            const back = btn('Put ' + issued + ' back', 'btn-link');
+            back.addEventListener('click', () => { fill({ number: issued }); tell('The number is ' + issued + ' again.'); });
+            tell(issued + ' downloaded. The number is now ' + next + ', ready for the next invoice.', back);
+          }
+        }
+      }, true);
+
+      fresh.addEventListener('click', () => {
+        const o = api.get();
+        const issued = store.get(KEY.issued);
+        const v = {};
+        controls.forEach((c) => {
+          if (SELLER.indexOf(c.key) >= 0 || c.type === 'image') return;
+          if (c.type === 'checkbox') v[c.key] = false;
+          else if (c.default === 'TODAY') v[c.key] = today();
+          else if (c.type === 'text' || c.type === 'textarea') v[c.key] = '';
+          else v[c.key] = String(c.default);
+        });
+        const cur = String(o.number || '').trim();
+        v.number = typeof issued === 'string' && issued && cur === issued ? nextNumber(issued) : cur;
+        fill(v);
+        tell('A new invoice, ' + v.number + ', with your business details kept.');
+        const t = api.reader('toName');
+        if (t && t.input) t.input.focus();
+      });
+
+      /* ---------- the whole invoice as a file ---------- */
+      exp.addEventListener('click', () => {
+        const o = api.get();
+        const doc = { format: FORMAT, version: 1, saved: new Date().toISOString(), fields: snapshot(), logo: packLogo(o.logo) };
+        api.download(JSON.stringify(doc, null, 1), fileStem(o.number) + '.json', 'application/json');
+        tell('Exported ' + fileStem(o.number) + '.json.');
+      });
+      imp.addEventListener('click', () => file.click());
+      file.addEventListener('change', async () => {
+        const f = file.files && file.files[0];
+        file.value = '';
+        if (!f) return;
+        const no = (why) => tell('Could not import ' + f.name + ': ' + why + '. Nothing was changed.');
+        if (f.size > 25 * 1048576) { no('it is larger than any saved invoice'); return; }
+        let doc;
+        try { doc = JSON.parse(await f.text()); } catch (e) { no('it is not JSON'); return; }
+        if (!doc || doc.format !== FORMAT) { no('it is not an invoice exported by this tool (it has no "format": "' + FORMAT + '")'); return; }
+        if (doc.version !== 1) { no('it was saved by a newer version of this tool'); return; }
+        const c = cleanFields(doc.fields, controls);
+        if (c.error) { no(c.error); return; }
+        const u = unpackLogo(doc.logo);
+        if (u.error) { no(u.error); return; }
+        fill(c.values);
+        quiet = true;
+        try { logoReader.set(u.value); } finally { quiet = false; }
+        saveLogo();
+        tell('Imported ' + f.name + ': invoice ' + (c.values.number || '') + '.');
+      });
+
+      forget.addEventListener('click', () => {
+        [KEY.form, KEY.logo, KEY.customers, KEY.issued].forEach((k) => store.del(k));
+        listClients();
+        clearTimeout(timer);
+        paused = true;
+        tell('This device no longer keeps the form, the logo, the saved clients or the last number, and this form is not saved again until the page is reloaded.');
+      });
+    },
+"tips": [
+  "Write one item per line: description, quantity, unit price. The longer form is description, HSN/SAC, quantity, unit, rate, discount%, and a line may end with its own tax rate, such as \"GST 5%\" or \"VAT 0%\"; a line without one is charged the default rate.",
+  "Prices may keep their thousands commas, western or Indian: \"Consulting, 1, 1,200\" is 1 at 1,200 and \"Fit-out, 1, 1,25,000\" is 1 at 1,25,000. A line that could mean two different prices is not guessed at: the tool names the line and the readings, and asks.",
+  "Under GST the place of supply decides the split. In your own state each rate is charged as CGST and SGST at half the rate each; in another state, as IGST at the full rate. Both states are read from the GSTINs unless you choose them.",
+  "The discount comes off before tax and is shared across the lines in proportion to their value, so each rate is charged on the discounted amount. Shipping is either taxed at the default rate or not taxed, and the invoice says which.",
+  "Three layouts: Modern puts your accent colour in a band across the top, Classic sets a ruled table in a serif face, and Compact uses small type to fit long invoices. Each prints on A4, US Letter or US Legal.",
+  "Mark as paid adds a translucent PAID stamp, turned at an angle, with the date and the method, and the total then reads TOTAL PAID with a balance of zero.",
+  "The form is saved on this device as you type and comes back when you return. After each download the number goes up by one: INV-2026-0042 becomes INV-2026-0043. Start a new invoice keeps your business details and logo and clears the client, the items and the stamp.",
+  "Save a client to pick them from the list next time. Export writes the whole invoice, logo included, to a JSON file that Import reads back on any device. Nothing you add is uploaded: the PDF, the saved clients and the autosave stay in this browser."
+],
+"faq": [
+  {"q":"Is this a legally compliant invoice?","a":"It produces the layout. Whether it is compliant depends on your jurisdiction and what you include — VAT registration number, tax point, reverse charge wording where relevant. Check the requirements for your country, or ask your accountant, before issuing."},
+  {"q":"Can one invoice carry items at different GST or VAT rates?","a":"Yes. End a line with its rate, such as \"GST 12%\", and the totals show the tax at each rate on its own taxable value, from the highest rate down. The amount column is always before tax."},
+  {"q":"Can I put my logo on the invoice?","a":"Yes. Choose a PNG, JPEG, WebP or GIF. It is drawn at the top left in every layout, scaled to fit without stretching, and saved on this device with the rest of the form."},
+  {"q":"Where are my saved clients and the autosaved invoice kept?","a":"In this browser's storage on this device, and nowhere else: another browser or computer starts empty. Export and Import move an invoice between them, and \"Forget what this device keeps\" clears it all."},
+  {"q":"Which currencies can I invoice in?","a":"Pounds, US dollars, euros, rupees, UAE dirhams, Singapore, Australian and Canadian dollars, and rand. Rupees are grouped in lakhs and crores, as 12,34,567.00, and the rest in thousands, as 1,234,567.00. The currency starts as the one in your site settings."}
+]
+},
 
   'paper-pdf': {
-    title: 'Printable Paper Generator',
-    kind: 'create', multiple: false,
-    description: 'Generate graph, lined, dotted, isometric or music paper as a print-ready PDF.',
-    keywords: ['graph paper pdf', 'printable lined paper', 'dot grid paper', 'isometric paper', 'music manuscript paper', 'squared paper'],
-    controls: [
-      { key: 'type', label: 'Paper type', type: 'select', default: 'grid',
-        options: [
-          { value: 'grid', label: 'Graph / squared' },
-          { value: 'lined', label: 'Lined (ruled)' },
-          { value: 'dot', label: 'Dot grid' },
-          { value: 'iso', label: 'Isometric' },
-          { value: 'music', label: 'Music manuscript' },
-          { value: 'cornell', label: 'Cornell notes' },
-          { value: 'blank', label: 'Blank with margin' }
-        ]},
-      { key: 'pageSize', label: 'Page size', type: 'select', default: 'a4',
-        options: [{ value: 'a4', label: 'A4' }, { value: 'letter', label: 'US Letter' },
-                  { value: 'a5', label: 'A5' }, { value: 'a3', label: 'A3' }] },
-      { key: 'orientation', label: 'Orientation', type: 'select', default: 'portrait',
-        options: [{ value: 'portrait', label: 'Portrait' }, { value: 'landscape', label: 'Landscape' }] },
-      { key: 'spacing', label: 'Spacing (mm)', type: 'number', default: 5, min: 2, max: 30, step: 0.5 },
-      { key: 'colour', label: 'Line colour', type: 'color', default: '#9db4d0' },
-      { key: 'weight', label: 'Line weight', type: 'number', default: 0.4, min: 0.1, max: 2, step: 0.1 },
-      { key: 'margin', label: 'Margin (mm)', type: 'number', default: 10, min: 0, max: 40 },
-      { key: 'pages', label: 'Number of pages', type: 'number', default: 1, min: 1, max: 100 }
-    ],
-    run: async ({ opts, core }) => {
+"title": "Printable Paper Generator",
+"kind": "create",
+"multiple": false,
+"description": "Generate graph, lined, dotted, isometric or music paper as a print-ready PDF.",
+"keywords": ["graph paper pdf","printable lined paper","dot grid paper","isometric paper","music manuscript paper","squared paper"],
+"controls": [{"key":"type","label":"Paper type","type":"select","default":"grid","options":[{"value":"grid","label":"Graph / squared"},{"value":"lined","label":"Lined (ruled)"},{"value":"dot","label":"Dot grid"},{"value":"iso","label":"Isometric"},{"value":"music","label":"Music manuscript"},{"value":"cornell","label":"Cornell notes"},{"value":"blank","label":"Blank with margin"}]},{"key":"pageSize","label":"Page size","type":"select","default":"a4","options":[{"value":"a4","label":"A4"},{"value":"letter","label":"US Letter"},{"value":"a5","label":"A5"},{"value":"a3","label":"A3"}]},{"key":"orientation","label":"Orientation","type":"select","default":"portrait","options":[{"value":"portrait","label":"Portrait"},{"value":"landscape","label":"Landscape"}]},{"key":"spacing","label":"Spacing (mm)","type":"number","default":5,"min":2,"max":30,"step":0.5},{"key":"colour","label":"Line colour","type":"color","default":"#9db4d0"},{"key":"weight","label":"Line weight","type":"number","default":0.4,"min":0.1,"max":2,"step":0.1},{"key":"margin","label":"Margin (mm)","type":"number","default":10,"min":0,"max":40},{"key":"pages","label":"Number of pages","type":"number","default":1,"min":1,"max":100}],
+"run": async ({ opts, core }) => {
       let [W, H] = core.PAGE_SIZES[opts.pageSize] || core.PAGE_SIZES.a4;
       if (opts.orientation === 'landscape') [W, H] = [H, W];
       const MM = 72 / 25.4;
@@ -939,42 +1560,18 @@ const PDF_TOOLS = {
         warn: ops.length > 8000 ? 'That spacing produces a very dense grid, which will make a large file and may print slowly.' : ''
       };
     },
-    tips: [
-      'Print at 100% scale with no "fit to page", or the spacing will not measure what it says. 5 mm graph paper printed at 96% is no longer 5 mm.',
-      'A pale blue-grey grid photocopies and scans far better than black, and is easier to draw over.',
-      'Isometric paper uses a 60-degree triangular grid, which is the standard for technical and orthographic sketching.',
-      'Cornell layout gives a narrow cue column on the left, a wide notes area, and a summary strip at the bottom.'
-    ],
-    faq: [
-      { q: 'Why does my printed grid measure slightly wrong?', a: 'Almost always print scaling. Check the print dialogue for "Actual size" or 100%, and turn off any margin fitting. Printers also have a small non-printable border, which is what the margin setting accounts for.' }
-    ]
-  },
+"tips": ["Print at 100% scale with no \"fit to page\", or the spacing will not measure what it says. 5 mm graph paper printed at 96% is no longer 5 mm.","A pale blue-grey grid photocopies and scans far better than black, and is easier to draw over.","Isometric paper uses a 60-degree triangular grid, which is the standard for technical and orthographic sketching.","Cornell layout gives a narrow cue column on the left, a wide notes area, and a summary strip at the bottom."],
+"faq": [{"q":"Why does my printed grid measure slightly wrong?","a":"Almost always print scaling. Check the print dialogue for \"Actual size\" or 100%, and turn off any margin fitting. Printers also have a small non-printable border, which is what the margin setting accounts for."}]
+},
 
   'label-pdf': {
-    title: 'Label Sheet Generator',
-    kind: 'create', multiple: false,
-    description: 'Print address or product labels on standard sheet layouts, with data from a list.',
-    keywords: ['label template pdf', 'address label generator', 'avery labels pdf', 'print labels', 'label sheet maker'],
-    controls: [
-      { key: 'layout', label: 'Label layout', type: 'select', default: '3x7',
-        options: [
-          { value: '3x7', label: 'A4 — 3 × 7 (63.5 × 38.1 mm, 21 per sheet)' },
-          { value: '2x8', label: 'A4 — 2 × 8 (99.1 × 33.9 mm, 16 per sheet)' },
-          { value: '2x7', label: 'A4 — 2 × 7 (99.1 × 38.1 mm, 14 per sheet)' },
-          { value: '1x10', label: 'A4 — 1 × 10 (200 × 27 mm, 10 per sheet)' },
-          { value: '4x10', label: 'A4 — 4 × 10 (45.7 × 25.4 mm, 40 per sheet)' }
-        ]},
-      { key: 'items', label: 'Label text — blank line between labels', type: 'textarea',
-        default: 'MVR IT Services LTD\nReading\nUnited Kingdom\n\nSecond Label\nAnother Address\nSomewhere' },
-      { key: 'repeat', label: 'If fewer labels than the sheet holds', type: 'select', default: 'repeat',
-        options: [{ value: 'repeat', label: 'Repeat to fill the sheet' }, { value: 'once', label: 'Leave the rest blank' }] },
-      { key: 'size', label: 'Font size', type: 'number', default: 9, min: 5, max: 18 },
-      { key: 'align', label: 'Alignment', type: 'select', default: 'left',
-        options: [{ value: 'left', label: 'Left' }, { value: 'center', label: 'Centred' }] },
-      { key: 'guides', label: 'Cutting guides', type: 'select', default: 'no',
-        options: [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Show outlines' }] }
-    ],
-    run: async ({ opts, core }) => {
+"title": "Label Sheet Generator",
+"kind": "create",
+"multiple": false,
+"description": "Print address or product labels on standard sheet layouts, with data from a list.",
+"keywords": ["label template pdf","address label generator","avery labels pdf","print labels","label sheet maker"],
+"controls": [{"key":"layout","label":"Label layout","type":"select","default":"3x7","options":[{"value":"3x7","label":"A4 — 3 × 7 (63.5 × 38.1 mm, 21 per sheet)"},{"value":"2x8","label":"A4 — 2 × 8 (99.1 × 33.9 mm, 16 per sheet)"},{"value":"2x7","label":"A4 — 2 × 7 (99.1 × 38.1 mm, 14 per sheet)"},{"value":"1x10","label":"A4 — 1 × 10 (200 × 27 mm, 10 per sheet)"},{"value":"4x10","label":"A4 — 4 × 10 (45.7 × 25.4 mm, 40 per sheet)"}]},{"key":"items","label":"Label text — blank line between labels","type":"textarea","default":"MVR IT Services LTD\nReading\nUnited Kingdom\n\nSecond Label\nAnother Address\nSomewhere"},{"key":"repeat","label":"If fewer labels than the sheet holds","type":"select","default":"repeat","options":[{"value":"repeat","label":"Repeat to fill the sheet"},{"value":"once","label":"Leave the rest blank"}]},{"key":"size","label":"Font size","type":"number","default":9,"min":5,"max":18},{"key":"align","label":"Alignment","type":"select","default":"left","options":[{"value":"left","label":"Left"},{"value":"center","label":"Centred"}]},{"key":"guides","label":"Cutting guides","type":"select","default":"no","options":[{"value":"no","label":"No"},{"value":"yes","label":"Show outlines"}]}],
+"run": async ({ opts, core }) => {
       const LAYOUTS = {
         '3x7':  { cols: 3, rows: 7,  w: 63.5, h: 38.1, left: 7.2,  top: 15.1, gapX: 2.5, gapY: 0 },
         '2x8':  { cols: 2, rows: 8,  w: 99.1, h: 33.9, left: 4.6,  top: 13.1, gapX: 2.5, gapY: 0 },
@@ -1040,34 +1637,18 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'Print at exactly 100% scale. Label sheets are unforgiving — even 2% scaling shifts text off the labels by the bottom of the page.',
-      'Run one sheet on plain paper first and hold it against a real label sheet up to a window to check alignment.',
-      'These dimensions match the common A4 label formats. Manufacturers vary slightly, so verify against your own sheets before printing a batch.',
-      'Turn on cutting guides for plain paper, and off for real label stock where the outlines would print onto the labels.'
-    ],
-    faq: [
-      { q: 'My labels are consistently a few millimetres off. What now?', a: 'That is almost always printer margin offset rather than the template. Most print drivers have a calibration or offset setting; alternatively adjust the margin in your printer dialogue by the amount you measured.' }
-    ]
-  },
+"tips": ["Print at exactly 100% scale. Label sheets are unforgiving — even 2% scaling shifts text off the labels by the bottom of the page.","Run one sheet on plain paper first and hold it against a real label sheet up to a window to check alignment.","These dimensions match the common A4 label formats. Manufacturers vary slightly, so verify against your own sheets before printing a batch.","Turn on cutting guides for plain paper, and off for real label stock where the outlines would print onto the labels."],
+"faq": [{"q":"My labels are consistently a few millimetres off. What now?","a":"That is almost always printer margin offset rather than the template. Most print drivers have a calibration or offset setting; alternatively adjust the margin in your printer dialogue by the amount you measured."}]
+},
 
   'certificate-pdf': {
-    title: 'Certificate Generator',
-    kind: 'create', multiple: false,
-    description: 'Create certificates of completion, achievement or attendance — one, or a batch from a name list.',
-    keywords: ['certificate generator', 'certificate of completion', 'award certificate pdf', 'diploma maker', 'certificate template'],
-    controls: [
-      { key: 'heading', label: 'Heading', type: 'text', default: 'Certificate of Completion' },
-      { key: 'names', label: 'Recipient names (one per line)', type: 'textarea', default: 'Priya Sharma\nJames Okafor\nAnna Kowalski' },
-      { key: 'body', label: 'Body text', type: 'textarea', default: 'has successfully completed the course\nAdvanced Web Development' },
-      { key: 'date', label: 'Date', type: 'date', default: 'TODAY' },
-      { key: 'signatory', label: 'Signatory name and title', type: 'text', default: 'A. Director\nManaging Director' },
-      { key: 'org', label: 'Organisation', type: 'text', default: 'MVR IT Services LTD' },
-      { key: 'accent', label: 'Accent colour', type: 'color', default: '#f7c948' },
-      { key: 'orientation', label: 'Orientation', type: 'select', default: 'landscape',
-        options: [{ value: 'landscape', label: 'Landscape' }, { value: 'portrait', label: 'Portrait' }] }
-    ],
-    run: async ({ opts, core }) => {
+"title": "Certificate Generator",
+"kind": "create",
+"multiple": false,
+"description": "Create certificates of completion, achievement or attendance — one, or a batch from a name list.",
+"keywords": ["certificate generator","certificate of completion","award certificate pdf","diploma maker","certificate template"],
+"controls": [{"key":"heading","label":"Heading","type":"text","default":"Certificate of Completion"},{"key":"names","label":"Recipient names (one per line)","type":"textarea","default":"Priya Sharma\nJames Okafor\nAnna Kowalski"},{"key":"body","label":"Body text","type":"textarea","default":"has successfully completed the course\nAdvanced Web Development"},{"key":"date","label":"Date","type":"date","default":"TODAY"},{"key":"signatory","label":"Signatory name and title","type":"text","default":"A. Director\nManaging Director"},{"key":"org","label":"Organisation","type":"text","default":"MVR IT Services LTD"},{"key":"accent","label":"Accent colour","type":"color","default":"#f7c948"},{"key":"orientation","label":"Orientation","type":"select","default":"landscape","options":[{"value":"landscape","label":"Landscape"},{"value":"portrait","label":"Portrait"}]}],
+"run": async ({ opts, core }) => {
       const names = String(opts.names || '').split('\n').map(s => s.trim()).filter(Boolean);
       if (!names.length) return { error: 'Enter at least one recipient name.' };
       if (names.length > 500) return { error: 'That is over 500 certificates. Split the list.' };
@@ -1136,70 +1717,63 @@ const PDF_TOOLS = {
         ]
       };
     },
-    tips: [
-      'Enter one name per line to generate a batch — each becomes its own page in a single PDF, ready to print or split.',
-      'Landscape is conventional for certificates and gives long names room to breathe.',
-      'Very long names reduce automatically only if you lower the font size; check the longest name in your list before printing a batch.',
-      'The signature line is left blank deliberately, for a real signature. A printed signature image offers no assurance to anyone.'
-    ],
-    faq: [
-      { q: 'Can I add a logo?', a: 'Not in this tool — it uses only vector drawing and standard fonts, which is what keeps it dependency-free. To add a logo, generate the certificate here and overlay the image in a PDF editor, or print onto pre-printed letterhead.' }
-    ]
-  },
-
-  /* ===================== RENDER (needs pdf.js) ===================== */
+"tips": ["Enter one name per line to generate a batch — each becomes its own page in a single PDF, ready to print or split.","Landscape is conventional for certificates and gives long names room to breathe.","Very long names reduce automatically only if you lower the font size; check the longest name in your list before printing a batch.","The signature line is left blank deliberately, for a real signature. A printed signature image offers no assurance to anyone."],
+"faq": [{"q":"Can I add a logo?","a":"Not in this tool — it uses only vector drawing and standard fonts, which is what keeps it dependency-free. To add a logo, generate the certificate here and overlay the image in a PDF editor, or print onto pre-printed letterhead."}]
+},
 
   'pdf-to-images': {
-    title: 'PDF to Images',
-    kind: 'render', action: 'Convert to images', multiple: false,
-    description: 'Convert PDF pages to PNG or JPEG images at any resolution, entirely in your browser.',
-    keywords: ['pdf to image', 'pdf to png', 'pdf to jpg', 'convert pdf to picture', 'extract pdf pages as images'],
-    needsRenderer: true,
-    controls: [
-      { key: 'pages', label: 'Pages', type: 'text', default: 'all' },
-      { key: 'dpi', label: 'Resolution', type: 'select', default: '150',
-        options: [{ value: '72', label: '72 DPI — screen' }, { value: '150', label: '150 DPI — good' },
-                  { value: '300', label: '300 DPI — print' }, { value: '600', label: '600 DPI — very large' }] },
-      { key: 'format', label: 'Format', type: 'select', default: 'image/png',
-        options: [{ value: 'image/png', label: 'PNG — lossless' }, { value: 'image/jpeg', label: 'JPEG — smaller' },
-                  { value: 'image/webp', label: 'WebP — smallest' }] },
-      { key: 'quality', label: 'Quality (JPEG/WebP)', type: 'number', default: 90, min: 40, max: 100 }
-    ],
-    tips: [
-      'Rendering needs a PDF engine, so this page downloads one on first use — about a megabyte, cached afterwards, and only on this page.',
-      '150 DPI suits screen use and most documents. 300 DPI matches print resolution and produces files roughly four times larger.',
-      'PNG is lossless and right for text and diagrams. JPEG is smaller and better for pages that are mostly photographs.',
-      'A 600 DPI A4 page is about 5000 × 7000 pixels. A long document at that resolution will use a great deal of memory.'
-    ],
-    faq: [
-      { q: 'Why does this one need a download when the other PDF tools do not?', a: 'Merging, splitting and rotating only rearrange the file\u2019s structure, which needs no rendering. Turning a page into an image means interpreting fonts, vector paths and colour spaces — that is a full rendering engine, and it cannot be written small.' }
-    ]
-  },
+"title": "PDF to Images",
+"kind": "render",
+"action": "Convert to images",
+"multiple": false,
+"description": "Convert PDF pages to PNG or JPEG images at any resolution, entirely in your browser.",
+"keywords": ["pdf to image","pdf to png","pdf to jpg","convert pdf to picture","extract pdf pages as images"],
+"needsRenderer": true,
+"pageGrid": { "key": "pages", "mode": "select", "marks": "keep", "rotate": true, "title": "Click the pages to convert; shift-click for a run, or drag across" },
+"zipSuffix": "images",
+"controls": [{"key":"pages","label":"Pages","type":"text","default":"all"},{"key":"dpi","label":"Resolution","type":"select","default":"150","options":[{"value":"72","label":"72 DPI — screen"},{"value":"150","label":"150 DPI — good"},{"value":"300","label":"300 DPI — print"},{"value":"600","label":"600 DPI — very large"}]},{"key":"format","label":"Format","type":"select","default":"image/png","options":[{"value":"image/png","label":"PNG — lossless"},{"value":"image/jpeg","label":"JPEG — smaller"},{"value":"image/webp","label":"WebP — smallest"}]},{"key":"quality","label":"Quality (JPEG/WebP)","type":"number","default":90,"min":40,"max":100}],
+"tips": ["Choose the pages from the thumbnails or type them; only those are drawn. Each picture has its own Save button, and several come as one ZIP.","Rendering needs a PDF engine, so this page downloads one on first use — about a megabyte, cached afterwards, and only on this page.","150 DPI suits screen use and most documents. 300 DPI matches print resolution and produces files roughly four times larger.","PNG is lossless and right for text and diagrams. JPEG is smaller and better for pages that are mostly photographs.","A 600 DPI A4 page is about 5000 × 7000 pixels. Where a page would be larger than this browser can draw, it is drawn at the largest size the browser allows and the page says so, rather than handing over a blank picture.","The file name follows the format the browser actually wrote: a browser that cannot write WebP saves PNG, and the picture is named .png."],
+"faq": [{"q":"Why does this one need a download when the other PDF tools do not?","a":"Merging, splitting and rotating only rearrange the file’s structure, which needs no rendering. Turning a page into an image means interpreting fonts, vector paths and colour spaces — that is a full rendering engine, and it cannot be written small."}]
+},
 
   'pdf-organise': {
-    title: 'Organise PDF Pages',
-    kind: 'render', action: 'Show the pages', multiple: false,
-    description: 'See page thumbnails and reorder, rotate or delete pages visually before saving.',
-    keywords: ['organise pdf', 'reorder pdf pages', 'rearrange pdf', 'pdf page organizer', 'move pdf pages'],
-    needsRenderer: true,
-    controls: [],
-    tips: [
-      'Thumbnails need a rendering engine, downloaded once on first use and cached afterwards.',
-      'Drag thumbnails to reorder, use the rotate button on each, and the cross to mark a page for removal. On a touch screen, drag by the grip in a card’s corner; from the keyboard, the ← and → buttons move a page one place and keep the focus, so you can press them again.',
-      'Nothing is changed until you save. The original file on your device is never modified.',
-      'If you already know the page numbers you want, the extract, delete and rotate tools do the same job without any download.'
-    ],
-    faq: [
-      { q: 'Is there a page limit?', a: 'No fixed limit, but every page’s thumbnail is drawn when the file opens, so a document of several hundred pages takes a while to appear and uses noticeable memory. For very large files, the numeric tools are lighter.' }
-    ]
-  },
+"title": "Organise PDF Pages",
+"kind": "transform",
+"action": "Save the new order",
+"multiple": false,
+"description": "See page thumbnails and reorder, rotate or delete pages visually before saving.",
+"keywords": ["organise pdf","reorder pdf pages","rearrange pdf","pdf page organizer","move pdf pages"],
+"needsRenderer": true,
+"pageGrid": { "mode": "organise", "label": "Pages, in their new order" },
+"controls": [],
+"run": async ({ docs, opts, core }) => {
+      const doc = docs[0].doc;
+      const total = await doc.pageCount();
+      /* the grid hands over the kept pages in their new order, each with the
+         quarter turns added to it; with no grid (a test, an old browser) the
+         file is saved as it is */
+      const layout = Array.isArray(opts.layout)
+        ? opts.layout.filter((x) => x && x.p >= 0 && x.p < total)
+        : Array.from({ length: total }, (_, i) => ({ p: i, r: 0 }));
+      if (!layout.length) return { error: 'Every page is marked for removal.' };
+      const bytes = await core.assemble(layout.map((x) => ({ doc, pageIndex: x.p, rotate: Number(x.r) || 0 })), {});
+      const moved = layout.filter((x, i) => x.p !== i).length;
+      return {
+        files: [{ name: docs[0].name.replace(/\.pdf$/i, '') + '-organised.pdf', bytes }],
+        stats: [
+          ['Source pages', String(total)],
+          ['Pages kept', String(layout.length)],
+          ['Pages removed', String(total - layout.length)],
+          ['Pages moved', String(moved)],
+          ['Rotated', String(layout.filter((x) => Number(x.r)).length)],
+          ['Output size', fmtBytes(bytes.length)]
+        ]
+      };
+    },
+"tips": ["The thumbnails appear as soon as the file is open, drawn as they scroll into view; the rendering engine behind them is downloaded once and cached afterwards.","Drag thumbnails to reorder, use the rotate button on each, and the cross to mark a page for removal. On a touch screen, drag by the grip in a card’s corner; from the keyboard, the ← and → buttons move a page one place and keep the focus, so you can press them again.","Nothing is changed until you save. The original file on your device is never modified.","If you already know the page numbers you want, the extract, delete and rotate tools do the same job without any download."],
+"faq": [{"q":"Is there a page limit?","a":"Up to 10,000 pages. Only the thumbnails near the part of the grid on screen are drawn, so a long document opens quickly and memory stays modest; the pages further down are drawn as you scroll to them."}]
+},
 
-  /* ===================== NEW TOOLS - RAPID PROTOTYPING =====================
-     pdf-editor and pdf-signature ship; the other six here are drafts that
-     do not (build-pdf-ship.js says why). */
-
-  /* pdf-editor ships: this block is engine/pdf-pdf-editor.js's spec, copied verbatim
-     (that file is edited directly). test_pdftools.js fails if the two differ. */
   'pdf-editor': {
 "title": "Add Text to a PDF",
 "kind": "transform",
@@ -1224,6 +1798,9 @@ const PDF_TOOLS = {
       if (!items.length) return { error: 'Type the text you want to add first.' };
 
       /* Resolve each item's pages once; a bad range names the item. */
+      /* text WinAnsi cannot hold (Polish, Greek, Cyrillic, ₹, Hindi …) is
+         drawn in an embedded Noto subset; the rest stays in Helvetica */
+      const tf = core.textRun ? core.textRun() : null;
       const placed = [];
       for (const it of items) {
         const v = String(it.pages || '1').trim();
@@ -1231,9 +1808,11 @@ const PDF_TOOLS = {
         try { sel = new Set(/^last$/i.test(v) ? [total - 1] : core.parsePageRange(v, total)); }
         catch (e) { return { error: `"${it.text.split('\n')[0].slice(0, 30)}": ${e.message}` }; }
         const size = Math.max(6, Math.min(72, Number(it.size) || 16));
+        const uni = tf && core.unicodeFonts.needs(it.text);
         const lines = it.width > 0
-          ? core.wrapText(it.text, 'Helvetica', size, it.width)
+          ? (uni ? await tf.wrap(it.text, size, false, it.width) : core.wrapText(it.text, 'Helvetica', size, it.width))
           : String(it.text).split('\n');
+        if (uni) for (const l of lines) await tf.prepare(l, false);
         placed.push({
           sel, size, lines, x: Math.max(0, Number(it.x) || 0), y: Math.max(0, Number(it.y) || 0),
           col: rgbTriplet(it.colour), lead: size * 1.25
@@ -1251,7 +1830,9 @@ const PDF_TOOLS = {
           ops += `${p.col} rg\nBT\n/MVRedit ${p.size} Tf\n`;
           p.lines.forEach((line, k) => {
             if (!line) return;
-            ops += `1 0 0 1 ${nf(p.x)} ${nf(p.y - k * p.lead)} Tm\n(${core.contentEscape(line)}) Tj\n`;
+            if (tf && tf.has(line, false)) {
+              ops += `1 0 0 1 ${nf(p.x)} ${nf(p.y - k * p.lead)} Tm\n${tf.show(line, p.size, false).ops}\n/MVRedit ${p.size} Tf\n`;
+            } else ops += `1 0 0 1 ${nf(p.x)} ${nf(p.y - k * p.lead)} Tm\n(${core.contentEscape(line)}) Tj\n`;
             linesWritten++;
           });
           ops += 'ET\n';
@@ -1262,10 +1843,16 @@ const PDF_TOOLS = {
         }});
       }
 
-      const bytes = await core.assemble(assembled, {});
+      const fonts = tf ? tf.overlayFonts() : {};
+      if (Object.keys(fonts).length) assembled.forEach((a) => { if (a.overlay) a.overlay.fonts = fonts; });
+      const miss = tf && tf.missing ? tf.missing() : [];
+      const missWarn = miss.length ? 'These characters are not in the fonts this tool embeds and show as empty boxes: ' + miss.slice(0, 12).join(' ') + (miss.length > 12 ? ' …' : '') + '. Noto Sans covers Latin, Greek, Cyrillic and Devanagari.' : undefined;
+
+      const bytes = await core.assemble(assembled, tf ? { finish: (w) => tf.finish(w) } : {});
       const base = docs[0].name.replace(/\.pdf$/i, '');
       return {
         files: [{ name: `${base}-edited.pdf`, bytes }],
+        warn: missWarn,
         stats: [
           ['Pages', String(total)],
           ['Pages written to', String(pagesTouched)],
@@ -1275,9 +1862,9 @@ const PDF_TOOLS = {
         ]
       };
     },
-"tips": ["Click the page preview to place the text. The dashed box shows where it will sit, at the size and colour it will be; if it wraps, every line is shown.","Several pieces of text: place the first, press \u201cAdd as another item\u201d, and the controls clear for the next one. Banked items stay drawn on the preview in grey and can be edited or removed from the list.","Wrap width is in points, measured with the real font metrics \u2014 A4 is 595 wide, so 450 leaves comfortable margins. 0 means each line stays exactly as typed, and a blank line in the box is a blank line on the page.","Use the arrows beside \u201cPage 1 of N\u201d to look through the document. The Pages box on each item decides where it goes: 1, 2-5, all, or last.","With the preview focused, the arrow keys nudge by 2 points and shift-arrow by 20, and Page Up and Page Down turn the page.","X and Y are PDF points from the bottom-left corner of the page as it is shown, 72 to the inch \u2014 a rotated or cropped page is measured the way you see it. A4 is 595 \u00d7 842, US Letter 612 \u00d7 792.","The text is drawn in Helvetica. Characters outside Latin-1 \u2014 Greek, Cyrillic, CJK, most emoji \u2014 will not render, because that font has no glyphs for them."],
-"faq": [{"q":"Can I change the text that is already in my PDF?","a":"No. This draws new text on top of the page; it does not touch what is already there. Editing existing words means re-flowing the original text, which needs the fonts and the layout the PDF was made from, and most PDFs do not carry enough of either. If you need to change existing wording, edit the source document and export it again."},{"q":"How do I add more than one piece of text?","a":"Type the first, click where it goes, then press \u201cAdd as another item\u201d. It moves into the list below and stays drawn on the preview; the controls clear for the next one. Each item keeps its own page, position, size, colour and wrap width. Edit puts an item back in the controls; the cross removes it. Whatever is in the controls when you press Add text is included too."},{"q":"Why does my text run off the page in one line?","a":"Set a wrap width. With it at 0 the tool draws each line exactly as you typed it, which is right for a label or a reference number and wrong for a paragraph. A width of 450 points on an A4 page wraps like a normal document; the preview shows the wrapped lines before you commit."},{"q":"How do I see a page other than the first one?","a":"Use the arrows beside the page number above the preview, or Page Up and Page Down with the preview focused. Paging through changes nothing on its own: each item\u2019s Pages box decides where it is written, and the preview greys out items that are not on the page in view."},{"q":"Can I add a picture or a logo?","a":"Not here. This tool writes text into the page\u2019s content stream with the standard Helvetica font, which is why the output stays tiny and needs nothing embedded. Placing an image means embedding it as a PDF image object, which is a different piece of work; if it is something you need, say so."},{"q":"Are my files uploaded?","a":"No. The PDF is parsed and rewritten by your own browser. Nothing is transmitted, which is why this works offline and why it is safe for contracts and financial documents."}]
-  },
+"tips": ["Click the page preview to place the text. The dashed box shows where it will sit, at the size and colour it will be; if it wraps, every line is shown.","Drag the dashed box to move the text, pull its corner handle to make it larger or smaller, or its side handle to set the wrap width. With the box focused, the arrow keys nudge it (Shift for 20 points) and + and − resize it.","Several pieces of text: place the first, press “Add as another item”, and the controls clear for the next one. Banked items stay drawn on the preview in grey; drag one to move it, click it to edit it, or remove it from the list.","Put an item on this page, every page or the last page with the buttons above the preview, or type pages such as 2-5 in its Pages box.","Wrap width is in points, measured with the real font metrics — A4 is 595 wide, so 450 leaves comfortable margins. 0 means each line stays exactly as typed, and a blank line in the box is a blank line on the page.","Use the arrows beside “Page 1 of N” to look through the document. The Pages box on each item decides where it goes: 1, 2-5, all, or last.","With the preview focused, the arrow keys nudge by 2 points and shift-arrow by 20, and Page Up and Page Down turn the page.","X and Y are PDF points from the bottom-left corner of the page as it is shown, 72 to the inch — a rotated or cropped page is measured the way you see it. A4 is 595 × 842, US Letter 612 × 792.","Text the standard fonts can hold is drawn in Helvetica, with nothing embedded. Anything else (Hindi, Greek, Cyrillic, Polish letters, the rupee sign) is drawn in Noto Sans or Noto Sans Devanagari, embedded as a subset of only the characters used, so it stays searchable and can be copied. Chinese, Japanese, Arabic and emoji are not covered and the tool says so."],
+"faq": [{"q":"Can I change the text that is already in my PDF?","a":"No. This draws new text on top of the page; it does not touch what is already there. Editing existing words means re-flowing the original text, which needs the fonts and the layout the PDF was made from, and most PDFs do not carry enough of either. If you need to change existing wording, edit the source document and export it again."},{"q":"How do I add more than one piece of text?","a":"Type the first, click where it goes, then press “Add as another item”. It moves into the list below and stays drawn on the preview; the controls clear for the next one. Each item keeps its own page, position, size, colour and wrap width. Edit puts an item back in the controls; the cross removes it. Whatever is in the controls when you press Add text is included too."},{"q":"Why does my text run off the page in one line?","a":"Set a wrap width. With it at 0 the tool draws each line exactly as you typed it, which is right for a label or a reference number and wrong for a paragraph. A width of 450 points on an A4 page wraps like a normal document; the preview shows the wrapped lines before you commit."},{"q":"How do I see a page other than the first one?","a":"Use the arrows beside the page number above the preview, or Page Up and Page Down with the preview focused. Paging through changes nothing on its own: each item’s Pages box decides where it is written, and the preview greys out items that are not on the page in view."},{"q":"Can I add a picture or a logo?","a":"Not with this tool, which writes text. Add an Image to a PDF places a logo, a stamp or a photo the same way: drag it, resize it, and put it on one page or many."},{"q":"Can I write in Hindi?","a":"Yes. Hindi is shaped the way it is printed, conjuncts and the i-matra included, and embedded in Noto Sans Devanagari, so the words can be searched and copied back out correctly. The first time you use it the font and the shaping engine are downloaded from this site, about 0.65 MB, and kept afterwards."},{"q":"Are my files uploaded?","a":"No. The PDF is parsed and rewritten by your own browser. Nothing is transmitted, which is why this works offline and why it is safe for contracts and financial documents."}]
+},
 
   'pdf-form-filler': {
     title: 'PDF Form Filler',
@@ -1574,84 +2161,109 @@ const PDF_TOOLS = {
 "multiple": false,
 "description": "Draw or type a signature onto a PDF and place it where you want. A visible signature, not a cryptographic one — the difference is explained below.",
 "keywords": ["sign pdf","add signature to pdf","pdf signature image","signature on pdf","place signature pdf","pdf sign online free"],
-"controls": [{"key":"drawn","label":"Draw your signature (optional)","type":"draw","hint":"Mouse, pen or finger. It sits just above the typed line."},{"key":"drawWidth","label":"Drawn signature width","type":"number","default":150,"min":40,"max":400,"hint":"Points; the height follows the drawing"},{"key":"signatureText","label":"Signature text","type":"text","default":"Signed by: ","hint":"Your name, or whatever should appear on the line"},{"key":"date","label":"Include date","type":"select","default":"yes","options":[{"value":"yes","label":"Yes"},{"value":"no","label":"No"}]},{"key":"x","label":"X","type":"number","default":400,"min":0,"hint":"Points from the left edge"},{"key":"y","label":"Y","type":"number","default":100,"min":0,"hint":"Points up from the bottom edge"},{"key":"pages","label":"Pages","type":"text","default":"last","hint":"last, 1, 2-5, or all"}],
-"placePreview": { "x": "x", "y": "y", "page": "pages", "text": "signatureText", "size": 11, "colour": "#000000", "drawing": "drawn", "drawingWidth": "drawWidth" },
+"controls": [{"key":"drawn","label":"Draw your signature (optional)","type":"draw","hint":"Mouse, pen or finger. It sits just above the typed line."},{"key":"drawWidth","label":"Drawn signature width","type":"number","default":150,"min":40,"max":400,"hint":"Points; the height follows the drawing"},{"key":"signatureText","label":"Signature text","type":"text","default":"Signed by: ","hint":"Your name, or whatever should appear on the line"},{"key":"size","label":"Text size","type":"number","default":11,"min":6,"max":48,"hint":"Points, for the typed line and the date"},{"key":"date","label":"Include date","type":"select","default":"yes","options":[{"value":"yes","label":"Yes"},{"value":"no","label":"No"}]},{"key":"x","label":"X","type":"number","default":400,"min":0,"hint":"Points from the left edge"},{"key":"y","label":"Y","type":"number","default":100,"min":0,"hint":"Points up from the bottom edge"},{"key":"pages","label":"Pages","type":"text","default":"last","hint":"last, 1, 2-5, or all"}],
+"placePreview": { "x": "x", "y": "y", "page": "pages", "text": "signatureText", "size": "size", "colour": "#000000", "drawing": "drawn", "drawingWidth": "drawWidth", "date": "date", "items": "items", "lastWord": true, "title": "Click the page to place the signature, or drag it; drag its corner to resize it", "bankLabel": "Add as another signature", "bankHint": "Keep this signature where it is and place another — initials on every page and a full signature on the last, for example.", "emptyMessage": "Type or draw a signature first, then add it as another one." },
 "inkPlacement": inkPlacement,
 "run": async ({ docs, opts, core }) => {
       const doc = docs[0].doc;
       const total = await doc.pageCount();
-
-      let sel;
-      if (opts.pages === 'last') {
-        sel = new Set([total - 1]);
-      } else {
-        try { sel = new Set(core.parsePageRange(opts.pages, total)); }
-        catch (e) { return { error: e.message }; }
-      }
-
-      const sigText = String(opts.signatureText == null ? '' : opts.signatureText);
-      const ink = inkPlacement(opts.drawn, opts);
-      if (!sigText.trim() && !ink) return { error: 'Type a signature or draw one first.' };
-      const x = Math.max(0, numOr(opts.x, 400));
-      const y = Math.max(0, numOr(opts.y, 100));
       const col = rgbTriplet('#000000');
+      const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
-      /* The drawing as vector strokes: as sharp as the text beside it at any
-         zoom, and a few hundred bytes rather than an embedded picture. */
-      let inkOps = '';
-      if (ink) {
-        const X = (p) => nf(ink.x0 + (p[0] - ink.minX) * ink.s);
-        const Y = (p) => nf(ink.y0 + (ink.maxY - p[1]) * ink.s);
-        inkOps = `q\n${col} RG\n1.4 w\n1 J\n1 j\n`;
-        for (const s of opts.drawn.strokes) {
-          if (!s.length) continue;
-          inkOps += `${X(s[0])} ${Y(s[0])} m\n`;
-          (s.length === 1 ? [s[0]] : s.slice(1)).forEach(p => { inkOps += `${X(p)} ${Y(p)} l\n`; });
-          inkOps += 'S\n';
+      /* Every banked signature, then whatever is in the controls now. */
+      const list = (opts.items || []).map((it) => ({
+        text: it.text, drawn: it.drawn || null, drawWidth: it.drawWidth, date: it.date,
+        size: it.size, x: it.x, y: it.y, pages: it.pages
+      }));
+      const cur = { text: opts.signatureText, drawn: opts.drawn, drawWidth: opts.drawWidth, date: opts.date, size: opts.size, x: opts.x, y: opts.y, pages: opts.pages };
+      const curText = String(cur.text == null ? '' : cur.text);
+      if (curText.trim() || inkPlacement(cur.drawn, cur) || !list.length) list.push(cur);
+
+      const tf = core.textRun ? core.textRun() : null;
+      const placed = [];
+      for (const it of list) {
+        const text = String(it.text == null ? '' : it.text);
+        const ink = inkPlacement(it.drawn, { x: it.x, y: it.y, drawWidth: it.drawWidth, signatureText: text });
+        if (!text.trim() && !ink) {
+          if (list.length === 1) return { error: 'Type a signature or draw one first.' };
+          continue;
         }
-        inkOps += 'Q\n';
+        const v = String(it.pages == null ? 'last' : it.pages).trim();
+        let sel;
+        if (/^last$/i.test(v)) sel = new Set([total - 1]);
+        else {
+          try { sel = new Set(core.parsePageRange(v, total)); }
+          catch (e) { return { error: (list.length > 1 ? '"' + (text.trim() || 'Drawn signature').slice(0, 30) + '": ' : '') + e.message }; }
+        }
+        const x = Math.max(0, numOr(it.x, 400));
+        const y = Math.max(0, numOr(it.y, 100));
+        const size = Math.max(6, Math.min(48, numOr(it.size, 11)));
+
+        /* The drawing as vector strokes: as sharp as the text beside it at
+           any zoom, and a few hundred bytes rather than an embedded picture. */
+        let ops = '';
+        if (ink) {
+          const X = (q) => nf(ink.x0 + (q[0] - ink.minX) * ink.s);
+          const Y = (q) => nf(ink.y0 + (ink.maxY - q[1]) * ink.s);
+          ops += `q\n${col} RG\n1.4 w\n1 J\n1 j\n`;
+          for (const st of it.drawn.strokes) {
+            if (!st.length) continue;
+            ops += `${X(st[0])} ${Y(st[0])} m\n`;
+            (st.length === 1 ? [st[0]] : st.slice(1)).forEach((q) => { ops += `${X(q)} ${Y(q)} l\n`; });
+            ops += 'S\n';
+          }
+          ops += 'Q\n';
+        }
+        ops += `q\n${col} rg\nBT\n/MVRsig ${nf(size)} Tf\n`;
+        if (text.trim() && tf && core.unicodeFonts.needs(text)) {
+          await tf.prepare(text, false);
+          ops += `1 0 0 1 ${nf(x)} ${nf(y)} Tm\n${tf.show(text, size, false).ops}\n/MVRsig ${nf(size)} Tf\n`;
+        } else if (text.trim()) ops += `1 0 0 1 ${nf(x)} ${nf(y)} Tm\n(${core.contentEscape(text)}) Tj\n`;
+        if (it.date === 'yes') {
+          ops += `\n1 0 0 1 ${nf(x)} ${nf(y - size * 14 / 11)} Tm\n(${core.contentEscape('Date: ' + dateStr)}) Tj`;
+        }
+        ops += '\nET\nQ\n';
+        placed.push({ sel, ops, ink, text });
       }
 
       const items = [];
+      let signedPages = 0;
       for (let i = 0; i < total; i++) {
-        if (!sel.has(i)) { items.push({ doc, pageIndex: i }); continue; }
-
-        let ops = inkOps + `q\n${col} rg\nBT\n/MVRsig 11 Tf\n`;
-        if (sigText.trim()) ops += `1 0 0 1 ${nf(x)} ${nf(y)} Tm\n(${core.contentEscape(sigText)}) Tj\n`;
-
-        if (opts.date === 'yes') {
-          const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-          ops += `\n1 0 0 1 ${nf(x)} ${nf(y - 14)} Tm\n(${core.contentEscape('Date: ' + dateStr)}) Tj`;
-        }
-
-        ops += '\nET\nQ\n';
-
+        const here = placed.filter((pl) => pl.sel.has(i));
+        if (!here.length) { items.push({ doc, pageIndex: i }); continue; }
+        signedPages++;
         /* X and Y are measured on the page as it is shown — cropped and
            turned by its /Rotate — which is also what the preview shows. */
         items.push({ doc, pageIndex: i, overlay: {
-          content: ops, fontKey: 'MVRsig', fontName: 'Helvetica', needsGS: false, opacity: 1, upright: true
+          content: here.map((pl) => pl.ops).join(''), fontKey: 'MVRsig', fontName: 'Helvetica', needsGS: false, opacity: 1, upright: true
         }});
       }
 
-      const bytes = await core.assemble(items, {});
+      const fonts = tf ? tf.overlayFonts() : {};
+      if (Object.keys(fonts).length) items.forEach((a) => { if (a.overlay) a.overlay.fonts = fonts; });
+      const miss = tf && tf.missing ? tf.missing() : [];
+      const missWarn = miss.length ? 'These characters are not in the fonts this tool embeds and show as empty boxes: ' + miss.slice(0, 12).join(' ') + (miss.length > 12 ? ' …' : '') + '. Noto Sans covers Latin, Greek, Cyrillic and Devanagari.' : undefined;
+
+      const bytes = await core.assemble(items, tf ? { finish: (w) => tf.finish(w) } : {});
       const base = docs[0].name.replace(/\.pdf$/i, '');
+      const one = placed.length === 1 ? placed[0] : null;
       return {
         files: [{ name: `${base}-signed.pdf`, bytes }],
         stats: [
           ['Pages', String(total)],
-          ['Pages signed', String(sel.size)],
-          ['Signature', ink ? (sigText.trim() ? 'Drawn, with typed text' : 'Drawn') : 'Typed'],
-          ...(sigText.trim() ? [['Signature text', sigText]] : []),
-          ...(ink ? [['Drawn size', Math.round(ink.w) + ' × ' + Math.round(ink.h) + ' points']] : []),
-          ['Date included', opts.date],
+          ['Pages signed', String(signedPages)],
+          ...(one ? [['Signature', one.ink ? (one.text.trim() ? 'Drawn, with typed text' : 'Drawn') : 'Typed']] : [['Signatures placed', String(placed.length)]]),
+          ...(one && one.text.trim() ? [['Signature text', one.text]] : []),
+          ...(one && one.ink ? [['Drawn size', Math.round(one.ink.w) + ' × ' + Math.round(one.ink.h) + ' points']] : []),
+          ['Date included', list.some((it) => it.date === 'yes') ? 'yes' : 'no'],
           ['Output size', fmtBytes(bytes.length)]
         ],
-        warn: 'This adds visual signature elements. For legally binding digital signatures, you need certificate-based cryptographic signing.'
+        warn: (missWarn ? missWarn + ' ' : '') + 'This adds visual signature elements. For legally binding digital signatures, you need certificate-based cryptographic signing.'
       };
     },
-"tips": ["Draw in the box with a mouse, a pen or a finger, or leave it empty and type. A drawing is placed just above the typed line, at the width you choose, as vector strokes rather than a picture, so it stays sharp when zoomed and adds only a few hundred bytes.","Click the page preview to place the signature. The dashed box is where the line will sit on the finished file, and a drawing is shown above it where it will land.","The arrows beside the page number page through the document. That changes only what you are looking at; the Pages box decides which pages are signed.","Leave the pages box on \"last\" to sign only the final page, which is where most contracts want it.","The date, if you include it, is drawn on a second line just under the signature.","X and Y are PDF points from the bottom-left corner of the page as it is shown, 72 to the inch — a rotated or cropped page is measured the way you see it. A4 is 595 × 842, US Letter 612 × 792. 0 is a real position: the very edge.","This is a visible signature and can be removed by anyone with an editor. A cryptographic signature cannot — see the question below."],
+"tips": ["Draw in the box with a mouse, a pen or a finger, or leave it empty and type. A drawing is placed just above the typed line, at the width you choose, as vector strokes rather than a picture, so it stays sharp when zoomed and adds only a few hundred bytes.","Click the page preview to place the signature. The dashed box is where the line will sit on the finished file, and a drawing is shown above it where it will land.","Drag the signature on the preview to move it and pull its corner to make it larger or smaller; the drawing and the typed line grow together. With it focused, the arrow keys nudge it and + and − resize it.","Several signatures: place one, press \"Add as another signature\", and place the next. Initials on every page and a full signature with the date on the last page take two items.","The arrows beside the page number page through the document. That changes only what you are looking at; the Pages box decides which pages are signed.","Leave the pages box on \"last\" to sign only the final page, which is where most contracts want it.","The date, if you include it, is drawn on a second line just under the signature.","X and Y are PDF points from the bottom-left corner of the page as it is shown, 72 to the inch — a rotated or cropped page is measured the way you see it. A4 is 595 × 842, US Letter 612 × 792. 0 is a real position: the very edge.","This is a visible signature and can be removed by anyone with an editor. A cryptographic signature cannot — see the question below.","A typed name in any of the Latin, Greek, Cyrillic or Devanagari scripts is written exactly, Łukasz or राम alike, in an embedded Noto subset; a plain English name stays in Helvetica."],
 "faq": [{"q":"Is this a legally binding digital signature?","a":"No, and the distinction matters. This adds visual elements only: your typed or drawn signature is drawn onto the page, the same as signing a printout and scanning it. A digital signature in the legal sense is a cryptographic operation that binds a certificate to the document so any later change is detectable, and it needs a certificate from a certifying authority or trust service provider. This tool writes no signature field, certificate or /ByteRange, so a signature validator finds nothing to check. If a contract, a court or a regulator asks for a digital signature, this is not it — use a certificate-based signing service. For a form, an invoice or an internal approval that only has to look signed, a visible signature is what is wanted."}]
-  },
+},
 
   'pdf-portfolio': {
     title: 'PDF Portfolio Creator',

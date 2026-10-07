@@ -67,7 +67,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const MASK = ['input', 'textarea', 'select', 'canvas', '[contenteditable]',
   '[class*="result"]', '[class*="output"]', '[class*="readout"]',
   '[class*="preview"]', '[class*="display"]', '#recent-tools',
-  '.io-pane', '.io-msg', '.pdf-file-name', '.page-grid', '.stat-val'].join(',');
+  '.io-pane', '.io-msg', '.pdf-file-name', '.page-grid', '.stat-val', '.tool-table',
+  '.tool-chart', '.calc-recent', '.calc-compare', '.formula-filled', '.working',
+  '.print-head', '.conv-batch', '.conv-live', '.fx-grid', '.calc-history'].join(',');
 
 const SECTIONS = ['finance', 'mathematics', 'engineering', 'health', 'design', 'utilities', 'time', 'developer', 'qr',
   'business', 'india', 'image', 'text', 'pdf', 'education', 'ai', 'ai-image', 'ai-video', 'conversions'];

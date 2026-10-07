@@ -15,32 +15,32 @@ module.exports = {
       'It says nothing about where fat is carried or how much of your weight is muscle, so the same BMI can mean quite different things for two people of the same height.'
     ],
     formula: {
-      text: 'Height is squared, so it moves the result more than weight does. In imperial mode the calculator first converts pounds to kilograms and inches to metres, then applies the same formula.',
-      expr: ['BMI = weight (kg) ÷ height (m)²', 'imperial: BMI = (lb × 0.45359237) ÷ (in × 0.0254)²'],
+      text: 'Height is squared, so it moves the result more than weight does. Weight in stones and pounds and height in feet and inches are first turned into kilograms and metres, then the same formula applies.',
+      expr: ['BMI = weight (kg) ÷ height (m)²', 'imperial: BMI = (lb × 0.45359237) ÷ (in × 0.0254)²', '1 st = 14 lb      1 ft = 12 in'],
       vars: [['kg', 'weight in kilograms'], ['m', 'height in metres: 175 cm is 1.75 m']]
     },
     worked: {
-      inputs: { system: 'imperial', weight: 154, height: 66 },
-      text: 'Someone 5 ft 6 in (66 inches) tall who weighs 11 stone (154 lb) chooses imperial and enters 154 and 66. That is 69.85 kg and 1.6764 m, a BMI of 24.9: within the healthy range. The range ends at 25, so about 0.4 kg more would move the same person into the next band: the boundaries are lines on a continuous scale.',
+      inputs: { weight: 69.85322498, height: 167.64 },
+      text: 'Someone 5 ft 6 in tall weighing 11 st enters just that. That is 69.85 kg and 1.6764 m, a BMI of 24.9: within the healthy range. The range ends at 25, so about 0.4 kg more would move them into the next band.',
       check: [['bmi', '24.9'], ['category', 'within the healthy range']]
     },
     uses: [
       ['Forms that ask for it', 'GP registration, insurance and gym inductions often ask for BMI.'],
       ['Following a trend', 'A reading every few months shows the direction, which says more than one figure.'],
-      ['Before an appointment', 'Have the number ready when a nurse or doctor asks.']
+      ['A child’s growth', 'Enter age and sex to see the centile.']
     ],
     mistakes: [
-      'Typing height in metres in metric mode. The box expects centimetres, so 1.75 m goes in as 175.',
+      'Typing height in metres in the centimetre box. It expects centimetres, so 1.75 m goes in as 175; or switch the unit to feet and inches.',
       'Reading BMI as body fat. Two people with a BMI of 27 can carry very different amounts of fat and muscle; waist size and body composition say more.',
-      'Using adult ranges for children. Under-18s are assessed on age- and sex-specific growth charts, not the adult cut-offs used here.'
+      'Reading a child’s BMI against the adult bands. Under 18, enter the age and sex: the result is then a centile for age, not an adult category.'
     ],
     faq: [
-      { q: 'What is a healthy BMI for adults?', a: 'For most adults the NHS and the World Health Organization use 18.5 to 24.9; this calculator calls 25 to 30 above that range and 30 or more well above it. Lower thresholds are often used for people of South Asian, Chinese, Black African or African-Caribbean background, so ask a GP how they apply to you.' },
-      { q: 'How do I calculate BMI in pounds and inches?', a: 'Multiply your weight in pounds by 703 and divide by your height in inches squared. For 180 lb at 70 inches that is 180 × 703 ÷ 4,900, a BMI of 25.8; the imperial setting here gives the same answer.' },
+      { q: 'What is a healthy BMI for adults?', a: 'For most adults the NHS uses 18.5 to 24.9; 25 to 30 is above that range and 30 or more well above it. Lower thresholds, 23 and 27.5, are used for people of South Asian, Chinese, other Asian, Middle Eastern, Black African or African-Caribbean background; choose that background above to apply them.' },
+      { q: 'How do I calculate BMI in pounds and inches?', a: 'Multiply your weight in pounds by 703 and divide by your height in inches squared. For 180 lb at 70 inches that is 180 × 703 ÷ 4,900, a BMI of 25.8; entering 180 lb and 5 ft 10 in here gives the same answer.' },
       { q: 'Is BMI different for men and women?', a: 'The formula and the adult cut-offs are the same for both. At the same BMI, women on average carry more body fat than men, one reason it is a screening figure, not a diagnosis.' }
     ],
     checks: [
-      { inputs: { system: 'imperial', weight: 180, height: 70 }, key: 'bmi', shown: '25.8' }
+      { inputs: { weight: 81.6466266, height: 177.8 }, key: 'bmi', shown: '25.8' }
     ]
   },
 

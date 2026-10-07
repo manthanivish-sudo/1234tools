@@ -526,7 +526,7 @@ module.exports = function ({ claim, manual, kit: K }) {
       return [K.j(ch) === K.j([4000, 2400, 1440, 1080, 1080]) && /year 4/.test(r.note), ch.join(', ') + '; ' + r.note];
     });
     c('works', 'Sum of years’ digits takes a falling fraction of the depreciable amount each year.', '5/15 … 1/15 of £32,000', () => { const ch = rows(DP({ method: 'syd' })).map((x) => x.charge); return [[5, 4, 3, 2, 1].every((k, i) => near(ch[i], 32000 * k / 15, 0.006)), ch.join(', ')]; });
-    c('works', 'straight line = (cost − residual) ÷ life', 'three assets', () => { const v = [[50000, 5000, 5], [1200, 0, 3], [9999, 999, 7]].map(([co, s, l]) => [near(DP({ cost: co, salvage: s, life: l }).firstYear, Math.round((co - s) / l * 100) / 100, 0.001), DP({ cost: co, salvage: s, life: l }).firstYear]); return [v.every((x) => x[0]), v.map((x) => x[1]).join(', ')]; });
+    c('works', 'straight line = (cost − residual) ÷ life', 'three assets', () => { const v = [[50000, 5000, 5], [1200, 0, 3], [9999, 999, 7]].map(([co, s, l]) => [near(DP({ cost: co, salvage: s, life: l }).firstYear, (co - s) / l, 1e-9), DP({ cost: co, salvage: s, life: l }).firstYear]); return [v.every((x) => x[0]), v.map((x) => x[1]).join(', ')]; });
     c('works', 'double declining = larger of opening book value × 2 ÷ life and (book value − residual) ÷ years left', 'each year the larger of the two, floored at the residual', () => {
       const ok = [[36000, 4000, 5], [10000, 0, 5], [20000, 1000, 8]].every(([co, s, l]) => {
         let book = co;
@@ -583,7 +583,7 @@ module.exports = function ({ claim, manual, kit: K }) {
     c.lc('Principal, interest and balance month by month for five years or year by year to the end, with overpayments.', '60 monthly rows; 20 yearly rows to £0.00; overpayment shortens', () => {
       const m = AM(), a = AM({ view: 'annual' }), o = AM({ view: 'annual', overpay: 100 });
       const last = a._table.rows[a._table.rows.length - 1];
-      return [m._table.rows.length === 60 && a._table.rows.length === 20 && last[4] === '£0.00' && o.months < 240, m._table.rows.length + ' monthly, ' + a._table.rows.length + ' yearly, last balance ' + last[4] + '; with overpay ' + o.months + ' months'];
+      return [m._table.rows.length === 60 && a._table.rows.length === 20 && Math.abs(money(last[4])) < 0.005 && o.months < 240, m._table.rows.length + ' monthly, ' + a._table.rows.length + ' yearly, last balance ' + last[4] + '; with overpay ' + o.months + ' months'];
     });
     c('why', 'Enter loan, rate and term. See the schedule, with overpayments.', 'schedule and overpayment', () => { const a = AM({ overpay: 200 }); return [a._table.rows.length > 0 && keys(P).indexOf('overpay') >= 0 && a.monthsSaved > 0, a._table.rows.length + ' rows; ' + a.monthsSaved + ' months saved']; });
     c('why', 'Read the schedule and savings', 'interest and months saved', () => { const r = AM({ overpay: 100 }); return [has(P, ['interestSaved', 'monthsSaved']) && r.interestSaved > 0, f(r.interestSaved, 2) + ', ' + r.monthsSaved]; });
@@ -594,7 +594,7 @@ module.exports = function ({ claim, manual, kit: K }) {
       const ok = rs.every((x) => { const g = near(x.int, bal * r, 0.006) && near(x.bal, bal - x.prin, 0.011); bal = x.bal; return g; });
       return [ok, 'month 60 balance ' + rs[59].bal];
     });
-    c('works', 'and M is set so the last row reaches £0.00.', 'last yearly balance £0.00 after exactly 240 payments', () => { const a = AM({ view: 'annual' }); const t = a._table.rows; return [t[t.length - 1][4] === '£0.00' && a.months === 240, t[t.length - 1].join(' | ') + '; ' + a.months + ' months']; });
+    c('works', 'and M is set so the last row reaches £0.00.', 'last yearly balance £0.00 after exactly 240 payments', () => { const a = AM({ view: 'annual' }); const t = a._table.rows; return [Math.abs(money(t[t.length - 1][4])) < 0.005 && a.months === 240, t[t.length - 1].join(' | ') + '; ' + a.months + ' months']; });
     c('works', 'principal(k) = M + overpayment − interest(k)', 'month 1 with £100 extra', () => { const r = AM({ overpay: 100 }); const t = rows(r)[0]; return [near(t.prin, r.monthly + 100 - t.int, 0.011), t.prin + ' = ' + f(r.monthly, 2) + ' + 100 − ' + t.int]; });
     c('works', 'M = P × r × (1 + r)ⁿ ÷ ((1 + r)ⁿ − 1)', 'the payment formula', () => { const r = 0.045 / 12, n = 240; const m = 150000 * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1); return [near(AM().monthly, m, 1e-9), f(AM().monthly, 4)]; });
     c('works', 'r = annual rate ÷ 12 ÷ 100', 'month 1 interest is balance × rate ÷ 1,200', () => { const t = rows(AM())[0]; return [t.int === 562.5, String(t.int)]; });
@@ -869,16 +869,25 @@ module.exports = function ({ claim, manual, kit: K }) {
       const a = CI({ rate: 4.5, freq: '12', years: 1, contribution: 0 }), b = CI({ rate: 4.55, freq: '1', years: 1, contribution: 0 });
       return [(a.effectiveRate > b.effectiveRate) === (a.total > b.total), f(a.effectiveRate) + '% ' + f(a.total, 2) + ' / ' + f(b.effectiveRate) + '% ' + f(b.total, 2)];
     });
-    c('tip', 'Contributions are treated as arriving at the end of each period. Contributing at the start of each period yields slightly more.', 'end-of-period annuity', () => {
-      const r = CI({ principal: 0 }); const i = 0.045 / 12; const due = 100 * (Math.pow(1 + i, 180) - 1) / i * (1 + i);
-      return [near(r.total, 100 * (Math.pow(1 + i, 180) - 1) / i, 1e-6) && due > r.total, f(r.total, 2) + ' vs ' + f(due, 2) + ' at the start'];
+    c('tip', 'Contributions are treated as arriving at the end of each period unless you choose the start. Contributing at the start of each period yields slightly more.', 'end by default; start is the annuity due', () => {
+      const r = CI({ principal: 0 }), s = CI({ principal: 0, timing: 'start' }); const i = 0.045 / 12; const due = 100 * (Math.pow(1 + i, 180) - 1) / i * (1 + i);
+      return [input(P, 'timing').default === 'end' && near(r.total, 100 * (Math.pow(1 + i, 180) - 1) / i, 1e-6) && near(s.total, due, 1e-6) && s.total > r.total, f(r.total, 2) + ' vs ' + f(s.total, 2) + ' at the start'];
+    });
+    c('tip', 'Contributions can come on their own schedule: monthly saving into an account that compounds daily or yearly earns the equivalent rate for each month.', '£100 a month into a yearly-compounding account', () => {
+      /* each month earns (1.05)^(1/12) − 1, so twelve payments of £100 grow to 100 × (1.05 − 1) ÷ that */
+      const ic = Math.pow(1.05, 1 / 12) - 1;
+      const r = CI({ principal: 0, rate: 5, years: 1, freq: '1', contribution: 100, contribFreq: '12' });
+      return [near(r.total, 100 * 0.05 / ic, 1e-6) && r.invested === 1200, f(r.total, 2)];
+    });
+    c('tip', 'Give an inflation rate to see the final balance in today’s money as well as the figure on the statement.', 'balance ÷ (1 + inflation)^years', () => {
+      const r = CI({ inflation: 2.5 }); return [near(r.realTotal, r.total / Math.pow(1.025, 15), 1e-6) && CI().realTotal === undefined, f(r.realTotal, 2)];
     });
     c('faq', 'Compound interest is calculated on the principal plus all previously accumulated interest, so growth accelerates over time.', 'beats simple interest after year 1', () => {
       const s = (t) => CI({ principal: 1000, rate: 10, years: t, freq: '1', contribution: 0 }).total - 1000;
       return [near(s(1), 100) && s(5) > 500 && s(10) - s(9) > s(2) - s(1), 'interest ' + [1, 5, 10].map((t) => f(s(t), 2)).join(', ')];
     });
-    c('faq', 'No. The result is a nominal figure.', 'no inflation or tax input', () => [!keys(P).some((k) => /infl|tax/i.test(k)), keys(P).join(', ')]);
-    c.m('faq', 'To estimate real purchasing power, subtract your expected inflation rate from the interest rate before calculating.', 'an approximation offered as advice; the tool has no inflation input (checked)');
+    c('faq', 'Inflation, yes, if you enter a rate: the final balance is also shown in today’s money.', 'an inflation input, and no tax input', () => [keys(P).indexOf('inflation') >= 0 && !keys(P).some((k) => /tax/i.test(k)) && near(CI({ inflation: 3 }).realTotal, CI().total / Math.pow(1.03, 15), 1e-6), keys(P).join(', ')]);
+    c.m('faq', 'Tax, no: interest above your personal savings allowance or outside an ISA may be taxed', 'UK tax law; the tool has no tax input (checked above)');
   }
 
   /* ================================================================ */
@@ -891,7 +900,7 @@ module.exports = function ({ claim, manual, kit: K }) {
     const pmt = (A, r, y) => { const i = r / 1200, n = y * 12; return i === 0 ? A / n : A * i * Math.pow(1 + i, n) / (Math.pow(1 + i, n) - 1); };
     const runDown = (A, r, M, n, extra) => { let b = A, paid = 0; for (let k = 1; k <= n && b > 1e-9; k++) { const int = b * r / 1200; paid += int; b = b + int - M - ((extra && extra[k]) || 0); } return { b, paid }; };
     c.lc('Calculate monthly loan payments, total interest paid, and the full cost of borrowing.', 'payment, interest and total', () => { const r = LP(); return [near(r.monthly, pmt(18000, 7.9, 5)) && near(r.totalPaid, r.monthly * 60) && near(r.totalInterest, r.totalPaid - 18000), f(r.monthly, 2) + ', ' + f(r.totalInterest, 2) + ', ' + f(r.totalPaid, 2)]; });
-    c('why', 'Enter amount, rate and term. See the payment and the full cost.', 'inputs and outputs', () => [K.j(keys(P)) === K.j(['amount', 'rate', 'years']) && has(P, ['monthly', 'totalPaid']), keys(P).join(', ')]);
+    c('why', 'Enter amount, rate and term. See the payment and the full cost.', 'inputs and outputs', () => [K.j(keys(P).slice(0, 3)) === K.j(['amount', 'rate', 'years']) && has(P, ['monthly', 'totalPaid']), keys(P).join(', ')]);
     c('why', 'Compare payment and interest', 'both shown', () => [has(P, ['monthly', 'totalInterest']) && primary(P) === 'monthly', outKeys(P).join(', ')]);
     c('what', 'whatever is left over pays down the debt, so the final payment clears it exactly.', 'balance after the last payment', () => { const r = LP(); const z = runDown(18000, 7.9, r.monthly, 60).b; return [Math.abs(z) < 1e-6, f(z, 9)]; });
     c('what', 'The monthly figure decides affordability; the total paid decides value, and a longer term trades one for the other.', '3, 5 and 7 years', () => { const v = [3, 5, 7].map((y) => LP({ years: y })); return [v[0].monthly > v[1].monthly && v[1].monthly > v[2].monthly && v[0].totalPaid < v[1].totalPaid && v[1].totalPaid < v[2].totalPaid, v.map((x) => f(x.monthly, 2) + '/' + f(x.totalPaid, 2)).join('; ')]; });
@@ -902,14 +911,17 @@ module.exports = function ({ claim, manual, kit: K }) {
     c('worked', 'the 60 payments add up to', 'total = 60 × payment', () => { const r = LP(); return [near(r.totalPaid / r.monthly, 60, 1e-9), f(r.totalPaid / r.monthly, 6)]; });
     c.m('mistake', 'Entering the APR in place of the interest rate on the agreement. APR also folds in fees, so it overstates the payment slightly.', 'consumer credit definition of APR; the tool takes the rate entered');
     c('mistake', 'PCP car finance leaves a large final payment that this calculator does not model', 'no balloon input', () => [!keys(P).some((k) => /balloon|final|residual|gfv/i.test(k)), keys(P).join(', ')]);
-    c('dfaq', 'with nothing added. Check for an arrangement fee, which this tool does not include.', 'no fee input; no interest at 0%', () => { const r = LP({ rate: 0 }); return [!keys(P).some((k) => /fee/i.test(k)) && r.totalPaid === 18000, keys(P).join(', ') + '; total ' + r.totalPaid]; });
+    c('dfaq', 'with nothing added. Enter any arrangement fee under Fees and APR to see the APR.', 'nothing added at 0%; a fee shows in the APR, not the payment', () => {
+      const r = LP({ rate: 0 }), f2 = LP({ rate: 0, fees: 120 });
+      return [r.totalPaid === 18000 && r.apr === undefined && f2.monthly === 300 && f2.apr > 0, 'total ' + r.totalPaid + '; with a £120 fee the APR is ' + f(f2.apr, 3) + '%'];
+    });
     c('dfaq', 'at a fixed rate and term the payment scales in proportion, so halving the loan halves it.', '£18,000 and £9,000', () => { const a = LP().monthly, b = LP({ amount: 9000 }).monthly; return [near(b * 2, a, 1e-9), f(a, 4) + ' / ' + f(b, 4)]; });
     c('formula', 'M = P · [r(1+r)^n] / [(1+r)^n − 1]', 'three loans', () => {
       const rows = [[250000, 6.5, 30], [18000, 7.9, 5], [5000, 19.9, 2]].map(([A, r, y]) => { const v = LP({ amount: A, rate: r, years: y }).monthly; return [near(v, pmt(A, r, y), 1e-9), f(v, 2)]; });
       return [rows.every((x) => x[0]), rows.map((x) => x[1]).join('; ')];
     });
     c('tip', 'Shortening the term raises the monthly payment but usually cuts total interest dramatically.', '£250,000: 30 years vs 20', () => { const a = LP({ amount: 250000, rate: 6.5, years: 30 }), b = LP({ amount: 250000, rate: 6.5, years: 20 }); return [b.monthly > a.monthly && b.totalInterest < a.totalInterest * 0.7, f(a.totalInterest, 2) + ' → ' + f(b.totalInterest, 2)]; });
-    c('tip', 'This covers principal and interest only. Property tax, insurance, and fees are additional.', 'no tax, insurance or fee input; total = payments', () => [!keys(P).some((k) => /tax|insur|fee/i.test(k)) && near(LP().totalPaid, LP().monthly * 60), keys(P).join(', ')]);
+    c('tip', 'This covers principal, interest and any arrangement fee you enter. Property tax and insurance are additional.', 'a fee input, no tax or insurance input; total = payments', () => [keys(P).indexOf('fees') >= 0 && !keys(P).some((k) => /tax|insur/i.test(k)) && near(LP().totalPaid, LP().monthly * 60), keys(P).join(', ')]);
     c('tip', 'Extra payments applied to principal reduce total interest more the earlier they are made.', '£1,000 extra in month 1 vs month 40', () => {
       const M = LP().monthly;
       const a = runDown(18000, 7.9, M, 200, { 1: 1000 }).paid, b = runDown(18000, 7.9, M, 200, { 40: 1000 }).paid, base = runDown(18000, 7.9, M, 60).paid;
@@ -987,5 +999,57 @@ module.exports = function ({ claim, manual, kit: K }) {
   ].forEach(([P, q, ks]) => claim(P, 'why', q, 'the form has ' + ks.join(', '), N, async () => [ks.every((k) => keys(P).indexOf(k) >= 0), keys(P).join(', ')]));
   claim('/business/commission-calculator/', 'why', 'Choose flat, threshold, tiered', 'exactly those three structures', N, async () => {
     const v = (input('/business/commission-calculator/', 'structure').options || []).map((o) => o.value); return [K.j(v) === K.j(['flat', 'threshold', 'tiered']), v.join(', ')];
+  });
+
+  /* ---------------- the currency converter: the count it states ---------------- */
+  const CC = '/business/currency-converter/';
+  /* The converter lists engine/fx.bundle.js's COMMON and converts with
+     assets/rates.json. Whatever "N+" the page, its spec, its card and the
+     Tool Finder say, the rates file must hold at least N currencies and
+     every listed currency must have a rate, so the count cannot drift. */
+  const fxListed = () => {
+    const src = K.read('engine/fx.bundle.js').toString('utf8');
+    const m = /var COMMON = \{([\s\S]*?)\};/.exec(src);
+    return m ? [...m[1].matchAll(/\b([A-Z]{3}):/g)].map((x) => x[1]) : [];
+  };
+  const fxRates = () => JSON.parse(K.read('assets/rates.json').toString('utf8'));
+  const stated = (text, re) => { const m = re.exec(text); return m ? Number(m[1]) : null; };
+  claim(CC, 'lede', 'Convert between 150+ world currencies using daily reference rates.', 'the page, its meta and spec state one count, and assets/rates.json holds at least that many', N, async () => {
+    const html = K.read('business/currency-converter/index.html').toString('utf8');
+    const counts = [...html.matchAll(/(\d+)\+ world currencies/g)].map((m) => Number(m[1]));
+    const spec = K.read('engine/calc-currency-converter.js').toString('utf8');   // mountCurrency: no compute(), so its text
+    counts.push(stated(spec, /(\d+)\+ world currencies/));
+    const manifest = K.read('pwa/business/currency-converter.webmanifest').toString('utf8');
+    counts.push(stated(manifest, /(\d+)\+ world currencies/));
+    const rates = fxRates(), have = Object.keys(rates.rates).length, listed = fxListed();
+    const noRate = listed.filter((c) => !(rates.rates[c] > 0));
+    const n = counts[0];
+    return [counts.length >= 7 && counts.every((c) => c === n) && have >= n && listed.length >= n && noRate.length === 0,
+      'stated ' + counts.join('/') + '; rates.json ' + have + ' (' + rates.date + '), listed ' + listed.length + (noRate.length ? ', no rate for ' + noRate.join(' ') : '')];
+  });
+  claim(CC, 'card', 'Convert between 150+ currencies', 'the card and the Tool Finder say the same count, and it holds', N, async () => {
+    const jobs = require(require('path').join(K.ROOT, 'build', 'jobs.js'));
+    const card = stated(jobs.descOf(CC) || '', /(\d+)\+ currencies/);
+    const finder = K.read('assets/finder-index.js').toString('utf8');
+    const fc = [...finder.matchAll(/(\d+)\+ (?:world )?currencies/g)].map((m) => Number(m[1]));
+    const have = Object.keys(fxRates().rates).length;
+    return [card !== null && fc.length >= 2 && fc.every((c) => c === card) && have >= card, 'card ' + card + ', finder ' + fc.join('/') + ', rates.json ' + have];
+  });
+  claim(CC, 'lede', 'Convert between 150+ world currencies', 'in the browser: the From list holds every listed currency, all with a rate, and 100 JEP to XOF is rates.json\'s cross rate', 'browser', async () => {
+    const p = await K.open(CC, { wait: '.result-primary' });
+    try {
+      const got = await p.evaluate(() => {
+        const from = document.getElementById('fx-from'), to = document.getElementById('fx-to');
+        const opts = [...from.options];
+        from.value = 'JEP'; to.value = 'XOF';
+        from.dispatchEvent(new Event('change', { bubbles: true }));
+        return { n: opts.length, disabled: opts.filter((o) => o.disabled).map((o) => o.value), out: document.querySelector('.result-primary .result-value').textContent };
+      });
+      const r = fxRates().rates, listed = fxListed();
+      const want = 100 * r.XOF / r.JEP;
+      const shown = Number(String(got.out).replace(/[^0-9.]/g, ''));
+      return [got.n === listed.length && got.disabled.length === 0 && Math.abs(shown - want) <= Math.max(1, want * 1e-6),
+        got.n + ' listed, ' + got.disabled.length + ' greyed; 100 JEP = ' + got.out + ' (want ' + want.toFixed(2) + ')'];
+    } finally { await p.close(); }
   });
 };

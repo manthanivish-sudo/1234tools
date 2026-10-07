@@ -1,0 +1,42 @@
+{
+  "id": "/social/link-in-bio/",
+  "name": "Link in Bio Page Maker — 1234Tools",
+  "short_name": "Link in Bio Page",
+  "description": "Make a link-in-bio page as one HTML file you own: photo, name, bio, link buttons and icons, in eight themes. It has no scripts, no tracking and makes no outside requests, so it works offline and on any static host. Nothing is uploaded.",
+  "start_url": "/social/link-in-bio/?src=pwa",
+  "scope": "/social/link-in-bio/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "social",
+    "photo"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-social-links.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-social-links-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-social-links-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

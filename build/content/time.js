@@ -31,7 +31,7 @@ module.exports = {
     uses: [
       ['Eligibility cut-offs', 'School admissions, junior leagues and age-banded competitions all fix the age on a set date.'],
       ['Ages in years and months', 'Nursery applications and child development reviews often record a young child’s age in months.'],
-      ['Ages on past dates', 'Find how old someone was in a census entry or an old photograph.']
+      ['Birthdays in a group', 'Add family or team members for a table sorted by the next birthday.']
     ],
     mistakes: [
       'Leaving the second box on today when a rule names a date: an age “on 31 August” must be measured on 31 August.',
@@ -59,17 +59,17 @@ module.exports = {
       'Which days are holidays depends on the country, and within the UK on the nation: Scotland and Northern Ireland each have bank holidays that England does not.'
     ],
     formula: {
-      text: 'In count mode the tool walks from the start date to the day before the end date, sorting each day into weekend, listed holiday or business day. In add mode it steps forward from the day after the start and stops on the business day that reaches your number.',
+      text: 'In count mode the tool walks from the start date to the day before the end date, sorting each day into weekend, holiday or business day. In add mode it steps forward from the day after the start and stops on the business day that reaches your number. Subtract mode steps backwards the same way.',
       expr: [
-        'business days = calendar days − weekend days − listed holidays on weekdays',
+        'business days = calendar days − weekend days − holidays on working days',
         'calendar days = end date − start date'
       ],
-      vars: [['calendar days', 'every day from the start date up to the end date'], ['listed holidays on weekdays', 'dates from the holiday box that fall Monday to Friday']]
+      vars: [['calendar days', 'every day from the start date up to the end date'], ['holidays on working days', 'dates from the chosen calendar or the box that fall outside the weekend']]
     },
     worked: {
-      inputs: { start: '2027-05-01', mode: 'between', end: '2027-06-01', holidays: '2027-05-03, 2027-05-31' },
-      text: 'How many working days does May 2027 have in the UK? Set the start to 1 May and the end to 1 June, and list the two May bank holidays, 2027-05-03 and 2027-05-31. Of the 31 calendar days, 10 fall at weekends because the month opens on a Saturday, and 2 are holidays, leaving 19 business days. With the holiday box empty the same month would have 21.',
-      check: [['businessDays', '19 business days'], ['calendarDays', '31 calendar days'], ['weekendDays', '10 fall'], ['holidaysUsed', '2 are holidays']]
+      inputs: { start: '2027-05-01', mode: 'between', end: '2027-06-01', calendar: 'uk-ew', holidays: '' },
+      text: 'How many working days does May 2027 have in England? Set the start to 1 May and the end to 1 June, and pick the England and Wales calendar. Of the 31 calendar days, 10 fall at weekends because the month opens on a Saturday, and 2 are bank holidays, 3 and 31 May, leaving 19 business days. With no calendar the same month would have 21.',
+      check: [['businessDays', '19 business days'], ['calendarDays', '31 calendar days'], ['weekendDays', '10 fall'], ['holidaysUsed', '2 are bank holidays']]
     },
     uses: [
       ['Payment terms', 'Turn “payment within 20 working days” into a date for the diary or the invoice.'],
@@ -82,7 +82,7 @@ module.exports = {
       'Typing holidays day first. The box reads YYYY-MM-DD only: entered as 31/05/2027, the spring bank holiday is not recognised and May shows 21 business days instead of 19.'
     ],
     faq: [
-      { q: 'How many working days are there in a year?', a: 'It depends on the year and the holidays. 2027 has 261 weekdays; listing the 8 bank holidays of England and Wales brings it down to 253.' },
+      { q: 'How many working days are there in a year?', a: 'It depends on the year and the holidays. 2027 has 261 weekdays; the England and Wales calendar takes off its 8 bank holidays, leaving 253.' },
       { q: 'Is 14 calendar days always 10 working days?', a: 'Before holidays, yes: any 14 consecutive days contain exactly two of each weekday, so 10 of them fall Monday to Friday. A bank holiday inside the fortnight takes it to 9.' },
       { q: 'What date is 5 working days after a Friday?', a: 'The following Friday, if no holiday intervenes. In add mode, 5 business days from Friday 4 June 2027 gives Friday, 11 June 2027.' }
     ],
@@ -90,7 +90,9 @@ module.exports = {
       { inputs: { start: '2027-05-01', mode: 'between', end: '2027-06-01', holidays: '' }, key: 'businessDays', shown: 'would have 21' },
       { inputs: { start: '2027-05-01', mode: 'between', end: '2027-06-01', holidays: '31/05/2027' }, key: 'businessDays', shown: '21 business days instead' },
       { inputs: { start: '2027-01-01', mode: 'between', end: '2028-01-01', holidays: '' }, key: 'businessDays', shown: '261 weekdays' },
-      { inputs: { start: '2027-01-01', mode: 'between', end: '2028-01-01', holidays: '2027-01-01, 2027-03-26, 2027-03-29, 2027-05-03, 2027-05-31, 2027-08-30, 2027-12-27, 2027-12-28' }, key: 'businessDays', shown: 'down to 253' },
+      { inputs: { start: '2027-01-01', mode: 'between', end: '2028-01-01', calendar: 'uk-ew', holidays: '' }, key: 'businessDays', shown: 'leaving 253' },
+      { inputs: { start: '2027-01-01', mode: 'between', end: '2028-01-01', calendar: 'uk-ew', holidays: '' }, key: 'holidaysUsed', shown: 'its 8 bank holidays' },
+      { inputs: { start: '2027-05-01', mode: 'between', end: '2027-06-01', calendar: 'none', holidays: '' }, key: 'businessDays', shown: 'no calendar the same month would have 21' },
       { inputs: { start: '2027-06-04', mode: 'add', add: 5, holidays: '' }, key: 'result', shown: 'Friday, 11 June 2027' }
     ]
   },
@@ -155,7 +157,7 @@ module.exports = {
         'weeks = total days ÷ 7      hours = total days × 24      minutes = total days × 1,440',
         'weekdays = days from the start up to the end that fall Monday to Friday'
       ],
-      vars: [['start', 'the first date, counted'], ['end', 'the last date, not counted']]
+      vars: [['start', 'the first date, counted'], ['end', 'the last date, not counted, unless Count the end date too is Yes']]
     },
     worked: {
       inputs: { start: '2025-11-17', end: '2026-08-14' },
@@ -172,16 +174,16 @@ module.exports = {
       'Reading Total Months as rounded. It counts complete months only, so 8 months and 28 days shows as 8, not 9.'
     ],
     faq: [
-      { q: 'How do I count the days between two dates including both?', a: 'Add one to Total Days: 17 November 2025 to 14 August 2026 is 270 days here, or 271 counting both ends.' },
-      { q: 'How many days are left until Christmas?', a: 'Put today in the start box and 25 December in the end box. Counted from 4 October 2026, it is 82 days, or 0 years, 2 months, 21 days.' },
+      { q: 'How do I count the days between two dates including both?', a: 'Set Count the end date too to Yes: 17 November 2025 to 14 August 2026 is 270 days, or 271 counting both ends.' },
+      { q: 'How many working days is that in England?', a: 'Pick the England and Wales calendar: the same contract has 194 weekdays and 187 business days.' },
       { q: 'Does the day count allow for leap years?', a: 'Yes, because it counts real calendar days. 1 January 2028 to 1 January 2029 is 366 days, as 2028 is a leap year; the same span a year earlier is 365.' },
       { q: 'How many weekdays are in a month?', a: 'Set the first of the month and the first of the next. June 2027, from 1 June to 1 July, has 22 weekdays out of 30 days.' }
     ],
     checks: [
       { inputs: { start: '2027-07-01', end: '2027-07-05' }, key: 'totalDays', shown: '4 nights' },
       { inputs: { start: '2025-11-17', end: '2026-08-14' }, key: 'totalMonths', shown: 'shows as 8' },
-      { inputs: { start: '2026-10-04', end: '2026-12-25' }, key: 'totalDays', shown: '82 days' },
-      { inputs: { start: '2026-10-04', end: '2026-12-25' }, key: 'breakdown', shown: '0 years, 2 months, 21 days' },
+      { inputs: { start: '2025-11-17', end: '2026-08-14', includeEnd: 'yes' }, key: 'totalDays', shown: '271 counting both ends' },
+      { inputs: { start: '2025-11-17', end: '2026-08-14', calendar: 'uk-ew' }, key: 'businessDays', shown: '187 business days' },
       { inputs: { start: '2028-01-01', end: '2029-01-01' }, key: 'totalDays', shown: '366 days' },
       { inputs: { start: '2027-01-01', end: '2028-01-01' }, key: 'totalDays', shown: 'is 365' },
       { inputs: { start: '2027-06-01', end: '2027-07-01' }, key: 'weekdays', shown: '22 weekdays' },
@@ -218,7 +220,7 @@ module.exports = {
     mistakes: [
       'Filing early-January figures under the calendar year. Sales from 1 to 3 January 2027 belong to week 53 of 2026, and filing them under 2027 breaks the year totals.',
       'Assuming every year has 52 weeks. 2026 has 53, so a weekly plan built on 52 leaves its last week unassigned.',
-      'Using a spreadsheet’s plain WEEKNUM. In Excel it starts weeks on Sunday by default; ISOWEEKNUM, or WEEKNUM with return type 21, gives the ISO number.'
+      'Using a spreadsheet’s plain WEEKNUM. In Excel it starts weeks on Sunday by default; ISOWEEKNUM, or WEEKNUM with return type 21, gives the ISO number. To match plain WEEKNUM instead, choose US under Numbering.'
     ],
     faq: [
       { q: 'Which years have 53 ISO weeks?', a: 'Those that start on a Thursday, plus leap years that start on a Wednesday. 2026 is one; the next is 2032, whose last day falls in Week 53 of 2032.' },

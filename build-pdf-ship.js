@@ -64,7 +64,19 @@ const SHIPPING = [
   ['mail-merge-pdf', 'i-mail-merge'],
   ['quotation-pdf', 'i-quotation'],
   ['purchase-order-pdf', 'i-purchase-order'],
-  ['delivery-challan-pdf', 'i-challan']
+  ['delivery-challan-pdf', 'i-challan'],
+  /* wave 2: each ships once its engine file exists */
+  ['compress-pdf', 'i-compress-pdf'],
+  ['protect-pdf', 'i-protect-pdf'],
+  ['unlock-pdf', 'i-unlock-pdf'],
+  ['pdf-to-text', 'i-pdf-to-text'],
+  ['pdf-to-word', 'i-pdf-to-word'],
+  ['ocr-pdf', 'i-ocr-pdf'],
+  ['image-to-text', 'i-image-to-text'],
+  ['scan-to-pdf', 'i-scan-to-pdf'],
+  ['flatten-pdf', 'i-flatten-pdf'],
+  ['crop-pdf', 'i-crop-pdf'],
+  ['add-image-to-pdf', 'i-add-image-to-pdf']
 ].filter(([slug]) => fs.existsSync(path.join(__dirname, 'engine', 'pdf-' + slug + '.js')));
 
 function patchIcons() {
@@ -163,7 +175,10 @@ function toolPage(slug, glyph, parts) {
   const url = SITE + '/pdf/' + slug + '/';
   const title = t.title + ' — Free Online | 1234Tools';
 
+  /* the tools nearest in kind first, eight at most, then the four everyone uses */
   const related = SHIPPING.filter(function (x) { return x[0] !== slug; })
+    .sort(function (a, b) { return (spec(a[0]).kind === t.kind ? 0 : 1) - (spec(b[0]).kind === t.kind ? 0 : 1); })
+    .slice(0, 8)
     .map(function (x) { return '<li><a href="/pdf/' + x[0] + '/">' + esc(spec(x[0]).title) + '</a></li>'; })
     .concat([
       '<li><a href="/pdf/watermark-pdf/">Add Watermark to PDF</a></li>',
@@ -181,7 +196,7 @@ function toolPage(slug, glyph, parts) {
     '  <h1><svg class="ico ico-title" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#' + glyph + '"></use></svg>' + esc(t.title) + '</h1>\n' +
     '  <p class="lede">' + esc(t.description) + '</p>\n' +
     '  <div class="tool-io"></div>\n' +
-    '  <section class="panel"><h2>Privacy</h2><p class="privacy-line">Your file never leaves your device. It is parsed and rewritten by your own browser, so nothing is uploaded, queued or logged.</p></section>\n' +
+    '  <section class="panel"><h2>Privacy</h2><p class="privacy-line">' + esc(t.privacy || 'Your file never leaves your device. It is parsed and rewritten by your own browser, so nothing is uploaded, queued or logged.') + '</p></section>\n' +
     (t.tips && t.tips.length
       ? '  <section class="panel"><h2>Tips</h2><ul class="tips">' +
         t.tips.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></section>\n' : '') +
@@ -360,11 +375,38 @@ function patchHub(oldPdf, newPdf) {
      goes into the grid for its kind: a tool that makes a PDF from a few fields
      (kind "create") under "Create a PDF from scratch", anything that takes a
      PDF under "Work with an existing PDF". */
-  const GRIDS = { create: '<h2>Create a PDF from scratch</h2>', other: '<h2>Work with an existing PDF</h2>' };
+  const GRIDS = { create: '<h2>Create a PDF from scratch</h2>', other: '<h2>Work with an existing PDF</h2>', render: '<h2>Needs a rendering engine</h2>' };
+  /* a tool that draws pages (pdf.js) or reads them (OCR) goes with the others that download an engine */
+  const gridOf = function (t) { return t.kind === 'create' ? 'create' : t.needsRenderer ? 'render' : 'other'; };
+  /* A shipped tool's card sits in the grid its spec says (a tool that gains
+     or loses pdf.js moves), and carries the spec's own description: a card
+     in the wrong grid, or out of date, is taken out and written again. */
+  SHIPPING.forEach(function (x) {
+    const re = new RegExp('<a class="card" href="/pdf/' + x[0] + '/">[\\s\\S]*?</a>');
+    const m = re.exec(out);
+    if (!m) return;
+    const t = spec(x[0]);
+    const heads = Object.keys(GRIDS).map(function (g) { return [g, out.indexOf(GRIDS[g])]; })
+      .filter(function (h) { return h[1] >= 0 && h[1] < m.index; }).sort(function (a, b) { return b[1] - a[1]; });
+    const inGrid = heads.length ? heads[0][0] : null;
+    const fresh = '<a class="card" href="/pdf/' + x[0] + '/"><span class="card-icon">' + icon(x[1]) + '</span>' +
+      '<strong>' + esc(t.title) + '</strong><span class="card-desc">' + esc(t.description) + '</span></a>';
+    if (inGrid !== gridOf(t)) out = out.slice(0, m.index) + out.slice(m.index + m[0].length);
+    else if (m[0] !== fresh) out = out.slice(0, m.index) + fresh + out.slice(m.index + m[0].length);
+  });
+  /* the cards of the older, hand-kept PDF pages take their description from their spec too */
+  out = out.replace(/(<a class="card" href="\/pdf\/([a-z0-9-]+)\/">[\s\S]*?<span class="card-desc">)([^<]*)(<\/span><\/a>)/g, function (m, a, slug, d, z) {
+    if (SHIPPING.some(function (x) { return x[0] === slug; })) return m;
+    const file = path.join(ROOT, 'engine', 'pdf-' + slug + '.js');
+    if (!fs.existsSync(file)) return m;
+    let t;
+    try { t = spec(slug); } catch (e) { return m; }
+    return a + esc(t.description) + z;
+  });
   const missing = SHIPPING.filter(function (x) { return out.indexOf('href="/pdf/' + x[0] + '/"') < 0; });
-  ['create', 'other'].forEach(function (g) {
+  ['create', 'other', 'render'].forEach(function (g) {
     const cards = missing
-      .filter(function (x) { return (spec(x[0]).kind === 'create') === (g === 'create'); })
+      .filter(function (x) { return gridOf(spec(x[0])) === g; })
       .map(function (x) {
         const t = spec(x[0]);
         return '<a class="card" href="/pdf/' + x[0] + '/"><span class="card-icon">' + icon(x[1]) + '</span>' +

@@ -361,7 +361,7 @@ module.exports = {
     mistakes: [
       'Tipping on a total that already includes service. A £120 bill with 12.5% service is £135; a further 12.5% on top pays the gratuity twice.',
       'Rounding each share up for a big table. Every share can rise by almost £1, so ten people can add nearly £10 to the tip without meaning to.',
-      'Splitting evenly when one person only had a drink. Take their amount off the bill, split the rest, and add their share separately.'
+      'Splitting evenly when one person only had a drink. Put what each person had in the uneven-split box instead: the bill and tip are then shared in proportion, so the person who had £8 pays for £8 and a tip on £8.'
     ],
     faq: [
       { q: 'How much is a 10% tip on £47?', a: '£4.70, which makes the total £51.70.' },

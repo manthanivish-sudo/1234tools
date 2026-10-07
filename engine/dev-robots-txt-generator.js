@@ -231,7 +231,8 @@ window.DEV_TOOLS["robots-txt-generator"] = {
 "keywords": ["robots.txt generator","robots txt","crawler rules","disallow","seo robots"],
 "inputLabel": null,
 "outputLabel": "Save as /robots.txt",
-"fields": [{"key":"policy","label":"Default policy","type":"select","default":"allow","options":[{"value":"allow","label":"Allow all crawlers"},{"value":"block","label":"Block all crawlers"},{"value":"custom","label":"Allow, with exclusions below"}]},{"key":"disallow","label":"Paths to exclude (one per line)","type":"textarea","default":"/admin/\n/cart/\n/checkout/\n/*.json$"},{"key":"sitemap","label":"Sitemap URL","type":"text","default":"https://www.1234tools.com/sitemap.xml"},{"key":"aibots","label":"AI training crawlers","type":"select","default":"allow","options":[{"value":"allow","label":"Allow"},{"value":"block","label":"Block GPTBot, CCBot and similar"}]}],
+"filename": "robots.txt",
+"fields": [{"key":"policy","label":"Default policy","type":"select","default":"allow","options":[{"value":"allow","label":"Allow all, except the paths below"},{"value":"block","label":"Block all crawlers"}]},{"key":"disallow","label":"Paths to exclude (one per line)","type":"textarea","default":"/admin/\n/cart/\n/checkout/\n/*.json$"},{"key":"sitemap","label":"Sitemap URL","type":"text","default":"https://www.1234tools.com/sitemap.xml"},{"key":"aibots","label":"AI training crawlers","type":"select","default":"allow","options":[{"value":"allow","label":"Allow"},{"value":"block","label":"Block GPTBot, CCBot and similar"}]}],
 "generate": (f) => {
       const L = [];
       const blockAll = f.policy === 'block';
@@ -241,8 +242,11 @@ window.DEV_TOOLS["robots-txt-generator"] = {
            point crawlers at pages they may not fetch. */
         L.push('User-agent: *', 'Disallow: /');
       } else {
+        /* Every policy but Block all writes the typed exclusions (an old
+           link's policy=custom means the same). Block all already disallows
+           everything, so they would add nothing there. */
         L.push('User-agent: *');
-        if (f.policy === 'custom' && f.disallow) {
+        if (f.disallow) {
           String(f.disallow).split('\n').map(s => s.trim()).filter(Boolean)
             .forEach(p => L.push('Disallow: ' + (p.startsWith('/') ? p : '/' + p)));
         }
