@@ -9,13 +9,37 @@ var SHELL = [
   './engine/render-core.js', './engine/units.bundle.js', './engine/tools.bundle.js',
   './assets/fonts/sora-latin.woff2', './assets/fonts/inter-latin.woff2',
   './manifest.webmanifest',
-  './assets/version.js'
+  './assets/version.js',
+  './engine/handoff.js'
 ];
 /* The footer's version record (written by build/release.js with this V) is
    precached so the cache named V holds the record of the same release. It
    alone skips the HTTP cache: /assets/ is max-age=600, and a record kept from
    the last release would label this one with the old number until the next. */
 var FRESH = { './assets/version.js': true };
+
+/* The hand-off store (engine/handoff.js) for the share target below. A
+   failure here must not stop the worker installing: offline use matters more. */
+try { importScripts('./engine/handoff.js'); } catch (err) { /* no share target */ }
+
+/* An installed tool chosen in a phone's share sheet is opened with a POST
+   (share_target in its manifest). Nothing is uploaded: the files and text are
+   put into IndexedDB under a one-time id and the tool opens with that id
+   after the #, where engine/handoff.js reads and deletes it. */
+function sharedIn(req) {
+  var to = new URL(req.url);
+  to.search = '';
+  return req.formData().then(function (fd) {
+    var files = fd.getAll('files').filter(function (f) { return f && typeof f !== 'string' && f.size; })
+      .map(function (f) { return { name: f.name || 'shared', type: f.type, blob: f }; });
+    var text = ['title', 'text', 'url'].map(function (k) { return fd.get(k); })
+      .filter(function (v) { return typeof v === 'string' && v.trim(); }).join('\n');
+    if (!self.MVRHandoff || (!files.length && !text)) return Response.redirect(to.href, 303);
+    return self.MVRHandoff.put({ from: 'your share sheet', files: files, text: text }).then(function (id) {
+      return Response.redirect(to.href + '#handoff=' + id, 303);
+    });
+  }).catch(function () { return Response.redirect(to.href, 303); });
+}
 
 self.addEventListener('install', function (e) {
   e.waitUntil(
@@ -42,6 +66,8 @@ self.addEventListener('activate', function (e) {
 
 self.addEventListener('fetch', function (e) {
   var req = e.request;
+  if (req.method === 'POST' && /[?&]share-target(?:[=&]|$)/.test(req.url) &&
+      new URL(req.url).origin === location.origin) { e.respondWith(sharedIn(req)); return; }
   if (req.method !== 'GET') return;
 
   var url = new URL(req.url);

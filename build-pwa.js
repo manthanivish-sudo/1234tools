@@ -147,7 +147,7 @@ const CATEGORY = {
 
 function manifestFor(tool, meta) {
   const page = '/' + tool.slug + '/';
-  return JSON.stringify({
+  return JSON.stringify(withIntake(page, {
     /* The id is what makes this a separate installation rather than another
        copy of the site. It must stay stable: change it and an installed app
        is orphaned rather than moved.
@@ -175,7 +175,31 @@ function manifestFor(tool, meta) {
       { src: '/assets/pwa/' + meta.glyph + '-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
       { src: '/assets/pwa/' + meta.glyph + '-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }
     ]
-  }, null, 2) + '\n';
+  }), null, 2) + '\n';
+}
+
+/**
+ * The tools that take a file or text from outside: a phone's share sheet
+ * (share_target, a POST the service worker answers without any upload) and
+ * the desktop's "Open with" (file_handlers, read by the launchQueue consumer
+ * in assets/pwa.js). The list lives in engine/handoff.js, beside the code
+ * that hands the files to the tool, so the two cannot drift.
+ */
+const INTAKE = new Map(require('./engine/handoff.js').INTAKE.map((i) => [i.path, i]));
+function withIntake(page, m) {
+  const it = INTAKE.get(page);
+  if (!it) return m;
+  const params = {};
+  if (it.text) Object.assign(params, { title: 'title', text: 'text', url: 'url' });
+  if (it.files) {
+    const accept = [];
+    for (const [type, exts] of Object.entries(it.files)) accept.push(type, ...exts);
+    params.files = [{ name: 'files', accept: [...new Set(accept)] }];
+  }
+  m.share_target = { action: page + '?share-target', method: 'POST', enctype: 'multipart/form-data', params };
+  if (it.files) m.file_handlers = [{ action: page, accept: it.files }];
+  m.launch_handler = { client_mode: ['navigate-existing', 'auto'] };
+  return m;
 }
 
 /**

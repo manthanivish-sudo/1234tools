@@ -907,7 +907,7 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
       await upload(p, [street, food]);
       let outs = await resultBytes(p);
       let m = await msg(p);
-      let dl = await clickAll(p, '.tool-io .image-stage .image-card button');
+      let dl = await clickAll(p, '.tool-io .image-stage .image-card button:not(.ho-ui)');
       check(outs.length === 2 && outs.every(isPng), '10  compressor, WebP asked of a browser that writes PNG instead: both results are PNG bytes', outs.map((b) => b.slice(0, 4).toString('hex')).join());
       check(dl.length === 2 && dl.every((d) => d.png) && dl.map((d) => d.name).join() === 'street-image-compressor.png,food-image-compressor.png',
         '10  …saved as street-image-compressor.png and food-image-compressor.png, not .webp', dl.map((d) => d.name).join());
@@ -921,7 +921,7 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
       await setCtl(p, 'format', 'image/webp');
       await upload(p, [street, food]);
       outs = await resultBytes(p);
-      dl = await clickAll(p, '.tool-io .image-stage .image-card button');
+      dl = await clickAll(p, '.tool-io .image-stage .image-card button:not(.ho-ui)');
       m = await msg(p);
       check(outs.length === 2 && outs.every(isWebp) && dl.length === 2 && dl.map((d) => d.name).join() === 'street-image-compressor.webp,food-image-compressor.webp' && m.text.indexOf('cannot write') < 0,
         '10  a browser whose canvas cannot write WebP, with WebAssembly: WebP bytes from libwebp, named .webp, no swap message', dl.map((d) => d.name).join() + ' | ' + m.text);
@@ -931,7 +931,7 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
       await setCtl(p, 'format', 'image/webp');
       await upload(p, [street]);
       outs = await resultBytes(p);
-      dl = await clickAll(p, '.tool-io .image-stage .image-card button');
+      dl = await clickAll(p, '.tool-io .image-stage .image-card button:not(.ho-ui)');
       m = await msg(p);
       check(outs.length === 1 && isWebp(outs[0]) && dl.length === 1 && dl[0].webp && dl[0].name === 'street-image-compressor.webp' && m.text.indexOf('cannot write') < 0,
         '10  in a browser that writes WebP: street-image-compressor.webp, WebP bytes, no swap message', dl.map((d) => d.name).join() + ' | ' + m.text);
@@ -941,7 +941,7 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
       await setCtl(p, 'value', 800);
       await upload(p, [street, food]);
       outs = await resultBytes(p);
-      dl = await clickAll(p, '.tool-io .image-stage .image-card button');
+      dl = await clickAll(p, '.tool-io .image-stage .image-card button:not(.ho-ui)');
       const zip = await clickAll(p, '.tool-io .image-actions .btn-primary');
       const inZip = zip.length === 1 ? zipNames(zip[0].b) : [];
       m = await msg(p);

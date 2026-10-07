@@ -375,3 +375,180 @@
   host.appendChild(grid);
   host.hidden = false;
 })();
+
+/* ---------- tool chaining, recent outputs, save to folder ----------
+   engine/handoff.js, fetched only on a tool page and only after the tool has
+   mounted: nothing in it is needed before the first interaction. */
+(function () {
+  'use strict';
+  if (window.MVRHandoff || document.querySelector('script[src*="/engine/handoff.js"]')) return;
+  if (!document.querySelector('article.tool, .tool[data-tool]')) return;
+  if (document.documentElement.classList.contains('is-embed')) return;
+  var me = document.currentScript && document.currentScript.src;
+  var src = me ? me.replace(/assets\/app\.js(\?.*)?$/, 'engine/handoff.js') : '/engine/handoff.js';
+  function load() {
+    if (window.MVRHandoff || document.querySelector('script[src*="/engine/handoff.js"]')) return;
+    var s = document.createElement('script');
+    s.src = src;
+    s.async = true;
+    document.head.appendChild(s);
+  }
+  /* A file arriving from another tool is the page's whole purpose: at once.
+     Otherwise after load, when the browser is idle, so it never competes
+     with the page's own first paint. */
+  if (/[#&]handoff=/.test(location.hash)) { load(); return; }
+  function idle() { (window.requestIdleCallback || function (f) { setTimeout(f, 200); })(load, { timeout: 3000 }); }
+  if (document.readyState === 'complete') idle(); else addEventListener('load', idle);
+})();
+
+/* ---------- accessibility repairs every shell needs ----------
+   Found by axe-core over the tool pages (build/tests/a11y.js). Made here,
+   once, rather than in each of the shells that share the pattern:
+   - a drop zone is already the button (role=button, Tab, Enter and Space
+     open the picker), so the hidden file input inside it is a second, invisible
+     Tab stop and an unlabelled control nested in a button: it leaves the Tab
+     order and the accessibility tree (the zone speaks for it), and keeps the
+     zone's words as its name for any tool that reads it;
+   - an output <pre> named with aria-label needs a role for the name to count;
+   - a <pre> that scrolls must be reachable by keyboard to be scrolled. */
+(function () {
+  'use strict';
+  var tool = document.querySelector('article.tool, .tool[data-tool]');
+  if (!tool || typeof MutationObserver !== 'function') return;
+  function repair() {
+    Array.prototype.forEach.call(tool.querySelectorAll('[role="button"] input[type="file"]'), function (i) {
+      if (i.getAttribute('tabindex') !== '-1') i.setAttribute('tabindex', '-1');
+      if (!i.hasAttribute('aria-hidden')) i.setAttribute('aria-hidden', 'true');
+      if (!i.hasAttribute('aria-label') && !(i.labels && i.labels.length)) {
+        var zone = i.closest('[role="button"]');
+        var words = zone.getAttribute('aria-label') || (zone.querySelector('strong') || zone).textContent;
+        i.setAttribute('aria-label', (words || 'Choose a file').replace(/\s+/g, ' ').trim().slice(0, 100));
+      }
+    });
+    Array.prototype.forEach.call(tool.querySelectorAll('pre[aria-label]:not([role])'), function (p) {
+      p.setAttribute('role', 'region');
+    });
+    Array.prototype.forEach.call(tool.querySelectorAll('pre:not([tabindex])'), function (p) {
+      if (p.scrollWidth > p.clientWidth + 1 || p.scrollHeight > p.clientHeight + 1) {
+        p.setAttribute('tabindex', '0');
+        if (!p.hasAttribute('role')) p.setAttribute('role', 'region');
+        if (!p.hasAttribute('aria-label') && !p.hasAttribute('aria-labelledby')) p.setAttribute('aria-label', 'Scrollable text');
+      }
+    });
+  }
+  var queued = 0;
+  function later() { if (!queued) queued = requestAnimationFrame(function () { queued = 0; repair(); }); }
+  new MutationObserver(later).observe(tool, { childList: true, subtree: true });
+  if (document.readyState === 'complete') later(); else addEventListener('load', later);
+  later();
+})();
+
+/* ---------- keyboard: the shortcut sheet (?) ----------
+   One list of the shortcuts the page in front of you actually has: the
+   site-wide ones, then the ones the tool's shell binds (read from which
+   shell is on the page, so a calculator is not told about Ctrl+Enter). */
+(function () {
+  'use strict';
+  var dlg = null, from = null;
+
+  function has(shell) { return !!document.querySelector('script[src*="/engine/' + shell + '.js"]'); }
+  function rows() {
+    var groups = [['On every page', [
+      ['/', 'Search the tools'],
+      ['?', 'Show this list'],
+      ['Esc', 'Close a menu, the category list or this list']
+    ]]];
+    if (document.querySelector('article.tool, .tool[data-tool]')) {
+      groups.push(['On this tool', [
+        ['Tab', 'Move between controls (Shift+Tab goes back). When a file result arrives, focus moves to its Download button'],
+        ['↑ ↓', 'Move through a Send to… menu; Enter opens the tool, Esc closes the menu']
+      ]]);
+    }
+    if (has('render-dev')) groups.push(['Developer and text tools', [
+      ['Ctrl+Enter', 'Run now'],
+      ['Ctrl+Shift+C', 'Copy the output'],
+      ['Ctrl+S', 'Download the output'],
+      ['Esc', 'Close the open panel']
+    ]]);
+    if (has('render-image')) groups.push(['Image tools', [
+      ['Ctrl+V', 'Paste an image from the clipboard'],
+      ['Arrow keys', 'Move a selection box (Shift: 10 px steps)'],
+      ['Ctrl+arrow keys', 'Resize a selection box']
+    ]]);
+    if (has('render-pdf')) groups.push(['PDF page grids', [
+      ['Arrow keys', 'Move between pages'],
+      ['Space', 'Choose a page; Shift extends the choice'],
+      ['Ctrl+A', 'Choose every page'],
+      ['R', 'Turn a page'],
+      ['Alt+arrow keys', 'Move a page (organiser)'],
+      ['Delete', 'Remove or restore a page (organiser)']
+    ]]);
+    if (has('render-qr') && /qr-code-scanner/.test(location.pathname)) groups.push(['QR scanner', [
+      ['Ctrl+V', 'Scan a pasted image']
+    ]]);
+    return groups;
+  }
+
+  function build() {
+    dlg = document.createElement('dialog');
+    dlg.className = 'kbd-sheet';
+    dlg.setAttribute('aria-labelledby', 'kbd-sheet-title');
+    var h = document.createElement('h2');
+    h.id = 'kbd-sheet-title';
+    h.textContent = 'Keyboard shortcuts';
+    dlg.appendChild(h);
+    rows().forEach(function (g) {
+      var h3 = document.createElement('h3');
+      h3.textContent = g[0];
+      dlg.appendChild(h3);
+      var dl = document.createElement('dl');
+      g[1].forEach(function (r) {
+        var dt = document.createElement('dt');
+        r[0].split('+').forEach(function (part, i) {
+          if (i) dt.appendChild(document.createTextNode('+'));
+          var k = document.createElement('kbd');
+          k.textContent = part;
+          dt.appendChild(k);
+        });
+        var dd = document.createElement('dd');
+        dd.textContent = r[1];
+        dl.appendChild(dt);
+        dl.appendChild(dd);
+      });
+      dlg.appendChild(dl);
+    });
+    var p = document.createElement('p');
+    p.className = 'kbd-mac';
+    p.textContent = 'On a Mac, ⌘ works wherever Ctrl is shown.';
+    dlg.appendChild(p);
+    var close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'btn-ghost kbd-close';
+    close.textContent = 'Close';
+    close.addEventListener('click', function () { dlg.close(); });
+    dlg.appendChild(close);
+    dlg.addEventListener('close', function () {
+      if (from && document.contains(from) && from.focus) from.focus();
+    });
+    dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
+    document.body.appendChild(dlg);
+  }
+
+  function open() {
+    if (!dlg) build();
+    if (dlg.open) return;
+    from = document.activeElement;
+    dlg.showModal();
+    dlg.querySelector('.kbd-close').focus();
+  }
+  window.MVRShortcuts = { open: open };
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== '?' || e.ctrlKey || e.metaKey || e.altKey) return;
+    var a = document.activeElement;
+    if (a && (/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) || a.isContentEditable)) return;
+    if (typeof HTMLDialogElement !== 'function') return;
+    e.preventDefault();
+    open();
+  });
+})();
