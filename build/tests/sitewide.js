@@ -266,11 +266,27 @@ CASES.image = async function () {
   const ctx = await browser.createBrowserContext();
   const page = await newPage(ctx);
   await page.goto(BASE + '/image/image-compressor/', { waitUntil: 'load' });
+  /* by mouse: the result arrives and nothing moves */
+  await page.waitForSelector('.tool [role="button"]');
+  await waitFor(page, () => !!window.MVRHandoff, null, 10000);
+  await page.mouse.click(5, 300);
+  const y0 = await page.evaluate(() => scrollY);
+  await upload(page, [FX['sitewide-c.png']]);
+  await waitFor(page, visibleSend, null, 30000);
+  await sleep(300);
+  const still = await page.evaluate((y) => ({ y: scrollY === y, a: !/^Download/.test((document.activeElement.textContent || '').trim()) }), y0);
+  check(still.y && still.a, 'by mouse: focus and scroll stay where they were when the result arrives', still);
+  await page.reload({ waitUntil: 'load' });
+  await waitFor(page, () => !!window.MVRHandoff, null, 10000);
+  /* by keyboard: Tab to the drop zone, then the file */
+  await page.focus('.tool [role="button"]');
+  await page.keyboard.press('Tab');
+  await page.keyboard.down('Shift'); await page.keyboard.press('Tab'); await page.keyboard.up('Shift');
   await upload(page, [FX['sitewide-a.png']]);
   const got = await waitFor(page, visibleSend, null, 30000);
   check(got, 'compressor: a Send to… button beside the result\'s Download');
   const foc = await page.evaluate(() => { const a = document.activeElement; return a && /^Download/.test(a.textContent.trim()) && !!a.closest('.tool'); });
-  check(foc, 'focus moved to the result\'s Download button when it arrived');
+  check(foc, 'by keyboard: focus moved to the result\'s Download button when it arrived');
   const menu = await openSendMenu(page);
   const paths = menu.items.map((i) => i.path).sort();
   check(JSON.stringify(paths) === JSON.stringify(['/image/image-converter/', '/image/image-cropper/', '/image/image-resizer/', '/image/image-to-pdf/']),

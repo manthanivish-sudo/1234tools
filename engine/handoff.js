@@ -615,7 +615,12 @@
 
   /* ---- results: decorate, and move focus to the first one ---- */
   var decorated = new WeakSet();
-  var focusArmed = false, armedFrom = null;
+  var focusArmed = false, armedFrom = null, viaKeys = false;
+  /* Focus follows the result only for someone using the keyboard. Moving it
+     (and scrolling to it) under a mouse or a finger would shift the page just
+     as they reach for something else. */
+  document.addEventListener('keydown', function (e) { if (e.key === 'Tab' || e.key === 'Enter' || e.key === ' ') viaKeys = true; }, true);
+  document.addEventListener('pointerdown', function () { viaKeys = false; }, true);
   function armFocus() { focusArmed = true; armedFrom = document.activeElement; }
   tool.addEventListener('change', function (e) { if (e.target && e.target.type === 'file') armFocus(); }, true);
   tool.addEventListener('drop', armFocus, true);
@@ -646,7 +651,7 @@
     });
     if (first && focusArmed) {
       focusArmed = false;
-      if (mayMoveFocus()) {
+      if (viaKeys && mayMoveFocus()) {
         first.focus({ preventScroll: true });
         try { first.scrollIntoView({ block: 'nearest' }); } catch (e) { /* old */ }
       }
