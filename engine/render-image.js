@@ -182,9 +182,37 @@
     return rawProbe;
   }
 
+  /* ---------- the size a picture is resized to ----------
+     o.width and o.height in pixels (0 = automatic), o.lockAspect ('yes'
+     keeps the shape: the picture fits inside width × height; 'no' with both
+     set stretches it to exactly that), o.scale in % (used when neither is
+     set). A picture is never enlarged unless allowEnlarge: a size larger
+     than the original is held at the original's ('held'). */
+  function resizeDims(nw, nh, o, allowEnlarge) {
+    o = o || {};
+    let w = nw, h = nh, asked = false;
+    const W = Math.max(0, Math.round(Number(o.width) || 0)), H = Math.max(0, Math.round(Number(o.height) || 0));
+    const pct = Number(o.scale) || 100;
+    const exact = o.lockAspect === 'no' && W && H;
+    if (W || H) {
+      asked = true;
+      if (exact) { w = W; h = H; }
+      else { const k = Math.min(W ? W / nw : Infinity, H ? H / nh : Infinity); w = nw * k; h = nh * k; }
+    } else if (pct > 0 && pct !== 100) { asked = true; w = nw * pct / 100; h = nh * pct / 100; }
+    let held = false;
+    if (!allowEnlarge && (w > nw + 0.5 || h > nh + 0.5)) {
+      held = true;
+      if (exact) { w = Math.min(w, nw); h = Math.min(h, nh); }
+      else { w = nw; h = nh; }
+    }
+    return { w: Math.max(1, Math.round(w)), h: Math.max(1, Math.round(h)), asked, held };
+  }
+
   /* ---------- helpers handed to each spec's paint() ---------- */
   function makeHelpers(canvas, ctx, notes) {
     const h = {
+      /* the size the Resize panel asks for, for this picture */
+      resizeDims: (img, o) => resizeDims(img.naturalWidth || img.width, img.naturalHeight || img.height, o, o && o.enlarge === 'yes'),
       size(w, hh) {
         canvas.width = Math.max(1, Math.round(w));
         canvas.height = Math.max(1, Math.round(hh));
@@ -401,6 +429,14 @@
       const lo = c.min !== undefined ? Number(c.min) : -Infinity, hi = c.max !== undefined ? Number(c.max) : Infinity;
       read = () => { const x = Number(n.value); return n.value === '' || !Number.isFinite(x) ? n.value : String(Math.max(lo, Math.min(hi, x))); };
       write = (v) => { const x = Number(v); if (v === '' || !Number.isFinite(x)) return false; n.value = String(Math.max(lo, Math.min(hi, x))); return true; };
+      if (c.blankZero) {
+        /* 0 means "automatic": the box is left empty and its placeholder says what it will be */
+        const r0 = read, w0 = write;
+        n.placeholder = 'auto';
+        read = () => n.value === '' ? '0' : r0();
+        write = (v) => { if (v === '' || Number(v) === 0) { n.value = ''; return true; } return w0(v); };
+        if (!Number(c.default)) n.value = '';
+      }
     }
     if (c.hint) wrap.appendChild(el('span', 'field-hint', c.hint));
     return { wrap, read, write, key: c.key, spec: c };
@@ -409,35 +445,49 @@
   /* ---------- the before/after view ----------
      The slider pattern of the AI upscaler (aiimg-image-upscaler.js): the
      result fills the frame, the original sits over it clipped to the left
-     of the divider. A side-by-side mode, zoom (fit, 100%, 200%) and pan by
-     dragging or with the arrow keys. Sizes and the saving shown under it. */
+     of the divider. A side-by-side mode; zoom from 10% to 1600% by the
+     buttons, the mouse wheel (with Ctrl unless opts.wheelZoom), a trackpad
+     or two-finger pinch, a double click, or the + − 0 1 keys, always about
+     the point under the pointer; pan by dragging or with the arrow keys,
+     both sides locked together. box.update() swaps the result in place and
+     keeps the zoom, the pan and the divider, so a settings change is seen
+     in the same spot. Sizes and the saving shown under it. */
+  const ZOOM_MAX = 16, ZOOM_MIN = 0.1;
   function makeCompare(opts) {
+    /* a pointer the browser no longer tracks cannot be captured; the drag still works without it */
+    const capture = (node, e) => { try { node.setPointerCapture(e.pointerId); } catch (x) { /* none */ } };
     const box = el('div', 'img-compare');
     const bar = el('div', 'img-compare-bar');
     const modeBtns = el('div', 'img-seg');
     modeBtns.setAttribute('role', 'group'); modeBtns.setAttribute('aria-label', 'View');
-    const zoomBtns = el('div', 'img-seg');
+    const zoomBtns = el('div', 'img-seg img-zoom');
     zoomBtns.setAttribute('role', 'group'); zoomBtns.setAttribute('aria-label', 'Zoom');
-    const btn = (label, group, on) => {
-      const b = el('button', 'img-seg-btn', label);
+    const btn = (label, group, on, cls) => {
+      const b = el('button', 'img-seg-btn' + (cls ? ' ' + cls : ''), label);
       b.type = 'button'; b.setAttribute('aria-pressed', 'false');
       b.addEventListener('click', on);
       group.appendChild(b);
       return b;
     };
-    const S = { mode: opts.sameShape ? 'slider' : 'side', zoom: 'fit', split: 0.5 };
-    const bSlider = btn('Slider', modeBtns, () => setMode('slider'));
-    const bSide = btn('Side by side', modeBtns, () => setMode('side'));
+    const S = { mode: opts.sameShape ? 'slider' : 'side', zoom: 'fit', split: 0.5, chosen: null };
+    const bSlider = btn('Slider', modeBtns, () => { S.chosen = 'slider'; setMode('slider'); });
+    const bSide = btn('Side by side', modeBtns, () => { S.chosen = 'side'; setMode('side'); });
+    const bOut = btn('−', zoomBtns, () => zoomTo(scale() / 1.25), 'img-zoom-step');
+    bOut.removeAttribute('aria-pressed'); bOut.setAttribute('aria-label', 'Zoom out');
+    const pct = el('output', 'img-zoom-pct', '100%');
+    pct.setAttribute('aria-label', 'Zoom level');
+    zoomBtns.appendChild(pct);
+    const bIn = btn('+', zoomBtns, () => zoomTo(scale() * 1.25), 'img-zoom-step');
+    bIn.removeAttribute('aria-pressed'); bIn.setAttribute('aria-label', 'Zoom in');
     const bFit = btn('Fit', zoomBtns, () => setZoom('fit'));
     const b100 = btn('100%', zoomBtns, () => setZoom(1));
     const b200 = btn('200%', zoomBtns, () => setZoom(2));
-    if (!opts.sameShape) { bSlider.disabled = true; bSlider.title = 'The result is a different shape from the original, so they are shown side by side'; }
     bar.appendChild(modeBtns); bar.appendChild(zoomBtns);
-    box.appendChild(bar);
+    if (opts.extraButton) bar.appendChild(opts.extraButton);
 
     const view = el('div', 'img-compare-view');
     view.tabIndex = 0;
-    view.setAttribute('aria-label', 'Before and after. When zoomed, drag or use the arrow keys to look around.');
+    view.setAttribute('aria-label', 'Before and after. Scroll' + (opts.wheelZoom ? '' : ' with Ctrl') + ' or pinch to zoom, + and − keys too; when zoomed, drag or use the arrow keys to look around.');
     const frame = el('div', 'img-compare-frame');
     const after = el('img', 'image-preview img-compare-after');
     after.src = opts.afterUrl; after.alt = 'After: ' + (opts.afterLabel || 'the result');
@@ -453,34 +503,50 @@
     handle.setAttribute('aria-label', 'Before and after divider');
     handle.setAttribute('aria-valuemin', '0'); handle.setAttribute('aria-valuemax', '100');
     divider.appendChild(handle);
-    const tagA = el('span', 'img-compare-tag is-before', 'Before');
-    const tagB = el('span', 'img-compare-tag is-after', 'After');
+    /* each side's label: what it is, then its format, size in pixels and bytes */
+    const tag = (cls) => { const t = el('span', 'img-compare-tag ' + cls); t.appendChild(el('span', 'img-compare-tag-t')); t.appendChild(el('span', 'img-compare-tag-s')); return t; };
+    const tagA = tag('is-before'), tagB = tag('is-after');
+    const busy = el('span', 'img-compare-busy', 'Updating…');
+    busy.hidden = true;
     frame.appendChild(after); frame.appendChild(beforeWrap); frame.appendChild(divider);
-    frame.appendChild(tagA); frame.appendChild(tagB);
     view.appendChild(frame);
+    /* the labels sit on the visible window, not on the picture, so they stay put when zoomed */
+    const port = el("div", "img-compare-port");
+    port.appendChild(view); port.appendChild(tagA); port.appendChild(tagB);
+    bar.appendChild(busy);
+    box.appendChild(bar);
 
     /* side by side: two panes that scroll together */
     const side = el('div', 'img-compare-side');
     const paneA = el('div', 'img-compare-pane'), paneB = el('div', 'img-compare-pane');
     const sideA = el('img', 'img-compare-img'); sideA.src = opts.beforeUrl; sideA.alt = 'Before: the original'; sideA.draggable = false;
     const sideB = el('img', 'img-compare-img'); sideB.src = opts.afterUrl; sideB.alt = 'After'; sideB.draggable = false;
-    paneA.appendChild(sideA); paneA.appendChild(el('span', 'img-compare-tag is-before', 'Before'));
-    paneB.appendChild(sideB); paneB.appendChild(el('span', 'img-compare-tag is-after', 'After'));
+    const tagA2 = tag('is-before'), tagB2 = tag('is-after');
+    paneA.appendChild(sideA); paneA.appendChild(tagA2);
+    paneB.appendChild(sideB); paneB.appendChild(tagB2);
     paneA.tabIndex = 0; paneB.tabIndex = 0;
     side.appendChild(paneA); side.appendChild(paneB);
-    box.appendChild(view); box.appendChild(side);
+    box.appendChild(port); box.appendChild(side);
 
     const readout = el('div', 'img-compare-readout');
     box.appendChild(readout);
     const setReadout = (r) => {
       readout.innerHTML = '';
+      if (!r) return;
       const add = (k, v, cls) => { const s = el('span', cls || ''); s.appendChild(el('span', 'img-compare-k', k + ' ')); s.appendChild(el('strong', null, v)); readout.appendChild(s); };
       add('Original', r.before);
       add('Result', r.after);
       if (r.change) add(r.saved ? 'Saved' : 'Grew', r.change, r.saved ? 'is-saved' : 'is-grew');
       if (r.extra) add(r.extra[0], r.extra[1]);
     };
-    if (opts.readout) setReadout(opts.readout);
+    const setLabels = (L) => {
+      L = L || {};
+      const put = (t, v, d) => { t.children[0].textContent = (v && v[0]) || d; t.children[1].textContent = (v && v[1]) || ''; t.children[1].hidden = !(v && v[1]); };
+      put(tagA, L.before, 'Before'); put(tagA2, L.before, 'Before');
+      put(tagB, L.after, 'After'); put(tagB2, L.after, 'After');
+    };
+    setReadout(opts.readout);
+    setLabels(opts.labels);
 
     function setSplit(v) {
       S.split = Math.max(0, Math.min(1, v));
@@ -488,49 +554,95 @@
       divider.style.left = (S.split * 100).toFixed(2) + '%';
       handle.setAttribute('aria-valuenow', String(Math.round(S.split * 100)));
     }
-    function size() {
+    /* the scale on screen, in the picture's own pixels (1 = 100%) */
+    function fitScale() {
       const W = opts.width, H = opts.height;
-      const z = S.zoom === 'fit' ? 0 : S.zoom;
-      const dpr = 1;
       if (S.mode === 'slider') {
-        if (!z) {
-          const cw = view.clientWidth || W;
-          const maxH = Math.max(220, Math.min(window.innerHeight * 0.7, 720));
-          frame.style.width = Math.max(1, Math.floor(Math.min(cw, W, W * maxH / H))) + 'px';
-        } else frame.style.width = Math.round(W * z / dpr) + 'px';
+        const cw = view.clientWidth || W;
+        /* as tall as the view may be (its CSS max-height: taller in full screen) */
+        const mh = parseFloat(getComputedStyle(view).maxHeight);
+        const maxH = Math.max(220, mh > 0 ? mh : Math.min(window.innerHeight * 0.7, 720));
+        return Math.min(cw, W, W * maxH / H) / W;
+      }
+      return Math.min(1, (paneB.clientWidth || W) / W);
+    }
+    const scale = () => S.zoom === 'fit' ? fitScale() : S.zoom;
+    function size() {
+      const W = opts.width;
+      const z = S.zoom === 'fit' ? 0 : S.zoom;
+      /* zoomed, the view keeps the height it has at Fit, so zooming out does not shrink it from under the pointer */
+      const fitH = Math.round(opts.height * fitScale());
+      if (S.mode === 'slider') {
+        frame.style.width = Math.max(1, Math.floor(W * (z || fitScale()))) + 'px';
+        view.style.height = z ? fitH + 'px' : '';
         view.classList.toggle('is-zoomed', !!z);
       } else {
         [sideA, sideB].forEach((im, k) => {
           const w = k ? W : (opts.beforeWidth || W);
           im.style.width = z ? Math.round(w * z) + 'px' : '';
         });
+        [paneA, paneB].forEach((pn) => { pn.style.height = z ? fitH + 'px' : ''; });
         side.classList.toggle('is-zoomed', !!z);
       }
+      pct.textContent = Math.round(scale() * 100) + '%';
+      bOut.disabled = scale() <= Math.min(ZOOM_MIN, fitScale()) + 1e-6;
+      bIn.disabled = scale() >= ZOOM_MAX - 1e-6;
     }
     function setMode(m) {
       if (m === 'slider' && !opts.sameShape) m = 'side';
+      const keep = S.zoom === 'fit' ? null : centre();
       S.mode = m;
-      view.hidden = m !== 'slider'; side.hidden = m !== 'side';
+      port.hidden = m !== 'slider'; side.hidden = m !== 'side';
+      bSlider.disabled = !opts.sameShape;
+      bSlider.title = opts.sameShape ? '' : 'The result is a different shape from the original, so they are shown side by side';
       bSlider.setAttribute('aria-pressed', m === 'slider' ? 'true' : 'false');
       bSide.setAttribute('aria-pressed', m === 'side' ? 'true' : 'false');
       size();
+      if (keep) restore(keep);
+    }
+    const pressZoom = () => [[bFit, 'fit'], [b100, 1], [b200, 2]].forEach(([b, v]) => b.setAttribute('aria-pressed', v === S.zoom ? 'true' : 'false'));
+    /* the scrolling box and the element inside it that carries the picture */
+    const scroller = (pane) => S.mode === 'slider' ? [view, frame] : pane === paneA ? [paneA, sideA] : [paneB, sideB];
+    /* the picture point at the middle of the view, as fractions of the picture */
+    function centre() {
+      const [sc, im] = scroller(paneB);
+      const w = im.offsetWidth || 1, h = im.offsetHeight || 1;
+      return { fx: (sc.scrollLeft + sc.clientWidth / 2 - im.offsetLeft) / w, fy: (sc.scrollTop + sc.clientHeight / 2 - im.offsetTop) / h };
+    }
+    function restore(c) {
+      const [sc, im] = scroller(paneB);
+      sc.scrollLeft = c.fx * im.offsetWidth + im.offsetLeft - sc.clientWidth / 2;
+      sc.scrollTop = c.fy * im.offsetHeight + im.offsetTop - sc.clientHeight / 2;
     }
     function setZoom(z) {
+      if (z === 'fit') { S.zoom = 'fit'; pressZoom(); size(); return; }
+      zoomTo(z);
+    }
+    /* zoom to z, keeping the picture point under (x, y) where it is; the
+       middle of the view when no point is given */
+    function zoomTo(z, at, pane) {
+      const lo = Math.min(ZOOM_MIN, fitScale());
+      z = Math.max(lo, Math.min(ZOOM_MAX, z));
+      if (Math.abs(z - fitScale()) < 0.004 && S.zoom === 'fit') return;
+      const [sc, im] = scroller(pane);
+      const r = sc.getBoundingClientRect();
+      const cx = at ? at.x - r.left : sc.clientWidth / 2, cy = at ? at.y - r.top : sc.clientHeight / 2;
+      const old = scale();
+      const ix = (sc.scrollLeft + cx - im.offsetLeft) / old, iy = (sc.scrollTop + cy - im.offsetTop) / old;
       S.zoom = z;
-      [[bFit, 'fit'], [b100, 1], [b200, 2]].forEach(([b, v]) => b.setAttribute('aria-pressed', v === z ? 'true' : 'false'));
+      pressZoom();
       size();
-      if (z !== 'fit') {
-        const sc = S.mode === 'slider' ? [view] : [paneA, paneB];
-        sc.forEach(v => { v.scrollLeft = Math.max(0, (v.scrollWidth - v.clientWidth) / 2); v.scrollTop = Math.max(0, (v.scrollHeight - v.clientHeight) / 2); });
-      }
+      sc.scrollLeft = ix * z + im.offsetLeft - cx;
+      sc.scrollTop = iy * z + im.offsetTop - cy;
     }
     const splitAt = (clientX) => { const r = frame.getBoundingClientRect(); return r.width ? (clientX - r.left) / r.width : 0.5; };
     let drag = null;
-    handle.addEventListener('pointerdown', (e) => { drag = 'split'; handle.setPointerCapture(e.pointerId); e.preventDefault(); e.stopPropagation(); });
-    handle.addEventListener('pointermove', (e) => { if (drag === 'split') setSplit(splitAt(e.clientX)); });
+    /* a finger on the handle still counts towards a pinch */
+    handle.addEventListener('pointerdown', (e) => { fingerDown(e); if (!pinch) drag = 'split'; capture(handle, e); e.preventDefault(); e.stopPropagation(); });
+    handle.addEventListener('pointermove', (e) => { if (fingerMove(e, null)) return; if (drag === 'split') setSplit(splitAt(e.clientX)); });
     const endDrag = () => { drag = null; view.classList.remove('is-panning'); };
-    handle.addEventListener('pointerup', endDrag);
-    handle.addEventListener('pointercancel', endDrag);
+    handle.addEventListener('pointerup', (e) => { fingerUp(e); endDrag(); });
+    handle.addEventListener('pointercancel', (e) => { fingerUp(e); endDrag(); });
     handle.addEventListener('keydown', (e) => {
       const step = e.shiftKey ? 0.1 : 0.02;
       if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') setSplit(S.split - step);
@@ -540,52 +652,98 @@
       else return;
       e.preventDefault(); e.stopPropagation();
     });
+    /* the wheel (and a trackpad pinch, which arrives as a wheel with Ctrl) */
+    const onWheel = (pane) => (e) => {
+      if (!opts.wheelZoom && !e.ctrlKey && !e.metaKey && !box.closest('.is-full')) return;
+      e.preventDefault();
+      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+      zoomTo(scale() * Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.002)), { x: e.clientX, y: e.clientY }, pane);
+    };
+    view.addEventListener('wheel', onWheel(null), { passive: false });
+    paneA.addEventListener('wheel', onWheel(paneA), { passive: false });
+    paneB.addEventListener('wheel', onWheel(paneB), { passive: false });
+    /* two fingers: pinch about their middle */
+    const fingers = new Map();
+    let pinch = null;
+    const gap = () => { const p = [...fingers.values()]; return Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) || 1; };
+    const mid = () => { const p = [...fingers.values()]; return { x: (p[0].x + p[1].x) / 2, y: (p[0].y + p[1].y) / 2 }; };
+    const fingerDown = (e) => { fingers.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (fingers.size === 2) { pinch = { d: gap(), z: scale() }; pan = null; drag = null; } };
+    const fingerMove = (e, pane) => {
+      if (!fingers.has(e.pointerId)) return false;
+      fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && fingers.size === 2) { zoomTo(pinch.z * gap() / pinch.d, mid(), pane); return true; }
+      return false;
+    };
+    const fingerUp = (e) => { fingers.delete(e.pointerId); if (fingers.size < 2) pinch = null; };
+    /* a double click or tap: Fit to 100% at that point, and back */
+    const dbl = (pane) => (e) => { if (e.target === handle) return; if (S.zoom === 'fit') zoomTo(Math.max(1, fitScale() * 2), { x: e.clientX, y: e.clientY }, pane); else setZoom('fit'); };
+    view.addEventListener('dblclick', dbl(null));
+    paneA.addEventListener('dblclick', dbl(paneA)); paneB.addEventListener('dblclick', dbl(paneB));
     /* pan: drag the picture when zoomed; a click without a drag moves the divider */
     let pan = null;
     view.addEventListener('pointerdown', (e) => {
       if (e.target === handle) return;
-      pan = { x: e.clientX, y: e.clientY, l: view.scrollLeft, t: view.scrollTop, moved: false };
-      view.setPointerCapture(e.pointerId);
+      fingerDown(e);
+      if (!pinch) pan = { x: e.clientX, y: e.clientY, l: view.scrollLeft, t: view.scrollTop, moved: false };
+      capture(view, e);
     });
     view.addEventListener('pointermove', (e) => {
-      if (!pan) return;
+      if (fingerMove(e, null) || !pan) return;
       const dx = e.clientX - pan.x, dy = e.clientY - pan.y;
       if (Math.abs(dx) + Math.abs(dy) > 4) { pan.moved = true; view.classList.add('is-panning'); }
       if (pan.moved && S.zoom !== 'fit') { view.scrollLeft = pan.l - dx; view.scrollTop = pan.t - dy; }
       else if (pan.moved && S.zoom === 'fit') setSplit(splitAt(e.clientX));
     });
-    view.addEventListener('pointerup', (e) => { if (pan && !pan.moved) setSplit(splitAt(e.clientX)); pan = null; endDrag(); });
-    view.addEventListener('pointercancel', () => { pan = null; endDrag(); });
-    const keyPan = (v) => (e) => {
+    view.addEventListener('pointerup', (e) => { const was = pinch; fingerUp(e); if (pan && !pan.moved && !was) setSplit(splitAt(e.clientX)); pan = null; endDrag(); });
+    view.addEventListener('pointercancel', (e) => { fingerUp(e); pan = null; endDrag(); });
+    const keyPan = (v, pane) => (e) => {
       if (e.target === handle) return;
       const step = e.shiftKey ? 200 : 40;
       if (e.key === 'ArrowLeft') v.scrollLeft -= step;
       else if (e.key === 'ArrowRight') v.scrollLeft += step;
       else if (e.key === 'ArrowUp') v.scrollTop -= step;
       else if (e.key === 'ArrowDown') v.scrollTop += step;
-      else if (e.key === '+' || e.key === '=') setZoom(S.zoom === 'fit' ? 1 : 2);
-      else if (e.key === '-') setZoom(S.zoom === 2 ? 1 : 'fit');
+      else if (e.key === '+' || e.key === '=') zoomTo(scale() * 1.25, null, pane);
+      else if (e.key === '-' || e.key === '_') zoomTo(scale() / 1.25, null, pane);
+      else if (e.key === '0') setZoom('fit');
+      else if (e.key === '1') setZoom(1);
       else return;
       e.preventDefault();
     };
-    view.addEventListener('keydown', keyPan(view));
+    view.addEventListener('keydown', keyPan(view, null));
     /* side by side: both panes scroll together */
     let syncing = false;
     const sync = (from, to) => from.addEventListener('scroll', () => { if (syncing) return; syncing = true; to.scrollLeft = from.scrollLeft; to.scrollTop = from.scrollTop; syncing = false; });
     sync(paneA, paneB); sync(paneB, paneA);
-    paneA.addEventListener('keydown', keyPan(paneA)); paneB.addEventListener('keydown', keyPan(paneB));
+    paneA.addEventListener('keydown', keyPan(paneA, paneA)); paneB.addEventListener('keydown', keyPan(paneB, paneB));
     [paneA, paneB].forEach((pn) => {
       let pp = null;
-      pn.addEventListener('pointerdown', (e) => { pp = { x: e.clientX, y: e.clientY, l: pn.scrollLeft, t: pn.scrollTop }; pn.setPointerCapture(e.pointerId); });
-      pn.addEventListener('pointermove', (e) => { if (pp && S.zoom !== 'fit') { pn.scrollLeft = pp.l - (e.clientX - pp.x); pn.scrollTop = pp.t - (e.clientY - pp.y); } });
-      pn.addEventListener('pointerup', () => { pp = null; });
-      pn.addEventListener('pointercancel', () => { pp = null; });
+      pn.addEventListener('pointerdown', (e) => { fingerDown(e); pp = pinch ? null : { x: e.clientX, y: e.clientY, l: pn.scrollLeft, t: pn.scrollTop }; capture(pn, e); });
+      pn.addEventListener('pointermove', (e) => { if (fingerMove(e, pn)) return; if (pp && S.zoom !== 'fit') { pn.scrollLeft = pp.l - (e.clientX - pp.x); pn.scrollTop = pp.t - (e.clientY - pp.y); } });
+      pn.addEventListener('pointerup', (e) => { fingerUp(e); pp = null; });
+      pn.addEventListener('pointercancel', (e) => { fingerUp(e); pp = null; });
     });
 
-    if (window.ResizeObserver) { const ro = new ResizeObserver(() => size()); ro.observe(view); box._ro = ro; }
+    if (window.ResizeObserver) { const ro = new ResizeObserver(() => size()); ro.observe(view); ro.observe(side); box._ro = ro; }
     setSplit(0.5);
     setMode(S.mode);
     setZoom('fit');
+
+    /* a new result in the same view: zoom, pan, divider and mode stay */
+    box.update = (o) => {
+      const keep = S.zoom === 'fit' ? null : centre();
+      Object.assign(opts, o);
+      if (o.afterUrl) { after.src = o.afterUrl; sideB.src = o.afterUrl; }
+      if (o.afterLabel) after.alt = 'After: ' + o.afterLabel;
+      if ('readout' in o) setReadout(o.readout);
+      if ('labels' in o) setLabels(o.labels);
+      setMode(opts.sameShape ? (S.chosen || 'slider') : 'side');
+      if (keep) restore(keep);
+    };
+    box.setWorking = (on) => { busy.hidden = !on; box.classList.toggle('is-working', !!on); };
+    box.zoomTo = zoomTo;
+    box.setZoom = setZoom;
+    box.scale = scale;
     box.setReadout = setReadout;
     box.state = S;
     return box;
@@ -624,6 +782,122 @@
       opts.appendChild(b.wrap);
       return b;
     });
+
+    /* ---- the Resize panel ----
+       Controls with "group": "resize" (width, height, lockAspect, scale,
+       resizeMethod) are gathered into one panel: % buttons, common widths,
+       width and height with a lock between them, the method, and a line that
+       says what the first picture comes to. They stay ordinary controls, so
+       links, device memory, Reset and per-file settings carry them. */
+    const RZ = {};
+    readers.forEach(r => { if (r.spec.group === 'resize') RZ[r.key] = r; });
+    const rzInput = (k) => RZ[k] && RZ[k].wrap.querySelector('input, select');
+    let rzReadout = null, rzLock = null;
+    const rzPct = [], rzWidths = [];
+    if (RZ.width && RZ.height) {
+      const panel = el('fieldset', 'img-resize');
+      panel.appendChild(el('legend', null, 'Resize'));
+      opts.insertBefore(panel, RZ.scale ? RZ.scale.wrap : RZ.width.wrap);
+      const fire = () => opts.dispatchEvent(new Event('change', { bubbles: true }));
+      const seg = (label) => { const g = el('div', 'img-seg img-resize-seg'); g.setAttribute('role', 'group'); g.setAttribute('aria-label', label); return g; };
+      if (RZ.scale) {
+        RZ.scale.wrap.hidden = true;
+        const g = seg('Scale');
+        RZ.scale.spec.options.forEach(op => {
+          const b = el('button', 'img-seg-btn', op.value + '%');
+          b.type = 'button'; b.dataset.v = String(op.value);
+          b.title = op.label;
+          b.addEventListener('click', () => { RZ.scale.write(op.value); RZ.width.write(0); RZ.height.write(0); fire(); });
+          g.appendChild(b); rzPct.push(b);
+        });
+        panel.appendChild(g);
+      }
+      const widths = spec.resizeWidths || [3840, 1920, 1280, 1080, 800];
+      if (widths.length) {
+        const g = seg('Common widths');
+        widths.forEach(wd => {
+          const b = el('button', 'img-seg-btn', String(wd));
+          b.type = 'button'; b.dataset.v = String(wd);
+          b.title = wd + ' px wide, the height to keep the shape';
+          b.addEventListener('click', () => { RZ.width.write(wd); RZ.height.write(0); if (RZ.scale) RZ.scale.write('100'); fire(); });
+          g.appendChild(b); rzWidths.push(b);
+        });
+        const lab = el('div', 'img-resize-row');
+        lab.appendChild(el('span', 'img-resize-k', 'Width'));
+        lab.appendChild(g);
+        panel.appendChild(lab);
+      }
+      const dimsRow = el('div', 'img-resize-dims');
+      dimsRow.appendChild(RZ.width.wrap);
+      if (RZ.lockAspect) {
+        RZ.lockAspect.wrap.hidden = true;
+        rzLock = el('button', 'btn-ghost img-lock');
+        rzLock.type = 'button';
+        rzLock.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>';
+        rzLock.setAttribute('aria-label', 'Keep the shape (lock width and height together)');
+        rzLock.addEventListener('click', () => {
+          const on = RZ.lockAspect.read() !== 'yes';
+          RZ.lockAspect.write(on ? 'yes' : 'no');
+          /* locked, one side leads and the other follows */
+          if (on && Number(RZ.width.read()) && Number(RZ.height.read())) RZ.height.write(0);
+          fire();
+        });
+        dimsRow.appendChild(rzLock);
+      }
+      dimsRow.appendChild(RZ.height.wrap);
+      panel.appendChild(dimsRow);
+      if (RZ.resizeMethod) panel.appendChild(RZ.resizeMethod.wrap);
+      rzReadout = el('p', 'img-resize-readout');
+      rzReadout.setAttribute('aria-live', 'polite');
+      panel.appendChild(rzReadout);
+      /* typing a width or a height: the scale gives way, and when locked the other side follows */
+      panel.addEventListener('input', (e) => {
+        const wIn = rzInput('width'), hIn = rzInput('height');
+        if (e.target !== wIn && e.target !== hIn) return;
+        if (RZ.scale) RZ.scale.write('100');
+        const locked = !RZ.lockAspect || RZ.lockAspect.read() === 'yes';
+        if (locked && Number(e.target.value) > 0) (e.target === wIn ? RZ.height : RZ.width).write(0);
+      });
+    }
+    function paintResize() {
+      if (!rzReadout) return;
+      const o = readOpts();
+      const W = Number(o.width) || 0, H = Number(o.height) || 0;
+      rzPct.forEach(b => b.setAttribute('aria-pressed', !W && !H && String(o.scale || '100') === b.dataset.v ? 'true' : 'false'));
+      rzWidths.forEach(b => b.setAttribute('aria-pressed', W === Number(b.dataset.v) && !H ? 'true' : 'false'));
+      if (rzLock) rzLock.setAttribute('aria-pressed', o.lockAspect === 'yes' ? 'true' : 'false');
+      const s = sources[0], wIn = rzInput('width'), hIn = rzInput('height');
+      if (!s || !s.img) {
+        wIn.placeholder = 'auto'; hIn.placeholder = 'auto';
+        rzReadout.textContent = 'Choose an image to see the size it will be.';
+        return;
+      }
+      const nw = s.img.naturalWidth, nh = s.img.naturalHeight;
+      const d = resizeDims(nw, nh, optsFor(s, o), o.enlarge === 'yes');
+      wIn.placeholder = String(d.w); hIn.placeholder = String(d.h);
+      let t;
+      if (!d.asked) t = `${nw}×${nh}, kept at its own size`;
+      else if (d.w === nw && d.h === nh) t = `${nw}×${nh}, kept: ` + (d.held ? 'the picture is smaller than that, and it is never enlarged' : 'that is its own size');
+      else {
+        const px = d.w * d.h / (nw * nh) - 1;
+        t = `${nw}×${nh} → ${d.w}×${d.h} (${px < 0 ? '−' : '+'}${Math.abs(Math.round(px * 100))}% pixels)` + (d.held ? '; held at the original size where it was smaller' : '');
+      }
+      rzReadout.textContent = (sources.length > 1 ? 'First picture: ' : '') + t;
+    }
+
+    /* ---- full screen: the before/after view beside the settings, filling the window ---- */
+    const fullBtn = el('button', 'img-seg-btn img-full-btn', 'Full screen');
+    fullBtn.type = 'button';
+    fullBtn.setAttribute('aria-pressed', 'false');
+    const setFull = (on) => {
+      on = !!on && !!spec.liveCompare;
+      io.classList.toggle('is-full', on);
+      document.documentElement.classList.toggle('img-full-open', on);
+      fullBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      fullBtn.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    fullBtn.addEventListener('click', () => setFull(!io.classList.contains('is-full')));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && io.classList.contains('is-full')) setFull(false); });
     const settingsBar = el('div', 'img-settings-bar');
 
     const msg = el('div', 'io-msg');
@@ -694,6 +968,7 @@
         });
         r.wrap.hidden = !ok;
       });
+      paintResize();
     };
     /* the format a run will ask for, before any file is chosen ("same" is
        the first file's own) */
@@ -716,8 +991,21 @@
       });
       return n;
     }
+    /* settings of an earlier version (spec.legacy: old key → new key or keys),
+       so old links and remembered settings still work: ?maxWidth=1200 is now
+       a width of 1200 */
+    const LEGACY = spec.legacy || {};
+    function fromLegacy(vals) {
+      Object.keys(LEGACY).forEach(k => {
+        if (!(k in vals)) return;
+        const v = vals[k];
+        delete vals[k];
+        if (Number(v) > 0) [].concat(LEGACY[k]).forEach(t => { if (!(t in vals)) vals[t] = v; });
+      });
+      return vals;
+    }
     function storedValues() {
-      try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); return s && typeof s === 'object' ? s : {}; } catch (e) { return {}; }
+      try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); return s && typeof s === 'object' ? fromLegacy(s) : {}; } catch (e) { return {}; }
     }
     let saveTimer = 0;
     function remember() {
@@ -736,10 +1024,10 @@
       const q = new URLSearchParams(location.search);
       q.forEach((v, k) => {
         const key = ALIASES[k] || k;
-        if (!readers.some(r => r.key === key)) return;
+        if (!readers.some(r => r.key === key) && !LEGACY[key]) return;
         out[key] = key === 'presets' ? v.split('.').filter(Boolean).map(Number) : v;
       });
-      return out;
+      return fromLegacy(out);
     };
     function settingsLink() {
       const o = readOpts();
@@ -979,7 +1267,7 @@
       rm.addEventListener('click', () => {
         if (sources[i].url) URL.revokeObjectURL(sources[i].url);
         sources.splice(i, 1);
-        if (!sources.length) { stage.innerHTML = ''; actions.innerHTML = ''; }
+        if (!sources.length) { stage.innerHTML = ''; actions.innerHTML = ''; dropLive(); paintResize(); }
         renderFileList(); if (sources.length) run();
       });
       return rm;
@@ -1214,7 +1502,18 @@
        the page is left, so a session of changes does not pile up blobs. */
     let previewUrls = [];
     const previewUrl = (blob) => { const u = URL.createObjectURL(blob); previewUrls.push(u); return u; };
-    const revokePreviews = () => { previewUrls.forEach(u => URL.revokeObjectURL(u)); previewUrls = []; };
+    /* the picture still on show in a kept before/after view is let go one run later, once it is replaced */
+    const revokePreviews = (keepUrl) => { previewUrls.forEach(u => { if (u !== keepUrl) URL.revokeObjectURL(u); }); previewUrls = keepUrl ? [keepUrl] : []; };
+    /* the before/after view of a single picture that lives through settings changes */
+    let liveCmp = null;     // {host, s, box, url}
+    const liveFor = () => liveCmp && sources.length === 1 && liveCmp.s === sources[0] && liveCmp.host.parentNode === stage ? liveCmp : null;
+    function dropLive() { liveCmp = null; io.classList.remove('img-live'); setFull(false); }
+    function settleLive() {
+      if (liveCmp) liveCmp.box.setWorking(false);
+      const on = !!(spec.liveCompare && liveCmp && liveCmp.host.isConnected);
+      io.classList.toggle('img-live', on);
+      if (!on) setFull(false);
+    }
     window.addEventListener('pagehide', revokePreviews);
 
     /* Said when a result is bigger than its source, naming only controls
@@ -1347,8 +1646,14 @@
       const token = ++runToken;
       const o = readOpts();
       if (detachSelect) { detachSelect(); detachSelect = null; }
-      revokePreviews();
-      stage.innerHTML = '';
+      /* one picture: its before/after view stays, so the zoom, the pan and
+         the divider stay where they were while the new result is made */
+      const keep = liveFor();
+      revokePreviews(keep && keep.url);
+      [...stage.childNodes].forEach(n => { if (!keep || n !== keep.host) { if (n._ro) n._ro.disconnect(); n.remove(); } });
+      if (keep) { keep.box.setWorking(true); keep.box.querySelector('.img-compare-after').classList.remove('image-preview'); }
+      else dropLive();
+      paintResize();
       actions.innerHTML = '';
       stats.innerHTML = '';
       outputs = [];
@@ -1369,7 +1674,7 @@
         say('Something went wrong processing that image. ' + (e && e.message ? e.message : ''), 'error');
         return false;
       } finally {
-        if (token === runToken) progress.end();
+        if (token === runToken) { progress.end(); settleLive(); }
       }
     }
 
@@ -1400,7 +1705,16 @@
       const target = targetOf(o0);
       const facts = [];
       let compareHost = null;
-      if (spec.compare !== false) { compareHost = el('div', 'image-card image-card-wide img-compare-card'); stage.appendChild(compareHost); }
+      if (spec.compare !== false) {
+        const keep = many ? null : liveFor();
+        if (keep) compareHost = keep.host;
+        else {
+          compareHost = el('div', 'image-card image-card-wide img-compare-card');
+          stage.appendChild(compareHost);
+          /* one picture: the view opens at once, the original on both sides until the result is ready */
+          if (!many && sources[0].img) showCompare(compareHost, sources[0], sources[0].url, sources[0].img.naturalWidth, sources[0].img.naturalHeight, null, { live: true });
+        }
+      }
       progress.start(sources.length, many ? 'Starting…' : 'Working…');
       for (let i = 0; i < sources.length; i++) {
         if (stale(token)) return false;
@@ -1419,8 +1733,8 @@
         const anim = CORE.animationInfo ? CORE.animationInfo(s.bytes) : { animated: false };
         if (anim.animated && spec.passthroughAnimated) {
           const own = CORE.mimeOf(s.bytes);
-          const side = Number(o.maxSide) || 0;
-          if (own === fmt && !(side > 0 && Math.max(s.img.naturalWidth, s.img.naturalHeight) > side)) {
+          const rd = resizeDims(s.img.naturalWidth, s.img.naturalHeight, o, o.enlarge === 'yes');
+          if (own === fmt && rd.w === s.img.naturalWidth && rd.h === s.img.naturalHeight) {
             const blob = new Blob([s.bytes], { type: own });
             problem(`${s.file.name} is animated (${anim.frames} frames), so it was kept exactly as it is, every frame.`);
             const name = `${baseName(s)}-${spec.id || 'out'}.${extOfType(own)}`;
@@ -1438,6 +1752,8 @@
             dl.addEventListener('click', () => downloadBlob(blob, name));
             card.appendChild(dl);
             stage.appendChild(card);
+            /* the same bytes on both sides: no before/after view */
+            if (compareHost && !many) { compareHost.remove(); compareHost = null; dropLive(); }
             continue;
           }
           problem(`${s.file.name} is animated (${anim.frames} frames); only its first frame was converted${own === fmt ? ', because it was also resized' : ''}.`);
@@ -1516,17 +1832,19 @@
         if (compareHost && many) {
           const cmp = el('button', 'btn-ghost img-cmp-btn', 'Compare');
           cmp.type = 'button';
-          cmp.addEventListener('click', () => { showCompare(compareHost, s, url, outW, outH, blob); compareHost.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
+          cmp.addEventListener('click', () => { showCompare(compareHost, s, url, outW, outH, blob, { made }); compareHost.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
           btns.appendChild(cmp);
         }
         card.appendChild(btns);
         if (compareHost && !many) {
           /* one file: the before/after view is the result; its After image is the preview */
-          showCompare(compareHost, s, url, outW, outH, blob, prev);
+          showCompare(compareHost, s, url, outW, outH, blob, { result: true, live: true, made });
         } else stage.appendChild(card);
-        if (compareHost && many && facts.length === 1) showCompare(compareHost, s, url, outW, outH, blob);
+        if (compareHost && many && facts.length === 1) showCompare(compareHost, s, url, outW, outH, blob, { made });
         if (many) progress.step(i + 1);
       }
+      /* a single picture that gave no result: no view of the original against itself */
+      if (compareHost && !many && !outputs.length) { compareHost.remove(); dropLive(); }
       if (compareHost && !compareHost.childNodes.length) compareHost.remove();
 
       addBatchActions();
@@ -1603,31 +1921,53 @@
       if (list.length) return list.join(', ');
       return srgb ? 'none: the original’s profile is sRGB, which every viewer assumes' : 'none (the original had none of those)';
     }
-    function showCompare(host, s, afterUrl, w, h, blob, previewImg) {
-      host.innerHTML = '';
-      if (host._ro) host._ro.disconnect();
+    /* how: {result} the After image is this run's result (a single file, so
+       no card of its own); {live} the view stays through settings changes;
+       {made} the type written. blob null: the result is still being made. */
+    function showCompare(host, s, afterUrl, w, h, blob, how) {
+      how = how || {};
       const ow = s.img ? s.img.naturalWidth : w, oh = s.img ? s.img.naturalHeight : h;
       const sameShape = Math.abs(ow / oh - w / h) < 0.01;
-      const delta = s.file.size - blob.size;
-      const box = makeCompare({
-        beforeUrl: s.url, afterUrl, width: w, height: h, beforeWidth: sameShape ? w : ow, sameShape,
-        afterLabel: `${w}×${h}, ${fmtBytes(blob.size)}`,
-        readout: { before: `${fmtBytes(s.file.size)} · ${ow}×${oh}`, after: `${fmtBytes(blob.size)} · ${w}×${h}`,
-          change: s.file.size ? `${fmtBytes(Math.abs(delta))} (${Math.abs(Math.round(delta / s.file.size * 100))}%)` : '', saved: delta >= 0 }
-      });
-      if (!previewImg) {
-        /* only the stage's cards count as results; this After image is a view */
-        box.querySelector('.img-compare-after').className = 'img-compare-img img-compare-after';
+      /* the same shape: both are shown at the larger one's size, so a resized
+         result is seen enlarged beside the original, where its loss shows */
+      const W = sameShape ? Math.max(ow, w) : w, H = sameShape ? (W === ow ? oh : h) : h;
+      const delta = blob ? s.file.size - blob.size : 0;
+      const srcType = s.bytes ? typeOfBytes(s.bytes, s.file.type) : (s.file.type || 'image');
+      const upd = {
+        afterUrl, width: W, height: H, beforeWidth: sameShape ? W : ow, sameShape,
+        afterLabel: blob ? `${w}×${h}, ${fmtBytes(blob.size)}` : 'being made',
+        labels: {
+          before: ['Original', `${fmtName(srcType)} · ${ow}×${oh} · ${fmtBytes(s.file.size)}`],
+          after: blob ? ['Result', `${fmtName(how.made || blob.type)} · ${w}×${h} · ${fmtBytes(blob.size)}`] : ['Result', 'Working…']
+        },
+        readout: blob ? { before: `${fmtBytes(s.file.size)} · ${ow}×${oh}`, after: `${fmtBytes(blob.size)} · ${w}×${h}`,
+          change: s.file.size ? `${fmtBytes(Math.abs(delta))} (${Math.abs(Math.round(delta / s.file.size * 100))}%)` : '', saved: delta >= 0 } : null
+      };
+      let box;
+      if (host._cmp && host._cmp.s === s && host._cmp.box.parentNode === host) {
+        box = host._cmp.box;
+        box.update(upd);
+      } else {
+        host.innerHTML = '';
+        if (host._ro) host._ro.disconnect();
+        box = makeCompare(Object.assign({ wheelZoom: !!spec.liveCompare, extraButton: how.live && spec.liveCompare ? fullBtn : null }, upd));
+        host.appendChild(box);
+        host._ro = box._ro;
+        host._tail = el('div', 'img-compare-tail');
+        host.appendChild(host._tail);
+        host._cmp = { s, box };
       }
-      host.appendChild(box);
-      host._ro = box._ro;
-      host.appendChild(el('p', 'img-compare-name', s.file.name));
-      if (previewImg) {
+      /* only the stage's cards count as results; this After image is a view, unless it is the result */
+      box.querySelector('.img-compare-after').className = how.result && blob ? 'image-preview img-compare-after' : 'img-compare-img img-compare-after';
+      host._tail.innerHTML = '';
+      host._tail.appendChild(el('p', 'img-compare-name', s.file.name));
+      if (how.result && blob) {
         const dl = el('button', 'btn-ghost', 'Download');
         dl.type = 'button';
         dl.addEventListener('click', () => downloadBlob(blob, outputs[0] ? outputs[0].name : 'image'));
-        host.appendChild(dl);
+        host._tail.appendChild(dl);
       }
+      if (how.live) { liveCmp = { host, s, box, url: afterUrl }; box.setWorking(!blob); }
     }
 
     /* one in, many out */
@@ -1658,6 +1998,7 @@
       if (stale(token)) return false;
       if (spec.nameJobs) spec.nameJobs(jobs, o0);
       let lanczos = false, steps = false;
+      let lastJob = null;
 
       let totalOut = 0;
       const many = jobs.length > 1;
@@ -1711,9 +2052,17 @@
         dl.addEventListener('click', () => downloadBlob(blob, name));
         card.appendChild(dl);
         stage.appendChild(card);
+        lastJob = { url: prev.src, w: outW, h: outH, blob, made };
         if (many) progress.step(k + 1);
       }
       enlargedNotes(notes, sources[0].file.name);
+      /* one picture in, one out: the before/after view above its card, kept through settings changes */
+      if (spec.liveCompare && sources.length === 1 && outputs.length === 1 && lastJob && sources[0].img && !cancelled) {
+        const keep = liveFor();
+        const host = keep ? keep.host : el('div', 'image-card image-card-wide img-compare-card');
+        if (stage.firstChild !== host) stage.insertBefore(host, stage.firstChild);
+        showCompare(host, sources[0], lastJob.url, lastJob.w, lastJob.h, lastJob.blob, { live: true, made: lastJob.made });
+      } else if (liveFor()) { liveCmp.host.remove(); dropLive(); }
 
       addBatchActions();
       if (cancelled) return false;                       // what was finished stays, with its ZIP
