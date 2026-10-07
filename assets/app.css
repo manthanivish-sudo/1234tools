@@ -6135,6 +6135,8 @@ details.jw-panel[open] > summary.jw-h { margin-bottom: 12px; }
 .ho-recent-list .ho-send { margin-left: 0; }
 .ho-recent-foot { margin: 10px 0 0; font-size: .82rem; color: var(--text-2); }
 .ho-recent-foot input { vertical-align: middle; }
+.ho-offer .btn-ghost { margin: 10px 8px 0 0; }
+.ho-offer .ho-recent-foot { margin: 0; color: var(--text-1); }
 .kbd-sheet {
   width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; padding: 20px 22px;
   border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-1); color: var(--text-1);

@@ -506,9 +506,41 @@
   }
 
   /* ---- recent outputs ---- */
-  function keeping() { try { return localStorage.getItem(PREF) !== 'off'; } catch (e) { return true; } }
+  /* Opt-in. Several tools promise that nothing you give them is kept after
+     you close the page; that stays true until you ask for this. The choice is
+     offered once, beside the first file a tool saves, and is remembered for
+     every tool; "No thanks" is remembered too and the offer does not return. */
+  function pref() { try { return localStorage.getItem(PREF); } catch (e) { return null; } }
+  function keeping() { return pref() === 'on'; }
+  function setPref(v) { try { localStorage.setItem(PREF, v); } catch (e) { /* private mode: this page only */ } }
+  var offered = false;
+  function offerKeep(f) {
+    if (offered || pref() === 'off' || recentBox) return;
+    offered = true;
+    recentBox = el('section', 'ho-ui ho-recent ho-offer');
+    recentBox.setAttribute('aria-label', 'Keep recent outputs on this device');
+    var p = el('p', 'ho-recent-foot', 'Keep your last ' + RECENT_PER_TOOL + ' results from each tool in this browser, so you can save them again or send them on later? Up to 50 MB in all, never uploaded, cleared with one button.');
+    var yes = el('button', 'btn-ghost', 'Keep them');
+    yes.type = 'button';
+    yes.addEventListener('click', function () {
+      setPref('on');
+      recentBox.remove(); recentBox = null;
+      remember(f);
+    });
+    var no = el('button', 'btn-ghost', 'No thanks');
+    no.type = 'button';
+    no.addEventListener('click', function () { setPref('off'); recentBox.remove(); recentBox = null; });
+    recentBox.appendChild(p);
+    recentBox.appendChild(yes);
+    recentBox.appendChild(no);
+    tool.appendChild(recentBox);
+  }
+  function clearAllRecent() {
+    return txn('recent', 'readwrite', function (s) { s.clear(); });
+  }
   function remember(f) {
-    if (!keeping() || !f.blob || f.blob.size > RECENT_CAP) return;
+    if (!f.blob || f.blob.size > RECENT_CAP) return;
+    if (!keeping()) { offerKeep(f); return; }
     txn('recent', 'readwrite', function (s) {
       s.add({ tool: here, name: f.name, type: f.type, size: f.blob.size, at: Date.now(), blob: f.blob });
     }).then(trim).then(paintRecent).catch(function () { /* no storage: nothing kept */ });
@@ -551,6 +583,8 @@
   }
   var recentBox = null;
   function paintRecent() {
+    /* nothing is opened (or created) in IndexedDB unless the visitor chose this */
+    if (!keeping()) return Promise.resolve();
     return recentRows().then(function (rows) {
       if (!rows.length) { if (recentBox) { recentBox.remove(); recentBox = null; } return; }
       if (!recentBox) {
@@ -601,10 +635,10 @@
       keep.id = 'ho-keep';
       keep.checked = keeping();
       keep.addEventListener('change', function () {
-        try { localStorage.setItem(PREF, keep.checked ? 'on' : 'off'); } catch (e) { /* private mode */ }
-        if (!keep.checked) clearRecent().then(paintRecent);
+        setPref(keep.checked ? 'on' : 'off');
+        if (!keep.checked) clearAllRecent().then(function () { if (recentBox) { recentBox.remove(); recentBox = null; } });
       });
-      var lab = el('label', null, ' Keep my last ' + RECENT_PER_TOOL + ' outputs here (up to 50 MB across all tools). They stay in this browser and are never uploaded.');
+      var lab = el('label', null, ' Keep recent outputs (the last ' + RECENT_PER_TOOL + ' per tool, up to 50 MB in all) in this browser. Never uploaded. Unticking deletes them from every tool.');
       lab.setAttribute('for', 'ho-keep');
       foot.appendChild(keep);
       foot.appendChild(lab);

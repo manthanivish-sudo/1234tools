@@ -616,8 +616,12 @@ CASES.recent = async function () {
   await upload(page, [FX['sitewide-a.png']]);
   await waitFor(page, visibleSend, null, 30000);
   await page.evaluate(() => [...document.querySelectorAll('.tool button')].find((b) => b.offsetParent && /^Download$/.test(b.textContent.trim())).click());
-  const row = await waitFor(page, () => { const r = document.querySelector('.ho-recent'); return r && /sitewide-a/.test(r.textContent); }, null, 10000);
-  check(row, 'after a save, the recent row shows the output');
+  check(await waitFor(page, () => !!document.querySelector('.ho-offer'), null, 10000), 'after the first save, keeping recent outputs is offered (opt-in)');
+  const none = await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name));
+  check(!none.includes('1234tools-handoff'), 'until the visitor opts in, no IndexedDB database exists', none);
+  await page.evaluate(() => [...document.querySelectorAll('.ho-offer button')].find((b) => b.textContent === 'Keep them').click());
+  const row = await waitFor(page, () => { const r = document.querySelector('.ho-recent:not(.ho-offer)'); return r && /sitewide-a/.test(r.textContent); }, null, 10000);
+  check(row, 'after "Keep them", the recent row shows the output just saved');
   await page.reload({ waitUntil: 'load' });
   check(await waitFor(page, () => { const r = document.querySelector('.ho-recent'); return r && /sitewide-a/.test(r.textContent); }, null, 10000), 'the recent row is still there after a reload');
   await page.evaluate(() => document.querySelector('.ho-clear').click());
@@ -653,7 +657,12 @@ CASES.recent = async function () {
   await waitFor(page, visibleSend, null, 30000);
   await page.evaluate(() => [...document.querySelectorAll('.tool button')].find((b) => b.offsetParent && /^Download$/.test(b.textContent.trim())).click());
   await sleep(1500);
-  check(await page.evaluate(() => !document.querySelector('.ho-recent')), 'with keeping off, nothing new is kept');
+  check(await page.evaluate(() => !document.querySelector('.ho-recent')), 'with keeping off, nothing new is kept and the offer does not return');
+  const left = await page.evaluate(() => new Promise((res) => {
+    const r = indexedDB.open('1234tools-handoff', 1);
+    r.onsuccess = () => { const g = r.result.transaction('recent').objectStore('recent').count(); g.onsuccess = () => res(g.result); };
+  }));
+  check(left === 0, 'unticking deleted every stored output (' + left + ' left)');
   await ctx.close();
 };
 
