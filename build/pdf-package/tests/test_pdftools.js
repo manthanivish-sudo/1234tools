@@ -66,8 +66,11 @@ if (!core || !core.PDFDocument) {
    page that loads no engine of its own shows up as a failure below rather
    than being silently left out. */
 const HUB = fs.readFileSync(siteFile('pdf/index.html'), 'utf8');
+/* landing pages (build-landing.js: data-landing="…") present another tool's engine
+   with a preset, so they are not tool pages of their own */
 const TOOL_PAGES = fs.readdirSync(siteFile('pdf'))
   .filter(d => fs.existsSync(siteFile(`pdf/${d}/index.html`)))
+  .filter(d => !/\sdata-landing="/.test(fs.readFileSync(siteFile(`pdf/${d}/index.html`), 'utf8')))
   .sort();
 const PAGE_ENGINE = new Map(TOOL_PAGES.map(d => [d,
   fs.readFileSync(siteFile(`pdf/${d}/index.html`), 'utf8').includes(`/engine/pdf-${d}.js"`)]));

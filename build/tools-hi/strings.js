@@ -71,6 +71,8 @@ const common = {
     'Text Diff': 'टेक्स्ट डिफ़',
     'Share this tool': 'यह टूल शेयर करें',
     'Share': 'शेयर करें',
+    /* the share-sheet button (assets/share.js), shown only where the browser has one: Windows, Android, Safari */
+    'Share…': 'शेयर करें…',
     'Share on WhatsApp': 'WhatsApp पर शेयर करें',
     'Share on Telegram': 'Telegram पर शेयर करें',
     'Share on X': 'X पर शेयर करें',
@@ -1012,7 +1014,8 @@ tools['age-calculator'] = {
   p: [
     ['^This device: (\\S+)$', 'यह डिवाइस: $1'],
     ['^([\\d,]+) years?, ([\\d,]+) months?, ([\\d,]+) days?$', '$1 साल, $2 महीने, $3 दिन'],
-    ['^(\\w+) (\\d{1,2}) (\\w+) (\\d{4})$', '%1, $2 %3 $4'],
+    /* "Tuesday 15 June 2027", or with a comma after the day name as Chrome on Windows writes it */
+    ['^(\\w+),? (\\d{1,2}) (\\w+) (\\d{4})$', '%1, $2 %3 $4'],
     ['^(\\d{1,2}) (\\w+) (\\d{4})$', '$1 %2 $3'],
     ['^(\\w+) \\((\\w+) (\\w+)\\)$', '%1 (%2 %3)'],
     ['^Right now: ([\\d,]+) days, (\\d+) h (\\d+) min (\\d+) s since birth — ([\\d,]+) seconds \\(from midnight; add a time of birth to be exact\\)\\.$', 'अभी: जन्म से $1 दिन, $2 घंटे $3 मिनट $4 सेकंड — $5 सेकंड (आधी रात से; सटीक गिनती के लिए जन्म का समय डालिए)।'],
