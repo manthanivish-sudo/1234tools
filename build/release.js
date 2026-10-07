@@ -428,7 +428,7 @@ try {
       return null;
     };
     const suites = [];
-    for (const t of ['share', 'proof', 'depth', 'conversions', 'hubs-nav', 'home-finder', 'dev-fixes', 'pdf-fixes', 'image-fixes', 'claims', 'footer', 'version']) {
+    for (const t of ['share', 'proof', 'depth', 'conversions', 'hubs-nav', 'home-finder', 'dev-fixes', 'pdf-fixes', 'image-fixes', 'claims', 'footer', 'version', 'landing', 'dev-w6', 'hi-tools', 'sitewide']) {
       if (fs.existsSync(path.join(REPO, 'build/tests', t + '.js'))) suites.push({ suite: t, script: 'build/tests/' + t + '.js', port: true });
     }
     suites.push({ suite: 'engines', script: 'build/tests/engines.js', args: ['--root', opt.out] });
