@@ -524,7 +524,7 @@ CASES.analytics = async function () {
     await page.evaluateOnNewDocument((c) => { try { if (c) localStorage.setItem('1234tools-consent', c); } catch (e) {} }, consent);
     await page.goto(BASE + '/image/image-compressor/', { waitUntil: 'load' });
     await upload(page, [FX['sitewide-a.png']]);
-    await waitFor(page, visibleSend, null, 30000);
+    await waitFor(page, () => [...document.querySelectorAll('.tool button')].some((b) => b.offsetParent && /^Download$/.test(b.textContent.trim())) && !!document.querySelector('.ho-send'), null, 60000);
     const events = () => page.evaluate(() => (window.dataLayer || []).map((a) => Array.from(a)).filter((a) => a[0] === 'event' && /^tool_/.test(a[1])));
     const clickDownload = () => page.evaluate(() => [...document.querySelectorAll('.tool button')].find((b) => b.offsetParent && /^Download$/.test(b.textContent.trim())).click());
     await clickDownload(); await sleep(400);
