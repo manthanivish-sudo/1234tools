@@ -1246,6 +1246,8 @@
 
   /** Mount the tool a page asks for into its article. */
   AIImg.mount = function (id, root) {
+    /* i18n hook: a translated twin of this page (build-tools-hi.js) loads engine/i18n.js; English pages do not, so this is a no-op there */
+    if (window.MVR_I18N) window.MVR_I18N.watch(root);
     const tool = AIImg.tools[id];
     if (!tool) throw new Error('no such tool: ' + id);
     return tool.mount(root);

@@ -81,6 +81,7 @@ const GENERATORS = [
   ['stories', 'build-stories.js'], ['examples', 'build-examples.js'], ['tools', 'build-tools.js'], ['collections', 'build-collections.js'],
   ['guides', 'build-guides.js'], ['compare', 'build-compare.js'], ['embed', 'build-embed.js'],
   ['biz', 'build-biz.js'], ['ai-image', 'build-ai-image.js'], ['ai-video', 'build-ai-video.js'], ['showcase', 'build-showcase.js'],
+  ['tools-hi', 'build-tools-hi.js'],
   ['og', 'build/make-og.js', ['--cards']],
 ];
 const ONCE = [['learn', 'build-learn.js'], ['ai', 'build-ai.js']];

@@ -228,6 +228,8 @@ const READING = {
   'for/':     { freq: 'monthly', pri: '0.8' },
   /* the Hindi twins of the collections, written by build-collections.js */
   'hi/for/':  { freq: 'monthly', pri: '0.7' },
+  /* the Hindi twins of tool pages, written by build-tools-hi.js */
+  'hi/':      { freq: 'monthly', pri: '0.6' },
   /* people who made something with a tool, written by build-showcase.js */
   'showcase/': { freq: 'weekly', pri: '0.6' },
   /* "Embed our calculators", written by build-embed.js: one page for the

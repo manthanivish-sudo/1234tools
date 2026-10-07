@@ -1172,6 +1172,8 @@
   };
 
   function mountQR(spec, root, api) {
+    /* i18n hook: a translated twin of this page (build-tools-hi.js) loads engine/i18n.js; English pages do not, so this is a no-op there */
+    if (window.MVR_I18N) window.MVR_I18N.watch(root);
     /* The page used to pass (encodeQR, qrToSVG) as two functions. Accept that
        shape as well, so a cached copy of the old page still works. */
     const QR = (api && api.encode) ? api : window.QR;

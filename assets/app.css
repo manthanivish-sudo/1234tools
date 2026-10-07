@@ -6082,3 +6082,10 @@ details.jw-panel[open] > summary.jw-h { margin-bottom: 12px; }
   .vk-tool .aiimg-stagecol { position: static; }
 }
 /* WAVE-6 end */
+/* WAVE-W6HI start */
+/* The language link under a tool heading, both ways (build-tools-hi.js). */
+.tool-lang { margin: 4px 0 12px; font-size: .9rem; }
+/* Devanagari has no capitals and joins along a headline: no tracking, no uppercase, a little more line height. */
+[lang="hi"] .tool label, [lang="hi"] .tool .stat-key, [lang="hi"] .tool .io-label, [lang="hi"] .tool .result-label, [lang="hi"] .proof-pills li { letter-spacing: 0; text-transform: none; }
+[lang="hi"] .tool .tips li, [lang="hi"] .tool details p, [lang="hi"] .tool .privacy-line { line-height: 1.8; }
+/* WAVE-W6HI end */

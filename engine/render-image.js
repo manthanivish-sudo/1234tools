@@ -598,6 +598,8 @@
 
   /* ---------- main mount ---------- */
   window.MVRTool.mountImage = function (spec, root) {
+    /* i18n hook: a translated twin of this page (build-tools-hi.js) loads engine/i18n.js; English pages do not, so this is a no-op there */
+    if (window.MVR_I18N) window.MVR_I18N.watch(root);
     const io = root.querySelector('.tool-io');
     const CORE = window.MVRImage;
     const STORE_KEY = '1234tools-img-' + (spec.id || 'tool') + '-v1';
@@ -767,7 +769,7 @@
       link.addEventListener('click', async () => {
         const url = settingsLink();
         try { await navigator.clipboard.writeText(url); link.textContent = 'Link copied'; }
-        catch (e) { window.prompt('Copy this link:', url); }
+        catch (e) { window.prompt(window.MVR_I18N ? window.MVR_I18N.t('Copy this link:') : 'Copy this link:', url); }
         setTimeout(() => { link.textContent = 'Copy settings link'; }, 1600);
       });
       const reset = el('button', 'btn-ghost img-reset', 'Reset settings');

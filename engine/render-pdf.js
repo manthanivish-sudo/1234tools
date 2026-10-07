@@ -562,6 +562,8 @@
   /* ================================================================== */
 
   window.MVRTool.mountPDF = function (spec, root) {
+    /* i18n hook: a translated twin of this page (build-tools-hi.js) loads engine/i18n.js; English pages do not, so this is a no-op there */
+    if (window.MVR_I18N) window.MVR_I18N.watch(root);
     const io = root.querySelector('.tool-io');
     const core = window.MVRPdfCore;
     const needsFiles = spec.files === true || (spec.kind !== 'create' && spec.files !== false);
