@@ -727,6 +727,8 @@
 
   window.MVRTool = {
     mount(spec, root) {
+      /* i18n hook: a translated twin of this page (build-tools-hi.js) loads engine/i18n.js; English pages do not, so this is a no-op there */
+      if (window.MVR_I18N) window.MVR_I18N.watch(root);
       const form = root.querySelector('.tool-form');
       const out = root.querySelector('.tool-results');
       const slug = root.getAttribute('data-tool') || String(spec.title || 'tool').toLowerCase().replace(/[^a-z0-9]+/g, '-');

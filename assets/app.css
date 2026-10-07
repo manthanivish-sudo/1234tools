@@ -6141,3 +6141,12 @@ details.jw-panel[open] > summary.jw-h { margin-bottom: 12px; }
 .bc-more-opts > summary { cursor: pointer; color: var(--text-2); font-size: .9rem; padding: 4px 0; }
 .bc-more-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; padding-top: 8px; }
 /* WAVE-6D end */
+/* WAVE-W6HI start */
+/* The language link under a tool heading, both ways (build-tools-hi.js). */
+.tool-lang { margin: 4px 0 12px; font-size: .9rem; }
+/* Devanagari has no capitals and joins along a headline: no tracking, no uppercase, a little more line height. */
+[lang="hi"] .tool label, [lang="hi"] .tool .stat-key, [lang="hi"] .tool .io-label, [lang="hi"] .tool .result-label, [lang="hi"] .proof-pills li { letter-spacing: 0; text-transform: none; }
+[lang="hi"] .tool .tips li, [lang="hi"] .tool details p, [lang="hi"] .tool .privacy-line { line-height: 1.8; }
+/* Devanagari needs a little more size than Latin small caps to stay readable */
+[lang="hi"] .tool .field > label, [lang="hi"] .tool .result-label, [lang="hi"] .tool .stat-key { font-size: .9rem; }
+/* WAVE-W6HI end */

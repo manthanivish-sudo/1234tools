@@ -722,6 +722,8 @@
   /* ---------------- text in, code out ---------------- */
 
   function mountCode(spec, root) {
+    /* i18n hook: a translated twin of this page (build-tools-hi.js) loads engine/i18n.js; English pages do not, so this is a no-op there */
+    if (window.MVR_I18N) window.MVR_I18N.watch(root);
     const io = root.querySelector('.tool-io');
     spec.id = spec.id || root.getAttribute('data-tool') || 'tool';
     const store = toolStore(spec.id);
@@ -1292,6 +1294,8 @@
   /* ---------------- form in, markup out ---------------- */
 
   function mountGenerate(spec, root) {
+    /* i18n hook: a translated twin of this page (build-tools-hi.js) loads engine/i18n.js; English pages do not, so this is a no-op there */
+    if (window.MVR_I18N) window.MVR_I18N.watch(root);
     const io = root.querySelector('.tool-io');
     spec.id = spec.id || root.getAttribute('data-tool') || 'tool';
     const store = toolStore(spec.id);

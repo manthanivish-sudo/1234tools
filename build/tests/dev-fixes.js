@@ -1098,7 +1098,8 @@ function testQrSplit() {
 
   // the pages: QR mounts load render-qr.js and not render-dev.js; the developer mounts still load render-dev.js
   const qrPages = pagesCalling(/MVRTool\.mountQR(Scanner|Bulk)?\(/);
-  const qrNames = Object.keys(qrPages).sort();
+  /* hi/…: the Hindi twins (build-tools-hi.js) are translations of these pages, not more QR pages; hi-tools.js checks them */
+  const qrNames = Object.keys(qrPages).filter((f) => f.indexOf('hi/') !== 0).sort();
   check(qrNames.join() === 'qr/qr-bulk-generator/index.html,qr/qr-code-generator/index.html,qr/qr-code-scanner/index.html' &&
     qrNames.every((f) => loads(qrPages[f], 'render-qr.js') && !loads(qrPages[f], 'render-dev.js')),
     'the three QR pages, and only they, mount a QR renderer; each loads /engine/render-qr.js and not /engine/render-dev.js', qrNames.map((f) => f + ' qr=' + loads(qrPages[f], 'render-qr.js') + ' dev=' + loads(qrPages[f], 'render-dev.js')).join(' | '));
