@@ -23,7 +23,7 @@ const puppeteer = require('puppeteer-core');
 const fs = require('fs');
 const path = require('path');
 
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const CHROME = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'assets', 'img', 'og-image.png');
 const CHECK = process.argv.includes('--check');
