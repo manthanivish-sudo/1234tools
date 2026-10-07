@@ -256,7 +256,9 @@ function presetScript(p) {
 
 function head(p, t, src) {
   const url = SITE + urlOf(p);
-  let h = src.slice(0, src.indexOf('</head>'));
+  /* the tool page's own language alternates (build-tools-hi.js adds en/hi
+     pairs) name the tool, not this page: drop them, ours follow canonical */
+  let h = src.slice(0, src.indexOf('</head>')).replace(/<link rel="alternate" hreflang="[^"]*" href="[^"]*">\n?/g, '');
   const sub = (re, val) => {
     if (!re.test(h)) throw new Error('build-landing.js: ' + t.rel + ' has no ' + re);
     h = h.replace(re, () => val);
