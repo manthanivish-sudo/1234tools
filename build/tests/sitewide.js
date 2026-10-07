@@ -36,6 +36,8 @@
  *              Esc closes it and focus goes back; ? in a text box types
  *   recent     the recent row after a save, kept across a reload, Clear; the
  *              50 MB cap and eight per tool; the opt-out
+ *   mobile     390 px with touch: the menu fits and its items are 44 px, a tap
+ *              sends, the recent row and the sheet fit
  *   folder     Save to folder… (File System Access, stubbed in memory) writes
  *              every file of a batch with unique names
  *   and, through everything but the analytics consent case, not one request
@@ -670,6 +672,41 @@ CASES.folder = async function () {
   check(ok && /Saved 3 of 3 files/.test(r.note), 'note: Saved 3 of 3 files to Pictures', r.note);
   check(names.length === 3 && new Set(names).size === 3 && names.every((n) => /sitewide-[abc]/.test(n)), 'three files with distinct names written', names);
   check(names.every((n) => isImg(r.files[n].head) && r.files[n].size > 50), 'each written file is a real image (magic bytes)');
+  await ctx.close();
+};
+
+CASES.mobile = async function () {
+  const ctx = await browser.createBrowserContext();
+  const page = await newPage(ctx, { downloads: 'deny' });
+  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+  await page.goto(BASE + '/image/image-compressor/', { waitUntil: 'load' });
+  await upload(page, [FX['sitewide-a.png']]);
+  check(await waitFor(page, visibleSend, null, 30000), '390 px: Send to… beside the result');
+  const sendBox = await page.evaluate(() => { const b = [...document.querySelectorAll('.tool .ho-send')].find((x) => x.offsetParent); b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, h: r.height }; });
+  await page.touchscreen.tap(sendBox.x, sendBox.y);
+  await waitFor(page, () => !!document.querySelector('.ho-menu'), null, 20000);
+  const m = await page.evaluate(() => {
+    const menu = document.querySelector('.ho-menu').getBoundingClientRect();
+    return {
+      left: menu.left, right: menu.right, vw: document.documentElement.clientWidth,
+      scroll: document.documentElement.scrollWidth,
+      minItem: Math.min(...[...document.querySelectorAll('.ho-item')].map((i) => i.getBoundingClientRect().height))
+    };
+  });
+  check(m.left >= 0 && m.right <= m.vw && m.scroll <= m.vw, '390 px: the menu fits the screen, no sideways scroll', m);
+  check(m.minItem >= 44, '390 px: menu items are at least 44 px tall (' + Math.round(m.minItem) + ')');
+  const item = await page.evaluate(() => { const i = document.querySelector('.ho-item[data-path="/image/image-cropper/"]'); i.scrollIntoView({ block: 'center' }); const r = i.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+  await Promise.all([page.waitForNavigation({ waitUntil: 'load', timeout: 30000 }).catch(() => null), page.touchscreen.tap(item.x, item.y)]);
+  check(await waitFor(page, () => /Opened sitewide-a/.test((document.querySelector('.ho-note') || {}).textContent || ''), null, 20000), '390 px: a tap on Crop opens the cropper with the file');
+  const ov = await page.evaluate(() => ({ s: document.documentElement.scrollWidth, w: document.documentElement.clientWidth }));
+  check(ov.s <= ov.w, '390 px: the cropper with the hand-off note has no sideways scroll', ov);
+  await page.goto(BASE + '/image/image-compressor/', { waitUntil: 'load' });
+  await waitFor(page, () => !!document.querySelector('.ho-recent'), null, 15000);
+  const rr = await page.evaluate(() => { const r = document.querySelector('.ho-recent'); return r && { right: r.getBoundingClientRect().right, w: document.documentElement.clientWidth, s: document.documentElement.scrollWidth }; });
+  check(!rr || (rr.right <= rr.w && rr.s <= rr.w), '390 px: the recent outputs row fits', rr);
+  await page.evaluate(() => window.MVRShortcuts.open());
+  const sh = await page.evaluate(() => { const r = document.querySelector('dialog.kbd-sheet').getBoundingClientRect(); return { l: r.left, r: r.right, w: document.documentElement.clientWidth }; });
+  check(sh.l >= 0 && sh.r <= sh.w, '390 px: the shortcut sheet fits the screen', sh);
   await ctx.close();
 };
 

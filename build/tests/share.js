@@ -317,6 +317,20 @@ async function case1(browser) {
   check(card.type === 'image/png' && card.w === 1080 && card.h === 1080, 'result card: a 1080 x 1080 PNG', JSON.stringify(card));
   check(card.tile.slice(0, 3).every((v) => v > 235) && card.dark > 2000, 'the card has a white QR tile with a code in it (bottom right)', JSON.stringify(card));
   fs.writeFileSync(path.join(OUT, 'card-check.json'), JSON.stringify(card));
+  /* saving the card is the share bar's, not the tool's: engine/handoff.js and
+     analytics.js skip an <a download> marked data-ho-skip */
+  const cardSave = await page.evaluate(() => new Promise((res) => {
+    const orig = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function () {
+      HTMLAnchorElement.prototype.click = orig;
+      res({ name: this.download, skip: this.hasAttribute('data-ho-skip') });
+    };
+    const b = document.querySelector('[data-share] [data-ch="card"]');
+    if (!b) { HTMLAnchorElement.prototype.click = orig; res(null); return; }
+    b.click();
+    setTimeout(() => { HTMLAnchorElement.prototype.click = orig; res(null); }, 8000);
+  }));
+  check(cardSave && cardSave.skip && /\.png$/.test(cardSave.name), 'saving the card is marked data-ho-skip: no tool_done, no Send to…, not a recent output', JSON.stringify(cardSave));
 
   /* masking, with the toggle on */
   const masked = await page.evaluate((MASK, A) => {

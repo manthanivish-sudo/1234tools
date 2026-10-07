@@ -386,10 +386,19 @@
   if (document.documentElement.classList.contains('is-embed')) return;
   var me = document.currentScript && document.currentScript.src;
   var src = me ? me.replace(/assets\/app\.js(\?.*)?$/, 'engine/handoff.js') : '/engine/handoff.js';
-  var s = document.createElement('script');
-  s.src = src;
-  s.async = true;
-  document.head.appendChild(s);
+  function load() {
+    if (window.MVRHandoff || document.querySelector('script[src*="/engine/handoff.js"]')) return;
+    var s = document.createElement('script');
+    s.src = src;
+    s.async = true;
+    document.head.appendChild(s);
+  }
+  /* A file arriving from another tool is the page's whole purpose: at once.
+     Otherwise after load, when the browser is idle, so it never competes
+     with the page's own first paint. */
+  if (/[#&]handoff=/.test(location.hash)) { load(); return; }
+  function idle() { (window.requestIdleCallback || function (f) { setTimeout(f, 200); })(load, { timeout: 3000 }); }
+  if (document.readyState === 'complete') idle(); else addEventListener('load', idle);
 })();
 
 /* ---------- accessibility repairs every shell needs ----------
