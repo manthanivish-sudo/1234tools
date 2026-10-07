@@ -81,7 +81,7 @@ function manual(page, where, quote, why) {
 const api = { claim, manual, kit };
 /* the file and text tools, then the calculators and conversions; a file not
    written yet is skipped, so sections can be added one at a time */
-for (const f of ['pdf.js', 'image.js', 'developer.js', 'text.js', 'qr.js',
+for (const f of ['pdf.js', 'image.js', 'developer.js', 'developer-w6.js', 'text.js', 'qr.js',
   'examples.js', 'calc-privacy.js', 'calc-india.js', 'calc-business.js', 'calc-everyday.js', 'time.js', 'calc-maths.js', 'conversions.js', 'social.js', 'video.js', 'audio.js']) {
   if (fs.existsSync(path.join(__dirname, 'claims', f))) require('./claims/' + f)(api);
 }
