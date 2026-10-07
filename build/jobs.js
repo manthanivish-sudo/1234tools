@@ -138,6 +138,13 @@ const JOBS = {
   '/developer/regex-tester/': ['Check', 'Pattern + text → matches'],
   '/developer/cron-parser/': ['Check', 'Cron expression → next runs'],
   '/developer/markdown-preview/': ['Convert', 'Markdown → HTML'],
+  '/developer/unix-timestamp/': ['Convert', 'Timestamp → date, and back'],
+  '/developer/sql-formatter/': ['Clean up', 'SQL → formatted or minified'],
+  '/developer/code-minifier/': ['Clean up', 'JS, CSS, HTML → smaller'],
+  '/developer/code-beautifier/': ['Clean up', 'Minified code → readable'],
+  '/developer/yaml-json/': ['Convert', 'YAML → JSON, and back'],
+  '/developer/barcode-generator/': ['Make', 'Numbers → EAN, UPC, Code 128'],
+  '/developer/color-contrast-checker/': ['Check', 'Two colours → WCAG pass or fail'],
 
   /* qr */
   '/qr/qr-code-generator/': ['Make', 'Link, WiFi, card → QR code'],
@@ -375,6 +382,13 @@ const JOBS = {
    read badly: a sentence that stopped mid-list, or a fragment ending in an
    ellipsis. ≤ 110 characters, one or two plain sentences. */
 const DESCS = {
+  '/developer/unix-timestamp/': 'Turn epoch timestamps into dates and dates into timestamps, in any time zone, a whole column at once.',
+  '/developer/sql-formatter/': 'Lay out or minify SQL for PostgreSQL, MySQL, SQL Server or SQLite, with strings and comments kept exact.',
+  '/developer/code-minifier/': 'Shrink JavaScript, CSS and HTML by removing comments and spare space, with names and logic untouched.',
+  '/developer/code-beautifier/': 'Turn minified JavaScript, CSS or HTML back into indented, readable code without changing what it does.',
+  '/developer/yaml-json/': 'Convert YAML to JSON and back, with anchors and merge keys expanded and errors given by line.',
+  '/developer/barcode-generator/': 'EAN-13, UPC-A, ITF-14, Code 128 and Code 39 barcodes in bulk, as SVG, PNG or a PDF sheet of labels.',
+  '/developer/color-contrast-checker/': 'Check text and background colours against WCAG AA and AAA, and get the nearest colours that pass.',
   '/qr/qr-code-generator/': 'QR codes for links, WiFi, contact cards and UPI, with custom colours and a logo. Download as SVG or PNG.',
   '/qr/qr-code-scanner/': 'Scan a QR code with your camera or from a picture, and see where a link really goes before you open it.',
   '/qr/qr-bulk-generator/': 'Turn a list or a CSV into hundreds of QR codes at once, all sharing one look, as PNG or SVG.',
