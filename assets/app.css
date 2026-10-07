@@ -6088,4 +6088,6 @@ details.jw-panel[open] > summary.jw-h { margin-bottom: 12px; }
 /* Devanagari has no capitals and joins along a headline: no tracking, no uppercase, a little more line height. */
 [lang="hi"] .tool label, [lang="hi"] .tool .stat-key, [lang="hi"] .tool .io-label, [lang="hi"] .tool .result-label, [lang="hi"] .proof-pills li { letter-spacing: 0; text-transform: none; }
 [lang="hi"] .tool .tips li, [lang="hi"] .tool details p, [lang="hi"] .tool .privacy-line { line-height: 1.8; }
+/* Devanagari needs a little more size than Latin small caps to stay readable */
+[lang="hi"] .tool .field > label, [lang="hi"] .tool .result-label, [lang="hi"] .tool .stat-key { font-size: .9rem; }
 /* WAVE-W6HI end */

@@ -1071,7 +1071,12 @@ tools['emi-calculator'] = {
     ['^([\\d,]+) years?$', '$1 साल'],
     ['^([\\d,]+) years?, ([\\d,]+) months?$', '$1 साल, $2 महीने'],
     ['^([\\d,]+) months?$', '$1 महीने'],
-    ['^(\\S+) % of the loan$', 'लोन का $1 %']
+    ['^(\\S+) % of the loan$', 'लोन का $1 %'],
+    /* the charts' spoken summaries */
+    ['^(.+)\\. (\\d+) to (\\d+)\\. At (\\d+): (.+)$', '%1। $2 से $3। $4 पर: %5'],
+    ['^Principal (\\S+), Interest (\\S+)$', 'मूलधन $1, ब्याज $2'],
+    ['^Balance (\\S+)$', 'बकाया $1'],
+    ['^Total repayment\\. Principal (.+); Interest (.+)$', 'कुल भुगतान। मूलधन $1; ब्याज $2']
   ]
 };
 

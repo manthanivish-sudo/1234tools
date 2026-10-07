@@ -265,7 +265,7 @@ const TOOLS = [
   { slug: 'image-upscaler', en: '/ai-image/image-upscaler/', slow: true, async drive(page, h, name) {
     await h.upload([tmpFile('small.png', makePng(48, 32))]);
     await sleep(1500);
-    await page.click('#aiimg-up-run');
+    await page.evaluate(() => document.querySelector('#aiimg-up-run').click()); /* not page.click: the consent bar can sit over it */
     /* the result is drawn, then saved from the Export tab */
     /* the download exists before the run ends and then saves nothing: press it until it gives a file */
     let r = null;

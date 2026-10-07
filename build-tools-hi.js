@@ -175,7 +175,7 @@ function body(t, en) {
     '  <h1>' + en.icon + esc(t.h1) + '</h1>\n' +
     '  <p class="lede">' + esc(t.lede) + '</p>\n' +
     (t.pills && t.pills.length ? '  <ul class="proof-pills" aria-label="' + esc(PAGE.pillsLabel) + '">' + t.pills.map((p) => '<li>' + esc(p) + '</li>').join('') + '</ul>\n' : '') +
-    '  <p class="tool-lang"><a href="' + t.path + '" hreflang="en" lang="en">' + esc(PAGE.toEnglish) + '</a></p>\n' +
+    '  <p class="tool-lang" data-i18n="off"><a href="' + t.path + '" hreflang="en" lang="en">' + esc(PAGE.toEnglish) + '</a></p>\n' +
     '  ' + en.toolMarkup + '\n' +
     (en.shareRow ? en.shareRow + '\n' : '') +
     steps +

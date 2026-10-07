@@ -32,9 +32,10 @@
  * anything under [data-i18n="off"]. A translated word in a JSON document
  * would be a corrupted document.
  *
- * With window.MVR_I18N_COLLECT set before this file runs (the tests and the
- * string harvester do that), every string seen that has Latin letters and
- * no translation is kept, and MVR_I18N.misses() returns them.
+ * A string with no translation (a control added to the English tool since
+ * the map was written) stays in English and is listed: MVR_I18N.misses()
+ * returns every English string seen without one (the first 500, or all of
+ * them with window.MVR_I18N_COLLECT set, as the tests and the harvester do).
  */
 (function () {
   'use strict';
@@ -72,7 +73,8 @@
     if (K.has(key)) return raw;
     const out = lookup(key);
     if (out === null) {
-      if (COLLECT && /[A-Za-z]{2,}/.test(key)) missed.add(key);
+      /* English with no translation stays English, and is listed: MVR_I18N.misses() */
+      if (/[A-Za-z]{2,}/.test(key) && !/[\u0900-\u097f]/.test(key) && (COLLECT || missed.size < 500)) missed.add(key);
       return raw;
     }
     /* keep the spacing around the words, which the layout may rely on */
