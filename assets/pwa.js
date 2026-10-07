@@ -250,4 +250,37 @@
     // that never fires one.
     setTimeout(function () { if (!used) markUsed(); }, 45000);
   });
+
+  /* ---------- files opened with the installed tool ----------
+     An installed tool whose manifest has file_handlers (build-pwa.js) can be
+     chosen in the desktop's "Open with". The browser hands the files over
+     through launchQueue; engine/handoff.js puts them into the tool's own file
+     input, the same way a "Send to…" hand-off arrives. The consumer is set at
+     once: the launch is queued until it is, and is not repeated. */
+  function handoff() {
+    return new Promise(function (resolve, reject) {
+      if (window.MVRHandoff && window.MVRHandoff.deliver) { resolve(window.MVRHandoff); return; }
+      var tries = 0;
+      if (!document.querySelector('script[src*="/engine/handoff.js"]')) {
+        var s = document.createElement('script');
+        s.src = '/engine/handoff.js';
+        s.async = true;
+        document.head.appendChild(s);
+      }
+      (function wait() {
+        if (window.MVRHandoff && window.MVRHandoff.deliver) resolve(window.MVRHandoff);
+        else if (++tries > 200) reject(new Error('handoff.js did not load'));
+        else setTimeout(wait, 50);
+      })();
+    });
+  }
+  if (window.launchQueue && typeof window.launchQueue.setConsumer === 'function') {
+    window.launchQueue.setConsumer(function (params) {
+      var handles = params && params.files ? Array.prototype.slice.call(params.files) : [];
+      if (!handles.length) return;
+      Promise.all(handles.map(function (h) { return h.getFile(); })).then(function (files) {
+        return handoff().then(function (H) { return H.deliver({ from: 'your files', files: files }); });
+      }).catch(function () { /* the tool still opens, empty */ });
+    });
+  }
 })();

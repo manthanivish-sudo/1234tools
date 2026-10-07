@@ -552,6 +552,8 @@
         var href = URL.createObjectURL(blob);
         var a = el('a');
         a.href = href; a.download = name;
+        /* the share card is not the tool's output: no tool_done, no Send to, not a recent output */
+        a.setAttribute('data-ho-skip', '');
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(function () { URL.revokeObjectURL(href); }, 2000);
         say('Card saved');

@@ -171,9 +171,75 @@
     });
   }
 
+  /* ---------- tool_done and tool_error ----------
+     Whether a tool did its job, per tool, and nothing else: the page's own
+     path as the tool, the kind of output as a file extension or the shell's
+     result kind, and how it left (saved, sent to another tool, or shown on
+     the page). Never a file name, a figure, a size or an error's wording —
+     those can carry what somebody typed. Only reached through start(), so
+     with consent refused or not yet given nothing here is even listening.
+
+     A run is one input: one tool_done at most, armed again when the visitor
+     gives the tool a new file. Tools with no file input (calculators,
+     converters, text tools) count once per page view, on the first result
+     the visitor changed, after it has settled for a second and a half.
+     ANALYTICS-SETUP.md says how to read completion rate from these. */
+  var KINDS = { jpeg: 'jpg', htm: 'html', '': 'file' };
+  function outputKind(name) {
+    var m = /\.([a-z0-9]{1,8})$/i.exec(name || '');
+    var e = m ? m[1].toLowerCase() : '';
+    return KINDS.hasOwnProperty(e) ? KINDS[e] : e;
+  }
+  function toolEvents() {
+    if (!GA4) return;
+    var tool = document.querySelector('article.tool, .tool[data-tool]');
+    if (!tool) return;
+    var slug = location.pathname.replace(/index\.html$/, '').replace(/^\/+|\/+$/g, '');
+    var done = false, failed = false, settle = 0;
+    function send(name, params) { if (typeof window.gtag === 'function') window.gtag('event', name, params); }
+    function finish(kind, how) {
+      clearTimeout(settle);
+      if (done) return;
+      done = true;
+      send('tool_done', { tool: slug, output_kind: kind, method: how });
+    }
+    function rearm() { done = false; failed = false; }
+    tool.addEventListener('change', function (e) { if (e.target && e.target.type === 'file') rearm(); }, true);
+    tool.addEventListener('drop', rearm, true);
+    /* Bubble phase on window: after engine/handoff.js has decided, in the
+       capture phase, whether this save is really a hand-off to another tool. */
+    window.addEventListener('click', function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('a[download]') : null;
+      if (!a || a.hasAttribute('data-ho-skip')) return;
+      finish(outputKind(a.getAttribute('download')), e.defaultPrevented ? 'send_to' : 'download');
+    });
+    document.addEventListener('mvr:result', function (e) {
+      var d = e.detail || {};
+      if (!d.changed || done) return;
+      clearTimeout(settle);
+      settle = setTimeout(function () { finish(String(d.kind || 'result').slice(0, 20), 'result'); }, 1500);
+    });
+    function errorShown(n) {
+      return n && n.nodeType === 1 && n.classList.contains('is-error') && (n.textContent || '').trim();
+    }
+    new MutationObserver(function (records) {
+      if (failed) return;
+      for (var i = 0; i < records.length; i++) {
+        var r = records[i];
+        var hit = errorShown(r.target) || Array.prototype.some.call(r.addedNodes || [], errorShown);
+        if (hit) {
+          failed = true;
+          send('tool_error', { tool: slug, stage: done ? 'after_result' : 'before_result' });
+          return;
+        }
+      }
+    }).observe(tool, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class'] });
+  }
+
   function start() {
     loadGa4();
     loadClarity();
+    toolEvents();
   }
 
   /* ---------- banner ---------- */

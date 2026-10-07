@@ -314,6 +314,43 @@ will make a correct install look broken):
 
 ---
 
+## Tool completion: `tool_done` and `tool_error`
+
+`assets/analytics.js` sends two custom events on tool pages, only after the visitor
+has allowed analytics (with consent refused or not yet given, nothing listens at all).
+
+| Event | Parameters | Sent when |
+|---|---|---|
+| `tool_done` | `tool` (page path, e.g. `image/image-compressor`), `output_kind` (file extension such as `webp`, `pdf`, `zip`, or the shell's result kind `calc`, `code`, `gen`), `method` (`download`, `send_to`, `result`) | A file tool's output is saved or sent to another tool; a tool with no file input shows a result the visitor changed, once it has settled for 1.5 s |
+| `tool_error` | `tool`, `stage` (`before_result` or `after_result`) | The tool shows an error message |
+
+At most one `tool_done` and one `tool_error` per **run**. A run starts when the page
+opens and again each time the visitor gives the tool a new file, so ten images
+compressed one after another are ten runs; a calculator is one run per page view.
+No file name, size, figure or error text is ever sent: those can carry what someone typed.
+
+### One-time setup (2 minutes)
+
+Admin → **Custom definitions** → **Create custom dimension**, scope **Event**, three
+times: `tool`, `output_kind`, `method` (and a fourth, `stage`, if you want the error
+split). Until they exist the parameters are collected but not reportable; they are
+not back-filled, so do this first.
+
+### Completion rate per tool
+
+Explore → **Free form**. Rows: `Page path` (or the `tool` dimension). Values: **Event
+count**, filtered by Event name. Make three columns with a segment or filter each:
+
+1. `page_view` — visits to the tool
+2. `tool_done` — runs that produced a result
+3. `tool_error` — runs that hit an error
+
+Completion rate = `tool_done` ÷ `page_view`; error rate = `tool_error` ÷ `page_view`.
+For a file tool, `tool_done` can exceed `page_view` (several files per visit); use
+**Active users** instead of event count for "share of visitors who got a result".
+Compare `method` = `send_to` against `download` to see how often a result goes on to
+another tool. Expect small numbers: only consenting visitors are counted.
+
 ## Things that will confuse you later
 
 **Your own traffic dominates early numbers.** With single-digit daily visitors your

@@ -375,3 +375,129 @@
   host.appendChild(grid);
   host.hidden = false;
 })();
+
+/* ---------- tool chaining, recent outputs, save to folder ----------
+   engine/handoff.js, fetched only on a tool page and only after the tool has
+   mounted: nothing in it is needed before the first interaction. */
+(function () {
+  'use strict';
+  if (window.MVRHandoff || document.querySelector('script[src*="/engine/handoff.js"]')) return;
+  if (!document.querySelector('article.tool, .tool[data-tool]')) return;
+  if (document.documentElement.classList.contains('is-embed')) return;
+  var me = document.currentScript && document.currentScript.src;
+  var src = me ? me.replace(/assets\/app\.js(\?.*)?$/, 'engine/handoff.js') : '/engine/handoff.js';
+  var s = document.createElement('script');
+  s.src = src;
+  s.async = true;
+  document.head.appendChild(s);
+})();
+
+/* ---------- keyboard: the shortcut sheet (?) ----------
+   One list of the shortcuts the page in front of you actually has: the
+   site-wide ones, then the ones the tool's shell binds (read from which
+   shell is on the page, so a calculator is not told about Ctrl+Enter). */
+(function () {
+  'use strict';
+  var dlg = null, from = null;
+
+  function has(shell) { return !!document.querySelector('script[src*="/engine/' + shell + '.js"]'); }
+  function rows() {
+    var groups = [['On every page', [
+      ['/', 'Search the tools'],
+      ['?', 'Show this list'],
+      ['Esc', 'Close a menu, the category list or this list']
+    ]]];
+    if (document.querySelector('article.tool, .tool[data-tool]')) {
+      groups.push(['On this tool', [
+        ['Tab', 'Move between controls (Shift+Tab goes back). When a file result arrives, focus moves to its Download button'],
+        ['↑ ↓', 'Move through a Send to… menu; Enter opens the tool, Esc closes the menu']
+      ]]);
+    }
+    if (has('render-dev')) groups.push(['Developer and text tools', [
+      ['Ctrl+Enter', 'Run now'],
+      ['Ctrl+Shift+C', 'Copy the output'],
+      ['Ctrl+S', 'Download the output'],
+      ['Esc', 'Close the open panel']
+    ]]);
+    if (has('render-image')) groups.push(['Image tools', [
+      ['Ctrl+V', 'Paste an image from the clipboard'],
+      ['Arrow keys', 'Move a selection box (Shift: 10 px steps)'],
+      ['Ctrl+arrow keys', 'Resize a selection box']
+    ]]);
+    if (has('render-pdf')) groups.push(['PDF page grids', [
+      ['Arrow keys', 'Move between pages'],
+      ['Space', 'Choose a page; Shift extends the choice'],
+      ['Ctrl+A', 'Choose every page'],
+      ['R', 'Turn a page'],
+      ['Alt+arrow keys', 'Move a page (organiser)'],
+      ['Delete', 'Remove or restore a page (organiser)']
+    ]]);
+    if (has('render-qr') && /qr-code-scanner/.test(location.pathname)) groups.push(['QR scanner', [
+      ['Ctrl+V', 'Scan a pasted image']
+    ]]);
+    return groups;
+  }
+
+  function build() {
+    dlg = document.createElement('dialog');
+    dlg.className = 'kbd-sheet';
+    dlg.setAttribute('aria-labelledby', 'kbd-sheet-title');
+    var h = document.createElement('h2');
+    h.id = 'kbd-sheet-title';
+    h.textContent = 'Keyboard shortcuts';
+    dlg.appendChild(h);
+    rows().forEach(function (g) {
+      var h3 = document.createElement('h3');
+      h3.textContent = g[0];
+      dlg.appendChild(h3);
+      var dl = document.createElement('dl');
+      g[1].forEach(function (r) {
+        var dt = document.createElement('dt');
+        r[0].split('+').forEach(function (part, i) {
+          if (i) dt.appendChild(document.createTextNode('+'));
+          var k = document.createElement('kbd');
+          k.textContent = part;
+          dt.appendChild(k);
+        });
+        var dd = document.createElement('dd');
+        dd.textContent = r[1];
+        dl.appendChild(dt);
+        dl.appendChild(dd);
+      });
+      dlg.appendChild(dl);
+    });
+    var p = document.createElement('p');
+    p.className = 'kbd-mac';
+    p.textContent = 'On a Mac, ⌘ works wherever Ctrl is shown.';
+    dlg.appendChild(p);
+    var close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'btn-ghost kbd-close';
+    close.textContent = 'Close';
+    close.addEventListener('click', function () { dlg.close(); });
+    dlg.appendChild(close);
+    dlg.addEventListener('close', function () {
+      if (from && document.contains(from) && from.focus) from.focus();
+    });
+    dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
+    document.body.appendChild(dlg);
+  }
+
+  function open() {
+    if (!dlg) build();
+    if (dlg.open) return;
+    from = document.activeElement;
+    dlg.showModal();
+    dlg.querySelector('.kbd-close').focus();
+  }
+  window.MVRShortcuts = { open: open };
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== '?' || e.ctrlKey || e.metaKey || e.altKey) return;
+    var a = document.activeElement;
+    if (a && (/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) || a.isContentEditable)) return;
+    if (typeof HTMLDialogElement !== 'function') return;
+    e.preventDefault();
+    open();
+  });
+})();
