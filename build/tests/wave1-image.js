@@ -757,6 +757,22 @@ const files = (p) => p.$$eval('.tool-io .image-cap', (l) => l.map((c) => c.textC
       check(st.live && st.box, '15  one picture: the before/after view is the main view (img-live)', JSON.stringify(st));
       check(/Original/.test(st.tags[0]) && /JPEG · 1600×1200 · 321\.4 KB/.test(st.tags[0]) && /Result/.test(st.tags[1]) && /JPEG · 1600×1200 · [\d.]+ KB/.test(st.tags[1]), '15  each side is labelled with its format, size in pixels and bytes: ' + st.tags.join(' | '), st.tags.join(' | '));
       check(st.beside, '15  at 1280 px the view sits beside the settings, not below them');
+      /* every picture in the view has really loaded: the original and the result, in both modes */
+      const decoded = (q) => q.evaluate(async () => {
+        const imgs = [...document.querySelectorAll('.img-compare img')];
+        await Promise.all(imgs.map((i) => i.decode().catch(() => null)));
+        return imgs.map((i) => i.alt.split(':')[0] + ' ' + (i.naturalWidth ? i.naturalWidth + 'px from ' + i.src.slice(0, 5) : 'NOT LOADED (' + i.getAttribute('src') + ')'));
+      });
+      const okAll = (l) => l.length === 4 && l.every((x) => / \d+px from blob:/.test(x)) && l.filter((x) => /^Before/.test(x)).length === 2;
+      let dl = await decoded(p);
+      check(okAll(dl) && dl.some((x) => /^Before 1600px/.test(x)), '15  slider: the original (1600 px) and the result have both loaded: ' + dl.join(', '), dl.join(' | '));
+      await p.evaluate(() => [...document.querySelectorAll('.img-compare .img-seg-btn')].find((x) => /Side by side/.test(x.textContent)).click());
+      await sleep(200);
+      dl = await decoded(p);
+      const shown = await p.evaluate(() => [...document.querySelectorAll('.img-compare-side img')].map((i) => Math.round(i.getBoundingClientRect().width)));
+      check(okAll(dl) && shown.every((w) => w > 100), '15  side by side: both pictures have loaded and are shown (' + shown.join(' and ') + ' px wide)', dl.join(' | ') + ' / ' + shown);
+      await p.evaluate(() => [...document.querySelectorAll('.img-compare .img-seg-btn')].find((x) => /^Slider$/.test(x.textContent)).click());
+      await sleep(100);
       /* the mouse wheel zooms about the pointer */
       const vr = await p.$eval('.img-compare-view', (v) => { const r = v.getBoundingClientRect(); return { x: r.left + r.width * 0.7, y: r.top + r.height * 0.4 }; });
       await p.mouse.move(vr.x, vr.y);
@@ -784,6 +800,8 @@ const files = (p) => p.$$eval('.tool-io .image-cap', (l) => l.map((c) => c.textC
       check(z3.same && z3.src !== src0 && z3.src.startsWith('blob:'), '15  a settings change shows the new result in the same view, live', JSON.stringify(z3));
       check(z3.pct === z2.pct && Math.abs(z3.l - z2.l) <= 2 && Math.abs(z3.t - z2.t) <= 2 && z3.split === split && !z3.busy, '15  …at the same zoom (' + z3.pct + '), pan (' + z3.l + ',' + z3.t + ') and divider (' + z3.split + '%)', JSON.stringify([z2, z3, split]));
       const r40 = await resultBytes(p);
+      const dl2 = await decoded(p);
+      check(okAll(dl2), '15  after the change the original is still loaded beside the new result: ' + dl2.join(', '), dl2.join(' | '));
       check(r40.length === 1 && z3.tag.indexOf((r40[0].length / 1024).toFixed(1) + ' KB') >= 0, '15  the result label follows the new file (' + z3.tag + ')', z3.tag + ' / ' + (r40[0] && r40[0].length));
       /* keys: + zooms in, 0 fits, 1 is 100% */
       await p.focus('.img-compare-view');
@@ -910,7 +928,8 @@ const files = (p) => p.$$eval('.tool-io .image-cap', (l) => l.map((c) => c.textC
         await upload(r, [sample('street.jpg')]);
         const r1 = await r.evaluate(() => { window.__box = document.querySelector('.img-compare'); return { box: !!window.__box, cards: document.querySelectorAll('.image-stage .image-card:not(.img-compare-card) img.image-preview').length }; });
         await change(r, 'quality', 55);
-        const r2 = await r.evaluate(() => ({ same: document.querySelector('.img-compare') === window.__box, cards: document.querySelectorAll('.image-stage .image-card:not(.img-compare-card) img.image-preview').length }));
+        const r2 = await r.evaluate(async () => { const imgs = [...document.querySelectorAll('.img-compare img')]; await Promise.all(imgs.map((i) => i.decode().catch(() => null))); return { same: document.querySelector('.img-compare') === window.__box, cards: document.querySelectorAll('.image-stage .image-card:not(.img-compare-card) img.image-preview').length, loaded: imgs.every((i) => i.naturalWidth > 0) }; });
+        check(r2.loaded, '16  ' + url + ': the original and the result in the view have both loaded', JSON.stringify(r2));
         check(r1.box && r1.cards === 1 && r2.same && r2.cards === 1, '16  ' + url + ' shows the before/after view above its result and keeps it through a change', JSON.stringify([r1, r2]));
         errs.push(...r.__errors); await r.close();
       }
