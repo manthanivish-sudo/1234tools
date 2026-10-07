@@ -585,4 +585,6 @@ function ccRender(res, ctx) {
   group('Harmony', S.harmony.map(function (x) { return { hex: x, label: '' }; }), 'Hues turned round the HSL colour wheel from this colour.');
   group('How it looks with colour blindness', [{ hex: S.hex, label: 'Normal' }].concat(S.sim), 'Machado, Oliveira and Fernandes (2009), full severity. An approximation.');
 }
+/* the same colour maths for the Colour Contrast Checker page, which loads this file */
+window.MVR_COLOUR = { parse: ccParse, ratio: ccRatio, lum: ccLum, fix: ccFix, hex: ccHex, simulate: ccSimulate, cvdNames: CC_CVD.map((x) => x[0]).concat(['Achromatopsia (no colour)']) };
 })();
