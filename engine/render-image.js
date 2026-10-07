@@ -1934,7 +1934,7 @@
       const delta = blob ? s.file.size - blob.size : 0;
       const srcType = s.bytes ? typeOfBytes(s.bytes, s.file.type) : (s.file.type || 'image');
       const upd = {
-        afterUrl, width: W, height: H, beforeWidth: sameShape ? W : ow, sameShape,
+        beforeUrl: s.url, afterUrl, width: W, height: H, beforeWidth: sameShape ? W : ow, sameShape,
         afterLabel: blob ? `${w}×${h}, ${fmtBytes(blob.size)}` : 'being made',
         labels: {
           before: ['Original', `${fmtName(srcType)} · ${ow}×${oh} · ${fmtBytes(s.file.size)}`],
