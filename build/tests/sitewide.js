@@ -682,7 +682,7 @@ CASES.mobile = async function () {
   await page.goto(BASE + '/image/image-compressor/', { waitUntil: 'load' });
   await upload(page, [FX['sitewide-a.png']]);
   check(await waitFor(page, visibleSend, null, 30000), '390 px: Send to… beside the result');
-  const sendBox = await page.evaluate(() => { const b = [...document.querySelectorAll('.tool .ho-send')].find((x) => x.offsetParent); b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, h: r.height }; });
+  const sendBox = await page.evaluate(() => { const b = [...document.querySelectorAll('.tool .ho-send')].find((x) => x.offsetParent); b.scrollIntoView({ block: 'center', behavior: 'instant' }); const r = b.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, h: r.height }; });
   await page.touchscreen.tap(sendBox.x, sendBox.y);
   await waitFor(page, () => !!document.querySelector('.ho-menu'), null, 20000);
   const m = await page.evaluate(() => {
@@ -695,7 +695,7 @@ CASES.mobile = async function () {
   });
   check(m.left >= 0 && m.right <= m.vw && m.scroll <= m.vw, '390 px: the menu fits the screen, no sideways scroll', m);
   check(m.minItem >= 44, '390 px: menu items are at least 44 px tall (' + Math.round(m.minItem) + ')');
-  const item = await page.evaluate(() => { const i = document.querySelector('.ho-item[data-path="/image/image-cropper/"]'); i.scrollIntoView({ block: 'center' }); const r = i.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+  const item = await page.evaluate(() => { const i = document.querySelector('.ho-item[data-path="/image/image-cropper/"]'); i.scrollIntoView({ block: 'center', behavior: 'instant' }); const r = i.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
   await Promise.all([page.waitForNavigation({ waitUntil: 'load', timeout: 30000 }).catch(() => null), page.touchscreen.tap(item.x, item.y)]);
   check(await waitFor(page, () => /Opened sitewide-a/.test((document.querySelector('.ho-note') || {}).textContent || ''), null, 20000), '390 px: a tap on Crop opens the cropper with the file');
   const ov = await page.evaluate(() => ({ s: document.documentElement.scrollWidth, w: document.documentElement.clientWidth }));
