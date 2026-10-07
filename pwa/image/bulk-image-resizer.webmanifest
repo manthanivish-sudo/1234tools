@@ -2,7 +2,7 @@
   "id": "/image/bulk-image-resizer.html",
   "name": "Bulk Image Resizer — 1234Tools",
   "short_name": "Bulk Image Resizer",
-  "description": "Resize dozens of images at once to a fixed width, height or percentage, and download them as a ZIP.",
+  "description": "Resize dozens of images at once by width, height, longest side, percentage or exact size, rename them, and download a ZIP or save to a folder.",
   "start_url": "/image/bulk-image-resizer/?src=pwa",
   "scope": "/image/bulk-image-resizer/",
   "display": "standalone",

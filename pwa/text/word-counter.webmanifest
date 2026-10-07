@@ -2,7 +2,7 @@
   "id": "/text/word-counter.html",
   "name": "Word & Character Counter — 1234Tools",
   "short_name": "Word & Character",
-  "description": "Count words, characters, sentences and paragraphs, with reading time and keyword density.",
+  "description": "Count words, characters, sentences and paragraphs, with a word goal, bars for X, SMS, SEO and social limits, Chinese and Japanese counting, reading time and phrase density.",
   "start_url": "/text/word-counter/?src=pwa",
   "scope": "/text/word-counter/",
   "display": "standalone",

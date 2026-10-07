@@ -2,7 +2,7 @@
   "id": "/developer/meta-tag-generator.html",
   "name": "Meta Tag & Open Graph Generator — 1234Tools",
   "short_name": "Meta Tag & Open",
-  "description": "Generate SEO meta tags, Open Graph and Twitter Card markup, with live length warnings.",
+  "description": "Generate SEO meta tags, Open Graph and Twitter Card markup with live Google, Facebook and X previews, length warnings, robots, twitter:site, image alt text and an image size check from a file you drop.",
   "start_url": "/developer/meta-tag-generator/?src=pwa",
   "scope": "/developer/meta-tag-generator/",
   "display": "standalone",

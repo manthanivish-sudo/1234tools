@@ -227,38 +227,135 @@ window.DEV_TOOLS["slug-generator"] = {
 "category": "developer",
 "icon": "🔤",
 "kind": "code",
-"description": "Turn titles into clean, SEO-friendly URL slugs. Handles accents and multiple lines at once.",
-"keywords": ["slug generator","url slug","seo friendly url","permalink generator","slugify"],
+"description": "Turn titles into clean, SEO-friendly URL slugs. Transliterates accented Latin letters and Hindi (Devanagari), trims to a length you set, and does many lines at once.",
+"keywords": ["slug generator","url slug","seo friendly url","permalink generator","slugify","hindi slug","transliterate url"],
 "inputLabel": "Titles (one per line)",
 "outputLabel": "Slugs",
 "placeholder": "How to Convert Miles to Kilometres",
-"sample": "How to Convert Miles to Kilometres\nSchool Management System — Features & Pricing\nCafé Résumé: 50% Faster!",
-"options": [{"key":"sep","label":"Separator","type":"select","default":"-","options":[{"value":"-","label":"Hyphen (recommended)"},{"value":"_","label":"Underscore"}]},{"key":"case","label":"Case","type":"select","default":"lower","options":[{"value":"lower","label":"lowercase"},{"value":"keep","label":"Keep original"}]},{"key":"stop","label":"Stop words","type":"select","default":"keep","options":[{"value":"keep","label":"Keep (a, the, of…)"},{"value":"strip","label":"Remove"}]}],
-"transform": (text, { sep, case: cs, stop }) => {
-      if (!text.trim()) return { output: '', note: 'Enter one or more titles above.' };
+"sample": "How to Convert Miles to Kilometres\nSchool Management System — Features & Pricing\nCafé Résumé: 50% Faster!\nŁódź & Straße: Große Æsthetik\nनमस्ते भारत: हिंदी समाचार",
+"options": [{"key":"sep","label":"Separator","type":"select","default":"-","options":[{"value":"-","label":"Hyphen (recommended)"},{"value":"_","label":"Underscore"}]},{"key":"case","label":"Case","type":"select","default":"lower","options":[{"value":"lower","label":"lowercase"},{"value":"keep","label":"Keep original"}]},{"key":"stop","label":"Stop words","type":"select","default":"keep","options":[{"value":"keep","label":"Keep (a, the, of…)"},{"value":"strip","label":"Remove"}]},{"key":"max","label":"Maximum length (0 = none)","type":"number","default":0,"min":0,"max":200},{"key":"german","label":"German style: ä ö ü as ae oe ue","type":"check","default":"no"}],
+"transform": (text, o) => {
+      if (!String(text).trim()) return { output: '', note: 'Enter one or more titles above.' };
+      const sep = o.sep === '_' ? '_' : '-';
       const STOP = new Set(['a','an','the','and','or','but','of','to','in','on','at','for','with','is','are','be']);
-      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-      const slugs = lines.map(line => {
-        let s = line.normalize('NFD').replace(/[\u0300-\u036f]/g, '');   // strip accents
-        s = s.replace(/[''`]/g, '').replace(/&/g, ' and ');
+      /* Latin letters that are letters of their own, not accented ones, so
+         NFD cannot take them apart: written the way their languages spell
+         them in plain ASCII */
+      const LATIN = { 'ß': 'ss', 'ẞ': 'SS', 'æ': 'ae', 'Æ': 'AE', 'œ': 'oe', 'Œ': 'OE', 'ø': 'o', 'Ø': 'O', 'ł': 'l', 'Ł': 'L',
+        'đ': 'd', 'Đ': 'D', 'ð': 'd', 'Ð': 'D', 'þ': 'th', 'Þ': 'Th', 'ı': 'i', 'ħ': 'h', 'Ħ': 'H', 'ŧ': 't', 'Ŧ': 'T',
+        'ŀ': 'l', 'Ŀ': 'L', 'ĸ': 'k', 'ŋ': 'ng', 'Ŋ': 'NG', 'ſ': 's', 'ĳ': 'ij', 'Ĳ': 'IJ' };
+      const GERMAN = { 'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'Ä': 'Ae', 'Ö': 'Oe', 'Ü': 'Ue' };
+      /* Devanagari (Hindi, Marathi, Nepali) to plain Latin in the common
+         Hunterian style without diacritics: each consonant carries the
+         inherent a unless a vowel sign or the virama follows; a word-final
+         inherent a is dropped, as Hindi speech drops it (भारत → bharat). */
+      const CONS = { 'क': 'k', 'ख': 'kh', 'ग': 'g', 'घ': 'gh', 'ङ': 'n', 'च': 'ch', 'छ': 'chh', 'ज': 'j', 'झ': 'jh', 'ञ': 'n',
+        'ट': 't', 'ठ': 'th', 'ड': 'd', 'ढ': 'dh', 'ण': 'n', 'त': 't', 'थ': 'th', 'द': 'd', 'ध': 'dh', 'न': 'n',
+        'प': 'p', 'फ': 'ph', 'ब': 'b', 'भ': 'bh', 'म': 'm', 'य': 'y', 'र': 'r', 'ल': 'l', 'व': 'v', 'श': 'sh',
+        'ष': 'sh', 'स': 's', 'ह': 'h', 'ळ': 'l', 'क़': 'q', 'ख़': 'kh', 'ग़': 'gh', 'ज़': 'z', 'ड़': 'd', 'ढ़': 'dh', 'फ़': 'f', 'य़': 'y' };
+      const NUKTA = { 'क': 'q', 'ख': 'kh', 'ग': 'gh', 'ज': 'z', 'ड': 'd', 'ढ': 'dh', 'फ': 'f', 'य': 'y' };
+      const VOW = { 'अ': 'a', 'आ': 'a', 'इ': 'i', 'ई': 'i', 'उ': 'u', 'ऊ': 'u', 'ऋ': 'ri', 'ॠ': 'ri', 'ऌ': 'li', 'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au', 'ऑ': 'o', 'ऍ': 'e' };
+      const SIGN = { 'ा': 'a', 'ि': 'i', 'ी': 'i', 'ु': 'u', 'ू': 'u', 'ृ': 'ri', 'ॄ': 'ri', 'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au', 'ॉ': 'o', 'ॅ': 'e' };
+      const LABIAL = /^(p|ph|b|bh|m)/;
+      const SIGN_END = (t) => t.vowel;   // a consonant that took a vowel sign is not a cluster
+      const deva = (s) => {
+        const out = [];
+        const ch = [...s.normalize('NFC')];
+        for (let i = 0; i < ch.length; i++) {
+          const c = ch[i];
+          if (c === 'ज' && ch[i + 1] === '्' && ch[i + 2] === 'ञ') {   // ज्ञ is said gy- in Hindi
+            i += 2;
+            if (SIGN[ch[i + 1]] !== undefined) { out.push({ t: 'gy' + SIGN[ch[i + 1]], cons: true, vowel: true }); i++; }
+            else out.push({ t: 'gy', cons: true, open: true });
+            continue;
+          }
+          if (CONS[c] !== undefined) {
+            let t = CONS[c];
+            if (ch[i + 1] === '़') { t = NUKTA[c] || t; i++; }
+            const next = ch[i + 1];
+            if (next === '्') { out.push({ t: t, cons: true }); i++; }
+            else if (SIGN[next] !== undefined) { out.push({ t: t + SIGN[next], cons: true, vowel: true }); i++; }
+            else out.push({ t: t, cons: true, open: true });   // the inherent a, decided below
+            continue;
+          }
+          if (VOW[c] !== undefined) { out.push({ t: VOW[c], vowelOnly: true }); continue; }
+          if (c === 'ं' || c === 'ँ') { out.push({ t: 'n', nasal: true }); continue; }
+          if (c === 'ः') { out.push({ t: 'h' }); continue; }
+          if (c >= '०' && c <= '९') { out.push({ t: String(c.charCodeAt(0) - 0x966) }); continue; }
+          if (c === '।' || c === '॥') { out.push({ t: ' ' }); continue; }
+          if (c === '़' || c === '्' || c === 'ऽ') continue;
+          out.push({ t: c, other: true });
+        }
+        /* Which inherent a's are said. Final: dropped, except after a cluster
+           (मित्र → mitra) other than a half r (धर्म → dharm), after ज्ञ, and in
+           -iya endings (राष्ट्रीय → rashtriya). Then, right to left, the rule
+           Hindi speech follows inside a word (Ohala's schwa deletion): an a
+           between a sounded vowel and a consonant that has its own vowel is
+           dropped, so कोलकाता is kolkata and समझना is samajhna; the first
+           syllable of a word always keeps its a. */
+        const ends = (i) => { const nx = out[i + 1]; return !nx || nx.other || nx.t === ' '; };
+        const voiced = (t) => !!t && !t.other && t.t !== ' ' && (t.vowelOnly || t.vowel || (t.open && t.keep));
+        for (let i = 0; i < out.length; i++) {
+          const x = out[i];
+          if (!x.open) continue;
+          const prev = out[i - 1];
+          x.keep = !ends(i) || x.t === 'gy' || !!(prev && prev.cons && !prev.open && !SIGN_END(prev) && prev.t !== 'r') || (x.t === 'y' && !!prev && /i$/.test(prev.t));
+        }
+        for (let i = out.length - 2; i > 0; i--) {
+          const x = out[i];
+          if (!x.open || !x.keep || ends(i) || x.t === 'gy') continue;
+          const prev = out[i - 1], next = out[i + 1];
+          if (voiced(prev) && next && next.cons && voiced(next)) x.keep = false;
+        }
+        for (let i = 0; i < out.length; i++) {
+          const x = out[i];
+          if (x.open) x.t += x.keep ? 'a' : '';
+          if (x.nasal) { const nx = out[i + 1]; if (nx && nx.cons && LABIAL.test(nx.t)) x.t = 'm'; }
+        }
+        return out.map((x) => x.t).join('');
+      };
+
+      const lines = String(text).split('\n').map((l) => l.trim()).filter(Boolean);
+      const max = Math.max(0, Math.floor(Number(o.max) || 0));
+      let cut = 0, translit = 0;
+      const empty = [];
+      const slugs = lines.map((line, n) => {
+        let s = line;
+        if (/[ऀ-ॿ]/.test(s)) { s = s.replace(/[ऀ-ॿ]+/g, (w) => deva(w)); translit++; }
+        if (o.german === 'yes') s = s.replace(/[äöüÄÖÜ]/g, (c) => GERMAN[c]);
+        s = s.replace(/[ßẞæÆœŒøØłŁđĐðÐþÞıħĦŧŦŀĿĸŋŊſĳĲ]/g, (c) => LATIN[c]);
+        s = s.normalize('NFD').replace(/[̀-ͯ]/g, '');   // strip accents
+        s = s.replace(/['’‘`]/g, '').replace(/&/g, ' and ');
         s = s.replace(/[^a-zA-Z0-9]+/g, ' ').trim();
         let words = s.split(/\s+/).filter(Boolean);
-        if (stop === 'strip' && words.length > 2) {
-          const kept = words.filter(w => !STOP.has(w.toLowerCase()));
+        if (o.stop === 'strip' && words.length > 2) {
+          const kept = words.filter((w) => !STOP.has(w.toLowerCase()));
           if (kept.length) words = kept;
         }
         let out = words.join(sep);
-        if (cs === 'lower') out = out.toLowerCase();
+        if (o.case !== 'keep') out = out.toLowerCase();
+        if (max && out.length > max) {
+          /* whole words only: cut at the last separator that fits; a single
+             word longer than the limit is cut inside it */
+          const at = out.lastIndexOf(sep, max);
+          out = at > 0 ? out.slice(0, at) : out.slice(0, max);
+          cut++;
+        }
+        if (!out) empty.push(n + 1);
         return out;
       });
       const longest = slugs.reduce((a, b) => a.length > b.length ? a : b, '');
+      const stats = [['Slugs', String(slugs.length)], ['Longest', `${longest.length} chars`],
+        ['Over 60 chars', String(slugs.filter((s) => s.length > 60).length)]];
+      if (translit) stats.push(['Transliterated from Devanagari', String(translit)]);
+      if (max) stats.push(['Shortened to ' + max, String(cut)]);
       return {
         output: slugs.join('\n'),
-        stats: [['Slugs', String(slugs.length)], ['Longest', `${longest.length} chars`],
-                ['Over 60 chars', String(slugs.filter(s => s.length > 60).length)]]
+        stats,
+        warn: empty.length ? (empty.length === 1 ? 'Line ' + empty[0] + ' has' : 'Lines ' + empty.join(', ') + ' have') + ' no letters or digits this tool can write in plain Latin (scripts such as Greek, Cyrillic, Arabic or Chinese are left out), so the slug is empty.' : ''
       };
     },
-"tips": ["Hyphens are read as word separators by search engines; underscores are not. Prefer hyphens.","Short slugs of three to five meaningful words read better in results and are easier to share.","Once a URL is live, changing the slug breaks every existing link. Add a 301 redirect if you must change it."],
-"faq": [{"q":"Should I remove stop words?","a":"Only when it keeps the slug readable. \"how-to-convert-miles\" is clearer than \"convert-miles\" — the tiny length saving is not worth losing meaning."}]
+"tips": ["Hyphens are read as word separators by search engines; underscores are not. Prefer hyphens.","Short slugs of three to five meaningful words read better in results and are easier to share. Set a maximum length and the slug is cut at a whole word.","Hindi and other Devanagari titles are written in plain Latin letters, the way they are usually typed: नमस्ते भारत becomes namaste-bharat.","Letters such as ß, Æ and Ł are spelt out (ss, ae, l) rather than dropped. Tick German style if ä, ö and ü should become ae, oe and ue.","Once a URL is live, changing the slug breaks every existing link. Add a 301 redirect if you must change it."],
+"faq": [{"q":"Should I remove stop words?","a":"Only when it keeps the slug readable. \"how-to-convert-miles\" is clearer than \"convert-miles\" — the tiny length saving is not worth losing meaning."},{"q":"How is Hindi turned into a slug?","a":"Letter by letter into plain Latin, without accents: each consonant carries a short a unless a vowel sign or the halant follows, and the a at the end of a word is dropped, as it is in speech. So भारत becomes bharat and हिंदी समाचार becomes hindi-samachar. Inside a word, an a between two sounded syllables is dropped too, so समझना becomes samajhna and कोलकाता kolkata. Names with a settled English spelling can still differ: हैदराबाद becomes haidrabad, not Hyderabad, so check those by hand."}]
 };
 })();

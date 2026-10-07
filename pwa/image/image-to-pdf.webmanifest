@@ -2,7 +2,7 @@
   "id": "/image/image-to-pdf.html",
   "name": "Image to PDF Converter — 1234Tools",
   "short_name": "Image → PDF",
-  "description": "Combine JPEG and PNG images into a single PDF, one image per page, with page size and margin control.",
+  "description": "Combine JPEG and PNG images into one PDF — JPEGs untouched, PNGs lossless — with drag-to-reorder pages, per-page rotation, page size, fit or fill, and your own file name.",
   "start_url": "/image/image-to-pdf/?src=pwa",
   "scope": "/image/image-to-pdf/",
   "display": "standalone",

@@ -1,0 +1,42 @@
+{
+  "id": "/video/video-trimmer/",
+  "name": "Video Trimmer — 1234Tools",
+  "short_name": "Video Trimmer",
+  "description": "Trim a video in your browser: drag the start and end, step them a frame at a time, play the selection, then cut exactly on your frame or copy it without re-encoding. MP4, MOV and WebM. Nothing is uploaded.",
+  "start_url": "/video/video-trimmer/?src=pwa",
+  "scope": "/video/video-trimmer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "video",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-video-trim.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-video-trim-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-video-trim-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

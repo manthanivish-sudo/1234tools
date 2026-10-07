@@ -1,0 +1,42 @@
+{
+  "id": "/audio/speed-changer/",
+  "name": "Audio Speed Changer — 1234Tools",
+  "short_name": "Audio Speed Changer",
+  "description": "Speed up or slow down a recording in your browser, from 0.5× to 2×, keeping the voice at its own pitch — or let the pitch move with the speed. Saved as WAV, M4A or Opus. Nothing is uploaded.",
+  "start_url": "/audio/speed-changer/?src=pwa",
+  "scope": "/audio/speed-changer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "music",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-audio-speed.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-audio-speed-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-audio-speed-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -227,21 +227,42 @@ window.DEV_TOOLS["meta-tag-generator"] = {
 "category": "developer",
 "icon": "🏷️",
 "kind": "generate",
-"description": "Generate SEO meta tags, Open Graph and Twitter Card markup, with live length warnings.",
-"keywords": ["meta tag generator","open graph generator","twitter card","seo meta tags","og tags"],
+"filename": "meta-tags.html",
+"download": {"ext": "html", "type": "text/html"},
+"highlight": "html",
+"description": "Generate SEO meta tags, Open Graph and Twitter Card markup with live Google, Facebook and X previews, length warnings, robots, twitter:site, image alt text and an image size check from a file you drop.",
+"keywords": ["meta tag generator","open graph generator","twitter card","seo meta tags","og tags","og:image:alt","twitter:site","robots meta tag","social share preview"],
 "inputLabel": null,
 "outputLabel": "Paste into <head>",
-"fields": [{"key":"title","label":"Page title","type":"text","default":"Free Online Tools and Calculators — 1234Tools"},{"key":"desc","label":"Meta description","type":"textarea","default":"Over a thousand free online tools: calculators, converters, PDF, image and AI tools. All but the AI tools run on your device and upload nothing."},{"key":"url","label":"Canonical URL","type":"text","default":"https://www.1234tools.com/"},{"key":"image","label":"Share image URL","type":"text","default":"https://www.1234tools.com/assets/img/og-image.png"},{"key":"site","label":"Site name","type":"text","default":"1234Tools"},{"key":"locale","label":"Locale","type":"select","default":"en_GB","options":[{"value":"en_GB","label":"en_GB"},{"value":"en_US","label":"en_US"},{"value":"en_IN","label":"en_IN"}]}],
+"share": ["title","desc","url","image","imgalt","site","twitter","locale","robots"],
+"fields": [
+  {"key":"title","label":"Page title","type":"text","default":"Free Online Tools and Calculators — 1234Tools"},
+  {"key":"desc","label":"Meta description","type":"textarea","default":"Over a thousand free online tools: calculators, converters, PDF, image and AI tools. All but the AI tools run on your device and upload nothing."},
+  {"key":"url","label":"Canonical URL","type":"text","default":"https://www.1234tools.com/"},
+  {"key":"image","label":"Share image URL","type":"text","default":"https://www.1234tools.com/assets/img/og-image.png"},
+  {"key":"imgalt","label":"Image description (og:image:alt)","type":"text","default":""},
+  {"key":"site","label":"Site name","type":"text","default":"1234Tools"},
+  {"key":"twitter","label":"X account (twitter:site)","type":"text","default":""},
+  {"key":"locale","label":"Locale","type":"select","default":"en_GB","options":[{"value":"en_GB","label":"en_GB"},{"value":"en_US","label":"en_US"},{"value":"en_IN","label":"en_IN"}]},
+  {"key":"robots","label":"Robots","type":"select","default":"","options":[{"value":"","label":"Do not write a robots tag"},{"value":"index, follow","label":"index, follow"},{"value":"noindex, follow","label":"noindex, follow"},{"value":"index, nofollow","label":"index, nofollow"},{"value":"noindex, nofollow","label":"noindex, nofollow"},{"value":"noindex, nofollow, noarchive","label":"noindex, nofollow, noarchive"},{"value":"index, follow, max-image-preview:large","label":"index, follow, max-image-preview:large"}]},
+  {"key":"imgw","label":"Image width (from a dropped file)","type":"number","default":0,"min":0,"remember":false},
+  {"key":"imgh","label":"Image height (from a dropped file)","type":"number","default":0,"min":0,"remember":false}
+],
 "generate": (f) => {
       const e = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
       /* a blank field (or only spaces) writes no tag at all, never content="" */
       const has = k => String(f[k] || '').trim() !== '';
       const v = k => e(String(f[k]).trim());
       const img = has('image');
+      const w = Math.floor(Number(f.imgw)) || 0, h = Math.floor(Number(f.imgh)) || 0;
+      let handle = String(f.twitter || '').trim();
+      const handleBad = handle !== '' && !/^@?[A-Za-z0-9_]{1,15}$/.test(handle);
+      if (handle && !handleBad) handle = '@' + handle.replace(/^@/, '');
       const lines = [
         has('title') && `<title>${v('title')}</title>`,
         has('desc') && `<meta name="description" content="${v('desc')}">`,
         has('url') && `<link rel="canonical" href="${v('url')}">`,
+        has('robots') && `<meta name="robots" content="${v('robots')}">`,
         ``,
         `<!-- Open Graph -->`,
         `<meta property="og:type" content="website">`,
@@ -251,13 +272,18 @@ window.DEV_TOOLS["meta-tag-generator"] = {
         has('desc') && `<meta property="og:description" content="${v('desc')}">`,
         has('url') && `<meta property="og:url" content="${v('url')}">`,
         img && `<meta property="og:image" content="${v('image')}">`,
+        img && has('imgalt') && `<meta property="og:image:alt" content="${v('imgalt')}">`,
+        img && w > 0 && h > 0 && `<meta property="og:image:width" content="${w}">`,
+        img && w > 0 && h > 0 && `<meta property="og:image:height" content="${h}">`,
         ``,
         `<!-- Twitter -->`,
         /* without an image the large-image card has nothing to show */
         `<meta name="twitter:card" content="${img ? 'summary_large_image' : 'summary'}">`,
+        handle && !handleBad && `<meta name="twitter:site" content="${e(handle)}">`,
         has('title') && `<meta name="twitter:title" content="${v('title')}">`,
         has('desc') && `<meta name="twitter:description" content="${v('desc')}">`,
-        img && `<meta name="twitter:image" content="${v('image')}">`
+        img && `<meta name="twitter:image" content="${v('image')}">`,
+        img && has('imgalt') && `<meta name="twitter:image:alt" content="${v('imgalt')}">`
       ].filter(l => l !== false);
       if (lines[0] === '') lines.shift();
       const out = lines.join('\n');
@@ -270,11 +296,144 @@ window.DEV_TOOLS["meta-tag-generator"] = {
         ['Description length', `${dl} — ${dl === 0 ? 'empty' : dl > 160 ? 'may be truncated' : dl < 70 ? 'quite short' : 'good'}`],
         ['Tags generated', String(tagCount)]
       ];
+      if (w > 0 && h > 0) {
+        const ratio = w / h;
+        const big = w >= 1200 && h >= 630;
+        stats.push(['Share image', `${w} × ${h} (${ratio.toFixed(2)}:1) — ${big && Math.abs(ratio - 1.91) < 0.15 ? 'right for a large card' : w < 600 ? 'too small for a large card (600 px wide is the least)' : Math.abs(ratio - 1.91) >= 0.15 ? 'cropped to 1.91:1 on a large card' : 'works, but 1200 × 630 is sharper'}`]);
+      }
       const missing = [['title', 'Page title'], ['url', 'Canonical URL'], ['image', 'Share image URL']].filter(m => !has(m[0])).map(m => m[1]);
-      const warn = missing.length ? 'Blank fields write no tags. Open Graph needs og:title, og:url and og:image, so fill in: ' + missing.join(', ') + '.' : '';
-      return { output: out, stats, warn };
+      const warns = [];
+      if (missing.length) warns.push('Blank fields write no tags. Open Graph needs og:title, og:url and og:image, so fill in: ' + missing.join(', ') + '.');
+      if (handleBad) warns.push('The X account should be 1 to 15 letters, digits or underscores, such as @1234tools; no twitter:site tag was written.');
+      return {
+        output: out, stats, warn: warns.join(' '),
+        card: { title: String(f.title || '').trim(), desc: String(f.desc || '').trim(), url: String(f.url || '').trim(), image: String(f.image || '').trim(), site: String(f.site || '').trim(), twitter: handleBad ? '' : handle, large: !!img, w: w, h: h }
+      };
     },
-"tips": ["Google typically shows around 60 characters of a title and 155–160 of a description. Longer is not penalised, it is just cut off.","Share images want 1200×630 pixels. Anything much smaller renders as a small square thumbnail instead of a banner.","og:url should be the canonical, absolute address — including https:// and the www you actually serve."],
-"faq": [{"q":"Do meta keywords still matter?","a":"No. Google publicly stopped using the keywords meta tag for ranking in 2009. It is omitted here deliberately."}]
+"tips": ["Google typically shows around 60 characters of a title and 155–160 of a description. Longer is not penalised, it is just cut off.","Share images want 1200×630 pixels. Anything much smaller renders as a small square thumbnail instead of a banner. Drop the image file under the previews to check its size; it is read in your browser and not uploaded.","og:url should be the canonical, absolute address — including https:// and the www you actually serve.","The previews are approximations: each platform changes its card and its cut-off points, and the image is not fetched unless you press the button, so nothing contacts your site while you type.","The robots tag is only written if you choose one. noindex keeps a page out of search results; it does not stop the page being read."],
+"faq": [{"q":"Do meta keywords still matter?","a":"No. Google publicly stopped using the keywords meta tag for ranking in 2009. It is omitted here deliberately."},{"q":"Why is there no image in the previews?","a":"Showing it would mean loading the address you typed, which would contact that site while you edit. Press Show the image to fetch it, or drop the file itself to preview it from your device."}],
+"mount": (ctx) => { mtMount(ctx); },
+"render": function (res, ctx) { mtRender(res, ctx); }
 };
+
+function mtMount(ctx) {
+  const el = ctx.el;
+  const st = { url: '', name: '', remote: false };
+  ctx.mt = st;
+  const box = el('div', 'mt-drop');
+  const label = el('label', 'mt-drop-l', 'Check the share image file (it stays on your device)');
+  const inp = el('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.id = 'mt-file';
+  label.setAttribute('for', 'mt-file');
+  const info = el('span', 'mt-drop-i', '');
+  const clear = el('button', 'btn-ghost', 'Forget the file');
+  clear.type = 'button'; clear.hidden = true;
+  box.appendChild(label); box.appendChild(inp); box.appendChild(info); box.appendChild(clear);
+  ctx.form.appendChild(box);
+  st.info = info; st.clear = clear;
+  function load(file) {
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { info.textContent = file.name + ' is not an image file.'; return; }
+    const u = URL.createObjectURL(file);
+    const im = new Image();
+    im.onload = function () {
+      if (st.url) URL.revokeObjectURL(st.url);
+      st.url = u; st.name = file.name;
+      ctx.setField('imgw', im.naturalWidth); ctx.setField('imgh', im.naturalHeight);
+      info.textContent = file.name + ': ' + im.naturalWidth + ' × ' + im.naturalHeight + ' px';
+      clear.hidden = false;
+      ctx.run();
+    };
+    im.onerror = function () { URL.revokeObjectURL(u); info.textContent = file.name + ' could not be read as an image.'; };
+    im.src = u;
+  }
+  inp.addEventListener('change', function () { load(inp.files[0]); inp.value = ''; });
+  ['dragenter', 'dragover'].forEach(function (ev) { box.addEventListener(ev, function (e) { e.preventDefault(); box.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { box.addEventListener(ev, function () { box.classList.remove('over'); }); });
+  box.addEventListener('drop', function (e) { e.preventDefault(); load(e.dataTransfer.files && e.dataTransfer.files[0]); });
+  clear.addEventListener('click', function () {
+    if (st.url) URL.revokeObjectURL(st.url);
+    st.url = ''; st.name = ''; info.textContent = ''; clear.hidden = true;
+    ctx.setField('imgw', 0); ctx.setField('imgh', 0); ctx.run();
+  });
+}
+
+function mtCut(s, n) { s = String(s); return s.length > n ? s.slice(0, n).replace(/\s+\S*$/, '') + '…' : s; }
+function mtHost(u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return String(u).replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, ''); } }
+function mtRender(res, ctx) {
+  const st = ctx.mt;
+  const box = ctx.extra;
+  box.textContent = '';
+  /* the two size fields are filled by the file check, not typed */
+  const wraps = ctx.form.querySelectorAll('.field');
+  if (wraps.length >= 11) { wraps[9].hidden = true; wraps[10].hidden = true; }
+  if (!res || res.error || !res.card) return;
+  const c = res.card, el = ctx.el;
+  const wrap = el('div', 'io-pane mt-prev');
+  const head = el('div', 'io-head');
+  head.appendChild(el('span', 'io-label', 'Previews (approximate)'));
+  wrap.appendChild(head);
+  const row = el('div', 'mt-cards');
+  const imgBox = function (cls) {
+    const b = el('div', 'mt-img ' + cls);
+    if (st.url) { const im = el('img'); im.alt = ''; im.src = st.url; b.appendChild(im); }
+    else if (st.remote && /^https?:\/\//i.test(c.image)) {
+      const im = el('img'); im.alt = ''; im.referrerPolicy = 'no-referrer'; im.src = c.image;
+      im.onerror = function () { b.textContent = ''; b.appendChild(el('span', 'mt-ph', 'The image at that address could not be loaded.')); };
+      b.appendChild(im);
+    } else if (c.image) {
+      b.appendChild(el('span', 'mt-ph', 'Image: ' + mtCut(c.image, 60)));
+    } else b.appendChild(el('span', 'mt-ph', 'No share image'));
+    return b;
+  };
+  /* Google */
+  const g = el('div', 'mt-card mt-google');
+  g.appendChild(el('div', 'mt-label', 'Google'));
+  const crumb = (function () { try { const u = new URL(c.url); return mtHost(c.url) + (u.pathname.length > 1 ? u.pathname.split('/').filter(Boolean).map(function (x) { return ' › ' + x; }).join('') : ''); } catch (e) { return c.url || 'example.com'; } })();
+  g.appendChild(el('div', 'mt-g-site', (c.site ? c.site + ' · ' : '') + crumb));
+  g.appendChild(el('div', 'mt-g-title', mtCut(c.title || 'Page title', 60)));
+  g.appendChild(el('div', 'mt-g-desc', mtCut(c.desc || 'No description: Google will pick text from the page.', 160)));
+  row.appendChild(g);
+  /* Facebook, LinkedIn and others that read Open Graph */
+  const fb = el('div', 'mt-card mt-fb');
+  fb.appendChild(el('div', 'mt-label', 'Facebook and LinkedIn'));
+  fb.appendChild(imgBox('mt-img-169'));
+  const fbt = el('div', 'mt-fb-t');
+  fbt.appendChild(el('div', 'mt-fb-d', mtHost(c.url || '').toUpperCase()));
+  fbt.appendChild(el('div', 'mt-fb-ti', mtCut(c.title || 'Page title', 88)));
+  fbt.appendChild(el('div', 'mt-fb-de', mtCut(c.desc, 110)));
+  fb.appendChild(fbt);
+  row.appendChild(fb);
+  /* X */
+  const x = el('div', 'mt-card mt-x');
+  x.appendChild(el('div', 'mt-label', 'X' + (c.twitter ? ' (' + c.twitter + ')' : '')));
+  if (c.large) {
+    const big = el('div', 'mt-x-big');
+    big.appendChild(imgBox('mt-img-2'));
+    const cap = el('div', 'mt-x-cap', mtCut(c.title || 'Page title', 70));
+    big.appendChild(cap);
+    x.appendChild(big);
+    x.appendChild(el('div', 'mt-x-dom', mtHost(c.url || '')));
+  } else {
+    const small = el('div', 'mt-x-small');
+    small.appendChild(imgBox('mt-img-sq'));
+    const tx = el('div', 'mt-x-tx');
+    tx.appendChild(el('div', 'mt-x-dom', mtHost(c.url || '')));
+    tx.appendChild(el('div', 'mt-x-ti', mtCut(c.title || 'Page title', 70)));
+    tx.appendChild(el('div', 'mt-x-de', mtCut(c.desc, 125)));
+    small.appendChild(tx);
+    x.appendChild(small);
+  }
+  row.appendChild(x);
+  wrap.appendChild(row);
+  const bar = el('div', 'mt-bar');
+  if (!st.url && c.image && /^https?:\/\//i.test(c.image)) {
+    const b = el('button', 'btn-ghost', st.remote ? 'Hide the image' : 'Show the image from that address');
+    b.type = 'button';
+    b.addEventListener('click', function () { st.remote = !st.remote; ctx.run(); });
+    bar.appendChild(b);
+    bar.appendChild(el('span', 'mt-warn', st.remote ? 'The image is being loaded from that address.' : 'Loading it contacts that address, so it only happens when you press this.'));
+  }
+  wrap.appendChild(bar);
+  box.appendChild(wrap);
+}
 })();

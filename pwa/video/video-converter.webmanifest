@@ -1,0 +1,42 @@
+{
+  "id": "/video/video-converter/",
+  "name": "Video Converter — 1234Tools",
+  "short_name": "Video Converter",
+  "description": "Convert MOV, MKV, WebM and MP4 videos to MP4 or WebM in your browser, sound included. When the picture and sound already suit the new format they are copied untouched, with no loss. Nothing is uploaded.",
+  "start_url": "/video/video-converter/?src=pwa",
+  "scope": "/video/video-converter/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "video",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-video-convert.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-video-convert-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-video-convert-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

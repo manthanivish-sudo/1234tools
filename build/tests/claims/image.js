@@ -12,7 +12,16 @@ const path = require('path');
 module.exports = function ({ claim, manual, kit: K }) {
   const N = 'node', B = 'browser';
   const S = (f) => K.sample(f);
-  const within = async (url, fn) => { const p = await K.open(url); try { return await fn(p); } finally { await p.close(); } };
+  /* every page opens as a first visit: the image tools remember their settings
+     on the device (1234tools-img-<tool>-v1), and one claim's settings must not
+     carry into the next */
+  const freshPage = (p) => p.evaluateOnNewDocument(() => { try { Object.keys(localStorage).filter((k) => /^1234tools-img-/.test(k)).forEach((k) => localStorage.removeItem(k)); } catch (e) { /* none */ } });
+  const openFresh = async (url) => {
+    const orig = K.browser.newPage;
+    K.browser.newPage = async function () { const p = await orig.call(this); await freshPage(p); return p; };
+    try { return await K.open(url); } finally { K.browser.newPage = orig; }
+  };
+  const within = async (url, fn) => { const p = await openFresh(url); try { return await fn(p); } finally { await p.close(); } };
   const tagged = (name, orient, src) => K.once('img:tag:' + name, () => K.write(name, K.withExif(fs.readFileSync(S(src || 'street.jpg')), orient || 1)));
   const hasExif = (b) => b.indexOf('Exif\0') >= 0 || b.indexOf('DemoCam') >= 0;
   /** a PNG made in the page: noise, so every pixel differs from its neighbours */
@@ -90,15 +99,42 @@ module.exports = function ({ claim, manual, kit: K }) {
   /* blur & redact                                                     */
   /* ================================================================ */
   const BR = '/image/blur-redact/';
-  claim(BR, 'point', 'Before you drag, the selection is the middle 70% of the picture.', 'street.jpg 1600×1200: selection 1120×840 at 240, 180', B, async () => within(BR, async (p) => {
+  /* a drag on the picture canvas, as a person does it: scrolled into view first, the result waited for */
+  const brDragBox = (p, fx0, fy0, fx1, fy1) => K.img.act(p, async () => {
+    await p.$eval('.select-canvas', (e) => e.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await K.sleep(300);
+    const box = await (await p.$('.select-canvas')).boundingBox();
+    await p.mouse.move(box.x + box.width * fx0, box.y + box.height * fy0);
+    await p.mouse.down();
+    await p.mouse.move(box.x + box.width * fx1, box.y + box.height * fy1, { steps: 8 });
+    await p.mouse.up();
+  }).then(() => idle(p));
+  const brAreas = async (p) => K.img.stat(await K.img.stats(p), 'Areas covered');
+  claim(BR, 'howto', 'Nothing is covered until you draw.', 'street.jpg uploaded: Areas covered 0 and the page says nothing is covered yet', B, async () => within(BR, async (p) => {
     await K.img.upload(p, [S('street.jpg')]);
-    const st = await K.img.stats(p); const ro = await p.$eval('.select-readout', (e) => e.textContent);
-    return [K.img.stat(st, 'Selection') === '1120×840' && /at 240, 180/.test(ro), K.img.stat(st, 'Selection') + ' / ' + ro];
+    const m = await K.img.msg(p);
+    const n = await brAreas(p);
+    return [n === '0' && /Nothing is covered yet/.test(m.text), 'areas ' + n + ' / ' + m.text];
   }));
-  claim(BR, 'point', 'Block fills the area with your colour, black by default.', 'block: centre black, corner untouched', B, async () => within(BR, async (p) => {
+  claim(BR, 'point', 'Drag a box, an oval or a free brush stroke, as many areas as you need; Undo, or Ctrl+Z, takes back the last one.', 'two boxes → 2 areas; Ctrl+Z → 1; Undo → 0; an oval and a brush stroke each count as an area', B, async () => within(BR, async (p) => {
+    await K.img.upload(p, [S('street.jpg')]);
+    await brDragBox(p, 0.1, 0.1, 0.3, 0.3); await brDragBox(p, 0.5, 0.5, 0.8, 0.8);
+    const two = await brAreas(p);
+    await K.img.act(p, async () => { await p.keyboard.down('Control'); await p.keyboard.press('z'); await p.keyboard.up('Control'); });
+    const one = await brAreas(p);
+    await K.img.act(p, async () => { await p.evaluate(() => [...document.querySelectorAll('.tool-io button')].find((b) => b.textContent.trim() === 'Undo').click()); });
+    const none = await brAreas(p);
+    await K.img.change(p, 'shape', 'ellipse'); await brDragBox(p, 0.2, 0.2, 0.4, 0.5);
+    const oval = await brAreas(p);
+    await K.img.change(p, 'shape', 'brush'); await brDragBox(p, 0.5, 0.5, 0.7, 0.7);
+    const brush = await brAreas(p);
+    return [two === '2' && one === '1' && none === '0' && oval === '1' && brush === '2', [two, one, none, oval, brush].join(', ')];
+  }));
+  claim(BR, 'point', 'Block fills the area with your colour, black by default.', 'block on a white picture: the dragged centre is black, a corner untouched', B, async () => within(BR, async (p) => {
     const f = await pngFile(p, 'br-white.png', 200, 100, "x.fillStyle='#fff';x.fillRect(0,0,w,h);");
     await K.img.set(p, 'method', 'block');
     await K.img.upload(p, [f]);
+    await brDragBox(p, 0.25, 0.25, 0.75, 0.75);
     const [b] = await K.img.results(p);
     const px = await K.img.pixels(p, b, [[100, 50], [2, 2]]);
     return [close(px.px[0], [0, 0, 0, 255], 0) && close(px.px[1], [255, 255, 255, 255], 0), K.j(px.px)];
@@ -118,44 +154,42 @@ module.exports = function ({ claim, manual, kit: K }) {
     return [K.isJpeg(b) && !hasExif(b), K.kind(b) + (hasExif(b) ? ' with EXIF' : ' without EXIF')];
   }));
   /* a figure read off the page against a measured byte count: within 2% (PNG/JPEG encoders drift between Chrome versions) */
+  const idle = async (p) => { await K.sleep(400); await p.waitForFunction(() => !document.querySelector('.tool-io[aria-busy]'), { timeout: 180000, polling: 100 }); await K.sleep(400); };
   const near = (bytes, figure) => { const [v, u] = figure.split(' '); return Math.abs(bytes / (u === 'MB' ? 1048576 : 1024) / Number(v) - 1) <= 0.02; };
-  const brDrag = (p) => cropDrag(p, 0.38, 0.48, 0.6, 0.63);
-  /* the FAQ's and the worked example's figures, from one run: each method on the starting selection, then the worked example's drag */
+  /* the worked example's figures, from one run: nothing drawn as PNG, then one box (38%,48% to 60%,63%) as PNG, JPEG 85, then blur and block as PNG */
   const brSizes = () => K.once('img:br-sizes', () => within(BR, async (p) => {
     await K.img.upload(p, [S('street.jpg')]);
-    const r = {};
-    for (const m of ['pixelate', 'blur', 'block']) { await K.img.change(p, 'method', m); const [b] = await K.img.results(p); r[m] = b; }
-    await K.img.change(p, 'method', 'pixelate');
-    r.sel = await brDrag(p);
+    const r = { areas0: await brAreas(p) };
+    [r.none] = await K.img.results(p);
+    await brDragBox(p, 0.38, 0.48, 0.6, 0.63);
+    r.areas1 = await brAreas(p);
     [r.png] = await K.img.results(p);
     await K.img.change(p, 'format', 'image/jpeg'); await K.img.change(p, 'quality', 85);
     [r.jpg] = await K.img.results(p);
-    await K.img.change(p, 'format', 'image/webp');
-    [r.webp] = await K.img.results(p);
+    await K.img.change(p, 'format', 'image/png');
+    await K.img.change(p, 'method', 'blur'); [r.blur] = await K.img.results(p);
+    await K.img.change(p, 'method', 'block'); [r.block] = await K.img.results(p);
     return r;
   }));
-  claim(BR, 'dfaq', 'PNG, the default, is lossless: the 321.4 KB street photo above became 2.79 MB. Undragged (the middle 70%) it gave 1.47 MB pixelated, 2.23 MB blurred, 1.46 MB blocked. JPEG or WebP is far smaller.',
-    'street.jpg: each method on the starting selection as PNG, the worked example\'s drag as PNG, and that as JPEG 85 smaller', B, async () => {
+  claim(BR, 'dfaq', 'PNG, the default, is lossless: the 321.4 KB street photo above became 2.79 MB. JPEG at 85 gave 349.5 KB, close to the original.',
+    'street.jpg: one box as PNG, then as JPEG 85', B, async () => {
       const r = await brSizes();
       const src = fmtKB(fs.statSync(S('street.jpg')).size);
-      const ok = src === '321.4 KB' && r.sel === '352×179' && [r.pixelate, r.blur, r.block, r.png].every(K.isPng) && K.isJpeg(r.jpg) &&
-        near(r.pixelate.length, '1.47 MB') && near(r.blur.length, '2.23 MB') && near(r.block.length, '1.46 MB') && near(r.png.length, '2.79 MB') && r.jpg.length * 5 < r.png.length && K.kind(r.webp) === 'webp' && r.webp.length * 5 < r.png.length;
-      return [ok, 'source ' + src + '; starting selection: pixelate ' + fmtKB(r.pixelate.length) + ', blur ' + fmtKB(r.blur.length) + ', block ' + fmtKB(r.block.length) +
-        '; drag ' + r.sel + ': PNG ' + fmtKB(r.png.length) + ', JPEG 85 ' + fmtKB(r.jpg.length) + ', WebP 85 ' + fmtKB(r.webp.length) + ' (2% allowed)'];
+      return [src === '321.4 KB' && r.areas1 === '1' && K.isPng(r.png) && K.isJpeg(r.jpg) && near(r.png.length, '2.79 MB') && near(r.jpg.length, '349.5 KB'),
+        'source ' + src + '; ' + r.areas1 + ' area: PNG ' + fmtKB(r.png.length) + ', JPEG 85 ' + fmtKB(r.jpg.length) + ' (2% allowed)'];
     });
-  claim(BR, 'what', 'a drag over the people on a zebra crossing selected 352×179 pixels.', 'the worked example\'s drag selects 352×179', B, async () => {
-    const r = await brSizes(); return [r.sel === '352×179', r.sel];
-  });
-  claim(BR, 'what', 'Saved as PNG the result weighed 2.79 MB; JPEG at quality 85 gave 355.3 KB, squares intact.', 'the worked example\'s drag as PNG, then JPEG 85', B, async () => {
-    const r = await brSizes();
-    return [K.isPng(r.png) && near(r.png.length, '2.79 MB') && K.isJpeg(r.jpg) && near(r.jpg.length, '355.3 KB'), r.sel + ': PNG ' + fmtKB(r.png.length) + ', JPEG 85 ' + fmtKB(r.jpg.length) + ' (2% allowed)'];
-  });
+  claim(BR, 'what', 'Saved as PNG the result weighed 2.79 MB; JPEG at quality 85 gave 349.5 KB. Blur gave 2.86 MB as PNG; with nothing drawn, the PNG was 2.91 MB.',
+    'the worked example: box as PNG and JPEG 85, blur as PNG, nothing drawn as PNG', B, async () => {
+      const r = await brSizes();
+      return [r.areas0 === '0' && K.isPng(r.none) && near(r.none.length, '2.91 MB') && near(r.png.length, '2.79 MB') && near(r.jpg.length, '349.5 KB') && K.isPng(r.blur) && near(r.blur.length, '2.86 MB'),
+        'nothing ' + fmtKB(r.none.length) + ', box PNG ' + fmtKB(r.png.length) + ', JPEG 85 ' + fmtKB(r.jpg.length) + ', blur ' + fmtKB(r.blur.length) + ', block ' + fmtKB(r.block.length) + ' (2% allowed)'];
+    });
 
   /* ================================================================ */
   /* bulk resizer                                                      */
   /* ================================================================ */
   const BU = '/image/bulk-image-resizer/';
-  claim(BU, 'point', 'Fixed width or height works out the other side from the photo\'s ratio; longest edge scales the bigger side to the value; percentage scales both; exact size stretches to your width and height.',
+  claim(BU, 'point', 'Fixed width or height works out the other side from the photo\'s ratio; longest edge scales the bigger side to the value; percentage scales both; exact size takes your width and height.',
     'street.jpg 1600×1200 in each mode', B, async () => within(BU, async (p) => {
       await K.img.set(p, 'mode', 'width'); await K.img.set(p, 'value', 800);
       await K.img.upload(p, [S('street.jpg')]);
@@ -167,7 +201,7 @@ module.exports = function ({ claim, manual, kit: K }) {
       await K.img.change(p, 'mode', 'exact'); await K.img.change(p, 'value', 300); await K.img.change(p, 'height', 200); out.exact = await dim();
       return [K.j(out) === K.j({ width: '800×600', height: '800×600', longest: '800×600', percent: '800×600', exact: '300×200' }), K.j(out)];
     }));
-  claim(BU, 'point', 'Each result is named after its source plus the new size, such as street-800x600.webp, and a batch comes as one ZIP built in the page.',
+  claim(BU, 'point', 'Results are named after their source plus the new size, such as street-800x600.webp, and come as one ZIP or go straight into a folder.',
     'two photos at width 800: one ZIP with street-800x600.webp and food-800x534.webp', B, async () => within(BU, async (p) => {
       await K.img.set(p, 'mode', 'width'); await K.img.set(p, 'value', 800);
       await K.img.upload(p, [S('street.jpg'), S('food.jpg')]);
@@ -178,13 +212,14 @@ module.exports = function ({ claim, manual, kit: K }) {
       const names = K.zipNames(d.bytes).map((x) => x.name).sort().join(',');
       return [names === 'food-800x534.webp,street-800x600.webp', d.name + ': ' + names];
     }));
-  claim(BU, 'works', 'encoded with canvas.toBlob, WebP at quality 85 unless you change it.', 'defaults WebP, 85; output is WebP', B, async () => within(BU, async (p) => {
+  claim(BU, 'works', 'Each photo is shrunk by Lanczos3 resampling in a background worker, then written by a WebAssembly encoder, WebP at quality 85 unless you change it.', 'defaults WebP, 85; output is WebP; the Resampling row names Lanczos3', B, async () => within(BU, async (p) => {
     const d = await p.evaluate(() => [document.getElementById('ic-format').value, document.getElementById('ic-quality').value]);
     await K.img.upload(p, [S('food.jpg')]);
     const [b] = await K.img.results(p);
-    return [d.join() === 'image/webp,85' && K.isWebp(b), d.join() + ' → ' + K.kind(b)];
+    const rs = K.img.stat(await K.img.stats(p), 'Resampling') || '';
+    return [d.join() === 'image/webp,85' && K.isWebp(b) && /Lanczos3/.test(rs), d.join() + ' → ' + K.kind(b) + ', ' + rs];
   }));
-  claim(BU, 'dfaq', 'Each file is redrawn from its pixels, so a tagged test photo resized to 800 px lost its camera and GPS tags too.', 'tagged JPEG resized to JPEG keeps no EXIF', B, async () => within(BU, async (p) => {
+  claim(BU, 'dfaq', 'By default, yes: each file is rewritten without camera and GPS tags, though Metadata can keep them.', 'tagged JPEG resized to JPEG keeps no EXIF', B, async () => within(BU, async (p) => {
     await K.img.set(p, 'format', 'image/jpeg'); await K.img.set(p, 'value', 800);
     await K.img.upload(p, [await tagged('bu-tagged.jpg')]);
     const [b] = await K.img.results(p);
@@ -198,7 +233,7 @@ module.exports = function ({ claim, manual, kit: K }) {
       return [d.w === 1600 && /left at its own size/.test(m.text), d.w + '×' + d.h + ' / ' + m.text];
     }));
   claim(BU, 'mistake', 'Reading the Source figure as the whole batch. It gives the first file\'s dimensions only', 'Source shows the first file only', B, async () => within(BU, async (p) => {
-    await K.img.upload(p, [S('street.jpg'), S('document.jpg')]);
+    await K.img.upload(p, [S('street.jpg'), S('document.jpg')]); await idle(p);
     const s = K.img.stat(await K.img.stats(p), 'Source');
     return [s === '1600×1200', s];
   }));
@@ -221,13 +256,13 @@ module.exports = function ({ claim, manual, kit: K }) {
     const d = await K.img.pixels(p, b, [[5, 256], [256, 256], [506, 256]]);
     return [d.px.every((c) => c[1] > 200 && c[0] < 30 && c[2] < 30), K.j(d.px)];
   }));
-  claim(CC, 'point', 'Squircle is the same shape with the radius fixed at 22.5%, not a true superellipse.', 'squircle clips a rounded square with radius 22.5% of the inner width', N, async () => {
+  claim(CC, 'point', 'Squircle is a rounded square with the radius fixed at 22.5%, not a true superellipse.', 'squircle clips a rounded square with radius 22.5% of the inner width', N, async () => {
     const log = paintIn('img-circle-crop.js', 'circle-crop', 800, 600, { shape: 'squircle', size: 512, border: 0 });
     const rr = log.find((x) => x[0] === 'roundRect');
     const arc = log.some((x) => x[0] === 'arc' || x[0] === 'ellipse' || x[0] === 'bezierCurveTo');
     return [rr && Math.abs(rr[5] - 512 * 0.225) < 1e-9 && !arc, rr ? 'roundRect radius ' + rr[5] + ' on ' + rr[3] + ' px' : 'no roundRect'];
   });
-  claim(CC, 'point', 'A border is stroked as a ring just outside the picture, so it never covers the photo.', 'border 40: ring colour from radius 216 to 256, photo inside', B, async () => within(CC, async (p) => {
+  claim(CC, 'point', 'A ring is stroked just outside the picture, so it never covers the photo', 'border 40: ring colour from radius 216 to 256, photo inside', B, async () => within(CC, async (p) => {
     const f = await pngFile(p, 'cc-green.png', 200, 200, "x.fillStyle='#00ff00';x.fillRect(0,0,w,h);");
     await K.img.set(p, 'border', 40); await K.img.set(p, 'borderColor', '#ff0000');
     await K.img.upload(p, [f]);
@@ -235,12 +270,24 @@ module.exports = function ({ claim, manual, kit: K }) {
     const d = await K.img.pixels(p, b, [[256, 256 - 210], [256, 256 - 230], [256, 256 - 250]]);
     return [d.px[0][1] > 200 && d.px[0][0] < 40 && d.px[1][0] > 200 && d.px[1][1] < 40 && d.px[2][0] > 200, K.j(d.px)];
   }));
-  claim(CC, 'dfaq', 'A 1024 px circle from a 220.3 KB JPEG weighed 1.40 MB', 'pet.jpg at 1024 px', B, async () => within(CC, async (p) => {
+  claim(CC, 'what', 'A 1600 × 1067 photo of a dog in long grass, a 220.3 KB JPEG, became a 1024×1024 circle that weighed 1.48 MB as PNG and 113.6 KB as WebP. At 256 px with a 6 px ring set apart from the picture by a gap, the PNG was 125.5 KB, light enough for any profile upload.',
+    'pet.jpg at 1024 as PNG and WebP; at 256 with a 6 px gap ring as PNG', B, async () => within(CC, async (p) => {
+      await K.img.set(p, 'size', 1024);
+      await K.img.upload(p, [S('pet.jpg')]); await idle(p);
+      const [png] = await K.img.results(p); const pd = await K.img.pixels(p, png, [[2, 2]]);
+      await K.img.change(p, 'format', 'image/webp'); await idle(p);
+      const [web] = await K.img.results(p);
+      await K.img.change(p, 'format', 'image/png'); await K.img.change(p, 'size', 256); await K.img.change(p, 'border', 6); await K.img.change(p, 'ring', 'gap'); await idle(p);
+      const [ring] = await K.img.results(p); const rd = await K.img.pixels(p, ring);
+      return [K.isPng(png) && pd.w === 1024 && pd.px[0][3] === 0 && near(png.length, '1.48 MB') && K.isWebp(web) && near(web.length, '113.6 KB') && K.isPng(ring) && rd.w === 256 && near(ring.length, '125.5 KB'),
+        'PNG ' + fmtKB(png.length) + ', WebP ' + fmtKB(web.length) + ', 256 px ring ' + fmtKB(ring.length) + ' (2% allowed)'];
+    }));
+  claim(CC, 'dfaq', 'A 1024 px circle from a 220.3 KB JPEG weighed 1.48 MB', 'pet.jpg at 1024 px', B, async () => within(CC, async (p) => {
     await K.img.set(p, 'size', 1024);
     await K.img.upload(p, [S('pet.jpg')]);
     const [b] = await K.img.results(p);
     /* a size from a run of the page: within 5%, since PNG encoders differ a little between Chrome versions */
-    return [fmtKB(fs.statSync(S('pet.jpg')).size) === '220.3 KB' && Math.abs(b.length / 1048576 / 1.40 - 1) <= 0.05, 'source ' + fmtKB(fs.statSync(S('pet.jpg')).size) + ', result ' + fmtKB(b.length) + ' (claim 1.40 MB, 5% allowed)'];
+    return [fmtKB(fs.statSync(S('pet.jpg')).size) === '220.3 KB' && Math.abs(b.length / 1048576 / 1.48 - 1) <= 0.03, 'source ' + fmtKB(fs.statSync(S('pet.jpg')).size) + ', result ' + fmtKB(b.length) + ' (claim 1.48 MB, 3% allowed)'];
   }));
 
   /* ================================================================ */
@@ -278,90 +325,204 @@ module.exports = function ({ claim, manual, kit: K }) {
     return [reads.indexOf('160×107') >= 0 && !reads.some((r) => r === '1600×1067'), 'getImageData on ' + (reads.join(', ') || 'nothing')];
   }));
 
+  /* wave 1: the eyedropper and the exports, each read back here by a parser of the test's own */
+  const QUAD = "x.fillStyle='#d62828';x.fillRect(0,0,w/2,h/2);x.fillStyle='#003049';x.fillRect(w/2,0,w/2,h/2);x.fillStyle='#fcbf49';x.fillRect(0,h/2,w/2,h/2);x.fillStyle='#2a9d8f';x.fillRect(w/2,h/2,w/2,h/2);";
+  claim(CP, 'tip', 'Click the picture to pick the exact colour of one pixel — a logo’s brand colour, say — and it joins the palette and every export.', 'a click on the navy quarter adds “Picked 1 #003049”, and the CSS export has it', B, async () => within(CP, async (p) => {
+    const f = await pngFile(p, 'cp-quad.png', 200, 120, QUAD);
+    await K.img.upload(p, [f]); await p.waitForSelector('.pal-view');
+    const r = await p.$eval('.pal-view', (c) => { c.scrollIntoView({ block: 'center', behavior: 'instant' }); const b = c.getBoundingClientRect(); return { x: b.left + b.width * 0.75, y: b.top + b.height * 0.25 }; });
+    await p.mouse.click(r.x, r.y);
+    await p.waitForFunction(() => [...document.querySelectorAll('.tool-io .stat-row')].some((x) => /^Picked 1/.test(x.textContent)), { timeout: 15000 });
+    const st = await K.img.stats(p);
+    const row = st.find((x) => /^Picked 1/.test(x[0]));
+    const css = await p.$eval('.tool-io pre.code-out', (e) => e.textContent);
+    return [row && /#003049$/.test(row[0]) && /: #003049;/.test(css), (row || []).join(' ') + ' / ' + (css.match(/--colour-\d+: #003049/) || ['not in CSS'])[0]];
+  }));
+  claim(CP, 'tip', 'Export as CSS custom properties, JSON, a Tailwind colour scale, a GIMP/Inkscape .gpl palette, an Adobe .ase swatch file or a PNG swatch card.',
+    'the .ase (parsed here: ASEF 1.0, RGB floats), .gpl and JSON downloads hold the palette’s colours', B, async () => within(CP, async (p) => {
+      await K.img.set(p, 'count', 4);
+      await K.img.upload(p, [S('food.jpg')]); await p.waitForSelector('.palette-swatch');
+      const want = (await K.img.stats(p)).map((r) => r[0].match(/#[0-9A-F]{6}/)[0].toLowerCase());
+      const get = async (kind) => {
+        await K.img.set(p, 'export', kind); await K.sleep(500);
+        await K.clearDownloads(p);
+        await K.clickText(p, '.tool-io .io-pane .io-actions button', /^Download/);
+        await p.waitForFunction(() => window.__downloads.length > 0, { timeout: 10000 });
+        return (await K.downloads(p))[0];
+      };
+      const ase = await get('ase');
+      const b = ase.bytes; const got = [];
+      let ok = b.slice(0, 4).toString('latin1') === 'ASEF' && b.readUInt16BE(4) === 1 && b.readUInt32BE(8) === want.length;
+      let i = 12;
+      for (let k = 0; k < want.length && ok; k++) {
+        const type = b.readUInt16BE(i), len = b.readUInt32BE(i + 2), nlen = b.readUInt16BE(i + 6);
+        const m = i + 8 + nlen * 2;
+        const model = b.slice(m, m + 4).toString('latin1');
+        const rgb = [0, 1, 2].map((c) => Math.round(b.readFloatBE(m + 4 + c * 4) * 255));
+        got.push('#' + rgb.map((v) => v.toString(16).padStart(2, '0')).join(''));
+        ok = ok && type === 1 && model === 'RGB ';
+        i += 6 + len;
+      }
+      const gpl = (await get('gpl')).bytes.toString('utf8');
+      const gplHex = gpl.split('\n').filter((l) => /^\s*\d+\s+\d+\s+\d+/.test(l)).map((l) => '#' + l.trim().split(/\s+/).slice(0, 3).map((v) => (+v).toString(16).padStart(2, '0')).join(''));
+      const json = JSON.parse((await get('json')).bytes.toString('utf8')).map((c) => c.hex);
+      const png = await get('png');
+      ok = ok && got.join() === want.join() && /^GIMP Palette\n/.test(gpl) && gplHex.join() === want.join() && json.join() === want.join() && K.isPng(png.bytes) && /food-palette\.png$/.test(png.name);
+      return [ok, 'palette ' + want.join(',') + ' | ase ' + got.join(',') + ' | gpl ' + gplHex.join(',') + ' | json ' + json.join(',') + ' | ' + png.name];
+    }));
+
   /* ================================================================ */
   /* EXIF remover                                                      */
   /* ================================================================ */
   const ER = '/image/exif-remover/';
-  claim(ER, 'works', 'This tool re-encodes. Each photo is drawn onto a fresh canvas of its own size and saved with canvas.toBlob, as JPEG at quality 92 unless you choose otherwise.',
-    'defaults JPEG at 92; the result is a new JPEG of the same size, not the same bytes', B, async () => within(ER, async (p) => {
-      const d = await p.evaluate(() => [document.getElementById('ic-format').value, document.getElementById('ic-quality').value]);
-      await K.img.upload(p, [S('street.jpg')]);
-      const [b] = await K.img.results(p); const px = await K.img.pixels(p, b);
-      const src = fs.readFileSync(S('street.jpg'));
-      return [d.join() === 'image/jpeg,92' && K.isJpeg(b) && !b.equals(src) && px.w === 1600 && px.h === 1200, d.join() + ' → ' + K.kind(b) + ' ' + px.w + '×' + px.h];
+  const FX = require(path.join(__dirname, '..', 'image-fixtures.js'));
+  /* the remover's and viewer's test file: landscape.jpg with an EXIF APP1 (camera, GPS) and an XMP APP1 (creator, rights) */
+  const lakeTagged = () => K.once('img:lake-tagged', () => {
+    const jpg = fs.readFileSync(S('landscape.jpg'));
+    const eb = Buffer.concat([Buffer.from('Exif\0\0', 'latin1'), FX.exifTiff(1)]);
+    const xmp = '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:creator><rdf:Seq><rdf:li>A. Photographer</rdf:li></rdf:Seq></dc:creator><dc:rights><rdf:Alt><rdf:li xml:lang="x-default">(c) 2026 A. Photographer</rdf:li></rdf:Alt></dc:rights></rdf:Description></rdf:RDF></x:xmpmeta>';
+    const xb = Buffer.concat([Buffer.from('http://ns.adobe.com/xap/1.0/\0', 'latin1'), Buffer.from(xmp)]);
+    const seg = (b) => Buffer.concat([Buffer.from([0xff, 0xe1, (b.length + 2) >> 8, (b.length + 2) & 255]), b]);
+    return K.write('lake-tagged.jpg', Buffer.concat([jpg.slice(0, 2), seg(eb), seg(xb), jpg.slice(2)]));
+  });
+  claim(ER, 'works', 'Lossless, the default, copies the file’s own bytes and leaves out every metadata segment or chunk',
+    'the result is the original JPEG with its EXIF and XMP segments taken out, byte for byte', B, async () => within(ER, async (p) => {
+      const m = await p.evaluate(() => document.getElementById('ic-method').value);
+      await K.img.upload(p, [await lakeTagged()]);
+      const [b] = await K.img.results(p);
+      const plain = fs.readFileSync(S('landscape.jpg'));
+      return [m === 'lossless' && b.equals(plain), m + ': result ' + b.length + ' bytes, landscape.jpg ' + plain.length + (b.equals(plain) ? ', identical' : ', different')];
     }));
-  claim(ER, 'point', 'The browser applies the Orientation tag as it draws, so a photo stored sideways by a phone is saved upright.', 'a 1600×1067 JPEG tagged Orientation 6 comes out 1067×1600', B, async () => within(ER, async (p) => {
+  claim(ER, 'point', 'A JPEG keeps its scan byte for byte, with its JFIF header and colour profile; a PNG keeps only its drawing chunks; a WebP loses its EXIF and XMP chunks.',
+    'JPEG: same scan, APP0 and ICC kept; PNG: eXIf and tEXt gone, IDAT identical; WebP: EXIF chunk gone, VP8X flag cleared', B, async () => within(ER, async (p) => {
+      await K.img.upload(p, [await lakeTagged()]);
+      const [j] = await K.img.results(p);
+      const segs = K.jpegSegs(j).filter((s) => s.m >= 0xe0 && s.m <= 0xef).map((s) => s.m.toString(16));
+      const okJ = K.jpegScan(j).equals(K.jpegScan(fs.readFileSync(S('landscape.jpg')))) && segs.join() === 'e0,e2';
+      const png0 = await K.img.makePng(p, 60, 40, NOISE);
+      const t = Buffer.from('Author\0Secret Person', 'latin1');
+      const withText = FX.pngWithExif(png0, FX.exifTiff(1));
+      const ihdrEnd = 8 + 12 + withText.readUInt32BE(8);
+      const td = Buffer.concat([Buffer.from('tEXt'), t]); const len = Buffer.alloc(4); len.writeUInt32BE(t.length); const cr = Buffer.alloc(4); cr.writeUInt32BE(FX.crc32(td));
+      const png = Buffer.concat([withText.slice(0, ihdrEnd), len, td, cr, withText.slice(ihdrEnd)]);
+      await K.img.upload(p, [K.write('er-meta.png', png)]);
+      const [pb] = await K.img.results(p);
+      const types = K.pngChunks(pb).map((c) => c.type);
+      const idat = (b) => Buffer.concat(K.pngChunks(b).filter((c) => c.type === 'IDAT').map((c) => c.data));
+      const okP = !types.includes('eXIf') && !types.includes('tEXt') && idat(pb).equals(idat(png));
+      const webp0 = Buffer.from(await p.evaluate(() => { const c = document.createElement('canvas'); c.width = 64; c.height = 48; const x = c.getContext('2d'); x.fillStyle = '#2a6'; x.fillRect(0, 0, 64, 48); return Array.from(atob(c.toDataURL('image/webp', 0.8).split(',')[1]), (ch) => ch.charCodeAt(0)); }));
+      await K.img.upload(p, [K.write('er-meta.webp', FX.webpWithExif(webp0, FX.exifTiff(1), 64, 48))]);
+      const [wb] = await K.img.results(p);
+      const img = FX.webpWithExif(webp0, FX.exifTiff(1), 64, 48); const body = img.slice(30, img.indexOf('EXIF', 30));
+      const okW = K.isWebp(wb) && wb.indexOf('EXIF') < 0 && wb.indexOf('DemoCam') < 0 && (wb[20] & 0x08) === 0 && wb.readUInt32LE(4) === wb.length - 8 && wb.indexOf(body) > 0;
+      return [okJ && okP && okW, 'JPEG ' + okJ + ' (' + segs.join() + '); PNG ' + okP + ' (' + types.join(',') + '); WebP ' + okW];
+    }));
+  claim(ER, 'point', 'Keep writes the chosen fields back as a small EXIF block of their own: the orientation tag by default, or the copyright and author.',
+    'a sideways JPEG keeps Orientation 6 and nothing else; "Copyright and author" keeps those two', B, async () => within(ER, async (p) => {
+      await K.img.upload(p, [await tagged('er-turned.jpg', 6, 'food.jpg')]);
+      const [b] = await K.img.results(p);
+      const ex = K.core().readExif ? null : null; void ex;
+      const tiffOf = (buf) => { const s = K.jpegSegs(buf).find((x) => x.m === 0xe1 && /^Exif/.test(x.id)); return s ? buf.slice(s.at + 10, s.at + 2 + s.len) : null; };
+      const t = tiffOf(b);
+      const tagsOf = (t) => { if (!t) return []; const le = t[0] === 0x49; const u16 = (o) => (le ? t.readUInt16LE(o) : t.readUInt16BE(o)); const ifd = le ? t.readUInt32LE(4) : t.readUInt32BE(4); const n = u16(ifd); return Array.from({ length: n }, (_, k) => [u16(ifd + 2 + k * 12), u16(ifd + 2 + k * 12 + 8)]); };
+      const tags = tagsOf(t);
+      return [tags.length === 1 && tags[0][0] === 0x0112 && tags[0][1] === 6 && b.indexOf('DemoCam') < 0, K.j(tags)];
+    }));
+  claim(ER, 'point', 'First the site’s own parser lists the original’s metadata and any GPS position being removed; then it reads each cleaned file back and reports what is really in it.',
+    'rows for the original (EXIF, XMP …), the GPS position, and the result', B, async () => within(ER, async (p) => {
+      await K.img.upload(p, [await lakeTagged()]);
+      const st = await K.img.stats(p);
+      const a = K.img.stat(st, 'Metadata found in original'), g = K.img.stat(st, 'GPS removed'), r = K.img.stat(st, 'Metadata in result');
+      return [a === 'EXIF, XMP, APP0, ICC colour profile' && g === '-44.10850, 170.15417' && r === 'No EXIF, GPS or camera data; standard JFIF header and sRGB colour profile kept', a + ' / ' + g + ' / ' + r];
+    }));
+  claim(ER, 'point', 'GIF, BMP and AVIF have no lossless path here, so they are redrawn, and the page says so.', 'a GIF comes out a JPEG with a note naming it', B, async () => within(ER, async (p) => {
+    const gif = Buffer.from('R0lGODlhAgACAIAAAP8AAAAA/yH5BAAAAAAALAAAAAACAAIAAAICRAoAOw==', 'base64');
+    await K.img.upload(p, [K.write('er-tiny.gif', gif)]);
+    const [b] = await K.img.results(p); const m = await K.img.msg(p);
+    return [K.isJpeg(b) && /er-tiny\.gif is GIF, which has no lossless path here, so it was redrawn as JPEG/.test(m.text), K.kind(b) + ' / ' + m.text];
+  }));
+  claim(ER, 'dfaq', 'Not in Lossless mode: the compressed picture is copied as it is, so the pixels are identical.', 'decoded pixels of the result equal the original’s', B, async () => within(ER, async (p) => {
+    const f = await lakeTagged();
+    await K.img.upload(p, [f]);
+    const [b] = await K.img.results(p);
+    const same = await p.evaluate(async (a, c) => {
+      const px = async (u8) => { const bm = await createImageBitmap(new Blob([new Uint8Array(u8)])); const cv = document.createElement('canvas'); cv.width = bm.width; cv.height = bm.height; const x = cv.getContext('2d'); x.drawImage(bm, 0, 0); return x.getImageData(0, 0, bm.width, bm.height).data; };
+      const A = await px(a), C = await px(c); if (A.length !== C.length) return false; for (let i = 0; i < A.length; i++) if (A[i] !== C[i]) return false; return true;
+    }, Array.from(b), Array.from(fs.readFileSync(f)));
+    return [same, same ? 'identical' : 'different'];
+  }));
+  claim(ER, 'dfaq', 'Redraw turns the pixels upright so no tag is needed.', 'Redraw: a 1600×1067 JPEG tagged Orientation 6 comes out 1067×1600 with no EXIF', B, async () => within(ER, async (p) => {
+    await K.img.set(p, 'method', 'redraw');
     await K.img.upload(p, [await tagged('er-turned.jpg', 6, 'food.jpg')]);
     const [b] = await K.img.results(p); const d = await K.img.pixels(p, b);
     return [d.w === 1067 && d.h === 1600 && !hasExif(b), d.w + '×' + d.h];
   }));
-  claim(ER, 'point', 'Chrome adds a 16-byte JFIF header and an sRGB colour profile to a JPEG, neither about you; its PNG holds only the image.',
-    'JPEG: APP0 of 16 bytes and an ICC APP2; PNG: no metadata chunk', B, async () => within(ER, async (p) => {
-      await K.img.upload(p, [await tagged('er-tagged.jpg')]);
-      let [b] = await K.img.results(p);
-      const segs = K.jpegSegs(b).filter((s) => s.m >= 0xe0 && s.m <= 0xef);
-      const app0 = segs.find((s) => s.m === 0xe0);
-      await K.img.change(p, 'format', 'image/png');
-      [b] = await K.img.results(p);
-      const ch = K.pngChunks(b).map((c) => c.type).filter((t) => ['IHDR', 'IDAT', 'IEND'].indexOf(t) < 0);
-      return [app0 && app0.len === 16 && segs.some((s) => s.m === 0xe2 && /ICC_PROFILE/.test(s.id)) && !ch.length,
-        'JPEG ' + segs.map((s) => 'APP' + (s.m - 0xe0) + '(' + s.len + ')').join(' ') + '; PNG extra chunks: ' + (ch.join(',') || 'none')];
-    }));
-  claim(ER, 'point', 'The original\'s list reads JPEG only; a PNG\'s text chunks go unlisted but are dropped too.', 'a PNG with a tEXt chunk: listed as none, gone from the result', B, async () => within(ER, async (p) => {
-    const png = await K.img.makePng(p, 60, 40, "x.fillStyle='#369';x.fillRect(0,0,w,h);");
-    const zlib = require('zlib');
-    const data = Buffer.from('Author\0Secret Person', 'latin1');
-    const crc = (buf) => { let c, crcT = []; for (let n = 0; n < 256; n++) { c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; crcT[n] = c >>> 0; } let r = 0xffffffff; for (const x of buf) r = crcT[(r ^ x) & 255] ^ (r >>> 8); return (r ^ 0xffffffff) >>> 0; };
-    const type = Buffer.from('tEXt'); const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const cr = Buffer.alloc(4); cr.writeUInt32BE(crc(Buffer.concat([type, data])));
-    const withText = Buffer.concat([png.slice(0, 33), len, type, data, cr, png.slice(33)]);
-    void zlib;
-    await K.img.set(p, 'format', 'image/png');
-    await K.img.upload(p, [K.write('er-text.png', withText)]);
-    const [b] = await K.img.results(p); const st = await K.img.stats(p);
-    return [K.img.stat(st, 'Metadata found in original') === 'none' && b.indexOf('Secret Person') < 0, 'listed: ' + K.img.stat(st, 'Metadata found in original') + '; text in result: ' + (b.indexOf('Secret Person') >= 0)];
-  }));
-  claim(ER, 'dfaq', 'the EXIF viewer showed the test JPEG with only APP0 (16 B) and ICC colour profile (472 B).', 'the cleaned JPEG, read by the EXIF viewer', B, async () => {
-    const clean = await within(ER, async (p) => { await K.img.upload(p, [await tagged('er-tagged2.jpg')]); return (await K.img.results(p))[0]; });
+  claim(ER, 'dfaq', 'the EXIF viewer then lists only APP0 and the ICC colour profile for the test JPEG.', 'the cleaned JPEG, read by the EXIF viewer', B, async () => {
+    const clean = await within(ER, async (p) => { await K.img.upload(p, [await lakeTagged()]); return (await K.img.results(p))[0]; });
     return within('/image/exif-viewer/', async (p) => {
       await K.img.upload(p, [K.write('er-clean.jpg', clean)]);
       const s = K.img.stat(await K.img.stats(p), 'Metadata segments');
       return [s === 'APP0 (16 B), ICC colour profile (472 B)', s];
     });
   });
-  claim(ER, 'tip', 'The tool lists the metadata segments the original had, then reads the cleaned file back and reports what it really contains, rather than assuming.', 'rows for the original and for the result', B, async () => within(ER, async (p) => {
-    await K.img.upload(p, [await tagged('er-tagged3.jpg')]);
-    const st = await K.img.stats(p);
-    return [/EXIF/.test(K.img.stat(st, 'Metadata found in original') || '') && /No EXIF/.test(K.img.stat(st, 'Metadata in result') || ''), K.img.stat(st, 'Metadata found in original') + ' / ' + K.img.stat(st, 'Metadata in result')];
-  }));
 
   /* ================================================================ */
   /* EXIF viewer                                                       */
   /* ================================================================ */
   const EV = '/image/exif-viewer/';
-  claim(EV, 'point', 'GPS degrees, minutes and seconds become signed decimal degrees, south and west negative, with a link to OpenStreetMap.', '44°6\'30.6"S 170°9\'15"E', B, async () => within(EV, async (p) => {
-    await K.img.upload(p, [await tagged('ev-tagged.jpg')]);
+  /* the viewer may show no picture (a HEIC in Chrome), so a run is over when its File row names the file */
+  const evUpload = async (p, f) => { const i = await p.$('.tool-io input[type=file]'); await i.uploadFile(f); await p.waitForFunction((n) => [...document.querySelectorAll('.tool-io .stat-row')].some((r) => r.textContent === 'File' + n), { timeout: 30000 }, path.basename(f)); await K.sleep(200); };
+  claim(EV, 'point', 'GPS degrees, minutes and seconds become signed decimal degrees, south and west negative, with a map link that sends only those two numbers.', '44°6\'30.6"S 170°9\'15"E', B, async () => within(EV, async (p) => {
+    await evUpload(p, await tagged('ev-tagged.jpg'));
     const st = await K.img.stats(p);
     const href = await p.$eval('.tool-io a[href*="openstreetmap"]', (a) => a.href).catch(() => '');
-    return [K.img.stat(st, 'GPS latitude') === '-44.108500' && K.img.stat(st, 'GPS longitude') === '170.154167' && /openstreetmap\.org/.test(href), K.img.stat(st, 'GPS latitude') + ', ' + K.img.stat(st, 'GPS longitude') + ', ' + (href ? 'map link' : 'no link')];
+    const q = href.replace(/^https:\/\/www\.openstreetmap\.org\//, '');
+    return [K.img.stat(st, 'GPS latitude') === '-44.108500' && K.img.stat(st, 'GPS longitude') === '170.154167' && /^\?mlat=-44\.108500&mlon=170\.154167#map=15\/-44\.108500\/170\.154167$/.test(q), K.img.stat(st, 'GPS latitude') + ', ' + K.img.stat(st, 'GPS longitude') + ', ' + href];
   }));
-  claim(EV, 'point', 'Every metadata segment is listed with its size, including XMP, IPTC and ICC blocks whose contents are not decoded.', 'an XMP block is listed with its size', B, async () => within(EV, async (p) => {
-    await K.img.upload(p, [K.write('ev-xmp.jpg', K.withXmp(fs.readFileSync(S('food.jpg')), '<x:xmpmeta>creator</x:xmpmeta>'))]);
-    const s = K.img.stat(await K.img.stats(p), 'Metadata segments') || '';
-    return [/XMP \(\d+(\.\d+)? (B|KB)\)/.test(s), s];
+  claim(EV, 'works', 'the site’s own parser finds the metadata in whichever container it is: a JPEG’s APP1 segment, a PNG’s eXIf chunk, a WebP’s EXIF chunk, the Exif item a HEIC or AVIF file locates through its iloc box, or a TIFF’s tag directory.',
+    'the same EXIF (DemoCam, GPS) read from a PNG, a WebP, a HEIC and a TIFF built byte by byte in the test', B, async () => {
+      const t = FX.exifTiff(6);
+      const files = await within(EV, async (p) => {
+        const png = await K.img.makePng(p, 40, 30, NOISE);
+        const webp = Buffer.from(await p.evaluate(() => { const c = document.createElement('canvas'); c.width = 40; c.height = 30; const x = c.getContext('2d'); x.fillStyle = '#c63'; x.fillRect(0, 0, 40, 30); return Array.from(atob(c.toDataURL('image/webp', 0.8).split(',')[1]), (ch) => ch.charCodeAt(0)); }));
+        return [K.write('ev-exif.png', FX.pngWithExif(png, t)), K.write('ev-exif.webp', FX.webpWithExif(webp, t, 40, 30)), K.write('ev-exif.heic', FX.heicWithExif(t, 4032, 3024)), K.write('ev-exif.tif', t)];
+      });
+      const got = [];
+      for (const f of files) {
+        got.push(await within(EV, async (p) => {
+          await evUpload(p, f);
+          const st = await K.img.stats(p);
+          return path.basename(f) + ':' + K.img.stat(st, 'Format') + ',' + K.img.stat(st, 'Make') + ',' + K.img.stat(st, 'GPS latitude') + ',' + K.img.stat(st, 'Orientation');
+        }));
+      }
+      return [got.every((g) => /,DemoCam,-44\.108500,Rotated 90° CW \(6\)$/.test(g)), got.join(' | ')];
+    });
+  claim(EV, 'point', 'A HEIC photo’s metadata is read even where the browser cannot draw the picture itself.', 'Chrome cannot decode HEIC; the page says so and lists the EXIF, with Dimensions from the ispe box', B, async () => within(EV, async (p) => {
+    await evUpload(p, K.write('ev-phone.heic', FX.heicWithExif(FX.exifTiff(6), 4032, 3024)));
+    const st = await K.img.stats(p);
+    const note = await p.$eval('.tool-io .image-stage', (e) => e.textContent).catch(() => '');
+    return [K.img.stat(st, 'Dimensions') === '4032×3024' && K.img.stat(st, 'Make') === 'DemoCam' && /cannot show HEIC/.test(note), K.img.stat(st, 'Dimensions') + ' / ' + note];
   }));
-  claim(EV, 'point', 'Only JPEG is parsed; a PNG or WebP gets "Not a JPEG", even if it carries EXIF.', 'a PNG is reported as not a JPEG', B, async () => within(EV, async (p) => {
-    const f = await pngFile(p, 'ev.png', 40, 40, "x.fillStyle='#123';x.fillRect(0,0,w,h);");
-    await K.img.upload(p, [f]);
-    const m = await K.img.msg(p);
-    return [/Not a JPEG/i.test(m.text), m.text];
+  claim(EV, 'point', 'XMP and IPTC fields such as creator, rights and caption follow the EXIF.', 'XMP creator and rights are listed', B, async () => within(EV, async (p) => {
+    await evUpload(p, await lakeTagged());
+    const st = await K.img.stats(p);
+    return [K.img.stat(st, 'XMP Creator') === 'A. Photographer' && K.img.stat(st, 'XMP Rights') === '(c) 2026 A. Photographer', K.img.stat(st, 'XMP Creator') + ' / ' + K.img.stat(st, 'XMP Rights')];
+  }));
+  claim(EV, 'tip', '“Save as JSON” keeps every field in a file', 'the JSON holds the EXIF, GPS and XMP fields the page lists', B, async () => within(EV, async (p) => {
+    await evUpload(p, await lakeTagged());
+    await K.clearDownloads(p);
+    await K.clickText(p, '.tool-io .image-actions button', /^Save as JSON$/);
+    const [d] = await K.downloads(p);
+    const j = JSON.parse(d.bytes.toString('utf8'));
+    return [d.name === 'lake-tagged-metadata.json' && j.exif.Make === 'DemoCam' && Math.abs(j.gps.latitude + 44.1085) < 1e-6 && j.xmp.Creator === 'A. Photographer', d.name + ' ' + K.j({ make: j.exif.Make, lat: j.gps && j.gps.latitude, xmp: j.xmp })];
   }));
   claim(EV, 'dfaq', 'The six decimal places shown here are about 11 cm', 'GPS is shown to six decimals', B, async () => within(EV, async (p) => {
-    await K.img.upload(p, [await tagged('ev-tagged2.jpg')]);
+    await evUpload(p, await tagged('ev-tagged2.jpg'));
     const v = K.img.stat(await K.img.stats(p), 'GPS latitude') || '';
     return [/\.\d{6}$/.test(v), v];
   }));
   claim(EV, 'point', 'It reads the main tag directory and the Exif and GPS directories, showing a fixed list of common tags, from Make to LensModel', 'Make and Orientation are read', B, async () => within(EV, async (p) => {
-    await K.img.upload(p, [await tagged('ev-tagged3.jpg', 6)]);
+    await evUpload(p, await tagged('ev-tagged3.jpg', 6));
     const st = await K.img.stats(p);
     return [K.img.stat(st, 'Make') === 'DemoCam' && /90|Rotate/i.test(K.img.stat(st, 'Orientation') || ''), K.img.stat(st, 'Make') + ' / ' + K.img.stat(st, 'Orientation')];
   }));
@@ -432,7 +593,7 @@ module.exports = function ({ claim, manual, kit: K }) {
   /* compressor                                                        */
   /* ================================================================ */
   const CO = '/image/image-compressor/';
-  claim(CO, 'point', 'A max width scales the picture down in proportion first; a narrower photo is never enlarged.', 'max 800 on 1600×1200 → 800×600; max 3000 → 1600×1200', B, async () => within(CO, async (p) => {
+  claim(CO, 'point', 'A max width scales the picture down first with Lanczos3; a narrower photo is never enlarged.', 'max 800 on 1600×1200 → 800×600; max 3000 → 1600×1200', B, async () => within(CO, async (p) => {
     await K.img.set(p, 'maxWidth', 800);
     await K.img.upload(p, [S('street.jpg')]);
     let [b] = await K.img.results(p); const a = await K.img.pixels(p, b);
@@ -440,25 +601,13 @@ module.exports = function ({ claim, manual, kit: K }) {
     [b] = await K.img.results(p); const c = await K.img.pixels(p, b);
     return [a.w === 800 && a.h === 600 && c.w === 1600 && c.h === 1200, a.w + '×' + a.h + ', ' + c.w + '×' + c.h];
   }));
-  claim(CO, 'point', 'For JPEG the canvas is painted white first, since JPEG cannot store transparency.', 'a transparent PNG to JPEG has white corners', B, async () => within(CO, async (p) => {
-    const f = await pngFile(p, 'co-t.png', 80, 80, "x.clearRect(0,0,w,h);x.fillStyle='#00f';x.fillRect(20,20,40,40);");
-    await K.img.set(p, 'format', 'image/jpeg');
-    await K.img.upload(p, [f]);
-    const [b] = await K.img.results(p); const d = await K.img.pixels(p, b, [[1, 1]]);
-    return [K.isJpeg(b) && d.px[0][0] > 245 && d.px[0][1] > 245 && d.px[0][2] > 245, K.j(d.px)];
-  }));
-  claim(CO, 'dfaq', 'A test JPEG carrying camera, date and GPS tags came out with none of them.', 'a tagged JPEG compressed to JPEG keeps no EXIF', B, async () => within(CO, async (p) => {
+  claim(CO, 'dfaq', 'By default, yes: a test JPEG with camera, date and GPS tags came out with none.', 'a tagged JPEG compressed to JPEG keeps no EXIF', B, async () => within(CO, async (p) => {
     await K.img.set(p, 'format', 'image/jpeg');
     await K.img.upload(p, [await tagged('co-tagged.jpg')]);
     const [b] = await K.img.results(p);
     return [K.isJpeg(b) && !hasExif(b), hasExif(b) ? 'EXIF kept' : 'no EXIF'];
   }));
-  claim(CO, 'point', 'Sizes use binary units: a KB here is 1,024 bytes.', 'street.jpg (329,068 bytes) reads 321.4 KB', B, async () => within(CO, async (p) => {
-    await K.img.upload(p, [S('street.jpg')]);
-    const s = K.img.stat(await K.img.stats(p), 'Original total');
-    return [s === '321.4 KB', s];
-  }));
-  claim(CO, 'dfaq', 'With it at 0 the test photo came out at 4000×3000 at every quality.', 'max width 0 keeps the size at quality 30 and 90', B, async () => within(CO, async (p) => {
+  claim(CO, 'dfaq', 'Not unless you set a max width, or a limit that quality alone cannot meet. Otherwise the street photo stayed 1600×1200.', 'max width 0 keeps the size at quality 30 and 90', B, async () => within(CO, async (p) => {
     await K.img.set(p, 'quality', 30);
     await K.img.upload(p, [S('street.jpg')]);
     let [b] = await K.img.results(p); const a = await K.img.pixels(p, b);
@@ -466,19 +615,21 @@ module.exports = function ({ claim, manual, kit: K }) {
     [b] = await K.img.results(p); const c = await K.img.pixels(p, b);
     return [a.w === 1600 && a.h === 1200 && c.w === 1600 && c.h === 1200, a.w + '×' + a.h + ' / ' + c.w + '×' + c.h + ' (4000×3000 is the page\'s own test photo; this sample is 1600×1200)'];
   }));
-  claim(CO, 'dfaq', 'so the 1,846,375-byte test photo is 1.76 MB here and 1.85 MB on a Mac.', 'the page\'s size formatter on 1,846,375 bytes', N, async () => {
-    const src = fs.readFileSync(path.join(K.ROOT, 'engine', 'render-image.js'), 'utf8');
-    const m = /const fmtBytes = (\(n\) =>[\s\S]*?MB');/.exec(src);
-    const fmt = m ? new Function('return ' + m[1] + ';')() : null;
-    const here = fmt ? fmt(1846375) : '?';
-    return [here === '1.76 MB' && (1846375 / 1e6).toFixed(2) === '1.85', 'here ' + here + ', decimal ' + (1846375 / 1e6).toFixed(2) + ' MB'];
-  });
-  claim(CO, 'lede', 'Shrink JPEG, PNG and WebP files', '"Keep original format" keeps a PNG a PNG', B, async () => within(CO, async (p) => {
+  claim(CO, 'dfaq', 'This page divides by 1,024 and macOS by 1,000: 329,068 bytes is 321.4 KB here, 329.1 KB on a Mac.', 'street.jpg (329,068 bytes) reads 321.4 KB on the page; 329,068 ÷ 1,000 is 329.1', B, async () => within(CO, async (p) => {
+    await K.img.upload(p, [S('street.jpg')]);
+    const shown = K.img.stat(await K.img.stats(p), 'Original total');
+    const bytes = fs.statSync(S('street.jpg')).size;
+    return [bytes === 329068 && shown === '321.4 KB' && (bytes / 1000).toFixed(1) === '329.1', bytes + ' bytes shown as ' + shown + '; decimal ' + (bytes / 1000).toFixed(1) + ' KB'];
+  }));
+  claim(CO, 'lede', 'Shrink JPEG, PNG, WebP and AVIF files', '"Keep original format" keeps a PNG a PNG; AVIF is offered and produced (an ftyp avif box)', B, async () => within(CO, async (p) => {
     const f = await pngFile(p, 'co-same.png', 80, 80, NOISE);
     await K.img.set(p, 'format', 'same');
     await K.img.upload(p, [f]);
     const [b] = await K.img.results(p);
-    return [K.isPng(b), K.kind(b)];
+    await K.img.change(p, 'format', 'image/avif', 120000);
+    const [a] = await K.img.results(p);
+    const avif = a && a.slice(4, 12).toString('latin1') === 'ftypavif';
+    return [K.isPng(b) && avif, K.kind(b) + '; ' + (a ? a.slice(4, 12).toString('latin1') : 'no result')];
   }));
 
   /* ================================================================ */
@@ -500,41 +651,43 @@ module.exports = function ({ claim, manual, kit: K }) {
     const [b] = await K.img.results(p);
     return [a.equals(b), a.equals(b) ? 'identical' : a.length + ' vs ' + b.length + ' bytes'];
   }));
-  claim(CV, 'point', 'The quality slider, 92 by default, reaches the JPEG and WebP encoders as 0.92.', 'default 92', B, async () => within(CV, async (p) => {
+  claim(CV, 'point', 'The quality slider, 92 by default, reaches JPEG, WebP and AVIF', 'default 92', B, async () => within(CV, async (p) => {
     const q = await p.$eval('#ic-quality', (e) => e.value); return [q === '92', q];
   }));
-  claim(CV, 'point', 'Only pixels cross over. EXIF, GPS and XMP blocks stay behind, and a rotation recorded as a tag is applied to the pixels.', 'Orientation 6 JPEG → upright JPEG with no EXIF', B, async () => within(CV, async (p) => {
+  claim(CV, 'point', 'EXIF, GPS and XMP stay behind unless Metadata keeps them; a rotation recorded as a tag is applied to the pixels.', 'Orientation 6 JPEG → upright JPEG with no EXIF', B, async () => within(CV, async (p) => {
     await K.img.set(p, 'format', 'image/jpeg');
     await K.img.upload(p, [await tagged('cv-turned.jpg', 6, 'food.jpg')]);
     const [b] = await K.img.results(p); const d = await K.img.pixels(p, b);
     return [d.w === 1067 && d.h === 1600 && !hasExif(b), d.w + '×' + d.h + (hasExif(b) ? ', EXIF kept' : ', no EXIF')];
   }));
-  claim(CV, 'dfaq', 'The canvas takes the picture\'s own size, so the test photo came out at 1600×1067 in every format.', 'food.jpg 1600×1067 as PNG, JPEG and WebP', B, async () => within(CV, async (p) => {
+  claim(CV, 'dfaq', 'Not unless you set a longest side. The test photo stayed 1600×1067, except in ICO, which holds at most 256×256.', 'food.jpg 1600×1067 as PNG, JPEG and WebP; the ICO card says 256×256', B, async () => within(CV, async (p) => {
     await K.img.upload(p, [S('food.jpg')]);
     const out = [];
     for (const f of ['image/png', 'image/jpeg', 'image/webp']) { await K.img.change(p, 'format', f); const [b] = await K.img.results(p); const d = await K.img.pixels(p, b); out.push(K.kind(b) + ' ' + d.w + '×' + d.h); }
-    return [out.join(', ') === 'png 1600×1067, jpeg 1600×1067, webp 1600×1067', out.join(', ')];
+    await K.img.change(p, 'format', 'image/x-icon'); await idle(p);
+    const cap = await p.$eval('.img-compare-readout', (e) => e.textContent).catch(() => '');
+    return [out.join(', ') === 'png 1600×1067, jpeg 1600×1067, webp 1600×1067' && /Result[^R]*256×256/.test(cap), out.join(', ') + ' / ico: ' + cap];
   }));
-  claim(CV, 'dfaq', 'only a JFIF header and the browser\'s standard sRGB colour profile remained.', 'the JPEG has APP0 and an ICC APP2 only', B, async () => within(CV, async (p) => {
+  claim(CV, 'dfaq', 'Not by default. A test JPEG with camera tags and a GPS position came out with only a JFIF header; Metadata can keep EXIF.', 'the JPEG has APP0 (JFIF) only', B, async () => within(CV, async (p) => {
     await K.img.set(p, 'format', 'image/jpeg');
     await K.img.upload(p, [await tagged('cv-tagged.jpg')]);
     const [b] = await K.img.results(p);
     const segs = K.jpegSegs(b).filter((s) => (s.m >= 0xe0 && s.m <= 0xef) || s.m === 0xfe).map((s) => s.m.toString(16));
-    return [segs.join() === 'e0,e2', segs.join()];
+    return [segs.join() === 'e0', segs.join()];
   }));
-  claim(CV, 'mistake', 'Chrome cannot decode either, so the tool says "None of those files could be decoded."', 'a TIFF is refused with that message', B, async () => within(CV, async (p) => {
+  claim(CV, 'mistake', 'Chrome cannot decode either, and the page names the file; export a JPEG first.', 'a TIFF is refused with that message', B, async () => within(CV, async (p) => {
     const tif = Buffer.from([0x49, 0x49, 0x2a, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     const i = await p.$('.tool-io input[type=file]'); await i.uploadFile(K.write('scan.tif', tif));
     await p.waitForFunction(() => /could|not images/.test((document.querySelector('.tool-io .io-msg') || {}).textContent || ''), { timeout: 15000 }).catch(() => {});
     const m = await K.img.msg(p);
-    return [m.text === 'None of those files could be decoded.', m.text];
+    return [/None of those files could be decoded\./.test(m.text) && /scan\.tif could not be read as an image/.test(m.text), m.text];
   }));
 
   /* ================================================================ */
   /* cropper                                                           */
   /* ================================================================ */
   const CR = '/image/image-cropper/';
-  claim(CR, 'point', 'On release, drawImage copies exactly that rectangle onto a new canvas, pixel for pixel.', 'the default crop of a noise PNG equals that rectangle of the source', B, async () => within(CR, async (p) => {
+  claim(CR, 'point', 'so the crop comes from the full-resolution file.', 'the default crop of a noise PNG equals that rectangle of the source', B, async () => within(CR, async (p) => {
     const f = await pngFile(p, 'cr-noise.png', 200, 100, NOISE);
     await K.img.upload(p, [f]);
     const [b] = await K.img.results(p);
@@ -546,13 +699,6 @@ module.exports = function ({ claim, manual, kit: K }) {
     }, Array.from(fs.readFileSync(f)), Array.from(b));
     return [diff.d === 0 && diff.w === 140 && diff.h === 70, K.j(diff)];
   }));
-  claim(CR, 'works', 'The preview canvas is at most 720 pixels wide, but your drag is converted back into the original\'s pixel coordinates, so the crop comes from the full-resolution file.',
-    'preview 720 px wide, crop 1120×840 from a 1600×1200 photo', B, async () => within(CR, async (p) => {
-      await K.img.upload(p, [S('street.jpg')]);
-      const vw = await p.$eval('.select-canvas', (c) => c.width);
-      const [b] = await K.img.results(p); const d = await K.img.pixels(p, b);
-      return [vw === 720 && d.w === 1120 && d.h === 840, 'preview ' + vw + ' px; crop ' + d.w + '×' + d.h];
-    }));
   /* drag on the crop canvas from (fx0, fy0) to (fx1, fy1), as fractions of it; the page scrolls smoothly, so it is put in place instantly first */
   const cropDrag = async (p, fx0, fy0, fx1, fy1) => {
     await p.$eval('.select-canvas', (e) => window.scrollTo({ top: e.getBoundingClientRect().top + window.scrollY - 120, behavior: 'instant' }));
@@ -568,7 +714,7 @@ module.exports = function ({ claim, manual, kit: K }) {
   };
   /* the readout under the crop canvas, "W × H px at X, Y", as numbers */
   const cropBox = async (p) => { const m = /(\d+) × (\d+) px\s+at (\d+), (\d+)/.exec(await p.$eval('.select-readout', (e) => e.textContent)) || []; return { w: +m[1], h: +m[2], x: +m[3], y: +m[4] }; };
-  claim(CR, 'point', 'With a ratio locked, the drag is first held inside the picture\'s edges, then trimmed on its longer side to match and rounded to whole pixels, so the shape holds even when you drag past an edge.',
+  claim(CR, 'point', 'With a ratio locked, the selection keeps that shape as you drag.',
     '1:1 inside, 1:1 past the bottom-right corner, 1:1 up-left past the top-left corner, 16:9 past the right edge: each the right shape and inside 1600×1200', B, async () => within(CR, async (p) => {
       await K.img.set(p, 'ratio', '1:1');
       await K.img.upload(p, [S('street.jpg')]);
@@ -583,17 +729,31 @@ module.exports = function ({ claim, manual, kit: K }) {
       const bad = runs.filter((r) => !(r.w > 50 && r.w === r.b.w && r.h === r.b.h && Math.abs(r.h - r.w / r.ar) <= 0.5 && r.b.x >= 0 && r.b.y >= 0 && r.b.x + r.w <= 1600 && r.b.y + r.h <= 1200));
       return [!bad.length, runs.map((r) => r.label + ' ' + r.w + '×' + r.h + ' at ' + r.b.x + ',' + r.b.y).join('; ')];
     }));
-  claim(CR, 'what', 'cropped with 16:9 locked by dragging across the middle gave a 1280×720 selection, a true 16:9. Downloaded as PNG, the default, the crop weighed 1.51 MB, almost five times the whole original. The same selection saved as JPEG at quality 85 was 217.2 KB.',
-    'street.jpg, 16:9, drag 10%,20% to 90%,80%: PNG then JPEG 85', B, async () => within(CR, async (p) => {
+  /* the number boxes: set one, fire change, as a person typing and leaving the box */
+  const cropNum = (p, k, v) => K.img.act(p, () => p.$eval('#crop-' + k, (e, v) => { e.value = String(v); e.dispatchEvent(new Event('change', { bubbles: true })); }, v)).then(() => idle(p));
+  claim(CR, 'what', 'the number boxes were set to X 160, Y 240 and a width of 1280, and the height followed: a 1280×720 box, a true 16:9. Downloaded as PNG, the default, the crop weighed 1.51 MB, nearly five times the whole original. The same box saved as JPEG at quality 85 was 184.7 KB.',
+    'street.jpg, 16:9, X 160, Y 240, width 1280 typed in: 1280×720; PNG then JPEG 85', B, async () => within(CR, async (p) => {
       await K.img.set(p, 'ratio', '16:9');
       await K.img.upload(p, [S('street.jpg')]);
-      const st = await cropDrag(p, 0.1, 0.2, 0.9, 0.8);
+      await cropNum(p, 'x', 160); await cropNum(p, 'y', 240); await cropNum(p, 'w', 1280);
+      const box = await cropBox(p);
+      await idle(p);
       const [png] = await K.img.results(p);
-      await K.img.change(p, 'format', 'image/jpeg'); await K.img.change(p, 'quality', 85);
+      await K.img.change(p, 'format', 'image/jpeg'); await K.img.change(p, 'quality', 85); await idle(p);
       const [jpg] = await K.img.results(p);
       const src = fs.statSync(S('street.jpg')).size;
-      return [st === '1280×720' && K.isPng(png) && near(png.length, '1.51 MB') && png.length / src > 4.5 && png.length / src < 5 && K.isJpeg(jpg) && near(jpg.length, '217.2 KB'),
-        st + ': PNG ' + fmtKB(png.length) + ' (' + (png.length / src).toFixed(2) + '× the original), JPEG 85 ' + fmtKB(jpg.length)];
+      return [box.w === 1280 && box.h === 720 && box.x === 160 && box.y === 240 && K.isPng(png) && near(png.length, '1.51 MB') && png.length / src > 4.5 && png.length / src < 5 && K.isJpeg(jpg) && near(jpg.length, '184.7 KB'),
+        K.j(box) + ': PNG ' + fmtKB(png.length) + ' (' + (png.length / src).toFixed(2) + '× the original), JPEG 85 ' + fmtKB(jpg.length) + ' (2% allowed)'];
+    }));
+  claim(CR, 'works', 'Draw a box, drag it, pull its handles, or type X, Y, Width and Height; a locked ratio is obeyed at once.',
+    '1:1 chosen first: the starting box is already square; typing a width on 16:9 sets the height', B, async () => within(CR, async (p) => {
+      await K.img.set(p, 'ratio', '1:1');
+      await K.img.upload(p, [S('street.jpg')]);
+      const sq = await cropBox(p);
+      await K.img.change(p, 'ratio', '16:9');
+      await cropNum(p, 'w', 800);
+      const wide = await cropBox(p);
+      return [sq.w === sq.h && wide.w === 800 && wide.h === 450, K.j(sq) + ' / ' + K.j(wide)];
     }));
   claim(CR, 'tip', 'With a ratio locked, the selection keeps that shape as you drag.', '1:1, a drag that runs past the bottom edge', B, async () => within(CR, async (p) => {
     await K.img.set(p, 'ratio', '1:1');
@@ -602,23 +762,10 @@ module.exports = function ({ claim, manual, kit: K }) {
     const [w, h] = st.split('×').map(Number);
     return [w > 100 && w === h, 'selection ' + st + ' after dragging from 10%,10% to 80%,115% of the picture'];
   }));
-  claim(CR, 'mistake', 'The lock shapes the box only while you drag, and the starting box follows the picture\'s own shape, so drag once first.', '1:1 chosen first: the undragged crop is 4:3', B, async () => within(CR, async (p) => {
-    await K.img.set(p, 'ratio', '1:1');
-    await K.img.upload(p, [S('street.jpg')]);
-    const [b] = await K.img.results(p); const d = await K.img.pixels(p, b);
-    return [d.w !== d.h, d.w + '×' + d.h];
-  }));
-  claim(CR, 'point', 'a JPEG gets a white backing so transparency does not turn black.', 'transparent PNG cropped to JPEG: white', B, async () => within(CR, async (p) => {
-    const f = await pngFile(p, 'cr-t.png', 100, 100, "x.clearRect(0,0,w,h);");
-    await K.img.set(p, 'format', 'image/jpeg');
-    await K.img.upload(p, [f]);
-    const [b] = await K.img.results(p); const d = await K.img.pixels(p, b, [[5, 5]]);
-    return [K.isJpeg(b) && d.px[0][0] > 245, K.j(d.px)];
-  }));
-  claim(CR, 'dfaq', 'Each crop needs its own box drawn on its own picture, so the cropper takes one image at a time.', 'the file input takes one file', B, async () => within(CR, async (p) => {
+  claim(CR, 'dfaq', 'Each crop needs its own box on its own picture, so the cropper takes one image at a time.', 'the file input takes one file', B, async () => within(CR, async (p) => {
     const m = await p.$eval('.tool-io input[type=file]', (e) => e.multiple); return [m === false, 'multiple=' + m];
   }));
-  claim(CR, 'dfaq', 'The browser\'s canvas writes a new file and does not copy the original\'s EXIF tags, GPS coordinates included, into it.', 'tagged JPEG cropped to JPEG: no EXIF', B, async () => within(CR, async (p) => {
+  claim(CR, 'dfaq', 'By default, yes: the crop is a new file with no EXIF or GPS tags. Metadata can keep the colour profile or EXIF without GPS.', 'tagged JPEG cropped to JPEG: no EXIF', B, async () => within(CR, async (p) => {
     await K.img.set(p, 'format', 'image/jpeg');
     await K.img.upload(p, [await tagged('cr-tagged.jpg')]);
     const [b] = await K.img.results(p);
@@ -804,7 +951,7 @@ module.exports = function ({ claim, manual, kit: K }) {
     const pdf = await makePdf(p, [S('document.jpg')]);
     return [pdf.includes(fs.readFileSync(S('document.jpg'))) && /DCTDecode/.test(pdf.toString('latin1')), pdf.length + ' bytes'];
   }));
-  claim(IP, 'point', 'Each image is fitted inside the margin (28 points by default) and centred', 'on A4 portrait the image spans the width less 28 pt each side', B, async () => within(IP, async (p) => {
+  claim(IP, 'point', 'Each image fits inside the margin (28 points by default) or fills the page', 'on A4 portrait the image spans the width less 28 pt each side', B, async () => within(IP, async (p) => {
     const pdf = await makePdf(p, [S('document.jpg')]);
     const a = await K.analyse(pdf); const c = await a.content(0);
     const m = /([\d.]+) 0 0 ([\d.]+) ([\d.]+) ([\d.]+) cm/.exec(c);
@@ -821,11 +968,11 @@ module.exports = function ({ claim, manual, kit: K }) {
     const mb = (await K.analyse(pdf)).pages[0].dict.MediaBox.map(Math.round).join(' ');
     return [mb === '0 0 1600 1067', mb];
   }));
-  claim(IP, 'point', 'The result is a plain PDF with no title, bookmarks or text layer.', 'no Info Title, no Outlines, no text', B, async () => within(IP, async (p) => {
+  claim(IP, 'point', 'The result has no title, bookmarks or text layer.', 'no Info Title, no Outlines, no text', B, async () => within(IP, async (p) => {
     const a = await K.analyse(await makePdf(p, [S('food.jpg')]));
     return [!a.info.Title && a.root.Outlines === undefined && !/ Tj| TJ/.test(await a.content(0)), K.j(a.info) + ', outlines ' + (a.root.Outlines ? 'yes' : 'no')];
   }));
-  claim(IP, 'tip', 'The list can be reordered before generating.', 'two images: "Move up" on the second puts it first', B, async () => within(IP, async (p) => {
+  claim(IP, 'tip', 'Drag the thumbnails to reorder, turn a single page with ⟲ or ⟳, and name the file yourself.', 'two images: "Move up" on the second puts it first', B, async () => within(IP, async (p) => {
     const i = await p.$('.tool-io input[type=file]'); await i.uploadFile(S('food.jpg'), S('document.jpg'));
     await p.waitForSelector('.file-list .file-row button[title="Move up"]', { timeout: 30000 });
     const up = await p.$$('.file-list .file-row button[title="Move up"]');
@@ -843,10 +990,10 @@ module.exports = function ({ claim, manual, kit: K }) {
   /* meme                                                              */
   /* ================================================================ */
   const MG = '/image/meme-generator/';
-  claim(MG, 'point', 'Font size is a percentage of the picture\'s height, in bold Impact, falling back to Haettenschweiler, Arial Narrow Bold or any sans-serif.', 'size 10 on a 500 px picture asks for bold 50px Impact…', N, async () => {
-    const log = paintIn('img-meme-generator.js', 'meme-generator', 800, 500, { size: 10 });
-    const f = (log.find((x) => x[0] === '=font') || [])[1];
-    return [f === 'bold 50px Impact, "Haettenschweiler", "Arial Narrow Bold", sans-serif', f];
+  claim(MG, 'point', 'Font size is a percentage of the picture’s height, in Anton unless you choose Impact (where the device has it), Bebas Neue, Comic Neue or Permanent Marker.', 'size 10 on a 500 px picture asks for 50px Anton; Impact when chosen', N, async () => {
+    const f = (opts) => (paintIn('img-meme-generator.js', 'meme-generator', 800, 500, opts).find((x) => x[0] === '=font') || [])[1];
+    const a = f({ size: 10 }), b = f({ size: 10, font: 'impact' });
+    return [/50px "?Anton"?/.test(a) && /50px "?Impact"?|50px Impact/.test(b), a + ' | ' + b];
   });
   claim(MG, 'point', 'The text is capitalised if "Force uppercase" is on, then broken at spaces into lines no wider than 94% of the picture.', 'caps on: drawn upper-case; lines fit 94%', N, async () => {
     const log = paintIn('img-meme-generator.js', 'meme-generator', 400, 400, { top: 'one two three four five six seven eight', bottom: '', caps: 'yes', size: 10 });
@@ -854,14 +1001,14 @@ module.exports = function ({ claim, manual, kit: K }) {
     const w = (s) => s.length * 20;
     return [lines.length > 1 && lines.every((l) => l === l.toUpperCase() && (w(l) <= 376 || !/ /.test(l))), K.j(lines)];
   });
-  claim(MG, 'point', 'Each line is stroked in the outline colour at 12% of the font size, then filled in the text colour on top.', 'stroke before fill, line width 12% of 50', N, async () => {
+  claim(MG, 'point', 'Each line is stroked in the outline colour, 12% of the font size by default, then filled in the text colour on top.', 'stroke before fill, line width 12% of 50', N, async () => {
     const log = paintIn('img-meme-generator.js', 'meme-generator', 800, 500, { size: 10, outline: '#123456', color: '#abcdef' });
     const lw = (log.find((x) => x[0] === '=lineWidth') || [])[1];
     const i = log.findIndex((x) => x[0] === 'strokeText'), j = log.findIndex((x) => x[0] === 'fillText');
     const ss = (log.find((x) => x[0] === '=strokeStyle') || [])[1], fs2 = (log.find((x) => x[0] === '=fillStyle') || [])[1];
     return [Math.abs(lw - 6) < 1e-9 && i >= 0 && i < j && ss === '#123456' && fs2 === '#abcdef', 'lineWidth ' + lw + ', stroke at ' + i + ', fill at ' + j];
   });
-  claim(MG, 'point', 'The meme keeps the picture\'s size: PNG by default, or JPEG or WebP at your quality.', 'food.jpg stays 1600×1067, PNG', B, async () => within(MG, async (p) => {
+  claim(MG, 'point', 'Drag any caption, add more text boxes and image stickers, and save PNG (the default), JPEG or WebP at the picture’s own size.', 'food.jpg stays 1600×1067, PNG', B, async () => within(MG, async (p) => {
     await K.img.upload(p, [S('food.jpg')]);
     const [b] = await K.img.results(p); const d = await K.img.pixels(p, b);
     return [K.isPng(b) && d.w === 1600 && d.h === 1067, K.kind(b) + ' ' + d.w + '×' + d.h];
@@ -876,59 +1023,121 @@ module.exports = function ({ claim, manual, kit: K }) {
   /* passport photo                                                    */
   /* ================================================================ */
   const PP = '/image/passport-photo/';
-  const presets = () => K.once('img:presets', () => within(PP, (p) => p.evaluate(() => (window.MVRImage && window.MVRImage.PHOTO_PRESETS || []).map((x) => ({ name: x.name, w: x.w, h: x.h, dpi: x.dpi })))));
-  claim(PP, 'works', 'The tool knows six fixed sizes at 300 DPI: India passport / visa 51×51 mm, UK passport 35×45 mm, US passport 51×51 mm, Schengen visa 35×45 mm, India PAN card 25×35 mm and stamp size 20×25 mm.',
-    'the preset table', B, async () => {
-      const ps = await presets();
-      const s = ps.map((x) => x.w + '×' + x.h + '@' + x.dpi).join(',');
-      return [s === '51×51@300,35×45@300,51×51@300,35×45@300,25×35@300,20×25@300', s];
-    });
+  const presets = () => K.once('img:presets', () => within(PP, (p) => p.evaluate(() => (window.MVRPassportPresets || []).map((x) => ({ id: x.id, name: x.name, w: x.w, h: x.h, source: x.source })))));
+  const sheetCopies = (caps, re) => { const c = caps.find((x) => re.test(x)) || ''; return (c.match(/(\d+) copies/) || [])[1]; };
+  claim(PP, 'works', 'The tool holds 43 documents with their sizes at 300 DPI; all but a generic stamp size name the issuer’s page.', 'the preset table: 43 documents, each with an https source and a size; the Source row names it', B, async () => within(PP, async (p) => {
+    const ps = await presets();
+    const bad = ps.filter((x) => !(/^https?:\/\//.test(x.source || '') || x.id === 'stamp') || !(x.w > 0 && x.h > 0));
+    await K.img.upload(p, [S('portrait.jpg')]); await idle(p);
+    const row = K.img.stat(await K.img.stats(p), 'Source of these sizes') || '';
+    return [ps.length === 43 && !bad.length && row.length > 0, ps.length + ' presets, ' + bad.length + ' without a source; Source row: ' + row];
+  }));
   claim(PP, 'dfaq', 'At 300 DPI, 35×45 mm is 413×531 pixels.', 'the UK preset\'s photo', B, async () => within(PP, async (p) => {
-    const idx = (await presets()).findIndex((x) => x.w === 35 && x.h === 45);
-    await K.img.set(p, 'preset', idx); await K.img.set(p, 'sheet', 'single');
+    await K.img.set(p, 'preset', 'uk-passport'); await K.img.set(p, 'sheet', 'single');
     await K.img.upload(p, [S('portrait.jpg')]);
     const [b] = await K.img.results(p); const d = await K.img.pixels(p, b);
     return [d.w === 413 && d.h === 531, d.w + '×' + d.h];
   }));
-  claim(PP, 'dfaq', 'Here, 8 at 35×45 mm and 21 at stamp size, but only 2 at 51×51 mm.', 'copies per 6×4 sheet', B, async () => within(PP, async (p) => {
-    const ps = await presets();
-    await K.img.upload(p, [S('portrait.jpg')]);
-    const out = [];
-    for (const want of [[35, 45], [20, 25], [51, 51]]) {
-      await K.img.change(p, 'preset', ps.findIndex((x) => x.w === want[0] && x.h === want[1]));
-      const cap = (await K.img.caps(p)).find((c) => /Print sheet/.test(c)) || '';
-      out.push((cap.match(/(\d+) copies/) || [])[1]);
-    }
-    return [out.join() === '8,21,2', out.join()];
+  claim(PP, 'dfaq', 'Here, 8 at 35×45 mm on a 6×4 inch sheet and 30 on A4, but only 2 of India’s 51×51 mm photos on the 6×4.', 'copies per sheet: UK 8 on 6×4 and 30 on A4, the India 2×2 in 2 on 6×4', B, async () => within(PP, async (p) => {
+    await K.img.set(p, 'sheet', 'all'); await K.img.set(p, 'preset', 'uk-passport');
+    await K.img.upload(p, [S('portrait.jpg')]); await idle(p);
+    const uk = await K.img.caps(p);
+    await K.img.change(p, 'preset', 'in-2x2'); await idle(p);
+    const ind = await K.img.caps(p);
+    const out = [sheetCopies(uk, /6×4/), sheetCopies(uk, /A4/), sheetCopies(ind, /6×4/)];
+    return [out.join() === '8,30,2', out.join()];
   }));
-  claim(PP, 'point', 'The print sheet is 1800×1200 pixels, 6×4 inches, with as many copies as fit at a 12-pixel gap.', 'sheet 1800×1200', B, async () => within(PP, async (p) => {
-    await K.img.set(p, 'sheet', 'sheet');
-    await K.img.upload(p, [S('portrait.jpg')]);
-    const [b] = await K.img.results(p); const d = await K.img.pixels(p, b);
-    return [d.w === 1800 && d.h === 1200, d.w + '×' + d.h];
+  claim(PP, 'point', 'The print sheet is 6×4 inches (1800×1200) or A4 (2480×3508), with as many copies as fit and thin cutting lines.', 'the 6×4 sheet is 1800×1200 and the A4 sheet 2480×3508', B, async () => within(PP, async (p) => {
+    await K.img.set(p, 'sheet', 'all');
+    await K.img.upload(p, [S('portrait.jpg')]); await idle(p);
+    const r = await K.img.results(p);
+    const d = await Promise.all(r.map((b) => K.img.pixels(p, b)));
+    const dims = d.map((x) => x.w + '×' + x.h).join();
+    return [dims === '602×602,1800×1200,2480×3508', dims];
   }));
-  claim(PP, 'point', 'Files are JPEG at quality 95, or PNG, and say 300 DPI inside: in the JFIF header or a pHYs chunk.', 'default JPEG at 95 with 300 DPI in JFIF', B, async () => within(PP, async (p) => {
-    const q = await p.$eval('#ic-quality', (e) => e.value);
-    await K.img.set(p, 'sheet', 'single');
+  claim(PP, 'point', 'Files are JPEG or PNG and say 300 DPI inside; “under N KB” finds the highest JPEG quality that fits.', 'JPEG with 300 DPI in JFIF; PNG with pHYs 11811; a 50 KB limit gives a JPEG under 50,000 bytes', B, async () => within(PP, async (p) => {
+    await K.img.set(p, 'preset', 'uk-passport'); await K.img.set(p, 'sheet', 'single');
     await K.img.upload(p, [S('portrait.jpg')]);
     const [b] = await K.img.results(p);
-    const s = K.jpegSegs(b).find((x) => x.m === 0xe0);
-    return [q === '95' && K.isJpeg(b) && s && s.body[7] === 1 && s.body.readUInt16BE(8) === 300, 'quality ' + q + ', JFIF units ' + (s && s.body[7]) + ' density ' + (s && s.body.readUInt16BE(8))];
+    const sg = K.jpegSegs(b).find((x) => x.m === 0xe0);
+    const jfif = !!sg && sg.body[7] === 1 && sg.body.readUInt16BE(8) === 300;
+    await K.img.change(p, 'format', 'image/png');
+    const [png] = await K.img.results(p);
+    const at = png.indexOf('pHYs');
+    const phys = at > 0 && png.readUInt32BE(at + 4) === 11811;
+    await K.img.change(p, 'format', 'image/jpeg'); await K.img.change(p, 'target', '50');
+    const [small] = await K.img.results(p);
+    return [K.isJpeg(b) && jfif && K.isPng(png) && phys && K.isJpeg(small) && small.length <= 50000 && small.length > 25000, 'JFIF 300 ' + jfif + ', pHYs 11811 ' + phys + ', under 50 KB: ' + small.length + ' bytes'];
   }));
+  claim(PP, 'what', 'From a 1600×1067 portrait, the UK preset gave a 413×531 single photo of 79.7 KB as JPEG and 288.4 KB as PNG. The 6×4 sheet held 8 copies and weighed 671.4 KB; the A4 sheet held 30 copies at 2480×3508 and weighed 2.45 MB. With a limit of 50 KB the JPEG came to 45.1 KB at quality 89. India’s 602×602 square fitted 2 copies on a 6×4 sheet.',
+    'portrait.jpg, UK preset: JPEG, PNG, the two sheets and a 50 KB limit', B, async () => within(PP, async (p) => {
+      await K.img.set(p, 'preset', 'uk-passport'); await K.img.set(p, 'sheet', 'all');
+      await K.img.upload(p, [S('portrait.jpg')]); await idle(p);
+      const r = await K.img.results(p);
+      const jpgSingle = r[0], six = r[1], a4 = r[2];
+      await K.img.change(p, 'format', 'image/png'); await idle(p);
+      const png = (await K.img.results(p))[0];
+      await K.img.change(p, 'format', 'image/jpeg'); await K.img.change(p, 'sheet', 'single'); await K.img.change(p, 'target', '50'); await idle(p);
+      const [small] = await K.img.results(p);
+      const cap = (await K.img.caps(p))[0] || '';
+      return [near(jpgSingle.length, '79.7 KB') && near(png.length, '288.4 KB') && near(six.length, '671.4 KB') && near(a4.length, '2.45 MB') && near(small.length, '45.1 KB') && /quality 89/.test(cap),
+        'JPEG ' + fmtKB(jpgSingle.length) + ', PNG ' + fmtKB(png.length) + ', 6×4 ' + fmtKB(six.length) + ', A4 ' + fmtKB(a4.length) + ', under 50 KB ' + fmtKB(small.length) + ' [' + cap + '] (2% allowed)'];
+    }));
 
   /* ================================================================ */
   /* photo filters                                                     */
   /* ================================================================ */
   const PF = '/image/photo-filters/';
-  claim(PF, 'point', 'Black & white is grayscale(1), sepia sepia(0.85); Cool and Warm add a hue-rotate of −12° and +12°.', 'the filter strings', N, async () => {
-    const f = (preset) => (paintIn('img-photo-filters.js', 'photo-filters', 10, 10, { preset }).find((x) => x[0] === '=filter') || [])[1];
-    const v = [f('grayscale'), f('sepia'), f('cool'), f('warm')];
-    return [v[0] === 'grayscale(1)' && v[1] === 'sepia(0.85)' && /^hue-rotate\(-12deg\)/.test(v[2]) && /^hue-rotate\(12deg\)/.test(v[3]), v.join(' | ')];
+  /* since wave 1 the filters are worked on the pixels (engine/img-filters-core.mjs); the reference here is
+     Chrome's own CSS filter on a canvas, a separate implementation of the same Filter Effects maths */
+  const openWith = async (url, init) => {
+    const orig = K.browser.newPage;
+    K.browser.newPage = async function () { const p = await orig.call(this); await freshPage(p); if (init) await p.evaluateOnNewDocument(init); return p; };
+    try { return await K.open(url); } finally { K.browser.newPage = orig; }
+  };
+  /* the page's PNG result and Chrome's ctx.filter of the same picture, compared pixel by pixel */
+  const pfVsCss = (set, css) => within(PF, async (p) => {
+    const f = await pngFile(p, 'pf-noise.png', 160, 120, NOISE);
+    for (const k of Object.keys(set)) await K.img.set(p, k, set[k]);
+    await K.img.upload(p, [f]);
+    const [b] = await K.img.results(p);
+    return p.evaluate(async (res, src, css) => {
+      const dec = async (u8) => { const bm = await createImageBitmap(new Blob([new Uint8Array(u8)])); const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height; const x = c.getContext('2d'); return { c, x, bm }; };
+      const r = await dec(res); r.x.drawImage(r.bm, 0, 0);
+      const s = await dec(src); s.x.filter = css; s.x.drawImage(s.bm, 0, 0);
+      const a = r.x.getImageData(0, 0, r.c.width, r.c.height).data, e = s.x.getImageData(0, 0, s.c.width, s.c.height).data;
+      let worst = 0; for (let i = 0; i < a.length; i++) if ((i & 3) !== 3) worst = Math.max(worst, Math.abs(a[i] - e[i]));
+      return worst;
+    }, Array.from(b), Array.from(fs.readFileSync(f)), css);
   });
-  claim(PF, 'point', 'The preset comes first and any slider moved from its default is appended after it, so sliders adjust the filtered picture.', 'dramatic + contrast 130', N, async () => {
-    const v = (paintIn('img-photo-filters.js', 'photo-filters', 10, 10, { preset: 'dramatic', contrast: 130 }).find((x) => x[0] === '=filter') || [])[1];
-    return [v === 'contrast(1.35) saturate(1.25) brightness(0.95) contrast(1.3)', v];
+  claim(PF, 'point', 'Presets are the Filter Effects colour matrices: Black & white is grayscale at 1, sepia 0.85, and Cool and Warm turn the hue by −12° and +12°.', 'each preset within 2 levels of Chrome’s own CSS filter', B, async () => {
+    const w = [await pfVsCss({ preset: 'grayscale' }, 'grayscale(1)'), await pfVsCss({ preset: 'sepia' }, 'sepia(0.85)'),
+      await pfVsCss({ preset: 'cool' }, 'hue-rotate(-12deg) saturate(1.15) brightness(1.02)'), await pfVsCss({ preset: 'warm' }, 'hue-rotate(12deg) saturate(1.2) brightness(1.04)')];
+    return [w.every((x) => x <= 2), 'largest difference per preset (levels): ' + w.join(', ')];
   });
+  claim(PF, 'point', 'Preset strength mixes the filtered picture with the original, so 40% keeps 60% of each pixel as it was.', 'grayscale at 40% = 0.6 × original + 0.4 × Chrome’s grayscale(1)', B, async () => within(PF, async (p) => {
+    const f = await pngFile(p, 'pf-noise.png', 160, 120, NOISE);
+    await K.img.set(p, 'preset', 'grayscale'); await K.img.set(p, 'intensity', 40);
+    await K.img.upload(p, [f]);
+    const [b] = await K.img.results(p);
+    const worst = await p.evaluate(async (res, src) => {
+      const load = async (u8, css) => { const bm = await createImageBitmap(new Blob([new Uint8Array(u8)])); const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height; const x = c.getContext('2d'); if (css) x.filter = css; x.drawImage(bm, 0, 0); return x.getImageData(0, 0, c.width, c.height).data; };
+      const r = await load(res), o = await load(src), g = await load(src, 'grayscale(1)');
+      let w = 0; for (let i = 0; i < r.length; i++) if ((i & 3) !== 3) w = Math.max(w, Math.abs(r[i] - (0.6 * o[i] + 0.4 * g[i])));
+      return w;
+    }, Array.from(b), Array.from(fs.readFileSync(f)));
+    return [worst <= 2, 'largest difference ' + worst.toFixed(2) + ' levels'];
+  }));
+  claim(PF, 'point', 'Exposure doubles the light per stop', 'a flat grey of 100 at +1 stop: sRGB → linear × 2 → sRGB, worked here = 137', B, async () => within(PF, async (p) => {
+    const f = await pngFile(p, 'pf-grey.png', 40, 30, "x.fillStyle='rgb(100,100,100)';x.fillRect(0,0,w,h);");
+    await K.img.set(p, 'exposure', 1);
+    await K.img.upload(p, [f]);
+    const [b] = await K.img.results(p);
+    const d = await K.img.pixels(p, b, [[10, 10]]);
+    const lin = Math.pow((100 / 255 + 0.055) / 1.055, 2.4) * 2;
+    const want = Math.round((1.055 * Math.pow(lin, 1 / 2.4) - 0.055) * 255);
+    return [Math.abs(d.px[0][0] - want) <= 1, 'got ' + d.px[0][0] + ', want ' + want];
+  }));
   claim(PF, 'mistake', 'Dramatic already sets contrast to 1.35; contrast at 130% on top multiplies to about 1.75', '1.35 × 1.3', N, async () => [Math.abs(1.35 * 1.3 - 1.755) < 1e-9, String(1.35 * 1.3)]);
   claim(PF, 'dfaq', 'Choose the Black & white preset', 'the grayscale preset makes R = G = B', B, async () => within(PF, async (p) => {
     await K.img.set(p, 'preset', 'grayscale');
@@ -936,68 +1145,95 @@ module.exports = function ({ claim, manual, kit: K }) {
     const [b] = await K.img.results(p); const d = await K.img.pixels(p, b, [[100, 100], [800, 500], [1500, 1000]]);
     return [d.px.every((c) => Math.abs(c[0] - c[1]) <= 1 && Math.abs(c[1] - c[2]) <= 1), K.j(d.px)];
   }));
-  claim(PF, 'point', 'The result keeps the original size, as PNG unless Save as says JPEG or WebP.', 'food.jpg → 1600×1067 PNG', B, async () => within(PF, async (p) => {
+  claim(PF, 'point', 'The result keeps the original size, saved as PNG unless Save as says JPEG or WebP.', 'food.jpg → 1600×1067 PNG', B, async () => within(PF, async (p) => {
     await K.img.set(p, 'preset', 'sepia');
     await K.img.upload(p, [S('food.jpg')]);
     const [b] = await K.img.results(p); const d = await K.img.pixels(p, b);
     return [K.isPng(b) && d.w === 1600 && d.h === 1067, K.kind(b) + ' ' + d.w + '×' + d.h];
   }));
+  claim(PF, 'dfaq', 'The page calculates them itself, so a photo filtered in Safari matches the one from Chrome.', 'with the canvas filter switched off (Safari stood in for) the pixels are the same as Chrome’s', B, async () => {
+    const run = async (init) => {
+      const p = await openWith(PF, init);
+      try {
+        const f = await pngFile(p, 'pf-noise.png', 160, 120, NOISE);
+        await K.img.set(p, 'preset', 'vintage'); await K.img.set(p, 'vignette', 50);
+        await K.img.upload(p, [f]);
+        const [b] = await K.img.results(p);
+        return await p.evaluate(async (u8) => { const bm = await createImageBitmap(new Blob([new Uint8Array(u8)])); const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height; const x = c.getContext('2d'); x.drawImage(bm, 0, 0); return Array.from(x.getImageData(0, 0, c.width, c.height).data); }, Array.from(b));
+      } finally { await p.close(); }
+    };
+    const chrome = await run(null);
+    const safari = await run(() => { Object.defineProperty(CanvasRenderingContext2D.prototype, 'filter', { get() { return 'none'; }, set() { /* Safari: no canvas filters */ }, configurable: true }); });
+    let diff = 0; for (let i = 0; i < chrome.length; i++) if (chrome[i] !== safari[i]) diff++;
+    return [chrome.length > 0 && diff === 0, diff + ' of ' + chrome.length + ' values differ'];
+  });
 
   /* ================================================================ */
   /* social media resizer                                              */
   /* ================================================================ */
   const SM = '/image/social-media-resizer/';
+  /* the editor fills its cards one by one: a run is over when the shell's aria-busy clears */
+  const settled = async (p) => { await K.sleep(300); await p.waitForFunction(() => !document.querySelector('.tool-io[aria-busy]'), { timeout: 120000, polling: 100 }); await K.sleep(200); };
+  const smTick = (p, list) => p.$$eval('.preset-list input[type=checkbox]', (l, want) => l.forEach((c) => { c.checked = want.indexOf(c.value) >= 0; c.dispatchEvent(new Event('change', { bubbles: true })); }), list);
   const social = () => K.once('img:social', () => within(SM, async (p) => {
-    await K.img.upload(p, [S('food.jpg')]);
+    await K.img.upload(p, [S('food.jpg')]); await settled(p);
     const r = await K.img.results(p);
     const d = await Promise.all(r.map((b) => K.img.pixels(p, b)));
     const caps = await K.img.caps(p);
     return { kinds: r.map((b) => K.kind(b)), dims: d.map((x) => x.w + '×' + x.h), caps };
   }));
-  claim(SM, 'works', '16 presets cover Instagram, Facebook, X, LinkedIn, YouTube, Pinterest, TikTok, WhatsApp and the web, from a 600×200 email header to 2560×1440 channel art.', 'all 16 sizes come out, smallest 600×200, largest 2560×1440', B, async () => {
+  claim(SM, 'works', '16 presets cover Instagram, Facebook, X, LinkedIn, YouTube, Pinterest, TikTok, WhatsApp and the web, from a 600×200 email header to 2560×1440 channel art, dated beside the list.', 'all 16 sizes come out, smallest 600×200, largest 2560×1440; the list is dated', B, async () => {
     const s = await social();
-    return [s.dims.length === 16 && s.dims.indexOf('600×200') >= 0 && s.dims.indexOf('2560×1440') >= 0, s.dims.length + ': ' + s.dims.join(', ')];
+    const label = await within(SM, (p) => p.$eval('label[for="ic-presets"]', (e) => e.textContent).catch(() => ''));
+    return [s.dims.length === 16 && s.dims.indexOf('600×200') >= 0 && s.dims.indexOf('2560×1440') >= 0 && /as of \d{1,2} [A-Z][a-z]+ 20\d\d/.test(label), s.dims.length + ': ' + s.dims.join(', ') + ' / ' + label];
   });
   claim(SM, 'mistake', 'All 16 are on when the page opens', 'with nothing unticked, 16 files', B, async () => { const s = await social(); return [s.dims.length === 16, s.dims.length + ' files']; });
-  claim(SM, 'point', 'Photos are enlarged as readily as reduced, even past their own size.', 'a 1600 px photo becomes 2560×1440', B, async () => { const s = await social(); return [s.dims.indexOf('2560×1440') >= 0, s.dims.indexOf('2560×1440') >= 0 ? 'made' : 'missing']; });
+  claim(SM, 'point', 'A frame bigger than the photo enlarges it, and each card says by how much.', 'food.jpg (1600×1067) → 2560×1440, its card saying “enlarged 1.60×”', B, async () => { const s = await social(); const c = s.caps.find((x) => /2560×1440/.test(x)) || ''; return [s.dims.indexOf('2560×1440') >= 0 && /enlarged 1\.60×/.test(c), c]; });
   claim(SM, 'dfaq', 'What size is an Instagram story? => 1080×1920 pixels'.replace(/^.*=> /, ''), 'a 1080×1920 slot', B, async () => { const s = await social(); return [s.dims.indexOf('1080×1920') >= 0, s.dims.join(',')]; });
-  claim(SM, 'dfaq', '1280×720 pixels, the 16:9 preset here.', 'a 1280×720 slot', B, async () => { const s = await social(); return [s.dims.indexOf('1280×720') >= 0, s.dims.join(',')]; });
-  claim(SM, 'point', 'Fit whole image takes the smaller factor and paints the rest in the bar colour, near-black navy (#0a0e1a) by default.', 'contain: story bars are #0a0e1a', B, async () => within(SM, async (p) => {
-    await K.img.set(p, 'mode', 'contain'); await K.img.set(p, 'format', 'image/png');
-    await K.img.upload(p, [S('food.jpg')]);
-    const r = await K.img.results(p);
-    for (const b of r) { const d = await K.img.pixels(p, b, [[5, 5]]); if (d.w === 1080 && d.h === 1920) return [close(d.px[0], [10, 14, 26, 255], 1), K.j(d.px[0])]; }
-    return [false, 'no story slot'];
+  claim(SM, 'point', 'Fit whole image takes the smaller factor and fills the rest with the bar colour, or with a soft, darkened copy of the photo itself.', 'contain: the story’s bars are #0a0e1a; blur: they are not that navy but darker than the photo there', B, async () => within(SM, async (p) => {
+    await smTick(p, ['2']); await K.img.set(p, 'mode', 'contain'); await K.img.set(p, 'format', 'image/png');
+    await K.img.upload(p, [S('food.jpg')]); await settled(p);
+    let [b] = await K.img.results(p); const bars = await K.img.pixels(p, b, [[5, 5], [540, 960]]);
+    await K.img.set(p, 'mode', 'blur'); await settled(p);
+    [b] = await K.img.results(p); const soft = await K.img.pixels(p, b, [[5, 5], [540, 960]]);
+    return [bars.w === 1080 && bars.h === 1920 && close(bars.px[0], [10, 14, 26, 255], 1) && !close(soft.px[0], [10, 14, 26, 255], 6) && close(bars.px[1], soft.px[1], 3),
+      'bars ' + K.j(bars.px[0]) + ', blurred fill ' + K.j(soft.px[0]) + ', middle ' + K.j(bars.px[1]) + ' / ' + K.j(soft.px[1])];
   }));
-  claim(SM, 'point', 'Files are JPEG, PNG or WebP at a fixed quality of 90, named after their slot.', 'JPEG by default, no quality control, slot names', B, async () => within(SM, async (p) => {
-    await K.img.upload(p, [S('food.jpg')]);
-    await K.clearDownloads(p);
-    if (!await K.clickText(p, '.tool-io button', /as ZIP/)) return [false, 'no ZIP'];
-    await p.waitForFunction(() => window.__downloads.length > 0, { timeout: 60000 });
-    const [d] = await K.downloads(p);
-    const z = K.zipNames(d.bytes).map((x) => x.name);
-    const q = await p.$('#ic-quality');
-    return [!q && z.length === 16 && z.every((n) => /^food-[a-z0-9-]+\.jpg$/.test(n)), z.slice(0, 4).join(', ') + ' …'];
+  claim(SM, 'point', 'Fill and crop takes the larger of the two scale factors and keeps the point you clicked on the photo as near the middle as the edges allow.',
+    'a 1600×1000 position-coded PNG into 1280×720, focus clicked at 20% across: the left edge is x 0 (it cannot go further), the vertical middle stays centred', B, async () => within(SM, async (p) => {
+      await smTick(p, ['9']); await K.img.set(p, 'format', 'image/png');
+      const f = await pngFile(p, 'sm-pos.png', 1600, 1000, "const d=x.createImageData(w,h);for(let j=0;j<h;j++)for(let i=0;i<w;i++){const k=(j*w+i)*4;d.data[k]=Math.round(i*255/(w-1));d.data[k+1]=Math.round(j*255/(h-1));d.data[k+2]=0;d.data[k+3]=255;}x.putImageData(d,0,0);");
+      await K.img.upload(p, [f]); await settled(p);
+      const r = await p.$eval('.sm-focus-view', (c) => { c.scrollIntoView({ block: 'center', behavior: 'instant' }); const b = c.getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; });
+      await p.mouse.click(r[0] + r[2] * 0.2, r[1] + r[3] * 0.5); await settled(p);
+      const [b] = await K.img.results(p);
+      const d = await K.img.pixels(p, b, [[0, 0], [1279, 719]]);
+      const at = (c) => [Math.round(c[0] * 1599 / 255), Math.round(c[1] * 999 / 255)];
+      /* scale 0.8 (1280/1600, the larger of 0.8 and 0.72): 1000 px tall becomes 800, so 80 px are cut top and bottom: source y 50 to 950 */
+      const tl = at(d.px[0]), br = at(d.px[1]);
+      return [d.w === 1280 && d.h === 720 && tl[0] <= 8 && Math.abs(tl[1] - 50) <= 8 && br[0] >= 1591 && Math.abs(br[1] - 949) <= 8, 'corners from source ' + K.j(tl) + ' to ' + K.j(br) + ' (a smooth ramp read back to within 8 px)'];
+    }));
+  claim(SM, 'dfaq', '1280×720 pixels, the 16:9 preset here. The 1600×1067 portrait photo above, filled and cropped, made a 210.1 KB JPEG at quality 90.', 'portrait.jpg, Fill and crop: the 1280×720 JPEG', B, async () => within(SM, async (p) => {
+    await smTick(p, ['9']);
+    await K.img.upload(p, [S('portrait.jpg')]); await settled(p);
+    const [b] = await K.img.results(p); const d = await K.img.pixels(p, b);
+    return [K.isJpeg(b) && d.w === 1280 && d.h === 720 && near(b.length, '210.1 KB'), K.kind(b) + ' ' + d.w + '×' + d.h + ' ' + fmtKB(b.length)];
   }));
   /* the worked example: portrait.jpg with only Instagram Story / Reel, LinkedIn Cover and YouTube Thumbnail ticked (presets 2, 8, 9) */
-  const smThree = (mode) => K.once('img:social3:' + mode, () => within(SM, async (p) => {
-    await p.$$eval('.preset-list input[type=checkbox]', (l) => l.forEach((c) => { c.checked = ['2', '8', '9'].indexOf(c.value) >= 0; c.dispatchEvent(new Event('change', { bubbles: true })); }));
-    await K.img.set(p, 'mode', mode);
-    await K.img.upload(p, [S('portrait.jpg')]);
+  const smThree = (mode, q) => K.once('img:social3:' + mode + q, () => within(SM, async (p) => {
+    await smTick(p, ['2', '8', '9']);
+    await K.img.set(p, 'mode', mode); await K.img.set(p, 'quality', q);
+    await K.img.upload(p, [S('portrait.jpg')]); await settled(p);
     const r = await K.img.results(p);
     const d = await Promise.all(r.map((b) => K.img.pixels(p, b)));
     return { files: r.map((b, i) => ({ dim: d[i].w + '×' + d[i].h, n: b.length, jpeg: K.isJpeg(b) })), total: r.reduce((s, b) => s + b.length, 0) };
   }));
-  claim(SM, 'dfaq', 'As JPEG it stays small: the 1600×1067 portrait photo from the example above, on Fill and crop, made a 185.8 KB thumbnail.', 'portrait.jpg, Fill and crop: the 1280×720 JPEG', B, async () => {
-    const s = await smThree('cover'); const t = s.files.find((f) => f.dim === '1280×720');
-    const src = await within(SM, (p) => K.img.pixels(p, fs.readFileSync(S('portrait.jpg'))));
-    return [!!t && t.jpeg && near(t.n, '185.8 KB') && src.w === 1600 && src.h === 1067, 'source ' + src.w + '×' + src.h + '; thumbnail ' + (t ? fmtKB(t.n) + (t.jpeg ? ' JPEG' : ' not JPEG') : 'missing')];
-  });
-  claim(SM, 'what', 'Fit whole image kept every pixel, but the 1080×1920 story is mostly bars around a band of photo; the three files came to 429.7 KB. Fill and crop filled every frame, 580.9 KB in all,',
-    'portrait.jpg to the three slots: totals for Fit and for Fill', B, async () => {
-      const a = await smThree('contain'), b = await smThree('cover');
+  claim(SM, 'what', 'Fill and crop gave 660.9 KB in all at quality 90, the 1080×1920 story enlarged 1.80× and the 1584×396 LinkedIn cover keeping only a strip of the photo. Fit whole image kept every pixel, 484.5 KB in all; on a blurred copy instead of bars it came to 582.3 KB. At quality 75 the cropped set fell to 289.3 KB.',
+    'portrait.jpg to the three slots: totals for each fitting and at quality 75', B, async () => {
+      const a = await smThree('cover', 90), b = await smThree('contain', 90), c = await smThree('blur', 90), d = await smThree('cover', 75);
       const dims = (s) => s.files.map((f) => f.dim).sort().join(',');
-      return [dims(a) === '1080×1920,1280×720,1584×396' && dims(b) === dims(a) && near(a.total, '429.7 KB') && near(b.total, '580.9 KB'), 'fit ' + fmtKB(a.total) + ' (' + dims(a) + '), fill ' + fmtKB(b.total)];
+      return [dims(a) === '1080×1920,1280×720,1584×396' && dims(b) === dims(a) && near(a.total, '660.9 KB') && near(b.total, '484.5 KB') && near(c.total, '582.3 KB') && near(d.total, '289.3 KB'),
+        'fill ' + fmtKB(a.total) + ', fit ' + fmtKB(b.total) + ', blur ' + fmtKB(c.total) + ', fill at 75 ' + fmtKB(d.total) + ' (' + dims(a) + ')'];
     });
 
   /* ================================================================ */
@@ -1104,16 +1340,211 @@ module.exports = function ({ claim, manual, kit: K }) {
     return [Math.abs(saved - 58.1) < 0.05, saved.toFixed(1) + '% from ' + Buffer.byteLength(input) + ' bytes'];
   });
 
+  /* ================================================================ */
+  /* wave 1 additions: the shell's own promises and the new page        */
+  /* ================================================================ */
+  /* pet.jpg re-saved as a PNG in Chrome, as the depth figures were made (2.41 MB) */
+  const petPng = () => K.once('img:petpng', () => within(CO, async (p) => K.write('pet-as-png.png', Buffer.from(await p.evaluate(async () => {
+    const bm = await createImageBitmap(await (await fetch('/build/promo/samples/pet.jpg')).blob());
+    const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height; c.getContext('2d').drawImage(bm, 0, 0);
+    return c.toDataURL('image/png').split(',')[1];
+  }), 'base64'))));
+  const KB = (b) => fmtKB(b.length);
+  claim(CO, 'tip', '“Make it under” tries qualities, then smaller sizes, until the file fits. A KB there is 1,000 bytes, so the result fits a form whichever kilobyte it counts.', 'street.jpg, Keep original format, under 100 KB: a JPEG of at most 100,000 bytes, 1472×1104', B, async () => within(CO, async (p) => {
+    await K.img.set(p, 'target', '100');
+    await K.img.upload(p, [S('street.jpg')]);
+    const [b] = await K.img.results(p); const d = await K.img.pixels(p, b);
+    return [K.isJpeg(b) && b.length <= 100000 && b.length > 80000 && d.w === 1472 && d.h === 1104, K.kind(b) + ' ' + b.length + ' bytes, ' + d.w + '×' + d.h];
+  }));
+  claim(CO, 'tip', '“Keep original format” turns a PNG into a 256-colour PNG with dithering, which is where PNG compressors find their big savings. Choose “All — lossless” under PNG colours to keep every pixel.', 'a pet photo as PNG: 256 colours is far smaller than All, and All keeps every pixel', B, async () => within(CO, async (p) => {
+    const f = await petPng();
+    await K.img.upload(p, [f]);
+    const [a] = await K.img.results(p); const pa = await K.img.pixels(p, a, [[400, 300]]);
+    await K.img.change(p, 'pngColours', 'all');
+    const [all] = await K.img.results(p);
+    const src = await K.img.pixels(p, fs.readFileSync(f), [[400, 300], [1000, 700]]);
+    const out = await K.img.pixels(p, all, [[400, 300], [1000, 700]]);
+    return [K.isPng(a) && K.isPng(all) && a.length * 1.5 < all.length && close(src.px[0], out.px[0], 0) && close(src.px[1], out.px[1], 0), '256 colours ' + KB(a) + ', all colours ' + KB(all) + '; pixels ' + K.j(src.px) + ' vs ' + K.j(out.px)];
+  }));
+  claim(CO, 'what', 'A 1600×1200 street photo, already a tight 321.4 KB JPEG, came out at 322.4 KB at quality 80, Keep original format: larger, and the page said so. WebP at 80 gave 277.0 KB, JPEG at 60 185.8 KB, AVIF 188.0 KB. Under 100 KB gave 96.1 KB at 1472×1104 after 12 tries; a max width of 800 gave 92.4 KB. A 2.41 MB PNG fell to 835.3 KB in 256 colours, 1.60 MB with all colours, 1.10 MB as lossless WebP.',
+    'street.jpg: each setting; pet.jpg as PNG: 256 colours, all colours, lossless WebP', B, async () => {
+      const f = await petPng();
+      const r = await within(CO, async (p) => {
+        const o = {};
+        await K.img.upload(p, [S('street.jpg')]);
+        [o.same] = await K.img.results(p); o.msg = (await K.img.msg(p)).text;
+        await K.img.change(p, 'format', 'image/webp'); await idle(p); [o.webp] = await K.img.results(p);
+        await K.img.change(p, 'format', 'image/avif', 180000); await idle(p); [o.avif] = await K.img.results(p);
+        await K.img.change(p, 'format', 'image/jpeg'); await K.img.change(p, 'quality', 60); await idle(p); [o.jpg60] = await K.img.results(p);
+        await K.img.change(p, 'format', 'same'); await K.img.change(p, 'quality', 80); await idle(p);
+        await K.img.change(p, 'target', '100'); await idle(p); [o.under] = await K.img.results(p); o.tries = (await K.img.caps(p)).join(' | ') + ' / ' + K.j(await K.img.stats(p));
+        await K.img.change(p, 'target', '0'); await K.img.change(p, 'maxWidth', 800); await idle(p); [o.w800] = await K.img.results(p);
+        return o;
+      });
+      const pg = await within(CO, async (p) => {
+        const o = {};
+        await K.img.upload(p, [f]); await idle(p); o.srcBytes = fs.statSync(f).size; [o.c256] = await K.img.results(p);
+        await K.img.change(p, 'pngColours', 'all'); await idle(p); [o.all] = await K.img.results(p);
+        await K.img.change(p, 'format', 'image/webp'); await K.img.change(p, 'webpMode', 'lossless'); await idle(p); [o.wl] = await K.img.results(p);
+        return o;
+      });
+      const ok = near(r.same.length, '322.4 KB') && /larger/i.test(r.msg) && near(r.webp.length, '277.0 KB') && near(r.jpg60.length, '185.8 KB') && near(r.avif.length, '188.0 KB') && near(r.under.length, '96.1 KB') && /12 tries/.test(r.tries) && near(r.w800.length, '92.4 KB')
+        && near(pg.srcBytes, '2.41 MB') && near(pg.c256.length, '835.3 KB') && near(pg.all.length, '1.60 MB') && near(pg.wl.length, '1.10 MB');
+      return [ok, 'keep ' + KB(r.same) + ' (' + r.msg + '), WebP ' + KB(r.webp) + ', JPEG 60 ' + KB(r.jpg60) + ', AVIF ' + KB(r.avif) + ', under 100 KB ' + KB(r.under) + ' [' + r.tries + '], 800 wide ' + KB(r.w800) + '; PNG ' + fmtKB(pg.srcBytes) + ' → 256 ' + KB(pg.c256) + ', all ' + KB(pg.all) + ', WebP lossless ' + KB(pg.wl) + ' (2% allowed)'];
+    });
+  claim(CV, 'point', 'A link ending ?from=png&to=jpg opens the page set for that pair.', '?from=png&to=jpg sets JPEG; ?to=avif sets AVIF; the link carries no image', B, async () => {
+    const a = await within(CV + '?from=png&to=jpg', (p) => p.evaluate(() => [document.getElementById('ic-format').value, location.search]));
+    const b = await within(CV + '?to=avif', (p) => p.evaluate(() => document.getElementById('ic-format').value));
+    return [a[0] === 'image/jpeg' && b === 'image/avif', a.join(' ') + ' / ' + b];
+  });
+  claim(CV, 'what', 'A dog in long grass, a 1600 × 1067 photograph saved as a PNG of 2.41 MB, became a 205.1 KB WebP at the default quality of 92, 92% smaller. JPEG at 92 gave 285.1 KB, AVIF 84.2 KB, WebP at 80 101.6 KB. An ICO came out at 256×256 and 161.0 KB.',
+    'pet.jpg as PNG: WebP 92, JPEG 92, AVIF, WebP 80, ICO', B, async () => within(CV, async (p) => {
+      const f = await petPng();
+      const o = {};
+      await K.img.set(p, 'format', 'image/webp');
+      await K.img.upload(p, [f]);
+      [o.w92] = await K.img.results(p);
+      await K.img.change(p, 'format', 'image/jpeg'); [o.j92] = await K.img.results(p);
+      await K.img.change(p, 'format', 'image/avif', 180000); [o.av] = await K.img.results(p);
+      await K.img.change(p, 'format', 'image/webp'); await K.img.change(p, 'quality', 80); [o.w80] = await K.img.results(p);
+      await K.img.change(p, 'format', 'image/x-icon');
+      await idle(p);
+      const caps = await p.$eval('.img-compare-readout', (e) => e.textContent).catch(() => '');
+      const m = /Result\s*([\d.]+) KB/.exec(caps);
+      const saved = 100 - o.w92.length / fs.statSync(f).size * 100;
+      return [near(o.w92.length, '205.1 KB') && Math.round(saved) === 92 && near(o.j92.length, '285.1 KB') && near(o.av.length, '84.2 KB') && near(o.w80.length, '101.6 KB') && /256×256/.test(caps) && m && Math.abs(Number(m[1]) / 161.0 - 1) <= 0.02,
+        'WebP 92 ' + KB(o.w92) + ' (' + saved.toFixed(1) + '% off), JPEG ' + KB(o.j92) + ', AVIF ' + KB(o.av) + ', WebP 80 ' + KB(o.w80) + ', ICO ' + caps + ' (2% allowed)'];
+    }));
+  claim(BU, 'what', 'Longest edge 800 with WebP at 85 gave 800×534, 800×600 and 800×534, 220.7 KB in all (66.2, 112.8 and 41.7 KB); as JPEG they came to 253.7 KB. Under 100 KB each, the street photo fell to quality 81 and the batch to 203.1 KB. A width of 2400 left all three at their own size, 624.6 KB, with a note; with “Allow enlarging” on they became 2400×1601 and 2400×1800, 993.3 KB.',
+    'portrait + street + food: longest 800 as WebP and JPEG, under 100 KB, width 2400 without and with enlarging', B, async () => within(BU, async (p) => {
+      const o = {};
+      await K.img.set(p, 'mode', 'longest'); await K.img.set(p, 'value', 800);
+      await K.img.upload(p, [S('portrait.jpg'), S('street.jpg'), S('food.jpg')]); await idle(p);
+      const tot = async () => { await idle(p); return K.img.stat(await K.img.stats(p), 'Total size'); };
+      const dims = async () => (await Promise.all((await K.img.results(p)).map((b) => K.img.pixels(p, b)))).map((x) => x.w + '×' + x.h).join();
+      o.w = await tot(); o.dims = await dims();
+      await K.img.change(p, 'format', 'image/jpeg'); o.j = await tot();
+      await K.img.change(p, 'format', 'image/webp'); await K.img.change(p, 'target', '100'); o.t = await tot();
+      o.q = (await K.img.caps(p)).join(' | ');
+      await K.img.change(p, 'target', '0'); await K.img.change(p, 'mode', 'width'); await K.img.change(p, 'value', 2400); o.n = await tot(); o.nm = (await K.img.msg(p)).text;
+      await K.img.change(p, 'enlarge', 'yes'); o.y = await tot(); o.ydims = await dims();
+      const kb = (t) => Number(/[\d.]+/.exec(t)[0]) * (/MB/.test(t) ? 1024 : 1);
+      const ok = o.dims === '800×534,800×600,800×534' && Math.abs(kb(o.w) / 220.7 - 1) <= 0.02 && Math.abs(kb(o.j) / 253.7 - 1) <= 0.02 && Math.abs(kb(o.t) / 203.1 - 1) <= 0.02 && /800×600 · [\d.]+ KB · quality 81/.test(o.q)
+        && Math.abs(kb(o.n) / 624.6 - 1) <= 0.02 && /left at their own size/.test(o.nm) && o.ydims === '2400×1601,2400×1800,2400×1601' && Math.abs(kb(o.y) / 993.3 - 1) <= 0.02;
+      return [ok, K.j(o) + ' (2% allowed)'];
+    }));
+  claim(IP, 'point', 'PNG, GIF and BMP keep every pixel, with transparency as a soft mask.', 'an opaque noise PNG: a FlateDecode image with the source pixels, no DCTDecode; a transparent PNG gets an SMask', B, async () => within(IP, async (p) => {
+    const f = await pngFile(p, 'ip-noise.png', 80, 60, NOISE);
+    const pdf = await makePdf(p, [f]);
+    const a = await K.analyse(pdf);
+    const img = a.streams.find((s) => s.dict && String(s.dict.Subtype) === '/Image' || (s.dict && s.dict.get && s.dict.get('Subtype') && String(s.dict.get('Subtype')).indexOf('Image') >= 0));
+    const txt = pdf.toString('latin1');
+    const src = await K.img.pixels(p, fs.readFileSync(f), [[0, 0], [40, 30], [79, 59]]);
+    const at = (x, y) => [0, 1, 2].map((k) => img && img.data ? img.data.charCodeAt((y * 80 + x) * 3 + k) : -1);
+    const same = img && img.data && img.data.length === 80 * 60 * 3 && close(at(0, 0), src.px[0].slice(0, 3), 0) && close(at(40, 30), src.px[1].slice(0, 3), 0) && close(at(79, 59), src.px[2].slice(0, 3), 0);
+    const g = await pngFile(p, 'ip-glass.png', 40, 40, "x.clearRect(0,0,w,h);x.fillStyle='rgba(0,0,255,0.5)';x.fillRect(10,10,20,20);");
+    const pdf2 = await makePdf(p, [g]);
+    return [!!same && /FlateDecode/.test(txt) && !/DCTDecode/.test(txt) && /SMask/.test(pdf2.toString('latin1')), 'image stream ' + (img && img.data ? img.data.length + ' bytes' : 'not found') + ', same pixels ' + !!same + ', SMask on the transparent one ' + /SMask/.test(pdf2.toString('latin1'))];
+  }));
+  claim(IP, 'tip', 'A JPEG goes into the PDF as it is: its own compressed bytes are the page image', 'turning a page keeps the JPEG bytes and swaps the page shape', B, async () => within(IP, async (p) => {
+    const i = await p.$('.tool-io input[type=file]'); await i.uploadFile(S('document.jpg'), S('food.jpg'));
+    await p.waitForSelector('.tool-io button[title="Turn right"]', { timeout: 30000 });
+    await p.click('.tool-io button[title="Turn right"]');
+    await K.sleep(800);
+    await p.waitForFunction(() => [...document.querySelectorAll('.tool-io .io-actions .btn-primary')].some((b) => /Download PDF/.test(b.textContent)), { timeout: 30000 });
+    await K.clearDownloads(p);
+    await K.clickText(p, '.tool-io .io-actions .btn-primary', /Download PDF/);
+    await p.waitForFunction(() => window.__downloads.length > 0, { timeout: 30000 });
+    const [d] = await K.downloads(p);
+    const a = await K.analyse(d.bytes);
+    const c = await a.content(0);
+    const m = /([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+) cm/.exec(c);
+    return [d.bytes.includes(fs.readFileSync(S('document.jpg'))) && !!m && Number(m[1]) === 0 && Number(m[4]) === 0, 'JPEG bytes inside: ' + d.bytes.includes(fs.readFileSync(S('document.jpg'))) + '; content: ' + c.slice(0, 90).replace(/\s+/g, ' ')];
+  }));
+
+  /* ---- the new single-image resizer ---- */
+  const IR = '/image/image-resizer/';
+  const irSet = async (p, o) => { for (const k of Object.keys(o)) await K.img.change(p, k, o[k]); };
+  claim(IR, 'tip', '“Exact size, crop to fit” fills the whole frame and trims the edges that do not fit; “pad to fit” keeps the whole picture and fills the gap with the padding colour.', 'street.jpg to 1080×1080: crop has photo in the corner, pad has the padding colour there and the photo in the middle', B, async () => within(IR, async (p) => {
+    await K.img.set(p, 'format', 'image/png'); await K.img.set(p, 'mode', 'cover'); await K.img.set(p, 'value', 1080); await K.img.set(p, 'height', 1080);
+    await K.img.upload(p, [S('street.jpg')]);
+    const [c] = await K.img.results(p); const cd = await K.img.pixels(p, c, [[2, 2]]);
+    await K.img.change(p, 'mode', 'pad'); await K.img.change(p, 'padColour', '#ff0000');
+    const [q] = await K.img.results(p); const qd = await K.img.pixels(p, q, [[2, 2], [540, 540]]);
+    return [cd.w === 1080 && cd.h === 1080 && !close(cd.px[0], [255, 0, 0, 255], 40) && qd.w === 1080 && qd.h === 1080 && close(qd.px[0], [255, 0, 0, 255], 0) && !close(qd.px[1], [255, 0, 0, 255], 40), 'crop corner ' + K.j(cd.px[0]) + '; pad corner ' + K.j(qd.px[0]) + ', pad middle ' + K.j(qd.px[1])];
+  }));
+  claim(IR, 'tip', 'A picture smaller than the size you ask for is never enlarged unless you set Allow enlarging to Yes, because enlarging adds softness, not detail. Padding centres it at its own size instead.', 'a 200×100 PNG to a 1080×1080 pad: enlarging off keeps it 200×100 in the middle; a 3000 px width leaves 1600 px; with Yes it becomes 3000', B, async () => within(IR, async (p) => {
+    const f = await pngFile(p, 'ir-small.png', 200, 100, "x.fillStyle='#00ff00';x.fillRect(0,0,w,h);");
+    await K.img.set(p, 'format', 'image/png'); await K.img.set(p, 'mode', 'pad'); await K.img.set(p, 'value', 1080); await K.img.set(p, 'height', 1080); await K.img.set(p, 'padColour', '#ff0000');
+    await K.img.upload(p, [f]);
+    const [a] = await K.img.results(p); const ad = await K.img.pixels(p, a, [[540, 540], [430, 540], [450, 540], [635, 540], [650, 540]]);
+    await K.img.change(p, 'mode', 'width'); await K.img.change(p, 'value', 3000);
+    const [b] = await K.img.results(p); const bd = await K.img.pixels(p, b);
+    await K.img.change(p, 'enlarge', 'yes');
+    const [c] = await K.img.results(p); const cd = await K.img.pixels(p, c);
+    const g = [0, 255, 0, 255], r = [255, 0, 0, 255];
+    return [ad.w === 1080 && close(ad.px[0], g, 0) && close(ad.px[1], r, 0) && close(ad.px[2], g, 0) && close(ad.px[3], g, 0) && close(ad.px[4], r, 0) && bd.w === 200 && cd.w === 3000, 'pad middle row ' + K.j(ad.px) + '; width 3000: ' + bd.w + ' px, with Yes: ' + cd.w + ' px'];
+  }));
+  claim(IR, 'tip', '“Make it under” finds the best quality that fits, then shrinks the size only if it must. A KB there is 1,000 bytes, so it fits a form whichever kilobyte the form counts.', 'street.jpg at 800×600 under 100 KB: a file of at most 100,000 bytes, at the original size, with a quality reported', B, async () => within(IR, async (p) => {
+    await K.img.set(p, 'mode', 'width'); await K.img.set(p, 'value', 800); await K.img.set(p, 'format', 'image/jpeg'); await K.img.set(p, 'target', '50');
+    await K.img.upload(p, [S('street.jpg')]);
+    const [b] = await K.img.results(p); const d = await K.img.pixels(p, b);
+    const cap = (await K.img.caps(p))[0] || '';
+    return [K.isJpeg(b) && b.length <= 50000 && b.length > 35000 && d.w === 800 && /quality \d+/.test(cap), K.kind(b) + ' ' + b.length + ' bytes, ' + d.w + '×' + d.h + ' [' + cap + ']'];
+  }));
+  claim(IR, 'tip', 'DPI only tells a printer how big to print; it does not change a single pixel. 300 DPI is the usual figure for photo prints.', 'width 1200 JPEG with DPI 300: JFIF density 300, the pixels equal a run with DPI 0', B, async () => within(IR, async (p) => {
+    await K.img.set(p, 'mode', 'width'); await K.img.set(p, 'value', 1200); await K.img.set(p, 'format', 'image/jpeg'); await K.img.set(p, 'quality', 85);
+    await K.img.upload(p, [S('street.jpg')]);
+    const [a] = await K.img.results(p);
+    await K.img.change(p, 'dpi', 300);
+    const [b] = await K.img.results(p);
+    const sg = K.jpegSegs(b).find((x) => x.m === 0xe0);
+    const row = K.img.stat(await K.img.stats(p), 'DPI in the file');
+    const pts = [[10, 10], [600, 450], [1190, 890]];
+    const pa = await K.img.pixels(p, a, pts), pb = await K.img.pixels(p, b, pts);
+    return [!!sg && sg.body[7] === 1 && sg.body.readUInt16BE(8) === 300 && row === '300' && pa.w === pb.w && pa.px.every((c, i) => close(c, pb.px[i], 0)), 'JFIF density ' + (sg && sg.body.readUInt16BE(8)) + ', row ' + row + ', ' + pa.w + '×' + pa.h];
+  }));
+  claim(IR, 'what', 'A 1600×1200 street photograph, a 321.4 KB JPEG, was halved to 800×600 and came to 112.6 KB as WebP. Cropped to a 1080×1080 square it weighed 235.0 KB, since the frame keeps the full scale. Padded to the same square it kept every pixel on a colour fill and weighed 182.4 KB. A width of 1200 as JPEG at 85 with 300 DPI gave 224.2 KB and the row “DPI in the file = 300”.',
+    'street.jpg: 50%, cover 1080×1080, pad 1080×1080, width 1200 as JPEG 85 with DPI 300', B, async () => within(IR, async (p) => {
+      const o = {};
+      await K.img.set(p, 'mode', 'percent'); await K.img.set(p, 'value', 50);
+      await K.img.upload(p, [S('street.jpg')]);
+      await idle(p); [o.half] = await K.img.results(p); o.halfd = await K.img.pixels(p, o.half);
+      await K.img.change(p, 'mode', 'cover'); await K.img.change(p, 'value', 1080); await K.img.change(p, 'height', 1080); await idle(p); [o.cover] = await K.img.results(p);
+      await K.img.change(p, 'mode', 'pad'); await idle(p); [o.pad] = await K.img.results(p);
+      await K.img.change(p, 'mode', 'width'); await K.img.change(p, 'value', 1200); await K.img.change(p, 'dpi', 300); await K.img.change(p, 'format', 'image/jpeg'); await idle(p); [o.w] = await K.img.results(p);
+      o.row = K.img.stat(await K.img.stats(p), 'DPI in the file');
+      return [o.halfd.w === 800 && o.halfd.h === 600 && near(o.half.length, '112.6 KB') && near(o.cover.length, '235.0 KB') && near(o.pad.length, '182.4 KB') && near(o.w.length, '224.2 KB') && o.row === '300' && K.isWebp(o.half) && K.isJpeg(o.w),
+        '50% ' + KB(o.half) + ', cover ' + KB(o.cover) + ', pad ' + KB(o.pad) + ', JPEG ' + KB(o.w) + ', DPI row ' + o.row + ' (2% allowed)'];
+    }));
+  claim(IR, 'dfaq', 'JPEG, unless the form names another. A KB limit on this page counts 1,000 bytes to the KB.', 'the limit is in 1,000-byte KB: under 20 KB gives at most 20,000 bytes', B, async () => within(IR, async (p) => {
+    await K.img.set(p, 'mode', 'width'); await K.img.set(p, 'value', 600); await K.img.set(p, 'format', 'image/jpeg'); await K.img.set(p, 'target', '20');
+    await K.img.upload(p, [S('street.jpg')]);
+    const [b] = await K.img.results(p);
+    return [K.isJpeg(b) && b.length <= 20000 && b.length > 15000, b.length + ' bytes'];
+  }));
+  claim(IR, 'dfaq', 'No. It is decoded, resampled and encoded on your device, with encoders that run in the page; nothing is sent anywhere.', 'no request leaves the origin while the page resizes a photo', B, async () => {
+    const out = await within(IR, async (p) => {
+      const seen = [];
+      p.on('request', (r) => { const u = r.url(); if (!/^(data|blob):/.test(u) && new URL(u).origin !== new URL(p.url()).origin) seen.push(u); });
+      await K.img.upload(p, [S('street.jpg')]);
+      return seen;
+    });
+    return [out.length === 0, out.length + ' outside requests'];
+  });
+
   /* ---------- manual ---------- */
   manual(CO, 'tip', 'WebP is typically 25–35% smaller than JPEG at the same visual quality, and every current browser supports it.', 'Needs a perceptual-quality comparison over a corpus and a browser-support source; not a property of this tool.');
   manual(CO, 'tip', 'Quality 80 is the usual sweet spot for photographs.', 'Perceptual judgement.');
   manual(BR, 'tip', 'Both blur and pixelation have been reversed in published research, particularly on short strings like numbers.', 'Research claim; needs a citation, not a run.');
   manual(PP, 'tip', 'It does not check the compositional rules — head size, expression, background uniformity', 'A statement of absence (no face detection); confirmed by reading the code, not by a run.');
   manual(PP, 'tip', 'a 25 MB model and the runtime are fetched from this site the first time, then kept by your browser.', 'Model size and browser caching; image-fixes.js runs the MODNet cut-out, caching needs a real profile.');
-  manual(MG, 'tip', 'Impact is the traditional meme typeface. If it is not installed the browser falls back to a similar condensed bold face.', 'Font availability depends on the device.');
+  manual(MG, 'tip', 'Impact itself is a Microsoft font that most phones lack, so choose it only if you know the device has it.', 'Font availability depends on the device.');
+  manual(CR, 'mistake', 'Cropping a shrunk copy. Crop the original first, then resize.', 'Advice about workflow order; no property of the tool to run.');
+  manual(PP, 'tip', 'Check the issuing authority’s own specification before printing: each document in the list, except the generic stamp size, names the page its size came from, and requirements change.', 'Whether each issuer page still says what the list says needs a person reading it; the owner spot-check is listed in NOTES.');
   manual(SM, 'tip', 'Sizes change. These are current at the time of writing', 'Platform image sizes need each platform\'s current documentation with a date.');
   manual(EV, 'tip', 'Social networks usually strip metadata on upload, but file sharing, email attachments and cloud links generally do not.', 'Behaviour of third-party services.');
-  manual(CV, 'what', 'an animated GIF comes out as one still frame', 'Needs an animated GIF fixture and a frame count of the output; not automated here.');
+  manual(CV, 'what', 'An animated GIF or WebP gives one still frame in any other format.', 'Covered by build/tests/wave1-image.js case 14 (a two-frame GIF, kept byte for byte to GIF, first frame to PNG); not a claims-harness check.');
   manual(SPL, 'tip', 'For a 3×3 profile mosaic, upload the tiles in reverse order. The grid fills right to left, bottom to top.', 'Instagram behaviour.');
   manual(B64, 'mistake', 'Gmail and many other webmail clients do not display data: URI images', 'Third-party email client behaviour.');
 };

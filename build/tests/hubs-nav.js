@@ -152,6 +152,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       const checks = await count();
       ok(checks > 0 && checks < all, 'Check filter: ' + all + ' -> ' + checks + ' rows');
       ok(await page.evaluate(() => [...document.querySelectorAll('.dir-row')].filter((r) => !r.hidden).every((r) => r.dataset.verb === 'Check')), 'every visible row is a Check');
+      /* centre the chip first (instantly: html has scroll-behavior smooth): the category chips wrap onto more rows now, and puppeteer's own scroll left this one under the sticky header at 390px */
+      await page.$eval('.filter-chips .chip[data-cat="/developer/"]', (c) => c.scrollIntoView({ block: 'center', behavior: 'instant' }));
       await page.click('.filter-chips .chip[data-cat="/developer/"]');
       const both = await count();
       ok(both > 0 && both < checks, 'AND with category Developer: ' + both + ' rows');

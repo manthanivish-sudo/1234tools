@@ -806,7 +806,7 @@ function drop2({ claim, manual, kit: K }) {
     const ic = [...r.html.matchAll(/<a [^>]*aria-label="([^"]*)" title="([^"]*)"/g)].map((m) => m[1] + '=' + m[2]);
     return [ic.join() === 'Instagram=Instagram,Email=Email,Phone=Phone,WhatsApp=WhatsApp', ic.join(', ')];
   });
-  claim(L, 'lede', 'It has no scripts, no tracking and makes no outside requests, so it works offline and on any static host.', 'no <script>, @import, @font-face or non-data url(); rel="noopener" on every link', B, async () => {
+  claim(L, 'lede', 'The file has no scripts and makes no outside requests, so it works offline and on any static host.', 'no <script>, @import, @font-face or non-data url(); rel="noopener" on every link', B, async () => {
     const r = await built();
     const a = anchors(r.html);
     const ok = !/<script|@import|@font-face/i.test(r.html) && !(r.html.match(/url\(\s*['"]?(?!data:)/gi) || []).length && a.every((x) => /noopener/.test(x.rel)) && /<link rel="icon" href="data:,">/.test(r.html) && r.name === 'index.html';

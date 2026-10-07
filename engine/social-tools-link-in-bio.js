@@ -12,7 +12,7 @@
     order: 7,
     title: 'Link in Bio Page Maker',
     pageTitle: 'Link in Bio Page Maker — One HTML File, Yours to Host | 1234Tools',
-    description: 'Make a link-in-bio page as one HTML file you own: photo, name, bio, link buttons and icons, in eight themes. It has no scripts, no tracking and makes no outside requests, so it works offline and on any static host. Nothing is uploaded.',
+    description: 'Make a link-in-bio page as one HTML file you own: photo, name, bio, link buttons and icons, in eight themes. The file has no scripts and makes no outside requests, so it works offline and on any static host. Nothing is uploaded.',
     keywords: ['link in bio', 'link in bio page', 'free link in bio', 'link in bio without account', 'instagram bio link page',
       'tiktok link in bio', 'bio link page html', 'static link page', 'self hosted link in bio'],
     glyph: 'i-social-links',

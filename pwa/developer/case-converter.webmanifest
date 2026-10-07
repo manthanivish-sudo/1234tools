@@ -2,7 +2,7 @@
   "id": "/developer/case-converter.html",
   "name": "Text Case Converter — 1234Tools",
   "short_name": "Text Case Converter",
-  "description": "Convert between camelCase, snake_case, kebab-case, PascalCase, CONSTANT_CASE, Title Case and more.",
+  "description": "Convert between camelCase, snake_case, kebab-case, PascalCase, CONSTANT_CASE, Title Case, dot.case, path/case, aLtErNaTiNg and more, or see every case at once.",
   "start_url": "/developer/case-converter/?src=pwa",
   "scope": "/developer/case-converter/",
   "display": "standalone",

@@ -1,7 +1,7 @@
 'use strict';
 /* Kit v2 story data: Developer & Web Tools. Contract: kit2-schema.md, sections 1 and 2.
    Tools mounted with mountCode take a `text` example (?text=, default options);
-   form generators and the favicon tool read nothing from the URL, so they get a
+   form generators (a link sets only their settings, never a text) and the favicon tool get a
    schematic with true in/out words. */
 module.exports = {
   '/developer/json-formatter/': {
@@ -9,8 +9,8 @@ module.exports = {
     hook: 'Unexpected token at position 214. Where, exactly?',
     pain: 'The API sent back one long line of JSON, and something in it will not parse. Your eyes give up first.',
     usual: ['Pasting configs into sites you do not know', 'Squinting at one 4,000-character line', 'Editor plugins you have to install'],
-    promise: 'Paste JSON. Get it tidy, or the exact line and column at fault.',
-    steps: ['Paste the JSON', 'Pick pretty or minify', 'Copy the result'],
+    promise: 'Paste JSON. Get it tidy, repaired, queried or turned into YAML, CSV or XML, or the exact line and column at fault.',
+    steps: ['Paste or open the JSON', 'Pick formatted, minified, YAML, CSV or XML', 'Copy or download the result'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: {
       kind: 'text',
@@ -24,7 +24,7 @@ module.exports = {
     hook: 'The product feed is one line of XML. Find the bad tag.',
     pain: 'The supplier’s feed arrives as a single unbroken line, and the import fails somewhere inside it.',
     usual: ['Scrolling sideways through one long line', 'A heavy IDE for a one-off check', 'Pasting supplier data into random sites'],
-    promise: 'Paste XML. Get it indented and checked for well-formedness.',
+    promise: 'Paste XML. Get it indented and checked, with the line and column of the first error, and query it with XPath.',
     steps: ['Paste the XML', 'Pick pretty or minify', 'Copy the tidy XML'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: {
@@ -39,8 +39,8 @@ module.exports = {
     hook: 'The spreadsheet is CSV. The API wants JSON.',
     pain: 'Someone exported a sheet and you need it as JSON for a seed file. One name has a comma in quotes.',
     usual: ['Writing a throwaway script for it', 'Converters that split quoted commas', 'Fixing broken columns by hand'],
-    promise: 'Paste CSV. Get clean JSON, quoted commas handled. And back again.',
-    steps: ['Paste the CSV', 'Pick the direction', 'Copy the JSON'],
+    promise: 'Paste or open a CSV. Get clean JSON or JSON Lines, quoted commas handled, with a table to check it. And back again.',
+    steps: ['Paste or open the CSV', 'Pick the direction', 'Copy or download the JSON'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: {
       kind: 'text',
@@ -54,8 +54,8 @@ module.exports = {
     hook: 'Base64 that does not choke on é, ₹ or ✓.',
     pain: 'A quick encode of a customer name throws an error the moment it holds an accent or a ₹ sign.',
     usual: ['Encoders that only handle plain Latin', 'Console one-liners you have to recall', 'Mistaking Base64 for encryption'],
-    promise: 'Paste text. Get Base64, URL-safe if you need it, and back again.',
-    steps: ['Paste the text', 'Pick encode or decode', 'Copy the result'],
+    promise: 'Paste text or open a file. Get Base64, a data URI or URL-safe output, and back again, with a preview for images.',
+    steps: ['Paste the text or open a file', 'Pick encode or decode', 'Copy or download the result'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: { kind: 'text', input: 'Café Zoë — ₹1,499 paid ✓' },
     howTo: 'How to encode text to Base64',
@@ -66,8 +66,8 @@ module.exports = {
     hook: 'Your link broke at the ampersand.',
     pain: 'The search term in your link has a space and an & in it. The page at the other end reads half of it.',
     usual: ['Hand-replacing spaces with %20', 'Links that break inside emails', 'Double-encoding % into %25'],
-    promise: 'Paste the value. Get it percent-encoded, safe inside any URL.',
-    steps: ['Paste the text', 'Pick component or full URL', 'Copy the encoded value'],
+    promise: 'Paste the value or a list. Get it percent-encoded for a component, a whole URL or a form, or a query string as a table.',
+    steps: ['Paste the text, a list or a query string', 'Pick component, full URL or form', 'Copy the result'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: { kind: 'text', input: 'fish & chips, Leeds (open late?)' },
     howTo: 'How to URL-encode text for a link',
@@ -78,8 +78,8 @@ module.exports = {
     hook: 'Your code sample vanished from the blog post.',
     pain: 'You pasted <div class="note"> into the article, and the browser read it as markup and hid it.',
     usual: ['Escaping angle brackets by hand', 'Missing one & and double-escaping', 'CMS editors that eat your tags'],
-    promise: 'Paste text. Get it escaped to show safely in HTML, or decoded back.',
-    steps: ['Paste the text', 'Pick encode or decode', 'Copy the result'],
+    promise: 'Paste text. Get it escaped to show safely in HTML, with any of 2,125 named entities, or decoded back.',
+    steps: ['Paste the text', 'Pick escape or unescape', 'Copy the result'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: { kind: 'text', input: '<div class="note">Tea & biscuits at 3 > 2</div>' },
     howTo: 'How to escape HTML special characters',
@@ -90,8 +90,8 @@ module.exports = {
     hook: 'Why was the user logged out? Read the exp claim.',
     pain: 'The login keeps failing and the token is a wall of letters and dots. You need the payload and expiry now.',
     usual: ['Decoding by hand in the console', 'Pasting live tokens into unknown sites', 'Forgetting exp is seconds, not ms'],
-    promise: 'Paste a JWT. See its header, payload and expiry in plain words.',
-    steps: ['Paste the token', 'Read header and payload', 'Check the expiry'],
+    promise: 'Paste a JWT. See its header, payload and expiry in plain words, and check its signature with your secret or public key.',
+    steps: ['Paste the token', 'Read every claim explained', 'Verify it with the secret or key'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: {
       kind: 'text',
@@ -105,8 +105,8 @@ module.exports = {
     hook: 'You shared your new page. The preview was a bare URL.',
     pain: 'The link went out on WhatsApp with no picture and no title. Nobody tapped it.',
     usual: ['Copying tags from another site’s source', 'Titles cut off in search results', 'SEO plugins for five lines of HTML'],
-    promise: 'Fill in the page details. Copy meta, Open Graph and Twitter tags.',
-    steps: ['Enter title and description', 'Add the share image', 'Copy the tags into <head>'],
+    promise: 'Fill in the page details. See how Google, Facebook and X will show it, then copy the meta, Open Graph and Twitter tags.',
+    steps: ['Enter title and description', 'Add the share image and check its size', 'Copy the tags into <head>'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: {
       kind: 'schematic',
@@ -157,8 +157,8 @@ module.exports = {
     hook: 'You need 50 unique IDs for test data. Right now.',
     pain: 'The fixture file needs fifty IDs and you are about to type “test-id-1, test-id-2”.',
     usual: ['Made-up IDs that collide later', 'A script written for a one-off list', 'Generators with a weak random source'],
-    promise: 'Pick how many. Get v4 UUIDs from the browser’s crypto source.',
-    steps: ['Set how many', 'Generate', 'Copy the list'],
+    promise: 'Pick how many. Get v4, v7 or v1 UUIDs, ULIDs or nanoids from the browser’s crypto source, or check any ID.',
+    steps: ['Pick the type and how many', 'Generate', 'Copy the list'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: {
       kind: 'schematic',
@@ -214,8 +214,8 @@ module.exports = {
     hook: 'Your brand yellow on white scores 1.57:1. Text needs 4.5.',
     pain: 'The brand colour looks great on a button. As text on white, people squint, and an audit will flag it.',
     usual: ['Converting HEX to HSL by hand', 'Guessing whether text is readable', 'Hopping between three colour sites'],
-    promise: 'Enter a colour. Get HEX, RGB, HSL and its WCAG contrast score.',
-    steps: ['Enter the colour', 'Set the background', 'Read the contrast result'],
+    promise: 'Enter a colour in any CSS syntax. Get HEX, RGB, HSL, OKLCH and more, its WCAG contrast score, and the nearest colour that passes.',
+    steps: ['Enter the colour', 'Set the background', 'Read the contrast result or take the fix'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: {
       kind: 'schematic',
@@ -232,14 +232,14 @@ module.exports = {
     hook: 'Two colours, one live preview, one line of CSS.',
     pain: 'You want a smooth hero gradient, and every hand-typed attempt goes muddy grey in the middle.',
     usual: ['Typing stops and refreshing the browser', 'Gradients that go grey in the middle', 'A design app just for one CSS line'],
-    promise: 'Pick the colours and the angle. See it live, copy the CSS.',
-    steps: ['Pick the colour stops', 'Set linear or radial', 'Copy the CSS'],
+    promise: 'Drag the colour stops and the angle. Blend in OKLab so the middle stays clean, then copy the CSS, a Tailwind class or a PNG.',
+    steps: ['Drag or type the colour stops', 'Set the angle, or the centre', 'Copy the CSS or save a PNG'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: {
       kind: 'schematic',
-      input: 'Colour stops, angle and gradient type',
-      output: 'Copy-ready linear or radial gradient CSS',
-      sampleOut: 'background: linear-gradient(135deg, #ffe29a 0%, #ff9d2e 100%);'
+      input: 'Colour stops, angle or centre, type and blend',
+      output: 'Copy-ready linear, radial or conic CSS, a Tailwind class and a PNG',
+      sampleOut: 'background: linear-gradient(120deg in oklab, #0000ff 0%, #ffff00 100%);'
     },
     howTo: 'How to make a CSS gradient',
     cta: 'Build a gradient'
@@ -249,8 +249,8 @@ module.exports = {
     hook: 'Your site is live. The browser tab shows a blank icon.',
     pain: 'Every device wants a different icon size, and the HTML to load them is another thing to get wrong.',
     usual: ['Resizing the logo eight times by hand', 'Generators that upload your logo', 'Forgetting the HTML that loads them'],
-    promise: 'Drop in one square image. Get every size plus the HTML.',
-    steps: ['Drop in a square image', 'Download the icon set', 'Paste the HTML into <head>'],
+    promise: 'Drop in a square image, or type a letter or pick an emoji. Get every size, an SVG with a dark-mode option, and the HTML.',
+    steps: ['Drop in an image or type a letter', 'Download the icon set', 'Paste the HTML into <head>'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: {
       kind: 'schematic',
@@ -267,8 +267,8 @@ module.exports = {
     hook: 'Change one character and watch every hash change.',
     pain: 'You need the SHA-256 of a string for a test, and the terminal command is different on every machine.',
     usual: ['A different command on every OS', 'Pasting secrets into sites that may log', 'Using MD5 where SHA-256 belongs'],
-    promise: 'Type text. Get SHA-256, SHA-1, MD5 and CRC32 at once.',
-    steps: ['Type or paste the text', 'Pick the algorithm', 'Copy the hash'],
+    promise: 'Type text or open a file of any size. Get SHA-256, SHA-1, MD5 and CRC32 at once, or SHA-3 and HMAC, and check it against the published value.',
+    steps: ['Type the text or open the file', 'Pick the algorithms', 'Copy the hash or paste the expected one'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: { kind: 'text', input: 'The quick brown fox jumps over the lazy dog' },
     howTo: 'How to make a SHA-256 hash of some text',
@@ -279,7 +279,7 @@ module.exports = {
     hook: 'Your regex matched nothing. Was it the g flag?',
     pain: 'You need every email address out of a block of text. The pattern works in your head, not in code.',
     usual: ['Trial and error in the console', 'Testers that use a different engine', 'Forgetting the g flag, again'],
-    promise: 'Type the pattern, paste the text. See every match and group live.',
+    promise: 'Type the pattern, paste the text. See every match and group coloured live, and each part of the pattern explained.',
     steps: ['Type your pattern', 'Paste the test text', 'Read matches and groups'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: {
@@ -294,8 +294,8 @@ module.exports = {
     hook: 'When does “*/15 9-17 * * 1-5” actually run?',
     pain: 'A job ran at 2 a.m. on a Sunday and nobody knows why. The cron line is your only clue.',
     usual: ['Counting asterisks on your fingers', 'Deploying and waiting to see', 'Mixing up day-of-month and weekday'],
-    promise: 'Paste the cron line. Read it in plain English, with the next runs.',
-    steps: ['Paste the expression', 'Read the plain English', 'Check the next run times'],
+    promise: 'Paste the cron line, Unix, seconds-first or Quartz. Read it in plain English, with the next runs in the time zone you choose.',
+    steps: ['Paste the expression', 'Read the plain English', 'Check the next run times in your zone'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: { kind: 'text', input: '*/15 9-17 * * 1-5\n0 2 * * 0' },
     howTo: 'How to read a cron expression',
@@ -306,8 +306,8 @@ module.exports = {
     hook: 'You wrote it in Markdown. The newsletter wants HTML.',
     pain: 'The update is written in Markdown. The newsletter tool only takes HTML, and converting by hand breaks the lists.',
     usual: ['Hand-writing <ul> and <li> tags', 'Converters that let raw HTML through', 'Installing a tool for one conversion'],
-    promise: 'Paste Markdown. Copy clean HTML: headings, lists, code and links.',
-    steps: ['Paste the Markdown', 'Check the HTML', 'Copy or download it'],
+    promise: 'Paste Markdown. See it rendered beside the text, tables, task lists, footnotes and maths included, and copy clean HTML or save a styled page.',
+    steps: ['Paste or open the Markdown', 'Check the live preview', 'Copy the HTML, export it or print it'],
     proof: ['Free', 'Nothing uploaded', 'Runs in your browser'],
     example: {
       kind: 'text',

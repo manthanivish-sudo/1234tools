@@ -15,6 +15,13 @@ mp4-muxer.mjs            mp4-muxer 5.2.2 (MIT, LICENSE-mp4-muxer.txt)
                          site's Apache-2.0/MIT/BSD rule — so that is not vendored; openMuxer() is
                          the one place to change if that decision changes.
 
+webm-muxer.mjs           webm-muxer 5.1.4 (MIT, LICENSE-webm-muxer.txt)
+                         https://registry.npmjs.org/webm-muxer/-/webm-muxer-5.1.4.tgz  build/webm-muxer.mjs
+                         sha256 53710543cecc4db7b6cd23fb0d9b308aa3374697f43a6149a8497f0a8547f0cb
+                         Boxes VP8/VP9/AV1 video and Opus/Vorbis sound into WebM for the video and audio
+                         tools (engine/render-video.js openBox). Same author as mp4-muxer; Mediabunny
+                         (MPL-2.0) is not vendored, for the reason given above.
+
 ort/                     ONNX Runtime Web 1.30.0 (MIT) — see ort/README.txt.
 
 pdfjs/                   pdf.js (Apache-2.0) — see the licence file in that folder.

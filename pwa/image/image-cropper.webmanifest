@@ -2,7 +2,7 @@
   "id": "/image/image-cropper.html",
   "name": "Image Cropper — 1234Tools",
   "short_name": "Image Cropper",
-  "description": "Crop an image by dragging a selection, with optional locked aspect ratios.",
+  "description": "Crop an image with a box you can move, resize and type in, locked ratios and platform sizes, rotation and straightening.",
   "start_url": "/image/image-cropper/?src=pwa",
   "scope": "/image/image-cropper/",
   "display": "standalone",

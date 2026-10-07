@@ -1,0 +1,42 @@
+{
+  "id": "/video/mute-video/",
+  "name": "Mute Video — 1234Tools",
+  "short_name": "Mute Video",
+  "description": "Remove the sound from a video in your browser. The picture is copied untouched into a new MP4 or WebM, so the quality stays exactly the same and a long video takes seconds. Nothing is uploaded.",
+  "start_url": "/video/mute-video/?src=pwa",
+  "scope": "/video/mute-video/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "video",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-video-mute.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-video-mute-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-video-mute-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

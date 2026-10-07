@@ -232,6 +232,7 @@ function kindOf(html) {
   if (/mountQR\(/.test(html)) return 'qr';
   /* the time zone converter, countdown and stopwatch: settings, not figures */
   if (/mount(?:Timezone|Countdown|Stopwatch)\(/.test(html)) return 'live';
+  if (/mountGenerate\(/.test(html)) return 'gen';     // generators share their settings (wave 3)
   return 'io';
 }
 

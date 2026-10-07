@@ -2,7 +2,7 @@
   "id": "/image/circle-crop.html",
   "name": "Circle Crop / Avatar Maker — 1234Tools",
   "short_name": "Circle Crop /",
-  "description": "Crop an image into a circle or rounded square with a transparent background — ready for profile pictures.",
+  "description": "Crop an image into a circle or rounded square, move and zoom it, add a ring or a background colour — ready for profile pictures, as PNG or WebP.",
   "start_url": "/image/circle-crop/?src=pwa",
   "scope": "/image/circle-crop/",
   "display": "standalone",

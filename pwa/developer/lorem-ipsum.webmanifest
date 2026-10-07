@@ -2,7 +2,7 @@
   "id": "/developer/lorem-ipsum.html",
   "name": "Lorem Ipsum Generator — 1234Tools",
   "short_name": "Lorem Ipsum",
-  "description": "Generate placeholder text by paragraphs, sentences or words — classical Latin or plain English.",
+  "description": "Generate placeholder text by paragraphs, sentences, words, list items or exact bytes, in classic Latin or plain English, as text, HTML or Markdown.",
   "start_url": "/developer/lorem-ipsum/?src=pwa",
   "scope": "/developer/lorem-ipsum/",
   "display": "standalone",

@@ -2,7 +2,7 @@
   "id": "/developer/cron-parser.html",
   "name": "Cron Expression Parser — 1234Tools",
   "short_name": "Cron Expression",
-  "description": "Translate a cron expression into plain English and see exactly when it will next run.",
+  "description": "Translate a cron expression into plain English and see its next runs in any time zone. Reads Unix, seconds-first and Quartz syntax, with L, W, # and ?, and has a builder and presets.",
   "start_url": "/developer/cron-parser/?src=pwa",
   "scope": "/developer/cron-parser/",
   "display": "standalone",

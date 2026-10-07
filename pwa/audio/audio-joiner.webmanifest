@@ -1,0 +1,42 @@
+{
+  "id": "/audio/audio-joiner/",
+  "name": "Audio Joiner — 1234Tools",
+  "short_name": "Audio Joiner",
+  "description": "Join sound files into one in your browser: put them in order, add a gap of silence or a crossfade between them, and save as WAV, M4A or Opus. Mixed sample rates and mono files are matched for you. Nothing is uploaded.",
+  "start_url": "/audio/audio-joiner/?src=pwa",
+  "scope": "/audio/audio-joiner/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "music",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-audio-join.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-audio-join-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-audio-join-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

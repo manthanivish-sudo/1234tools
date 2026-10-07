@@ -1,571 +1,545 @@
 (function(){
-/**
- * Developer tools, second set.
- *
- * Hashing is implemented in plain JavaScript rather than via SubtleCrypto.
- * SubtleCrypto is async, which the code-pane renderer is not, and it is
- * unavailable on insecure origins. Plain implementations are synchronous,
- * work everywhere, and — more usefully — can be verified in Node against
- * the published test vectors, which an async browser API cannot be.
- */
-
 /* ============================================================
-   Hash implementations
-   ============================================================ */
-
-function utf8Bytes(str) {
-  const out = [];
-  for (const ch of String(str)) {
-    const cp = ch.codePointAt(0);
-    if (cp < 0x80) out.push(cp);
-    else if (cp < 0x800) out.push(0xc0 | (cp >> 6), 0x80 | (cp & 63));
-    else if (cp < 0x10000) out.push(0xe0 | (cp >> 12), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
-    else out.push(0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 63), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
-  }
-  return out;
-}
-
-const hex = (arr) => arr.map(b => b.toString(16).padStart(2, '0')).join('');
-
-/* ---------- SHA-256 (FIPS 180-4) ---------- */
-const K256 = [
-  0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
-  0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
-  0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
-  0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
-  0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
-  0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
-  0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
-  0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
-];
-
-function sha256(bytes) {
-  const H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
-  const msg = bytes.slice();
-  const bitLen = msg.length * 8;
-  msg.push(0x80);
-  while (msg.length % 64 !== 56) msg.push(0);
-  // 64-bit length, big-endian; the high word is zero for anything realistic
-  const hi = Math.floor(bitLen / 4294967296);
-  msg.push((hi >>> 24) & 255, (hi >>> 16) & 255, (hi >>> 8) & 255, hi & 255);
-  msg.push((bitLen >>> 24) & 255, (bitLen >>> 16) & 255, (bitLen >>> 8) & 255, bitLen & 255);
-
-  const w = new Uint32Array(64);
-  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
-
-  for (let i = 0; i < msg.length; i += 64) {
-    for (let t = 0; t < 16; t++) {
-      w[t] = (msg[i + t * 4] << 24) | (msg[i + t * 4 + 1] << 16) |
-             (msg[i + t * 4 + 2] << 8) | msg[i + t * 4 + 3];
-    }
-    for (let t = 16; t < 64; t++) {
-      const s0 = rotr(w[t - 15], 7) ^ rotr(w[t - 15], 18) ^ (w[t - 15] >>> 3);
-      const s1 = rotr(w[t - 2], 17) ^ rotr(w[t - 2], 19) ^ (w[t - 2] >>> 10);
-      w[t] = (w[t - 16] + s0 + w[t - 7] + s1) >>> 0;
-    }
-    let [a, b, c, d, e, f, g, h] = H;
-    for (let t = 0; t < 64; t++) {
-      const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
-      const ch = (e & f) ^ (~e & g);
-      const t1 = (h + S1 + ch + K256[t] + w[t]) >>> 0;
-      const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
-      const maj = (a & b) ^ (a & c) ^ (b & c);
-      const t2 = (S0 + maj) >>> 0;
-      h = g; g = f; f = e; e = (d + t1) >>> 0;
-      d = c; c = b; b = a; a = (t1 + t2) >>> 0;
-    }
-    H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0;
-    H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0;
-    H[4] = (H[4] + e) >>> 0; H[5] = (H[5] + f) >>> 0;
-    H[6] = (H[6] + g) >>> 0; H[7] = (H[7] + h) >>> 0;
-  }
-  const out = [];
-  H.forEach(x => out.push((x >>> 24) & 255, (x >>> 16) & 255, (x >>> 8) & 255, x & 255));
-  return hex(out);
-}
-
-/* ---------- SHA-1 (FIPS 180-4) ---------- */
-function sha1(bytes) {
-  const H = [0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0];
-  const msg = bytes.slice();
-  const bitLen = msg.length * 8;
-  msg.push(0x80);
-  while (msg.length % 64 !== 56) msg.push(0);
-  const hi = Math.floor(bitLen / 4294967296);
-  msg.push((hi >>> 24) & 255, (hi >>> 16) & 255, (hi >>> 8) & 255, hi & 255);
-  msg.push((bitLen >>> 24) & 255, (bitLen >>> 16) & 255, (bitLen >>> 8) & 255, bitLen & 255);
-
-  const w = new Uint32Array(80);
-  const rotl = (x, n) => (x << n) | (x >>> (32 - n));
-
-  for (let i = 0; i < msg.length; i += 64) {
-    for (let t = 0; t < 16; t++) {
-      w[t] = (msg[i + t * 4] << 24) | (msg[i + t * 4 + 1] << 16) |
-             (msg[i + t * 4 + 2] << 8) | msg[i + t * 4 + 3];
-    }
-    for (let t = 16; t < 80; t++) w[t] = rotl(w[t - 3] ^ w[t - 8] ^ w[t - 14] ^ w[t - 16], 1);
-
-    let [a, b, c, d, e] = H;
-    for (let t = 0; t < 80; t++) {
-      let f, k;
-      if (t < 20)      { f = (b & c) | (~b & d);            k = 0x5A827999; }
-      else if (t < 40) { f = b ^ c ^ d;                     k = 0x6ED9EBA1; }
-      else if (t < 60) { f = (b & c) | (b & d) | (c & d);   k = 0x8F1BBCDC; }
-      else             { f = b ^ c ^ d;                     k = 0xCA62C1D6; }
-      const tmp = (rotl(a, 5) + f + e + k + w[t]) >>> 0;
-      e = d; d = c; c = rotl(b, 30) >>> 0; b = a; a = tmp;
-    }
-    H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0; H[2] = (H[2] + c) >>> 0;
-    H[3] = (H[3] + d) >>> 0; H[4] = (H[4] + e) >>> 0;
-  }
-  const out = [];
-  H.forEach(x => out.push((x >>> 24) & 255, (x >>> 16) & 255, (x >>> 8) & 255, x & 255));
-  return hex(out);
-}
-
-/* ---------- MD5 (RFC 1321) — for checksums only, never for security ---------- */
-function md5(bytes) {
-  const S = [7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,
-             5,9,14,20,5,9,14,20,5,9,14,20,5,9,14,20,
-             4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,
-             6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21];
-  const K = new Uint32Array(64);
-  for (let i = 0; i < 64; i++) K[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 4294967296) >>> 0;
-
-  const msg = bytes.slice();
-  const bitLen = msg.length * 8;
-  msg.push(0x80);
-  while (msg.length % 64 !== 56) msg.push(0);
-  // MD5 length is little-endian
-  const lo = bitLen >>> 0, hi = Math.floor(bitLen / 4294967296);
-  msg.push(lo & 255, (lo >>> 8) & 255, (lo >>> 16) & 255, (lo >>> 24) & 255);
-  msg.push(hi & 255, (hi >>> 8) & 255, (hi >>> 16) & 255, (hi >>> 24) & 255);
-
-  let a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
-  const rotl = (x, n) => ((x << n) | (x >>> (32 - n))) >>> 0;
-  const M = new Uint32Array(16);
-
-  for (let i = 0; i < msg.length; i += 64) {
-    for (let j = 0; j < 16; j++) {
-      M[j] = (msg[i + j * 4]) | (msg[i + j * 4 + 1] << 8) |
-             (msg[i + j * 4 + 2] << 16) | (msg[i + j * 4 + 3] << 24);
-    }
-    let A = a0, B = b0, C = c0, D = d0;
-    for (let j = 0; j < 64; j++) {
-      let F, g;
-      if (j < 16)      { F = (B & C) | (~B & D);        g = j; }
-      else if (j < 32) { F = (D & B) | (~D & C);        g = (5 * j + 1) % 16; }
-      else if (j < 48) { F = B ^ C ^ D;                 g = (3 * j + 5) % 16; }
-      else             { F = C ^ (B | ~D);              g = (7 * j) % 16; }
-      F = (F + A + K[j] + M[g]) >>> 0;
-      A = D; D = C; C = B;
-      B = (B + rotl(F, S[j])) >>> 0;
-    }
-    a0 = (a0 + A) >>> 0; b0 = (b0 + B) >>> 0;
-    c0 = (c0 + C) >>> 0; d0 = (d0 + D) >>> 0;
-  }
-  const le = (x) => [x & 255, (x >>> 8) & 255, (x >>> 16) & 255, (x >>> 24) & 255];
-  return hex([...le(a0), ...le(b0), ...le(c0), ...le(d0)]);
-}
-
-/* ---------- CRC32 ---------- */
-const CRC_TABLE = (() => {
-  const t = new Uint32Array(256);
-  for (let i = 0; i < 256; i++) {
-    let c = i;
-    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-    t[i] = c >>> 0;
-  }
-  return t;
-})();
-
-function crc32(bytes) {
-  let c = 0xFFFFFFFF;
-  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
-  return ((c ^ 0xFFFFFFFF) >>> 0).toString(16).padStart(8, '0');
-}
-
-/* ============================================================
-   Cron expression parsing
+   Cron expressions: parsing (Unix, seconds-first and Quartz), plain
+   English, and the next runs in any time zone. Written for this page
+   from the crontab(5) manual page and the Quartz CronTrigger tutorial;
+   no library.
    ============================================================ */
 
 const CRON_NAMES = {
-  month: ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'],
-  dow: ['sun','mon','tue','wed','thu','fri','sat']
+  month: ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'],
+  dow: ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+};
+const CRON_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const CRON_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const CRON_MACROS = {
+  '@yearly': '0 0 1 1 *', '@annually': '0 0 1 1 *', '@monthly': '0 0 1 * *',
+  '@weekly': '0 0 * * 0', '@daily': '0 0 * * *', '@midnight': '0 0 * * *', '@hourly': '0 * * * *'
+};
+/* the field definitions; dow is 0-7 (0 and 7 Sunday) for Unix and seconds-first, 1-7 (1 Sunday) for Quartz */
+const CRON_DEF = {
+  sec: { name: 'second', min: 0, max: 59 },
+  min: { name: 'minute', min: 0, max: 59 },
+  hour: { name: 'hour', min: 0, max: 23 },
+  dom: { name: 'day of month', min: 1, max: 31 },
+  mon: { name: 'month', min: 1, max: 12, names: CRON_NAMES.month, nameBase: 1 },
+  dow: { name: 'day of week', min: 0, max: 7, names: CRON_NAMES.dow, nameBase: 0 },
+  year: { name: 'year', min: 1970, max: 2199 }
 };
 
-/* Day of week runs 0-7, both ends Sunday, as in Vixie cron: so 1-7 is Monday
-   to Sunday and 5-7 Friday to Sunday. The caller folds 7 into 0. The name
-   sun at the end of a range means that 7, so mon-sun is the whole week. */
-function parseCronField(field, min, max, names) {
-  const out = new Set();
-  for (let part of String(field).split(',')) {
-    part = part.trim().toLowerCase();
-    if (!part) throw new Error('empty field element');
+class CronError extends Error {
+  constructor(msg, field, from, to) { super(msg); this.field = field; this.from = from; this.to = to; }
+}
 
+/* one field: its values, and the Quartz extras. `col` is where the field starts in the line. */
+function cronField(token, key, dialect, col) {
+  const def = Object.assign({}, CRON_DEF[key]);
+  const quartz = dialect === 'quartz';
+  if (key === 'dow' && quartz) { def.min = 1; def.max = 7; }
+  const spec = { key: key, raw: token, values: new Set(), star: false, none: false, last: false, lastOffset: null, lastWeekday: false, weekdayNear: [], dowLast: [], dowNth: [], from: col, to: col + token.length };
+  const fail = (msg, a, b) => { throw new CronError(msg, key, col + (a || 0), col + (b === undefined ? token.length : b)); };
+  const num = (v, at, isEnd) => {
+    const low = v.toLowerCase();
+    if (def.names && /^[a-z]{3}/.test(low)) {
+      const i = def.names.indexOf(low.slice(0, 3));
+      if (i < 0 || !(low.length === 3 || def.name === 'month' && CRON_MONTHS[i].toLowerCase() === low || def.name === 'day of week' && CRON_DAYS[i].toLowerCase() === low)) fail('"' + v + '" is not a ' + def.name + ' name', at, at + v.length);
+      if (key === 'dow') { if (quartz) return i + 1; return isEnd && i === 0 ? 7 : i; }
+      return i + def.nameBase;
+    }
+    if (!/^\d+$/.test(v)) fail('"' + v + '" is not a valid ' + def.name + ' value', at, at + v.length);
+    return parseInt(v, 10);
+  };
+  let at = 0;
+  token.split(',').forEach((part0) => {
+    const start = at;
+    at += part0.length + 1;
+    let part = part0;
+    if (!part) fail('empty element in the ' + def.name + ' field', start, start + 1);
+    if (part === '?') {
+      if (key !== 'dom' && key !== 'dow') fail('? is only allowed in the day-of-month and day-of-week fields', start, start + 1);
+      if (!quartz) fail('? is Quartz syntax; with five fields write * instead (or choose Quartz in Format)', start, start + 1);
+      if (token !== '?') fail('? has to stand alone in the field', start, start + 1);
+      spec.none = true; spec.star = true;
+      for (let v = def.min; v <= def.max; v++) spec.values.add(v);
+      return;
+    }
+    if (key === 'dom') {
+      let m;
+      if (part === 'L') { spec.last = true; return; }
+      if (part === 'LW') { spec.lastWeekday = true; return; }
+      if ((m = /^L-(\d+)$/.exec(part))) { const n = parseInt(m[1], 10); if (n < 1 || n > 30) fail('L-' + n + ': the offset must be 1 to 30', start, start + part.length); spec.lastOffset = (spec.lastOffset || []).concat(n); return; }
+      if ((m = /^(\d+)W$/.exec(part))) { const n = parseInt(m[1], 10); if (n < 1 || n > 31) fail(n + 'W: the day must be 1 to 31', start, start + part.length); spec.weekdayNear.push(n); return; }
+      if (/[LW#]/.test(part)) fail('"' + part + '" is not valid in the day-of-month field (L, L-n, LW and nW are)', start, start + part.length);
+    } else if (key === 'dow') {
+      let m;
+      if (part === 'L' && quartz) { spec.values.add(7); return; }
+      if ((m = /^([A-Za-z0-9]+)L$/.exec(part)) && part !== 'L') { spec.dowLast.push(num(m[1], start, false)); return; }
+      if ((m = /^([A-Za-z0-9]+)#(\d+)$/.exec(part))) { const n = parseInt(m[2], 10); if (n < 1 || n > 5) fail('#' + n + ': the occurrence must be 1 to 5', start, start + part.length); spec.dowNth.push([num(m[1], start, false), n]); return; }
+      if (/[LW#]/.test(part.replace(/[A-Za-z]{3}/g, ''))) fail('"' + part + '" is not valid in the day-of-week field (nL and n#m are)', start, start + part.length);
+    } else if (/[LW#?]/.test(part) && !/^[A-Za-z]{3}/.test(part)) {
+      fail('L, W, # and ? are only for the day fields', start, start + part.length);
+    }
     let step = 1;
     const slash = part.split('/');
+    if (slash.length > 2) fail('more than one / in an element', start, start + part.length);
     if (slash.length === 2) {
+      if (!/^\d+$/.test(slash[1]) || parseInt(slash[1], 10) < 1) fail('the step "' + slash[1] + '" must be a whole number of 1 or more', start + slash[0].length + 1, start + part.length);
       step = parseInt(slash[1], 10);
-      if (!isFinite(step) || step < 1) throw new Error(`invalid step "${slash[1]}"`);
       part = slash[0];
-    } else if (slash.length > 2) throw new Error('more than one / in a field');
-
+    }
     let lo, hi;
-    if (part === '*') { lo = min; hi = max; }
+    if (part === '*') { lo = def.min; hi = key === 'dow' && !quartz ? 6 : def.max; spec.star = true; if (slash.length === 2) spec.starStep = true; }
     else {
       const range = part.split('-');
-      const toNum = (v, isEnd) => {
-        if (names) {
-          const i = names.indexOf(v.slice(0, 3));
-          if (i >= 0) {
-            if (names === CRON_NAMES.dow && isEnd && i === 0) return 7;
-            return i + (names === CRON_NAMES.month ? 1 : 0);
-          }
-        }
-        const n = parseInt(v, 10);
-        if (!isFinite(n)) throw new Error(`"${v}" is not a valid value`);
-        return n;
-      };
-      if (range.length === 1) { lo = toNum(range[0]); hi = step > 1 ? max : lo; }
-      else if (range.length === 2) { lo = toNum(range[0]); hi = toNum(range[1], true); }
-      else throw new Error('more than one - in a field element');
+      if (range.length === 1) { lo = num(range[0], start, false); hi = slash.length === 2 ? def.max : lo; }
+      else if (range.length === 2) { lo = num(range[0], start, false); hi = num(range[1], start + range[0].length + 1, true); }
+      else fail('more than one - in an element', start, start + part.length);
     }
-    if (lo < min || hi > max || lo > hi) throw new Error(`${lo}-${hi} is outside the allowed range ${min}-${max}`);
-    for (let v = lo; v <= hi; v += step) out.add(v);
+    if (lo < def.min || hi > def.max) fail((lo < def.min ? lo : hi) + ' is outside the ' + def.name + ' range ' + def.min + '-' + def.max, start, start + part0.length);
+    if (lo > hi) fail(lo + '-' + hi + ' goes backwards (the start must not be above the end)', start, start + part0.length);
+    for (let v = lo; v <= hi; v += step) spec.values.add(v);
+  });
+  /* the values the engine works with: day of week folded to 0-6, Sunday 0 */
+  let vals = Array.from(spec.values);
+  if (key === 'dow') {
+    if (quartz) vals = vals.map((v) => v - 1);
+    else vals = vals.map((v) => v % 7);
+    spec.dowLast = spec.dowLast.map((v) => quartz ? v - 1 : v % 7);
+    spec.dowNth = spec.dowNth.map((p) => [quartz ? p[0] - 1 : p[0] % 7, p[1]]);
+    spec.dowLast.concat(spec.dowNth.map((p) => p[0])).forEach((v) => { if (v < 0 || v > 6) fail('the day of week must be ' + (quartz ? '1 (Sunday) to 7 (Saturday)' : '0 or 7 (Sunday) to 6 (Saturday)'), 0); });
   }
-  return [...out].sort((a, b) => a - b);
+  spec.list = Array.from(new Set(vals)).sort((a, b) => a - b);
+  spec.set = new Set(spec.list);
+  spec.special = spec.last || spec.lastWeekday || !!spec.lastOffset || spec.weekdayNear.length > 0 || spec.dowLast.length > 0 || spec.dowNth.length > 0;
+  /* "restricted" as cron means it: a field is unrestricted only if it starts with * */
+  spec.all = spec.star && !spec.starStep && spec.list.length === (key === 'dow' ? 7 : (def.max - def.min + 1)) || (spec.none === true);
+  return spec;
 }
 
-function describeCron(expr) {
-  const parts = String(expr).trim().split(/\s+/);
-  const PRESETS = {
-    '@yearly': '0 0 1 1 *', '@annually': '0 0 1 1 *', '@monthly': '0 0 1 * *',
-    '@weekly': '0 0 * * 0', '@daily': '0 0 * * *', '@midnight': '0 0 * * *',
-    '@hourly': '0 * * * *'
-  };
-  if (parts.length === 1 && PRESETS[parts[0].toLowerCase()]) {
-    return describeCron(PRESETS[parts[0].toLowerCase()]);
+/* a whole expression: splits it, picks the dialect, parses every field */
+function cronParse(expr, format) {
+  let line = String(expr).trim();
+  const macro = CRON_MACROS[line.toLowerCase()];
+  if (line.charAt(0) === '@') {
+    if (line.toLowerCase() === '@reboot') throw new CronError('@reboot runs once, when the machine starts, so it has no schedule to show', null, 0, line.length);
+    if (!macro) throw new CronError('"' + line + '" is not a known shortcut (@yearly, @annually, @monthly, @weekly, @daily, @midnight, @hourly)', null, 0, line.length);
+    line = macro;
   }
-  if (parts.length !== 5) {
-    throw new Error(`A cron expression has five fields (minute hour day month weekday). This has ${parts.length}.`);
+  const tokens = [];
+  line.replace(/\S+/g, (t, i) => { tokens.push([t, i]); return t; });
+  const n = tokens.length;
+  let dialect = format || 'auto';
+  if (dialect === 'auto') {
+    if (n === 5) dialect = 'unix';
+    else if (n === 7) dialect = 'quartz';
+    else if (n === 6) dialect = tokens.some((t, i) => (i === 3 || i === 5) && /[?LW#]/.test(t[0].replace(/[A-Za-z]{3}/g, ''))) ? 'quartz' : 'sec';
+    else throw new CronError('A cron expression has 5 fields (minute hour day-of-month month day-of-week), or 6 with seconds first, or 7 with a year as well. This has ' + n + '.', null, 0, line.length);
   }
-
-  const [minF, hourF, domF, monF, dowF] = parts;
-  const mins  = parseCronField(minF, 0, 59);
-  const hours = parseCronField(hourF, 0, 23);
-  const doms  = parseCronField(domF, 1, 31);
-  const mons  = parseCronField(monF, 1, 12, CRON_NAMES.month);
-  /* 0-7 with 7 folded into 0. Rewriting every 7 to 0 in the text first, as
-     this once did, turned 1-7 into 1-0 and refused it. */
-  const dows  = [...new Set(parseCronField(dowF, 0, 7, CRON_NAMES.dow).map(d => d % 7))].sort((a, b) => a - b);
-
-  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const list = (arr, fmt) => arr.length === 1 ? fmt(arr[0])
-    : arr.length === 2 ? `${fmt(arr[0])} and ${fmt(arr[1])}`
-    : arr.slice(0, -1).map(fmt).join(', ') + ' and ' + fmt(arr[arr.length - 1]);
-  const pad = (n) => String(n).padStart(2, '0');
-
-  let when;
-  if (mins.length === 60 && hours.length === 24) when = 'Every minute';
-  else if (mins.length === 60) when = `Every minute during ${list(hours, h => pad(h) + ':00')}`;
-  else if (hours.length === 24) when = `At ${list(mins, m => 'minute ' + m)} of every hour`;
-  else if (mins.length <= 4 && hours.length <= 4) {
-    const times = [];
-    hours.forEach(h => mins.forEach(m => times.push(`${pad(h)}:${pad(m)}`)));
-    when = `At ${list(times, t => t)}`;
-  } else {
-    when = `At ${list(mins, m => 'minute ' + m)} past ${list(hours, h => pad(h) + ':00')}`;
+  const want = dialect === 'unix' ? [5] : dialect === 'sec' ? [6] : [6, 7];
+  if (want.indexOf(n) < 0) throw new CronError((dialect === 'unix' ? 'Unix cron has 5 fields' : dialect === 'sec' ? 'Seconds-first cron has 6 fields' : 'Quartz has 6 fields, or 7 with a year') + ' (' + (dialect === 'unix' ? 'minute hour day-of-month month day-of-week' : dialect === 'sec' ? 'second minute hour day-of-month month day-of-week' : 'second minute hour day-of-month month day-of-week [year]') + '). This has ' + n + '.', null, 0, line.length);
+  const keys = dialect === 'unix' ? ['min', 'hour', 'dom', 'mon', 'dow'] : dialect === 'sec' || n === 6 ? ['sec', 'min', 'hour', 'dom', 'mon', 'dow'] : ['sec', 'min', 'hour', 'dom', 'mon', 'dow', 'year'];
+  const f = {};
+  keys.forEach((k, i) => { f[k] = cronField(tokens[i][0], k, dialect, tokens[i][1]); });
+  if (!f.sec) f.sec = { key: 'sec', raw: '0', list: [0], set: new Set([0]), all: false, from: 0, to: 0, star: false };
+  if (dialect === 'quartz') {
+    if (f.dom.none && f.dow.none) throw new CronError('Quartz wants a ? in only one of the day fields, not both', 'dow', f.dow.from, f.dow.to);
+    if (!f.dom.none && !f.dow.none) {
+      const err = f.dow;
+      throw new CronError('Quartz needs a ? in the day-of-month or the day-of-week field: you cannot restrict both', 'dow', err.from, err.to);
+    }
   }
-
-  let onDays = '';
-  const allDom = doms.length === 31, allDow = dows.length === 7;
-  // days are named Monday first, so 5-7 reads Friday, Saturday and Sunday
-  const weekOrder = dows.slice().sort((a, b) => (a + 6) % 7 - (b + 6) % 7);
-  if (allDom && allDow) onDays = 'every day';
-  else if (!allDom && allDow) onDays = `on day ${list(doms, d => String(d))} of the month`;
-  else if (allDom && !allDow) onDays = `on ${list(weekOrder, d => DAYS[d])}`;
-  else onDays = `on day ${list(doms, d => String(d))} of the month, and on ${list(weekOrder, d => DAYS[d])}`;
-
-  const inMonths = mons.length === 12 ? '' : `, in ${list(mons, m => MONTHS[m - 1])}`;
-
-  return {
-    text: `${when}, ${onDays}${inMonths}.`,
-    fields: { mins, hours, doms, mons, dows },
-    runsPerDay: mins.length * hours.length,
-    normalised: parts.join(' ')
-  };
+  return { dialect: dialect, fields: f, keys: keys, hasSeconds: dialect !== 'unix', hasYear: !!f.year, line: line, macro: macro ? expr.trim() : null };
 }
 
-/** Next N times the expression fires, walking forward minute by minute. */
-function nextCronRuns(parsed, from, count) {
-  const { mins, hours, doms, mons, dows } = parsed.fields;
-  const mSet = new Set(mins), hSet = new Set(hours);
-  const domSet = new Set(doms), monSet = new Set(mons), dowSet = new Set(dows);
-  const allDom = doms.length === 31, allDow = dows.length === 7;
+/* ---------- calendar helpers on plain (year, month, day) ---------- */
+function cronDim(y, m) { return new Date(Date.UTC(y, m, 0)).getUTCDate(); }       // m is 1-12
+function cronDow(y, m, d) { return new Date(Date.UTC(y, m - 1, d)).getUTCDay(); }
+/* does this day match the day-of-month and day-of-week fields, by cron's own rule? */
+function cronDayOk(p, y, m, d) {
+  const dom = p.fields.dom, dow = p.fields.dow;
+  const last = cronDim(y, m), wd = cronDow(y, m, d);
+  let domOk = dom.set.has(d);
+  if (!domOk && dom.last && d === last) domOk = true;
+  if (!domOk && dom.lastOffset && dom.lastOffset.some((n) => d === last - n)) domOk = true;
+  if (!domOk && dom.lastWeekday) { let x = last; while (cronDow(y, m, x) === 0 || cronDow(y, m, x) === 6) x--; if (d === x) domOk = true; }
+  if (!domOk && dom.weekdayNear.length) domOk = dom.weekdayNear.some((n) => {
+    if (n > last) return false;
+    const w = cronDow(y, m, n);
+    let t = n;
+    if (w === 6) t = n === 1 ? 3 : n - 1;
+    else if (w === 0) t = n === last ? n - 2 : n + 1;
+    return d === t;
+  });
+  let dowOk = dow.set.has(wd);
+  if (!dowOk && dow.dowLast.length) dowOk = dow.dowLast.some((v) => wd === v && d + 7 > last);
+  if (!dowOk && dow.dowNth.length) dowOk = dow.dowNth.some((p2) => wd === p2[0] && Math.ceil(d / 7) === p2[1]);
+  if (p.dialect === 'quartz') return (dom.none ? true : domOk) && (dow.none ? true : dowOk);
+  /* Vixie cron: if either day field starts with *, both must match; otherwise either may */
+  if (dom.star || dow.star) return domOk && dowOk;
+  return domOk || dowOk;
+}
 
+/* ---------- time zones, by Intl ---------- */
+const CRON_FMT = {};
+function cronFormatter(tz) {
+  const k = tz || 'local';
+  if (!CRON_FMT[k]) CRON_FMT[k] = new Intl.DateTimeFormat('en-GB', { timeZone: tz || undefined, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
+  return CRON_FMT[k];
+}
+function cronWall(ms, tz) {
+  const o = {};
+  cronFormatter(tz).formatToParts(new Date(ms)).forEach((p) => { if (p.type !== 'literal') o[p.type] = parseInt(p.value, 10); });
+  return { y: o.year, mo: o.month, d: o.day, h: o.hour === 24 ? 0 : o.hour, mi: o.minute, s: o.second };
+}
+const cronKey = (w) => ((((w.y * 13 + w.mo) * 32 + w.d) * 24 + w.h) * 60 + w.mi) * 60 + w.s;
+function cronOffset(ms, tz) { const w = cronWall(ms, tz); return Date.UTC(w.y, w.mo - 1, w.d, w.h, w.mi, w.s) - Math.floor(ms / 1000) * 1000; }
+/* the earliest instant whose wall clock in tz reads w; null if the clocks skip it */
+function cronInstant(w, tz) {
+  const guess = Date.UTC(w.y, w.mo - 1, w.d, w.h, w.mi, w.s);
+  const cands = new Set([guess - cronOffset(guess - 86400000, tz), guess - cronOffset(guess + 86400000, tz), guess - cronOffset(guess, tz)]);
+  const ok = Array.from(cands).filter((t) => cronKey(cronWall(t, tz)) === cronKey(w)).sort((a, b) => a - b);
+  return ok.length ? ok[0] : null;
+}
+
+/* the next `count` runs strictly after `fromMs`, as instants */
+function cronNext(p, fromMs, count, tz, maxYears) {
+  const f = p.fields;
+  const w0 = cronWall(fromMs, tz), k0 = cronKey(w0);
   const out = [];
-  const t = new Date(from.getTime());
-  t.setSeconds(0, 0);
-  t.setMinutes(t.getMinutes() + 1);
-
-  // a year of minutes is the practical ceiling for a five-field expression
-  for (let i = 0; i < 527040 && out.length < count; i++) {
-    if (mSet.has(t.getMinutes()) && hSet.has(t.getHours()) && monSet.has(t.getMonth() + 1)) {
-      // cron ORs day-of-month and day-of-week when both are restricted
-      const dayOk = (allDom && allDow) ? true
-        : (!allDom && allDow) ? domSet.has(t.getDate())
-        : (allDom && !allDow) ? dowSet.has(t.getDay())
-        : (domSet.has(t.getDate()) || dowSet.has(t.getDay()));
-      if (dayOk) out.push(new Date(t.getTime()));
+  const lastYear = w0.y + (maxYears || (p.hasYear ? 200 : 9));
+  for (let y = w0.y; y <= lastYear && out.length < count; y++) {
+    if (p.hasYear && !f.year.set.has(y)) continue;
+    for (const mo of f.mon.list) {
+      if (y === w0.y && mo < w0.mo) continue;
+      const dim = cronDim(y, mo);
+      for (let d = 1; d <= dim; d++) {
+        if (cronKey({ y: y, mo: mo, d: d, h: 23, mi: 59, s: 59 }) <= k0) continue;
+        if (!cronDayOk(p, y, mo, d)) continue;
+        for (const h of f.hour.list) for (const mi of f.min.list) for (const s of f.sec.list) {
+          const w = { y: y, mo: mo, d: d, h: h, mi: mi, s: s };
+          if (cronKey(w) <= k0) continue;
+          const t = cronInstant(w, tz);
+          if (t === null) continue;
+          out.push(t);
+          if (out.length >= count) return out;
+        }
+      }
     }
-    t.setMinutes(t.getMinutes() + 1);
   }
   return out;
 }
 
-/* ============================================================
-   Markdown -> HTML
-   ============================================================ */
-
-/**
- * The address a link or picture may carry, or null when it may not.
- *
- * Allowed: http, https, mailto and tel (http and https only for a picture),
- * and relative addresses: /path, ../x, page.html, #part, ?q=1. Anything else
- * with a scheme (javascript:, vbscript:, data:, file: …) is refused, and the
- * link or picture is written as its plain text instead. Browsers skip tabs,
- * line breaks and control characters when they read a scheme, so the test
- * strips them first: "java\tscript:" is still javascript:.
- */
-function mdSafeUrl(url, forImage) {
-  const raw = String(url);
-  const probe = raw.replace(/[\u0000- \u007f-\u009f]/g, '').toLowerCase();
-  const m = /^([a-z][a-z0-9+.\-]*):/.exec(probe);
-  if (m) {
-    const ok = forImage ? ['http', 'https'] : ['http', 'https', 'mailto', 'tel'];
-    return ok.indexOf(m[1]) >= 0 ? raw : null;
-  }
-  // a colon before the first / ? or # would be read as some other scheme
-  if (/^[^\/?#]*:/.test(probe)) return null;
-  return raw;
-}
-
-function markdownToHtml(md) {
-  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const unesc = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-  /* An attribute value is quoted with ", so " and ' are escaped as well as
-     & < and >: a quote in an address can no longer close the attribute and
-     open a new one, as [x](a"onmouseover="…) once did. */
-  const attr = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
-    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const blocks = [];
-  // \u0000 to \u0003 mark the pieces lifted out below, so none may come in
-  let src = String(md).replace(/[\u0000-\u0003]/g, '');
-
-  // pull fenced code out first so nothing else touches it
-  src = src.replace(/```(\w*)\n([\s\S]*?)```/g, (m, lang, code) => {
-    blocks.push(`<pre><code${lang ? ` class="language-${lang}"` : ''}>${esc(code.replace(/\n$/, ''))}</code></pre>`);
-    return `\u0000BLOCK${blocks.length - 1}\u0000`;
-  });
-
-  /* Code spans, pictures and the tags of links are lifted out as \u0001n\u0002
-     once written, so the emphasis rules that follow cannot reach into an
-     address or a code span. An address may hold one level of brackets, as
-     in https://en.wikipedia.org/wiki/Cron_(software); a title after it, as
-     in [x](url "title"), is accepted and dropped. */
-  const LINK_URL = '\\(\\s*((?:[^()\\s]|\\([^()\\s]*\\))+)(?:\\s+[^)]*)?\\)';
-  const IMG_RE = new RegExp('!\\[([^\\]]*)\\]' + LINK_URL, 'g');
-  const LINK_RE = new RegExp('\\[([^\\]]+)\\]' + LINK_URL, 'g');
-  const inline = (s) => {
-    const kept = [];
-    const keep = (html) => '\u0001' + (kept.push(html) - 1) + '\u0002';
-    const t = esc(s)
-      .replace(/`([^`]+)`/g, (m, code) => keep('<code>' + code + '</code>'))
-      .replace(IMG_RE, (m, alt, url) => {
-        const u = mdSafeUrl(unesc(url), true);
-        return u === null ? alt : keep('<img src="' + attr(u) + '" alt="' + attr(unesc(alt)) + '">');
-      })
-      .replace(LINK_RE, (m, text, url) => {
-        const u = mdSafeUrl(unesc(url), false);
-        return u === null ? text : keep('<a href="' + attr(u) + '" rel="noopener noreferrer">') + text + keep('</a>');
-      })
-      .replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
-      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-      .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
-      .replace(/~~([^~]+)~~/g, '<del>$1</del>')
-      .replace(/(^|\s)__([^_]+)__/g, '$1<strong>$2</strong>');
-    return t.replace(/\u0001(\d+)\u0002/g, (m, i) => kept[Number(i)]);
-  };
-
-  /* GitHub-style pipe tables. A row is split at every | that is not written
-     \| (which becomes a plain | in the cell); one pipe at either end is
-     optional. The line under the header must be a divider row of ---, :---,
-     ---: or :---: with as many cells as the header, or neither line is a
-     table. Body rows are padded with empty cells or cut to the header's
-     width, and the table ends at a blank line or at a line that starts some
-     other block (#, >, a bullet, a number, a rule, a code block); any other
-     line is one more row, as on GitHub. Cells go through inline() above, so
-     the same escaping as a paragraph, and the alignment is taken from the
-     fixed list below, never copied from the text. */
-  const ALIGN = { left: ' style="text-align:left"', center: ' style="text-align:center"', right: ' style="text-align:right"', none: '' };
-  const splitRow = (row) => {
-    const s = row.trim();
-    const cells = [];
-    let cur = '', endPipe = false;
-    for (let i = 0; i < s.length; i++) {
-      const c = s.charAt(i);
-      endPipe = false;
-      if (c === '\\' && s.charAt(i + 1) === '|') { cur += '|'; i++; }
-      else if (c === '\\' && i + 1 < s.length) { cur += c + s.charAt(i + 1); i++; }
-      else if (c === '|') { cells.push(cur.trim()); cur = ''; endPipe = true; }
-      else cur += c;
-    }
-    if (!endPipe) cells.push(cur.trim());
-    if (s.charAt(0) === '|') cells.shift();
-    return cells;
-  };
-  const alignOf = (d) => d.charAt(0) === ':' ? (d.length > 1 && d.charAt(d.length - 1) === ':' ? 'center' : 'left')
-    : d.charAt(d.length - 1) === ':' ? 'right' : 'none';
-  const tableHead = (line, next) => {
-    if (next === undefined || line.indexOf('|') < 0) return null;
-    next = next.replace(/\s+$/, '');
-    if (next.indexOf('|') < 0) return null;
-    const delim = splitRow(next);
-    if (!delim.length || !delim.every((d) => /^:?-+:?$/.test(d))) return null;
-    const head = splitRow(line);
-    if (head.length !== delim.length) return null;
-    return { head, aligns: delim.map(alignOf) };
-  };
-  const startsBlock = (l) => !l.trim() || /^\u0000BLOCK\d+\u0000$/.test(l.trim()) || /^#{1,6}\s+/.test(l) ||
-    /^(-{3,}|\*{3,}|_{3,})$/.test(l.trim()) || /^>/.test(l) || /^\s*[-*+]\s+/.test(l) || /^\s*\d+[.)]\s+/.test(l);
-  const tableHtml = (t, rows) => {
-    const cell = (tag, text, i) => '<' + tag + ALIGN[t.aligns[i]] + '>' + inline(text) + '</' + tag + '>';
-    let h = '<table>\n<thead>\n<tr>' + t.head.map((c, i) => cell('th', c, i)).join('') + '</tr>\n</thead>';
-    if (rows.length) {
-      h += '\n<tbody>\n' + rows.map((r) => '<tr>' + t.aligns.map((a, i) => cell('td', r[i] || '', i)).join('') + '</tr>').join('\n') + '\n</tbody>';
-    }
-    return h + '\n</table>';
-  };
-
-  const lines = src.split('\n');
-  const out = [];
-  let inList = null, inQuote = false, para = [];
-
-  const flushPara = () => {
-    if (para.length) { out.push(`<p>${inline(para.join(' '))}</p>`); para = []; }
-  };
-  const closeList = () => { if (inList) { out.push(`</${inList}>`); inList = null; } };
-  const closeQuote = () => { if (inQuote) { out.push('</blockquote>'); inQuote = false; } };
-
-  for (let li = 0; li < lines.length; li++) {
-    const line = lines[li].replace(/\s+$/, '');
-
-    if (/^\u0000BLOCK\d+\u0000$/.test(line.trim())) {
-      flushPara(); closeList(); closeQuote();
-      out.push(line.trim());
-      continue;
-    }
-    if (!line.trim()) { flushPara(); closeList(); closeQuote(); continue; }
-
-    let m;
-    if ((m = line.match(/^(#{1,6})\s+(.*)$/))) {
-      flushPara(); closeList(); closeQuote();
-      out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`);
-    } else if (/^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())) {
-      flushPara(); closeList(); closeQuote();
-      out.push('<hr>');
-    } else if ((m = line.match(/^>\s?(.*)$/))) {
-      flushPara(); closeList();
-      if (!inQuote) { out.push('<blockquote>'); inQuote = true; }
-      out.push(`<p>${inline(m[1])}</p>`);
-    } else if ((m = line.match(/^\s*[-*+]\s+(.*)$/))) {
-      flushPara(); closeQuote();
-      if (inList !== 'ul') { closeList(); out.push('<ul>'); inList = 'ul'; }
-      out.push(`<li>${inline(m[1])}</li>`);
-    } else if ((m = line.match(/^\s*\d+[.)]\s+(.*)$/))) {
-      flushPara(); closeQuote();
-      if (inList !== 'ol') { closeList(); out.push('<ol>'); inList = 'ol'; }
-      out.push(`<li>${inline(m[1])}</li>`);
+/* ---------- plain English ---------- */
+const cronPad = (n) => String(n).padStart(2, '0');
+const cronList = (arr, fmt) => arr.length === 1 ? fmt(arr[0])
+  : arr.length === 2 ? `${fmt(arr[0])} and ${fmt(arr[1])}`
+  : arr.slice(0, -1).map(fmt).join(', ') + ' and ' + fmt(arr[arr.length - 1]);
+const cronOrd = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+function cronDescribe(p) {
+  const f = p.fields;
+  const mins = f.min.list, hours = f.hour.list, secs = f.sec.list;
+  const hasSec = p.hasSeconds && !(secs.length === 1 && secs[0] === 0);
+  let when;
+  const minAll = mins.length === 60, hourAll = hours.length === 24, secAll = secs.length === 60;
+  if (!hasSec) {
+    if (minAll && hourAll) when = 'Every minute';
+    else if (minAll) when = `Every minute during ${cronList(hours, h => cronPad(h) + ':00')}`;
+    else if (hourAll) when = `At ${cronList(mins, m => 'minute ' + m)} of every hour`;
+    else if (mins.length <= 4 && hours.length <= 4) {
+      const times = [];
+      hours.forEach(h => mins.forEach(m => times.push(`${cronPad(h)}:${cronPad(m)}`)));
+      when = `At ${cronList(times, t => t)}`;
+    } else when = `At ${cronList(mins, m => 'minute ' + m)} past ${cronList(hours, h => cronPad(h) + ':00')}`;
+  } else {
+    const uniform = (arr, n) => { if (arr.length < 2) return 0; const st = arr[1] - arr[0]; if (arr[0] !== 0 || 60 % st !== 0 || arr.length !== 60 / st) return 0; return arr.every((v, i) => v === i * st) ? st : 0; };
+    if (minAll && hourAll) {
+      if (secAll) when = 'Every second';
+      else if (uniform(secs)) when = `Every ${uniform(secs)} seconds`;
+      else when = `At ${cronList(secs, s => 'second ' + s)} of every minute`;
+    } else if (mins.length * hours.length * secs.length <= 4) {
+      const times = [];
+      hours.forEach(h => mins.forEach(m => secs.forEach(s => times.push(`${cronPad(h)}:${cronPad(m)}:${cronPad(s)}`))));
+      when = `At ${cronList(times, t => t)}`;
     } else {
-      closeList(); closeQuote();
-      const table = tableHead(line, lines[li + 1]);
-      if (table) {
-        flushPara();
-        const rows = [];
-        for (li += 2; li < lines.length && !startsBlock(lines[li].replace(/\s+$/, '')); li++) rows.push(splitRow(lines[li]));
-        li--;
-        out.push(tableHtml(table, rows));
-        continue;
-      }
-      para.push(line.trim());
+      const secPart = secAll ? 'every second' : uniform(secs) ? `every ${uniform(secs)} seconds` : cronList(secs, s => 'second ' + s);
+      let base;
+      if (minAll && !hourAll) base = `every minute during ${cronList(hours, h => cronPad(h) + ':00')}`;
+      else if (hourAll) base = `${cronList(mins, m => 'minute ' + m)} of every hour`;
+      else base = `${cronList(mins, m => 'minute ' + m)} past ${cronList(hours, h => cronPad(h) + ':00')}`;
+      when = `At ${secPart} of ${base}`.replace('of every minute during', 'of every minute during');
     }
   }
-  flushPara(); closeList(); closeQuote();
-
-  return out.join('\n').replace(/\u0000BLOCK(\d+)\u0000/g, (m, i) => blocks[Number(i)]);
+  const dom = f.dom, dow = f.dow;
+  const bits = [];
+  const domAll = dom.none || (dom.list.length === 31 && !dom.special), dowAll = dow.none || (dow.list.length === 7 && !dow.special);
+  const domParts = [], dowParts = [];
+  if (!domAll && !dom.none) {
+    if (dom.list.length) domParts.push(`day ${cronList(dom.list, d => String(d))} of the month`);
+    if (dom.last) domParts.push('the last day of the month');
+    if (dom.lastOffset) domParts.push(cronList(dom.lastOffset, n => n + (n === 1 ? ' day' : ' days') + ' before the last day of the month'));
+    if (dom.lastWeekday) domParts.push('the last weekday of the month');
+    if (dom.weekdayNear.length) domParts.push(cronList(dom.weekdayNear, n => 'the weekday nearest day ' + n + ' of the month'));
+  }
+  if (!dowAll && !dow.none) {
+    const order = (a) => a.slice().sort((x, y) => (x + 6) % 7 - (y + 6) % 7);
+    if (dow.list.length) dowParts.push(cronList(order(dow.list), d => CRON_DAYS[d]));
+    if (dow.dowLast.length) dowParts.push(cronList(dow.dowLast, d => 'the last ' + CRON_DAYS[d] + ' of the month'));
+    if (dow.dowNth.length) dowParts.push(cronList(dow.dowNth, q => 'the ' + cronOrd(q[1]) + ' ' + CRON_DAYS[q[0]] + ' of the month'));
+  }
+  let onDays;
+  if (!domParts.length && !dowParts.length) onDays = 'every day';
+  else if (domParts.length && !dowParts.length) onDays = 'on ' + domParts.join(' and on ');
+  else if (!domParts.length) onDays = 'on ' + dowParts.join(' and on ');
+  else onDays = 'on ' + domParts.join(' and on ') + ', and on ' + dowParts.join(' and on ');
+  const inMonths = f.mon.list.length === 12 ? '' : `, in ${cronList(f.mon.list, m => CRON_MONTHS[m - 1])}`;
+  let inYears = '';
+  if (p.hasYear && !(f.year.all)) {
+    const ys = f.year.list;
+    if (ys.length > 2 && ys[ys.length - 1] - ys[0] === ys.length - 1) inYears = `, every year from ${ys[0]} through ${ys[ys.length - 1]}`;
+    else if (ys.length > 6) inYears = `, in ${ys.length} years between ${ys[0]} and ${ys[ys.length - 1]}`;
+    else inYears = `, in ${ys.length === 1 ? 'the year' : 'the years'} ${cronList(ys, y => String(y))}`;
+  }
+  return `${when}, ${onDays}${inMonths}${inYears}.`;
+}
+/* what one field means, for the help under the cursor */
+function cronFieldHelp(spec, key, dialect) {
+  const def = CRON_DEF[key];
+  const unit = def.name;
+  const show = (v) => key === 'mon' ? CRON_MONTHS[v - 1] : key === 'dow' ? CRON_DAYS[v] : String(v);
+  const l = spec.list;
+  const parts = [];
+  if (spec.none) return 'no specific ' + unit + ' (the other day field decides)';
+  if (spec.last) parts.push('the last day of the month');
+  if (spec.lastOffset) parts.push(cronList(spec.lastOffset, n => n + ' day' + (n > 1 ? 's' : '') + ' before the last day'));
+  if (spec.lastWeekday) parts.push('the last weekday of the month');
+  if (spec.weekdayNear.length) parts.push(cronList(spec.weekdayNear, n => 'the weekday nearest the ' + cronOrd(n)));
+  if (spec.dowLast.length) parts.push(cronList(spec.dowLast, v => 'the last ' + CRON_DAYS[v] + ' of the month'));
+  if (spec.dowNth.length) parts.push(cronList(spec.dowNth, q => 'the ' + cronOrd(q[1]) + ' ' + CRON_DAYS[q[0]] + ' of the month'));
+  if (l.length) {
+    const full = key === 'dow' ? 7 : (def.max - def.min + 1);
+    if (spec.all && l.length === full) parts.push('every ' + unit);
+    else if (l.length > 12) parts.push(l.length + ' values from ' + show(l[0]) + ' to ' + show(l[l.length - 1]));
+    else parts.push((spec.star && spec.starStep ? 'every step: ' : '') + cronList(key === 'dow' ? l.slice().sort((x, y) => (x + 6) % 7 - (y + 6) % 7) : l, show));
+  }
+  return parts.join(' and ');
 }
 
-/* ============================================================
-   Tool specs
-   ============================================================ */
-
+const CRON_TZ_LOCAL = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch (e) { return 'UTC'; } })();
+const CRON_TZ_OPTIONS = (() => {
+  let zones = [];
+  try { zones = Intl.supportedValuesOf('timeZone'); } catch (e) { zones = []; }
+  if (zones.indexOf('UTC') < 0) zones = ['UTC'].concat(zones);
+  return [{ value: 'local', label: 'This device (' + CRON_TZ_LOCAL + ')' }].concat(zones.map((z) => ({ value: z, label: z })));
+})();
 
 window.DEV_TOOLS = window.DEV_TOOLS || {};
 window.DEV_TOOLS["cron-parser"] = {
 "title": "Cron Expression Parser",
 "kind": "code",
-"description": "Translate a cron expression into plain English and see exactly when it will next run.",
-"keywords": ["cron parser","crontab generator","cron expression","cron schedule explained","crontab guru"],
+"filename": "cron-schedule.txt",
+"description": "Translate a cron expression into plain English and see its next runs in any time zone. Reads Unix, seconds-first and Quartz syntax, with L, W, # and ?, and has a builder and presets.",
+"keywords": ["cron parser","crontab generator","cron expression","cron schedule explained","crontab guru","quartz cron","cron seconds","cron builder"],
 "inputLabel": "Cron expressions (one per line)",
 "outputLabel": "Explanation and next runs",
 "placeholder": "0 9 * * 1-5",
 "sample": "0 9 * * 1-5\n*/15 * * * *\n0 0 1 * *\n30 2 * * 0\n@daily",
-"options": [{"key":"count","label":"Next runs to show","type":"select","default":"5","options":[{"value":"3","label":"3"},{"value":"5","label":"5"},{"value":"10","label":"10"}]}],
+"options": [
+  {"key":"count","label":"Next runs to show","type":"select","default":"5","options":[{"value":"3","label":"3"},{"value":"5","label":"5"},{"value":"10","label":"10"},{"value":"20","label":"20"}]},
+  {"key":"format","label":"Format","type":"select","default":"auto","options":[{"value":"auto","label":"Detect from the field count"},{"value":"unix","label":"Unix, 5 fields"},{"value":"sec","label":"Seconds first, 6 fields"},{"value":"quartz","label":"Quartz, 6 or 7 fields"}]},
+  {"key":"tz","label":"Time zone","type":"select","default":"local","options": CRON_TZ_OPTIONS},
+  {"key":"offset","label":"UTC offset on each run","type":"select","default":"hide","options":[{"value":"hide","label":"Hide"},{"value":"show","label":"Show"}]}
+],
 "transform": (text, o) => {
-      const lines = String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
+      const lines = String(text || '').split('\n').map((l, i) => [l.trim(), i + 1]).filter((x) => x[0]);
       if (!lines.length) return { output: '', note: 'Enter a cron expression, for example: 0 9 * * 1-5' };
-
       const n = Number(o.count) || 5;
-      const now = new Date();
+      const tz = !o.tz || o.tz === 'local' ? undefined : o.tz;
+      try { cronFormatter(tz); } catch (e) { return { error: '"' + o.tz + '" is not a time zone this browser knows.' }; }
+      const nowMs = Date.now();
       const out = [];
-      let ok = 0, bad = 0;
-
-      lines.forEach(expr => {
+      let ok = 0, bad = 0, firstBad = null, dialect = null, withSec = false;
+      const raw = String(text || '').split('\n');
+      lines.forEach(([expr, lineNo]) => {
         out.push(expr);
         try {
-          const parsed = describeCron(expr);
-          out.push('  → ' + parsed.text);
-          const runs = nextCronRuns(parsed, now, n);
+          const p = cronParse(expr, o.format);
+          dialect = dialect || p.dialect;
+          if (p.hasSeconds) withSec = true;
+          out.push('  → ' + cronDescribe(p));
+          const runs = cronNext(p, nowMs, n, tz);
           if (runs.length) {
-            runs.forEach(r => out.push('     ' + r.toLocaleString('en-GB', {
-              weekday: 'short', day: '2-digit', month: 'short', year: 'numeric',
-              hour: '2-digit', minute: '2-digit'
-            })));
+            const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: tz, weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: p.hasSeconds ? '2-digit' : undefined, hourCycle: 'h23' });
+            runs.forEach((t) => {
+              let s = fmt.format(new Date(t));
+              if (o.offset === 'show') { const off = cronOffset(t, tz) / 60000; s += ' UTC' + (off < 0 ? '−' : '+') + cronPad(Math.floor(Math.abs(off) / 60)) + ':' + cronPad(Math.abs(off) % 60); }
+              out.push('     ' + s);
+            });
           } else {
-            out.push('     (no runs found within the next year — the expression may be unsatisfiable, such as 30 February)');
+            out.push('     (no runs found within the next ' + (p.hasYear ? 'few' : '9') + ' years — the expression may be unsatisfiable, such as 30 February)');
           }
           ok++;
         } catch (e) {
-          out.push('  ✗ ' + e.message);
+          if (!(e instanceof CronError)) throw e;
+          const col = e.from !== undefined && e.from !== null ? e.from + 1 : 1;
+          out.push('  ✗ ' + e.message + (e.field ? ' (' + (CRON_DEF[e.field] || {}).name + ' field, column ' + col + ')' : ''));
+          if (!firstBad) { const lead = raw[lineNo - 1].length - raw[lineNo - 1].replace(/^\s+/, '').length; firstBad = { line: lineNo, col: col + lead }; }
           bad++;
         }
         out.push('');
       });
-
-      return {
+      const res = {
         output: out.join('\n').trim(),
         stats: [
           ['Expressions', String(lines.length)],
           ['Valid', String(ok)],
           ['Invalid', String(bad)],
-          ['Times shown in', Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time']
+          ['Format', dialect === 'unix' ? 'Unix, 5 fields' : dialect === 'sec' ? 'Seconds first, 6 fields' : dialect === 'quartz' ? 'Quartz' : '—'],
+          ['Times shown in', o.tz && o.tz !== 'local' ? o.tz : CRON_TZ_LOCAL]
         ],
         warn: bad ? `${bad} expression${bad > 1 ? 's' : ''} could not be parsed.` : ''
       };
+      if (firstBad) res.errorAt = firstBad;
+      return res;
     },
-"tips": ["The five fields are minute, hour, day of month, month and day of week — in that order. A sixth field for seconds is a non-standard extension used by some schedulers.","When both day-of-month and day-of-week are restricted, cron runs on either — not both. \"0 0 1 * 1\" fires on the 1st of the month *and* every Monday.","Day of week accepts 0 or 7 for Sunday, and three-letter names such as mon and fri.","Shortcuts @daily, @hourly, @weekly, @monthly and @yearly are supported by most cron implementations and are easier to read.","Next-run times are calculated in your browser’s time zone. A server running the job elsewhere, or observing daylight saving differently, will fire at different local times."],
-"faq": [{"q":"Why does */5 in the hours field not mean every five hours from now?","a":"Steps count from the start of the range, not from the current time. */5 in hours means 0, 5, 10, 15 and 20 — fixed clock hours, not an interval since the last run."}]
+"tips": ["The five fields are minute, hour, day of month, month and day of week — in that order. A sixth field for seconds is a non-standard extension used by some schedulers.","When both day-of-month and day-of-week are restricted, cron runs on either — not both.","Day of week accepts 0 or 7 for Sunday, and three-letter names such as mon and fri.","Shortcuts @daily, @hourly, @weekly, @monthly and @yearly are supported, and expand to their five-field form.","Seconds-first (6 fields) and Quartz (6 or 7 fields, with a year) are read as well. Quartz counts Sunday as 1, needs a ? in one of the two day fields, and adds L (last), W (nearest weekday) and # (the nth weekday): 0 0 12 ? * 6#1 is noon on the first Friday of each month.","Choose a time zone to see the runs in it. A time that does not exist when the clocks go forward is skipped, and one that happens twice when they go back is shown once.","Click into a field and the line below the box explains that field and what it allows."],
+"faq": [{"q":"Why does */5 in the hours field not mean every five hours from now?","a":"Steps count from the start of the range, not from the current time. */5 in hours means 0, 5, 10, 15 and 20 — fixed clock hours, not an interval since the last run."},{"q":"Which dialect do I need?","a":"Linux crontab, GitHub Actions and Kubernetes CronJobs use five fields. Spring, node-cron and many libraries put seconds first. Quartz, Jenkins and AWS EventBridge have their own rules: see the tip on Quartz."}],
+"mount": (ctx) => { cronMount(ctx); },
+"render": function (res, ctx) { cronRender(res, ctx); }
 };
+
+/* ===== the builder, presets and the field under the cursor ===== */
+const CRON_PRESETS = [
+  ['Every minute', '* * * * *'], ['Every 5 minutes', '*/5 * * * *'], ['Every 15 minutes', '*/15 * * * *'], ['Hourly', '0 * * * *'],
+  ['Daily at midnight', '0 0 * * *'], ['Daily at 9:00', '0 9 * * *'], ['Weekdays at 9:00', '0 9 * * 1-5'], ['Every Monday at 8:30', '30 8 * * 1'],
+  ['First of the month', '0 0 1 * *'], ['Every quarter', '0 0 1 */3 *'], ['Every year, 1 January', '0 0 1 1 *'],
+  ['Every 30 seconds (6 fields)', '*/30 * * * * *'], ['Quartz: last day of the month at noon', '0 0 12 L * ?'], ['Quartz: first Friday at 9:00', '0 0 9 ? * 6#1']
+];
+const CRON_QUICK = {
+  sec: ['0', '*', '*/5', '*/15', '*/30'],
+  min: ['*', '*/5', '*/10', '*/15', '*/30', '0', '0,30', '15', '45'],
+  hour: ['*', '*/2', '*/6', '0', '9', '12', '9-17', '9,17'],
+  dom: ['*', '1', '15', '1,15', '1-7', '*/2', 'L', '?'],
+  mon: ['*', '1', '*/3', '6', '1-3', 'JAN,JUL'],
+  dow: ['*', 'MON-FRI', 'SAT,SUN', '1', '0', '5', '6#1', '?'],
+  year: ['*', '2027', '2027-2030']
+};
+function cronMount(ctx) {
+  const el = ctx.el;
+  const st = { fields: [], line: 0 };
+  ctx.cron = st;
+  const wrap = el('div', 'io-pane cron-builder');
+  const head = el('div', 'io-head');
+  head.appendChild(el('span', 'io-label', 'Builder and presets'));
+  wrap.appendChild(head);
+  const body = el('div', 'cron-b-body');
+  const presets = el('div', 'field');
+  const pl = el('label', null, 'Start from a preset');
+  const ps = el('select', 'control');
+  pl.setAttribute('for', 'cron-preset'); ps.id = 'cron-preset';
+  const o0 = el('option', null, 'Choose…'); o0.value = ''; ps.appendChild(o0);
+  CRON_PRESETS.forEach((x, i) => { const o = el('option', null, x[0] + '  —  ' + x[1]); o.value = String(i); ps.appendChild(o); });
+  ps.addEventListener('change', function () { if (ps.value === '') return; ctx.setText(CRON_PRESETS[Number(ps.value)][1]); ps.value = ''; });
+  presets.appendChild(pl); presets.appendChild(ps);
+  body.appendChild(presets);
+  const grid = el('div', 'cron-b-grid');
+  body.appendChild(grid);
+  wrap.appendChild(body);
+  const help = el('div', 'cron-help');
+  help.setAttribute('aria-live', 'polite');
+  wrap.appendChild(help);
+  ctx.extra.appendChild(wrap);
+  st.grid = grid; st.help = help;
+
+  function firstLineInfo() {
+    const text = ctx.input.value, nl = text.indexOf('\n');
+    return { line: nl < 0 ? text : text.slice(0, nl), rest: nl < 0 ? '' : text.slice(nl) };
+  }
+  function build(keys) {
+    grid.textContent = '';
+    st.fields = [];
+    keys.forEach(function (k, i) {
+      const w = el('div', 'cron-b-field');
+      const l = el('label', null, CRON_DEF[k].name);
+      const inp = el('input', 'control');
+      inp.type = 'text'; inp.spellcheck = false; inp.autocomplete = 'off';
+      inp.id = 'cron-f-' + k;
+      l.setAttribute('for', inp.id);
+      const q = el('select', 'control cron-quick');
+      q.setAttribute('aria-label', 'Common values for ' + CRON_DEF[k].name);
+      const q0 = el('option', null, 'Pick…'); q0.value = ''; q.appendChild(q0);
+      (CRON_QUICK[k] || []).forEach(function (v) { const o = el('option', null, v); o.value = v; q.appendChild(o); });
+      q.addEventListener('change', function () { if (q.value) { inp.value = q.value; q.value = ''; push(); } });
+      inp.addEventListener('input', push);
+      w.appendChild(l); w.appendChild(inp); w.appendChild(q);
+      grid.appendChild(w);
+      st.fields.push({ key: k, input: inp });
+    });
+    st.keys = keys;
+  }
+  function push() {
+    const info = firstLineInfo();
+    const line = st.fields.map(function (f) { return f.input.value.trim() || '*'; }).join(' ');
+    st.pushing = true;
+    ctx.setText(line + info.rest);
+    st.pushing = false;
+  }
+  function pull() {
+    if (st.pushing) return;
+    const info = firstLineInfo();
+    const toks = info.line.trim().split(/\s+/).filter(Boolean);
+    const o = ctx.opts();
+    let keys = ['min', 'hour', 'dom', 'mon', 'dow'];
+    if (toks.length === 6) keys = ['sec', 'min', 'hour', 'dom', 'mon', 'dow'];
+    else if (toks.length === 7) keys = ['sec', 'min', 'hour', 'dom', 'mon', 'dow', 'year'];
+    if (toks.length === 1 && toks[0].charAt(0) === '@') { grid.hidden = true; return; }
+    if (toks.length < 5 || toks.length > 7) { grid.hidden = true; return; }
+    grid.hidden = false;
+    if (!st.keys || st.keys.join() !== keys.join()) build(keys);
+    st.fields.forEach(function (f, i) { if (document.activeElement !== f.input) f.input.value = toks[i]; });
+  }
+  st.pull = pull;
+  function caret() {
+    const ta = ctx.input;
+    const pos = ta.selectionStart || 0;
+    const text = ta.value;
+    const ls = text.lastIndexOf('\n', pos - 1) + 1;
+    let le = text.indexOf('\n', pos); if (le < 0) le = text.length;
+    const line = text.slice(ls, le);
+    help.textContent = '';
+    if (!line.trim()) { help.hidden = true; return; }
+    const col = pos - ls;
+    let p;
+    try { p = cronParse(line, ctx.opts().format); }
+    catch (e) { help.hidden = false; help.appendChild(el('p', 'cron-help-err', e.message)); return; }
+    help.hidden = false;
+    const row = el('div', 'cron-help-row');
+    /* tokens by position in the original line */
+    const toks = [];
+    line.replace(/\S+/g, function (t, i) { toks.push([t, i]); return t; });
+    const macro = line.trim().charAt(0) === '@';
+    p.keys.forEach(function (k, i) {
+      const f = p.fields[k];
+      const t = macro ? [f.raw, 0] : toks[i];
+      const on = !macro && col >= t[1] && col <= t[1] + t[0].length;
+      const box = el('div', 'cron-hf' + (on ? ' is-on' : ''));
+      box.appendChild(el('span', 'cron-hf-name', CRON_DEF[k].name));
+      box.appendChild(el('code', 'cron-hf-tok', f.raw));
+      box.appendChild(el('span', 'cron-hf-mean', cronFieldHelp(f, k, p.dialect)));
+      row.appendChild(box);
+    });
+    help.appendChild(row);
+    if (macro) help.appendChild(el('p', 'cron-help-note', line.trim() + ' stands for ' + p.line + '.'));
+  }
+  st.caret = caret;
+  ['keyup', 'click', 'focus', 'input', 'select'].forEach(function (ev) { ctx.input.addEventListener(ev, caret); });
+  ctx.input.addEventListener('input', pull);
+  pull();
+  caret();
+}
+function cronRender(res, ctx) {
+  const st = ctx.cron;
+  if (!st) return;
+  st.pull();
+  st.caret();
+}
 })();

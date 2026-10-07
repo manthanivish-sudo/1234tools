@@ -8,8 +8,8 @@ module.exports = {
     hook: 'The limit is 150 words. Are you at 140 or 165?',
     pain: 'The application box cuts you off without warning. You need the exact count before you paste.',
     usual: ['Word processors that count differently', 'Counter sites smothered in adverts', 'Counting by hand down the page'],
-    promise: 'Paste your text. See words, characters, sentences and reading time.',
-    steps: ['Paste or type your text', 'Read the counts', 'Trim to the limit'],
+    promise: 'Paste your text. See words, characters, sentences and reading time, and bars for your word goal and the X, SMS and search limits.',
+    steps: ['Paste or type your text', 'Set a goal or read the limit bars', 'Trim to the limit'],
     proof: ['Free', 'Nothing uploaded', 'Works offline once opened'],
     example: {
       kind: 'text',
@@ -23,8 +23,8 @@ module.exports = {
     hook: 'They said they changed one line. Did they?',
     pain: 'The “final” version came back from the other side. Reading both copies side by side, you will miss something.',
     usual: ['Reading two versions line by line', 'Track changes someone switched off', 'Printing both and using a highlighter'],
-    promise: 'Paste both versions. See every added, removed and changed line.',
-    steps: ['Paste the old version', 'Add --- and the new one', 'Read the differences'],
+    promise: 'Paste or open both versions. See every added, removed and changed line, side by side or inline.',
+    steps: ['Paste the old version on the left', 'Paste the new one on the right', 'Read the differences, or merge a change'],
     proof: ['Free', 'Nothing uploaded', 'Works offline once opened'],
     example: {
       kind: 'text',
@@ -38,8 +38,8 @@ module.exports = {
     hook: 'Would a 12-year-old follow your letter?',
     pain: 'Your policy letter keeps getting the same questions back. Long sentences may be the reason.',
     usual: ['Guessing whether it reads clearly', 'Asking a colleague who is too polite', 'Checkers that want an account to score'],
-    promise: 'Paste the text. Get Flesch, Kincaid, Fog and SMOG scores.',
-    steps: ['Paste your text', 'Read the scores', 'Shorten the long sentences'],
+    promise: 'Paste the text. Get Flesch, Kincaid, Fog and SMOG scores, with the long sentences and long words marked in your own text.',
+    steps: ['Paste your text', 'Read the scores', 'Shorten the marked sentences'],
     proof: ['Free', 'Nothing uploaded', 'Works offline once opened'],
     example: {
       kind: 'text',
@@ -116,7 +116,7 @@ module.exports = {
     hook: 'Your dog’s name plus 123 is not a password.',
     pain: 'Every site wants a new password with a symbol and a number, so you keep using the same three.',
     usual: ['Reusing one password everywhere', 'Pet names with a number on the end', 'Generators you cannot see inside'],
-    promise: 'Set the length and rules. Get a random password or passphrase.',
+    promise: 'Set the length and rules. Get a random password, passphrase or pronounceable one with its exact strength, or check the one you use.',
     steps: ['Set the length', 'Pick characters or words', 'Copy it to your manager'],
     proof: ['Free', 'Runs in your browser', 'Nothing uploaded'],
     example: {

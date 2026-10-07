@@ -177,7 +177,7 @@ const noIndexPages = () => classified().noindex;
  */
 const SECTIONS = ['finance', 'mathematics', 'engineering', 'health', 'design',
   'utilities', 'time', 'developer', 'business', 'education', 'india', 'image',
-  'text', 'conversions', 'pdf', 'qr', 'ai-image', 'ai-video', 'social', 'ai'];
+  'text', 'conversions', 'pdf', 'qr', 'ai-image', 'ai-video', 'social', 'video', 'audio', 'ai'];
 
 /**
  * The single pages that are not tools. Most change on the order of never, and
@@ -471,6 +471,8 @@ const REL_AFFINITY = {
   'ai-image':  ['image', 'design', 'ai-video'],
   'ai-video':  ['ai-image', 'image', 'social'],
   social:      ['ai-video', 'ai-image', 'image'],
+  video:       ['ai-video', 'social', 'audio'],
+  audio:       ['video', 'ai-video'],
   finance:     ['business', 'india'],
   business:    ['finance', 'india'],
   india:       ['finance', 'business'],

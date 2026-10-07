@@ -6,21 +6,65 @@ function optimiseSVGRef(src, opts) {
   return fn(src, opts);
 }
 
-
+const NAMES = { png: 'PNG', jpg: 'JPG', jpeg: 'JPG', webp: 'WebP', avif: 'AVIF', gif: 'GIF', bmp: 'BMP', ico: 'ICO', svg: 'SVG', heic: 'HEIC', tiff: 'TIFF' };
+const ACCEPT = { png: '.png,image/png', jpg: '.jpg,.jpeg,image/jpeg', jpeg: '.jpg,.jpeg,image/jpeg', webp: '.webp,image/webp', avif: '.avif,image/avif', gif: '.gif,image/gif', bmp: '.bmp,image/bmp', svg: '.svg,image/svg+xml', ico: '.ico,image/x-icon' };
 window.IMAGE_TOOLS = window.IMAGE_TOOLS || {};
 window.IMAGE_TOOLS["image-converter"] = {
 "title": "Image Format Converter",
 "kind": "canvas",
 "multiple": true,
-"description": "Convert between PNG, JPEG and WebP in your browser. No upload, no queue, no watermark.",
-"keywords": ["image converter","png to jpg","jpg to png","webp converter","convert image format","png to webp"],
-"controls": [{"key":"format","label":"Convert to","type":"select","default":"image/png","options":[{"value":"image/png","label":"PNG — lossless, supports transparency"},{"value":"image/jpeg","label":"JPEG — small, no transparency"},{"value":"image/webp","label":"WebP — small, supports transparency"}]},{"key":"quality","label":"Quality (JPEG / WebP)","type":"range","default":92,"min":10,"max":100},{"key":"bg","label":"Background for transparency","type":"color","default":"#ffffff"}],
-"paint": (ctx, img, o, h) => {
-      h.size(img.naturalWidth, img.naturalHeight);
+"codecs": "wasm",
+"passthroughAnimated": true,
+"perFile": ["format", "quality"],
+"noLargerNote": true,
+"description": "Convert between PNG, JPEG, WebP, AVIF, GIF, BMP and ICO in your browser, one file or a batch. No upload, no queue, no watermark.",
+"keywords": ["image converter","png to jpg","jpg to png","webp converter","convert image format","png to webp","jpg to avif","png to ico","webp to jpg"],
+"controls": [
+  {"key":"format","label":"Convert to","type":"select","default":"image/png","options":[
+    {"value":"image/png","label":"PNG — lossless, supports transparency"},
+    {"value":"image/jpeg","label":"JPEG — small, no transparency"},
+    {"value":"image/webp","label":"WebP — small, supports transparency"},
+    {"value":"image/avif","label":"AVIF — smallest, supports transparency"},
+    {"value":"image/gif","label":"GIF — 256 colours, for old systems"},
+    {"value":"image/bmp","label":"BMP — uncompressed, for old software"},
+    {"value":"image/x-icon","label":"ICO — a Windows or site icon, 16 to 256 px"}]},
+  {"key":"quality","label":"Quality (JPEG / WebP / AVIF)","type":"range","default":92,"min":10,"max":100,"when":{"format":["image/jpeg","image/webp","image/avif"]}},
+  {"key":"bg","label":"Background for transparency","type":"color","default":"#ffffff","when":{"format":["image/jpeg"]}},
+  {"key":"maxSide","label":"Longest side in px (0 = keep)","type":"number","default":0,"min":0},
+  {"key":"metadata","label":"Metadata","type":"select","default":"icc","options":[
+    {"value":"none","label":"Remove all (colours converted to sRGB)"},
+    {"value":"icc","label":"Keep the colour profile only"},
+    {"value":"exif","label":"Keep colour profile and EXIF, without GPS"},
+    {"value":"all","label":"Keep everything: EXIF with GPS, XMP, colour profile"}]}
+],
+/* ?from=png&to=jpg: "to" chooses the format (the shell reads it as format);
+   "from" names what the page expects, so a link from "PNG to JPG" opens a
+   page that asks for PNG files */
+"setup": (api) => {
+  const q = new URLSearchParams(location.search);
+  const from = String(q.get('from') || '').toLowerCase();
+  const to = String(q.get('to') || '').toLowerCase();
+  if (!NAMES[from]) return;
+  const drop = api.io.querySelector('.dropzone');
+  const strong = drop && drop.querySelector('strong');
+  if (strong) strong.textContent = 'Choose ' + NAMES[from] + ' images' + (NAMES[to] ? ' to convert to ' + NAMES[to] : '');
+  const input = drop && drop.querySelector('input[type=file]');
+  if (input && ACCEPT[from]) input.accept = ACCEPT[from] + ',image/*';
+},
+"paint": async (ctx, img, o, h) => {
+      const side = Number(o.maxSide) || 0;
+      let w = img.naturalWidth, hh = img.naturalHeight;
+      /* a longest side caps the size; a smaller picture is never enlarged */
+      if (side > 0 && Math.max(w, hh) > side) {
+        const k = side / Math.max(w, hh);
+        w = Math.max(1, Math.round(w * k)); hh = Math.max(1, Math.round(hh * k));
+      }
+      const src = (w !== img.naturalWidth || hh !== img.naturalHeight) && h.resample ? await h.resample(img, w, hh) : img;
+      h.size(w, hh);
       if (o.format === 'image/jpeg') h.fill(o.bg || '#ffffff');
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(src, 0, 0, w, hh);
     },
-"tips": ["JPEG has no alpha channel. Converting a transparent PNG to JPEG fills the transparency with the background colour chosen above.","PNG is lossless, so the quality slider has no effect on it — the setting applies to JPEG and WebP only.","Converting JPEG to PNG will not restore detail already lost. It usually just produces a much larger file."],
-"faq": [{"q":"Can you convert HEIC from my iPhone?","a":"Not here. HEIC needs a decoder that browsers do not ship, and adding one would mean loading roughly a megabyte of extra code. On an iPhone you can set Camera to \"Most Compatible\" to capture JPEG directly."}]
+"tips": ["JPEG has no alpha channel. Converting a transparent PNG to JPEG fills the transparency with the background colour chosen above.","PNG is lossless, so the quality slider has no effect on it — the setting applies to JPEG, WebP and AVIF only.","An animated GIF or WebP converted to the same format is kept exactly as it is, every frame. Converted to anything else, only its first frame is used, and the page says so.","Each file in a batch can have its own format: open “Own settings” beside it.","Converting JPEG to PNG will not restore detail already lost. It usually just produces a much larger file."],
+"faq": [{"q":"Can you convert HEIC from my iPhone?","a":"Only in Safari. HEIC needs a decoder that Chrome, Edge and Firefox do not have, and the free decoders for it are under licences this site does not ship. Safari on an iPhone, iPad or Mac opens HEIC itself, so this page converts it there. On an iPhone you can also set Settings › Camera › Formats to Most Compatible, which saves JPEG."},{"q":"Can I link straight to one conversion?","a":"Yes. Add ?from=png&to=jpg (or webp, avif, gif, bmp, ico) to this page’s address: the format is set and the page asks for the right kind of file. The link never carries an image."}]
 };
 })();

@@ -2,7 +2,7 @@
   "id": "/developer/color-converter.html",
   "name": "Colour Converter & Contrast Checker — 1234Tools",
   "short_name": "Colour Converter",
-  "description": "Convert between HEX, RGB, HSL and HSB, and check WCAG contrast against a background.",
+  "description": "Read any CSS colour, convert it to HEX, RGB, HSL, HWB, CMYK, Lab, LCH, OKLab and OKLCH, check WCAG contrast, fix a failing pair, and see tints, shades, harmonies and colour-blind views.",
   "start_url": "/developer/color-converter/?src=pwa",
   "scope": "/developer/color-converter/",
   "display": "standalone",

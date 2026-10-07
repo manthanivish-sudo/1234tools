@@ -2,7 +2,7 @@
   "id": "/image/meme-generator.html",
   "name": "Meme Generator — 1234Tools",
   "short_name": "Meme Generator",
-  "description": "Add classic top and bottom caption text to an image, with the traditional outlined Impact styling.",
+  "description": "Add top and bottom captions or any number of text boxes you drag into place, in Anton or four other fonts, with outlines and image stickers.",
   "start_url": "/image/meme-generator/?src=pwa",
   "scope": "/image/meme-generator/",
   "display": "standalone",

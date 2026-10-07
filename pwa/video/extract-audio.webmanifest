@@ -1,0 +1,42 @@
+{
+  "id": "/video/extract-audio/",
+  "name": "Extract Audio from Video — 1234Tools",
+  "short_name": "Extract Audio from",
+  "description": "Save the sound of a video as its own file in your browser: the original sound copied out untouched, or WAV, or a small Opus file. The whole sound or a part. Nothing is uploaded.",
+  "start_url": "/video/extract-audio/?src=pwa",
+  "scope": "/video/extract-audio/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "video",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-video-audio.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-video-audio-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-video-audio-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

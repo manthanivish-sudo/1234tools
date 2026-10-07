@@ -2,7 +2,7 @@
   "id": "/image/exif-viewer.html",
   "name": "EXIF Metadata Viewer — 1234Tools",
   "short_name": "EXIF Metadata Viewer",
-  "description": "See the hidden metadata in a photo — camera, timestamp, settings and GPS location.",
+  "description": "See the hidden metadata in a photo — camera, timestamp, settings, GPS location, XMP and IPTC — from JPEG, PNG, WebP, HEIC, AVIF and TIFF files, and save it as JSON.",
   "start_url": "/image/exif-viewer/?src=pwa",
   "scope": "/image/exif-viewer/",
   "display": "standalone",

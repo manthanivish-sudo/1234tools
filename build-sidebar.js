@@ -58,6 +58,8 @@ const ORDER = [
   ['/ai-image/', 'i-ai-image'],
   ['/ai-video/', 'i-ai-video'],
   ['/social/', 'i-social'],
+  ['/video/', 'i-video'],
+  ['/audio/', 'i-audio'],
   ['/text/', 'i-text'],
   ['/mathematics/', 'i-mathematics'],
   ['/finance/', 'i-finance'],

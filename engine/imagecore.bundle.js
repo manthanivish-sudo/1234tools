@@ -19,13 +19,18 @@ const EXIF_TAGS = {
   0x920a: 'FocalLength', 0x9209: 'Flash', 0xa002: 'PixelXDimension',
   0xa003: 'PixelYDimension', 0xa430: 'CameraOwnerName',
   0xa431: 'BodySerialNumber', 0xa433: 'LensMake', 0xa434: 'LensModel',
-  0xa435: 'LensSerialNumber', 0x9286: 'UserComment', 0x010e: 'ImageDescription'
+  0xa435: 'LensSerialNumber', 0x9286: 'UserComment', 0x010e: 'ImageDescription',
+  0x8822: 'ExposureProgram', 0x9202: 'ApertureValue', 0x9204: 'ExposureBiasValue',
+  0x9207: 'MeteringMode', 0xa001: 'ColorSpace', 0xa403: 'WhiteBalance',
+  0xa405: 'FocalLengthIn35mmFilm', 0x9010: 'OffsetTime', 0x9011: 'OffsetTimeOriginal',
+  0xa432: 'LensSpecification', 0x9000: 'ExifVersion'
 };
 
 const GPS_TAGS = {
   0x0000: 'GPSVersionID', 0x0001: 'GPSLatitudeRef', 0x0002: 'GPSLatitude',
   0x0003: 'GPSLongitudeRef', 0x0004: 'GPSLongitude', 0x0005: 'GPSAltitudeRef',
-  0x0006: 'GPSAltitude', 0x0007: 'GPSTimeStamp', 0x001d: 'GPSDateStamp'
+  0x0006: 'GPSAltitude', 0x0007: 'GPSTimeStamp', 0x001d: 'GPSDateStamp',
+  0x000c: 'GPSSpeedRef', 0x000d: 'GPSSpeed', 0x0010: 'GPSImgDirectionRef', 0x0011: 'GPSImgDirection'
 };
 
 const ORIENTATION = {
@@ -40,35 +45,46 @@ const ORIENTATION = {
  * @param {Uint8Array} bytes
  * @returns {{found:boolean, tags:Object, gps:Object|null, warnings:string[]}}
  */
+/* Where a file's EXIF (a TIFF structure) starts: in a JPEG the APP1
+   "Exif" segment, in a TIFF the file itself, in a PNG the eXIf chunk, in a
+   WebP the EXIF chunk, in a HEIC or AVIF the Exif item. */
+function exifLocation(bytes) {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8) {
+    let i = 2;
+    while (i < bytes.length - 4) {
+      if (bytes[i] !== 0xff) { i++; continue; }
+      const marker = bytes[i + 1];
+      if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { i += 2; continue; }
+      if (marker === 0xda) break;                     // start of scan — no more metadata
+      const len = (bytes[i + 2] << 8) | bytes[i + 3];
+      if (marker === 0xe1 &&
+          bytes[i + 4] === 0x45 && bytes[i + 5] === 0x78 &&
+          bytes[i + 6] === 0x69 && bytes[i + 7] === 0x66) {
+        return { bytes, at: i + 10 };                  // skip "Exif\0\0"
+      }
+      i += 2 + len;
+    }
+    return null;
+  }
+  const kind = containerOf(bytes);
+  if (kind === 'tiff') return { bytes, at: 0 };
+  if (!kind) return null;
+  const m = extractMetadata(bytes);
+  return m.exif ? { bytes: m.exif, at: 0 } : null;
+}
+
 function readExif(bytes) {
   const out = { found: false, tags: {}, gps: null, warnings: [] };
   if (!bytes || bytes.length < 4) return out;
-  if (bytes[0] !== 0xff || bytes[1] !== 0xd8) {
-    out.warnings.push('Not a JPEG — EXIF is only read from JPEG files here.');
+  if (!containerOf(bytes)) {
+    out.warnings.push('Not a format this viewer reads metadata from: it reads JPEG, PNG, WebP, HEIC, AVIF and TIFF.');
     return out;
   }
+  const loc = exifLocation(bytes);
+  if (!loc || loc.at + 8 > loc.bytes.length) return out;
+  bytes = loc.bytes;
 
-  // walk the segment markers looking for APP1/Exif
-  let i = 2;
-  let app1 = -1, app1Len = 0;
-  while (i < bytes.length - 4) {
-    if (bytes[i] !== 0xff) { i++; continue; }
-    const marker = bytes[i + 1];
-    if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { i += 2; continue; }
-    if (marker === 0xda) break;                       // start of scan — no more metadata
-    const len = (bytes[i + 2] << 8) | bytes[i + 3];
-    if (marker === 0xe1 &&
-        bytes[i + 4] === 0x45 && bytes[i + 5] === 0x78 &&
-        bytes[i + 6] === 0x69 && bytes[i + 7] === 0x66) {
-      app1 = i + 10;                                   // skip "Exif\0\0"
-      app1Len = len;
-      break;
-    }
-    i += 2 + len;
-  }
-  if (app1 < 0) return out;
-
-  const tiff = app1;
+  const tiff = loc.at;
   const b0 = bytes[tiff], b1 = bytes[tiff + 1];
   let little;
   if (b0 === 0x49 && b1 === 0x49) little = true;
@@ -232,7 +248,7 @@ function buildPDF(images, opts = {}) {
 
   const n = images.length;
   // 1 catalog, 2 pages, then per image: page, content, xobject, and its ICC profile if it has one
-  const pageIds = [], contentIds = [], imgIds = [], iccIds = [];
+  const pageIds = [], contentIds = [], imgIds = [], iccIds = [], maskIds = [];
   let nextId = 3;
   for (let i = 0; i < n; i++) {
     pageIds.push(nextId++);
@@ -241,6 +257,7 @@ function buildPDF(images, opts = {}) {
     const comps = images[i].colorSpace === 'DeviceGray' ? 1 : 3;
     const icc = images[i].icc;
     iccIds.push(icc && icc.length > 128 && iccChannels(icc) === comps ? nextId++ : 0);
+    maskIds.push(images[i].smask ? nextId++ : 0);
   }
 
   startObj(1);
@@ -254,10 +271,13 @@ function buildPDF(images, opts = {}) {
   images.forEach((img, i) => {
     let pw, ph;
     const base = PAGE[opts.pageSize || 'a4'];
+    /* a page turned a quarter shows the image on its side: its width and height swap */
+    const rot = ((Number(img.rotate) || 0) % 360 + 360) % 360;
+    const iw = rot % 180 ? img.height : img.width, ih = rot % 180 ? img.width : img.height;
     if (!base) {                                  // "fit": page matches the image
-      pw = img.width; ph = img.height;
+      pw = iw; ph = ih;
     } else if (opts.orientation === 'landscape' ||
-              (opts.orientation === 'auto' && img.width > img.height)) {
+              (opts.orientation === 'auto' && iw > ih)) {
       pw = base[1]; ph = base[0];
     } else {
       pw = base[0]; ph = base[1];
@@ -265,28 +285,53 @@ function buildPDF(images, opts = {}) {
 
     const availW = Math.max(1, pw - margin * 2);
     const availH = Math.max(1, ph - margin * 2);
-    const scale = base ? Math.min(availW / img.width, availH / img.height) : 1;
-    const dw = img.width * scale, dh = img.height * scale;
+    /* fit: all of the image inside the margins; fill: the margin box covered, the overflow cut off */
+    const fill = !!base && (img.fill || opts.fill === 'fill');
+    const scale = base ? (fill ? Math.max(availW / iw, availH / ih) : Math.min(availW / iw, availH / ih)) : 1;
+    const dw = iw * scale, dh = ih * scale;
     const dx = (pw - dw) / 2, dy = (ph - dh) / 2;
+    const f2 = (v) => v.toFixed(2);
+    const cm = rot === 90 ? `0 ${f2(-dh)} ${f2(dw)} 0 ${f2(dx)} ${f2(dy + dh)}`
+      : rot === 180 ? `${f2(-dw)} 0 0 ${f2(-dh)} ${f2(dx + dw)} ${f2(dy + dh)}`
+      : rot === 270 ? `0 ${f2(dh)} ${f2(-dw)} 0 ${f2(dx + dw)} ${f2(dy)}`
+      : `${f2(dw)} 0 0 ${f2(dh)} ${f2(dx)} ${f2(dy)}`;
+    const clip = fill ? `${f2(margin)} ${f2(margin)} ${f2(availW)} ${f2(availH)} re W n\n` : '';
 
     startObj(pageIds[i]);
     push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw.toFixed(2)} ${ph.toFixed(2)}] ` +
          `/Resources << /XObject << /Im0 ${imgIds[i]} 0 R >> >> /Contents ${contentIds[i]} 0 R >>\n`);
     endObj();
 
-    const stream = `q\n${dw.toFixed(2)} 0 0 ${dh.toFixed(2)} ${dx.toFixed(2)} ${dy.toFixed(2)} cm\n/Im0 Do\nQ\n`;
+    const stream = `q\n${clip}${cm} cm\n/Im0 Do\nQ\n`;
     startObj(contentIds[i]);
     push(`<< /Length ${stream.length} >>\nstream\n${stream}endstream\n`);
     endObj();
 
     const device = img.colorSpace === 'DeviceGray' ? 'DeviceGray' : 'DeviceRGB';
     const cs = iccIds[i] ? `[/ICCBased ${iccIds[i]} 0 R]` : '/' + device;
+    /* a JPEG's own bytes (DCTDecode), or pixels compressed losslessly
+       (FlateDecode, with PNG row filters when predictor is set) and their
+       transparency as a soft mask */
+    const flate = img.filter === 'FlateDecode';
+    const comps = device === 'DeviceGray' ? 1 : 3;
+    const parms = flate && img.predictor ? ` /DecodeParms << /Predictor 15 /Colors ${comps} /BitsPerComponent 8 /Columns ${img.width} >>` : '';
     startObj(imgIds[i]);
     push(`<< /Type /XObject /Subtype /Image /Width ${img.width} /Height ${img.height} ` +
-         `/ColorSpace ${cs} /BitsPerComponent 8 /Filter /DCTDecode /Length ${img.bytes.length} >>\nstream\n`);
+         `/ColorSpace ${cs} /BitsPerComponent 8 /Filter /${flate ? 'FlateDecode' : 'DCTDecode'}${parms}` +
+         (maskIds[i] ? ` /SMask ${maskIds[i]} 0 R` : '') + ` /Length ${img.bytes.length} >>\nstream\n`);
     push(img.bytes);
     push('\nendstream\n');
     endObj();
+
+    if (maskIds[i]) {
+      const m = img.smask;
+      const mp = m.predictor ? ` /DecodeParms << /Predictor 15 /Colors 1 /BitsPerComponent 8 /Columns ${img.width} >>` : '';
+      startObj(maskIds[i]);
+      push(`<< /Type /XObject /Subtype /Image /Width ${img.width} /Height ${img.height} /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode${mp} /Length ${m.bytes.length} >>\nstream\n`);
+      push(m.bytes);
+      push('\nendstream\n');
+      endObj();
+    }
 
     if (iccIds[i]) {
       startObj(iccIds[i]);
@@ -309,6 +354,38 @@ function buildPDF(images, opts = {}) {
   const out = new Uint8Array(length);
   let p = 0;
   for (const c of chunks) { out.set(c, p); p += c.length; }
+  return out;
+}
+
+/**
+ * PNG row filtering (the adaptive choice of None, Sub, Up, Average and
+ * Paeth per row, by the smallest sum of absolute values), the step before
+ * deflate that a PDF's /Predictor 15 undoes. data: rows of width × channels
+ * bytes. Returns the filtered bytes, one filter-type byte before each row.
+ */
+function pngFilterRows(data, width, height, channels) {
+  const stride = width * channels;
+  const out = new Uint8Array((stride + 1) * height);
+  const paeth = (a, b, c) => { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); return pa <= pb && pa <= pc ? a : pb <= pc ? b : c; };
+  const at = (t, y, i) => {
+    const row = y * stride, prev = row - stride;
+    const x = data[row + i];
+    const a = i >= channels ? data[row + i - channels] : 0;
+    const b = y ? data[prev + i] : 0;
+    const c = y && i >= channels ? data[prev + i - channels] : 0;
+    return (t === 0 ? x : t === 1 ? x - a : t === 2 ? x - b : t === 3 ? x - ((a + b) >> 1) : x - paeth(a, b, c)) & 255;
+  };
+  for (let y = 0; y < height; y++) {
+    let best = 0, bestSum = Infinity;
+    for (let t = 0; t < 5; t++) {
+      let sum = 0;
+      for (let i = 0; i < stride && sum < bestSum; i++) { const v = at(t, y, i); sum += v < 128 ? v : 256 - v; }
+      if (sum < bestSum) { bestSum = sum; best = t; }
+    }
+    const o = y * (stride + 1);
+    out[o] = best;
+    for (let i = 0; i < stride; i++) out[o + 1 + i] = at(best, y, i);
+  }
   return out;
 }
 
@@ -1011,6 +1088,9 @@ function optimiseSVG(src, opts = {}) {
    Social & print presets
    ============================================================ */
 
+/* Each platform's recommended upload size as of SOCIAL_AS_OF. Platforms
+   change these; the social media resizer shows the date beside them. */
+const SOCIAL_AS_OF = '2026-10-06';
 const SOCIAL_PRESETS = [
   { group: 'Instagram', name: 'Square post',      w: 1080, h: 1080 },
   { group: 'Instagram', name: 'Portrait post',    w: 1080, h: 1350 },
@@ -1047,5 +1127,731 @@ const mmToPx = (mm, dpi) => Math.round((mm / 25.4) * dpi);
 const pxToMm = (px, dpi) => px / dpi * 25.4;
 
 
-window.MVRImage={readExif:readExif,metadataSegments:metadataSegments,buildPDF:buildPDF,jpegSize:jpegSize,jpegInfo:jpegInfo,jpegICC:jpegICC,iccChannels:iccChannels,iccIsSRGB:iccIsSRGB,stripJpegMetadata:stripJpegMetadata,metadataReport:metadataReport,metadataSummary:metadataSummary,setDPI:setDPI,readDPI:readDPI,crc32:crc32,medianCut:medianCut,toHex:toHex,relLuminance:relLuminance,rgbToHsl:rgbToHsl,contrastRatio:contrastRatio,wcagGrade:wcagGrade,optimiseSVG:optimiseSVG,referencedIds:referencedIds,SOCIAL_PRESETS:SOCIAL_PRESETS,PHOTO_PRESETS:PHOTO_PRESETS,mmToPx:mmToPx,pxToMm:pxToMm};
+/* ============================================================
+   Containers and their metadata — read, edit and write back
+   (wave 1, 2026-10-06). Pure functions on bytes, so the tests
+   can check them in Node against independent readers.
+   ============================================================ */
+
+const u32be = (b, o) => ((b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]) >>> 0;
+const u32le = (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;
+const concatBytes = (parts) => {
+  const n = parts.reduce((t, p) => t + p.length, 0);
+  const out = new Uint8Array(n);
+  let o = 0;
+  for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+};
+const latin1 = (s) => { const b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i) & 0xff; return b; };
+const utf8Bytes = (s) => new TextEncoder().encode(s);
+const utf8Text = (b) => new TextDecoder('utf-8').decode(b);
+
+/** What kind of file the bytes are, from their signature: jpeg, png, webp,
+ *  gif, bmp, tiff, heic, avif, ico, or '' when none of these. */
+function containerOf(b) {
+  if (!b || b.length < 12) return '';
+  if (b[0] === 0xff && b[1] === 0xd8) return 'jpeg';
+  if (b[0] === 0x89 && ascii(b, 1, 3) === 'PNG') return 'png';
+  if (ascii(b, 0, 4) === 'RIFF' && ascii(b, 8, 4) === 'WEBP') return 'webp';
+  if (ascii(b, 0, 3) === 'GIF') return 'gif';
+  if (b[0] === 0x42 && b[1] === 0x4d) return 'bmp';
+  if ((b[0] === 0x49 && b[1] === 0x49 && b[2] === 42 && b[3] === 0) || (b[0] === 0x4d && b[1] === 0x4d && b[2] === 0 && b[3] === 42)) return 'tiff';
+  if (ascii(b, 4, 4) === 'ftyp') {
+    const major = ascii(b, 8, 4);
+    const brands = ascii(b, 8, Math.max(4, Math.min(64, u32be(b, 0)) - 8));
+    if (major === 'avif' || major === 'avis') return 'avif';
+    if (/heic|heix|hevc|hevx|heim|heis/.test(brands)) return 'heic';
+    if (/avif/.test(brands)) return 'avif';
+    if (major === 'mif1' || major === 'msf1') return 'heic';
+  }
+  if (b[0] === 0 && b[1] === 0 && b[2] === 1 && b[3] === 0) return 'ico';
+  return '';
+}
+
+const MIME_OF = { jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', bmp: 'image/bmp',
+  tiff: 'image/tiff', heic: 'image/heic', avif: 'image/avif', ico: 'image/x-icon' };
+/** The MIME type the bytes really are, or ''. */
+const mimeOf = (b) => MIME_OF[containerOf(b)] || '';
+const EXT_OF = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/bmp': 'bmp',
+  'image/tiff': 'tif', 'image/heic': 'heic', 'image/avif': 'avif', 'image/x-icon': 'ico' };
+/** The file extension for a MIME type, without the dot. */
+const extOf = (mime) => EXT_OF[mime] || 'bin';
+
+/* ---- ISOBMFF (HEIC, AVIF): boxes, the Exif and XMP items, the ICC profile ---- */
+function isoBoxes(b, from, to) {
+  const out = [];
+  let i = from;
+  while (i + 8 <= to) {
+    let size = u32be(b, i);
+    const type = ascii(b, i + 4, 4);
+    let head = 8;
+    if (size === 1) { size = u32be(b, i + 8) * 4294967296 + u32be(b, i + 12); head = 16; }
+    else if (size === 0) size = to - i;
+    if (size < head || i + size > to) break;
+    out.push({ type, at: i, start: i + head, end: i + size });
+    i += size;
+  }
+  return out;
+}
+function isoMetadata(b) {
+  const res = { exif: null, xmp: null, icc: null, width: 0, height: 0 };
+  const top = isoBoxes(b, 0, b.length);
+  const meta = top.find((x) => x.type === 'meta');
+  if (!meta) return res;
+  const kids = isoBoxes(b, meta.start + 4, meta.end);          // meta is a full box: 4 bytes of version and flags
+  const iinf = kids.find((x) => x.type === 'iinf');
+  const iloc = kids.find((x) => x.type === 'iloc');
+  const iprp = kids.find((x) => x.type === 'iprp');
+  const items = {};
+  if (iinf) {
+    const v = b[iinf.start];
+    const first = iinf.start + 4 + (v === 0 ? 2 : 4);
+    for (const e of isoBoxes(b, first, iinf.end)) {
+      if (e.type !== 'infe') continue;
+      const ver = b[e.start];
+      if (ver < 2) continue;
+      let p = e.start + 4;
+      const id = ver === 2 ? (b[p] << 8) | b[p + 1] : u32be(b, p);
+      p += ver === 2 ? 2 : 4;
+      p += 2;                                                  // protection index
+      const type = ascii(b, p, 4); p += 4;
+      while (p < e.end && b[p]) p++;                           // item name
+      p++;
+      let ctype = '';
+      if (type === 'mime') { while (p < e.end && b[p]) ctype += String.fromCharCode(b[p++]); }
+      items[id] = { type, ctype };
+    }
+  }
+  if (iloc) {
+    const ver = b[iloc.start];
+    let p = iloc.start + 4;
+    const offSize = b[p] >> 4, lenSize = b[p] & 15, baseSize = b[p + 1] >> 4, idxSize = ver >= 1 ? b[p + 1] & 15 : 0;
+    p += 2;
+    const readN = (n) => { let v = 0; for (let k = 0; k < n; k++) v = v * 256 + b[p++]; return v; };
+    const count = ver < 2 ? readN(2) : readN(4);
+    for (let k = 0; k < count && p < iloc.end; k++) {
+      const id = ver < 2 ? readN(2) : readN(4);
+      if (ver >= 1) p += 2;                                    // construction method
+      p += 2;                                                  // data reference index
+      const base = readN(baseSize);
+      const extents = readN(2);
+      const parts = [];
+      for (let e = 0; e < extents; e++) {
+        if (idxSize) readN(idxSize);
+        const off = readN(offSize), len = readN(lenSize);
+        parts.push(b.subarray(base + off, base + off + len));
+      }
+      const it = items[id];
+      if (!it) continue;
+      const data = parts.length === 1 ? parts[0] : concatBytes(parts);
+      if (it.type === 'Exif' && data.length > 4) {
+        const skip = u32be(data, 0);                            // offset of the TIFF header after these 4 bytes
+        res.exif = data.subarray(4 + skip);
+      } else if (it.type === 'mime' && /rdf\+xml/.test(it.ctype)) res.xmp = utf8Text(data);
+    }
+  }
+  if (iprp) {
+    const ipco = isoBoxes(b, iprp.start, iprp.end).find((x) => x.type === 'ipco');
+    if (ipco) for (const pbox of isoBoxes(b, ipco.start, ipco.end)) {
+      const kind = ascii(b, pbox.start, 4);
+      if (pbox.type === 'colr' && (kind === 'prof' || kind === 'rICC') && !res.icc) res.icc = b.subarray(pbox.start + 4, pbox.end);
+      if (pbox.type === 'ispe' && !res.width) { res.width = u32be(b, pbox.start + 4); res.height = u32be(b, pbox.start + 8); }
+    }
+  }
+  return res;
+}
+
+/* ---- TIFF: the file is the EXIF; ICC, XMP and IPTC are tags of IFD0 ---- */
+function tiffTagBytes(b, tag) {
+  const little = b[0] === 0x49;
+  const u16 = (o) => little ? b[o] | (b[o + 1] << 8) : (b[o] << 8) | b[o + 1];
+  const u32 = (o) => little ? u32le(b, o) : u32be(b, o);
+  const ifd = u32(4);
+  if (ifd + 2 > b.length) return null;
+  const n = u16(ifd);
+  for (let e = 0; e < n; e++) {
+    const at = ifd + 2 + e * 12;
+    if (at + 12 > b.length) break;
+    if (u16(at) !== tag) continue;
+    const type = u16(at + 2), count = u32(at + 4);
+    const size = (({ 1: 1, 2: 1, 3: 2, 4: 4, 7: 1 })[type] || 1) * count;
+    const off = size > 4 ? u32(at + 8) : at + 8;
+    return off + size <= b.length ? b.subarray(off, off + size) : null;
+  }
+  return null;
+}
+
+const XMP_SIG = 'http://ns.adobe.com/xap/1.0/\0';
+/**
+ * Every metadata block a file carries, as raw bytes: exif (a TIFF
+ * structure, without JPEG's "Exif\0\0" prefix), icc (the profile), xmp
+ * (the XML as text), iptc (a JPEG's Photoshop APP13 block, or a TIFF's
+ * IPTC tag). A PNG's iCCP profile is compressed: it comes back as
+ * iccDeflated (a zlib stream) for the caller to inflate. Missing blocks
+ * are null. width and height are filled where the container says them
+ * without decoding (PNG, WebP, HEIC and AVIF).
+ */
+function extractMetadata(b) {
+  const m = { format: containerOf(b), exif: null, icc: null, iccDeflated: null, xmp: null, iptc: null, width: 0, height: 0 };
+  if (m.format === 'jpeg') {
+    const segs = jpegSegments(b) || [];
+    for (const s of segs) {
+      if (s.marker === 0xe1 && ascii(b, s.at + 4, 6) === 'Exif\0\0' && !m.exif) m.exif = b.subarray(s.at + 10, s.end);
+      else if (s.marker === 0xe1 && ascii(b, s.at + 4, XMP_SIG.length) === XMP_SIG && !m.xmp) m.xmp = utf8Text(b.subarray(s.at + 4 + XMP_SIG.length, s.end));
+      else if (s.marker === 0xed && !m.iptc) m.iptc = b.subarray(s.at + 4, s.end);
+    }
+    m.icc = jpegICC(b);
+    const sz = jpegSize(b);
+    if (sz) { m.width = sz.width; m.height = sz.height; }
+  } else if (m.format === 'png') {
+    let i = 8;
+    while (i + 8 <= b.length) {
+      const len = u32be(b, i), type = ascii(b, i + 4, 4), d = i + 8;
+      if (d + len > b.length) break;
+      if (type === 'IHDR') { m.width = u32be(b, d); m.height = u32be(b, d + 4); }
+      if (type === 'eXIf' && !m.exif) m.exif = b.subarray(d, d + len);
+      else if (type === 'iCCP') {
+        let k = d; while (k < d + len && b[k]) k++;
+        m.iccDeflated = b.subarray(k + 2, d + len);           // after the name, its 0 and the method byte
+      } else if (type === 'iTXt') {
+        let k = d; while (k < d + len && b[k]) k++;
+        if (ascii(b, d, k - d) === 'XML:com.adobe.xmp' && b[k + 1] === 0) {
+          let q = k + 3;                                         // compression flag, method
+          while (q < d + len && b[q]) q++; q++;                  // language tag
+          while (q < d + len && b[q]) q++; q++;                  // translated keyword
+          m.xmp = utf8Text(b.subarray(q, d + len));
+        }
+      }
+      if (type === 'IEND') break;
+      i = d + len + 4;
+    }
+  } else if (m.format === 'webp') {
+    let i = 12;
+    while (i + 8 <= b.length) {
+      const type = ascii(b, i, 4), len = u32le(b, i + 4), d = i + 8;
+      if (d + len > b.length) break;
+      if (type === 'EXIF') {
+        const x = b.subarray(d, d + len);
+        m.exif = ascii(x, 0, 6) === 'Exif\0\0' ? x.subarray(6) : x;
+      } else if (type === 'ICCP') m.icc = b.subarray(d, d + len);
+      else if (type === 'XMP ') m.xmp = utf8Text(b.subarray(d, d + len));
+      else if (type === 'VP8X') { m.width = 1 + (b[d + 4] | (b[d + 5] << 8) | (b[d + 6] << 16)); m.height = 1 + (b[d + 7] | (b[d + 8] << 8) | (b[d + 9] << 16)); }
+      i = d + len + (len & 1);
+    }
+  } else if (m.format === 'heic' || m.format === 'avif') {
+    const r = isoMetadata(b);
+    m.exif = r.exif; m.xmp = r.xmp; m.icc = r.icc; m.width = r.width; m.height = r.height;
+  } else if (m.format === 'tiff') {
+    m.exif = b;
+    m.icc = tiffTagBytes(b, 34675);
+    const x = tiffTagBytes(b, 700);
+    if (x) m.xmp = utf8Text(x);
+    m.iptc = tiffTagBytes(b, 33723);
+  }
+  return m;
+}
+
+/* ---- XMP and IPTC as readable fields ---- */
+const XMP_FIELDS = [
+  ['dc:creator', 'Creator'], ['dc:rights', 'Rights'], ['dc:title', 'Title'], ['dc:description', 'Description'],
+  ['dc:subject', 'Keywords'], ['xmp:CreatorTool', 'Creator tool'], ['xmp:CreateDate', 'Created'],
+  ['xmp:ModifyDate', 'Modified'], ['xmp:Rating', 'Rating'], ['photoshop:Credit', 'Credit'],
+  ['photoshop:Source', 'Source'], ['photoshop:City', 'City'], ['photoshop:State', 'State'],
+  ['photoshop:Country', 'Country'], ['photoshop:Headline', 'Headline'], ['photoshop:DateCreated', 'Date created'],
+  ['Iptc4xmpCore:Location', 'Location'], ['xmpRights:UsageTerms', 'Usage terms'], ['xmpRights:WebStatement', 'Copyright URL'],
+  ['xmpMM:DocumentID', 'Document ID'], ['xmpMM:OriginalDocumentID', 'Original document ID'],
+  ['exif:GPSLatitude', 'GPS latitude'], ['exif:GPSLongitude', 'GPS longitude'], ['tiff:Make', 'Make'], ['tiff:Model', 'Model'],
+  ['aux:SerialNumber', 'Serial number'], ['aux:Lens', 'Lens'], ['exifEX:LensModel', 'Lens model'], ['exifEX:BodySerialNumber', 'Body serial number']
+];
+const xmlText = (s) => s.replace(/<[^>]+>/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+/** The XMP fields people look for, as [label, value] pairs, in a fixed order. */
+function parseXMP(xmp) {
+  const out = [];
+  if (!xmp) return out;
+  for (const [name, label] of XMP_FIELDS) {
+    const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    let v = null;
+    const attr = new RegExp('\\s' + esc + '\\s*=\\s*"([^"]*)"').exec(xmp) || new RegExp('\\s' + esc + "\\s*=\\s*'([^']*)'").exec(xmp);
+    if (attr) v = xmlText(attr[1]);
+    else {
+      const elm = new RegExp('<' + esc + '(?:\\s[^>]*)?>([\\s\\S]*?)</' + esc + '>').exec(xmp);
+      if (elm) {
+        const li = elm[1].match(/<rdf:li[^>]*>([\s\S]*?)<\/rdf:li>/g);
+        v = li ? li.map((x) => xmlText(x)).filter(Boolean).join('; ') : xmlText(elm[1]);
+      }
+    }
+    if (v) out.push([label, v]);
+  }
+  return out;
+}
+
+const IPTC_FIELDS = { 5: 'Object name', 15: 'Category', 25: 'Keywords', 40: 'Special instructions', 55: 'Date created',
+  80: 'By-line (author)', 85: 'By-line title', 90: 'City', 92: 'Sub-location', 95: 'Province / state', 101: 'Country',
+  103: 'Original transmission reference', 105: 'Headline', 110: 'Credit', 115: 'Source', 116: 'Copyright notice',
+  118: 'Contact', 120: 'Caption / abstract', 122: 'Caption writer' };
+/** IPTC-IIM fields from a JPEG's Photoshop APP13 block (resource 0x0404) or a raw IIM block, as [label, value] pairs. */
+function parseIPTC(block) {
+  const out = [];
+  if (!block) return out;
+  let iim = block;
+  if (ascii(block, 0, 14) === 'Photoshop 3.0\0') {
+    iim = null;
+    let i = 14;
+    while (i + 12 <= block.length && ascii(block, i, 4) === '8BIM') {
+      const id = (block[i + 4] << 8) | block[i + 5];
+      const nameLen = block[i + 6];
+      let p = i + 7 + nameLen; if ((nameLen + 1) & 1) p++;
+      const size = u32be(block, p); p += 4;
+      if (id === 0x0404) { iim = block.subarray(p, p + size); break; }
+      i = p + size + (size & 1);
+    }
+    if (!iim) return out;
+  }
+  const seen = {};
+  let i = 0;
+  while (i + 5 <= iim.length && iim[i] === 0x1c) {
+    const rec = iim[i + 1], ds = iim[i + 2], len = (iim[i + 3] << 8) | iim[i + 4];
+    const v = utf8Text(iim.subarray(i + 5, i + 5 + len)).replace(/\0+$/, '').trim();
+    if (rec === 2 && IPTC_FIELDS[ds] && v) {
+      if (seen[ds] !== undefined) out[seen[ds]][1] += '; ' + v;
+      else { seen[ds] = out.length; out.push([IPTC_FIELDS[ds], v]); }
+    }
+    i += 5 + len;
+  }
+  return out;
+}
+
+/* ---- EXIF: set orientation, drop GPS and the thumbnail; build a small one ---- */
+/**
+ * A copy of an EXIF block (TIFF bytes) for a file whose pixels have been
+ * redrawn: Orientation set to 1 (the pixels are already upright), the
+ * thumbnail in IFD1 blanked and unlinked (it would show the old picture),
+ * and, with dropGps, every GPS value blanked and the pointer to the GPS
+ * block taken out, so no location survives anywhere in the bytes. The
+ * pixel width and height tags are updated when given.
+ */
+function exifForRedraw(tiff, opts = {}) {
+  if (!tiff || tiff.length < 8) return null;
+  const b = tiff.slice();
+  const little = b[0] === 0x49;
+  if (!little && b[0] !== 0x4d) return null;
+  const u16 = (o) => little ? b[o] | (b[o + 1] << 8) : (b[o] << 8) | b[o + 1];
+  const u32 = (o) => little ? u32le(b, o) : u32be(b, o);
+  const w16 = (o, v) => { if (little) { b[o] = v & 255; b[o + 1] = v >> 8; } else { b[o] = v >> 8; b[o + 1] = v & 255; } };
+  const w32 = (o, v) => { if (little) { b[o] = v & 255; b[o + 1] = (v >>> 8) & 255; b[o + 2] = (v >>> 16) & 255; b[o + 3] = v >>> 24; } else { b[o] = v >>> 24; b[o + 1] = (v >>> 16) & 255; b[o + 2] = (v >>> 8) & 255; b[o + 3] = v & 255; } };
+  const SIZES = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 6: 1, 7: 1, 8: 2, 9: 4, 10: 8, 11: 4, 12: 8 };
+  const ifd0 = u32(4);
+  if (ifd0 + 2 > b.length) return null;
+  const walk = (ifd, fn) => {
+    if (!ifd || ifd + 2 > b.length) return;
+    const n = u16(ifd);
+    for (let e = 0; e < n && ifd + 2 + e * 12 + 12 <= b.length; e++) fn(ifd + 2 + e * 12, e, n);
+  };
+  let exifIfd = 0, gpsIfd = 0, gpsEntry = -1;
+  walk(ifd0, (at, e) => {
+    const tag = u16(at);
+    if (tag === 0x0112) w16(at + 8, 1);                          // Orientation: Normal
+    else if (tag === 0x8769) exifIfd = u32(at + 8);
+    else if (tag === 0x8825) { gpsIfd = u32(at + 8); gpsEntry = e; }
+  });
+  if (opts.width && opts.height) walk(exifIfd, (at) => {
+    const tag = u16(at), type = u16(at + 2);
+    if (tag === 0xa002 || tag === 0xa003) {
+      const v = tag === 0xa002 ? opts.width : opts.height;
+      if (type === 3) w16(at + 8, Math.min(65535, v)); else if (type === 4) w32(at + 8, v);
+    }
+  });
+  if (opts.dropGps && gpsIfd) {
+    /* blank every value the GPS block points at, then the block itself */
+    walk(gpsIfd, (at) => {
+      const size = (SIZES[u16(at + 2)] || 1) * u32(at + 4);
+      if (size > 4) { const off = u32(at + 8); if (off + size <= b.length) b.fill(0, off, off + size); }
+    });
+    const n = u16(gpsIfd);
+    b.fill(0, gpsIfd, Math.min(b.length, gpsIfd + 2 + n * 12 + 4));
+    /* and take the pointer out of IFD0: the later entries, and the link to
+       the next IFD, move up one place */
+    const n0 = u16(ifd0);
+    const from = ifd0 + 2 + (gpsEntry + 1) * 12, end = ifd0 + 2 + n0 * 12 + 4;
+    b.copyWithin(from - 12, from, end);
+    b.fill(0, end - 12, end);
+    w16(ifd0, n0 - 1);
+  }
+  if (opts.dropThumb !== false) {
+    const n0 = u16(ifd0);
+    const next = ifd0 + 2 + n0 * 12;
+    const ifd1 = next + 4 <= b.length ? u32(next) : 0;
+    if (ifd1 && ifd1 + 2 <= b.length) {
+      let thumbOff = 0, thumbLen = 0;
+      walk(ifd1, (at) => { const t = u16(at); if (t === 0x0201) thumbOff = u32(at + 8); if (t === 0x0202) thumbLen = u32(at + 8); });
+      if (thumbOff && thumbLen && thumbOff + thumbLen <= b.length) b.fill(0, thumbOff, thumbOff + thumbLen);
+      w32(next, 0);
+    }
+  }
+  return b;
+}
+
+/**
+ * A new, minimal EXIF block (big-endian TIFF) holding only the fields
+ * given: Orientation (a number), Artist and Copyright (text). Used to keep
+ * just those when everything else is stripped.
+ */
+function buildExif(fields) {
+  const entries = [];
+  if (fields.Orientation) entries.push({ tag: 0x0112, type: 3, short: fields.Orientation });
+  if (fields.Artist) entries.push({ tag: 0x013b, type: 2, text: fields.Artist });
+  if (fields.Copyright) entries.push({ tag: 0x8298, type: 2, text: fields.Copyright });
+  entries.sort((a, b) => a.tag - b.tag);
+  const n = entries.length;
+  let dataAt = 8 + 2 + n * 12 + 4;
+  const data = [];
+  const head = new Uint8Array(dataAt);
+  head.set([0x4d, 0x4d, 0, 42, 0, 0, 0, 8]);
+  head[8] = n >> 8; head[9] = n & 255;
+  entries.forEach((e, k) => {
+    const at = 10 + k * 12;
+    head[at] = e.tag >> 8; head[at + 1] = e.tag & 255; head[at + 2] = 0; head[at + 3] = e.type;
+    if (e.type === 3) {
+      head.set([0, 0, 0, 1], at + 4);
+      head[at + 8] = e.short >> 8; head[at + 9] = e.short & 255;
+    } else {
+      const t = concatBytes([utf8Bytes(String(e.text)), new Uint8Array([0])]);
+      const c = t.length;
+      head.set([c >>> 24, (c >>> 16) & 255, (c >>> 8) & 255, c & 255], at + 4);
+      if (c <= 4) head.set(t, at + 8);
+      else {
+        head.set([dataAt >>> 24, (dataAt >>> 16) & 255, (dataAt >>> 8) & 255, dataAt & 255], at + 8);
+        data.push(t); dataAt += c;
+        if (c & 1) { data.push(new Uint8Array(1)); dataAt++; }
+      }
+    }
+  });
+  return concatBytes([head].concat(data));
+}
+
+/* ---- zlib without compression, for a PNG's iCCP chunk ---- */
+function adler32(b) {
+  let a = 1, c = 0;
+  for (let i = 0; i < b.length; i++) { a = (a + b[i]) % 65521; c = (c + a) % 65521; }
+  return ((c << 16) | a) >>> 0;
+}
+/** A valid zlib stream made of stored (uncompressed) deflate blocks. */
+function zlibStored(data) {
+  const parts = [new Uint8Array([0x78, 0x01])];
+  let i = 0;
+  do {
+    const chunk = data.subarray(i, Math.min(data.length, i + 65535));
+    const last = i + 65535 >= data.length ? 1 : 0;
+    const len = chunk.length;
+    parts.push(new Uint8Array([last, len & 255, len >> 8, ~len & 255, (~len >> 8) & 255]), chunk);
+    i += 65535;
+  } while (i < data.length);
+  const s = adler32(data);
+  parts.push(new Uint8Array([s >>> 24, (s >>> 16) & 255, (s >>> 8) & 255, s & 255]));
+  return concatBytes(parts);
+}
+function pngChunk(type, data) {
+  const c = new Uint8Array(12 + data.length);
+  const n = data.length;
+  c.set([n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255], 0);
+  c.set(latin1(type), 4);
+  c.set(data, 8);
+  const crc = crc32(c, 4, 8 + n);
+  c.set([crc >>> 24, (crc >>> 16) & 255, (crc >>> 8) & 255, crc & 255], 8 + n);
+  return c;
+}
+function riffChunk(type, data) {
+  const pad = data.length & 1;
+  const c = new Uint8Array(8 + data.length + pad);
+  c.set(latin1(type), 0);
+  const n = data.length;
+  c.set([n & 255, (n >>> 8) & 255, (n >>> 16) & 255, n >>> 24], 4);
+  c.set(data, 8);
+  return c;
+}
+
+/**
+ * Metadata out, pixels untouched: a JPEG keeps its scan byte for byte
+ * (stripJpegMetadata); a PNG keeps only the chunks that say how to draw it
+ * (the image data, palette, transparency, colour and print-size chunks, and
+ * an animation's frames), dropping text, EXIF and time stamps; a WebP drops
+ * its EXIF and XMP chunks and the VP8X flags that announced them. Anything
+ * else comes back unchanged. Returns the new bytes (the same array when
+ * there was nothing to take out).
+ */
+const PNG_KEEP = ['IHDR', 'PLTE', 'IDAT', 'IEND', 'tRNS', 'gAMA', 'cHRM', 'sRGB', 'iCCP', 'sBIT', 'pHYs', 'bKGD', 'acTL', 'fcTL', 'fdAT', 'cICP'];
+function stripMetadata(bytes) {
+  const kind = containerOf(bytes);
+  if (kind === 'jpeg') return stripJpegMetadata(bytes);
+  if (kind === 'png') {
+    const parts = [bytes.subarray(0, 8)];
+    let i = 8, dropped = 0;
+    while (i + 8 <= bytes.length) {
+      const len = u32be(bytes, i), type = ascii(bytes, i + 4, 4), end = i + 12 + len;
+      if (end > bytes.length) return bytes;
+      if (PNG_KEEP.indexOf(type) >= 0) parts.push(bytes.subarray(i, end)); else dropped++;
+      i = end;
+      if (type === 'IEND') break;
+    }
+    return dropped ? concatBytes(parts) : bytes;
+  }
+  if (kind === 'webp') {
+    const parts = [];
+    let i = 12, dropped = 0, vp8x = -1;
+    while (i + 8 <= bytes.length) {
+      const type = ascii(bytes, i, 4), len = u32le(bytes, i + 4), end = i + 8 + len + (len & 1);
+      if (end > bytes.length + 1) return bytes;
+      if (type === 'EXIF' || type === 'XMP ') dropped++;
+      else { if (type === 'VP8X') vp8x = parts.length; parts.push(bytes.slice(i, Math.min(end, bytes.length))); }
+      i = end;
+    }
+    if (!dropped) return bytes;
+    if (vp8x >= 0) parts[vp8x][8] &= ~(0x08 | 0x04);          // the EXIF and XMP flags
+    const body = concatBytes(parts);
+    const out = new Uint8Array(12 + body.length);
+    out.set(bytes.subarray(0, 12));
+    const n = 4 + body.length;
+    out.set([n & 255, (n >>> 8) & 255, (n >>> 16) & 255, n >>> 24], 4);
+    out.set(body, 12);
+    return out;
+  }
+  return bytes;
+}
+
+/**
+ * Write metadata into an encoded JPEG, PNG or WebP: meta.exif (TIFF bytes),
+ * meta.icc (profile bytes), meta.xmp (text). Blocks of those kinds the file
+ * already has are replaced. Returns { bytes, written, skipped }: a block
+ * too big for its container (a JPEG segment holds 64 KB) is skipped and
+ * named. Any other format comes back unchanged, with everything asked for
+ * in skipped.
+ */
+function embedMetadata(bytes, meta) {
+  const kind = containerOf(bytes);
+  const want = ['exif', 'icc', 'xmp'].filter((k) => meta && meta[k]);
+  const written = [], skipped = [];
+  if (!want.length) return { bytes, written, skipped };
+  if (kind === 'jpeg') {
+    const segs = jpegSegments(bytes);
+    if (!segs) return { bytes, written, skipped: want };
+    const sos = segs[segs.length - 1];
+    const keep = segs.filter((s) => {
+      if (s.marker === 0xe1 && meta.exif && ascii(bytes, s.at + 4, 6) === 'Exif\0\0') return false;
+      if (s.marker === 0xe1 && meta.xmp && ascii(bytes, s.at + 4, XMP_SIG.length) === XMP_SIG) return false;
+      if (s.marker === 0xe2 && meta.icc && ascii(bytes, s.at + 4, 12) === 'ICC_PROFILE\0') return false;
+      return true;
+    });
+    const seg = (marker, payload) => {
+      const len = payload.length + 2;
+      return concatBytes([new Uint8Array([0xff, marker, len >> 8, len & 255]), payload]);
+    };
+    const add = [];
+    if (meta.exif) {
+      const p = concatBytes([latin1('Exif\0\0'), meta.exif]);
+      if (p.length + 2 <= 65535) { add.push(seg(0xe1, p)); written.push('exif'); } else skipped.push('exif');
+    }
+    if (meta.xmp) {
+      const p = concatBytes([latin1(XMP_SIG), utf8Bytes(meta.xmp)]);
+      if (p.length + 2 <= 65535) { add.push(seg(0xe1, p)); written.push('xmp'); } else skipped.push('xmp');
+    }
+    if (meta.icc) {
+      const per = 65519;
+      const n = Math.ceil(meta.icc.length / per);
+      if (n <= 255) {
+        for (let k = 0; k < n; k++) add.push(seg(0xe2, concatBytes([latin1('ICC_PROFILE\0'), new Uint8Array([k + 1, n]), meta.icc.subarray(k * per, (k + 1) * per)])));
+        written.push('icc');
+      } else skipped.push('icc');
+    }
+    /* after the JFIF header when there is one, as the EXIF standard asks */
+    const parts = [new Uint8Array([0xff, 0xd8])];
+    let placed = false;
+    for (const s of keep) {
+      if (!placed && s.marker !== 0xe0) { parts.push(...add); placed = true; }
+      parts.push(bytes.subarray(s.at, s === sos ? bytes.length : s.end));
+    }
+    if (!placed) parts.push(...add);
+    return { bytes: concatBytes(parts), written, skipped };
+  }
+  if (kind === 'png') {
+    const parts = [bytes.subarray(0, 8)];
+    let i = 8;
+    while (i + 8 <= bytes.length) {
+      const len = u32be(bytes, i), type = ascii(bytes, i + 4, 4), end = i + 12 + len;
+      const drop = (meta.icc && (type === 'iCCP' || type === 'sRGB' || type === 'gAMA' || type === 'cHRM'))
+        || (meta.exif && type === 'eXIf')
+        || (meta.xmp && type === 'iTXt' && ascii(bytes, i + 8, 17) === 'XML:com.adobe.xmp');
+      if (!drop) parts.push(bytes.subarray(i, end));
+      if (type === 'IHDR') {
+        if (meta.icc) { parts.push(pngChunk('iCCP', concatBytes([latin1('ICC profile\0\0'), zlibStored(meta.icc)]))); written.push('icc'); }
+        if (meta.exif) { parts.push(pngChunk('eXIf', meta.exif)); written.push('exif'); }
+        if (meta.xmp) { parts.push(pngChunk('iTXt', concatBytes([latin1('XML:com.adobe.xmp\0\0\0\0\0'), utf8Bytes(meta.xmp)]))); written.push('xmp'); }
+      }
+      if (type === 'IEND') break;
+      i = end;
+    }
+    return { bytes: concatBytes(parts), written, skipped };
+  }
+  if (kind === 'webp') {
+    let w = 0, h = 0, alpha = false, anim = false;
+    const chunks = [];
+    let i = 12;
+    while (i + 8 <= bytes.length) {
+      const type = ascii(bytes, i, 4), len = u32le(bytes, i + 4), d = i + 8;
+      if (d + len > bytes.length) break;
+      const data = bytes.subarray(d, d + len);
+      if (type === 'VP8X') {
+        alpha = !!(data[0] & 0x10); anim = !!(data[0] & 0x02);
+        w = 1 + (data[4] | (data[5] << 8) | (data[6] << 16)); h = 1 + (data[7] | (data[8] << 8) | (data[9] << 16));
+      } else if (type === 'VP8 ' && !w) {
+        w = (data[6] | (data[7] << 8)) & 0x3fff; h = (data[8] | (data[9] << 8)) & 0x3fff;
+      } else if (type === 'VP8L' && !w) {
+        const bits = u32le(data, 1);
+        w = (bits & 0x3fff) + 1; h = ((bits >> 14) & 0x3fff) + 1; alpha = !!((bits >> 28) & 1);
+      }
+      if (type === 'ALPH') alpha = true;
+      const replaced = (meta.icc && type === 'ICCP') || (meta.exif && type === 'EXIF') || (meta.xmp && type === 'XMP ');
+      if (type !== 'VP8X' && !replaced) chunks.push({ type, data });
+      i = d + len + (len & 1);
+    }
+    const has = (t) => chunks.some((c) => c.type === t);
+    const flags = (meta.icc || has('ICCP') ? 0x20 : 0) | (alpha ? 0x10 : 0) | (meta.exif || has('EXIF') ? 0x08 : 0) | (meta.xmp || has('XMP ') ? 0x04 : 0) | (anim ? 0x02 : 0);
+    const vp8x = new Uint8Array(10);
+    vp8x[0] = flags;
+    vp8x.set([(w - 1) & 255, ((w - 1) >> 8) & 255, ((w - 1) >> 16) & 255, (h - 1) & 255, ((h - 1) >> 8) & 255, ((h - 1) >> 16) & 255], 4);
+    /* the order the WebP container asks for: VP8X, ICCP, image data, EXIF, XMP */
+    const out = [riffChunk('VP8X', vp8x)];
+    if (meta.icc) { out.push(riffChunk('ICCP', meta.icc)); written.push('icc'); }
+    for (const c of chunks) if (c.type === 'ICCP') out.push(riffChunk(c.type, c.data));
+    for (const c of chunks) if (c.type !== 'ICCP' && c.type !== 'EXIF' && c.type !== 'XMP ') out.push(riffChunk(c.type, c.data));
+    for (const c of chunks) if (c.type === 'EXIF') out.push(riffChunk(c.type, c.data));
+    if (meta.exif) { out.push(riffChunk('EXIF', meta.exif)); written.push('exif'); }
+    for (const c of chunks) if (c.type === 'XMP ') out.push(riffChunk(c.type, c.data));
+    if (meta.xmp) { out.push(riffChunk('XMP ', utf8Bytes(meta.xmp))); written.push('xmp'); }
+    const body = concatBytes(out);
+    const head = new Uint8Array(12);
+    head.set(latin1('RIFF'), 0);
+    const size = body.length + 4;
+    head.set([size & 255, (size >>> 8) & 255, (size >>> 16) & 255, size >>> 24], 4);
+    head.set(latin1('WEBP'), 8);
+    return { bytes: concatBytes([head, body]), written, skipped };
+  }
+  return { bytes, written, skipped: want };
+}
+
+/* ---- writers the browser does not have: BMP and ICO ---- */
+/**
+ * A BMP of RGBA pixels: 24-bit when every pixel is opaque (what every
+ * program opens), otherwise 32-bit with an alpha channel (a BITMAPV4HEADER
+ * with bit masks). Rows bottom-up, as BMP stores them; the resolution
+ * fields carry dpi (96 when not given).
+ */
+function encodeBMP(rgba, width, height, dpi) {
+  let opaque = true;
+  for (let i = 3; i < rgba.length; i += 4) if (rgba[i] !== 255) { opaque = false; break; }
+  const bpp = opaque ? 24 : 32;
+  const rowBytes = opaque ? (width * 3 + 3) & ~3 : width * 4;
+  const headSize = opaque ? 40 : 108;
+  const off = 14 + headSize;
+  const size = off + rowBytes * height;
+  const b = new Uint8Array(size);
+  const dv = new DataView(b.buffer);
+  b[0] = 0x42; b[1] = 0x4d;
+  dv.setUint32(2, size, true); dv.setUint32(10, off, true);
+  dv.setUint32(14, headSize, true);
+  dv.setInt32(18, width, true); dv.setInt32(22, height, true);
+  dv.setUint16(26, 1, true); dv.setUint16(28, bpp, true);
+  dv.setUint32(30, opaque ? 0 : 3, true);                      // BI_RGB, or BI_BITFIELDS
+  dv.setUint32(34, rowBytes * height, true);
+  const ppm = Math.round((dpi || 96) / 0.0254);
+  dv.setInt32(38, ppm, true); dv.setInt32(42, ppm, true);
+  if (!opaque) {
+    dv.setUint32(54, 0x00ff0000, true); dv.setUint32(58, 0x0000ff00, true);
+    dv.setUint32(62, 0x000000ff, true); dv.setUint32(66, 0xff000000, true);
+    b.set(latin1('BGRs'), 70);                                   // LCS_sRGB ('sRGB' read as a little-endian number)
+  }
+  for (let y = 0; y < height; y++) {
+    let o = off + (height - 1 - y) * rowBytes;
+    for (let x = 0; x < width; x++) {
+      const j = (y * width + x) * 4;
+      b[o++] = rgba[j + 2]; b[o++] = rgba[j + 1]; b[o++] = rgba[j];
+      if (!opaque) b[o++] = rgba[j + 3];
+    }
+  }
+  return b;
+}
+
+/**
+ * An ICO holding the given PNG files, one entry per size (PNG entries are
+ * what Windows Vista onwards and every browser read). images: [{ width,
+ * height, bytes }], each side at most 256.
+ */
+function encodeICO(images) {
+  const n = images.length;
+  const head = new Uint8Array(6 + n * 16);
+  const dv = new DataView(head.buffer);
+  dv.setUint16(2, 1, true); dv.setUint16(4, n, true);
+  let off = head.length;
+  images.forEach((im, k) => {
+    const at = 6 + k * 16;
+    head[at] = im.width >= 256 ? 0 : im.width;
+    head[at + 1] = im.height >= 256 ? 0 : im.height;
+    dv.setUint16(at + 4, 1, true); dv.setUint16(at + 6, 32, true);
+    dv.setUint32(at + 8, im.bytes.length, true); dv.setUint32(at + 12, off, true);
+    off += im.bytes.length;
+  });
+  return concatBytes([head].concat(images.map((im) => im.bytes)));
+}
+
+/* ---- animation: GIF, WebP and APNG ---- */
+/** { animated, frames } for a GIF, WebP or PNG, frames counted from the file's own structure. */
+function animationInfo(b) {
+  const kind = containerOf(b);
+  if (kind === 'gif') {
+    let frames = 0;
+    let i = 13;
+    const flags = b[10];
+    if (flags & 0x80) i += 3 * (1 << ((flags & 7) + 1));
+    while (i < b.length) {
+      const t = b[i];
+      if (t === 0x3b) break;                                     // trailer
+      if (t === 0x21) {                                          // extension: label, then sub-blocks
+        i += 2;
+        while (i < b.length && b[i]) i += b[i] + 1;
+        i++;
+      } else if (t === 0x2c) {                                   // an image
+        frames++;
+        const f = b[i + 9];
+        i += 10;
+        if (f & 0x80) i += 3 * (1 << ((f & 7) + 1));
+        i++;                                                     // LZW minimum code size
+        while (i < b.length && b[i]) i += b[i] + 1;
+        i++;
+      } else break;
+    }
+    return { animated: frames > 1, frames };
+  }
+  if (kind === 'webp') {
+    let frames = 0, flag = false;
+    let i = 12;
+    while (i + 8 <= b.length) {
+      const type = ascii(b, i, 4), len = u32le(b, i + 4);
+      if (type === 'VP8X') flag = !!(b[i + 8] & 0x02);
+      if (type === 'ANMF') frames++;
+      i += 8 + len + (len & 1);
+    }
+    return { animated: flag && frames > 1, frames: frames || 1 };
+  }
+  if (kind === 'png') {
+    let i = 8;
+    while (i + 8 <= b.length) {
+      const len = u32be(b, i), type = ascii(b, i + 4, 4);
+      if (type === 'acTL') { const f = u32be(b, i + 8); return { animated: f > 1, frames: f }; }
+      if (type === 'IDAT') break;
+      i += 12 + len;
+    }
+  }
+  return { animated: false, frames: 1 };
+}
+
+window.MVRImage={readExif:readExif,metadataSegments:metadataSegments,buildPDF:buildPDF,jpegSize:jpegSize,jpegInfo:jpegInfo,jpegICC:jpegICC,iccChannels:iccChannels,iccIsSRGB:iccIsSRGB,stripJpegMetadata:stripJpegMetadata,metadataReport:metadataReport,metadataSummary:metadataSummary,setDPI:setDPI,readDPI:readDPI,crc32:crc32,medianCut:medianCut,toHex:toHex,relLuminance:relLuminance,rgbToHsl:rgbToHsl,contrastRatio:contrastRatio,wcagGrade:wcagGrade,optimiseSVG:optimiseSVG,referencedIds:referencedIds,SOCIAL_PRESETS:SOCIAL_PRESETS,SOCIAL_AS_OF:SOCIAL_AS_OF,PHOTO_PRESETS:PHOTO_PRESETS,mmToPx:mmToPx,pxToMm:pxToMm,containerOf:containerOf,mimeOf:mimeOf,extOf:extOf,extractMetadata:extractMetadata,parseXMP:parseXMP,parseIPTC:parseIPTC,exifForRedraw:exifForRedraw,buildExif:buildExif,zlibStored:zlibStored,embedMetadata:embedMetadata,encodeBMP:encodeBMP,encodeICO:encodeICO,animationInfo:animationInfo,pngFilterRows:pngFilterRows,stripMetadata:stripMetadata};
 })();

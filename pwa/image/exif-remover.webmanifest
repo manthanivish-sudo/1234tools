@@ -2,7 +2,7 @@
   "id": "/image/exif-remover.html",
   "name": "Remove Image Metadata — 1234Tools",
   "short_name": "Remove Image",
-  "description": "Strip EXIF, GPS location and all other metadata from photos before you share them.",
+  "description": "Strip EXIF, GPS location and all other metadata from photos before you share them — losslessly for JPEG, PNG and WebP — keeping the copyright or orientation if you choose.",
   "start_url": "/image/exif-remover/?src=pwa",
   "scope": "/image/exif-remover/",
   "display": "standalone",

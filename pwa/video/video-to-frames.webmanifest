@@ -1,0 +1,42 @@
+{
+  "id": "/video/video-to-frames/",
+  "name": "Video to Frames — 1234Tools",
+  "short_name": "Video → Frames",
+  "description": "Save frames from a video as pictures in your browser: every frame of a part, one every few seconds, a set number spread evenly, or the frame on screen. PNG or JPG, in a ZIP. Nothing is uploaded.",
+  "start_url": "/video/video-to-frames/?src=pwa",
+  "scope": "/video/video-to-frames/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "video",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-video-frames.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-video-frames-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-video-frames-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

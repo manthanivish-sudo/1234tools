@@ -222,40 +222,162 @@ function contrastRatio(a, b) {
 
 
 window.DEV_TOOLS = window.DEV_TOOLS || {};
+
+/* ---- percent-encoding, by the RFC 3986 and WHATWG rules ---- */
+function ueHex(c) { return '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'); }
+/* application/x-www-form-urlencoded: only A–Z a–z 0–9 * - . _ stay; a space is + */
+function ueFormEncode(s) {
+  return encodeURIComponent(s).replace(/%20/g, '+').replace(/[!'()~]/g, ueHex);
+}
+function ueFormDecode(s) { return decodeURIComponent(s.replace(/\+/g, ' ')); }
+function ueEncodeOne(s, scope) {
+  if (scope === 'full') return encodeURI(s);
+  if (scope === 'form') return ueFormEncode(s);
+  return encodeURIComponent(s);
+}
+function ueDecodeOne(s, scope, plusSpace) {
+  const t = plusSpace ? s.replace(/\+/g, ' ') : s;
+  return scope === 'full' ? decodeURI(t) : decodeURIComponent(t);
+}
+function ueParseQuery(text) {
+  let s = String(text).trim(), base = '', hash = '';
+  const h = s.indexOf('#');
+  if (h >= 0) { hash = s.slice(h + 1); s = s.slice(0, h); }
+  const q = s.indexOf('?');
+  if (q >= 0) { base = s.slice(0, q); s = s.slice(q + 1); }
+  else if (/^[a-z][a-z0-9+.-]*:\/\//i.test(s) || s.charAt(0) === '/') { base = s; s = ''; }
+  const rows = [], seen = {};
+  s.split('&').forEach(function (part) {
+    if (part === '') return;
+    const i = part.indexOf('=');
+    const rawName = i < 0 ? part : part.slice(0, i), rawValue = i < 0 ? '' : part.slice(i + 1);
+    let name = rawName, value = rawValue, bad = false;
+    try { name = ueFormDecode(rawName); } catch (e) { bad = true; name = rawName.replace(/\+/g, ' '); }
+    try { value = ueFormDecode(rawValue); } catch (e) { bad = true; value = rawValue.replace(/\+/g, ' '); }
+    seen[name] = (seen[name] || 0) + 1;
+    rows.push({ name: name, value: value, noEquals: i < 0, bad: bad });
+  });
+  rows.forEach(function (r) { r.dup = seen[r.name] > 1; });
+  return { base: base, hash: hash, rows: rows, unique: Object.keys(seen).length };
+}
+function ueBuildQuery(text, scope) {
+  const lines = String(text).split(/\r?\n/);
+  let base = '';
+  const pairs = [];
+  lines.forEach(function (ln, i) {
+    if (!ln.trim()) return;
+    if (!pairs.length && !base && ln.indexOf('\t') < 0 && (/^[a-z][a-z0-9+.-]*:\/\//i.test(ln.trim()) || ln.trim().charAt(0) === '/')) { base = ln.trim(); return; }
+    let name, value, t = ln.indexOf('\t');
+    if (t >= 0) { name = ln.slice(0, t); value = ln.slice(t + 1); }
+    else { const e = ln.indexOf('='); if (e >= 0) { name = ln.slice(0, e).trim(); value = ln.slice(e + 1); } else { name = ln.trim(); value = ''; } }
+    pairs.push([name, value]);
+  });
+  const enc = function (x) { return ueEncodeOne(x, scope === 'form' ? 'form' : 'component'); };
+  const q = pairs.map(function (p) { return enc(p[0]) + '=' + enc(p[1]); }).join('&');
+  return { base: base, query: q, count: pairs.length, text: base ? (q ? base + '?' + q : base) : q };
+}
+
 window.DEV_TOOLS["url-encoder"] = {
 "title": "URL Encoder & Decoder",
 "category": "developer",
 "icon": "🔗",
 "kind": "code",
-"description": "Percent-encode text for URLs and query strings, or decode it back to readable form.",
-"keywords": ["url encode","url decode","percent encoding","uri encode","query string encode"],
-"inputLabel": "Text or encoded URL",
+"files": {"accept": ".txt,text/plain", "label": "Open text file"},
+"description": "Percent-encode and decode text for URLs, form data and query strings, one line at a time if you like, and turn a query string into a table and back.",
+"keywords": ["url encode","url decode","percent encoding","uri encode","query string encode","query string parser","form urlencoded","batch url encode"],
+"inputLabel": "Text, encoded URL or query string",
 "outputLabel": "Result",
 "placeholder": "https://example.com/search?q=hello world&lang=en-GB",
 "sample": "https://www.1234tools.com/utilities/tool-finder/?q=merge two PDFs&lang=en-GB",
-"options": [{"key":"dir","label":"Direction","type":"select","default":"enc","options":[{"value":"enc","label":"Encode →"},{"value":"dec","label":"← Decode"}]},{"key":"scope","label":"Scope","type":"select","default":"component","options":[{"value":"component","label":"Component (a single value)"},{"value":"full","label":"Full URL (keeps :/?#&= intact)"}]},{"key":"plus","label":"Treat + as space (decoding)","type":"select","default":"auto","options":[{"value":"auto","label":"Auto: yes in Component, no in Full URL"},{"value":"yes","label":"Yes: + is a space"},{"value":"no","label":"No: + stays +"}]}],
-"transform": (text, { dir, scope, plus }) => {
+"options": [
+  {"key":"dir","label":"Direction","type":"select","default":"enc","options":[{"value":"enc","label":"Encode →"},{"value":"dec","label":"← Decode"},{"value":"table","label":"Query string → table"},{"value":"build","label":"Table → query string"}]},
+  {"key":"scope","label":"Scope","type":"select","default":"component","options":[{"value":"component","label":"Component (a single value)"},{"value":"full","label":"Full URL (keeps :/?#&= intact)"},{"value":"form","label":"Form (space as +)"}]},
+  {"key":"plus","label":"Treat + as space (decoding)","type":"select","default":"auto","options":[{"value":"auto","label":"Auto (no in Full URL)"},{"value":"yes","label":"Yes: + is a space"},{"value":"no","label":"No: + stays +"}]},
+  {"key":"lines","label":"Lines","type":"select","default":"whole","options":[{"value":"whole","label":"Whole text as one"},{"value":"each","label":"Each line separately"}]}
+],
+"transform": (text, { dir, scope, plus, lines }) => {
       if (!text.trim()) return { output: '', note: 'Type or paste something above.' };
+      if (dir === 'table') {
+        const q = ueParseQuery(text);
+        if (!q.rows.length) return { output: '', note: q.base ? 'That address has no query string, so there is nothing to put in a table.' : 'No name=value pairs found.', table: q };
+        const out = q.rows.map((r) => r.name + '\t' + r.value).join('\n');
+        const dups = q.rows.filter((r) => r.dup).length;
+        const res = { output: out, table: q, stats: [['Parameters', String(q.rows.length)], ['Distinct names', String(q.unique)], ['Repeated', String(dups)]], download: { ext: 'tsv', type: 'text/tab-separated-values' } };
+        if (q.rows.some((r) => r.bad)) res.warn = 'A % that is not followed by two hex digits was left as typed in ' + q.rows.filter((r) => r.bad).length + ' name or value.';
+        return res;
+      }
+      if (dir === 'build') {
+        const b = ueBuildQuery(text, scope);
+        if (!b.count) return { output: b.base, note: 'Write one name and value per line, separated by a tab or =.' };
+        return { output: b.text, stats: [['Parameters', String(b.count)], ['Output', bytes(b.text)]] };
+      }
       /* A + is a space only in form-encoded text (a query string sent by an
          HTML form); RFC 3986 and decodeURIComponent leave it alone. So when
          decoding, + is read as a space first if the option says so (Auto:
-         yes for a single value, no for a whole address), which also keeps
-         %2B as a real plus sign. Encoding never writes +. */
+         yes for a single value or a form, no for a whole address), which also
+         keeps %2B as a real plus sign. Encoding writes + only in Form scope. */
       const plusSpace = dir !== 'enc' && (plus === 'yes' || (plus !== 'no' && scope !== 'full'));
       const plusCount = dir !== 'enc' ? (text.match(/\+/g) || []).length : 0;
+      const one = (s) => dir === 'enc' ? ueEncodeOne(s, scope) : ueDecodeOne(s, scope, plusSpace);
+      const malformed = dir === 'enc'
+        ? 'That text holds half of a surrogate pair (a broken emoji), which cannot be written as UTF-8.'
+        : 'Malformed percent-encoding — check for a stray % not followed by two hex digits.';
+      if (lines === 'each') {
+        const src = text.split(/\r?\n/), outL = [], bad = [];
+        src.forEach((ln, i) => {
+          if (!ln) { outL.push(''); return; }
+          try { outL.push(one(ln)); } catch (e) { outL.push(ln); bad.push(i + 1); }
+        });
+        const output = outL.join('\n');
+        const res = { output, stats: [['Lines', String(src.filter((x) => x).length)], ['Input', bytes(text)], ['Output', bytes(output)]] };
+        if (plusCount) res.stats.push(['Plus signs', plusCount + (plusSpace ? (plusCount === 1 ? ' read as a space' : ' read as spaces') : ' kept as +')]);
+        if (bad.length) res.warn = (bad.length === 1 ? 'Line ' + bad[0] + ' is' : 'Lines ' + bad.slice(0, 8).join(', ') + (bad.length > 8 ? ' and ' + (bad.length - 8) + ' more are' : ' are')) + ' not valid ' + (dir === 'enc' ? 'text to encode' : 'percent-encoding') + ' and ' + (bad.length === 1 ? 'was' : 'were') + ' left as typed.';
+        return res;
+      }
       try {
-        const fn = dir === 'enc'
-          ? (scope === 'full' ? encodeURI : encodeURIComponent)
-          : (scope === 'full' ? decodeURI : decodeURIComponent);
-        const output = fn(plusSpace ? text.replace(/\+/g, ' ') : text);
+        const output = one(text);
         const stats = [['Input', bytes(text)], ['Output', bytes(output)]];
         if (plusCount) stats.push(['Plus signs', plusCount + (plusSpace ? (plusCount === 1 ? ' read as a space' : ' read as spaces') : ' kept as +')]);
         return { output, stats };
       } catch (e) {
-        return { error: 'Malformed percent-encoding — check for a stray % not followed by two hex digits.' };
+        return { error: malformed };
       }
     },
-"tips": ["Use Component scope for a single query value. Full URL scope leaves :/?#&= alone so the address stays usable.","A space is %20 in a path but + in a query string sent by a form. Decoding, Treat + as space reads each + as a space (Auto: yes in Component scope, no in Full URL scope). An encoded plus, %2B, never becomes a space.","Encoding an already-encoded string double-encodes it: % becomes %25. Decode first if in doubt."],
-"faq": [{"q":"Which characters actually need encoding?","a":"Anything outside A–Z, a–z, 0–9 and - _ . ~ is unsafe in a URL component. Reserved characters such as & = ? # / must be encoded when they appear inside a value rather than as separators."}]
+"tips": ["Use Component scope for a single query value. Full URL scope leaves :/?#&= alone so the address stays usable.","A space is %20 in a path but + in a query string sent by a form. Form scope writes the +; decoding, Treat + as space reads each + as a space (Auto: yes in Component and Form scope, no in Full URL scope). An encoded plus, %2B, never becomes a space.","Encoding an already-encoded string double-encodes it: % becomes %25. Decode first if in doubt.","Each line separately encodes or decodes a list, one result per line; a line that cannot be decoded is left as typed and named.","Query string → table splits a pasted address into names and values, marks repeated names, and Table → query string builds one back from lines of name, a tab or =, and value."],
+"faq": [{"q":"Which characters actually need encoding?","a":"Anything outside A–Z, a–z, 0–9 and - _ . ~ is unsafe in a URL component. Reserved characters such as & = ? # / must be encoded when they appear inside a value rather than as separators."},{"q":"What is the difference between Component and Form?","a":"Component is encodeURIComponent: a space becomes %20. Form is what an HTML form sends, application/x-www-form-urlencoded: a space becomes + and ! ' ( ) ~ are escaped too."}],
+"render": function (res, ctx) { ueRender(res, ctx); }
 };
+
+function ueRender(res, ctx) {
+  const box = ctx.extra;
+  box.textContent = '';
+  const q = res && res.table;
+  if (!q || !q.rows.length) return;
+  const wrap = ctx.el('div', 'io-pane ue-table');
+  const head = ctx.el('div', 'io-head');
+  head.appendChild(ctx.el('span', 'io-label', 'Query string as a table'));
+  wrap.appendChild(head);
+  if (q.base || q.hash) {
+    const meta = ctx.el('div', 'ue-meta');
+    if (q.base) { meta.appendChild(ctx.el('span', 'ue-k', 'Address')); meta.appendChild(ctx.el('code', null, q.base)); }
+    if (q.hash) { meta.appendChild(ctx.el('span', 'ue-k', 'Fragment')); meta.appendChild(ctx.el('code', null, '#' + q.hash)); }
+    wrap.appendChild(meta);
+  }
+  const scroll = ctx.el('div', 'ue-scroll');
+  const t = ctx.el('table', 'ue-grid');
+  const h = ctx.el('tr');
+  ['#', 'Name', 'Value', ''].forEach(function (x) { h.appendChild(ctx.el('th', null, x)); });
+  t.appendChild(h);
+  q.rows.forEach(function (r, i) {
+    const tr = ctx.el('tr', r.dup ? 'is-dup' : '');
+    tr.appendChild(ctx.el('td', null, String(i + 1)));
+    tr.appendChild(ctx.el('td', 'ue-name', r.name));
+    tr.appendChild(ctx.el('td', 'ue-val', r.value === '' ? (r.noEquals ? '(no =)' : '(empty)') : r.value));
+    tr.appendChild(ctx.el('td', 'ue-flag', r.dup ? 'repeated' : ''));
+    t.appendChild(tr);
+  });
+  scroll.appendChild(t);
+  wrap.appendChild(scroll);
+  box.appendChild(wrap);
+}
 })();

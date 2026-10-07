@@ -1,0 +1,42 @@
+{
+  "id": "/audio/audio-to-text/",
+  "name": "Audio to Text — 1234Tools",
+  "short_name": "Audio → Text",
+  "description": "Transcribe a recording to text in your browser with Whisper running on your device: plain text with times, or SRT and VTT subtitles. English and 98 other languages. Nothing is uploaded.",
+  "start_url": "/audio/audio-to-text/?src=pwa",
+  "scope": "/audio/audio-to-text/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "music",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-audio-stt.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-audio-stt-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-audio-stt-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

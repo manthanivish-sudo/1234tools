@@ -2,7 +2,7 @@
   "id": "/image/photo-filters.html",
   "name": "Photo Filters & Adjustments — 1234Tools",
   "short_name": "Photo Filters",
-  "description": "Adjust brightness, contrast, saturation and blur, or apply grayscale, sepia and invert.",
+  "description": "Adjust exposure, highlights, shadows, colour temperature, hue, sharpness and vignette, or apply a preset at the strength you choose, with a before-and-after view.",
   "start_url": "/image/photo-filters/?src=pwa",
   "scope": "/image/photo-filters/",
   "display": "standalone",

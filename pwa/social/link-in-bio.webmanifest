@@ -2,7 +2,7 @@
   "id": "/social/link-in-bio/",
   "name": "Link in Bio Page Maker — 1234Tools",
   "short_name": "Link in Bio Page",
-  "description": "Make a link-in-bio page as one HTML file you own: photo, name, bio, link buttons and icons, in eight themes. It has no scripts, no tracking and makes no outside requests, so it works offline and on any static host. Nothing is uploaded.",
+  "description": "Make a link-in-bio page as one HTML file you own: photo, name, bio, link buttons and icons, in eight themes. The file has no scripts and makes no outside requests, so it works offline and on any static host. Nothing is uploaded.",
   "start_url": "/social/link-in-bio/?src=pwa",
   "scope": "/social/link-in-bio/",
   "display": "standalone",

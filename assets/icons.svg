@@ -1851,4 +1851,102 @@
   <circle cx="12" cy="7" r="1.8"/>
   <path d="M8.5 11.5h7M8.5 14.5h7M8.5 17.5h7" class="thin"/>
 </symbol>
+<symbol id="i-video" viewBox="0 0 24 24">
+  <rect x="2.5" y="5.5" width="13.5" height="13" rx="2.5"/>
+  <path d="M16 10.2l5.5-3.2v10l-5.5-3.2"/>
+  <path d="M7.6 9.6v4.8l3.8-2.4z" class="fill"/>
+</symbol>
+<symbol id="i-video-compress" viewBox="0 0 24 24">
+  <rect x="2.5" y="5.5" width="13.5" height="13" rx="2.5"/>
+  <path d="M16 10.2l5.5-3.2v10l-5.5-3.2"/>
+  <path d="M9.2 7.8v3.4M7.4 9.6l1.8 1.8 1.8-1.8M9.2 16.2v-3.4M7.4 14.4l1.8-1.8 1.8 1.8" class="thin"/>
+</symbol>
+<symbol id="i-video-trim" viewBox="0 0 24 24">
+  <rect x="2.5" y="6" width="19" height="12" rx="2.5"/>
+  <path d="M8 6v12M16 6v12" class="thin"/>
+  <path d="M8 3.5v2.5M16 3.5v2.5M8 18v2.5M16 18v2.5"/>
+</symbol>
+<symbol id="i-video-convert" viewBox="0 0 24 24">
+  <rect x="2.5" y="5.5" width="13.5" height="13" rx="2.5"/>
+  <path d="M16 10.2l5.5-3.2v10l-5.5-3.2"/>
+  <path d="M6 10.5h5.5l-1.6-1.6M10.5 13.5H5l1.6 1.6" class="thin"/>
+</symbol>
+<symbol id="i-video-mute" viewBox="0 0 24 24">
+  <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/>
+  <path d="M15.5 9.5l5 5M20.5 9.5l-5 5"/>
+</symbol>
+<symbol id="i-video-audio" viewBox="0 0 24 24">
+  <rect x="2.5" y="5.5" width="11" height="13" rx="2.5"/>
+  <path d="M18 5v9.5"/>
+  <circle cx="16.2" cy="15.8" r="2.2"/>
+  <path d="M18 5l3.5 1.5"/>
+</symbol>
+<symbol id="i-audio" viewBox="0 0 24 24">
+  <path d="M3 10v4M6.5 7v10M10 4v16M13.5 8v8M17 6v12M20.5 10v4"/>
+</symbol>
+<symbol id="i-audio-convert" viewBox="0 0 24 24">
+  <path d="M3 10v4M6 8v8M9 10v4"/>
+  <path d="M12.5 12h5l-2-2M17.5 12l-2 2" class="thin"/>
+  <path d="M20.5 7v10"/>
+</symbol>
+<symbol id="i-audio-trim" viewBox="0 0 24 24">
+  <path d="M3 11v2M6 9v6M9 6v12M12 9v6M15 7v10M18 10v4M21 11v2" class="thin"/>
+  <path d="M8 3.5v17M16 3.5v17"/>
+</symbol>
+<symbol id="i-audio-join" viewBox="0 0 24 24">
+  <path d="M3 10v4M5.5 8v8M8 10v4"/>
+  <path d="M16 10v4M18.5 7v10M21 10v4"/>
+  <path d="M10 12h4M12 10v4" class="thin"/>
+</symbol>
+<symbol id="i-audio-level" viewBox="0 0 24 24">
+  <path d="M4 20V14M9 20V9M14 20V5M19 20V11"/>
+  <path d="M2.5 8h19" class="thin"/>
+</symbol>
+<symbol id="i-audio-speed" viewBox="0 0 24 24">
+  <path d="M4.5 16a8 8 0 1 1 15 0"/>
+  <path d="M12 15l4-5" />
+  <path d="M3 11v2M21 11v2" class="thin"/>
+</symbol>
+<symbol id="i-audio-silence" viewBox="0 0 24 24">
+  <path d="M3 9v6M6 7v10M9 10v4"/>
+  <path d="M11.5 12h2" class="thin"/>
+  <path d="M16 10v4M19 7v10M21.5 9v6"/>
+</symbol>
+<symbol id="i-audio-mic" viewBox="0 0 24 24">
+  <rect x="9" y="3" width="6" height="11" rx="3"/>
+  <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>
+</symbol>
+<symbol id="i-audio-tts" viewBox="0 0 24 24">
+  <path d="M3 5h9M3 9h7M3 13h5" class="thin"/>
+  <path d="M13 10h2.5l3.5-3v10l-3.5-3H13z"/>
+  <path d="M21 9.5a3.5 3.5 0 0 1 0 5" class="thin"/>
+</symbol>
+<symbol id="i-audio-stt" viewBox="0 0 24 24">
+  <path d="M3 9v6M5.5 7v10M8 10v4"/>
+  <path d="M12 7h9M12 11h9M12 15h6" class="thin"/>
+</symbol>
+<symbol id="i-audio-video" viewBox="0 0 24 24">
+  <rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/>
+  <path d="M7 10.5v3M10 9v6M13 8v8M16 10v4" class="thin"/>
+</symbol>
+<symbol id="i-video-resize" viewBox="0 0 24 24">
+  <rect x="3" y="7" width="12" height="10" rx="2"/>
+  <path d="M18 4h3v3M21 4l-4.5 4.5M18 20h3v-3M21 20l-4.5-4.5" class="thin"/>
+</symbol>
+<symbol id="i-video-frames" viewBox="0 0 24 24">
+  <rect x="2.5" y="5" width="8" height="6" rx="1.5"/>
+  <rect x="13.5" y="5" width="8" height="6" rx="1.5"/>
+  <rect x="2.5" y="13" width="8" height="6" rx="1.5"/>
+  <rect x="13.5" y="13" width="8" height="6" rx="1.5"/>
+</symbol>
+<symbol id="i-video-screen" viewBox="0 0 24 24">
+  <rect x="2.5" y="4" width="19" height="13" rx="2"/>
+  <path d="M8 21h8M12 17v4" class="thin"/>
+  <circle cx="12" cy="10.5" r="2.5" class="fill"/>
+</symbol>
+<symbol id="i-video-cam" viewBox="0 0 24 24">
+  <circle cx="12" cy="10" r="6.5"/>
+  <circle cx="12" cy="10" r="2.5" class="fill"/>
+  <path d="M7.5 21h9M12 16.5V21" class="thin"/>
+</symbol>
 </svg>

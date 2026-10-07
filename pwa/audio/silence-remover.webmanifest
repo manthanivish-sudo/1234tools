@@ -1,0 +1,42 @@
+{
+  "id": "/audio/silence-remover/",
+  "name": "Silence Remover — 1234Tools",
+  "short_name": "Silence Remover",
+  "description": "Take the long pauses out of a recording in your browser: set how quiet and how long a silence is, see what will go on the waveform, keep a little either side so words are not clipped. Nothing is uploaded.",
+  "start_url": "/audio/silence-remover/?src=pwa",
+  "scope": "/audio/silence-remover/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "music",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-audio-silence.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-audio-silence-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-audio-silence-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

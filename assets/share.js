@@ -40,14 +40,14 @@
 
   var SITE_NAME = '1234Tools';
   var FIG_KINDS = { calc: 1, converter: 1, currency: 1 };
-  var TXT_KINDS = { code: 1, qr: 1, live: 1 };
+  var TXT_KINDS = { code: 1, qr: 1, live: 1, gen: 1 };
   /* measured: most calculators settle under 900 px with their main answer and
      the credit; a converter fits 560 once the long "All units" table is left
      out of the frame (app.css, embed mode) */
   var EMBED_HEIGHT = { calc: 900, converter: 560, currency: 640 };
   var TOGGLE_LABEL = {
     calc: 'Include my figures', converter: 'Include my figures', currency: 'Include my figures',
-    code: 'Include my text', qr: 'Include this code’s content', live: 'Include my settings'
+    code: 'Include my text', qr: 'Include this code’s content', live: 'Include my settings', gen: 'Include my settings'
   };
 
   /* ---------- the page's own facts ---------- */

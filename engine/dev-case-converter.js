@@ -227,19 +227,19 @@ window.DEV_TOOLS["case-converter"] = {
 "category": "developer",
 "icon": "Aa",
 "kind": "code",
-"description": "Convert between camelCase, snake_case, kebab-case, PascalCase, CONSTANT_CASE, Title Case and more.",
+"description": "Convert between camelCase, snake_case, kebab-case, PascalCase, CONSTANT_CASE, Title Case, dot.case, path/case, aLtErNaTiNg and more, or see every case at once.",
 "keywords": ["case converter","camelcase","snake case","kebab case","pascal case","title case"],
 "inputLabel": "Text (one item per line)",
 "outputLabel": "Converted",
 "placeholder": "user profile image url",
 "sample": "user profile image url\nHTTP response code\nmax retry attempts",
-"options": [{"key":"target","label":"Convert to","type":"select","default":"camel","options":[{"value":"camel","label":"camelCase"},{"value":"pascal","label":"PascalCase"},{"value":"snake","label":"snake_case"},{"value":"kebab","label":"kebab-case"},{"value":"constant","label":"CONSTANT_CASE"},{"value":"title","label":"Title Case"},{"value":"sentence","label":"Sentence case"},{"value":"lower","label":"lowercase"},{"value":"upper","label":"UPPERCASE"}]}],
+"options": [{"key":"target","label":"Convert to","type":"select","default":"camel","options":[{"value":"camel","label":"camelCase"},{"value":"pascal","label":"PascalCase"},{"value":"snake","label":"snake_case"},{"value":"kebab","label":"kebab-case"},{"value":"constant","label":"CONSTANT_CASE"},{"value":"title","label":"Title Case"},{"value":"sentence","label":"Sentence case"},{"value":"dot","label":"dot.case"},{"value":"path","label":"path/case"},{"value":"alternating","label":"aLtErNaTiNg cAsE"},{"value":"lower","label":"lowercase"},{"value":"upper","label":"UPPERCASE"},{"value":"all","label":"Every case at once"}]}],
 "transform": (text, { target }) => {
       if (!text.trim()) return { output: '', note: 'Enter some text above.' };
       const words = s => s
         .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
         .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
-        .replace(/[_\-.]+/g, ' ')
+        .replace(/[_\-./\\]+/g, ' ')
         .trim().split(/\s+/).filter(Boolean);
       const cap = w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
       const SMALL = new Set(['a','an','the','and','or','but','of','to','in','on','at','for','with','vs']);
@@ -257,13 +257,30 @@ window.DEV_TOOLS["case-converter"] = {
           case 'sentence': return w.map((x, i) => i ? x.toLowerCase() : cap(x)).join(' ');
           case 'lower':    return w.join(' ').toLowerCase();
           case 'upper':    return w.join(' ').toUpperCase();
+          case 'dot':      return w.map(x => x.toLowerCase()).join('.');
+          case 'path':     return w.map(x => x.toLowerCase()).join('/');
+          case 'alternating': {
+            /* letters alternate lower, upper, lower…, counted over the line's
+               letters only, so spaces and digits do not break the rhythm */
+            let k = 0;
+            return [...w.join(' ')].map(c => (c.toLowerCase() !== c.toUpperCase()) ? (k++ % 2 ? c.toUpperCase() : c.toLowerCase()) : c).join('');
+          }
           default:         return line;
         }
       };
+      if (target === 'all') {
+        const ALL = [['camelCase', 'camel'], ['PascalCase', 'pascal'], ['snake_case', 'snake'], ['kebab-case', 'kebab'], ['CONSTANT_CASE', 'constant'],
+          ['Title Case', 'title'], ['Sentence case', 'sentence'], ['dot.case', 'dot'], ['path/case', 'path'], ['aLtErNaTiNg', 'alternating'],
+          ['lowercase', 'lower'], ['UPPERCASE', 'upper']];
+        const items = text.split('\n').filter((l) => l.trim());
+        const blocks = items.map((line) => ALL.map(([name, t]) => { target = t; return name.padEnd(14) + conv(line); }).join('\n'));
+        target = 'all';
+        return { output: blocks.join('\n\n'), stats: [['Lines converted', String(items.length)], ['Cases each', String(ALL.length)]] };
+      }
       const lines = text.split('\n').map(conv);
       return { output: lines.join('\n'), stats: [['Lines converted', String(lines.filter(Boolean).length)]] };
     },
-"tips": ["Acronyms are split sensibly: HTTPResponse becomes http_response in snake_case and HttpResponse in PascalCase, not h_t_t_p_response.","Conventions by language: camelCase for JavaScript and Java, snake_case for Python and SQL, kebab-case for CSS and URLs, PascalCase for types and components.","Title Case here keeps short joining words lowercase unless they start the line, matching most style guides."],
+"tips": ["Acronyms are split sensibly: HTTPResponse becomes http_response in snake_case and HttpResponse in PascalCase, not h_t_t_p_response.","Conventions by language: camelCase for JavaScript and Java, snake_case for Python and SQL, kebab-case for CSS and URLs, PascalCase for types and components.","Title Case here keeps short joining words lowercase unless they start the line, matching most style guides.","dot.case suits configuration keys and path/case suits file and route names; both are all lower case, and both are read back as words, so src/components/NavBar converts cleanly.","Every case at once lists all twelve forms of each line, so you can copy the one a codebase uses without trying them in turn."],
 "faq": [{"q":"Why does converting twice not always return the original?","a":"Case conversion is lossy. Turning \"user_ID\" into camelCase gives \"userId\", and the original capitalisation of ID cannot be recovered from that."}]
 };
 })();

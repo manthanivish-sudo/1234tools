@@ -1,0 +1,42 @@
+{
+  "id": "/audio/text-to-speech/",
+  "name": "Text to Speech — 1234Tools",
+  "short_name": "Text → Speech",
+  "description": "Turn text into natural speech in your browser with 28 English voices, American and British. Listen, then save it as WAV, M4A or Opus. The voice runs on your device; your text is not uploaded.",
+  "start_url": "/audio/text-to-speech/?src=pwa",
+  "scope": "/audio/text-to-speech/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "music",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-audio-tts.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-audio-tts-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-audio-tts-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

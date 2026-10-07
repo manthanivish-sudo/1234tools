@@ -56,6 +56,12 @@ const SECTIONS = {
      maths. They run in the browser like the image tools; build-social.js
      owns everything under /social/. */
   '/social/':      { name: 'Social Media Tools', head: 'Social Media', hub: 'Social Media Tools', noun: 'tool' },
+  /* Video and sound files, cut, shrunk, converted and recorded in the
+     browser with its own WebCodecs codecs: nothing is uploaded and no model
+     is involved. build-video.js owns everything under /video/, build-audio.js
+     everything under /audio/. */
+  '/video/':       { name: 'Video Tools', head: 'Video', hub: 'Video Tools', noun: 'tool' },
+  '/audio/':       { name: 'Audio Tools', head: 'Audio', hub: 'Audio Tools', noun: 'tool' },
   '/india/':       { name: 'India' },
   /* `crumb` is the short form used as a step in a trail; `hub` is what the
      section's own page is called at the end of its trail. */

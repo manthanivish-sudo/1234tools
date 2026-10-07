@@ -145,7 +145,7 @@ module.exports = {
   '/text/number-to-words/': {
     whatTitle: 'How numbers are written in words',
     whatIs: [
-      'English names numbers in groups of three digits, each said as a number under a thousand followed by its scale word, so 4,050,017 is four million, fifty thousand and seventeen. Indian grouping pairs the digits after the first three, putting one lakh at 1,00,000 and one crore at 1,00,00,000.',
+      'English names numbers in groups of three digits, each followed by its scale word, so 4,050,017 is four million, fifty thousand and seventeen. Indian grouping pairs the digits after the first three: one lakh is 1,00,000 and one crore 1,00,00,000.',
       'Cheques add words because words are harder to alter. Section 9(2) of the UK’s Bills of Exchange Act 1882 and section 18 of India’s Negotiable Instruments Act 1881 make the amount in words the one payable if the figures differ.'
     ],
     howItWorks: {
@@ -153,15 +153,16 @@ module.exports = {
       points: [
         'The whole part is divided by a billion, a million and a thousand (by crore, lakh and thousand in rupee style), and each group is spelt from tables of the words up to nineteen and the tens.',
         'Currency styles round the digits as typed to the penny, cent or paisa, half up, carrying into the whole part: 0.285 is twenty-nine pence and 2.999 is three pounds. Plain style reads every decimal digit after “point”.',
-        'Ordinals change only the last word, from a short list of irregular forms and a rule that turns twenty into twentieth.'
+        'Ordinals change only the last word: irregular forms from a short list, and twenty into twentieth by rule.',
+        'American English drops the and inside a number, and the US cheque style writes cents as a fraction: 1234.56 becomes One thousand two hundred thirty-four and 56/100 dollars.'
       ]
     },
     worked: {
-      text: 'Take 1,250,000.50. As pounds and pence it reads “One million two hundred and fifty thousand pounds and fifty pence only”. Typed the Indian way, ₹12,50,000.50 in rupee style becomes “Twelve lakh fifty thousand rupees and fifty paise only”: the same digits grouped differently. Plain style reads the half as “point five zero”, one word for each digit as typed.'
+      text: 'As pounds and pence, 1,250,000.50 reads “One million two hundred and fifty thousand pounds and fifty pence only”. Typed the Indian way, ₹12,50,000.50 in rupee style is “Twelve lakh fifty thousand rupees and fifty paise only”. Plain style reads the half as “point five zero”, a word per digit.'
     },
     uses: [
-      ['Cheques', 'Fill in the words line and check where the “and” goes before you sign.'],
-      ['Contracts and invoices', 'State a fee in words as well as figures, as many purchase orders ask.'],
+      ['Cheques', 'Fill in the words line before you sign.'],
+      ['Contracts and invoices', 'State a fee in words as well as figures.'],
       ['Indian banking forms', 'Write amounts in lakh and crore for demand drafts and agreements.']
     ],
     mistakes: [
@@ -183,6 +184,8 @@ module.exports = {
       /* three decimals round half up and carry; 0.285 is 29 pence; the euro sign is not stripped */
       { input: '2.999', options: { style: 'gbp' }, check: [['output', 'Three pounds only']] },
       { input: '0.285', options: { style: 'gbp' }, check: [['output', 'twenty-nine pence']] },
+      /* American English, US cheque style */
+      { input: '1234.56', options: { style: 'cheque', dialect: 'us' }, check: [['output', 'One thousand two hundred thirty-four and 56/100 dollars']] },
       { input: '€40', options: {}, check: [['output', 'not a number']] },
       /* the FAQ answers */
       { input: '1,50,000', options: { style: 'inr' }, check: [['output', 'One lakh fifty thousand rupees only']] },
@@ -240,39 +243,43 @@ module.exports = {
     term: 'password entropy',
     whatIs: [
       'Password strength is measured as entropy: the bits of randomness an attacker has to search. L characters drawn at random from a pool of N give L × log2(N) bits, and every extra bit doubles the guesses needed.',
-      'That holds only for a random choice. A password built on a pattern, such as a word plus a year, has far less entropy than its length suggests.'
+      'That holds only for a random choice. A pattern, such as a word plus a year, has far less entropy than its length suggests.'
     ],
     howItWorks: {
       text: 'Each character or word is chosen with `crypto.getRandomValues`, the browser’s cryptographic generator.',
       points: [
-        'Rejection sampling keeps it unbiased: a 32-bit draw in the top slice not divisible by the pool size is redrawn.',
+        'Rejection sampling keeps it unbiased: a 32-bit draw in the top slice not divisible by the pool size is redrawn. The cracking time is 2 to the power of the entropy divided by a trillion guesses a second.',
         'The default pool is 80 characters: 25 lower-case letters (no l), 24 capitals (no I or O), 8 digits (no 0 or 1) and 23 symbols.',
-        'Passphrases come from a built-in list of 510 four-letter words joined by hyphens, plus a number from 0 to 99 when digits are on. With capitals on, one more draw picks the capitalised word.',
-        'The cracking time is 2 to the power of the entropy divided by a trillion guesses a second. No character type is forced in, so the entropy figure stays honest.'
+        'With Guarantee on, a password is redrawn until it holds every kind you chose, so each valid one is equally likely; the entropy is the log2 of how many there are.',
+        'Passphrases come from a built-in list of 5,229 words written for this site, joined as you choose, with a number from 0 to 99 and one capitalised word by default.',
+        'Pronounceable passwords alternate 17 consonants and 5 vowels, so each character is worth less.',
+        'Check a password estimates a typed one against common passwords, the word list, sequences and keyboard rows.'
       ]
     },
     worked: {
-      text: 'A six-word passphrase with a number on the end scores 61 bits, from a pool of 510 words, with an offline cracking time of 1,759,629 seconds, about three weeks. Without the number it drops to 54 bits and 17,596 seconds, under the 60 bits the tool warns about. A 16-character password of letters and digits reaches 93 bits from a pool of 57 characters.'
+      text: 'A six-word passphrase with a number and one capital scores 83 bits, with an offline cracking time of 388,650 years. Without the number it drops to 77 bits and 3,887 years, and without the capital as well to 74 bits and 648 years. A 16-character password of letters and digits reaches 93 bits from a pool of 57 characters.'
     },
     uses: [
-      ['New accounts', 'Make a different password for every site and paste it into a password manager.'],
-      ['Wi-Fi keys', 'Generate a long router passphrase; WPA2 accepts 8 to 63 characters.'],
-      ['Shared logins', 'Replace a guessable password on a team mailbox.']
+      ['New accounts', 'Make a different password for each site.'],
+      ['Wi-Fi keys', 'Generate a router passphrase of 8 to 63 characters.'],
+      ['Shared logins', 'Replace a guessable shared password.']
     ],
     mistakes: [
-      'Regenerating until one looks nice. Choosing between outputs by eye favours memorable patterns and lowers the real entropy; take the first.',
-      'Switching symbols off for a fussy site without adding length. A smaller pool gives fewer bits per character, so add characters instead.'
+      'Regenerating until one looks nice. Choosing by eye favours memorable patterns and lowers the real entropy; take the first.',
+      'Switching symbols off for a fussy site without adding length. A smaller pool gives fewer bits per character, so add length.'
     ],
     faq: [
-      { q: 'How many bits of entropy does a strong password need?', a: 'Around 60 bits holds up against online guessing; against an offline attack on a leaked hash, aim for 80 or more. The 20-character default gives 126 bits.' },
-      { q: 'How does a passphrase here compare with diceware?', a: 'Diceware rolls five dice per word to pick from 7,776 words, about 12.9 bits each. This list of 510 gives about 9 bits a word, so you need roughly 1.4 words here per diceware word.' },
+      { q: 'How many bits of entropy does a strong password need?', a: 'Around 60 bits holds up against online guessing; against a leaked hash, aim for 80 or more. The 20-character default gives 126 bits.' },
+      { q: 'How does a passphrase here compare with diceware?', a: 'Diceware rolls five dice per word to pick from 7,776 words, about 12.9 bits each. This list of 5,229 gives about 12.4 bits a word.' },
       { q: 'Do lookalike characters make a password stronger?', a: 'Barely: letters and digits grow from 57 to 62 characters, taking 12 characters from 70 bits to 71 bits.' }
     ],
     runs: [
-      /* six-word passphrase, digits on (other fields default) */
-      { fields: { type: 'passphrase', words: 6 }, check: [['stat:Entropy', '61 bits'], ['stat:Character pool', '510 words'], ['stat:Offline cracking time*', '1,759,629 seconds']] },
+      /* six-word passphrase (other fields default: hyphen, one capital, a number) */
+      { fields: { type: 'passphrase', words: 6 }, check: [['stat:Entropy', '83 bits'], ['stat:Offline cracking time*', '388,650 years']] },
       /* the same without the number */
-      { fields: { type: 'passphrase', words: 6, digits: 'no' }, check: [['stat:Entropy', '54 bits'], ['stat:Offline cracking time*', '17,596 seconds'], ['warn', '60 bits']] },
+      { fields: { type: 'passphrase', words: 6, addnum: 'no' }, check: [['stat:Entropy', '77 bits'], ['stat:Offline cracking time*', '3,887 years']] },
+      /* and without the capital */
+      { fields: { type: 'passphrase', words: 6, addnum: 'no', caps: 'none' }, check: [['stat:Entropy', '74 bits'], ['stat:Offline cracking time*', '648 years']] },
       /* 16 characters, letters and digits, no symbols, lookalikes excluded */
       { fields: { type: 'password', length: 16, symbols: 'no' }, check: [['stat:Entropy', '93 bits'], ['stat:Character pool', '57 characters']] },
       /* the default: 20 characters, every type */
@@ -295,20 +302,21 @@ module.exports = {
         'Words are runs between spaces, so £5 is one. A sentence ends at . ! ? or … plus a space or the end.',
         'Syllables are estimated by rule: three letters or fewer is one; otherwise a final -e or -es after a consonant other than l is dropped and each group of one or two vowels, y included, counts once.',
         'Reading Ease is 206.835 − 1.015 × words per sentence − 84.6 × syllables per word; Flesch-Kincaid is 0.39 × words per sentence + 11.8 × syllables per word − 15.59.',
-        'Gunning Fog and SMOG count any word of three or more estimated syllables as complex, with none of Gunning’s exceptions; the consensus is the mean of four grades.'
+        'Gunning Fog and SMOG count any word of three or more estimated syllables as complex, with none of Gunning’s exceptions; the consensus is the mean of four grades.',
+        'Your text is shown again with sentences over the limit you set (20 words) shaded amber, and red past one and a half times it; long words are underlined and the five hardest sentences listed.'
       ]
     },
     worked: {
-      text: 'A 74-word letter home about a school trip, in 6 sentences, scores 85.7 for Reading Ease and grade 4.4, with 5 complex words. Add “Mr. Patel and Mrs. Okoye will travel with them.” and the counter finds 9 sentences where a reader sees seven, since the full stops after Mr and Mrs each end one. Reading Ease rises to 87.4 and the grade falls to 3.4: two abbreviations made the letter look easier. The rule also scores packed as two syllables and Science as one.'
+      text: 'A 74-word letter home about a school trip, in 6 sentences, scores 85.7 for Reading Ease and grade 4.4, with 5 complex words. Add “Mr. Patel and Mrs. Okoye will travel with them.” and the counter finds 9 sentences where a reader sees seven, since the full stops after Mr and Mrs each end one. Reading Ease rises to 87.4 and the grade falls to 3.4: two abbreviations made the letter look easier.'
     },
     uses: [
-      ['Plain-English letters', 'Check a school or council letter before it reaches people reading in a hurry.'],
-      ['Leaflets and forms', 'Score patient or customer material against the reading level your organisation sets.'],
-      ['Choosing class texts', 'Pick passages whose grade level suits a year group.']
+      ['Plain-English letters', 'Check a school or council letter before it goes out.'],
+      ['Leaflets and forms', 'Score patient or customer material against your target level.'],
+      ['Choosing class texts', 'Pick passages for a year group.']
     ],
     mistakes: [
-      'Scoring bullet points. Without full stops a list counts as one sentence and every score looks dire; score only the prose.',
-      'Leaving headings in. A heading has no full stop, so it joins the sentence after it and makes that one look much longer.'
+      'Scoring bullet points. Without full stops a list is one sentence and every score looks dire; score only prose.',
+      'Leaving headings in. A heading has no full stop, so it joins the next sentence and makes it look longer.'
     ],
     faq: [
       { q: 'Can a readability score be negative?', a: 'Yes. Long sentences of long words push Reading Ease below zero, and very simple text can push a grade below zero, shown as below grade 1.' },
@@ -326,20 +334,21 @@ module.exports = {
   '/text/text-diff/': {
     term: 'a text diff',
     whatIs: [
-      'A diff lists the smallest set of removals and additions that turns one version of a text into the other. What it leaves out is the longest common subsequence: the lines or words both versions share, in the same order.',
+      'A diff lists the smallest set of removals and additions that turns one version of a text into the other. What it leaves out is the longest common subsequence: the lines, words or letters both versions share, in the same order.',
       'It has no idea of a move. A paragraph cut from the top and pasted at the bottom shows as one removal and one addition.'
     ],
     howItWorks: {
-      text: 'The input is cut at the first line holding only ---, and each half is split into lines, or into words in word mode.',
+      text: 'Each text goes in its own box, and each is split into lines, words or characters.',
       points: [
-        'A table of common-subsequence lengths, one cell per pair of units, is filled from the ends backwards, then walked from the start to mark each unit unchanged, removed (−) or added (+).',
-        'Ties go to the removal, so a replaced block shows all its − lines before its + lines.',
-        'The whitespace and case options change only the comparison, although trimmed lines are also shown trimmed.',
-        'Similarity is twice the unchanged units divided by the units in both texts, as a percentage.'
+        'Myers’ algorithm, the one behind Git, finds the shortest list of removals and additions.',
+        'Ties go to the removal, so a replaced block shows all its − lines before its + lines. Inside a changed line, the changed words are marked.',
+        'Ignore all whitespace, trim and ignore case change only the comparison; both texts are shown as you wrote them.',
+        'Similarity is twice the unchanged units divided by the units in both texts, as a percentage.',
+        'The Text view is a unified diff, saved as .diff; Export HTML saves the coloured view.'
       ]
     },
     worked: {
-      text: 'Two versions of a site rule: “Deliveries arrive between 7am and 9am on weekdays. Drivers must sign in at the gatehouse and wear a high-visibility vest.” and the same with 6am, “and Saturdays” and “a hard hat”. Line mode can only report a replaced line: 1 added, 1 removed, similarity 0.0%. Word mode finds 16 unchanged words, 6 added and 4 removed, similarity 76.2%, and pins the 7am to 6am change. It also lists weekdays. as removed and weekdays as added: the full stop moved, and punctuation belongs to the word.'
+      text: 'Two versions of a delivery rule differ in 7am and 6am, an added “and Saturdays”, and “a hard hat” for “a high-visibility vest”. Line mode can only report a replaced line: 1 added, 1 removed, similarity 0.0%. Word mode finds 16 unchanged words, 6 added and 4 removed, similarity 76.2%, and pins the changes. It also lists weekdays. as removed and weekdays as added: the full stop moved, and punctuation belongs to the word.'
     },
     uses: [
       ['Supplier terms', 'Compare this year’s terms with last year’s before renewing.'],
@@ -347,20 +356,20 @@ module.exports = {
       ['Essay drafts', 'See in word mode which sentences an editor rewrote.']
     ],
     mistakes: [
-      'Pasting a text with --- lines first. YAML front matter and Markdown rules use them; put that version second, and a note confirms the later lines were compared as part of the second text.',
+      'Putting --- lines in a single-box link. Each text has its own box now, so --- is just text; the old one-box form cuts at the first, and a note says the other --- lines were compared as part of the second text.',
       'Pasting from a word processor on one side only. Curly quotes and non-breaking spaces differ from plain ones, so identical-looking lines are flagged.'
     ],
     faq: [
-      { q: 'How do I compare two Word documents?', a: 'Copy the text of each into the box with --- on a line of its own between them. Formatting, comments and tracked changes are not compared, only the words.' },
-      { q: 'Is there a size limit?', a: 'Yes. The units in one text times those in the other may not exceed 4,000,000, so 2,000 lines against 2,000 is the most.' },
-      { q: 'Does the diff ignore blank lines?', a: 'No. An extra empty line between paragraphs shows as an addition; only blank lines at the very start or end of each text are dropped.' }
+      { q: 'How do I compare two Word documents?', a: 'Copy the text of each into its box. Formatting, comments and tracked changes are not compared, only the words.' },
+      { q: 'Is there a size limit?', a: 'Not by line count. A pair that needs more than 3,000 edits to line up is shown as one replaced block between the matching start and end, with a note saying so.' },
+      { q: 'Does the diff ignore blank lines?', a: 'No. An extra empty line between paragraphs shows as an addition; only newlines at the very end of each text are dropped.' }
     ],
     runs: [
       /* the delivery rule, line mode (defaults: trim, case-sensitive) */
       { input: 'Deliveries arrive between 7am and 9am on weekdays. Drivers must sign in at the gatehouse and wear a high-visibility vest.\n---\nDeliveries arrive between 6am and 9am on weekdays and Saturdays. Drivers must sign in at the gatehouse and wear a hard hat.', options: { mode: 'line' }, check: [['stat:Result', '1 added, 1 removed'], ['stat:Similarity', '0.0%']] },
       /* the same pair, word mode */
       { input: 'Deliveries arrive between 7am and 9am on weekdays. Drivers must sign in at the gatehouse and wear a high-visibility vest.\n---\nDeliveries arrive between 6am and 9am on weekdays and Saturdays. Drivers must sign in at the gatehouse and wear a hard hat.', options: { mode: 'word' }, check: [['stat:Unchanged words', '16'], ['stat:Added words', '6'], ['stat:Removed words', '4'], ['stat:Similarity', '76.2%']] },
-      /* the mistake: front matter in the second text */
+      /* the single-box form: front matter in the second text */
       { input: 'title: Notes\nbody\n---\n---\ntitle: Notes\n---\nbody', check: [['note', 'compared as part of the second text']] }
     ]
   },
@@ -368,34 +377,36 @@ module.exports = {
   '/text/word-counter/': {
     term: 'a word count',
     whatIs: [
-      'Every counter has to decide what a word is. This one counts runs of characters between whitespace, so e-mail is one word, “e - mail” is three, and £5 or a lone emoji counts too. Word processors decide differently, so two tools seldom agree exactly.',
+      'Every counter has to decide what a word is. This one counts runs of characters between whitespace, so e-mail is one word, “e - mail” is three, and £5 or a lone emoji counts too; Chinese and Japanese, written without spaces, are split into words. Word processors decide differently.',
       'Character limits have a catch of their own: a text message holds 160 GSM characters, but one emoji switches it to Unicode and the limit drops to 70.'
     ],
     howItWorks: {
-      text: 'Every figure is recalculated by the page’s script as you type.',
+      text: 'Every figure is recalculated as you type.',
       points: [
         'Characters is the JavaScript string length in UTF-16 code units, so an emoji counts as 2.',
-        'A sentence ends at . ! ? or … followed by a space or the end of the text; a blank line separates paragraphs.',
+        'A sentence ends at . ! ? or … followed by a space or the end; a blank line separates paragraphs.',
         'For keyword density, words are lower-cased and cut down to letters and digits in any script, with their accents and vowel signs, plus straight apostrophes and hyphens; 48 common words are left out unless the filter is off.',
-        'Unique words counts that same list, so it follows the filter. Average word length divides characters without spaces by words.'
+        'Unique words counts that same list, so it follows the filter. Average word length divides characters without spaces by words.',
+        'Phrases of two or three words are counted the same way, not starting or ending with a common word while the filter is on.',
+        'Chinese and Japanese runs are split by the browser’s word segmenter. The bars count X links as 23 and emoji as 2.'
       ]
     },
     worked: {
-      text: 'A 17-word shop notice, “Grand reopening of Café Lumière on Saturday Free coffee for the first 50 customers. See you there!”, measures 98 characters. Put a party-popper emoji after Saturday and the counts become 18 words and 101 characters: the emoji is a word of its own and adds two characters, plus the space before it. The density list keeps the accents, listing café and lumière as written, only lower-cased. Unique words reads 11 with common words filtered and 17 with the filter off.'
+      text: 'A 17-word shop notice, “Grand reopening of Café Lumière on Saturday Free coffee for the first 50 customers. See you there!”, measures 98 characters. With a party-popper emoji after Saturday it is 18 words and 101 characters: the emoji is a word of its own and adds two characters and a space. The density list lists café and lumière lower-cased. Unique words reads 11 with common words filtered and 17 with the filter off.'
     },
     uses: [
-      ['University essays', 'Keep coursework inside its limit; your department may exclude references.'],
-      ['Search snippets and adverts', 'Check a meta description or ad headline against its character limit.'],
-      ['Translation quotes', 'Count a source document’s words, since translators usually price per word.']
+      ['University essays', 'Keep coursework to its goal.'],
+      ['Search snippets and adverts', 'Check a meta description.'],
+      ['Translation quotes', 'Count a source’s words; translators price per word.']
     ],
     mistakes: [
       'Mixing straight and curly apostrophes. The density list keeps a straight one and drops a curly one, so don\'t and don’t are listed apart, as don\'t and dont.',
-      'Reading Characters as bytes. Databases often limit bytes, and an accented letter takes 2 bytes in UTF-8 while counting as one character here.'
+      'Reading Characters as bytes. Databases often limit bytes, and an accented letter is 2 bytes in UTF-8 but one character here.'
     ],
     faq: [
       { q: 'Do numbers count as words?', a: 'Yes. Anything between spaces is a word here, so “Doors open at 7 for £5 in 2026.” is 8 words.' },
       { q: 'Is a hyphenated word one word or two?', a: 'One, as long as there are no spaces round the hyphen: well-known counts once. A dash with a space either side counts as a word of its own.' },
-      { q: 'How many pages is 1,000 words?', a: 'About two pages single-spaced or four double-spaced in 12-point type, though the font and margins change it.' }
+      { q: 'How many pages is 1,000 words?', a: 'About two pages single-spaced or four double-spaced in 12-point type.' }
     ],
     runs: [
       /* the notice without the emoji, default options (top 10, common words ignored) */

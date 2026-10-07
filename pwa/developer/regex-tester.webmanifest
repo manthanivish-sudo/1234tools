@@ -2,7 +2,7 @@
   "id": "/developer/regex-tester.html",
   "name": "Regex Tester — 1234Tools",
   "short_name": "Regex Tester",
-  "description": "Test regular expressions against sample text with live match highlighting and capture groups.",
+  "description": "Test regular expressions against sample text: every JavaScript flag, matches coloured in place, a groups table, a plain-English explanation and saved tests.",
   "start_url": "/developer/regex-tester/?src=pwa",
   "scope": "/developer/regex-tester/",
   "display": "standalone",

@@ -2,7 +2,7 @@
   "id": "/developer/uuid-generator.html",
   "name": "UUID Generator — 1234Tools",
   "short_name": "UUID Generator",
-  "description": "Generate cryptographically random version 4 UUIDs, singly or in bulk.",
+  "description": "Generate UUID v4, v7 and v1, ULID and nanoid with a secure random source, in bulk, and check any UUID or ULID to see its version and when it was made.",
   "start_url": "/developer/uuid-generator/?src=pwa",
   "scope": "/developer/uuid-generator/",
   "display": "standalone",

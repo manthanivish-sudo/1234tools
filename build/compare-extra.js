@@ -114,35 +114,35 @@ const COMPARISONS = [
     name: 'Free image compressor',
     crumb: 'Free image compressor',
     title: 'Free image compressor: smaller photos without uploading them, and where specialist compressors do better',
-    lede: 'Shrink JPEG, PNG and WebP files in your browser, several at once, with the size before and after for each and a ZIP of the lot — no upload, no account, no watermark. It uses the encoder your browser already has, which is very good with photographs and plain with PNGs; the gap is set out below before anything else.',
+    lede: 'Shrink JPEG, PNG, WebP and AVIF files in your browser, several at once, with a before-and-after slider, a “make it under 100 KB” mode and a ZIP of the lot — no upload, no account, no watermark. It runs the open MozJPEG, libwebp, libavif and oxipng encoders inside the page; the gap is set out below before anything else.',
     honest: [
-      'An image compressor does one thing: encode a picture again at a lower quality, a smaller size or a more efficient format until the file is small enough for whatever turned it away. The one here does it inside your browser. The file is decoded, redrawn onto a canvas and encoded again on your own device, so a photo of your passport, your house or your child never leaves it. There is no upload queue because there is no upload.',
-      'We compare against the category — compressors that take an upload, and specialist image software — rather than any named product, because we have not tested them and will not describe them from memory. The honest summary is that a browser’s own encoder is very good at turning a large photograph into a small WebP or JPEG, and not the best tool there is for squeezing the last few per cent out of a PNG.'
+      'An image compressor does one thing: encode a picture again at a lower quality, a smaller size or a more efficient format until the file is small enough for whatever turned it away. The one here does it inside your browser. The file is decoded and encoded again on your own device, by encoders that are part of the page, so a photo of your passport, your house or your child never leaves it. There is no upload queue because there is no upload.',
+      'We compare against the category — compressors that take an upload, and specialist image software — rather than any named product, because we have not tested them and will not describe them from memory. The honest summary is that the encoders here are the well-known open ones and the controls cover what most jobs need, and that a few things — reading iPhone HEIC outside Safari, running without a person, and a specialist’s tuned palette reduction for very small PNGs — are still better elsewhere.'
     ],
     gap: {
       heading: 'What a specialist compressor does that we do not',
-      intro: 'Some of these matter only to somebody chasing kilobytes on a website. The first two matter to almost everyone who has tried to make a PNG smaller or a photo fit a form.',
+      intro: 'Most people who try to make a photo fit a form or a web page will not meet these. Somebody doing it all day, or with a camera that saves HEIC, may.',
       points: [
-        { h: 'It shrinks a PNG properly.', p: 'Specialist tools reduce a PNG’s colour palette or recompress it harder than a browser does. Ours encodes PNG losslessly with the browser’s own encoder, so a PNG kept as a PNG may barely shrink, and the tool warns you when the result is larger than the original. Converting a screenshot to WebP is usually the better move.' },
-        { h: 'It aims at a target size.', p: 'Some compressors let you type a limit and hand back a file that fits it, which is what a job or exam portal asks for. Ours does not: you set a quality and a maximum width, read the size, and adjust.' },
-        { h: 'It reads more formats.', p: 'HEIC photos from an iPhone are not read here, because browsers do not ship a decoder for them, and AVIF is not offered as an output. The tool is built for JPEG, PNG and WebP, in and out.' },
-        { h: 'It keeps the metadata you want kept.', p: 'Because the picture is redrawn, nothing from the original file’s header survives — not the camera details and GPS location, which is usually what you want gone, and not the copyright and author fields either, which sometimes is not.' },
-        { h: 'It runs without a person.', p: 'An API, a plugin for a website’s media library, a folder that compresses whatever lands in it. Ours is a page somebody opens.' }
+        { h: 'It reads HEIC wherever you are.', p: 'HEIC photos from an iPhone open here only in Safari, which has the decoder. Chrome, Edge and Firefox do not, and the free decoders for HEIC are under licences this site does not ship, so each HEIC file is named, left alone, and you are pointed to the camera setting that saves JPEG instead.' },
+        { h: 'It runs without a person.', p: 'An API, a plugin for a website’s media library, a folder that compresses whatever lands in it. Ours is a page somebody opens.' },
+        { h: 'It tunes the palette of a small PNG.', p: 'The PNG option here reduces a picture to 256, 128, 64, 32, 16 or 8 colours with dithering and then packs it with oxipng. The colour reduction is the site’s own, so at the lowest counts a specialist tool built around a tuned quantiser may look cleaner on a gradient.' },
+        { h: 'It writes more formats.', p: 'JPEG, PNG, WebP and AVIF go out from here. JPEG XL does not, and some products offer it.' },
+        { h: 'It is quick with AVIF.', p: 'AVIF makes the smallest files here and is the slowest to write; the encoder is a 3.3 MB download the first time, and a large photograph takes noticeably longer than the same one as WebP.' }
       ]
     },
     table: {
       us: 'Here, free, in your browser',
       them: 'A specialist or upload-based compressor',
       rows: [
-        { edge: 'them', need: 'Making a PNG much smaller while it stays a PNG', us: 'Lossless re-encoding only: often a small saving, and a warning if the file grows.', them: 'Palette reduction and heavier recompression, where the product offers them.' },
-        { edge: 'them', need: 'Compressing to a target size', us: 'No. Set the quality and the width, read the result, adjust.', them: 'Offered by some. Check the one you use.' },
-        { edge: 'them', need: 'HEIC in, AVIF out', us: 'Neither.', them: 'Varies by product.' },
-        { edge: 'them', need: 'Keeping copyright and camera metadata', us: 'Not kept. Redrawing removes all of it.', them: 'Often a setting.' },
+        { edge: 'them', need: 'Reading HEIC from an iPhone', us: 'In Safari only. Elsewhere the file is named and skipped, with the camera setting that avoids it.', them: 'Offered by some. Check the one you use.' },
         { edge: 'them', need: 'Automation: an API, a plugin, a watched folder', us: 'None. A page a person opens.', them: 'Available in some products.' },
-        { edge: 'level', need: 'How good a compressed photograph looks', us: 'The browser’s own JPEG and WebP encoders, with a live preview and the size before and after.', them: 'Some use encoders tuned to save a little more at the same quality. Resizing usually matters far more than the encoder: a 4,000-pixel photo shown 800 wide wastes most of its bytes.' },
-        { edge: 'us', need: 'Where your photos go', us: 'Nowhere. Decoded, redrawn and encoded on your own device, which is why it works with the network off.', them: 'An upload-based compressor receives the file. Read its terms before sending anything personal.' },
-        { edge: 'us', need: 'GPS location in a phone photo', us: 'Gone from the compressed copy, because nothing from the original header survives the redraw.', them: 'Depends on the product and its settings.' },
-        { edge: 'us', need: 'A batch of photos', us: 'Drop them all in, see every result and its size, and download one at a time or all of them as a ZIP.', them: 'Also offered. Whether a free tier limits how many is a question for the product.' },
+        { edge: 'them', need: 'The smallest PNG at very few colours', us: 'The site’s own colour reduction down to 8 colours, then oxipng.', them: 'Some use a tuned quantiser built for it.' },
+        { edge: 'them', need: 'JPEG XL output', us: 'Not offered.', them: 'Offered by some.' },
+        { edge: 'level', need: 'How good a compressed photograph looks', us: 'MozJPEG, libwebp and libavif, with quality, effort and speed settings and a draggable before-and-after view of both sizes.', them: 'Many products use the same open encoders. Resizing usually matters far more than the encoder: a 4,000-pixel photo shown 800 wide wastes most of its bytes.' },
+        { edge: 'us', need: 'Where your photos go', us: 'Nowhere. Decoded and encoded on your own device, which is why it works with the network off once the page is open.', them: 'An upload-based compressor receives the file. Read its terms before sending anything personal.' },
+        { edge: 'us', need: 'Getting under a size limit', us: 'Choose 20 KB, 50 KB, 100 KB, 200 KB, 500 KB, 1 MB, 2 MB or your own figure; the page tries qualities, then smaller sizes, and says which it used.', them: 'Offered by some. Check the one you use.' },
+        { edge: 'us', need: 'Which metadata stays', us: 'Your choice: nothing, the colour profile only, EXIF without GPS, or everything. The default keeps the colour profile only.', them: 'Often a setting; the default varies.' },
+        { edge: 'us', need: 'A batch of photos', us: 'Drop files or a whole folder, give any file its own settings, and download a ZIP or save into a folder you pick.', them: 'Also offered. Whether a free tier limits how many is a question for the product.' },
         { edge: 'us', need: 'Cost and limits', us: 'Free, no account, no watermark, and no limit beyond your own device’s memory.', them: 'Free tiers and subscriptions. The vendor has the figures; we will not guess at them.' }
       ]
     },
@@ -150,11 +150,10 @@ const COMPARISONS = [
       heading: 'When you should use something else',
       intro: 'Often there is nothing to buy — but there is sometimes a better tool for the job, and you should use it.',
       points: [
-        'You prepare PNG graphics for a website and every kilobyte counts. A dedicated PNG optimiser will beat a browser’s lossless encoder.',
-        'A portal demands an exact size limit and you are doing it every day. A compressor with a target-size setting saves the trial and error.',
-        'Your photos arrive as HEIC and you would rather not change the camera setting that makes them.',
+        'Your photos arrive as HEIC and you use Chrome, Edge or Firefox, and would rather not change the camera setting that makes them.',
         'It has to happen without a person: a site’s uploads, a product feed, a build step. That is an API or a plugin, not a page.',
-        'You must keep copyright and author metadata in the files you deliver.'
+        'You prepare PNG graphics for a website at 16 colours or fewer and every kilobyte counts. A dedicated PNG optimiser may do better.',
+        'You need JPEG XL.'
       ]
     },
     groups: [
@@ -164,12 +163,12 @@ const COMPARISONS = [
       { name: 'Put it in a document', blurb: 'Photos into a PDF, and PDF pages back into pictures.', tools: ['/image/image-to-pdf/', '/pdf/pdf-to-images/'] }
     ],
     faq: [
-      { q: 'Are my photos uploaded?', a: 'No. Each file is read by your browser, drawn to a canvas and encoded again on your device. Nothing is transmitted, which is why the compressor works with the network off.' },
-      { q: 'How do I get a photo under a portal’s size limit?', a: 'Choose JPEG or WebP, start at quality 80, and set a maximum width — the biggest saving is nearly always the dimensions, not the quality. Read the size under the result; if it is still too big, lower the width before you lower the quality. There is no target-size box, so it can take two tries.' },
-      { q: 'Why did my PNG get bigger?', a: 'PNG is lossless, so the quality slider does nothing to it, and a browser’s PNG encoder is not tuned for size. Saving a screenshot as JPEG usually makes it worse too, because JPEG handles flat colour badly. Try WebP, or keep the original.' },
-      { q: 'Which format should I choose?', a: 'WebP for the web: it is typically a quarter to a third smaller than JPEG at the same visual quality, and every current browser shows it. JPEG where a form or an older program refuses WebP. PNG for screenshots, logos and diagrams that need to stay sharp and lossless.' },
-      { q: 'Can it compress HEIC photos from an iPhone?', a: 'Not here: browsers do not ship a HEIC decoder. On an iPhone you can set the camera format to “Most Compatible” so that it saves JPEG in the first place.' },
-      { q: 'Is there a limit on how many images?', a: 'No artificial one. Each image is decoded in memory, so a few dozen photographs is comfortable on a phone and a few hundred is better done on a desktop.' }
+      { q: 'Are my photos uploaded?', a: 'No. Each file is read by your browser and encoded again on your device, by encoders that run inside the page. Nothing is transmitted, which is why the compressor keeps working with the network off once the page has loaded.' },
+      { q: 'How do I get a photo under a portal’s size limit?', a: 'Choose the limit under “Make it under”, from 20 KB to 2 MB or your own figure. The page tries qualities first, then smaller sizes, and shows the quality and the size it used. A KB there is 1,000 bytes, so the file fits whichever kilobyte the form counts.' },
+      { q: 'Why did my PNG get bigger?', a: 'It should not if you leave the format on “Keep original format”: a PNG is reduced to 256 colours and repacked, and the page says when a result is larger than the original. Choosing All colours keeps every pixel and may barely shrink a photograph. Saving a screenshot as JPEG usually makes it worse, because JPEG handles flat colour badly.' },
+      { q: 'Which format should I choose?', a: 'WebP for the web: it is typically a quarter to a third smaller than JPEG at the same visual quality, and every current browser shows it. AVIF is smaller still but slower to write. JPEG where a form or an older program refuses both. PNG for screenshots, logos and diagrams that need to stay sharp.' },
+      { q: 'Can it compress HEIC photos from an iPhone?', a: 'Only in Safari, which can open them. Chrome, Edge and Firefox cannot, and the page then names each HEIC file. On an iPhone you can set the camera format to “Most Compatible” so that it saves JPEG in the first place.' },
+      { q: 'Is there a limit on how many images?', a: 'No artificial one. Each image is decoded in memory, so a few dozen photographs is comfortable on a phone and a few hundred is better done on a desktop. A long batch shows its progress and can be cancelled.' }
     ],
     collections: ['online-sellers', 'photographers', 'job-seekers'],
     sources: null
@@ -182,36 +181,37 @@ const COMPARISONS = [
     name: 'Free JSON formatter',
     crumb: 'Free JSON formatter',
     title: 'Free JSON formatter: when a browser tab is the right tool, and when your editor is',
-    lede: 'Paste JSON and get it indented, minified or with its keys sorted — or get the exact line and column of the first fault — in your browser, with nothing sent anywhere. For anything bigger than a paste, your code editor and the command line do more, and this page says which jobs those are first.',
+    lede: 'Paste or open JSON and get it indented, minified, sorted, shown as a tree, queried with JSONPath or converted to YAML, CSV and XML — or get the exact line and column of the first fault — in your browser, with nothing sent anywhere. For anything bigger than a paste, your code editor and the command line do more, and this page says which jobs those are first.',
     honest: [
-      'A JSON formatter is what you reach for when an API hands back one unbroken line, or a config file will not load and the error says “unexpected token” and nothing else. The one here parses with the browser’s built-in JSON engine as you type, prints the result with the indent you choose, and on a failure tells you the line, the column and the text around it. Nothing you paste leaves the page.',
+      'A JSON formatter is what you reach for when an API hands back one unbroken line, or a config file will not load and the error says “unexpected token” and nothing else. The one here parses with the browser’s built-in JSON engine as you type, prints the result with the indent you choose, and on a failure tells you the line, the column and the text around it, marking the line in the box. It can also repair the common faults, run a JSONPath query and show a tree. Nothing you paste or open leaves the page.',
       'We compare it against the tools a developer already has rather than against other websites: a code editor with a formatter built in or added, and command-line JSON processors. For a lot of jobs those are the better choice, and this page is for deciding which one to open.'
     ],
     gap: {
       heading: 'What your editor or a command-line processor does that we do not',
-      intro: 'The comparison is not with a paid product. It is with the tools already on a developer’s machine, which is why the list is long.',
+      intro: 'The comparison is not with a paid product. It is with the tools already on a developer’s machine, which is why the list is long. Some of it is narrower than it was: this page says what the tool does today.',
       points: [
-        { h: 'It works on the file where it lives.', p: 'Format on save, in the repository, with the diff right there. Here you paste in and copy out; there is no file picker on this tool.' },
+        { h: 'It works on the file where it lives.', p: 'Format on save, in the repository, with the diff right there. Here you open a file or drop it on the box, or paste, and download the result; nothing is written back to a folder and there is no diff against your last commit.' },
         { h: 'It checks the shape, not just the syntax.', p: 'Making sure a document has the right fields of the right types is schema validation. This tool checks that JSON is well-formed — that it parses — and nothing more.' },
-        { h: 'It queries and reshapes.', p: 'Pulling one field out of every object in an array, filtering, restructuring: that is what command-line processors are for. Ours formats, minifies and sorts keys. It does not query.' },
-        { h: 'It handles a big document.', p: 'Folding a tree to see its shape, jumping between matching brackets, searching inside it. Our output is a plain block of text with a copy button and a download button.' },
-        { h: 'It leaves your text alone.', p: 'This tool follows the specification, so comments and trailing commas — common in config files — are errors. And because it goes through the browser’s JSON parser, integers larger than 9,007,199,254,740,991 lose precision and a key that appears twice keeps only its last value. An editor working on the text keeps both visible.' }
+        { h: 'It reshapes, not just selects.', p: 'A JSONPath query (RFC 9535, including filters such as $.items[?@.price > 10].sku) keeps what matches, and the result can be written as YAML, CSV or XML. Pipelines, joins, grouping and building a new structure out of old ones are what command-line processors are for, and this tool does not attempt them.' },
+        { h: 'It handles a big document comfortably.', p: 'There is a collapsible tree with arrow-key movement, and a large input is formatted in a background worker you can cancel. But the tree has no search, there is no bracket matching, a file over 2 MB stays out of the input box, and the output pane shows the first 1 MB of a very large result (copy and download take all of it).' },
+        { h: 'It leaves your text alone.', p: 'The Repair box fixes comments, trailing commas, single quotes, bare keys and Python’s True, False and None, and lists every change, but it is still a program rewriting your text; an editor lets you decide line by line. Without it, comments and trailing commas are errors, as the specification says. Either way the browser’s own parser does the reading, so integers larger than 9,007,199,254,740,991 lose precision and a key that appears twice keeps only its last value. An editor working on the text keeps both visible.' }
       ]
     },
     table: {
       us: 'Here, free, in your browser',
       them: 'Your code editor or a command-line processor',
       rows: [
-        { edge: 'them', need: 'Formatting the file where it lives', us: 'Paste in, copy out. No file picker on this tool.', them: 'Format on save, in the repository.' },
+        { edge: 'them', need: 'Formatting the file where it lives', us: 'Open or drop a file, or paste, and download the result. Nothing is saved back to a folder.', them: 'Format on save, in the repository.' },
         { edge: 'them', need: 'Checking against a schema', us: 'Well-formedness only.', them: 'Supported by editors and by validators you add.' },
-        { edge: 'them', need: 'Querying, filtering and reshaping', us: 'Not attempted.', them: 'What command-line processors exist for.' },
-        { edge: 'them', need: 'Big documents: folding, bracket matching, search', us: 'A plain text block, scrollable, with copy and download.', them: 'Built in.' },
-        { edge: 'them', need: 'Comments, trailing commas, 64-bit integers, repeated keys', us: 'Strict JSON through the browser’s parser: comments and trailing commas are errors, very large integers lose precision, and a repeated key keeps its last value.', them: 'Work on the text, so nothing is silently changed.' },
-        { edge: 'level', need: 'Finding why it will not parse', us: 'The line, the column, the text around it and the reason, from the tool’s own checker.', them: 'Editors underline it as you type, which is at least as good.' },
+        { edge: 'them', need: 'Reshaping: grouping, joining, building new structures', us: 'Not attempted. A JSONPath query selects and filters, and the result converts to YAML, CSV or XML.', them: 'What command-line processors exist for.' },
+        { edge: 'them', need: 'Big documents: search, bracket matching, no size limits', us: 'A collapsible tree and a worker for large inputs, but no search or bracket matching; the output pane shows the first 1 MB.', them: 'Built in.' },
+        { edge: 'them', need: '64-bit integers and repeated keys', us: 'The browser’s parser is used, so very large integers lose precision and a repeated key keeps its last value.', them: 'Work on the text, so nothing is silently changed.' },
+        { edge: 'level', need: 'Comments and trailing commas in a config', us: 'Errors by default, as in the specification; tick Repair to remove them, with every change listed.', them: 'Editors that know the dialect accept them in place.' },
+        { edge: 'level', need: 'Finding why it will not parse', us: 'The line, the column, a marked line in the input and the reason, from the tool’s own checker.', them: 'Editors underline it as you type, which is at least as good.' },
         { edge: 'level', need: 'A token or a config with internal hostnames in it', us: 'Parsed in this page and sent nowhere; open the network panel and watch it stay empty.', them: 'Local too. The risk is pasting into a web page that does its work on a server, so check before you do.' },
         { edge: 'us', need: 'A machine you cannot install anything on', us: 'A browser tab: a locked-down work laptop, a client’s machine, a phone.', them: 'Needs the editor, and its extensions, installed and allowed.' },
-        { edge: 'us', need: 'Starting from nothing', us: 'Open the page and paste. Indent with two spaces, four or a tab, minify, or sort the keys at every depth.', them: 'Install, configure, find the extension.' },
-        { edge: 'us', need: 'The jobs next to it', us: 'CSV to JSON and back, XML, JWT decoding, Base64 and URL encoding, hashes, a regex tester and a text diff — each one click away, none of them sending anything.', them: 'An extension per job, to find and install.' }
+        { edge: 'us', need: 'Starting from nothing', us: 'Open the page and paste. Indent with two spaces, four or a tab, minify, sort the keys at every depth, or look at it as a tree.', them: 'Install, configure, find the extension.' },
+        { edge: 'us', need: 'The jobs next to it', us: 'CSV to JSON and back, XML with XPath, JWT decoding, Base64 and URL encoding, hashes, a regex tester and a text diff — each one click away, none of them sending anything.', them: 'An extension per job, to find and install.' }
       ]
     },
     buy: {
@@ -220,8 +220,8 @@ const COMPARISONS = [
       points: [
         'The JSON is a file in a repository. Format it where it lives, with the formatter your team has agreed on, so the diff is only the change.',
         'You need to know it is the right shape, not just valid. That is a schema and a validator, in the editor or in your pipeline.',
-        'You are pulling fields out or restructuring it. Use a command-line processor; a formatter is the wrong tool.',
-        'It is large, or it carries comments, trailing commas or 64-bit IDs that must survive. Work on the text, not through a JavaScript parser.',
+        'You are grouping, joining or restructuring it. Use a command-line processor; a formatter is the wrong tool.',
+        'It is large, or it carries 64-bit IDs or repeated keys that must survive. Work on the text, not through a JavaScript parser.',
         'Where this page earns its place: a machine with nothing installed, a quick look at an API response, a token to decode, or a colleague who needs a link rather than an extension.'
       ]
     },
@@ -232,9 +232,9 @@ const COMPARISONS = [
     ],
     faq: [
       { q: 'Is my JSON sent anywhere?', a: 'No. It is parsed and formatted in your browser by its built-in JSON engine, and nothing leaves the page. One thing worth knowing: if you use the share bar and tick “Include my text”, an input of up to 300 characters is put into the link you are sharing. That box is off on every page load.' },
-      { q: 'Why does it reject my config file?', a: 'Most likely a comment or a trailing comma. The JSON specification allows neither, even though JavaScript and many config formats do. Remove them, or format the file in an editor that understands the dialect it is written in.' },
+      { q: 'Why does it reject my config file?', a: 'Most likely a comment or a trailing comma. The JSON specification allows neither, even though JavaScript and many config formats do. Tick Repair to remove them and see each change listed, or format the file in an editor that understands the dialect it is written in.' },
       { q: 'Why did a long number change?', a: 'The browser’s parser holds every number as a 64-bit floating-point value, so integers larger than 9,007,199,254,740,991 cannot all be represented exactly and are rounded. If your IDs are that long, keep them as strings in the JSON, or use a tool that works on the text.' },
-      { q: 'Can it validate against a JSON Schema?', a: 'No. It checks that the JSON is well-formed — that it parses — and reports the line and column where it does not. Checking fields and types against a schema needs a schema validator.' },
+      { q: 'Can it validate against a JSON Schema?', a: 'No. It checks that the JSON is well-formed — that it parses — and reports the line and column where it does not. Checking fields and types against a schema needs a schema validator. A JSONPath query can show what is in a field, but it does not check it.' },
       { q: 'What do the figures under the output mean?', a: 'Whether it parsed, the type at the top level, how many keys and array items there are in total, how deeply it nests, and the size of the input and of the output — so you can see what minifying saved.' }
     ],
     collections: ['developers'],

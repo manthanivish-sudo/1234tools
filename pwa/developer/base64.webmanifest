@@ -2,7 +2,7 @@
   "id": "/developer/base64.html",
   "name": "Base64 Encoder & Decoder — 1234Tools",
   "short_name": "Base64 Encoder",
-  "description": "Encode text to Base64 or decode it back. Full Unicode support, plus URL-safe output.",
+  "description": "Encode text or any file to Base64 and decode it back, with data URIs, URL-safe output, 64 and 76 character lines, an image preview and a hex view for binary.",
   "start_url": "/developer/base64/?src=pwa",
   "scope": "/developer/base64/",
   "display": "standalone",

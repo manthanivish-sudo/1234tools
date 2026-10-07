@@ -67,6 +67,8 @@ const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 && proce
 const PORT = Number(arg('--port', 8690));
 const ROOT = path.resolve(arg('--root', path.join(__dirname, '..', '..')));
 const OUT = path.resolve(arg('--out', path.join(os.tmpdir(), '1234tools-image-fixes')));
+const ONLY = arg('--only', '') ? arg('--only', '').split(',').map(Number) : null;
+const want = (n) => !ONLY || ONLY.indexOf(n) >= 0;
 const BASE = 'http://127.0.0.1:' + PORT;
 const CHROME = process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const SAMPLES = path.join(ROOT, 'build', 'promo', 'samples');
@@ -156,6 +158,89 @@ function withExif(jpeg, orientation) {
   return Buffer.concat([jpeg.slice(0, 2), head, body, jpeg.slice(2)]);
 }
 
+/** A JPEG with an EXIF APP1 (big-endian) holding the ASCII fields given (Make, Artist, Copyright) and, with gps, a GPS IFD. */
+function withExifFields(jpeg, f) {
+  const TAG = { Make: 0x010f, Artist: 0x013b, Copyright: 0x8298 };
+  const ents = Object.keys(TAG).filter((k) => f[k]).map((k) => ({ tag: TAG[k], text: Buffer.from(f[k] + '\0', 'latin1') }));
+  if (f.gps) ents.push({ tag: 0x8825, gps: true });
+  ents.sort((a, b) => a.tag - b.tag);
+  const ifdLen = 2 + ents.length * 12 + 4;
+  let data = 8 + ifdLen;
+  const head = Buffer.alloc(8 + ifdLen), parts = [];
+  head.write('MM', 0, 'latin1'); head.writeUInt16BE(42, 2); head.writeUInt32BE(8, 4); head.writeUInt16BE(ents.length, 8);
+  ents.forEach((e, k) => {
+    const at = 10 + k * 12;
+    head.writeUInt16BE(e.tag, at);
+    if (e.gps) { head.writeUInt16BE(4, at + 2); head.writeUInt32BE(1, at + 4); e.at = at + 8; return; }
+    head.writeUInt16BE(2, at + 2); head.writeUInt32BE(e.text.length, at + 4); head.writeUInt32BE(data, at + 8);
+    parts.push(e.text); data += e.text.length;
+  });
+  const g = ents.find((e) => e.gps);
+  if (g) {
+    head.writeUInt32BE(data, g.at);
+    const gi = Buffer.alloc(2 + 2 * 12 + 4 + 24);
+    gi.writeUInt16BE(2, 0);
+    gi.writeUInt16BE(1, 2); gi.writeUInt16BE(2, 4); gi.writeUInt32BE(2, 6); gi.write('S\0', 10, 'latin1');
+    gi.writeUInt16BE(2, 14); gi.writeUInt16BE(5, 16); gi.writeUInt32BE(3, 18); gi.writeUInt32BE(data + 30, 22);
+    [[44, 1], [6, 1], [3060, 100]].forEach(([n, d], i) => { gi.writeUInt32BE(n, 30 + i * 8); gi.writeUInt32BE(d, 34 + i * 8); });
+    parts.push(gi);
+  }
+  const body = Buffer.concat([Buffer.from('Exif\0\0', 'latin1'), head].concat(parts));
+  const app1 = Buffer.from([0xff, 0xe1, (body.length + 2) >> 8, (body.length + 2) & 255]);
+  return Buffer.concat([jpeg.slice(0, 2), app1, body, jpeg.slice(2)]);
+}
+/** The IFD0 fields of a JPEG's EXIF, parsed here: Make, Artist, Copyright, Orientation, and gps when a GPS pointer is there. Null without EXIF. */
+function tiffTags(jpeg) {
+  const seg = (jpegSegs(jpeg) || []).find((s) => s.m === 0xe1 && s.body.slice(0, 6).toString('latin1') === 'Exif\0\0');
+  if (!seg) return null;
+  const t = seg.body.slice(6);
+  const le = t[0] === 0x49;
+  const u16 = (o) => (le ? t.readUInt16LE(o) : t.readUInt16BE(o)), u32 = (o) => (le ? t.readUInt32LE(o) : t.readUInt32BE(o));
+  const NAMES = { 0x010f: 'Make', 0x013b: 'Artist', 0x8298: 'Copyright', 0x0112: 'Orientation', 0x0110: 'Model' };
+  const out = {};
+  const ifd = u32(4), n = u16(ifd);
+  for (let k = 0; k < n; k++) {
+    const e = ifd + 2 + k * 12, tag = u16(e), type = u16(e + 2), cnt = u32(e + 4);
+    if (tag === 0x8825) { out.gps = true; continue; }
+    if (!NAMES[tag]) { out['tag' + tag.toString(16)] = true; continue; }
+    if (type === 2) { const at = cnt > 4 ? u32(e + 8) : e + 8; out[NAMES[tag]] = t.slice(at, at + cnt).toString('latin1').replace(/\0+$/, ''); }
+    else if (type === 3) out[NAMES[tag]] = u16(e + 8);
+  }
+  return out;
+}
+
+/** The RGB of the w×h image XObject in a PDF, from its FlateDecode stream with PNG predictors (Node's zlib), or null. */
+function pdfImageRGB(pdf, w, h) {
+  const zlib = require('zlib');
+  const txt = pdf.toString('latin1');
+  const re = new RegExp('/Width ' + w + '\\b[\\s\\S]{0,300}?/Height ' + h + '\\b|/Height ' + h + '\\b[\\s\\S]{0,300}?/Width ' + w + '\\b');
+  const at = txt.search(re);
+  if (at < 0) return null;
+  const objAt = txt.lastIndexOf(' obj', at);
+  const st = txt.indexOf('stream', at);
+  const dict = txt.slice(objAt, st);
+  if (!/FlateDecode/.test(dict)) return null;
+  const len = Number((/\/Length (\d+)/.exec(dict) || [])[1]);
+  let from = st + 6;
+  if (txt[from] === '\r') from++;
+  if (txt[from] === '\n') from++;
+  const raw = zlib.inflateSync(pdf.slice(from, from + len));
+  const bpr = w * 3, out = Buffer.alloc(bpr * h);
+  for (let y = 0; y < h; y++) {
+    const ft = raw[y * (bpr + 1)], row = raw.slice(y * (bpr + 1) + 1, (y + 1) * (bpr + 1));
+    for (let i = 0; i < bpr; i++) {
+      const a = i >= 3 ? out[y * bpr + i - 3] : 0, b = y ? out[(y - 1) * bpr + i] : 0, c = y && i >= 3 ? out[(y - 1) * bpr + i - 3] : 0;
+      let v = row[i];
+      if (ft === 1) v += a;
+      else if (ft === 2) v += b;
+      else if (ft === 3) v += (a + b) >> 1;
+      else if (ft === 4) { const q = a + b - c, pa = Math.abs(q - a), pb = Math.abs(q - b), pc = Math.abs(q - c); v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c; }
+      out[y * bpr + i] = v & 255;
+    }
+  }
+  return out;
+}
+
 /* The site's own Colour Converter engine, run here as the reference. */
 function colourConverter() {
   const w = {};
@@ -188,6 +273,8 @@ async function open(browser, url, init) {
       if (a.download) window.__downloads.push(fetch(a.href).then((r) => r.blob()).then(async (b) => ({ name: a.download, type: b.type, bytes: Array.from(new Uint8Array(await b.arrayBuffer())) })));
     };
     try { localStorage.setItem('1234tools-consent', 'declined'); } catch (e) { /* none */ }
+    /* a first visit: no image tool's remembered settings (1234tools-img-<tool>-v1) */
+    try { Object.keys(localStorage).filter((k) => /^1234tools-img-/.test(k)).forEach((k) => localStorage.removeItem(k)); } catch (e) { /* none */ }
   });
   if (init) await p.evaluateOnNewDocument(init);
   await p.goto(BASE + url, { waitUntil: 'load' });
@@ -213,7 +300,8 @@ async function act(p, fn, timeout) {
     if (m && m.classList.contains('is-error')) return true;
     return now.length && now.every((s) => old.indexOf(s) < 0);
   }, { timeout: timeout || 30000, polling: 100 }, before);
-  /* a batch appears card by card: wait until the set has stopped changing */
+  /* a batch appears card by card: wait until the run is over (aria-busy, since wave 1) and the set has stopped changing */
+  await p.waitForFunction(() => !document.querySelector('.tool-io[aria-busy]'), { timeout: timeout || 30000, polling: 100 });
   let last = '';
   for (let k = 0; k < 60; k++) {
     await sleep(350);
@@ -249,7 +337,7 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
   const t0 = Date.now();
   try {
     /* ============ 1 background remover ============ */
-    {
+    if (want(1)) {
       const engines = fs.readdirSync(path.join(ROOT, 'engine')).filter((f) => /^(img-|imagecore|render-image)/.test(f) && f.endsWith('.js'));
       /* a third-party host by name, or code that loads anything from an absolute http(s) URL */
       const hits = engines.filter((f) => /jsdelivr|imgly|img\.ly|staticimgly|unpkg|(import\s*\(|fetch\s*\(|\.src\s*=|loadScript\w*\s*\()\s*['"`]https?:/i.test(fs.readFileSync(path.join(ROOT, 'engine', f), 'utf8')));
@@ -295,7 +383,7 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
     }
 
     /* ============ 2 SVG optimiser ============ */
-    {
+    if (want(2)) {
       const SVG = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<!-- exported -->',
@@ -372,7 +460,7 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
     }
 
     /* ============ 3 EXIF remover ============ */
-    {
+    if (want(3)) {
       const tagged = withExif(fs.readFileSync(path.join(SAMPLES, 'landscape.jpg')), 1);
       const file = path.join(OUT, 'tagged.jpg');
       fs.writeFileSync(file, tagged);
@@ -391,6 +479,24 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
       check(jpg.indexOf('Exif') < 0 && jpg.indexOf('DemoCam') < 0, '3  no "Exif" header or camera make anywhere in the result');
       check(stat(rows, 'Metadata in result') === 'No EXIF, GPS or camera data; standard JFIF header and sRGB colour profile kept',
         '3  the page reports what the JPEG really holds', stat(rows, 'Metadata in result'));
+      /* since wave 1 the default is Lossless: the picture's own bytes, so the scan is the original's, byte for byte */
+      check(jpegScan(jpg).equals(jpegScan(tagged)) && jpg.length < tagged.length, '3  Lossless (the default): the result\'s scan is the original\'s byte for byte, and the file is smaller', jpg.length + ' vs ' + tagged.length);
+      /* keep copyright and author: a JPEG whose EXIF has Artist and Copyright beside the camera and GPS */
+      {
+        const rights = withExifFields(fs.readFileSync(path.join(SAMPLES, 'landscape.jpg')), { Make: 'DemoCam', Artist: 'A. Photographer', Copyright: '(c) 2026 A. Photographer', gps: true });
+        const rf = path.join(OUT, 'rights.jpg'); fs.writeFileSync(rf, rights);
+        await setCtl(p, 'keep', 'copyright');
+        await upload(p, [rf]);
+        const [out] = await resultBytes(p);
+        const tags = tiffTags(out);
+        const r2 = await stats(p);
+        check(tags && tags.Artist === 'A. Photographer' && tags.Copyright === '(c) 2026 A. Photographer' && !tags.Make && !tags.gps && jpegScan(out).equals(jpegScan(rights)),
+          '3  Keep "Copyright and author only": the result\'s own EXIF (parsed here) holds Artist and Copyright and nothing else, no GPS, same scan', JSON.stringify(tags));
+        check(/^EXIF with only Artist and Copyright, kept as you chose; no GPS or camera data/.test(stat(r2, 'Metadata in result') || ''), '3  …and the page says exactly that', stat(r2, 'Metadata in result'));
+        await setCtl(p, 'keep', 'orientation');
+        await upload(p, [file]);
+      }
+      await change(p, 'method', 'redraw');
       await change(p, 'format', 'image/png');
       rows = await stats(p);
       [jpg] = await resultBytes(p);
@@ -406,7 +512,7 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
     }
 
     /* ============ 4 colour palette ============ */
-    {
+    if (want(4)) {
       const cc = colourConverter();
       const p = await open(browser, '/image/color-palette-extractor/');
       await setCtl(p, 'count', 6);
@@ -437,7 +543,7 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
     }
 
     /* ============ 5 passport photo ============ */
-    {
+    if (want(5)) {
       const p = await open(browser, '/image/passport-photo/');
       await setCtl(p, 'preset', 0);                       // India 51×51 mm
       await upload(p, [path.join(SAMPLES, 'portrait.jpg')]);
@@ -484,7 +590,7 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
     }
 
     /* ============ 6 image to PDF ============ */
-    {
+    if (want(6)) {
       const doc = fs.readFileSync(path.join(SAMPLES, 'document.jpg'));
       const tagged = withExif(fs.readFileSync(path.join(SAMPLES, 'street.jpg')), 1);
       const turned = withExif(fs.readFileSync(path.join(SAMPLES, 'food.jpg')), 6);
@@ -531,8 +637,23 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
       const m = await msg(p);
       check(!r.pdf.includes(jpegScan(turned)) && /1 image re-encoded as JPEG at quality 88/.test(stat(r.rows, 'Embedding') || '') && /orientation/.test(m.text),
         '6  a JPEG turned by its orientation tag is re-encoded upright, and the page says why', stat(r.rows, 'Embedding') + ' / ' + m.text);
-      r = await makePdf([path.join(OUT, 'pdf-plain.png')]);
-      check(/1 image re-encoded as JPEG at quality 88/.test(stat(r.rows, 'Embedding') || ''), '6  a PNG is encoded as JPEG at the slider\'s quality', stat(r.rows, 'Embedding'));
+      /* since wave 1 a PNG goes in losslessly (FlateDecode): the stream, inflated and un-filtered here with
+         Node's zlib, is the PNG's pixels exactly as the browser decodes the PNG itself */
+      const gradB64 = await p.evaluate(() => { const c = document.createElement('canvas'); c.width = 300; c.height = 200; const x = c.getContext('2d'); const d = x.createImageData(300, 200); for (let i = 0; i < 300 * 200; i++) { d.data[i * 4] = i % 300 & 255; d.data[i * 4 + 1] = (i / 300 | 0) & 255; d.data[i * 4 + 2] = (i * 7) & 255; d.data[i * 4 + 3] = 255; } x.putImageData(d, 0, 0); return c.toDataURL('image/png').split(',')[1]; });
+      fs.writeFileSync(path.join(OUT, 'pdf-grad.png'), Buffer.from(gradB64, 'base64'));
+      r = await makePdf([path.join(OUT, 'pdf-grad.png')]);
+      {
+        const ref = await p.evaluate(async (b64) => { const bm = await createImageBitmap(await (await fetch('data:image/png;base64,' + b64)).blob()); const c = document.createElement('canvas'); c.width = bm.width; c.height = bm.height; const x = c.getContext('2d'); x.drawImage(bm, 0, 0); return Array.from(x.getImageData(0, 0, bm.width, bm.height).data); }, gradB64);
+        const got = pdfImageRGB(r.pdf, 300, 200);
+        let diff = got ? 0 : -1;
+        if (got) for (let i = 0, j = 0; i < ref.length; i += 4, j += 3) if (ref[i] !== got[j] || ref[i + 1] !== got[j + 1] || ref[i + 2] !== got[j + 2]) diff++;
+        check(/1 image kept lossless \(FlateDecode\)/.test(stat(r.rows, 'Embedding') || '') && diff === 0,
+          '6  a PNG goes in lossless: its FlateDecode stream, inflated here, is every pixel of the PNG exactly', stat(r.rows, 'Embedding') + ', differing pixels ' + diff);
+      }
+      r = await makePdf([path.join(OUT, 'pdf-plain.png')], { png: 'jpeg' });
+      check(/1 image re-encoded as JPEG at quality 88/.test(stat(r.rows, 'Embedding') || ''), '6  "As JPEG" encodes a PNG as JPEG at the slider\'s quality', stat(r.rows, 'Embedding'));
+      await setCtl(p, 'png', 'lossless');
+
       r = await makePdf([path.join(SAMPLES, 'document.jpg')], { jpeg: 'reencode', quality: 60 });
       check(!r.pdf.includes(jpegScan(doc)) && /re-encoded as JPEG at quality 60/.test(stat(r.rows, 'Embedding') || ''), '6  "Re-encode" re-encodes a JPEG at the chosen quality', stat(r.rows, 'Embedding'));
       check(!p.__errors.length, '6  no page errors', p.__errors.join(' | '));
@@ -540,7 +661,7 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
     }
 
     /* ============ 7 format choice on five tools ============ */
-    for (const t of ['image-rotate-flip', 'meme-generator', 'photo-filters', 'image-border', 'blur-redact']) {
+    for (const t of (want(7) ? ['image-rotate-flip', 'meme-generator', 'photo-filters', 'image-border', 'blur-redact'] : [])) {
       const p = await open(browser, '/image/' + t + '/');
       const fmts = await p.$$eval('#ic-format option', (l) => l.map((o) => o.value));
       check(fmts.join() === 'image/png,image/jpeg,image/webp' && !!(await p.$('#ic-quality')), '7  ' + t + ': Save as PNG / JPEG / WebP and a quality slider', fmts.join());
@@ -550,7 +671,8 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
       let [b] = await resultBytes(p);
       let m = await msg(p);
       check(isPng(b), '7  ' + t + ': PNG by default');
-      if (t !== 'blur-redact') check(/choose JPEG or WebP under “Save as”/.test(m.text), '7  ' + t + ': the "larger" warning points at the real Save as control', m.text);
+      /* (blur & redact and, since wave 1, the meme editor make a new picture and do not compare sizes with the original) */
+      if (t !== 'blur-redact' && t !== 'meme-generator') check(/choose JPEG or WebP under “Save as”/.test(m.text), '7  ' + t + ': the "larger" warning points at the real Save as control', m.text);
       await change(p, 'format', 'image/jpeg');
       const [j92] = await resultBytes(p);
       await change(p, 'quality', 50);
@@ -570,7 +692,7 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
     }
 
     /* ============ 8 bulk resizer ============ */
-    {
+    if (want(8)) {
       const p = await open(browser, '/image/bulk-image-resizer/');
       const en = await p.$eval('#ic-enlarge', (e) => e.value);
       check(en === 'no', '8  "Allow enlarging" exists and is off by default', en);
@@ -588,6 +710,7 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
       outs = await resultBytes(p);
       d = await Promise.all(outs.map((b) => pixels(p, b, [[0, 0]])));
       m = await msg(p);
+      /* asked for, so not silent: no warning (the shell names enlarging only when nobody asked for it) */
       check(d.map((x) => x.w + '×' + x.h).join() === '2400×1800,2400×1601' && !m.text, '8  "Allow enlarging: Yes" enlarges them', d.map((x) => x.w + '×' + x.h).join() + ' ' + m.text);
       await change(p, 'value', 800);
       outs = await resultBytes(p);
@@ -598,7 +721,7 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
     }
 
     /* 9  cropper: a locked ratio holds when the drag runs past an edge */
-    {
+    if (want(9)) {
       /* `let`: the helpers below act on whichever page p is, the mouse page and then the touch page */
       let p = await open(browser, '/image/image-cropper/');
       await p.setViewport({ width: 1700, height: 2100 });
@@ -631,6 +754,16 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
         return { w: bm.width, h: bm.height, tl: at(0, 0), br: at(bm.width - 1, bm.height - 1) };
       });
       const doDrag = async (W, H, d, touch) => {
+        /* since wave 1 a drag that starts inside the box moves it and one on a handle resizes it; to test
+           drawing, the box is first parked as a tiny one near the top-right corner with the X/Y/Width/Height
+           boxes, away from every start point used here */
+        await p.evaluate((W, H) => {
+          const set = (k, v) => { const i = document.getElementById('crop-' + k); i.value = String(v); i.dispatchEvent(new Event('change')); };
+          set('w', 2); set('h', 2); set('x', Math.round(W * 0.88)); set('y', Math.round(H * 0.05));
+        }, W, H);
+        /* …and its own render has landed, so a slow earlier render cannot pass for the drag's */
+        await p.waitForFunction(() => { const i = document.querySelector('.tool-io .image-stage img.image-preview'); return i && i.complete && i.naturalWidth > 0 && i.naturalWidth <= 3; }, { timeout: 20000, polling: 50 });
+        await sleep(100);
         await p.$eval('.select-canvas', (e) => window.scrollTo({ top: e.getBoundingClientRect().top + window.scrollY - 150, behavior: 'instant' }));
         await sleep(60);
         const r = await p.$eval('.select-canvas', (e) => { const b = e.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height }; });
@@ -720,15 +853,22 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
     }
 
     /* ============ 10 names from what was produced; failures named; previews and listeners let go ============ */
-    {
+    if (want(10)) {
       const street = path.join(SAMPLES, 'street.jpg'), food = path.join(SAMPLES, 'food.jpg');
       /* Safari has no WebP encoder: asked for image/webp, its toBlob writes a PNG. This stand-in does the same. */
       const SAFARI = () => {
         const orig = HTMLCanvasElement.prototype.toBlob;
         HTMLCanvasElement.prototype.toBlob = function (cb, type, q) { return orig.call(this, cb, type === 'image/webp' ? 'image/png' : type, q); };
       };
+      /* …and with WebAssembly switched off, so the page has only the browser's own encoder (since wave 1 the
+         compressor and resizers encode with MozJPEG, libwebp and oxipng in a worker, which write WebP everywhere) */
+      const SAFARI_NO_WASM = () => {
+        const orig = HTMLCanvasElement.prototype.toBlob;
+        HTMLCanvasElement.prototype.toBlob = function (cb, type, q) { return orig.call(this, cb, type === 'image/webp' ? 'image/png' : type, q); };
+        try { delete window.WebAssembly; } catch (e) { window.WebAssembly = undefined; }
+      };
       /* a browser whose toBlob gives null above a pixel count */
-      const NULL_ABOVE = (limit) => '(() => { const orig = HTMLCanvasElement.prototype.toBlob; HTMLCanvasElement.prototype.toBlob = function (cb, type, q) { if (this.width * this.height > ' + limit + ') { setTimeout(() => cb(null), 0); return; } return orig.call(this, cb, type, q); }; })();';
+      const NULL_ABOVE = (limit) => '(() => { try { delete window.WebAssembly; } catch (e) { window.WebAssembly = undefined; } const orig = HTMLCanvasElement.prototype.toBlob; HTMLCanvasElement.prototype.toBlob = function (cb, type, q) { if (this.width * this.height > ' + limit + ') { setTimeout(() => cb(null), 0); return; } return orig.call(this, cb, type, q); }; })();';
       /* a phone: a canvas over 16,777,216 pixels gets no buffer, so it reads back empty and encodes to null */
       const PHONE = () => {
         const LIMIT = 16777216;
@@ -761,8 +901,9 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
       const engineSrc = fs.readFileSync(path.join(ROOT, 'engine', 'render-image.js'), 'utf8');
       check(!/function encode\s*\(/.test(engineSrc) && !/extFor\(fmt\)/.test(engineSrc), '10  render-image.js: the unused encode() is gone, and no file name takes its extension from the requested format');
 
-      /* 10a  a browser that writes PNG when asked for WebP */
-      let p = await open(browser, '/image/image-compressor/', SAFARI);
+      /* 10a  a browser that writes PNG when asked for WebP, without WebAssembly */
+      let p = await open(browser, '/image/image-compressor/', SAFARI_NO_WASM);
+      await setCtl(p, 'format', 'image/webp');
       await upload(p, [street, food]);
       let outs = await resultBytes(p);
       let m = await msg(p);
@@ -772,10 +913,22 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
         '10  …saved as street-image-compressor.png and food-image-compressor.png, not .webp', dl.map((d) => d.name).join());
       check(m.text.split(SWAP).length === 2 && /is-warn/.test(m.cls), '10  …and the message says, once: "' + SWAP + '"', m.text);
       check(!/or WebP/.test(m.text), '10  …and the advice for a larger result no longer offers WebP in that browser', m.text);
+      check(/WebAssembly encoders are not available in this browser, so its own encoder was used/.test(m.text), '10  …and the page says the WebAssembly encoders were not available', m.text);
       fs.writeFileSync(smallPng, Buffer.from(await p.evaluate(() => { const c = document.createElement('canvas'); c.width = 300; c.height = 200; const x = c.getContext('2d'); x.fillStyle = '#2a9d8f'; x.fillRect(0, 0, 300, 200); return c.toDataURL('image/png').split(',')[1]; }), 'base64'));
+      errs.push(...p.__errors); await p.close();
+      /* the same browser WITH WebAssembly (wave 1): libwebp writes real WebP, so the swap never happens */
+      p = await open(browser, '/image/image-compressor/', SAFARI);
+      await setCtl(p, 'format', 'image/webp');
+      await upload(p, [street, food]);
+      outs = await resultBytes(p);
+      dl = await clickAll(p, '.tool-io .image-stage .image-card button');
+      m = await msg(p);
+      check(outs.length === 2 && outs.every(isWebp) && dl.length === 2 && dl.map((d) => d.name).join() === 'street-image-compressor.webp,food-image-compressor.webp' && m.text.indexOf('cannot write') < 0,
+        '10  a browser whose canvas cannot write WebP, with WebAssembly: WebP bytes from libwebp, named .webp, no swap message', dl.map((d) => d.name).join() + ' | ' + m.text);
       errs.push(...p.__errors); await p.close();
       /* where WebP can be written, it still is */
       p = await open(browser, '/image/image-compressor/');
+      await setCtl(p, 'format', 'image/webp');
       await upload(p, [street]);
       outs = await resultBytes(p);
       dl = await clickAll(p, '.tool-io .image-stage .image-card button');
@@ -784,7 +937,7 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
         '10  in a browser that writes WebP: street-image-compressor.webp, WebP bytes, no swap message', dl.map((d) => d.name).join() + ' | ' + m.text);
       errs.push(...p.__errors); await p.close();
       /* the bulk resizer: every card and every name in the ZIP */
-      p = await open(browser, '/image/bulk-image-resizer/', SAFARI);
+      p = await open(browser, '/image/bulk-image-resizer/', SAFARI_NO_WASM);
       await setCtl(p, 'value', 800);
       await upload(p, [street, food]);
       outs = await resultBytes(p);
@@ -798,13 +951,22 @@ const near = (a, b, tol) => a.every((v, i) => i > 2 || Math.abs(v - b[i]) <= tol
       check(m.text.split(SWAP).length === 2, '10  …and the message says so once', m.text);
       errs.push(...p.__errors); await p.close();
       /* the cropper, WebP chosen */
-      p = await open(browser, '/image/image-cropper/', SAFARI);
+      p = await open(browser, '/image/image-cropper/', SAFARI_NO_WASM);
       await setCtl(p, 'format', 'image/webp');
       await upload(p, [street]);
       dl = await clickAll(p, '.tool-io .image-actions .btn-primary');
       m = await msg(p);
       check(dl.length === 1 && dl[0].png && dl[0].name === 'street-image-cropper.png' && m.text.indexOf(SWAP) >= 0,
         '10  cropper, WebP chosen, PNG written: street-image-cropper.png, PNG bytes, and the message says so', dl.map((d) => d.name).join() + ' | ' + m.text);
+      errs.push(...p.__errors); await p.close();
+      /* …and with WebAssembly the cropper's WebP comes from libwebp, since the canvas cannot write it */
+      p = await open(browser, '/image/image-cropper/', SAFARI);
+      await setCtl(p, 'format', 'image/webp');
+      await upload(p, [street]);
+      dl = await clickAll(p, '.tool-io .image-actions .btn-primary');
+      m = await msg(p);
+      check(dl.length === 1 && dl[0].webp && dl[0].name === 'street-image-cropper.webp' && m.text.indexOf(SWAP) < 0,
+        '10  cropper, WebP chosen in that browser with WebAssembly: street-image-cropper.webp, WebP bytes, no swap', dl.map((d) => d.name).join() + ' | ' + m.text);
       errs.push(...p.__errors); await p.close();
 
       /* 10b  files that cannot be read are named, and the rest go on */

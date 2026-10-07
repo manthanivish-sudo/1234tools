@@ -227,38 +227,86 @@ window.DEV_TOOLS["lorem-ipsum"] = {
 "category": "developer",
 "icon": "📄",
 "kind": "generate",
-"description": "Generate placeholder text by paragraphs, sentences or words — classical Latin or plain English.",
+"filename": (f) => (f.wrap === 'plain' ? 'lorem-ipsum.txt' : 'lorem-ipsum.html'),
+"highlight": (f) => (f.wrap === 'plain' ? null : 'html'),
+"description": "Generate placeholder text by paragraphs, sentences, words, list items or exact bytes, in classic Latin or plain English, as text, HTML or Markdown.",
 "keywords": ["lorem ipsum","placeholder text","dummy text","filler text","sample text"],
 "inputLabel": null,
 "outputLabel": "Placeholder text",
 "regenerate": true,
-"fields": [{"key":"unit","label":"Generate","type":"select","default":"paragraphs","options":[{"value":"paragraphs","label":"Paragraphs"},{"value":"sentences","label":"Sentences"},{"value":"words","label":"Words"}]},{"key":"count","label":"How many","type":"number","default":3,"min":1,"max":100},{"key":"flavour","label":"Language","type":"select","default":"latin","options":[{"value":"latin","label":"Latin (classic)"},{"value":"english","label":"Plain English"}]},{"key":"wrap","label":"Wrap in","type":"select","default":"plain","options":[{"value":"plain","label":"Plain text"},{"value":"p","label":"<p> tags"},{"value":"li","label":"<li> tags"}]}],
+"fields": [{"key":"unit","label":"Generate","type":"select","default":"paragraphs","options":[{"value":"paragraphs","label":"Paragraphs"},{"value":"sentences","label":"Sentences"},{"value":"words","label":"Words"},{"value":"items","label":"List items"},{"value":"bytes","label":"Bytes (exact length)"}]},{"key":"count","label":"How many","type":"number","default":3,"min":1,"max":100000},{"key":"flavour","label":"Language","type":"select","default":"latin","options":[{"value":"latin","label":"Latin (classic)"},{"value":"english","label":"Plain English"}]},{"key":"wrap","label":"Format","type":"select","default":"plain","options":[{"value":"plain","label":"Plain text"},{"value":"p","label":"HTML: <p> tags"},{"value":"h2","label":"HTML: headings and paragraphs"},{"value":"li","label":"HTML: bulleted list <ul>"},{"value":"ol","label":"HTML: numbered list <ol>"},{"value":"md","label":"Markdown: headings, paragraphs, lists"}]},{"key":"classic","label":"Start with “Lorem ipsum dolor sit amet…” (Latin)","type":"check","default":"yes"}],
 "generate": (f) => {
       const LAT = 'lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua enim ad minim veniam quis nostrud exercitation ullamco laboris nisi aliquip ex ea commodo consequat duis aute irure in reprehenderit voluptate velit esse cillum eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt culpa qui officia deserunt mollit anim id est laborum'.split(' ');
       /* the source sentences repeat the, to, parts, that and fail; the Set keeps one of each, so the list holds 54 distinct words, each as likely as the next */
       const ENG = [...new Set('the system handles every request without delay because each service runs close to where data already lives teams deploy small changes often and measure what happens next reliability comes from simple parts that fail loudly rather than clever parts that fail quietly documentation is written for the person who arrives on a friday afternoon with an incident to resolve'.split(' '))];
-      const W = f.flavour === 'english' ? ENG : LAT;
+      /* the classic opening, word for word as typesetters have used it since the 1500s */
+      const OPENING = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.';
+      const latin = f.flavour !== 'english';
+      const classic = latin && f.classic !== 'no';
+      const W = latin ? LAT : ENG;
       const pick = () => W[Math.floor(Math.random() * W.length)];
-      const sentence = () => {
-        const n = 8 + Math.floor(Math.random() * 12);
-        const s = Array.from({ length: n }, pick).join(' ');
-        return s.charAt(0).toUpperCase() + s.slice(1) + '.';
+      const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+      const sentence = () => cap(Array.from({ length: 8 + Math.floor(Math.random() * 12) }, pick).join(' ')) + '.';
+      const heading = () => cap(Array.from({ length: 2 + Math.floor(Math.random() * 4) }, pick).join(' '));
+      const para = () => Array.from({ length: 3 + Math.floor(Math.random() * 3) }, sentence).join(' ');
+      const unit = ['paragraphs', 'sentences', 'words', 'items', 'bytes'].indexOf(f.unit) >= 0 ? f.unit : 'paragraphs';
+      const max = unit === 'bytes' ? 100000 : 100;
+      const asked = Math.floor(Number(f.count) || 1);
+      const n = Math.max(1, Math.min(max, asked));
+      const capped = asked > max;
+
+      let output, blocks, label = 'Paragraphs';
+      if (unit === 'bytes') {
+        /* plain text of exactly n bytes: every character here is ASCII, so a
+           byte is a character; the cut never leaves a space at the end */
+        let s = classic ? OPENING : '';
+        while (s.length < n + 1) s += (s ? ' ' : '') + sentence();
+        output = s.slice(0, n);
+        if (/\s$/.test(output)) output = output.slice(0, -1) + '.';
+        blocks = 1;
+      } else if (unit === 'words') {
+        const w = Array.from({ length: n }, pick);
+        if (classic) 'lorem ipsum dolor sit amet'.split(' ').slice(0, n).forEach((x, i) => { w[i] = x; });
+        blocks = [w.join(' ')];
+      } else if (unit === 'sentences') {
+        const s = Array.from({ length: n }, sentence);
+        if (classic) s[0] = OPENING;
+        blocks = [s.join(' ')];
+      } else if (unit === 'items') {
+        blocks = Array.from({ length: n }, sentence);
+        if (classic) blocks[0] = OPENING;
+        label = 'List items';
+      } else {
+        blocks = Array.from({ length: n }, para);
+        if (classic) blocks[0] = OPENING + blocks[0].slice(blocks[0].indexOf('.') + 1);   // its first sentence becomes the classic one
+      }
+
+      if (unit !== 'bytes') {
+        const listy = unit === 'items';
+        const fmt = f.wrap;
+        const ul = (tag) => '<' + tag + '>\n' + blocks.map((p) => '  <li>' + p + '</li>').join('\n') + '\n</' + tag + '>';
+        if (fmt === 'p') output = blocks.map((p) => '<p>' + p + '</p>').join('\n');
+        else if (fmt === 'li') output = ul('ul');
+        else if (fmt === 'ol') output = ul('ol');
+        else if (fmt === 'h2') output = listy ? '<h2>' + heading() + '</h2>\n' + ul('ul') : blocks.map((p) => '<h2>' + heading() + '</h2>\n<p>' + p + '</p>').join('\n');
+        else if (fmt === 'md') {
+          const bullets = () => Array.from({ length: 3 }, () => '- ' + cap(Array.from({ length: 3 + Math.floor(Math.random() * 4) }, pick).join(' '))).join('\n');
+          output = listy ? '## ' + heading() + '\n\n' + blocks.map((p) => '- ' + p).join('\n')
+            : blocks.map((p, i) => '## ' + heading() + '\n\n' + p + (i === 0 && blocks.length > 1 ? '\n\n' + bullets() : '')).join('\n\n');
+        } else output = listy ? blocks.map((p) => '- ' + p).join('\n') : blocks.join('\n\n');
+        blocks = blocks.length;
+      }
+
+      const text = output.replace(/<[^>]+>/g, ' ').replace(/^#+ |^- /gm, '').trim();
+      const words = text ? text.split(/\s+/).length : 0;
+      const bytes = typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(output).length : output.length;
+      return {
+        output,
+        warn: capped ? 'The most at once is ' + max.toLocaleString('en-GB') + ' ' + (unit === 'items' ? 'list items' : unit) + ', so ' + max.toLocaleString('en-GB') + ' were made.' : '',
+        stats: [[label, String(blocks)], ['Words', words.toLocaleString('en-GB')], ['Characters', output.length.toLocaleString('en-GB')], ['Bytes (UTF-8)', bytes.toLocaleString('en-GB')]]
       };
-      const n = Math.max(1, Math.min(100, Number(f.count) || 1));
-      let parts;
-      if (f.unit === 'words') parts = [Array.from({ length: n }, pick).join(' ')];
-      else if (f.unit === 'sentences') parts = [Array.from({ length: n }, sentence).join(' ')];
-      else parts = Array.from({ length: n }, () => Array.from({ length: 3 + Math.floor(Math.random() * 3) }, sentence).join(' '));
-
-      let output;
-      if (f.wrap === 'p') output = parts.map(p => `<p>${p}</p>`).join('\n');
-      else if (f.wrap === 'li') output = '<ul>\n' + parts.map(p => `  <li>${p}</li>`).join('\n') + '\n</ul>';
-      else output = parts.join('\n\n');
-
-      const words = output.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).length;
-      return { output, stats: [['Paragraphs', String(parts.length)], ['Words', String(words)], ['Characters', String(output.length)]] };
     },
-"tips": ["Latin filler stops people reading the copy and lets them judge the layout — that is the whole point of it.","English filler is better for client demos, where nonsense Latin can read as unfinished work.","Placeholder text is roughly uniform. Test with your longest and shortest real content too, since that is what breaks layouts."],
+"tips": ["Latin filler stops people reading the copy and lets them judge the layout — that is the whole point of it.","The Latin text starts with the classic sentence, Lorem ipsum dolor sit amet, consectetur adipiscing elit…, which most people recognise as filler at a glance. Untick the box for random words from the first one.","Bytes gives plain text of exactly that many bytes, for testing a field or column limit: 255 bytes fills a VARCHAR(255) exactly.","Headings and paragraphs, numbered and bulleted lists, and Markdown fill a whole page template, not only a text block.","English filler is better for client demos, where nonsense Latin can read as unfinished work.","Placeholder text is roughly uniform. Test with your longest and shortest real content too, since that is what breaks layouts."],
 "faq": [{"q":"Where does Lorem ipsum come from?","a":"It is scrambled Latin from Cicero’s De finibus bonorum et malorum, written in 45 BC. Typesetters have used it as filler since the 1500s."}]
 };
 })();

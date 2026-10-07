@@ -2,7 +2,7 @@
   "id": "/developer/css-gradient.html",
   "name": "CSS Gradient Generator — 1234Tools",
   "short_name": "CSS Gradient",
-  "description": "Build linear and radial CSS gradients with a live preview and copy-ready code.",
+  "description": "Build linear, radial and conic CSS gradients with a stop editor, an angle wheel and a live preview; copy the CSS or a Tailwind class, or save a PNG.",
   "start_url": "/developer/css-gradient/?src=pwa",
   "scope": "/developer/css-gradient/",
   "display": "standalone",

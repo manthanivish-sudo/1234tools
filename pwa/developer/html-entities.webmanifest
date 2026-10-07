@@ -2,7 +2,7 @@
   "id": "/developer/html-entities.html",
   "name": "HTML Entity Encoder & Decoder — 1234Tools",
   "short_name": "HTML Entity Encoder",
-  "description": "Escape text for safe display in HTML, or convert entities back to characters.",
+  "description": "Escape text for HTML or decode entities with the full list of 2,125 named references, as named, decimal or hex entities, and look any entity up by name, character or code point.",
   "start_url": "/developer/html-entities/?src=pwa",
   "scope": "/developer/html-entities/",
   "display": "standalone",

@@ -1,0 +1,42 @@
+{
+  "id": "/video/screen-recorder/",
+  "name": "Screen Recorder — 1234Tools",
+  "short_name": "Screen Recorder",
+  "description": "Record your screen, a window or a tab in the browser, with the tab’s sound and your microphone if you like. Pause, stop, and save as WebM or make an MP4. Nothing is uploaded and there is no time limit.",
+  "start_url": "/video/screen-recorder/?src=pwa",
+  "scope": "/video/screen-recorder/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "video",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-video-screen.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-video-screen-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-video-screen-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

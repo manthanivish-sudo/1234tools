@@ -303,31 +303,69 @@ function arrayCell(v) {
 
 let lastDir = 'c2j';
 
+/* The parser the tool uses: parseCSV's rules (RFC 4180, a quote anywhere opens
+   or closes a quoted run), and it says where a quote was left open. */
+function csvScan(text, delim) {
+  const rows = [];
+  let row = [], field = '', inQ = false, qRow = 0;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQ = false;
+      } else field += c;
+    } else if (c === '"') { inQ = true; qRow = rows.length + 1; }
+    else if (c === delim) { row.push(field); field = ''; }
+    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else if (c !== '\r') field += c;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return { rows: rows, openAt: inQ ? qRow : 0 };
+}
+let lastFmt = 'array';
+const CSV_PREVIEW_ROWS = 100;
+
 window.DEV_TOOLS = window.DEV_TOOLS || {};
 window.DEV_TOOLS["csv-to-json"] = {
 "title": "CSV to JSON Converter",
 "category": "developer",
 "icon": "⇄",
 "kind": "code",
-"description": "Convert CSV or TSV into JSON, and back again. Handles quoted fields and embedded commas.",
-"keywords": ["csv to json","json to csv","convert csv","tsv converter","spreadsheet to json"],
+"files": {"accept": ".csv,.tsv,.txt,.json,.jsonl,.ndjson,text/csv,application/json", "label": "Open file"},
+"highlight": (o) => (o.dir === 'j2c' ? null : 'json'),
+"description": "Convert CSV or TSV to JSON or JSON Lines, and JSON back to CSV with Excel-style quoting, CRLF and a BOM, with a table preview and the problems named.",
+"keywords": ["csv to json","json to csv","convert csv","tsv converter","spreadsheet to json","json lines","ndjson","excel csv"],
 "inputLabel": "CSV / JSON",
 "outputLabel": "Converted output",
 "placeholder": "name,role,city\nPriya,Engineer,Reading\nSam,Designer,London",
 "sample": "name,role,city\nPriya,Engineer,Reading\nSam,Designer,London\n\"Patel, R.\",Manager,Birmingham",
-/* Download saves JSON as .json and CSV as .csv: render-dev.js reads ext and
+/* Download saves JSON as .json, JSON Lines as .jsonl and CSV as .csv: render-dev.js reads ext and
    type when the button is pressed, after the last conversion set lastDir. */
-"download": { get ext() { return lastDir === 'j2c' ? 'csv' : 'json'; }, get type() { return lastDir === 'j2c' ? 'text/csv' : 'application/json'; }, suffix: '' },
-"options": [{"key":"dir","label":"Direction","type":"select","default":"c2j","options":[{"value":"c2j","label":"CSV → JSON"},{"value":"j2c","label":"JSON → CSV"}]},{"key":"delim","label":"Delimiter","type":"select","default":"auto","options":[{"value":"auto","label":"Detect (comma for JSON → CSV)"},{"value":",","label":"Comma"},{"value":";","label":"Semicolon"},{"value":"\t","label":"Tab"},{"value":"|","label":"Pipe"}]},{"key":"header","label":"First row is a header","type":"select","default":"yes","options":[{"value":"yes","label":"Yes"},{"value":"no","label":"No: column1, column2 …"}]},{"key":"types","label":"Infer types (CSV → JSON)","type":"select","default":"off","options":[{"value":"off","label":"Off: every value is text"},{"value":"on","label":"On: numbers, true/false, null"}]},{"key":"nest","label":"Dotted headers (CSV → JSON)","type":"select","default":"flat","options":[{"value":"flat","label":"Keep a.b as one key"},{"value":"nest","label":"Nest a.b into objects"}]}],
-"transform": (text, { dir, delim, header, types, nest }) => {
+"download": { get ext() { return lastDir === 'j2c' ? 'csv' : lastFmt === 'lines' ? 'jsonl' : 'json'; }, get type() { return lastDir === 'j2c' ? 'text/csv' : lastFmt === 'lines' ? 'application/x-ndjson' : 'application/json'; }, suffix: '' },
+"options": [
+  {"key":"dir","label":"Direction","type":"select","default":"c2j","options":[{"value":"c2j","label":"CSV → JSON"},{"value":"j2c","label":"JSON → CSV"}]},
+  {"key":"delim","label":"Delimiter","type":"select","default":"auto","options":[{"value":"auto","label":"Detect (comma for JSON → CSV)"},{"value":",","label":"Comma"},{"value":";","label":"Semicolon"},{"value":"\t","label":"Tab"},{"value":"|","label":"Pipe"}]},
+  {"key":"header","label":"First row is a header","type":"select","default":"yes","options":[{"value":"yes","label":"Yes"},{"value":"no","label":"No: column1, column2 …"}]},
+  {"key":"types","label":"Infer types (CSV → JSON)","type":"select","default":"off","options":[{"value":"off","label":"Off: every value is text"},{"value":"on","label":"On: numbers, true/false, null"}]},
+  {"key":"nest","label":"Dotted headers (CSV → JSON)","type":"select","default":"flat","options":[{"value":"flat","label":"Keep a.b as one key"},{"value":"nest","label":"Nest a.b into objects"}]},
+  {"key":"fmt","label":"JSON form (CSV → JSON)","type":"select","default":"array","options":[{"value":"array","label":"One array"},{"value":"lines","label":"JSON Lines: one object a line"}]},
+  {"key":"quote","label":"Quote fields (JSON → CSV)","type":"select","default":"min","options":[{"value":"min","label":"Only when needed"},{"value":"all","label":"Every field"},{"value":"text","label":"Text fields, not numbers"}]},
+  {"key":"eol","label":"Line ends (JSON → CSV)","type":"select","default":"lf","options":[{"value":"lf","label":"LF"},{"value":"crlf","label":"CRLF (Excel, RFC 4180)"}]},
+  {"key":"bom","label":"Byte order mark (JSON → CSV)","type":"select","default":"no","options":[{"value":"no","label":"None"},{"value":"yes","label":"Add one, so Excel reads UTF-8"}]}
+],
+"transform": (text, { dir, delim, header, types, nest, fmt, quote, eol, bom }) => {
       lastDir = dir === 'j2c' ? 'j2c' : 'c2j';
+      lastFmt = fmt === 'lines' ? 'lines' : 'array';
       if (!text.trim()) return { output: '', note: 'Paste CSV or JSON above.' };
+      text = text.replace(/^\uFEFF/, '');
       const picked = delim === '\\t' ? '\t' : delim;
       const auto = !picked || picked === 'auto';
       const withHeader = header !== 'no';
       if (dir !== 'j2c') {
         const d = auto ? detectDelimiter(text) : picked;
-        const rows = parseCSV(text, d).filter(r => r.some(c => c !== ''));
+        const scan = csvScan(text, d);
+        const rows = scan.rows.filter(r => r.some(c => c !== ''));
         if (rows.length < 1) return { error: 'No rows found.' };
         const width = withHeader ? rows[0].length : Math.max(...rows.map(r => r.length));
         const head = withHeader ? rows[0].map((h, i) => h || `column${i + 1}`) : Array.from({ length: width }, (x, i) => `column${i + 1}`);
@@ -341,36 +379,86 @@ window.DEV_TOOLS["csv-to-json"] = {
           n.clash.forEach(k => clashes.add(k));
           return n.o;
         });
-        const stats = [['Columns', String(head.length)], ['Data rows', String(objs.length)], ['Delimiter', DELIM_NAME[d] + (auto ? ' (detected)' : '')], ['Output', bytes(JSON.stringify(objs))]];
-        const res = { output: JSON.stringify(objs, null, 2), stats };
-        if (clashes.size) res.warn = 'Kept as flat keys, because another column already uses the name: ' + [...clashes].join(', ') + '.';
+        const json = lastFmt === 'lines' ? objs.map(o => JSON.stringify(o)).join('\n') : JSON.stringify(objs, null, 2);
+        const stats = [['Columns', String(head.length)], ['Data rows', String(objs.length)], ['Delimiter', DELIM_NAME[d] + (auto ? ' (detected)' : '')], ['Output', bytes(lastFmt === 'lines' ? json : JSON.stringify(objs))]];
+        const res = { output: json, stats, download: lastFmt === 'lines' ? { ext: 'jsonl', type: 'application/x-ndjson' } : { ext: 'json', type: 'application/json' } };
+        const warns = [];
+        if (scan.openAt) warns.push('A quote opened in row ' + scan.openAt + ' is never closed, so the rest of the text was read as one field.');
+        const longer = body.map((r, i) => [r.length, i]).filter(x => x[0] > head.length), shorter = body.filter(r => r.length < head.length).length;
+        if (longer.length) warns.push(longer.length + (longer.length === 1 ? ' row has' : ' rows have') + ' more fields than the ' + head.length + ' column' + (head.length === 1 ? '' : 's') + ' (first: data row ' + (longer[0][1] + 1) + ', with ' + longer[0][0] + '); the extra fields were dropped.');
+        if (shorter) warns.push(shorter + (shorter === 1 ? ' row has' : ' rows have') + ' fewer fields than the header; the missing ones are empty.');
+        if (clashes.size) warns.push('Kept as flat keys, because another column already uses the name: ' + [...clashes].join(', ') + '.');
+        if (warns.length) res.warn = warns.join(' ');
+        res.table = { head: head, rows: body.slice(0, CSV_PREVIEW_ROWS).map(r => head.map((h, i) => r[i] ?? '')), total: body.length };
         return res;
       }
       const d = auto ? ',' : picked;
       let data;
-      try { data = JSON.parse(text); } catch (e) { return { error: describeJsonError(e, text) }; }
-      if (!Array.isArray(data)) return { error: 'JSON → CSV needs an array of objects at the top level.' };
+      try { data = JSON.parse(text); }
+      catch (e) {
+        /* JSON Lines: every non-blank line is a JSON value of its own */
+        const ls = text.split(/\r?\n/).filter(l => l.trim());
+        let lines = null;
+        if (ls.length > 1) { try { lines = ls.map(l => JSON.parse(l)); } catch (e2) { lines = null; } }
+        if (lines) data = lines; else return { error: describeJsonError(e, text) };
+      }
+      if (!Array.isArray(data)) return { error: 'JSON → CSV needs an array of objects at the top level, or JSON Lines with one object a line.' };
       if (!data.length) return { output: '', note: 'Empty array.' };
       const flat = data.map(o => (o && typeof o === 'object' && !Array.isArray(o)) ? flattenRow(o, '', []) : []);
       const cols = [...new Set(flat.flatMap(p => p.map(x => x[0])))];
       const dupes = new Set();
       const maps = flat.map(p => { const m = new Map(); p.forEach(([k, v]) => { if (m.has(k)) dupes.add(k); m.set(k, v); }); return m; });
-      const q = v => {
+      const wrapQ = (s) => '"' + s.replace(/"/g, '""') + '"';
+      const q = (v, isHead) => {
         const s = cellText(v);
-        return /["\n\r]|^\s|\s$/.test(s) || s.includes(d) ? '"' + s.replace(/"/g, '""') + '"' : s;
+        if (quote === 'all') return wrapQ(s);
+        if (quote === 'text' && (isHead || typeof v === 'string')) return wrapQ(s);
+        return /["\n\r]|^\s|\s$/.test(s) || s.includes(d) ? wrapQ(s) : s;
       };
       const lines = maps.map(m => cols.map(c => q(m.get(c))).join(d));
-      if (withHeader) lines.unshift(cols.map(q).join(d));
-      const out = lines.join('\n');
+      if (withHeader) lines.unshift(cols.map(c => q(c, true)).join(d));
+      const out = lines.join(eol === 'crlf' ? '\r\n' : '\n');
       const nested = cols.filter(c => c.includes('.')).length;
       const stats = [['Columns', String(cols.length)], ['Rows', String(data.length)]];
       if (nested) stats.push(['Dotted columns', String(nested)]);
       stats.push(['Output', bytes(out)]);
-      const res = { output: out, stats };
+      const res = { output: out, stats, download: { ext: 'csv', type: 'text/csv' } };
+      if (bom === 'yes') { res.bytes = new TextEncoder().encode('\uFEFF' + out); res.mime = 'text/csv'; res.download = { ext: 'csv', type: 'text/csv' }; stats.push(['Byte order mark', 'added to the download']); }
       if (dupes.size) res.warn = 'Two fields write to the same column, and the later one is kept: ' + [...dupes].join(', ') + '.';
+      const cellOf = (m, c) => cellText(m.get(c));
+      res.table = { head: cols, rows: maps.slice(0, CSV_PREVIEW_ROWS).map(m => cols.map(c => cellOf(m, c))), total: maps.length };
       return res;
     },
-"tips": ["Fields containing the delimiter, a quote or a line break are wrapped in double quotes, and inner quotes are doubled — the RFC 4180 convention Excel expects.","Excel exports in some European locales use semicolons rather than commas. Detect, the default, counts commas, semicolons, tabs and pipes outside quotes in the first 20 lines and names its choice in the Delimiter row; pick one yourself if it guesses wrong.","Going JSON → CSV, the column set is the union of every object’s keys, so rows with missing fields still line up. Nested objects become dotted columns such as addr.city, and arrays are written as JSON text.","Nest a.b into objects turns dotted columns back into nested objects, and a cell holding JSON such as [\"a\",\"b\"] back into an array."],
-"faq": [{"q":"Are numbers preserved as numbers?","a":"Only with Infer types on. CSV has no types, so by default every value stays a string. Infer types turns numbers written as JSON writes them into numbers, true and false into booleans and null into null; 007, 1,000, +5 and whole numbers past 9007199254740991 stay text, so no digit is lost. Empty cells stay empty strings."}]
+"tips": ["Fields containing the delimiter, a quote or a line break are wrapped in double quotes, and inner quotes are doubled — the RFC 4180 convention Excel expects.","Excel exports in some European locales use semicolons rather than commas. Detect, the default, counts commas, semicolons, tabs and pipes outside quotes in the first 20 lines and names its choice in the Delimiter row; pick one yourself if it guesses wrong.","Going JSON → CSV, the column set is the union of every object’s keys, so rows with missing fields still line up. Nested objects become dotted columns such as addr.city, and arrays are written as JSON text.","Nest a.b into objects turns dotted columns back into nested objects, and a cell holding JSON such as [\"a\",\"b\"] back into an array.","JSON Lines writes one object per line, ready for a log pipeline or a database import; JSON → CSV reads it as well as an array. For Excel, choose CRLF line ends and the byte order mark so accented text opens correctly. A table below the output previews the first 100 rows."],
+"faq": [{"q":"Are numbers preserved as numbers?","a":"Only with Infer types on. CSV has no types, so by default every value stays a string. Infer types turns numbers written as JSON writes them into numbers, true and false into booleans and null into null; 007, 1,000, +5 and whole numbers past 9007199254740991 stay text, so no digit is lost. Empty cells stay empty strings."}],
+"mount": (ctx) => {},
+"render": function (res, ctx) { csvRender(res, ctx); }
 };
+
+function csvRender(res, ctx) {
+  const box = ctx.extra;
+  box.textContent = '';
+  const t = res && res.table;
+  if (!t || res.error || !t.head.length) return;
+  const wrap = ctx.el('div', 'io-pane csv-table');
+  const head = ctx.el('div', 'io-head');
+  head.appendChild(ctx.el('span', 'io-label', 'Table preview'));
+  head.appendChild(ctx.el('span', 'csv-count', (t.total > t.rows.length ? 'First ' + t.rows.length + ' of ' + t.total.toLocaleString('en-GB') + ' rows' : t.total.toLocaleString('en-GB') + (t.total === 1 ? ' row' : ' rows'))));
+  wrap.appendChild(head);
+  const scroll = ctx.el('div', 'csv-scroll');
+  const tb = ctx.el('table', 'csv-grid');
+  const hr = ctx.el('tr');
+  hr.appendChild(ctx.el('th', null, '#'));
+  t.head.forEach(function (h) { hr.appendChild(ctx.el('th', null, h)); });
+  tb.appendChild(hr);
+  t.rows.forEach(function (r, i) {
+    const tr = ctx.el('tr');
+    tr.appendChild(ctx.el('td', 'csv-n', String(i + 1)));
+    r.forEach(function (c) { tr.appendChild(ctx.el('td', c === '' ? 'is-empty' : '', c.length > 200 ? c.slice(0, 200) + '…' : c)); });
+    tb.appendChild(tr);
+  });
+  scroll.appendChild(tb);
+  wrap.appendChild(scroll);
+  box.appendChild(wrap);
+}
 })();

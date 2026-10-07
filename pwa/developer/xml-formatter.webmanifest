@@ -2,7 +2,7 @@
   "id": "/developer/xml-formatter.html",
   "name": "XML Formatter & Validator — 1234Tools",
   "short_name": "XML Formatter",
-  "description": "Indent, tidy and check XML. Also minifies for production and reports tag structure.",
+  "description": "Format, minify and validate XML with a real parser that names the line and column of the first error, and run XPath queries against it.",
   "start_url": "/developer/xml-formatter/?src=pwa",
   "scope": "/developer/xml-formatter/",
   "display": "standalone",

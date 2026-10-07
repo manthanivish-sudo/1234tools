@@ -1,0 +1,42 @@
+{
+  "id": "/audio/audio-trimmer/",
+  "name": "Audio Trimmer — 1234Tools",
+  "short_name": "Audio Trimmer",
+  "description": "Cut a sound file in your browser: see its waveform, drag the start and end, play the part, then keep it or cut it out, with fades if you like. To the millisecond. Nothing is uploaded.",
+  "start_url": "/audio/audio-trimmer/?src=pwa",
+  "scope": "/audio/audio-trimmer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "music",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-audio-trim.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-audio-trim-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-audio-trim-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

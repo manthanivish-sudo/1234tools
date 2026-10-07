@@ -91,7 +91,7 @@ function calculatorPages(root) {
 }
 
 /** The tools that work on files and text: every tool page in these sections. */
-const FILE_SECTIONS = ['image', 'pdf', 'text', 'developer', 'qr', 'social'];
+const FILE_SECTIONS = ['image', 'pdf', 'text', 'developer', 'qr', 'social', 'video', 'audio'];
 
 function filePages(root) {
   const out = [];

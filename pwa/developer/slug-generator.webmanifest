@@ -2,7 +2,7 @@
   "id": "/developer/slug-generator.html",
   "name": "URL Slug Generator — 1234Tools",
   "short_name": "URL Slug Generator",
-  "description": "Turn titles into clean, SEO-friendly URL slugs. Handles accents and multiple lines at once.",
+  "description": "Turn titles into clean, SEO-friendly URL slugs. Transliterates accented Latin letters and Hindi (Devanagari), trims to a length you set, and does many lines at once.",
   "start_url": "/developer/slug-generator/?src=pwa",
   "scope": "/developer/slug-generator/",
   "display": "standalone",

@@ -3,13 +3,13 @@ window.TEXT_TOOLS = window.TEXT_TOOLS || {};
 window.TEXT_TOOLS["number-to-words"] = {
 "title": "Number to Words Converter",
 "kind": "code",
-"description": "Write numbers out in words, including currency form for cheques and contracts.",
+"description": "Write numbers out in words, in British or American English, including currency and cheque forms for contracts and payments.",
 "keywords": ["number to words","number spelling","amount in words","cheque amount in words","write numbers in english"],
 "inputLabel": "Numbers (one per line)",
 "outputLabel": "In words",
 "placeholder": "1234.56",
 "sample": "1234.56\n1000000\n42\n0.75",
-"options": [{"key":"style","label":"Style","type":"select","default":"plain","options":[{"value":"plain","label":"Plain words"},{"value":"gbp","label":"Currency — pounds and pence"},{"value":"usd","label":"Currency — dollars and cents"},{"value":"inr","label":"Currency — rupees and paise (lakh/crore)"},{"value":"ordinal","label":"Ordinal (first, second…)"}]},{"key":"caps","label":"Capitalisation","type":"select","default":"sentence","options":[{"value":"sentence","label":"Sentence case"},{"value":"lower","label":"lowercase"},{"value":"upper","label":"UPPERCASE"}]}],
+"options": [{"key":"dialect","label":"English","type":"select","default":"uk","options":[{"value":"uk","label":"British: one hundred and twenty"},{"value":"us","label":"American: one hundred twenty"}]},{"key":"style","label":"Style","type":"select","default":"plain","options":[{"value":"plain","label":"Plain words"},{"value":"gbp","label":"Currency — pounds and pence"},{"value":"usd","label":"Currency — dollars and cents"},{"value":"cheque","label":"US cheque — dollars and 56/100"},{"value":"inr","label":"Currency — rupees and paise (lakh/crore)"},{"value":"ordinal","label":"Ordinal (first, second…)"}]},{"key":"caps","label":"Capitalisation","type":"select","default":"sentence","options":[{"value":"sentence","label":"Sentence case"},{"value":"lower","label":"lowercase"},{"value":"upper","label":"UPPERCASE"}]}],
 "transform": (text, o) => {
       const lines = String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
       if (!lines.length) return { output: '', note: 'Enter one or more numbers.' };
@@ -17,6 +17,9 @@ window.TEXT_TOOLS["number-to-words"] = {
       const ONES = ['zero','one','two','three','four','five','six','seven','eight','nine','ten',
         'eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
       const TENS = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+      /* American English leaves out the and inside a number (one hundred
+         twenty); the and before cents stays in both */
+      const us = o.dialect === 'us';
       const ORD = { one:'first', two:'second', three:'third', five:'fifth', eight:'eighth',
                     nine:'ninth', twelve:'twelfth' };
 
@@ -24,7 +27,7 @@ window.TEXT_TOOLS["number-to-words"] = {
         if (n === 0) return '';
         if (n < 20) return ONES[n];
         if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? '-' + ONES[n % 10] : '');
-        return ONES[Math.floor(n / 100)] + ' hundred' + (n % 100 ? ' and ' + under1000(n % 100) : '');
+        return ONES[Math.floor(n / 100)] + ' hundred' + (n % 100 ? (us ? ' ' : ' and ') + under1000(n % 100) : '');
       };
 
       const western = (n) => {
@@ -34,7 +37,7 @@ window.TEXT_TOOLS["number-to-words"] = {
         for (const [v, name] of SCALE) {
           if (n >= v) { out.push(under1000(Math.floor(n / v)) + ' ' + name); n %= v; }
         }
-        if (n) out.push((out.length && n < 100 ? 'and ' : '') + under1000(n));
+        if (n) out.push((out.length && n < 100 && !us ? 'and ' : '') + under1000(n));
         return out.join(' ').replace(/\s+/g, ' ').trim();
       };
 
@@ -44,7 +47,7 @@ window.TEXT_TOOLS["number-to-words"] = {
         if (n >= 1e7) { out.push(indian(Math.floor(n / 1e7)) + ' crore'); n %= 1e7; }
         if (n >= 1e5) { out.push(under1000(Math.floor(n / 1e5)) + ' lakh'); n %= 1e5; }
         if (n >= 1e3) { out.push(under1000(Math.floor(n / 1e3)) + ' thousand'); n %= 1e3; }
-        if (n) out.push((out.length && n < 100 ? 'and ' : '') + under1000(n));
+        if (n) out.push((out.length && n < 100 && !us ? 'and ' : '') + under1000(n));
         return out.join(' ').replace(/\s+/g, ' ').trim();
       };
 
@@ -64,7 +67,7 @@ window.TEXT_TOOLS["number-to-words"] = {
         : o.caps === 'lower' ? s.toLowerCase()
         : s.charAt(0).toUpperCase() + s.slice(1);
 
-      const CUR = { gbp: ['pound','pounds','penny','pence'], usd: ['dollar','dollars','cent','cents'],
+      const CUR = { gbp: ['pound','pounds','penny','pence'], usd: ['dollar','dollars','cent','cents'], cheque: ['dollar','dollars','',''],
                     inr: ['rupee','rupees','paisa','paise'] };
 
       /* The number as decimal digits, read from what was typed rather than
@@ -116,7 +119,11 @@ window.TEXT_TOOLS["number-to-words"] = {
 
         let s;
         if (o.style === 'ordinal') s = toOrdinal(w);
-        else if (CUR[o.style]) {
+        else if (o.style === 'cheque') {
+          /* the US cheque line: words for the dollars, the cents as a
+             fraction of 100, always two digits (and 00/100 for none) */
+          s = w + ' and ' + String(frac).padStart(2, '0') + '/100 dollars';   // the word a printed check ends with, whatever the amount
+        } else if (CUR[o.style]) {
           const [sing, plur, csing, cplur] = CUR[o.style];
           s = `${w} ${whole === 1 ? sing : plur}`;
           if (frac) s += ` and ${western(frac)} ${frac === 1 ? csing : cplur}`;
@@ -130,7 +137,7 @@ window.TEXT_TOOLS["number-to-words"] = {
 
       return { output: out.join('\n'), stats: [['Numbers converted', String(lines.length)]] };
     },
-"tips": ["Currency style ends with \"only\", which is the convention on cheques and in contracts to stop anything being appended.","The Indian style groups in lakh and crore rather than thousands and millions, which is what Indian banking and legal documents expect.","Ordinal style handles the irregular forms — first, second, third, fifth, ninth, twelfth — rather than simply appending \"th\"."],
-"faq": [{"q":"Why does it say \"one hundred and twenty\" rather than \"one hundred twenty\"?","a":"That is British usage, and it is also the form used on cheques in the UK, India and much of the Commonwealth. American English usually omits the \"and\"."}]
+"tips": ["Currency style ends with \"only\", which is the convention on cheques and in contracts to stop anything being appended.","US cheque style writes the cents as a fraction, One thousand two hundred thirty-four and 56/100 dollars, the form printed on American checks; choose American English with it to drop the and inside the number.","The Indian style groups in lakh and crore rather than thousands and millions, which is what Indian banking and legal documents expect.","Ordinal style handles the irregular forms — first, second, third, fifth, ninth, twelfth — rather than simply appending \"th\"."],
+"faq": [{"q":"Why does it say \"one hundred and twenty\" rather than \"one hundred twenty\"?","a":"That is British usage, and it is also the form used on cheques in the UK, India and much of the Commonwealth. American English usually omits the \"and\"; choose American in the English setting for that form."}]
 };
 })();

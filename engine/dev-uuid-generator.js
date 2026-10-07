@@ -222,33 +222,222 @@ function contrastRatio(a, b) {
 
 
 window.DEV_TOOLS = window.DEV_TOOLS || {};
+
+/* ===== identifiers: RFC 9562 UUIDs (v1, v4, v7), ULID and nanoid ===== */
+function uuRandom(n) {
+  const b = new Uint8Array(n);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) crypto.getRandomValues(b);
+  else for (let i = 0; i < n; i++) b[i] = Math.floor(Math.random() * 256);
+  return b;
+}
+const uuHex = (b) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+const uuDash = (h) => h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+function uuMs(b, ms) {
+  // 48-bit big-endian millisecond count into b[0..5]
+  for (let i = 5, v = ms; i >= 0; i--) { b[i] = v % 256; v = Math.floor(v / 256); }
+}
+/* version 7: 48-bit Unix milliseconds, a 12-bit counter that makes IDs made in one millisecond sort in the order
+   they were made (RFC 9562 6.2, method 1), then random bits. The counter starts below 0x800 so there is room to
+   count; if it still overflows, the millisecond moves on by one. */
+function uuV7(n, now) {
+  const out = [];
+  let ms = now;
+  const r0 = uuRandom(2);
+  let ctr = ((r0[0] << 8) | r0[1]) & 0x7FF;
+  for (let i = 0; i < n; i++) {
+    if (i > 0) ctr++;
+    if (ctr > 0xFFF) { ms++; ctr = uuRandom(2)[0] & 0x7FF; }
+    const b = uuRandom(16);
+    uuMs(b, ms);
+    b[6] = 0x70 | (ctr >> 8);
+    b[7] = ctr & 0xFF;
+    b[8] = 0x80 | (b[8] & 0x3F);
+    out.push(uuDash(uuHex(b)));
+  }
+  return out;
+}
+/* version 1: 100-nanosecond ticks since 15 October 1582, a random 14-bit clock sequence and a random node with
+   the multicast bit set (RFC 9562 6.10): no hardware address is read. Ticks go up by one for each ID of a batch. */
+function uuV1(n, now) {
+  const out = [];
+  const node = uuRandom(8);
+  const base = (BigInt(now) + 12219292800000n) * 10000n;
+  for (let i = 0; i < n; i++) {
+    const t = base + BigInt(i);
+    const low = Number(t & 0xFFFFFFFFn), mid = Number((t >> 32n) & 0xFFFFn), hi = Number((t >> 48n) & 0x0FFFn) | 0x1000;
+    const h = low.toString(16).padStart(8, '0') + mid.toString(16).padStart(4, '0') + hi.toString(16).padStart(4, '0') +
+      (0x80 | (node[6] & 0x3F)).toString(16).padStart(2, '0') + node[7].toString(16).padStart(2, '0') +
+      ((node[0] | 1).toString(16).padStart(2, '0')) + uuHex(node.slice(1, 6));
+    out.push(uuDash(h));
+  }
+  return out;
+}
+function uuV4(n) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) { out.push(crypto.randomUUID()); continue; }
+    const b = uuRandom(16);
+    b[6] = 0x40 | (b[6] & 0x0F);
+    b[8] = 0x80 | (b[8] & 0x3F);
+    out.push(uuDash(uuHex(b)));
+  }
+  return out;
+}
+const UU_B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+function uuB32(v, len) {
+  let s = '';
+  for (let i = 0; i < len; i++) { s = UU_B32[Number(v & 31n)] + s; v >>= 5n; }
+  return s;
+}
+/* ULID: 48-bit milliseconds then 80 random bits, 26 Crockford base 32 characters. Within a millisecond each ID
+   is the previous one plus one in the random part, as the specification's monotonic mode says. */
+function uuUlid(n, now) {
+  const out = [];
+  let rnd = 0n;
+  uuRandom(10).forEach((x) => { rnd = (rnd << 8n) | BigInt(x); });
+  for (let i = 0; i < n; i++) {
+    if (i > 0) rnd = (rnd + 1n) & ((1n << 80n) - 1n);
+    out.push(uuB32(BigInt(now), 10) + uuB32(rnd, 16));
+  }
+  return out;
+}
+/* nanoid's method: a bit mask over random bytes, keeping the bytes that index the alphabet, so no character is
+   likelier than another whatever the alphabet's length */
+function uuNano(n, size, alphabet) {
+  const a = Array.from(alphabet);
+  const mask = (2 << Math.floor(Math.log2(a.length - 1))) - 1;
+  const step = Math.ceil(1.6 * mask * size / a.length);
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    let id = '';
+    while (id.length < size) {
+      const bytes = uuRandom(step);
+      for (let k = 0; k < bytes.length && id.length < size; k++) { const c = a[bytes[k] & mask]; if (c !== undefined) id += c; }
+    }
+    out.push(id);
+  }
+  return out;
+}
+
+/* ===== the checker ===== */
+function uuTicksToMs(ticks) { return Number(ticks / 10000n - 12219292800000n); }
+function uuCheck(line) {
+  let s = line.trim();
+  if (!s) return null;
+  s = s.replace(/^urn:uuid:/i, '').replace(/^\{(.*)\}$/, '$1');
+  let hex = null;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) hex = s.replace(/-/g, '').toLowerCase();
+  else if (/^[0-9a-f]{32}$/i.test(s)) hex = s.toLowerCase();
+  if (hex) {
+    if (hex === '0'.repeat(32)) return { ok: true, what: 'the nil UUID (all zeros)' };
+    if (hex === 'f'.repeat(32)) return { ok: true, what: 'the max UUID (all ones)' };
+    const v = parseInt(hex[12], 16), vr = parseInt(hex[16], 16);
+    const variant = vr < 8 ? 'NCS (reserved)' : vr < 12 ? 'RFC 9562' : vr < 14 ? 'Microsoft (reserved)' : 'reserved for the future';
+    let what = 'UUID version ' + v + ', ' + variant + ' variant';
+    if (vr >= 8 && vr < 12) {
+      const names = { 1: 'time-based', 2: 'DCE security', 3: 'name-based (MD5)', 4: 'random', 5: 'name-based (SHA-1)', 6: 'reordered time-based', 7: 'Unix-time ordered', 8: 'custom' };
+      if (names[v]) what += ' (' + names[v] + ')';
+      else return { ok: false, what: 'the version digit is ' + v + ', which RFC 9562 does not define' };
+      if (v === 7) what += ', made ' + new Date(parseInt(hex.slice(0, 12), 16)).toISOString();
+      if (v === 1) { const t = (BigInt('0x' + hex.slice(12, 16).replace(/^./, '0')) << 48n) | (BigInt('0x' + hex.slice(8, 12)) << 32n) | BigInt('0x' + hex.slice(0, 8)); what += ', made ' + new Date(uuTicksToMs(t)).toISOString(); }
+      if (v === 6) { const t = (BigInt('0x' + hex.slice(0, 8)) << 28n) | (BigInt('0x' + hex.slice(8, 12)) << 12n) | BigInt('0x' + hex.slice(13, 16)); what += ', made ' + new Date(uuTicksToMs(t)).toISOString(); }
+      return { ok: true, what: what };
+    }
+    return { ok: false, what: 'well-shaped, but its variant digit ' + hex[16] + ' is not 8, 9, a or b, so it is not an RFC 9562 UUID (' + variant + ')' };
+  }
+  if (/^[0-9A-HJKMNP-TV-Z]{26}$/i.test(s)) {
+    const up = s.toUpperCase();
+    if (up[0] > '7') return { ok: false, what: 'looks like a ULID but the first character is above 7, which would overflow 48 bits of time' };
+    let ts = 0;
+    for (let i = 0; i < 10; i++) ts = ts * 32 + UU_B32.indexOf(up[i]);
+    return { ok: true, what: 'ULID, made ' + new Date(ts).toISOString() };
+  }
+  if (/^[A-Za-z0-9_-]{21}$/.test(s)) return { ok: true, what: 'has the shape of a default nanoid (21 URL-safe characters); nothing more can be checked' };
+  const hexish = s.replace(/-/g, '');
+  let why;
+  if (/[^0-9a-fA-F-]/.test(s) && s.length >= 30 && s.length <= 40) why = 'it has a character that is not a hex digit: "' + (s.match(/[^0-9a-fA-F-]/) || [''])[0] + '"';
+  else if (hexish.length === 32) why = 'the hyphens are in the wrong places (the layout is 8-4-4-4-12)';
+  else if (/^[0-9a-fA-F-]+$/.test(s)) why = 'it has ' + hexish.length + ' hex digits; a UUID has 32';
+  else why = 'it is neither a UUID (36 characters with hyphens, or 32 without) nor a 26-character ULID';
+  return { ok: false, what: why };
+}
+
 window.DEV_TOOLS["uuid-generator"] = {
 "title": "UUID Generator",
 "category": "developer",
 "icon": "🆔",
 "kind": "generate",
-"description": "Generate cryptographically random version 4 UUIDs, singly or in bulk.",
-"keywords": ["uuid generator","guid generator","uuid v4","random id","unique identifier"],
+"filename": "uuids.txt",
+"download": {"ext": "txt", "type": "text/plain"},
+"description": "Generate UUID v4, v7 and v1, ULID and nanoid with a secure random source, in bulk, and check any UUID or ULID to see its version and when it was made.",
+"keywords": ["uuid generator","guid generator","uuid v4","uuid v7","ulid generator","nanoid generator","uuid validator","random id","unique identifier"],
 "inputLabel": null,
-"outputLabel": "Generated UUIDs",
+"outputLabel": "Generated IDs",
 "regenerate": true,
-"fields": [{"key":"count","label":"How many","type":"number","default":10,"min":1,"max":500},{"key":"case","label":"Case","type":"select","default":"lower","options":[{"value":"lower","label":"Lowercase"},{"value":"upper","label":"Uppercase"}]},{"key":"braces","label":"Format","type":"select","default":"plain","options":[{"value":"plain","label":"Plain"},{"value":"braces","label":"Braces {…}"},{"value":"nodash","label":"No hyphens"}]}],
+"fields": [
+  {"key":"mode","label":"What to do","type":"select","default":"gen","options":[{"value":"gen","label":"Generate"},{"value":"check","label":"Check IDs"}]},
+  {"key":"kind","label":"Type","type":"select","default":"v4","options":[{"value":"v4","label":"UUID v4 (random)"},{"value":"v7","label":"UUID v7 (time-ordered)"},{"value":"v1","label":"UUID v1 (time and node)"},{"value":"ulid","label":"ULID"},{"value":"nano","label":"nanoid"}]},
+  {"key":"count","label":"How many","type":"number","default":10,"min":1,"max":500},
+  {"key":"case","label":"Case (UUIDs)","type":"select","default":"lower","options":[{"value":"lower","label":"Lowercase"},{"value":"upper","label":"Uppercase"}]},
+  {"key":"braces","label":"Format (UUIDs)","type":"select","default":"plain","options":[{"value":"plain","label":"Plain"},{"value":"braces","label":"Braces {…}"},{"value":"nodash","label":"No hyphens"}]},
+  {"key":"size","label":"nanoid length","type":"number","default":21,"min":2,"max":128},
+  {"key":"alphabet","label":"nanoid characters","type":"text","default":"A-Za-z0-9_-"},
+  {"key":"ids","label":"IDs to check (one per line)","type":"textarea","default":""}
+],
 "generate": (f) => {
-      const n = Math.max(1, Math.min(500, Number(f.count) || 1));
-      const out = [];
-      for (let i = 0; i < n; i++) {
-        let u = uuidV4();
-        if (f.braces === 'nodash') u = u.replace(/-/g, '');
-        if (f.case === 'upper') u = u.toUpperCase();
-        if (f.braces === 'braces') u = '{' + u + '}';
-        out.push(u);
+      if (f.mode === 'check') {
+        const lines = String(f.ids || '').split(/\r?\n/);
+        const rows = [];
+        let ok = 0, bad = 0;
+        lines.forEach((l) => { const r = uuCheck(l); if (!r) return; (r.ok ? ok++ : bad++); rows.push(l.trim() + '\n    ' + (r.ok ? '✓ ' : '✗ ') + r.what); });
+        if (!rows.length) return { output: '', warn: 'Paste one or more UUIDs or ULIDs, one per line.' };
+        return { output: rows.join('\n'), stats: [['Checked', String(ok + bad)], ['Valid', String(ok)], ['Not valid', String(bad)]] };
       }
+      const n = Math.max(1, Math.min(500, Math.floor(Number(f.count)) || 1));
+      const now = Date.now();
+      const kind = f.kind;
+      let ids, label, bits;
+      if (kind === 'v7') { ids = uuV7(n, now); label = '7 (Unix time, then random)'; bits = 62 + 12; }
+      else if (kind === 'v1') { ids = uuV1(n, now); label = '1 (time and a random node)'; bits = 14 + 47; }
+      else if (kind === 'ulid') { ids = uuUlid(n, now); label = 'ULID (48-bit time, 80 random bits)'; bits = 80; }
+      else if (kind === 'nano') {
+        const size = Math.max(2, Math.min(128, Math.floor(Number(f.size)) || 21));
+        let alpha = String(f.alphabet || '').trim();
+        /* ranges such as A-Za-z0-9 expand; a leading or trailing - is a hyphen */
+        let chars = '';
+        for (let i = 0; i < alpha.length; i++) {
+          if (i + 2 < alpha.length && alpha[i + 1] === '-') { const a = alpha.codePointAt(i), b = alpha.codePointAt(i + 2); if (b >= a && b - a < 256) { for (let c = a; c <= b; c++) chars += String.fromCodePoint(c); i += 2; continue; } }
+          chars += alpha[i];
+        }
+        chars = Array.from(new Set(chars)).join('');
+        if (Array.from(chars).length < 2) return { error: 'The nanoid characters need at least two different characters, for example A-Za-z0-9_-' };
+        if (Array.from(chars).length > 256) return { error: 'The nanoid characters can hold at most 256 different characters.' };
+        ids = uuNano(n, size, chars);
+        label = 'nanoid, ' + size + ' characters from ' + Array.from(chars).length;
+        bits = Math.floor(size * Math.log2(Array.from(chars).length));
+      } else { ids = uuV4(n); label = '4 (random)'; bits = 122; }
+      const isUuid = kind === 'v4' || kind === 'v7' || kind === 'v1';
+      ids = ids.map((u) => {
+        if (isUuid) { if (f.braces === 'nodash') u = u.replace(/-/g, ''); if (f.case === 'upper') u = u.toUpperCase(); if (f.braces === 'braces') u = '{' + u + '}'; }
+        return u;
+      });
       return {
-        output: out.join('\n'),
-        stats: [['Generated', String(n)], ['Version', '4 (random)'], ['Source', typeof crypto !== 'undefined' && crypto.getRandomValues ? 'crypto.getRandomValues' : 'Math.random fallback']]
+        output: ids.join('\n'),
+        stats: [['Generated', String(n)], ['Version', isUuid ? label : kind === 'ulid' ? 'ULID' : 'nanoid'], ['Random bits', String(bits)], ['Source', typeof crypto !== 'undefined' && crypto.getRandomValues ? 'crypto.getRandomValues' : 'Math.random fallback']]
       };
     },
-"tips": ["Version 4 UUIDs carry 122 random bits. You would need to generate about 2.7 × 10¹⁸ of them before a collision became likely.","They are random, so they make poor primary keys in large tables — the index fragments. UUIDv7 or an auto-increment column indexes far better.","The version 4 marker is fixed: the 13th hex digit is always 4, and the 17th is 8, 9, a or b."],
-"faq": [{"q":"Are these safe to use as security tokens?","a":"They are generated with the browser’s cryptographic random source, so the entropy is sound. Even so, use a purpose-built token with an expiry and server-side validation for sessions or password resets."}]
+"tips": ["Version 4 UUIDs carry 122 random bits. You would need to generate about 2.7 × 10¹⁸ of them before a collision became likely.","Random IDs make poor primary keys in large tables because the index fragments. UUID v7 and ULID start with the time, so new rows land together and a batch sorts in the order it was made.","The version 4 marker is fixed: the 13th hex digit is always 4, and the 17th is 8, 9, a or b.","Check IDs reads any UUID version, with or without hyphens or braces, and a ULID, and for v1, v6, v7 and ULID says when it was made.","A nanoid is shorter (21 characters by default) and URL-safe; a custom alphabet is allowed, with ranges such as a-z0-9."],
+"faq": [{"q":"Are these safe to use as security tokens?","a":"They are generated with the browser’s cryptographic random source, so the entropy is sound. Even so, use a purpose-built token with an expiry and server-side validation for sessions or password resets."},{"q":"Which should I use: v4, v7 or ULID?","a":"v4 when you want pure randomness and no clock in the ID. v7 or ULID when the IDs are database keys: they sort by creation time, v7 in the standard 36-character UUID form."},{"q":"Does a version 1 UUID reveal my computer?","a":"Not here. The node part is random with the multicast bit set, as RFC 9562 allows, so no network address is read. The time in it is the time you generated it."}],
+"render": function (res, ctx) { uuShow(ctx); }
 };
+
+/* only the fields the chosen mode and type use are shown */
+function uuShow(ctx) {
+  const f = ctx.fields();
+  const keys = ['mode', 'kind', 'count', 'case', 'braces', 'size', 'alphabet', 'ids'];
+  const wraps = ctx.form.querySelectorAll('.field');
+  const chk = f.mode === 'check', uuid = f.kind === 'v4' || f.kind === 'v7' || f.kind === 'v1', nano = f.kind === 'nano';
+  const show = { mode: true, kind: !chk, count: !chk, case: !chk && uuid, braces: !chk && uuid, size: !chk && nano, alphabet: !chk && nano, ids: chk };
+  keys.forEach(function (k, i) { if (wraps[i]) wraps[i].hidden = !show[k]; });
+}
 })();
