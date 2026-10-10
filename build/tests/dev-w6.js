@@ -78,7 +78,12 @@ const gen = (s, f) => s.generate(Object.assign(defs(s), f || {})) || {};
 function py(code, input, extraPath) {
   const env = Object.assign({}, process.env);
   if (extraPath) env.PYTHONPATH = extraPath;
-  try { return execFileSync('python3', extraPath ? ['-s', '-c', code] : ['-I', '-c', code], { input: input || '', encoding: 'utf8', env: env, cwd: TMP, maxBuffer: 64 * 1024 * 1024 }); }
+  /* -E -P rather than -I: the same guard against PYTHON* variables and the
+     cwd, but user site-packages stay visible (the only place the Microsoft
+     Store Python can pip-install). -X utf8 and folding CRLF make Windows
+     output match Linux. */
+  const flags = ['-X', 'utf8'].concat(extraPath ? ['-s'] : ['-E', '-P']);
+  try { return execFileSync('python3', flags.concat(['-c', code]), { input: input || '', encoding: 'utf8', env: env, cwd: TMP, maxBuffer: 64 * 1024 * 1024 }).replace(/\r\n/g, '\n'); }
   catch (e) { return null; }
 }
 const hasPy = py('print(1)') !== null;
@@ -119,11 +124,28 @@ function testUnix() {
   const wref = py('import sys,json\nfrom zoneinfo import ZoneInfo\nfrom datetime import datetime\nfor z,y,mo,d,h,mi,s in json.loads(sys.stdin.read()):\n  print(int(datetime(y,mo,d,h,mi,s,tzinfo=ZoneInfo(z)).timestamp()))', JSON.stringify(walls)).trim().split('\n');
   bad = [];
   const p2 = (n) => String(n).padStart(2, '0');
+  /* The page reads zones from the browser's ICU data and Python from its
+     tzdata package, and the two are often years apart: IANA keeps revising
+     pre-1990 history (tzdata 2026e puts Tijuana on daylight time in
+     September 1974, ICU 2024b does not). A miss counts as a database
+     difference, not a failure, only when Node's own ICU reads the page's
+     answer back as the very wall time asked for. */
+  const icuWall = (t, z) => {
+    const p = {};
+    new Intl.DateTimeFormat('en-CA', { timeZone: z, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' })
+      .formatToParts(new Date(t * 1000)).forEach((x) => { p[x.type] = Number(x.value); });
+    return [p.year, p.month, p.day, p.hour, p.minute, p.second].join(' ');
+  };
+  const dbDiff = [];
   walls.forEach((c, i) => {
     const r = tx(U, c[1] + '-' + p2(c[2]) + '-' + p2(c[3]) + 'T' + p2(c[4]) + ':' + p2(c[5]) + ':' + p2(c[6]), { zone: c[0], out: 's' });
-    if (String(r.output) !== wref[i]) bad.push(c.join(' ') + ' → ' + r.output + ' / ' + wref[i]);
+    if (String(r.output) === wref[i]) return;
+    const line = c.join(' ') + ' → ' + r.output + ' / ' + wref[i];
+    if (c[1] < 2026 && icuWall(Number(r.output), c[0]) === c.slice(1).join(' ')) dbDiff.push(line);
+    else bad.push(line);
   });
-  check(bad.length === 0, walls.length + ' wall times (' + (walls.length - 300) + ' beside clock changes) read as zoneinfo reads them with fold 0', bad.slice(0, 3).join('; '));
+  check(bad.length === 0, walls.length + ' wall times (' + (walls.length - 300) + ' beside clock changes) read as zoneinfo reads them with fold 0' +
+    (dbDiff.length ? ', except ' + dbDiff.length + ' where ICU ' + process.versions.tz + ' and the tzdata Python has disagree about history (' + dbDiff.slice(0, 2).join('; ') + ')' : ''), bad.slice(0, 3).join('; '));
   const rfc = [];
   for (let i = 0; i < 100; i++) rfc.push([pick[i % pick.length], rnd(2 ** 31)]);
   const outs = rfc.map(([z, t]) => tx(U, String(t), { zone: z, out: 'rfc' }).output);
@@ -227,7 +249,7 @@ function testSql() {
   const out = py("import sys,json,sqlite3\ndb=sqlite3.connect(':memory:')\ndb.execute('create table t(id integer, name text, qty integer, price real, status text)')\nfor i in range(1,80): db.execute('insert into t values(?,?,?,?,?)',(i,'n'+chr(97+i%26),i%5,i*1.25,None if i%7==0 else ('ok' if i%3 else 'x')))\nbad=[]\nfor a,b in json.loads(sys.stdin.read()):\n  try:\n    if db.execute(a).fetchall()!=db.execute(b).fetchall(): bad.append(b)\n  except Exception as e: bad.append(str(e)+' :: '+b)\nprint(len(bad)); print(json.dumps(bad[:3]))", JSON.stringify(pairs));
   const lines = (out || '').split('\n');
   check(lines[0] === '0', pairs.length + ' formatted and minified queries (6 settings) return the same rows from SQLite as the originals', lines.slice(0, 2).join(' '));
-  if (!PYPATH || py('import sqlparse', '', PYPATH) === null) { skip('sqlparse is not available (pass --pypath with it installed): token comparison'); return; }
+  if (py('import sqlparse', '', PYPATH) === null) { skip('sqlparse is not available (pass --pypath with it installed): token comparison'); return; }
   const tok = py("import sys,json,sqlparse\nfrom sqlparse import tokens as T\nfor a,b in json.loads(sys.stdin.read()):\n  f=lambda s:[t.value if t.ttype in T.String or t.ttype in T.Literal.String or (t.ttype in T.Name and t.value[:1] in '\"`[') else t.value.upper() for st in sqlparse.parse(s) for t in st.flatten() if not t.is_whitespace and t.ttype not in T.Comment]\n  ok=f(a)==f(b)\n  print(int(ok))\n  if not ok: sys.stderr.write(json.dumps([f(a),f(b)])+chr(10))", JSON.stringify(pairs.filter((p, i) => i % 6 === 0 || i % 6 === 1)), PYPATH);
   const t = (tok || '').trim().split('\n');
   check(tok && t.every((x) => x === '1'), t.length + ' formatted or minified queries have the same tokens, comments aside, as sqlparse reads them', t.filter((x) => x !== '1').length + ' differ');
@@ -400,7 +422,7 @@ function testBarcodes() {
   const syms = ['ean13', 'ean8', 'upca', 'itf14'];
   check(wrong.every((v, i) => /check digit should be/.test(tx(S, v, { sym: syms[i] }).error || '')), 'a wrong check digit is refused for EAN-13, EAN-8, UPC-A and ITF-14');
   /* zxing-cpp on rasters made here from the SVG */
-  if (!PYPATH || py('import zxingcpp', '', PYPATH) === null) { skip('zxing-cpp is not available (pass --pypath with it installed): independent scanning'); return; }
+  if (py('import zxingcpp', '', PYPATH) === null) { skip('zxing-cpp is not available (pass --pypath with it installed): independent scanning'); return; }
   const files = pngs.map(([sym, want, svg], i) => { const f = path.join(TMP, 'bc' + i + '.png'); fs.writeFileSync(f, rasterise(svg, 3)); return [f, sym, want]; });
   const out = py('import sys,json,zxingcpp\nfrom PIL import Image\nfor f in json.loads(sys.stdin.read()):\n  r=zxingcpp.read_barcodes(Image.open(f))\n  print(json.dumps([x.text for x in r]))', JSON.stringify(files.map((x) => x[0])), PYPATH);
   if (!out) { skip('zxing-cpp did not run'); return; }

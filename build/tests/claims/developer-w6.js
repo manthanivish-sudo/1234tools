@@ -28,7 +28,7 @@ module.exports = function ({ claim, manual, kit: K }) {
   };
   const tx = (slug, input, opts) => K.tx(spec(slug), input, opts);
   const gen = (slug, fields) => K.gen(spec(slug), fields);
-  const py = (code, input) => { try { return execFileSync('python3', ['-I', '-c', code], { input: input || '', encoding: 'utf8', cwd: require('os').tmpdir() }); } catch (e) { return null; } };
+  const py = (code, input) => { try { return execFileSync('python3', ['-X', 'utf8', '-E', '-P', '-c', code], { input: input || '', encoding: 'utf8', cwd: require('os').tmpdir() }).replace(/\r\n/g, '\n'); } catch (e) { return null; } };
   const hasPy = () => py('print(1)') !== null;
 
   /* ================= Unix timestamp ================= */
