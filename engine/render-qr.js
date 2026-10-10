@@ -1122,6 +1122,51 @@
   }
 
   /**
+   * The frame and label panel, shared by both generators for the same reason
+   * as the style panels above: a frame called "Border, label below" should be
+   * the same frame whether it goes round one code or four hundred.
+   */
+  function qrFrameControls(host, title) {
+    const frameBody = qrPanel(host, title, false);
+    const cardSel = selectControl(frameBody, 'Frame', 'frame', FRAME_STYLES, 'none');
+    const labelWrap = el('div', 'field');
+    const labelLab = el('label', null, 'Label');
+    labelLab.setAttribute('for', 'qr-label');
+    const labelIn = el('input', 'control');
+    labelIn.type = 'text';
+    labelIn.id = 'qr-label';
+    labelIn.maxLength = 40;
+    labelIn.value = 'SCAN ME';
+    labelWrap.appendChild(labelLab);
+    labelWrap.appendChild(labelIn);
+    frameBody.appendChild(labelWrap);
+    const cardColIn = colourControl(frameBody, 'Frame colour', 'cardcol', '#06080f');
+    const labelColIn = colourControl(frameBody, 'Label colour', 'labelcol', '#ffffff');
+
+    function frameOf() {
+      return { style: cardSel.value, text: labelIn.value, colour: cardColIn.read(), textColour: labelColIn.read() };
+    }
+    function syncFrame() {
+      const st = cardSel.value;
+      labelWrap.hidden = st === 'none';
+      cardColIn.wrap.hidden = st === 'none';
+      labelColIn.wrap.hidden = st === 'none' || st === 'outline' || st === 'text';
+    }
+
+    return {
+      body: frameBody, cardSel: cardSel, labelWrap: labelWrap, labelIn: labelIn,
+      cardColIn: cardColIn, labelColIn: labelColIn, frameOf: frameOf, syncFrame: syncFrame
+    };
+  }
+
+  /** The PDF and EPS set a label in Helvetica; say so when it cannot show it. */
+  function frameFontNote(frame, notes) {
+    if (frame.style !== 'none' && frame.text && window.QRExport && !window.QRExport.fitsWinAnsi(frame.text)) {
+      notes.push('The PDF and EPS set the label in Helvetica, which has no letters for some of these characters, so they show as question marks there. The SVG and PNG show the label as typed.');
+    }
+  }
+
+  /**
    * Read a finished picture back.
    *
    * Checking the matrix only proves the encoder did its job. It says nothing
@@ -1236,31 +1281,10 @@
 
     /* frame and label ----------------------------------------- */
 
-    const frameBody = qrPanel(controls, '6. Frame and label', false);
-    const cardSel = selectControl(frameBody, 'Frame', 'frame', FRAME_STYLES, 'none');
-    const labelWrap = el('div', 'field');
-    const labelLab = el('label', null, 'Label');
-    labelLab.setAttribute('for', 'qr-label');
-    const labelIn = el('input', 'control');
-    labelIn.type = 'text';
-    labelIn.id = 'qr-label';
-    labelIn.maxLength = 40;
-    labelIn.value = 'SCAN ME';
-    labelWrap.appendChild(labelLab);
-    labelWrap.appendChild(labelIn);
-    frameBody.appendChild(labelWrap);
-    const cardColIn = colourControl(frameBody, 'Frame colour', 'cardcol', '#06080f');
-    const labelColIn = colourControl(frameBody, 'Label colour', 'labelcol', '#ffffff');
-
-    function frameOf() {
-      return { style: cardSel.value, text: labelIn.value, colour: cardColIn.read(), textColour: labelColIn.read() };
-    }
-    function syncFrame() {
-      const st = cardSel.value;
-      labelWrap.hidden = st === 'none';
-      cardColIn.wrap.hidden = st === 'none';
-      labelColIn.wrap.hidden = st === 'none' || st === 'outline' || st === 'text';
-    }
+    const frameUi = qrFrameControls(controls, '6. Frame and label');
+    const cardSel = frameUi.cardSel, labelIn = frameUi.labelIn;
+    const cardColIn = frameUi.cardColIn, labelColIn = frameUi.labelColIn;
+    const frameOf = frameUi.frameOf, syncFrame = frameUi.syncFrame;
 
     /** The code as it will be downloaded: the styled code, in its frame. */
     function artwork(qr, opts) {
@@ -1711,10 +1735,7 @@
          about the matrix behind it. */
       const stamp = ++verifySeq;
       const basic = style.staticNotes();
-      const frame = frameOf();
-      if (frame.style !== 'none' && frame.text && window.QRExport && !window.QRExport.fitsWinAnsi(frame.text)) {
-        basic.notes.push('The PDF and EPS set the label in Helvetica, which has no letters for some of these characters, so they show as question marks there. The SVG and PNG show the label as typed.');
-      }
+      frameFontNote(frameOf(), basic.notes);
       paintVerdict('check', 'Reading the code back…', basic.notes);
 
       qrReadBack(currentSVG, data, qr.size + opts.quiet * 2).then(async function (got) {
@@ -1846,7 +1867,8 @@
     type: ['type', 'content type', 'kind'],
     fg: ['colour', 'color', 'fg', 'foreground', 'foreground colour', 'dark'],
     bg: ['bg', 'background', 'background colour', 'light'],
-    caption: ['caption', 'text under', 'label text', 'print text']
+    caption: ['caption', 'text under', 'label text', 'print text'],
+    frame: ['frame text', 'frame label', 'frame', 'call to action', 'cta']
   };
 
   /**
@@ -1964,7 +1986,7 @@
   function rowValues(cells, map, keys) {
     const v = {};
     keys.forEach(function (k) { v[k] = ''; });
-    const out = { values: v, name: '', type: '', fg: '', bg: '', caption: '' };
+    const out = { values: v, name: '', type: '', fg: '', bg: '', caption: '', frame: '' };
     map.forEach(function (m, i) {
       if (!m) return;
       const cell = cells[i] === undefined ? '' : cells[i];
@@ -2111,9 +2133,14 @@
       QR: QR, host: controls, schedule: function () { scheduleRestyle(); }
     });
 
-    /* 6. the label sheet ---------------------------------------- */
+    /* 6. frame and label: one call to action, or a brand, round every code;
+       a "frame text" column gives a row its own label ------------------- */
 
-    const sheetBody = qrPanel(controls, '6. Label sheet (PDF)', false);
+    const frameUi = qrFrameControls(controls, '6. Frame and label');
+
+    /* 7. the label sheet ---------------------------------------- */
+
+    const sheetBody = qrPanel(controls, '7. Label sheet (PDF)', false);
     const presetSel = selectControl(sheetBody, 'Sheet', 'sheet',
       Object.keys(LABEL_PRESETS_UI).map((k) => [k, LABEL_PRESETS_UI[k].name]).concat([['custom', 'Custom grid']]), 'a4-21');
     const pageSel = selectControl(sheetBody, 'Paper', 'paper', [['a4', 'A4 (210 x 297 mm)'], ['letter', 'US Letter (215.9 x 279.4 mm)']], 'a4');
@@ -2262,7 +2289,7 @@
       return plan;
     }
 
-    const ROLE_LABELS = { type: 'content type', fg: 'colour', bg: 'background', caption: 'text under the code' };
+    const ROLE_LABELS = { type: 'content type', fg: 'colour', bg: 'background', caption: 'text under the code', frame: 'frame label' };
 
     function labelForField(key) {
       const f = allFields().filter(function (x) { return x[0] === key; })[0];
@@ -2306,7 +2333,7 @@
         const s = el('select', 'control');
         s.id = id;
         const opts = [['', 'Ignore']].concat(fields.map(function (f) { return ['field:' + f[0], f[1]]; }))
-          .concat([['name', 'File name'], ['role:caption', 'Text under the code'], ['role:type', 'Content type (per row)'],
+          .concat([['name', 'File name'], ['role:caption', 'Text under the code'], ['role:frame', 'Frame label (per row)'], ['role:type', 'Content type (per row)'],
             ['role:fg', 'Colour (#rrggbb)'], ['role:bg', 'Background (#rrggbb)']]);
         const cur = !m ? '' : m.name ? 'name' : m.role ? 'role:' + m.role : 'field:' + m.field;
         opts.forEach(function (o) {
@@ -2349,6 +2376,7 @@
       lastPlan = plan;
       const ec = style.ecSel.value;
       const base = style.styleOptions(8);
+      const frameBase = frameUi.frameOf();
       const stamp = ++runSeq;
 
       generated = area.value;
@@ -2431,13 +2459,18 @@
           continue;
         }
         const fromFields = BULK_NAME[tkey] ? BULK_NAME[tkey](got.values) : content;
+        /* a row's own frame text replaces the panel's label, never the frame:
+           with "No frame" chosen a column cannot sneak one in */
+        const frame = got.frame && frameBase.style !== 'none'
+          ? Object.assign({}, frameBase, { text: String(got.frame).trim().slice(0, 40) }) : frameBase;
         made.push({
           name: slugName(got.name || fromFields, 'qr-' + String(i + 1).padStart(3, '0')),
           caption: got.caption || got.name || fromFields,
           type: tkey,
           content: content,
           qr: qr,
-          svg: QR.toSVG(qr, opts),
+          svg: frameSVG(QR.toSVG(qr, opts), frame, opts.scale, opts.light),
+          frame: frame,
           modules: qr.size + opts.quiet * 2,
           colours: opts !== base ? (opts.dark + ' on ' + (opts.light === 'none' ? 'transparent' : opts.light)) : '',
           status: 'checking',
@@ -2650,7 +2683,7 @@
         const trial = style.styleOptions(8);
         if (trial.logo && c.apply.logopad !== undefined) trial.logo.padding = Number(c.apply.logopad);
         if (trial.logo && c.apply.logosize !== undefined) trial.logo.size = Number(c.apply.logosize);
-        const got = await qrReadBack(QR.toSVG(qr, trial), failing.content, qr.size + trial.quiet * 2);
+        const got = await qrReadBack(frameSVG(QR.toSVG(qr, trial), failing.frame, trial.scale, trial.light), failing.content, qr.size + trial.quiet * 2);
         if (got && got.clean) return c;
       }
       return null;
@@ -2665,6 +2698,10 @@
       if (batch.some(function (b) { return b.colours; })) {
         notes.push('Some rows set their own colours, and each was read back in them.');
       }
+      const odd = batch.filter(function (b) { return b.frame.style !== 'none'; })
+        .map(function (b) { return b.frame; })
+        .filter(function (f) { return window.QRExport && !window.QRExport.fitsWinAnsi(f.text || ''); })[0];
+      if (odd) frameFontNote(odd, notes);
 
       let kind, head;
       if (bad) {
@@ -3015,6 +3052,7 @@
         would make the textarea unusable. */
     function scheduleRestyle() {
       style.syncVisibility();
+      frameUi.syncFrame();
       remember();
       if (!batch.length && !generated) return;
       if (pending) clearTimeout(pending);
@@ -3082,6 +3120,7 @@
 
     restoreSettings();
     style.syncVisibility();
+    frameUi.syncFrame();
     syncHint();
     build();
   }

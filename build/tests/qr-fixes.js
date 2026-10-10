@@ -48,6 +48,8 @@
  *      Cancel stops a run and shuts the downloads
  *   15 Scanner: barcodes and QR codes in one picture; a batch with a CSV
  *      and per-file reasons; the history on the device; screen share
+ *   17 Bulk: a frame and label round every code, a frame text column per
+ *      row, read back, on the label sheet, remembered; No frame wins
  *   16 All three pages at 390 and 1400 px, both themes: no sideways
  *      scroll, every control reachable by Tab, no script errors
  *   and, through all of it, not one request to anything but 127.0.0.1.
@@ -653,6 +655,7 @@ async function browserPart() {
     if (want(14)) await testTwoThousand(browser);
     if (want(15)) await testScanner(browser);
     if (want(16)) await testLayout(browser);
+    if (want(17)) await testBulkFrames(browser);
     check(offsite.length === 0, 'browser: not one request to anything but 127.0.0.1', offsite.slice(0, 5).join(' '));
   } finally {
     await browser.close();
@@ -976,6 +979,48 @@ async function testSheet(browser) {
   const afterNames = await page.$$eval('.bulk-card .bulk-name', (l) => l.map((x) => x.textContent));
   check(afterNames.join() === 'shelf-a,shelf-b' && before.join() !== afterNames.join(), 'setting column 2 to File name in the editor renames the codes shelf-a and shelf-b', before.join() + ' -> ' + afterNames.join());
   check(errors.length === 0, 'bulk: no script errors', errors.join(' | '));
+  await page.close();
+}
+
+async function testBulkFrames(browser) {
+  section('17  Bulk: frame and label, per-row frame text');
+  const { page, errors } = await open(browser, BU);
+  await page.evaluate(() => { document.querySelectorAll('.qr-panel').forEach((d) => { d.open = true; }); });
+  await setField(page, '#qr-frame', 'banner');
+  await setField(page, '#qr-label', 'ACME CAFE');
+  const list = 'name,url,frame text\nT1,https://cafe.example/menu?t=1,Table 1\nT2,https://cafe.example/menu?t=2,\nT3,https://cafe.example/menu?t=3,テーブル 3';
+  await bulkRun(page, list, 'url');
+  const verdict = await page.$eval('.qr-stage .qr-verdict', (e) => e.textContent);
+  const arts = await page.$$eval('.bulk-card .bulk-art svg', (l) => l.map((s) => {
+    const vb = s.getAttribute('viewBox').split(' ').map(Number);
+    const t = s.querySelector(':scope > text');
+    return { tall: vb[3] > vb[2], label: t ? t.textContent : null };
+  }));
+  check(/Verified: all 3 codes/.test(verdict) && arts.length === 3 && arts.every((a) => a.tall) &&
+    arts[0].label === 'Table 1' && arts[1].label === 'ACME CAFE' && arts[2].label === 'テーブル 3',
+    'every code is framed and read back; the frame text column labels its row and an empty cell falls back to the panel label', verdict.slice(0, 80) + ' ' + JSON.stringify(arts));
+  check(/Helvetica/.test(verdict), 'a row label Helvetica cannot set is warned about for the PDF', verdict.slice(0, 200));
+  await clickText(page, '.qr-actions button', /Label sheet/);
+  const [pdf] = await downloads(page, 1, 120000);
+  const r1 = await page.evaluate(PDFJS_RENDER, Array.from(pdf.bytes), 1, 4);
+  const cells = await page.evaluate(() => {
+    const c = window.__pdfCanvas, g = c.getContext('2d'), k = 4 * 72 / 25.4, out = [];
+    for (let i = 0; i < 3; i++) {
+      const d = g.getImageData(Math.round((7.21 + i * (63.5 + 2.54)) * k), Math.round(15.15 * k), Math.round(63.5 * k), Math.round(38.1 * k));
+      const got = window.QRDetect.scan(d); out.push(got ? got.text : null);
+    }
+    return out;
+  });
+  check(JSON.stringify(cells) === JSON.stringify([1, 2, 3].map((n) => 'https://cafe.example/menu?t=' + n)) && /ACME CAFE/.test(r1.text) && /Table 1/.test(r1.text) && r1.images === 0,
+    'the label sheet carries the framed codes as vector art: each cell decodes by pdf.js and the labels are text', JSON.stringify(cells) + ' ' + r1.text.slice(0, 120));
+  await sleep(600);
+  const stored = await page.evaluate(() => localStorage.getItem('1234tools-qr-bulk-v1') || '');
+  check(/"qr-frame":"banner"/.test(stored) && /ACME CAFE/.test(stored) && !/cafe\.example/.test(stored), 'the frame and label are remembered; the list is not', stored.slice(0, 160));
+  await setField(page, '#qr-frame', 'none');
+  await page.waitForFunction(() => { const s = document.querySelector('.bulk-card .bulk-art svg'); return s && !s.querySelector(':scope > text'); }, { timeout: 30000 }).catch(() => {});
+  const plain = await page.$$eval('.bulk-card .bulk-art svg', (l) => l.map((s) => !!s.querySelector(':scope > text')));
+  check(plain.length === 3 && plain.every((x) => !x), 'with No frame chosen the frame text column adds nothing', JSON.stringify(plain));
+  check(errors.length === 0, 'bulk frames: no script errors', errors.join(' | '));
   await page.close();
 }
 
