@@ -194,6 +194,9 @@
   }
 
   let DOCS = null, DF = null, N = 0, VOCAB = null, CONV = null, FAMILY_HUBS = null;
+  /* every unit a conversion page names, by its slug: "meters per second"
+     is meters-per-second even though no short alias spells it out */
+  const UNIT_SLUGS = Object.create(null);
   /* The 8th index column, "bill|tip": the input a lone typed number fills,
      then the input a number written with % fills. Either side may be empty;
      a third part, "pair", says the tool takes a percentage of a number and
@@ -219,6 +222,12 @@
       const m = /^conversions\/([^/]+)\/([a-z0-9-]+)-to-([a-z0-9-]+)\/$/.exec(p);
       if (!m) continue;
       CONV[m[2] + '>' + m[3]] = { title, path: p, family: m[1] };
+      for (const u of [m[2], m[3]]) {
+        UNIT_SLUGS[u] = [u];
+        /* data units carry their base: kibibyte-1024, megabyte-1000 */
+        const stem = u.replace(/-\d+$/, '');
+        if (stem !== u && !UNIT_SLUGS[stem]) UNIT_SLUGS[stem] = [u];
+      }
       FAMILY_HUBS[m[1]] = 'conversions/' + m[1] + '/';
     }
   }
@@ -261,6 +270,19 @@
     const s = str.trim().toLowerCase().replace(/\s+/g, ' ');
     const direct = UNITS[s] || UNITS[s.replace(/\s/g, '')] || UNITS[s.replace(/\s/g, '-')];
     if (direct) return direct;
+    /* a unit spelled out as its page names it, British spellings and a
+       singular or plural first word folded: "metres per second", "mile per
+       hour", "nanometres", "furlongs". Before the last-word rule below,
+       which would read "second" as time */
+    if (/^[a-zà-ÿø]/.test(s)) {
+      /* accents folded as the page slugs fold them: réaumur, rømer */
+      const slug = s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ø/g, 'o')
+        .replace(/metre/g, 'meter').replace(/litre/g, 'liter').replace(/\s/g, '-');
+      const first = slug.split('-')[0];
+      const alt = slug.replace(first, /s$/.test(first) ? first.slice(0, -1) : first === 'foot' ? 'feet' : first + 's');
+      if (UNIT_SLUGS[slug]) return UNIT_SLUGS[slug];
+      if (UNIT_SLUGS[alt]) return UNIT_SLUGS[alt];
+    }
     const compact = s.replace(/[^a-z0-9°/]/g, '');
     if (UNITS[compact]) return UNITS[compact];
     const parts = s.split(' ');
@@ -369,10 +391,16 @@
        answer is on screen the moment it opens */
     let value;
     s = s.replace(/^-?\d+(?:[.,]\d+)*\s*/, (n) => { value = typedNumber(n); return ''; });
-    const m = /^(.{1,30}?)\s+(?:to|in|into|as|vs|versus|per|equals?)\s+(.{1,30}?)$/.exec(s);
-    const pairs = [];
-    if (m) pairs.push([m[1], m[2]]);
     const w = s.split(' ').filter(Boolean);
+    /* every separator is a possible split, first one first: "meters per
+       second to mach" must also be tried at "to", not only at "per" */
+    const pairs = [];
+    for (let i = 1; i < w.length - 1; i++) {
+      if (!/^(?:to|in|into|as|vs|versus|per|equals?)$/.test(w[i])) continue;
+      const a = w.slice(0, i).join(' '), b = w.slice(i + 1).join(' ');
+      if (a.length <= 30 && b.length <= 30) pairs.push([a, b]);
+    }
+    const m = pairs.length > 0;
     if (w.length === 2) pairs.push([w[0], w[1]]);
     if (w.length === 3 && !m) pairs.push([w[0], w[1] + ' ' + w[2]], [w[0] + ' ' + w[1], w[2]]);
     for (const [a, b] of pairs) {
@@ -386,6 +414,8 @@
   }
 
   const LANDING_WEIGHT = 0.7;
+  const PREFILL_WEIGHT = 1.5, PREFILL_TIE = 0.8;
+  const EXACT_TITLE_WEIGHT = 1.4;
   function rank(text, pool) {
     const qTokens = tokens(text);
     /* a number is a value, not a word for the job: "tip on 84.50" is one
@@ -403,6 +433,7 @@
     const q = Array.from(new Set(expanded));
     const qPlain = q.filter((t) => t[0] !== '~' && !isNum(t));
     const phrase = text.toLowerCase().trim();
+    const typedNumber = qTokens.some(isNum);
     const scored = [];
     for (const d of (pool || DOCS)) {
       let s = 0, matched = 0, numbers = 0;
@@ -429,7 +460,19 @@
       if (d.landing) s *= LANDING_WEIGHT;
       if (phrase.length > 3 && d.titleText.indexOf(phrase) >= 0) s += 6;
       if (qPlain.length > 1 && qPlain.every((t) => d.tf[t] && d.tf[t] >= 3)) s += 3;
+      /* the tool whose name is exactly what was typed, brackets aside,
+         beats one whose name merely contains it: "percentage calculator"
+         is not the Marks Percentage Calculator */
+      if (d.titleText.replace(/\s*\([^)]*\)/g, '').trim() === phrase) s *= EXACT_TITLE_WEIGHT;
       scored.push({ doc: d, score: s, coverage, why });
+    }
+    /* a number typed with the job is a value to work on, so among close
+       matches the tool that takes it (jobs.js PREFILL) wins: "vat on 100" is
+       the VAT calculator, not the VAT return. Only a tie-break: it never
+       lifts a tool past one the words clearly named ("cagr calculator 100") */
+    if (typedNumber && scored.length) {
+      const best = Math.max.apply(null, scored.map((x) => x.score));
+      for (const x of scored) if (x.doc.prefill && x.doc.prefill.n && x.score >= PREFILL_TIE * best) x.score *= PREFILL_WEIGHT;
     }
     scored.sort((a, b) => b.score - a.score);
     return { results: scored.slice(0, 8), fixes, plain, qPlain };

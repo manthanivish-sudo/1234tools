@@ -408,12 +408,24 @@ function trustBody() {
     row('Webhook records from payment providers', 'for reconciliation and disputes; pruned after 13 months') +
     row('AI inputs and outputs', '<strong>not stored.</strong> We count that a call happened; the text is not kept') +
     '</tbody></table></div><p class="acct-hint">All of it is downloadable from your <a href="/account/">account page</a> as one file, and deletable there in one step.</p></section>\n' +
+    /* the practice workspace (/practice/) is a third kind: a shared store,
+       in its own London project (backend UK.md), with its own login. Its page
+       links here for "what we hold and where", so this says it plainly, and
+       promises the deletion terms rather than inventing them */
+    '  <section class="panel" id="practice"><h2>The practice workspace</h2>' +
+    '<p><a href="/practice/">Practice</a> is for an accountancy firm and its clients, and it is the one part of 1234Tools that is meant to store what you give it: the client details a practice enters and the documents its clients upload are kept so that both sides can see them. <strong>It is not switched on yet.</strong> When it is, this is how it works:</p><ul class="tips">' +
+    '<li>Its data is held in a separate Google Cloud (Firebase) project in <strong>London (europe-west2)</strong>, database and file storage alike, apart from the account database described above.</li>' +
+    '<li>It has its own login, separate from a 1234Tools account.</li>' +
+    '<li>A practice’s records are visible only to the people it has invited. A client sees their own folder and nothing else, not even the name of another client.</li>' +
+    '<li>Nobody can add themselves to a practice from the browser: membership is written only by our server, from an invitation, and an invitation lapses after 14 days.</li>' +
+    '</ul><p class="acct-hint">How long practice records are kept, and how a practice or a client has them deleted, will be set out here before it opens.</p></section>\n' +
     '  <section class="panel"><h2>Who else touches your data</h2><div class="table-scroll"><table class="biz-table trust-table"><thead><tr><th>Processor</th><th>What for</th><th>Where</th></tr></thead><tbody>' +
     '<tr><td>Google Cloud (Firebase)</td><td>Sign-in, the account database, the functions that run the gateway and the payment webhooks</td><td>Mumbai (asia-south1) for data and functions; Firebase Authentication is a global Google service</td></tr>' +
+    '<tr><td>Google Cloud (Firebase), second project</td><td>The <a href="#practice">practice workspace</a>: its sign-in, records and uploaded documents</td><td>London (europe-west2) for data, files and functions</td></tr>' +
     '<tr><td>Anthropic</td><td>The language model behind the AI tools, via our own server; receives the (masked) text you send</td><td>United States. API data is not used to train models under Anthropic’s terms and is retained by them only briefly for abuse prevention</td></tr>' +
     '<tr><td>Razorpay</td><td>Payments in India; you pay on their page</td><td>India</td></tr>' +
     '<tr><td>Stripe</td><td>Payments in the UK and elsewhere; you pay on their page; billing portal</td><td>Stripe Payments UK Ltd, with processing in the EU and US under their safeguards</td></tr>' +
-    '<tr><td>GitHub Pages</td><td>Serves the site’s static pages</td><td>Global CDN</td></tr>' +
+    '<tr><td>Cloudflare</td><td>Serves the site’s static pages and files</td><td>Global network</td></tr>' +
     '<tr><td>Google Analytics, Microsoft Clarity</td><td>Page-view statistics, <strong>only if you allow them</strong> in the cookie prompt; never anything you type into a tool</td><td>Global</td></tr>' +
     '</tbody></table></div><p class="acct-hint">A data processing agreement covering these sub-processors is available on request from the contact page.</p></section>\n' +
     '  <section class="panel"><h2>How it is protected</h2><ul class="tips">' +

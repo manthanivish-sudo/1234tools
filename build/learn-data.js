@@ -564,7 +564,7 @@ const CATEGORIES = [
             'CAPM and PMP. Worth it in organisations that ask for it by name, and rarely otherwise.'],
           ['Scrum.org Certifications', 'https://www.scrum.org/professional-scrum-certifications', 'Scrum.org', 'paid', 'basic',
             'PSM and PSPO. The open assessments are free to practise against and are a fair sample of the real thing.'],
-          ['Google Career Certificates', 'https://www.coursera.org/partners/google', 'Google', 'paid', 'basic',
+          ['Google Career Certificates', 'https://www.coursera.org/google-career-certificates', 'Google', 'paid', 'basic',
             'Data analytics, UX, IT support and project management. Linked at Coursera because grow.google sends visitors outside the US to a country page instead.']
         ]
       }

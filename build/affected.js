@@ -57,7 +57,13 @@ const inRelease = (name) => new RegExp("['\"]" + name.replace(/[-]/g, '\\-') + "
 
 const hits = [];
 for (const s of suites) {
-  const why = changed.filter((c) => c === s.file || s.src.includes(c) || s.src.includes(path.basename(c)));
+  /* a page is index.html in its folder, a name every browser suite says:
+     match a page by its address ("/account/") or full path instead */
+  const why = changed.filter((c) => {
+    if (c === s.file || s.src.includes(c)) return true;
+    if (path.basename(c) === 'index.html') return path.dirname(c) !== '.' && s.src.includes('/' + path.dirname(c) + '/');
+    return s.src.includes(path.basename(c));
+  });
   if (why.length) hits.push({ s: s, why: why });
 }
 

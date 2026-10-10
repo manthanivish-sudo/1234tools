@@ -72,7 +72,18 @@ const CASES = [
   ['read an invoice into a spreadsheet', 'ai/invoice-extractor/|ai/scanned-invoice-extractor/'],
   ['passport photo', 'image/passport-photo/'],
   ['make a 3d parallax video from a photo', 'ai-image/3d-photo-parallax/'],
-  ['knitting pattern for a scarf', null]
+  ['knitting pattern for a scarf', null],
+  /* units spelled out as the conversion pages name them (October 2026) */
+  ['meters per second to mach', 'conversions/speed/meters-per-second-to-mach-sea-level/'],
+  ['nanometres to inches', 'conversions/length/nanometer-to-inch/'],
+  ['megabytes to kibibytes', 'conversions/data/megabyte-1000-to-kibibyte-1024/'],
+  ['fahrenheit to réaumur', 'conversions/temperature/fahrenheit-to-reaumur/']
+];
+/* ties the first finder review found (2026-10-10): one answer, not several */
+const ONE = [
+  ['vat on 100', 'finance/vat-sales-tax/'],
+  ['gst on 10000', 'india/gst-calculator/'],
+  ['percentage calculator', 'mathematics/percentage/']
 ];
 /* header search: typed term -> the path the first result must have (null: no result, only the finder handoff) */
 const SEARCH = [
@@ -133,6 +144,10 @@ const registerTotal = () => {
     }, q);
     const ok = want === null ? (u.kind === 'none' || u.kind === 'weak') : (u.top && want.split('|').includes(u.top));
     check(ok, 'understand ' + JSON.stringify(q) + ' -> ' + u.kind + ' ' + (u.top || '-') + (u.fixes.length ? ' fix:' + JSON.stringify(u.fixes) : ''), 'wanted ' + want);
+  }
+  for (const [q, want] of ONE) {
+    const u = await page.evaluate((text) => { const r = window.ToolFinder.understand(text); return { kind: r.kind, top: r.results && r.results[0] ? r.results[0].doc.path : null }; }, q);
+    check(u.kind === 'one' && u.top === want, 'understand ' + JSON.stringify(q) + ' -> one answer, ' + want, u.kind + ' ' + u.top);
   }
   const scoped = await page.evaluate(() => {
     const a = window.ToolFinder.understand('merge two pdf files', { section: 'pdf' });

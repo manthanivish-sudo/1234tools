@@ -528,7 +528,12 @@
     close.addEventListener('click', function () { dlg.close(); });
     dlg.appendChild(close);
     dlg.addEventListener('close', function () {
-      if (from && document.contains(from) && from.focus) from.focus();
+      /* 'close' arrives a task after Esc; if focus has already gone
+         somewhere (a click into a text box), leave it there rather than
+         pull it back mid-typing */
+      var a = document.activeElement;
+      var adrift = !a || a === document.body || a === dlg || dlg.contains(a);
+      if (adrift && from && document.contains(from) && from.focus) from.focus();
     });
     dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
     document.body.appendChild(dlg);

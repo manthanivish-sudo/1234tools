@@ -595,7 +595,7 @@ CASES.keys = async function () {
   await page.evaluate(() => { const t = document.querySelector('.tool textarea'); t.focus(); });
   await page.keyboard.type('a?b');
   const typed = await page.evaluate(() => ({ v: document.querySelector('.tool textarea').value.slice(-3), open: document.querySelector('dialog.kbd-sheet').open }));
-  check(typed.v === 'a?b' && !typed.open, '? typed in a text box is text, not the sheet');
+  check(typed.v === 'a?b' && !typed.open, '? typed in a text box is text, not the sheet', typed);
   await page.goto(BASE + '/finance/compound-interest/', { waitUntil: 'load' });
   await page.evaluate(() => document.body.focus());
   await page.keyboard.type('?');
