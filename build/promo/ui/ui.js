@@ -108,23 +108,114 @@
   };
 
   /* -------------------------------------------------------------- tabs */
-  function showTab(name) {
+  /* Every move to another tab is a history entry, so Back (the browser's, Alt+Left, the
+     mouse's back button, or the "Back to …" bar) returns to the tab you came from. The
+     tab being left remembers its spot: the slot you clicked in (or the top one in view)
+     and the scroll position, so a tab that redraws puts you back on that slot. */
+  const TABS = $$('.tabs button').map((b) => b.dataset.tab);
+  const tabName = (t) => { const b = $('.tabs button[data-tab="' + t + '"]'); return b ? b.firstChild.textContent.trim() : t; };
+  const ANCHORS = '.cal-item[data-id], .cov-slot[data-id], .tv-slot[data-id], .tm-item[data-id], .gw-sec[data-id]';
+  const spots = {};
+  let curTab = '', clicked = null;
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest && e.target.closest(ANCHORS);
+    clicked = el ? { el, at: Date.now() } : null;
+  }, true);
+  function spotOf(tab) {
+    const sec = $('main .tab[data-tab="' + tab + '"]');
+    const spot = { y: Math.round(window.scrollY) };
+    let el = clicked && Date.now() - clicked.at < 2000 && sec && sec.contains(clicked.el) ? clicked.el : null;
+    if (el) spot.flash = true;
+    else if (sec && window.scrollY > 0) {
+      const topH = $('header.top').getBoundingClientRect().bottom;
+      el = Array.from(sec.querySelectorAll(ANCHORS)).find((x) => x.getClientRects().length && x.getBoundingClientRect().bottom > topH + 8) || null;
+    }
+    if (el && el.isConnected) {
+      spot.sel = '.' + el.classList[0] + '[data-id="' + CSS.escape(el.dataset.id) + '"]';
+      spot.top = Math.round(el.getBoundingClientRect().top);
+      const b = el.querySelector('b');
+      if (spot.flash && b) spot.label = b.textContent.trim().slice(0, 60);
+    }
+    return spot;
+  }
+  /* once on what is drawn now, so the page does not sit at the top while the tab reloads,
+     and again once the reload has drawn it */
+  function restoreSpot(tab, spot, loading) {
+    const go = (last) => requestAnimationFrame(() => {
+      if (curTab !== tab) return;
+      const el = spot.sel ? $('main .tab[data-tab="' + tab + '"] ' + spot.sel) : null;
+      if (!el) { window.scrollTo(0, spot.y || 0); return; }
+      for (let d = el.closest('details'); d; d = d.parentElement && d.parentElement.closest('details')) d.open = true;
+      if (spot.center) el.scrollIntoView({ block: 'center' });
+      else window.scrollBy(0, el.getBoundingClientRect().top - spot.top);
+      if (last && spot.flash) { el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); }
+    });
+    go(false);
+    Promise.resolve(loading).then(() => go(true), () => go(true));
+  }
+  function loadTab(name) {
+    if (name === 'today') return loadPlan();
+    if (name === 'venues') return loadVenues();
+    if (name === 'log') return loadLog();
+    if (name === 'kits') return loadKits();
+    if (name === 'reels') return loadReels();
+    if (name === 'opps') return loadSavedOpps();
+    if (name === 'calendar') return loadCalendar();
+    if (name === 'post') return loadPostTab();
+    if (name === 'grow') return loadGrow();
+    if (name === 'guide') return loadGuide().catch((e) => toast(e.message));
+    if (name === 'testimonials') return loadTestimonials().catch((e) => toast(e.message));
+  }
+  /* how.spot: where to land (a remembered spot, or a slot to centre on); how.history: the
+     move came from Back or Forward, so the entry already exists; how.jump: a jump inside
+     the same tab that Back should undo (Go to slot). */
+  function showTab(name, how) {
+    how = how || {};
+    const prev = curTab;
+    if (!prev) history.replaceState(Object.assign({}, history.state, { tab: name }), '', '#' + name);
+    else {
+      const spot = spotOf(prev);
+      spots[prev] = spot;
+      if (!how.history && (name !== prev || how.jump)) {
+        history.replaceState(Object.assign({}, history.state, { tab: prev, spot }), '', '#' + prev);
+        history.pushState({ tab: name, from: prev, fromLabel: spot.label || '' }, '', '#' + name);
+      }
+    }
+    curTab = name;
     $$('.tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
     $$('main .tab').forEach((s) => { s.hidden = s.dataset.tab !== name; });
-    if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
-    if (name === 'today') loadPlan();
-    if (name === 'venues') loadVenues();
-    if (name === 'log') loadLog();
-    if (name === 'kits') loadKits();
-    if (name === 'reels') loadReels();
-    if (name === 'opps') loadSavedOpps();
-    if (name === 'calendar') loadCalendar();
-    if (name === 'post') loadPostTab();
-    if (name === 'grow') loadGrow();
-    if (name === 'guide') loadGuide().catch((e) => toast(e.message));
-    if (name === 'testimonials') loadTestimonials().catch((e) => toast(e.message));
+    showBackBar();
+    const loading = loadTab(name);
+    if (how.spot) restoreSpot(name, how.spot, loading);
+    else if (name !== prev) window.scrollTo(0, 0);
+    return loading;
   }
-  $$('.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  function showBackBar() {
+    const st = history.state || {};
+    const bar = $('#nav-back');
+    bar.hidden = !TABS.includes(st.from);
+    if (!bar.hidden) $('#nav-back-to').textContent = tabName(st.from) + (st.fromLabel ? ' · ' + st.fromLabel : '');
+  }
+  $('#nav-back-btn').addEventListener('click', () => history.back());
+  $$('.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab, { spot: spots[b.dataset.tab] })));
+  window.addEventListener('popstate', (e) => {
+    const st = e.state || {};
+    const tab = st.tab || location.hash.slice(1).split('?')[0];
+    if (!TABS.includes(tab)) return;
+    showTab(tab, { history: true, spot: st.spot || spots[tab] || { y: 0 } });
+  });
+  /* a reload, or Back from a site the desk sent you to, lands on the same spot */
+  window.addEventListener('pagehide', () => { if (curTab) history.replaceState(Object.assign({}, history.state, { tab: curTab, spot: spotOf(curTab) }), '', '#' + curTab); });
+  /* in-page links (the Guide's contents line) scroll; they add no entry that Back would trip on */
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[href^="#"]');
+    if (!a || e.defaultPrevented) return;
+    const id = a.getAttribute('href').slice(1);
+    if (TABS.includes(id)) { e.preventDefault(); showTab(id); return; }
+    const el = id && document.getElementById(id);
+    if (el) { e.preventDefault(); el.scrollIntoView({ block: 'start' }); }
+  });
 
   /* Day / Night / Auto. index.html's head script applies the saved choice before the
      first paint; "auto" leaves the attribute off so the CSS follows Windows. */
@@ -874,6 +965,10 @@
     S.cal = cal;
     $('#cal-start').value = cal.start;
     renderCalStats();
+    /* a redraw of the same plan keeps the weeks you opened or closed */
+    const key = SITE_ID + ' ' + cal.start;
+    const was = S.calKey === key ? new Map($$('#cal-weeks details.cal-week').map((d) => [d.dataset.wk, d.open])) : new Map();
+    S.calKey = key;
     const box = clear($('#cal-weeks'));
     let week = null, list = null, n = 0;
     for (const it of cal.items) {
@@ -882,12 +977,13 @@
         week = wk;
         list = h('div', { class: 'stack' });
         const hasToday = cal.items.some((x) => x.date === cal.today && Math.floor((localDay(x.date) - localDay(cal.start)) / (7 * 864e5)) === wk);
-        box.appendChild(h('details', { class: 'card cal-week', open: n < 2 || hasToday ? '' : null }, h('summary', { text: wk < 0 ? 'Kept from an earlier plan · ' + it.date : 'Week ' + (wk + 1) + ' · from ' + it.date }), list));
+        const open = was.has(String(wk)) ? was.get(String(wk)) : n < 2 || hasToday;
+        box.appendChild(h('details', { class: 'card cal-week', 'data-wk': wk, open: open ? '' : null }, h('summary', { text: wk < 0 ? 'Kept from an earlier plan · ' + it.date : 'Week ' + (wk + 1) + ' · from ' + it.date }), list));
         n++;
       }
       list.appendChild(calItem(it, cal.today));
     }
-    loadCoverage();
+    await loadCoverage();   /* the coverage box sits above the weeks: let it settle before Back restores a spot */
   }
   function renderCalStats() {
     const cal = S.cal;
@@ -985,15 +1081,7 @@
         st !== 'planned' ? h('span', { class: 'badge st-' + st, text: STATE_LABEL[st] || st }) : null));
   }
   function goToSlot(id) {
-    showTab('calendar');
-    const tryIt = (n) => {
-      const el = document.querySelector('.cal-item[data-id="' + id + '"]');
-      if (!el) { if (n > 0) setTimeout(() => tryIt(n - 1), 200); return; }
-      const d = el.closest('details'); if (d) d.open = true;
-      el.scrollIntoView({ block: 'center' });
-      el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600);
-    };
-    tryIt(20);
+    return showTab('calendar', { jump: true, spot: { sel: '.cal-item[data-id="' + CSS.escape(id) + '"]', center: true, flash: true } });
   }
   $('#cal-replan').addEventListener('click', async () => {
     const start = $('#cal-start').value;
@@ -1529,6 +1617,7 @@
     pick.value = SITE_ID;
     pick.addEventListener('change', async () => {
       SITE_ID = pick.value;
+      for (const k of Object.keys(spots)) delete spots[k];   /* another site's slots: start each tab at the top */
       try { localStorage.setItem('promo-site', SITE_ID); } catch (e) { /* the choice lasts for this tab only */ }
       document.body.setAttribute('data-ready', '0');
       try { await loadSite(); } catch (e) { toast(e.message); }
@@ -1540,7 +1629,8 @@
     loadAutostart();
     await loadSite();
     const tab = (location.hash || '#today').slice(1).split('?')[0];
-    showTab(['today', 'draft', 'post', 'opps', 'kits', 'venues', 'log', 'reels', 'calendar', 'grow', 'testimonials', 'guide'].includes(tab) ? tab : 'today');
+    const st = history.state || {};
+    showTab(TABS.includes(tab) ? tab : 'today', { spot: st.tab === tab ? st.spot : null });
     document.body.setAttribute('data-ready', '1');
   })().catch((e) => { document.body.setAttribute('data-ready', 'error'); toast(e.message); });
 })();

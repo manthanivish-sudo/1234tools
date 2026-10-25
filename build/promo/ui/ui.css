@@ -68,6 +68,11 @@ code{font-size:13px;color:var(--ink2);background:var(--code);padding:1px 6px;bor
 .side-foot .site-home{margin:10px 0 0}
 main{padding:22px 28px 60px;min-width:0}
 main>.tab{max-width:1200px}
+html{scroll-padding-top:calc(var(--top-h) + 12px)}
+/* "Back to …": shown after a jump to another tab, and stays in reach while you scroll */
+.nav-back{position:sticky;top:calc(var(--top-h) + 8px);z-index:4;width:max-content;max-width:100%;margin:0 0 12px}
+.nav-back[hidden]{display:none}
+.nav-back .btn{box-shadow:var(--pop);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:1000px){
   .shell{grid-template-columns:1fr}
   .side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);padding:10px 14px}
@@ -233,7 +238,7 @@ select{cursor:pointer}
 /* targets per slot, coverage and the guide */
 .cal-item.is-partly{box-shadow:inset 4px 0 0 var(--cyan)}
 .cal-item.is-today.is-partly{box-shadow:inset 4px 0 0 var(--gold)}
-.cal-item.flash{background:var(--sel)}
+.flash{background:var(--sel)}
 .cal-prog{color:var(--gold);font-weight:600}
 .badge.st-partly{color:var(--cyan)}.badge.st-posted{color:var(--green)}.badge.st-check{color:var(--red);border-color:color-mix(in srgb,var(--red) 50%,transparent)}.badge.st-due{color:var(--muted)}
 .cal-targets{margin-top:8px;display:flex;flex-direction:column;gap:6px}

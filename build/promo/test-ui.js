@@ -300,6 +300,31 @@ let S_ch = '';
       await page.click(row(wrongCh) + ' button.linkish');
       await page.waitForFunction((ch) => { const c = document.getElementById('gc-' + ch); return c && !c.hidden && c.open && document.querySelectorAll('#g-channels .g-card:not([hidden])').length === 1; }, { timeout: 10000 }, wrongCh);
     });
+    await check('Back returns to the calendar slot you left from: browser Back, the "Back to" bar, and the sidebar', async () => {
+      await page.click('.tabs button[data-tab="calendar"]');
+      await page.waitForSelector('#cal-weeks .cal-item');
+      /* a slot well down the page: the last one of the last open week */
+      const id = await page.$$eval('#cal-weeks details.cal-week[open]', (ds) => { const xs = ds[ds.length - 1].querySelectorAll('.cal-item'); return xs[xs.length - 1].dataset.id; });
+      const sel = '.cal-item[data-id="' + id + '"]';
+      const backOnSlot = () => page.waitForFunction((s) => { const el = document.querySelector(s); if (!el || document.querySelector('#tab-calendar').hidden) return false; const r = el.getBoundingClientRect(); return r.top >= 0 && r.top < innerHeight && scrollY > 300; }, { timeout: 15000 }, sel);
+      const pack = async () => {
+        await page.click(sel + ' .tg-pack');
+        await page.waitForFunction(() => !document.querySelector('#tab-post').hidden && !document.querySelector('#nav-back').hidden && location.hash === '#post', { timeout: 10000 });
+      };
+      await pack();
+      assert.ok(/Back to Calendar · \d{4}-\d\d-\d\d/.test(await page.$eval('#nav-back-btn', (b) => b.textContent)), 'back bar names the calendar slot');
+      assert.strictEqual(await page.evaluate(() => scrollY), 0, 'the Post tab opens at its top');
+      await page.evaluate(() => history.back());
+      await backOnSlot();
+      assert.strictEqual(await page.evaluate(() => location.hash), '#calendar');
+      await pack();
+      await page.click('#nav-back-btn');
+      await backOnSlot();
+      await page.click('.tabs button[data-tab="guide"]');
+      await page.waitForFunction(() => !document.querySelector('#tab-guide').hidden, { timeout: 10000 });
+      await page.click('.tabs button[data-tab="calendar"]');
+      await backOnSlot();
+    });
     await check('Calendar: profile-link badge on Reels, and the Facebook link budget in Coverage', async () => {
       await page.click('.tabs button[data-tab="calendar"]');
       await page.waitForSelector('#cal-weeks .cal-item');
