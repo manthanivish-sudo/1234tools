@@ -1,5 +1,5 @@
 'use strict';
-/** Site profile: Attend Now. Read from E:/projects/register-check-2025 (read-only; public/ is the site) and https://attend-now.com/ (home page fetched to confirm it matches the repo) on 2026-10-05. */
+/** Site profile: Attend Now. Read from E:/projects/register-check-2025 (read-only; public/ is the site) and https://attend-now.com/ (home page fetched to confirm it matches the repo) on 2026-10-05. PayX added 2026-10-25 from the product page at /payments/ (E:/tmp/wave-sites-in/payx-index.html, commit f316911 of 2026-10-08); https://attend-now.com/payments/ returned HTTP 200 with the PayX title on 2026-10-25. */
 module.exports = {
   id: 'attend-now',
   name: 'Attend Now',
@@ -9,7 +9,7 @@ module.exports = {
   kind: 'app',
   promotes: 'app features',
   utm: { medium: 'social' },
-  brandWords: ['Attend Now', 'attend-now.com', 'MVR IT', 'MVR IT Services Ltd', 'Smart Attendance System', 'Smart Attendance', 'LearnX'],
+  brandWords: ['Attend Now', 'attend-now.com', 'MVR IT', 'MVR IT Services Ltd', 'Smart Attendance System', 'Smart Attendance', 'LearnX', 'PayX'],
   colours: { primary: '#2563eb', accent: '#3b82f6', background: '#f3f4f6', ink: '#374151' },
   colourSource: 'public/index.html Tailwind 2.0 classes (the last stylesheet loaded): bg-blue-600 buttons, bg-blue-500 footer, body bg-gray-100, text-gray-700 copy. /css/styles.css is linked but not in public/, so it is not served. LearnX pages use their own tokens (public/learnx/css/tokens.css --lx-primary #4f46e5, --lx-accent #7c3aed).',
   logo: 'E:/projects/register-check-2025/public/images/logo.png',
@@ -26,7 +26,7 @@ module.exports = {
       { rule: 'no-compliance', re: 'gdpr|dpdp|compliant|compliance|health (and|&) safety|insurance|iso ?27001|certified', msg: 'about.html says "Health & Safety Compliant" but nothing backs it. Make no compliance or certification claim.' },
       { rule: 'no-testimonials', re: 'john doe|jane smith|mike johnson|anita d|raj s\\.|testimonial|clients say|customers say|what (our )?users say', msg: 'The testimonials on index.html and about.html are placeholders (e.g. "John Doe"). Never quote or allude to them.' },
       { rule: 'no-trust-counts', re: 'trusted|growing number of organi[sz]ations|organi[sz]ations (use|trust)|enterprise[- ]grade|thousands|hundreds of', msg: 'The site claims "Comprehensive & Trusted" and a "growing number of organizations" without evidence. No trust or adoption claims.' },
-      { rule: 'no-ticketing', re: 'ticket|ticketing|online registration|event registration|sell tickets|payments?', msg: 'The MVR A–Z banner lists "Registrations: online event registration & ticketing" but the page it links to (the home page) shows no such feature.' },
+      { rule: 'no-ticketing', re: 'ticket|ticketing|online registration|event registration|sell tickets', msg: 'The MVR A–Z banner lists "Registrations: online event registration & ticketing" but the page it links to (the home page) shows no such feature. (PayX payments are Razorpay Payment Pages, so the word "payments" itself is allowed.) Do not call PayX event ticketing: its "Event passes" use case is not promoted.' },
       { rule: 'no-self-signup', re: 'sign up (now|today|in)|create (an|your) account|download the app|app store|google play|install the app|start now in', msg: 'The attendance pages offer no self-service sign-up, download or app install; the only route is contacting MVR IT.' },
       { rule: 'no-open-source', re: 'open[- ]source|join (our|the) community|(our|the) newsletter|(our|the|read the) (faq|docs|documentation)|support team|24/7', msg: 'Community, newsletter, FAQ, docs, support and contribute links on index.html all fall through to the home page (no such pages exist): never point people to them.' },
       { rule: 'no-absolute-privacy', re: '(100%|totally|completely|fully) (private|secure)|never leaves|no one else can see|unhackable', msg: 'Say only what the site says: attendance data is kept within your own Google Drive or Google Sheets, under your authorisation.' },
@@ -39,7 +39,8 @@ module.exports = {
       'Use the site\'s own wording for features (QR code check-in, bulk QR generation and email distribution, automated follow-up emails, data in your own Google Drive or Google Sheets).',
       'Do not call it "secure" or "realtime" as a promise; the tagline uses those words but copy should describe features, not assurances.',
       'LearnX lives on the same domain (/learnx) and in the sitemap; it is for students and teachers of an institute that already uses it.',
-      'Regions are not stated for the attendance product; the company address is the United Kingdom, and LearnX\'s structured data gives country IN. Do not claim service in any particular country.'
+      'PayX (/payments/): payments are handled by Razorpay on the owner\'s own Razorpay Payment Page. PayX never holds money and is not a payment gateway; never call it one. It checks and delivers after Razorpay confirms. Razorpay\'s usual fees apply and PayX setup and support plans are by contact, so quote no price.',
+    'Regions are not stated for the attendance product; the company address is the United Kingdom, and LearnX\'s structured data gives country IN. Do not claim service in any particular country.'
     ]
   },
   items: [
@@ -237,9 +238,129 @@ module.exports = {
       cta: 'Sign in to LearnX with Google',
       facts: ['"Sign in securely with your Google account" (learnx/index.html)', '"Enrol in your courses in a tap" (learnx/index.html)', 'Button: "Continue with Google"'],
       source: 'public/learnx/index.html'
+    },
+    {
+      id: 'payx-instant-delivery',
+      path: '/payments/',
+      title: 'PayX: deliver what people paid for, the moment they pay',
+      group: 'payx',
+      audiences: ['smallbiz', 'teachers', 'general'],
+      hook: 'The PDF, meeting link or next step appears seconds after paying.',
+      pain: 'After someone pays, I copy names from the Razorpay Dashboard and e-mail links by hand.',
+      usual: ['Copying names from the Razorpay Dashboard', 'E-mailing links by hand'],
+      promise: 'PayX turns a Razorpay Payment Page into a branded thank-you page that hands over a PDF, session details or a link.',
+      steps: ['Buyer pays on your existing Razorpay Payment Page', 'PayX shows a branded page with the PDF, session details or a link', 'You get an e-mail copy sent too, if you want one'],
+      cta: 'Set up PayX for your Payment Page',
+      facts: [
+        '"Deliver what people paid for, the moment they pay."',
+        'PayX turns any Razorpay Payment Page into a branded thank-you page that hands over a PDF, session details or a link',
+        '"The PDF, meeting link or next step appears seconds after paying."',
+        '"Works with the Razorpay Payment Page you already have"',
+        '"No app to install, no code for you to write"'
+      ],
+      source: 'payx-index.html (attend-now.com/payments/, PayX product page, commit f316911, 2026-10-08)'
+    },
+    {
+      id: 'payx-payment-checked',
+      path: '/payments/#how',
+      title: 'PayX checks the payment with Razorpay first',
+      group: 'payx',
+      audiences: ['smallbiz', 'general'],
+      hook: 'Nothing is shown until Razorpay confirms the payment.',
+      pain: 'A copied link should not unlock what people have to pay for.',
+      usual: ['Trusting a screenshot of a payment', 'Sharing a link anyone can forward'],
+      promise: 'PayX confirms status and amount with Razorpay before anything is shown, so a copied link cannot unlock your content.',
+      steps: ['Buyer pays on Razorpay', 'PayX checks the payment with Razorpay', 'Only then does it show the delivery'],
+      cta: 'Set up PayX for your Payment Page',
+      facts: [
+        '"PayX checks the payment: Status and amount are confirmed with Razorpay before anything is shown."',
+        '"Every payment is checked with Razorpay\'s API: status, amount and page, so a copied link cannot unlock your content."'
+      ],
+      source: 'payx-index.html (attend-now.com/payments/, PayX product page, commit f316911, 2026-10-08)'
+    },
+    {
+      id: 'payx-private-pdfs',
+      path: '/payments/#features',
+      title: 'Private PDFs for verified buyers only',
+      group: 'payx',
+      audiences: ['smallbiz', 'teachers', 'general'],
+      hook: 'Keep the Drive file private and let only verified buyers download it.',
+      pain: 'Sharing a PDF means a public Drive link anyone can forward.',
+      usual: ['A public Drive link', 'E-mailing the PDF to every buyer'],
+      promise: 'PayX streams the private Drive file only to verified buyers, with an optional download limit per payment.',
+      steps: ['Keep the PDF private in your Google Drive', 'Buyer pays and is verified', 'PayX streams the file to them, with an optional download limit per payment'],
+      cta: 'Set up PayX for your Payment Page',
+      facts: [
+        '"Keep the Drive file private: PayX streams it only to verified buyers, with an optional download limit per payment."',
+        '"Private files stay private: only verified buyers can download."',
+        '"Files stay in your Google Drive."'
+      ],
+      source: 'payx-index.html (attend-now.com/payments/, PayX product page, commit f316911, 2026-10-08)'
+    },
+    {
+      id: 'payx-session-ready',
+      path: '/payments/#features',
+      title: 'Session-ready details after payment',
+      group: 'payx',
+      audiences: ['teachers', 'smallbiz', 'general'],
+      hook: 'Join link, meeting ID, passcode, a live countdown and calendar invites, straight after paying.',
+      pain: 'Before every session I message each buyer the join link and then answer who lost it.',
+      usual: ['Messaging the join link to each buyer', 'Re-sending links to people who closed the tab'],
+      promise: 'Buyers see the join link, meeting ID, passcode, a live countdown and one-tap Google, Apple or Outlook calendar invites, even for multi-day courses.',
+      steps: ['Add the session details to the page row in your Google Sheet', 'Buyer pays and sees the details at once', 'They add it to their calendar in one tap'],
+      cta: 'Set up PayX for your Payment Page',
+      facts: [
+        '"Session-ready: Join link, meeting ID, passcode, a live countdown and one-tap Google / Apple / Outlook calendar invites, even for multi-day courses."',
+        '"Lost the tab? Buyers find their purchase with their e-mail and phone."',
+        'Made for: yoga and wellness sessions, workshops and webinars, course enrolments, coaching calls'
+      ],
+      source: 'payx-index.html (attend-now.com/payments/, PayX product page, commit f316911, 2026-10-08)'
+    },
+    {
+      id: 'payx-google-sheet-log',
+      path: '/payments/#how',
+      title: 'Every payment logged in your own Google Sheet',
+      group: 'payx',
+      audiences: ['smallbiz', 'general'],
+      hook: 'Every payment, failed attempt and download lands in a Google Sheet you own.',
+      pain: 'My buyer list lives in someone else\'s dashboard and I rebuild it by hand.',
+      usual: ['Copying buyers into a spreadsheet', 'Checking the Razorpay Dashboard for who paid'],
+      promise: 'PayX records every buyer in your own Google Sheet, and an admin dashboard with Google sign-in shows revenue, buyers and failed attempts.',
+      steps: ['Buyer pays and PayX checks it', 'The payment is logged in your Google Sheet', 'Open the admin dashboard to see revenue, buyers and failed attempts'],
+      cta: 'Set up PayX for your Payment Page',
+      facts: [
+        '"Logged in your Sheet: Every payment, failed attempt and download lands in a Google Sheet you own."',
+        '"Where is my data stored? In a Google Sheet in your own Google account. Files stay in your Google Drive. PayX keeps no separate database."',
+        '"Admin dashboard: Google sign-in. Revenue, buyers, failed attempts, approve, re-check, resend e-mails and CSV export."',
+        '"Can one setup serve several Payment Pages? Yes. Each Payment Page is one row in the Sheet."'
+      ],
+      source: 'payx-index.html (attend-now.com/payments/, PayX product page, commit f316911, 2026-10-08)'
+    },
+    {
+      id: 'payx-failed-payments',
+      path: '/payments/#features',
+      title: 'Failed payments show the reason and a retry',
+      group: 'payx',
+      audiences: ['smallbiz', 'general'],
+      hook: 'A failed UPI payment shows the reason and a one-tap retry.',
+      pain: 'A failed UPI payment leaves the buyer unsure what to do next.',
+      usual: ['Waiting for the buyer to message you', 'Telling people to try again by hand'],
+      promise: 'Buyers see the reason Razorpay gave and a "Try the payment again" button; if the bank is still confirming, PayX tells them not to pay twice and keeps checking.',
+      steps: ['A payment fails on Razorpay', 'PayX shows the reason Razorpay gave', 'The buyer taps "Try the payment again"'],
+      cta: 'Set up PayX for your Payment Page',
+      facts: [
+        '"Failed payments show the reason and a one-tap \'Try the payment again\'."',
+        '"What if the buyer\'s payment fails? They see the reason Razorpay gave and a button to try the payment again. If their bank is still confirming, PayX tells them not to pay twice and keeps checking."',
+        '"Webhook back-up: Optional Razorpay webhook records buyers who closed the tab early, and e-mails them their access."'
+      ],
+      source: 'payx-index.html (attend-now.com/payments/, PayX product page, commit f316911, 2026-10-08)'
     }
   ],
   notConfirmed: [
+    'PayX cost: the page says "Razorpay\'s usual fees apply to payments" and "contact us for setup and support plans". No price is shown, so none is given.',
+    'PayX "Event passes" use case and "Donations with a thank-you": listed under "Made for" but not promoted; "event passes" sits next to ticketing, which attend-now.com does not offer.',
+    'PayX "Secure by default" (strict content security policy, no third-party scripts), "nine themes", the "few kilobytes" speed claim and the optional back-up server: product-page claims left out as assurance or unmeasured wording; only the verification, private-file and retry facts are used.',
+    'PayX on the attend-now home page or in the sitemap: PayX is at /payments/ (page committed 2026-10-08, f316911); no other page was checked.',
     'Biometric integration (fingerprint / facial recognition): index.html footnote says it "may be available in future updates. Please contact us for current availability."',
     '"Health & Safety Compliant" and "privacy compliance" (about.html): a compliance claim with nothing behind it on the site.',
     'Testimonials on index.html (John Doe, Jane Smith, Mike Johnson) and about.html (Anita D., Raj S.): placeholders, not usable.',
@@ -252,5 +373,5 @@ module.exports = {
     'LearnX admin/teacher portals, invites, course reminders and WhatsApp links: only in docs/LearnX manuals and signed-in pages (noindex), so not used as items.',
     'LearnX legal pages show placeholder company details ("Your Institute Name", support@example.com) from learnx/js/config.js; /learnx redirects to the default institute (DEFAULT_TENANT \'aoc\').'
   ],
-  checked: '2026-10-05'
+  checked: '2026-10-25'
 };

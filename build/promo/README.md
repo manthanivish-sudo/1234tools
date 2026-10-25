@@ -7,6 +7,14 @@ A local tool for promoting the site's tools by hand, in about 45 minutes a day. 
 ## Run it
 
 ```
+node build/promo/desk.js start            # the desk in the background (no window), then opens it in your browser
+node build/promo/desk.js stop | status
+node build/promo/desk.js autostart on     # start it whenever you sign in to Windows (add --open to open the browser too)
+node build/promo/desk.js autostart off
+node build/promo/desk.js pack pdf/merge-pdf/ youtube-shorts   # every box to paste: title, description, tags, pinned comment …
+node build/promo/desk.js pack pdf/merge-pdf/ all
+node build/promo/desk.js grow                        # today's growth moves and the moments coming up
+node build/promo/desk.js grow pdf/merge-pdf/         # one tool's viral angles, each linked to a Reel Maker style
 node build/promo/desk.js serve            # http://127.0.0.1:8797  (ports 8796-8799 only)
 node build/promo/desk.js plan             # today's tasks in the terminal
 node build/promo/desk.js draft pdf/merge-pdf/ reddit-r-sideproject --template reddit-post --variant 1
@@ -27,19 +35,41 @@ node build/promo/desk.js testimonials --site xleshop [list|add|email|export|stat
 
 Tool paths work with or without the leading slash. Git Bash rewrites `/pdf/...` into a Windows path; the desk undoes that, but `pdf/merge-pdf/` avoids the problem.
 
-The web app has ten tabs:
+The web app has twelve tabs. Every tool box takes typing (typos are forgiven: "mrge pdf" finds Merge PDF Files), shows today's and recent tools when it is empty, and has **Browse all**: the sections as chips and the tools as a grid. The header has the **Start with Windows** switch.
 
 - **Today**: the day's routine as tasks, each with the tool, the venue, the draft, the venue's red lines and a composer link where one exists. **Done…** asks for the post URL and logs it; **Skip** logs a skip. High-risk venues are never suggested here; venues whose rules the register could not confirm carry a **verify rules first** badge. Above the tasks, **Today's videos** lists the day's calendar slots and the channels still to post, with "wait" where a channel's cadence is used up.
-- **Draft**: pick any of the 232 finder tools, then a venue (ranked by fit, with risk, self-promotion rule, cadence status, rules link, notes and how the register verified them), a template and a variant. Every part has a live character count against its limit, red lint errors and its own Copy button. While a venue is blocked by the log, Copy and Open composer are disabled until you tick the override (logged as an override).
+- **Draft**: pick any finder tool (the desk reads the finder index, so a new tool appears on its own: 318 on 2026-10-25), then a venue (ranked by fit, with risk, self-promotion rule, cadence status, rules link, notes and how the register verified them), a template and a variant. Every part has a live character count against its limit, red lint errors and its own Copy button. While a venue is blocked by the log, Copy and Open composer are disabled until you tick the override (logged as an override).
 - **Opportunities**: open questions for a tool or an audience. Every question found is saved (`opportunities.json`) with its status — new, drafted, answered, dismissed — so a restart loses nothing and a dismissed question stays dismissed when it turns up again. **Draft answer** opens Draft with the question in the answer template; **Mark answered** and **Dismiss** file it.
 - **Drafts survive restarts**: an edited draft is saved as you type (`drafts.json`) and comes back when the same tool, venue, template and variant are opened again, with **Reset to the generated text**.
 - **Kits**: generates a launch kit that tells the tool's story — the pain, the usual way, the fix with a REAL example captured from the live tool, three steps, a QR call to action — as a 5-slide carousel (plus `carousel.pdf` for LinkedIn documents), a square, a story, a Pinterest pin and a link-preview card. Every kit gets a different look (5 layouts × 8 palettes × 5 type styles × 3 copy variants, never repeating the tool's last 3 or the last 2 overall); **Shuffle look**, the Layout / Palette / Type / Copy menus, a seed and six alternative-look thumbnails let you choose.
-- **Calendar**: a 90-day short-video plan, about nine a week in five formats (problem → solution, before / after, 10-second developer tricks, India finance, AI at work), no tool repeated within 21 days. Each slot carries the tool's own hook and the Reel's beats, with **Make the Reel** (opens the Reel Maker on that tool), **Kit**, **Caption**, and **Made / Posted / Skip**; statuses live in `calendar.json` and survive re-planning; **Download CSV** for a shared planner. See *The per-channel checklist* below.
+- **Post**: pick a tool and a platform tile; every box of that platform's upload screen with its own Copy button, **Copy all**, **Another version**, the official how-to-post guide and the upload page. See *Post packs* below.
+- **Calendar**: a 90-day short-video plan, about nine a week in five formats (problem → solution, before / after, 10-second developer tricks, India finance, AI at work), no tool repeated within 21 days. Each slot carries the tool's own hook, the Reel's beats and its reel style (**Another style** steps on), with **Make the Reel** (opens the Reel Maker on that tool in that style), **Pack** on each channel row, **Kit**, **Caption**, and **Made / Posted / Skip**; statuses live in `calendar.json` and survive re-planning; **Download CSV** for a shared planner. See *The per-channel checklist* below.
 - **Testimonials**: named client quotes for the site in the picker, each published only with the client's written permission. See *Testimonials* below.
 - **Guide**: why the desk exists, the process from slot to every channel (with the Today routine, cadence, the 9:1 rule, missed days, removals and skips), the red lines, one card per channel and the FAQ. The same text prints with `desk.js guide`.
 - **Venues**: the register as a filterable table, plus the excluded venues with reasons and the research insights.
 - **Log**: history with filters, a form for help-only replies and removals, and cadence status per venue.
-- **Reels**: the top tools per section with a link to the Reel Maker (`/ai-video/reel-maker/?tool=<path>`), which works once that page is deployed.
+- **Reels**: the top tools per section with a link to the Reel Maker (`/ai-video/reel-maker/?tool=<path>`), plus quick links for the Speed run, Myth vs fact and POV styles and **Surprise me**.
+- **Grow**: today's three growth moves, the experiment of the week, the reel style of the day, the moments to prepare for, the whole playbook, and **Viral angles** for any tool. See *Growth* below. The Today tab shows the day's first move.
+
+## Start with Windows
+
+`desk.js autostart on` puts a shortcut named **1234Tools Promotion Desk** in your Startup folder (`shell:startup`), so the desk starts in the background whenever you sign in, and a second one in the Start menu, so typing "Promotion" in Start opens it. No admin rights, no scheduled task, no registry key: `autostart off` deletes both. `--open` also opens the desk in the browser at sign-in. The same switch is in the desk's header. Double-clicking `build/promo/start-desk.cmd` does the same as `desk.js start`.
+
+The background desk writes its output to `PROMO_HOME/desk.log` and its process id to `PROMO_HOME/desk.pid`; `desk.js stop` uses it. A desk started with `serve` in a terminal is stopped by closing that window.
+
+## Post packs: every box, ready to paste
+
+The **Post** tab (and `desk.js pack <tool> <channel>`) gives each platform's upload screen, box by box, with its own Copy button, character count and lint result: YouTube Shorts title, description, tags (comma-separated, within the 500 characters Studio allows), hashtags (YouTube shows three by the title), a pinned comment with no link, category and cover text; TikTok caption, on-screen hook, search phrase, cover text and pinned comment; Instagram caption with at most 5 hashtags (Instagram's cap since December 2025), cover text, alt text per carousel slide and first comment; Pinterest title, description, alt text, link, board and topics; LinkedIn post, document title and first comment; X post, link reply and alt text; Threads topic; WhatsApp status text and link. The main text is the channel's own Draft template, so it follows the same claim rules; the other boxes are built from the tool's story and linted the same way.
+
+Every pack also links the platform's **own how-to-post guide** and its upload page (channels.js `HOWTO`, read on 2026-10-25). Instagram, Threads and TikTok help pages render only with JavaScript, so those links go to the platform's help section and say "check the steps there".
+
+## Growth: going further than posting
+
+The **Grow** tab (and `desk.js grow`) holds the playbook: 30 cards in eight groups (hooks, formats, engagement, distribution, collaboration, search, proof, moments), each with why it works, the steps, and the desk tab that helps. Every day it picks three moves from three groups, an experiment of the week and a reel style of the day, and lists the moments coming up for the site's regions (tax deadlines, festivals, shopping days, exam season, monthly GST and PAYE days) with the date to start posting; lunar dates carry "check the date". For one tool it writes viral angles: a hook in each reel style, series ideas, a challenge, a collab and a reply-video prompt. Nothing in it breaks a red line: no bought reach, no pods, no auto-replies, no invented numbers.
+
+## Reel styles
+
+The Reel Maker tells a tool's story in twelve shapes: full story, speed run, before / after, myth vs fact, 3 mistakes, POV, stop doing this, guess first, 3 reasons, hot take, this or that and step by step (`?style=`; growth.js `STYLES` and the engine's `PROMO_STYLES` keep the same ids). Each calendar slot gets one, rotating within its format and never the same as the slot before; **Another style** steps on. For other sites the slot suggests a Reel Maker script template instead (`?template=`: pack an order with me, guess the price, product demo …).
 
 ## The per-channel checklist and coverage
 

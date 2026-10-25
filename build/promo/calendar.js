@@ -321,11 +321,82 @@ function viewItem(it, idx) {
   return Object.assign({}, it, { targets, state, progress: { done, total, posted, skipped, flagged, label } });
 }
 
+/* The shape of each slot's reel. For 1234Tools: the Reel Maker's story style (growth.js STYLES, ?style=),
+   rotating within a format and never the same as the slot before, so a week of reels is not one shape nine
+   times. For another site the Reel Maker has no story to tell, so a slot suggests a script template
+   (?template=) that suits the site's kind. A style or template chosen by hand (setStyle) is kept. */
+const STYLE_ORDER = {
+  problem: ['story', 'pov', 'stop', 'mistakes', 'quiz', 'hottake'],
+  before: ['beforeafter', 'speedrun', 'thisorthat', 'myth'],
+  dev: ['speedrun', 'tutorial', 'quiz', 'stop'],
+  india: ['countdown', 'myth', 'quiz', 'beforeafter', 'tutorial', 'story'],
+  ai: ['tutorial', 'hottake', 'thisorthat', 'speedrun']
+};
+const SITE_TEMPLATES = {
+  shop: [['packorder', 'Pack an order with me'], ['pricereveal', 'Guess the price'], ['smallbiz', 'Small business check'], ['unboxing', 'Unboxing'], ['bts', 'Behind the scenes'], ['didyouknow', 'Did you know?'], ['tellme', 'Tell me without telling me'], ['grwm', 'Get ready with me']],
+  app: [['productdemo', 'Product demo'], ['stopscrolling', 'Stop scrolling if…'], ['faq', 'FAQ — questions answered'], ['myth', 'Myth vs Fact'], ['expectation', 'Expectation vs reality'], ['problem', 'Problem → Solution'], ['beforeafter', 'Before / After'], ['didyouknow', 'Did you know?']],
+  services: [['problem', 'Problem → Solution'], ['faq', 'FAQ — questions answered'], ['myth', 'Myth vs Fact'], ['bts', 'Behind the scenes'], ['didyouknow', 'Did you know?'], ['expectation', 'Expectation vs reality'], ['stopscrolling', 'Stop scrolling if…'], ['tellme', 'Tell me without telling me']]
+};
+const REEL_BASE = REEL.replace(/\?tool=$/, '');
+function siteTemplates() { const S = require('./site'); return SITE_TEMPLATES[S.current().kind] || SITE_TEMPLATES.services; }
+
+/** Each slot's style (or template) and its Reel Maker link, worked out in date order. */
+function withStyles(items) {
+  const S = require('./site');
+  const STYLES = require('./growth').STYLES;
+  const own = S.isDefault();
+  const tpls = own ? null : siteTemplates();
+  const count = {};
+  let prev = '';
+  return items.map((it) => {
+    const fmt = own ? it.format : 'site';
+    const order = own ? (STYLE_ORDER[it.format] || STYLE_ORDER.problem) : tpls.map((t) => t[0]);
+    let pick = own ? it.style : it.template;
+    if (!pick || !order.concat(own ? STYLES.map((s) => s.id) : []).includes(pick)) {
+      const n = count[fmt] || 0;
+      pick = order[n % order.length];
+      for (let k = 0; k < order.length && pick === prev; k++) pick = order[(n + k + 1) % order.length];
+      count[fmt] = n + 1;
+    }
+    prev = pick;
+    if (own) {
+      const st = STYLES.find((s) => s.id === pick) || STYLES[0];
+      return Object.assign({}, it, { style: st.id, styleLabel: st.label, styleAbout: st.about, reel: REEL + encodeURIComponent(it.tool) + (st.id !== 'story' ? '&style=' + st.id : '') });
+    }
+    const t = tpls.find((x) => x[0] === pick) || tpls[0];
+    return Object.assign({}, it, { template: t[0], styleLabel: t[1], styleAbout: 'Start from the "' + t[1] + '" template, then paste the slot\'s lines into it.', reel: REEL_BASE + '?template=' + t[0] });
+  });
+}
+
 /** The calendar as the UI and the CLI see it: every slot with its targets checked. */
 function get() {
   const cal = raw();
   const idx = linkIndex(cal);
-  return Object.assign({}, cal, { today: todayIso(), items: cal.items.map((it) => viewItem(it, idx)) });
+  return Object.assign({}, cal, { today: todayIso(), items: withStyles(cal.items.map((it) => viewItem(it, idx))) });
+}
+
+/** Choose a slot's style (1234Tools) or template (another site) by hand; '' goes back to the rotation. */
+function setStyle(id, style) {
+  const S = require('./site');
+  const own = S.isDefault();
+  const ok = own ? require('./growth').STYLES.map((s) => s.id) : siteTemplates().map((t) => t[0]);
+  if (style && !ok.includes(style)) throw new Error('Unknown ' + (own ? 'style' : 'template') + ': ' + style + '. Try ' + ok.join(', '));
+  const cal = raw();
+  const it = find(cal, id);
+  if (own) { if (style) it.style = style; else delete it.style; } else { if (style) it.template = style; else delete it.template; }
+  save(cal);
+  return get().items.find((x) => x.id === id);
+}
+
+/** The next style (or template) after a slot's current one, for the "Another style" button. */
+function nextStyle(id) {
+  const S = require('./site');
+  const own = S.isDefault();
+  const cur = get().items.find((x) => x.id === id);
+  if (!cur) throw new Error('No calendar slot ' + id);
+  const ids = own ? require('./growth').STYLES.map((s) => s.id) : siteTemplates().map((t) => t[0]);
+  const now = own ? cur.style : cur.template;
+  return setStyle(id, ids[(ids.indexOf(now) + 1) % ids.length]);
 }
 
 /* ------------------------------------------------------------ actions */
@@ -493,9 +564,9 @@ function adviceFor(ch) {
 function csv() {
   const cal = get();
   const q = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-  const head = ['Date', 'Format', 'Tool', 'Path', 'Hook', 'Platforms', 'Reel Maker', 'Status', 'Posted URL', 'Channels', 'Targets'];
+  const head = ['Date', 'Format', 'Tool', 'Path', 'Hook', 'Platforms', 'Reel Maker', 'Status', 'Posted URL', 'Channels', 'Targets', 'Style'];
   const tgt = (t) => t.name + ': ' + (t.state === 'posted' ? (t.url || 'ticked') + (t.flagged ? ' (check the link)' : '') : t.state === 'skipped' ? 'skipped, ' + (t.reason || 'no reason') : 'due');
-  return [head.map(q).join(',')].concat(cal.items.map((it) => [it.date, it.formatLabel, it.title, it.tool, it.hook, it.platforms.join(' / '), it.reel, it.state, it.postedUrl, it.progress.label, it.targets.map(tgt).join(' | ')].map(q).join(','))).join('\r\n') + '\r\n';
+  return [head.map(q).join(',')].concat(cal.items.map((it) => [it.date, it.formatLabel, it.title, it.tool, it.hook, it.platforms.join(' / '), it.reel, it.state, it.postedUrl, it.progress.label, it.targets.map(tgt).join(' | '), it.styleLabel].map(q).join(','))).join('\r\n') + '\r\n';
 }
 
-module.exports = { plan, get, setStatus, target, coverage, csv, migrate, linkKey, FORMATS, WEEK, DAYS, GAP, FILE };
+module.exports = { plan, get, setStatus, target, coverage, csv, migrate, linkKey, setStyle, nextStyle, STYLE_ORDER, SITE_TEMPLATES, FORMATS, WEEK, DAYS, GAP, FILE };

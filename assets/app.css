@@ -3544,6 +3544,9 @@ html.is-embed .embed-credit { display: flex; justify-content: space-between; gap
 .reel-chosen[hidden] { display: none; }
 .reel-chosen .ico { flex: none; }
 .reel-chosen-text { flex: 1 1 160px; }
+.reel-styles-lbl { flex-basis: 100%; margin: 2px 0 0; font-size: .78rem; color: var(--text-3); }
+.reel-styles { flex-basis: 100%; gap: 6px; }
+.reel-styles .chip { padding: 5px 11px; font-size: .8rem; cursor: pointer; }
 .reel-chosen .btn-ghost { font-size: .78rem; padding: 4px 10px; }
 .reel-undo { margin-bottom: 8px; }
 .reel-undo[hidden] { display: none; }

@@ -1,5 +1,5 @@
 'use strict';
-/** Site profile: XLeShop. Read from E:/projects/XLeShop/xleshop (read-only; the platform's marketing site, public/*.html, last commit 2026-09-25)
+/** Site profile: XLeShop. Read from E:/projects/XLeShop/xleshop (read-only; the platform's marketing site, public/*.html, features.html and pricing.html re-read 2026-10-25; billing is now yearly only)
  *  and the workspace CLAUDE.md at E:/projects/XLeShop, plus https://xleshop.com/pricing.html (fetched to confirm prices) on 2026-10-05.
  *  XLeShop is a store platform sold to shop owners (food, grocery, dairy, fashion; India and UK). Items are its features for shop owners,
  *  not the products of the shops that run on it: those shops are separate brands (see notConfirmed). */
@@ -43,12 +43,13 @@ module.exports = {
       { rule: 'no-uk-prices', re: '£\\s?\\d', msg: 'UK shops are billed in pounds on a quote. No pound prices are shown.' },
       { rule: 'no-free-trial', re: '\\bfree (trial|plan|month|tier)\\b|\\btry (it )?free\\b', msg: 'There is no free trial or free plan. The free things are catalogue migration and domain set-up.' },
       { rule: 'no-marketplace-names', re: '\\b(swiggy|zomato|amazon|flipkart|blinkit|zepto|bigbasket|dunzo|jiomart|meesho|shopify|dukaan|woocommerce|wordpress|wix)\\b', msg: 'The site contrasts "a marketplace" in general and has retired its named comparison pages. Never name a marketplace or platform.' },
+      { rule: 'monthly-price-alone', level: 'warn', re: '(?<!(a year|yearly|paid yearly)[^.\\n]{0,60})₹\\s?(1,500|2,499|3,999|7,999)\\b(?![^.\\n]{0,60}(a year|yearly))', msg: 'Billing is yearly only. A monthly price (₹1,500, ₹2,499, ₹3,999, ₹7,999) must sit next to the yearly price (₹18,000, ₹29,988, ₹47,988, ₹95,988 a year, paid yearly in advance), for example: ₹18,000 a year, paid yearly (₹1,500 a month).' },
       { rule: 'no-money-claims', re: '\\b(save|keep) ₹\\s?[\\d,]+', msg: 'Savings from the commission calculator depend on the visitor\'s own inputs. Point people to the calculator instead of quoting a saving.' }
     ],
     notes: [
       'XLeShop is a store platform for shop owners: speak to owners of food, grocery, dairy, sweets, Ayurveda and fashion shops in India and the UK.',
       '"0% commission" is stated on every page and is fine to use; payment gateways still charge their own per-transaction fee, so never imply payments cost nothing.',
-      'Plan prices are shown statically in rupees: Starter ₹1,500, Growth ₹2,499, Pro ₹3,999, Enterprise ₹7,999 per month (or yearly). Always name the plan a feature needs.',
+      'Billing is yearly only, paid in advance: Starter ₹18,000 a year, Growth ₹29,988, Pro ₹47,988, Enterprise ₹95,988 (pricing.html also shows the monthly equivalents ₹1,500, ₹2,499, ₹3,999 and ₹7,999 a month, paid yearly). Quote the yearly price with the monthly equivalent in brackets; never show a monthly price on its own as if it were billed monthly. Always name the plan a feature needs.',
       'Razorpay and PayU are integrations: name them only as facts about how payments settle, never in a comparison.',
       'Compare with "selling through a marketplace" only in the site\'s own general terms (commission per order, the app keeps the customer); never name one.',
       'The only free things are catalogue migration and domain set-up; "free delivery" is a setting the shop offers its own customers.'
@@ -72,7 +73,7 @@ module.exports = {
         'Logo, colours and a choice of four design themes. Customers see only your brand, never ours',
         'You pay one flat plan, and we take 0% of your sales',
         'Catalogue migration and domain set-up are free on every plan',
-        'Starter ₹1,500 per month · or ₹18,000 a year'
+        'Starter ₹18,000 a year, paid yearly in advance (₹1,500 a month)'
       ],
       source: 'public/features.html'
     },
@@ -187,7 +188,7 @@ module.exports = {
       facts: [
         'Daily or weekly deliveries that customers pause, skip, resume or cancel themselves. You get a forecast of what to stock (Growth)',
         'Daily milk, a weekly vegetable box, paneer every Wednesday. Customers set it once and manage it themselves',
-        'Growth ₹2,499 per month · or ₹29,988 a year'
+        'Growth ₹29,988 a year, paid yearly in advance (₹2,499 a month)'
       ],
       source: 'public/features.html'
     },
@@ -225,7 +226,7 @@ module.exports = {
       facts: [
         'New, Bronze, Silver, Gold and Platinum. Customers see their tier and how close they are to the next one (Pro)',
         'Customers climb from New to Bronze, Silver, Gold and Platinum as they order. It\'s automatic, visible to them',
-        'Pro ₹3,999 per month · or ₹47,988 a year'
+        'Pro ₹47,988 a year, paid yearly in advance (₹3,999 a month)'
       ],
       source: 'public/features.html'
     },
@@ -303,7 +304,7 @@ module.exports = {
       cta: 'Make product reels with XLeShop',
       facts: [
         'Short vertical videos made from your own product photos, to share on Instagram, YouTube Shorts and WhatsApp Status (Pro)',
-        'Pro ₹3,999 per month · or ₹47,988 a year'
+        'Pro ₹47,988 a year, paid yearly in advance (₹3,999 a month)'
       ],
       source: 'public/index.html'
     },
@@ -398,7 +399,7 @@ module.exports = {
       pain: 'I worry that if a bill slips through, my shop disappears and my customers can\'t order.',
       usual: ['Setting reminders for every renewal', 'Paying early just in case'],
       promise: 'Reminders 60, 30 and 7 days ahead, 14 days of grace, then only premium extras pause. Checkout, payments and stock keep working.',
-      steps: ['Pick a plan, monthly or yearly', 'Get renewal reminders by email and in your admin', 'Renew; nothing changes for your customers'],
+      steps: ['Pick a plan (billed yearly, in advance)', 'Get renewal reminders by email and in your admin', 'Renew; nothing changes for your customers'],
       cta: 'Read how XLeShop licences work',
       facts: [
         'We will never switch off your checkout over a bill',
@@ -446,6 +447,200 @@ module.exports = {
         'Revenue by brand, so you can see what your own label earns next to the brands you stock (Growth)'
       ],
       source: 'public/features.html'
+    },
+    {
+      id: 'google-product-pages',
+      path: '/features.html#storefront',
+      title: 'Product pages built for Google',
+      group: 'storefront',
+      audiences: ['smallbiz', 'india', 'uk'],
+      hook: 'Every product on your store gets its own page, ready to be found and shared.',
+      pain: 'My products only exist inside a chat or an app, so nobody can find them on Google or share a link.',
+      usual: ['Sending product photos on WhatsApp', 'Listing products only inside someone else\'s app'],
+      promise: 'Every product gets its own page, with a sitemap and share previews that look right on WhatsApp and social media.',
+      steps: ['Add a product to your catalogue', 'It gets its own page on your domain', 'Share the link, and the preview looks right on WhatsApp'],
+      cta: 'Put your products on their own pages with XLeShop',
+      facts: [
+        'Every product gets its own page, with a sitemap and share previews that look right on WhatsApp and social media (All plans)'
+      ],
+      source: 'public/features.html'
+    },
+    {
+      id: 'vouchers',
+      path: '/features.html#checkout',
+      title: 'Vouchers',
+      group: 'checkout',
+      audiences: ['smallbiz', 'india', 'uk'],
+      hook: 'Offer money off or free delivery, with a limit on each voucher.',
+      pain: 'I give discounts by message and then can\'t stop the same code being used again and again.',
+      usual: ['Promising discounts over WhatsApp', 'Knocking money off by hand at delivery'],
+      promise: 'Create vouchers for a percentage off, a flat amount off or free delivery, and limit how many times each can be used.',
+      steps: ['Create a voucher in your admin', 'Set how many times it can be used', 'Customers enter the code at checkout'],
+      cta: 'Run vouchers on your XLeShop store',
+      facts: [
+        'Percentage off, a flat amount off or free delivery, with limits on how many times each voucher can be used (All plans)'
+      ],
+      source: 'public/features.html'
+    },
+    {
+      id: 'returns',
+      path: '/features.html#customers',
+      title: 'Returns',
+      group: 'customers',
+      audiences: ['smallbiz', 'india', 'uk'],
+      hook: 'Customers start a return from their own account. Your team approves it and processes the refund.',
+      pain: 'Returns arrive as messages and phone calls, and nobody can tell which ones are sorted.',
+      usual: ['Handling returns by phone call', 'Tracking refunds in a notebook'],
+      promise: 'Customers start a return from their account, your team approves it, and you process the refund.',
+      steps: ['The customer starts a return from their account', 'Your team approves it', 'You process the refund'],
+      cta: 'Handle returns on your XLeShop store',
+      facts: [
+        'Customers start a return from their account. Your team approves it and processes the refund (All plans)'
+      ],
+      source: 'public/features.html'
+    },
+    {
+      id: 'sizes-variants',
+      path: '/features.html#catalogue',
+      title: 'Sizes, size charts and variants',
+      group: 'catalogue',
+      audiences: ['smallbiz', 'india', 'uk', 'marketers'],
+      hook: 'Sell anything that comes in sizes, with stock counted for each size.',
+      pain: 'One product, five sizes, and I lose track of which size has sold out.',
+      usual: ['A separate listing for every size', 'Counting sizes in a spreadsheet'],
+      promise: 'Sell clothing and anything else that comes in sizes, with stock tracked for each size and a size chart on the product.',
+      steps: ['Add the sizes or options to a product', 'Set the stock count for each one', 'Show a size chart on the product page'],
+      cta: 'Sell sizes and options on XLeShop',
+      facts: [
+        'Sell clothing and anything else that comes in sizes, with stock tracked for each size and a size chart on the product (All plans)',
+        'Variants: sizes and options, each with its own stock count (All plans)'
+      ],
+      source: 'public/features.html'
+    },
+    {
+      id: 'order-tracking',
+      path: '/features.html#storefront',
+      title: 'Order tracking',
+      group: 'storefront',
+      audiences: ['smallbiz', 'india', 'uk'],
+      hook: 'Every order gets a private tracking link, so customers can follow it themselves.',
+      pain: 'Customers keep messaging to ask where their order is.',
+      usual: ['Answering "where is my order?" messages', 'Calling customers with updates'],
+      promise: 'Every order has a private tracking link, so customers can follow it from confirmed to delivered.',
+      steps: ['A customer places an order', 'They get a private tracking link for it', 'They follow it from confirmed to delivered'],
+      cta: 'Give your customers order tracking with XLeShop',
+      facts: [
+        'Every order has a private tracking link, so customers can follow it from confirmed to delivered (All plans)',
+        'Order pipeline: placed, confirmed, packed, dispatched, delivered. The server checks every step, and each order keeps a full timeline (All plans)'
+      ],
+      source: 'public/features.html'
+    },
+    {
+      id: 'publish-and-bulk-edit',
+      path: '/features.html#catalogue',
+      title: 'Publish in under a minute and bulk edit',
+      group: 'catalogue',
+      audiences: ['smallbiz', 'india', 'uk'],
+      hook: 'Name, price, photo, live. There is no review queue.',
+      pain: 'A flash sale idea comes in the afternoon, but updating every product takes until the next day.',
+      usual: ['Waiting for a developer to update the catalogue', 'Editing products one at a time'],
+      promise: 'Name, price, photo, live, with no review queue, so a flash sale can go up the same evening. Bulk edit changes many products at once.',
+      steps: ['Add the name, price and photo', 'Publish it: no review queue', 'Use bulk edit to change stock, category or visibility across many products'],
+      cta: 'Update your catalogue fast with XLeShop',
+      facts: [
+        'Publish in under a minute: name, price, photo, live. There\'s no review queue, so a flash sale can go up the same evening (All plans)',
+        'Bulk edit: change stock, category and visibility across many products at once, and switch a whole range on or off (All plans)'
+      ],
+      source: 'public/features.html'
+    },
+    {
+      id: 'auto-confirm-assignment',
+      path: '/features.html#operations',
+      title: 'Auto-confirm and automatic assignment',
+      group: 'operations',
+      audiences: ['smallbiz', 'india', 'uk'],
+      hook: 'Confirm orders automatically and send each new order to the least busy packer or driver.',
+      pain: 'On a busy morning, customers wait for me to confirm and I decide by hand who packs what.',
+      usual: ['Confirming every order by hand', 'Telling staff by phone which orders are theirs'],
+      promise: 'Turn on auto-confirm, and new orders go to the least busy packer or driver, who each see only their own queue.',
+      steps: ['Switch on auto-confirm if you like', 'New orders go to the least busy packer or driver', 'Each person sees only their own queue'],
+      cta: 'Run your orders on XLeShop',
+      facts: [
+        'Auto-confirm: confirm orders automatically if you like, so customers aren\'t left waiting on a busy morning (All plans)',
+        'Automatic assignment: new orders go to the least busy packer or driver, and each person sees only their own queue (All plans)'
+      ],
+      source: 'public/features.html'
+    },
+    {
+      id: 'staff-audit-log',
+      path: '/features.html#team',
+      title: 'Staff accounts and audit log',
+      group: 'team',
+      audiences: ['smallbiz', 'india', 'uk'],
+      hook: 'Add your team, and see who changed what, and when.',
+      pain: 'A price changed and nobody knows who did it.',
+      usual: ['Sharing one admin password', 'Asking around who edited an order'],
+      promise: 'Add, change or remove team members and reset their passwords, with an audit log of who changed what, and when, for orders, products and settings.',
+      steps: ['Add your team members as staff accounts', 'They work in their own accounts', 'Check the audit log for who changed what, and when'],
+      cta: 'Give your team their own accounts on XLeShop',
+      facts: [
+        'Staff accounts: add, change or remove team members, and reset their passwords (All plans)',
+        'Audit log: who changed what, and when, for orders, products and settings (All plans)'
+      ],
+      source: 'public/features.html'
+    },
+    {
+      id: 'sales-reports-ledgers',
+      path: '/features.html#insights',
+      title: 'Sales reports, analytics and payment ledgers',
+      group: 'insights',
+      audiences: ['smallbiz', 'india', 'uk', 'accountants'],
+      hook: 'Sales by day, product, category and brand, with a CSV for your accountant.',
+      pain: 'At month end I rebuild my sales from chat messages and bank entries.',
+      usual: ['Adding up sales in a spreadsheet', 'Matching bank credits to orders by hand'],
+      promise: 'Sales reports by day, product, category and brand with CSV export, analytics for trends and best sellers, and payment records for Razorpay and PayU.',
+      steps: ['Open Reports in your admin', 'Pick the view: by day, product, category or brand', 'Export a CSV for your accountant'],
+      cta: 'See your sales clearly on XLeShop',
+      facts: [
+        'Sales reports: by day, product, category and brand, with CSV export for your accountant (All plans)',
+        'Analytics: trends, best sellers and repeat rate (All plans)',
+        'Payment ledgers: payment records for Razorpay and PayU, including Razorpay settlements, with CSV export (All plans)'
+      ],
+      source: 'public/features.html'
+    },
+    {
+      id: 'delivery-charges',
+      path: '/features.html#checkout',
+      title: 'Delivery charges and free delivery',
+      group: 'checkout',
+      audiences: ['smallbiz', 'india', 'uk'],
+      hook: 'Set a delivery charge and a free-delivery threshold, worked out on the server.',
+      pain: 'I quote delivery charges by message and customers argue about them.',
+      usual: ['Quoting delivery by message', 'Adjusting totals by hand'],
+      promise: 'A delivery charge and a free-delivery threshold, both calculated on the server so they can\'t be tampered with.',
+      steps: ['Set your delivery charge', 'Set the free-delivery threshold', 'Checkout works the charge out on the server'],
+      cta: 'Set your delivery charges on XLeShop',
+      facts: [
+        'A delivery charge and a free-delivery threshold, both calculated on the server so they can\'t be tampered with (All plans)'
+      ],
+      source: 'public/features.html'
+    },
+    {
+      id: 'duplicate-orders',
+      path: '/features.html#checkout',
+      title: 'Protection against duplicate orders',
+      group: 'checkout',
+      audiences: ['smallbiz', 'india', 'uk'],
+      hook: 'The same basket sent twice from the same phone is caught before it becomes two orders.',
+      pain: 'A slow signal, a second tap, and the customer is charged for two orders.',
+      usual: ['Phoning customers about double orders', 'Cancelling the extra order by hand'],
+      promise: 'If the same basket is submitted twice from the same phone, it\'s caught before it becomes two orders.',
+      steps: ['A customer taps place order', 'If the same basket is submitted again from the same phone', 'It is caught before it becomes two orders'],
+      cta: 'Take orders on XLeShop',
+      facts: [
+        'If the same basket is submitted twice from the same phone, it\'s caught before it becomes two orders (All plans)'
+      ],
+      source: 'public/features.html'
     }
   ],
   notConfirmed: [
@@ -461,9 +656,9 @@ module.exports = {
     'Merchant lookbook (/lookbook/): a walkthrough of homepage layouts for tenants ("current default", "one-file switch"); reads as a sales aid, not a product feature, so left out.',
     'Blog posts (/blog/), including "best ecommerce platforms for Indian grocery 2026": articles, not items; the old named comparison pages now 301 to /#why.',
     'Commission calculator saving figures (e.g. ₹6,90,012) depend on the visitor\'s inputs; not quoted.',
-    'XLePOS: a separate product in the same workspace (Phase 0, docs only per CLAUDE.md); its logo is in public/icons but it is not offered on the site.',
+    'XLePOS: now in a pilot (practice period) with its own profile, sites/xlepos.js; it is still not offered on xleshop.com and has no public page, so it is not an item here.',
     '/console/ (noindex) and chat-widget.js: internal or support tooling, not promoted.',
     'Separate shop brands run on XLeShop, candidates for their own profiles: Gajanan Home Foods (gajananafoods.co.in, repo gajananafoods/), Sri Balaji Stores (sribalajistores.co.uk, SriBalajiStores/), SouthBasket (southbasket.co.in, SouthBasket/), Natural Cure Ayurveda (naturalcureayurveda.com, naturalcureayurveda/), KBK Dairy Products (kbkdairyproducts.com, kbkdairyproducts/), KBK Mart (kbkmart.com, kbkmart/), Aarvik Dairy Products (aarvikdairyproducts.com, aarvikdairyproducts/), DairyZest (dairyzest.com, dairyzest/), RAP CLUB (rapclub.co.in, rapclub/). Domains as linked from xleshop/public/customers.html.'
   ],
-  checked: '2026-10-05'
+  checked: '2026-10-25'
 };

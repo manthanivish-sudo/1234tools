@@ -37,7 +37,7 @@ const iso = (d) => new Date(d).toISOString();
 
 /* ------------------------------------------------------------ modules */
 section('modules are inert on require');
-for (const m of ['tools', 'hashtags', 'hooks', 'lint', 'templates', 'venues', 'log', 'find', 'plan', 'kit', 'desk', 'channels', 'guide', 'calendar', 'site', 'site-templates', 'testimonials']) {
+for (const m of ['tools', 'hashtags', 'hooks', 'lint', 'templates', 'venues', 'log', 'find', 'plan', 'kit', 'desk', 'channels', 'guide', 'calendar', 'site', 'site-templates', 'testimonials', 'autostart', 'postpack', 'growth']) {
   check('require ' + m, () => { const x = require('./' + m); assert.ok(x && typeof x === 'object'); });
 }
 check('log dir is PROMO_HOME', () => assert.strictEqual(L.home(), TMP));
@@ -671,9 +671,11 @@ check('the Facebook guidance: native first, no Meta One push, reported figures l
 section('sites: profiles, isolation, rules, migration');
 const SITE = require('./site');
 const SHOPS = ['aarvik-dairy-products', 'dairyzest', 'gajanan-home-foods', 'kbk-dairy-products', 'kbk-mart', 'natural-cure-ayurveda', 'rap-club', 'sri-balaji-stores', 'southbasket'];
-check('fourteen sites: 1234tools built in, four own sites with at least 10 items, nine XLeShop shops with at least 8', () => {
+/* XLePOS is in a pilot: fewer items (only what is built), each pointing at XLeShop's contact page */
+const PILOTS = ['xlepos'];
+check('fifteen sites: 1234tools built in, four own sites with at least 10 items, a pilot with at least 6, nine XLeShop shops with at least 8', () => {
   const ids = SITE.list().map((s) => s.id).sort();
-  assert.deepStrictEqual(ids, ['1234tools', 'attend-now', 'fixourtime', 'mvr-it', 'xleshop'].concat(SHOPS).sort());
+  assert.deepStrictEqual(ids, ['1234tools', 'attend-now', 'fixourtime', 'mvr-it', 'xleshop'].concat(PILOTS, SHOPS).sort());
   for (const s of SITE.list()) {
     if (s.id === '1234tools') continue;
     const p = SITE.get(s.id);
@@ -683,7 +685,7 @@ check('fourteen sites: 1234tools built in, four own sites with at least 10 items
     /* a shop whose catalogue could not be confirmed may be a skeleton: then it must say so in its TODOs */
     const skeleton = shop && p.items.length < 8;
     if (skeleton) assert.ok((p.todo || []).some((t) => /TODO/.test(t)), s.id + ' is a skeleton without TODO markers');
-    else assert.ok(p.items.length >= (shop ? 8 : 10), s.id + ' items ' + p.items.length);
+    else assert.ok(p.items.length >= (shop ? 8 : PILOTS.includes(s.id) ? 6 : 10), s.id + ' items ' + p.items.length);
     assert.ok(p.rules && Array.isArray(p.rules.forbid) && p.rules.forbid.length >= 1, s.id + ' forbid rules');
     for (const it of p.items) for (const k of ['id', 'path', 'title', 'hook', 'promise', 'cta', 'source']) assert.ok(it[k], s.id + ' ' + it.id + ' ' + k);
     assert.strictEqual(new Set(SITE.run(s.id, () => SITE.listItems().map((x) => x.path))).size, p.items.length, s.id + ' item keys are unique');
@@ -1106,9 +1108,160 @@ async function restartCheck() {
   if (cliOk) pass++; else { fail++; failures.push('CLI --site: ' + JSON.stringify([s1.status, s2.status, s2.stdout.slice(0, 80), s3.status, s3.stderr.slice(0, 80), s4.status, s4.stdout.slice(0, 200), s4.stderr.slice(0, 200)])); }
 }
 
+/* -------------------------------------------- post packs and how-to */
+section('post packs: every platform\'s boxes, linted; the official how-to guides');
+{
+  const PK = require('./postpack');
+  const CHN = require('./channels');
+  check('every channel has an official guide and https links', () => {
+    for (const c of CHN.list()) {
+      assert.ok(c.howTo && c.howTo.guides.length >= 1, c.id + ' has no guide');
+      for (const g of c.howTo.guides) assert.ok(/^https:\/\//.test(g.url) && g.label, c.id + ' guide ' + g.url);
+      if (c.howTo.upload) assert.ok(/^https:\/\//.test(c.howTo.upload), c.id + ' upload ' + c.howTo.upload);
+      assert.ok(c.howTo.uploadLabel, c.id + ' upload label');
+    }
+  });
+  check('YouTube Shorts pack: title, description, tags, hashtags, pinned comment, category, cover', () => {
+    const p = PK.pack('/pdf/merge-pdf/', 'youtube-shorts');
+    const k = p.fields.map((f) => f.key);
+    for (const want of ['title', 'description', 'tags', 'hashtags', 'pinned', 'category', 'cover']) assert.ok(k.includes(want), 'missing ' + want);
+    const f = (key) => p.fields.find((x) => x.key === key);
+    assert.ok(Array.from(f('title').text).length <= 100 && /merge/i.test(f('title').text), f('title').text);
+    assert.ok(f('tags').text.length <= 500 && !/#/.test(f('tags').text) && f('tags').text.split(', ').length >= 3, f('tags').text);
+    assert.ok(!/https?:/.test(f('pinned').text), 'no links in YouTube comments');
+    assert.ok(p.ok && p.howTo.guides.some((g) => /support\.google\.com\/youtube/.test(g.url)) && /studio\.youtube\.com/.test(p.howTo.upload));
+    assert.ok(p.steps.every((s) => !/<tool>/.test(s)) && p.upload.some((s) => /reel-merge-pdf\.mp4/.test(s)));
+  });
+  check('Instagram packs carry at most 5 hashtags (Instagram\'s cap)', () => {
+    for (const ch of ['instagram-reel', 'instagram-carousel']) {
+      const p = PK.pack('/india/gst-calculator/', ch);
+      const cap = p.fields.find((x) => x.key === 'caption').text;
+      assert.ok((cap.match(/#\w+/g) || []).length <= 5, ch + ': ' + cap);
+    }
+  });
+  check('an AI tool\'s packs never say plain "free"', () => {
+    const ai = tools.find((r) => r.pricing === 'freemium');
+    for (const ch of PK.channelIds()) { const p = PK.pack(ai.path, ch); assert.ok(p.ok, ch + ': ' + p.fields.filter((f) => !f.ok).map((f) => f.key + ' ' + f.errors.map((e) => e.rule).join('/')).join(', ')); }
+  });
+  check('every tool on every platform: no lint error in any box', () => {
+    const bad = [];
+    for (const r of tools) for (const ch of PK.channelIds()) { const p = PK.pack(r.path, ch); for (const f of p.fields) if (!f.ok) bad.push(r.path + ' ' + ch + '.' + f.key + ' ' + f.errors.map((e) => e.rule).join('/')); }
+    assert.strictEqual(bad.length, 0, bad.slice(0, 5).join(' | '));
+  });
+  check('every other site\'s items on every platform: no lint error', () => {
+    const bad = [];
+    for (const s of SITE.list()) {
+      if (s.id === '1234tools') continue;
+      SITE.run(s.id, () => { for (const r of SITE.listItems()) for (const ch of PK.channelIds()) { const p = PK.pack(r.path, ch); for (const f of p.fields) if (!f.ok) bad.push(s.id + ' ' + r.path + ' ' + ch + '.' + f.key + ' ' + f.errors.map((e) => e.rule).join('/')); } });
+    }
+    assert.strictEqual(bad.length, 0, bad.slice(0, 5).join(' | '));
+  });
+  check('unknown channel and missing tool are clear errors', () => {
+    assert.throws(() => PK.pack('/pdf/merge-pdf/', 'myspace'), /Unknown channel/);
+    assert.throws(() => PK.pack('', 'x'), /Pick an item/);
+  });
+}
+
+/* ------------------------------------------------------------ growth */
+section('growth: playbook, moments, angles, the calendar\'s reel styles');
+{
+  const G = require('./growth');
+  const C = require('./calendar');
+  check('playbook: eight groups, every card has why and steps', () => {
+    const pb = G.playbook();
+    assert.ok(pb.length === 8, pb.length);
+    for (const g of pb) for (const c of g.cards) assert.ok(c.title && c.why && c.how.length >= 2, c.id);
+  });
+  check('the airplane-mode card is for 1234Tools only; neighbour shops only for shops', () => {
+    const ids = () => G.playbook().flatMap((g) => g.cards.map((c) => c.id));
+    assert.ok(ids().includes('airplane-test') && !ids().includes('neighbour-shops'));
+    SITE.run('kbk-mart', () => assert.ok(!ids().includes('airplane-test') && ids().includes('neighbour-shops')));
+  });
+  check('today: three moves from three groups, a style, upcoming moments in date order', () => {
+    const t = G.today({ now: '2026-10-25T09:00:00Z' });
+    assert.strictEqual(t.moves.length, 3);
+    assert.strictEqual(new Set(t.moves.map((m) => m.group)).size, 3);
+    assert.ok(t.style && t.style.id && t.next.length >= 3);
+    for (let i = 1; i < t.next.length; i++) assert.ok(t.next[i - 1].date <= t.next[i].date);
+  });
+  check('moments follow the site\'s regions: a UK shop gets no Indian tax days', () => {
+    const all = G.moments({ now: '2026-10-25T09:00:00Z', days: 365 });
+    assert.ok(all.some((m) => /Diwali/.test(m.name) && m.check) && all.some((m) => /Self Assessment/.test(m.name)));
+    SITE.run('sri-balaji-stores', () => { const uk = G.moments({ now: '2026-10-25T09:00:00Z', days: 365 }); assert.ok(!uk.some((m) => m.region === 'india') && uk.some((m) => /Christmas/.test(m.name))); });
+  });
+  check('angles: ten hooks across styles, each passes lint, reel links carry the style', () => {
+    const a = G.angles('/pdf/merge-pdf/');
+    assert.ok(a.hooks.length >= 8 && a.series.length === 3 && a.challenge && a.collab && a.styles.length === 12);
+    for (const h of a.hooks) { assert.ok(lint(h.text, { pricing: 'free', section: 'pdf' }).ok, h.text); if (h.style !== 'story') assert.ok(h.reel.includes('&style=' + h.style), h.reel); }
+  });
+  check('STYLES match the Reel Maker\'s PROMO_STYLES ids, in order', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'engine', 'aivid-reel-maker.js'), 'utf8');
+    const block = src.slice(src.indexOf('const PROMO_STYLES = ['), src.indexOf('const STYLE_IDS'));
+    const ids = (block.match(/^\s+\['([a-z]+)',/gm) || []).map((l) => l.trim().slice(2, -2));
+    assert.deepStrictEqual(ids, G.STYLES.map((s) => s.id));
+  });
+  check('calendar: every slot has a style, no two slots in a row share one, links carry it', () => {
+    C.plan('2026-10-26');
+    const items = C.get().items;
+    assert.ok(items.length > 50 && items.every((it) => it.style && it.styleLabel));
+    for (let i = 1; i < items.length; i++) assert.notStrictEqual(items[i].style, items[i - 1].style, items[i].date);
+    for (const it of items) assert.ok(it.style === 'story' ? !/&style=/.test(it.reel) : it.reel.endsWith('&style=' + it.style), it.reel);
+    assert.ok(new Set(items.map((x) => x.style)).size >= 8);
+  });
+  check('calendar: Another style steps on and sticks; a bad style is refused; CSV has a Style column', () => {
+    const first = C.get().items[0];
+    const n = C.nextStyle(first.id);
+    assert.ok(n.style !== first.style && C.get().items[0].style === n.style);
+    assert.throws(() => C.setStyle(first.id, 'nope'), /Unknown style/);
+    C.setStyle(first.id, '');
+    assert.strictEqual(C.get().items[0].style, first.style);
+    assert.ok(/"Style"\r?\n/.test(C.csv().split('\r\n')[0] + '\n'));
+  });
+  check('calendar for a shop suggests shop templates (?template=)', () => {
+    SITE.run('kbk-mart', () => {
+      C.plan('2026-10-26');
+      const it = C.get().items;
+      assert.ok(it.length && it.every((x) => /\?template=[a-z]+$/.test(x.reel) && x.template));
+      assert.ok(it.some((x) => x.template === 'packorder'));
+    });
+  });
+}
+
+/* --------------------------------------------- start with Windows */
+section('autostart: background desk and the Startup shortcuts');
+{
+  const AS = require('./autostart');
+  check('info() without shortcuts says off', () => {
+    process.env.PROMO_STARTUP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'promo-startup-'));
+    process.env.PROMO_PROGRAMS_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'promo-programs-'));
+    const i = AS.info();
+    assert.ok(i.on === false && /1234Tools Promotion Desk\.lnk$/.test(i.startup) && i.supported === (process.platform === 'win32'));
+  });
+  if (process.platform === 'win32') {
+    check('enable() writes both shortcuts; disable() removes them', () => {
+      const on = AS.enable({ open: true });
+      assert.ok(on.on && on.open && fs.existsSync(AS.startupLink()) && fs.existsSync(AS.programsLink()) && /start$/.test(on.command));
+      const off = AS.disable();
+      assert.ok(!off.on && !fs.existsSync(AS.startupLink()) && !fs.existsSync(AS.programsLink()));
+    });
+  }
+}
+
 /* ------------------------------------------------------------- report */
 (async () => {
 await restartCheck();
+/* the background desk: start, a second start finds it, stop (a test port, PROMO_TEST=1) */
+try {
+  process.env.PROMO_TEST = '1';
+  const AS = require('./autostart');
+  const a = await AS.start({ port: 8759, open: false });
+  const b = await AS.start({ port: 8759, open: false });
+  const st = await AS.status({ port: 8759 });
+  const s = await AS.stop({ port: 8759 });
+  const after = await AS.health(8759);
+  if (!a.already && b.already && st.running && s.stopped && !after) pass++;
+  else { fail++; failures.push('background desk start/stop: ' + JSON.stringify({ a, b, st: st.running, s, after })); }
+} catch (e) { fail++; failures.push('background desk start/stop: ' + e.message); }
 fs.rmSync(TMP, { recursive: true, force: true });
 console.log('\n' + pass + ' passed, ' + fail + ' failed (' + renders + ' template renders, ' + samples + ' channel link samples)');
 for (const f of failures) console.log('  FAIL ' + f);

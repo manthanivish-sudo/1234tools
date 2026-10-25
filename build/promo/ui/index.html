@@ -20,15 +20,22 @@
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="today" aria-selected="true">Today</button>
     <button role="tab" data-tab="draft">Draft</button>
+    <button role="tab" data-tab="post">Post</button>
     <button role="tab" data-tab="opps">Opportunities</button>
     <button role="tab" data-tab="kits">Kits</button>
     <button role="tab" data-tab="venues">Venues</button>
     <button role="tab" data-tab="log">Log</button>
     <button role="tab" data-tab="reels">Reels</button>
     <button role="tab" data-tab="calendar">Calendar</button>
+    <button role="tab" data-tab="grow">Grow</button>
     <button role="tab" data-tab="testimonials">Testimonials</button>
     <button role="tab" data-tab="guide">Guide</button>
   </nav>
+  <div class="autostart" id="autostart" hidden>
+    <label class="chk"><input type="checkbox" id="as-on"> Start with Windows</label>
+    <label class="chk" id="as-open-wrap"><input type="checkbox" id="as-open"> also open the desk</label>
+    <span class="muted small">Starts the desk when you sign in; find it in Start as 1234Tools Promotion Desk.</span>
+  </div>
 </header>
 
 <main>
@@ -38,6 +45,7 @@
   <section id="tab-today" class="tab" data-tab="today">
     <div class="head-row"><h2 id="plan-title">Today</h2><button class="ghost" id="plan-refresh">Refresh</button></div>
     <p class="muted" id="plan-work"></p>
+    <div id="plan-grow"></div>
     <div id="plan-cal"></div>
     <div id="plan-tasks" class="stack"></div>
   </section>
@@ -54,6 +62,7 @@
         <p class="chosen" id="d-tool-chosen"></p>
 
         <label class="lbl" for="d-venue">Venue <span class="muted">(ranked by fit)</span></label>
+        <div class="vchips" id="d-venue-chips" role="group" aria-label="Top venues"></div>
         <select id="d-venue"><option value="">Pick a tool first</option></select>
 
         <div class="row">
@@ -96,6 +105,21 @@
         <details class="redlines" id="d-redlines"><summary>Red lines for this venue</summary><ul></ul></details>
       </div>
     </div>
+  </section>
+
+  <!-- POST -->
+  <section id="tab-post" class="tab" data-tab="post" hidden>
+    <div class="card">
+      <label class="lbl" for="p-tool">Tool</label>
+      <div class="picker" id="p-picker">
+        <input id="p-tool" type="search" autocomplete="off" placeholder="Search the tools… e.g. merge pdf">
+        <ul class="picker-list" id="p-tool-list" hidden></ul>
+      </div>
+      <span class="lbl">Platform</span>
+      <div id="p-channels" class="tile-groups"></div>
+      <p class="muted small">Pick a tool and a platform for the title, caption, tags and checks, then open the upload page and paste. The desk never posts for you.</p>
+    </div>
+    <div id="p-pack" class="stack"></div>
   </section>
 
   <!-- OPPORTUNITIES -->
@@ -227,6 +251,20 @@
       <div id="cov-body"></div>
     </details>
     <div id="cal-weeks" class="stack"></div>
+  </section>
+
+  <!-- GROW -->
+  <section id="tab-grow" class="tab" data-tab="grow" hidden>
+    <div id="gw-main"></div>
+    <h3 class="gw-h">Viral angles for a tool</h3>
+    <div class="card">
+      <label class="lbl" for="gw-tool">Tool</label>
+      <div class="picker" id="gw-picker">
+        <input id="gw-tool" type="search" autocomplete="off" placeholder="Search the tools…">
+        <ul class="picker-list" id="gw-tool-list" hidden></ul>
+      </div>
+    </div>
+    <div id="gw-angles"></div>
   </section>
 
   <!-- TESTIMONIALS -->

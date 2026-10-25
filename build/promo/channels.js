@@ -37,6 +37,7 @@ const SRC = {
   igCreatorsFaq: 'https://creators.instagram.com/faq?locale=en_US',
   igCarouselHelp: 'https://help.instagram.com/269314186824048/',
   igLinkInBio: 'https://help.instagram.com/362497417173378',
+  igHashtagCap: 'https://www.socialmediatoday.com/news/instagrams-implementing-new-limits-on-hashtag-use/808309/',
   igStoriesAbout: 'https://about.instagram.com/features/stories',
   igStoryHelp: 'https://help.instagram.com/1257341144298972',
   igLinkSticker: 'https://about.instagram.com/blog/announcements/expanding-sharing-links-in-stories-to-everyone',
@@ -144,7 +145,7 @@ const CHANNELS = [
       s('Caption limit', '2,200 characters, 30 hashtags, 20 @ mentions (publishing API)', SRC.igMedia),
       s('Links in the caption', null, 'https://help.instagram.com/236245819849257'),
       s('Link in bio', 'Up to 5 websites on your profile', SRC.igLinkInBio),
-      s('Hashtags', 'Trending hashtags that are relevant to the reel can help it reach more people. A lower in-app cap has been reported but no official page confirms it', SRC.igCreatorsFaq),
+      s('Hashtags', 'At most 5 in the caption of a reel or post, rolling out gradually (announced by Instagram\'s @creators account on Threads on 18 December 2025, as reported); pick relevant ones, not generic tags such as #reels', SRC.igHashtagCap, '2026-10-25'),
       s('First seconds', 'Instagram advises making the first 3 seconds engaging', SRC.igCreatorsFaq),
       s('Post link', 'instagram.com/reel/{shortcode}/', SRC.igOembed)
     ],
@@ -611,7 +612,62 @@ const ADVICE = {
   'youtube-shorts': { perDay: 2, group: ['youtube-shorts'], what: 'Shorts' },
   tiktok: { perDay: 2, group: ['tiktok'], what: 'TikTok videos' }
 };
+/* How to post, in the platform's own words: the official guide for each channel and
+   the page you upload from. `read` is the day the desk read the page and the title it
+   showed; read: null means the page renders only with JavaScript (Instagram, Threads,
+   TikTok and parts of Meta's help) or refused the desk's reader (X), so the link goes
+   to the platform's own help section and the guide says to check the steps there.
+   Open each link and update `read` when you refresh CHECKED above. */
+const HOW_CHECKED = '2026-10-25';
+const g = (label, url, title) => ({ label, url, read: title ? { on: HOW_CHECKED, title } : null });
+const HOWTO = {
+  'youtube-shorts': { upload: 'https://studio.youtube.com/', uploadLabel: 'YouTube Studio → Create → Upload videos', guides: [
+    g('Get started creating YouTube Shorts', 'https://support.google.com/youtube/answer/10059070?hl=en', 'Get started creating YouTube Shorts - YouTube Help'),
+    g('Upload from a computer (YouTube Studio)', 'https://support.google.com/youtube/answer/57407?hl=en', 'Upload YouTube videos - Computer - YouTube Help'),
+    g('Add tags', 'https://support.google.com/youtube/answer/146402?hl=en', 'Add tags to your YouTube videos - YouTube Help'),
+    g('Hashtags (up to three show by the title)', SRC.ytHashtags, 'Find playlists & videos using hashtags - YouTube Help')] },
+  tiktok: { upload: 'https://www.tiktok.com/tiktokstudio/upload', uploadLabel: 'TikTok Studio upload (web)', guides: [
+    g('TikTok Help: Creating videos (making a post, editing, posting)', 'https://support.tiktok.com/en/using-tiktok/creating-videos', null)] },
+  'instagram-reel': { upload: 'https://www.instagram.com/', uploadLabel: 'instagram.com → Create (or the app\'s + button)', guides: [
+    g('Instagram Reels: create and share', SRC.igReelsAbout, 'Instagram Reels: Create & Share Short Videos'),
+    g('Use a template to create a reel', 'https://help.instagram.com/610485296790527', null)] },
+  'instagram-carousel': { upload: 'https://www.instagram.com/', uploadLabel: 'instagram.com → Create → choose several files', guides: [
+    g('Instagram Help: post several photos or videos', SRC.igCarouselHelp, null)] },
+  'instagram-story': { upload: '', uploadLabel: 'The Instagram app: swipe right from the feed, or your profile picture +', guides: [
+    g('Instagram Help: share to your story', SRC.igStoryHelp, null),
+    g('Link sticker (links in stories)', SRC.igLinkSticker, null)] },
+  'facebook-reel': { upload: 'https://business.facebook.com/latest/composer', uploadLabel: 'Meta Business Suite, or the Facebook app → Reel', guides: [
+    g('Create a Facebook reel', SRC.fbReelsHelp, 'Create a Facebook reel | Meta Business Help Centre')] },
+  'facebook-post': { upload: 'https://business.facebook.com/latest/composer', uploadLabel: 'Meta Business Suite → Create post', guides: [
+    g('Facebook Help Centre: posting from a Page', 'https://www.facebook.com/help/', null)] },
+  'pinterest-video': { upload: 'https://www.pinterest.com/pin-creation-tool/', uploadLabel: 'Pinterest → Create → Pin', guides: [
+    g('Create a Pin from an image or video', SRC.pinBuild, 'Create a Pin from an image or video | Pinterest help')] },
+  'pinterest-image': { upload: 'https://www.pinterest.com/pin-creation-tool/', uploadLabel: 'Pinterest → Create → Pin', guides: [
+    g('Create a Pin from an image or video', SRC.pinBuild, 'Create a Pin from an image or video | Pinterest help')] },
+  'linkedin-post': { upload: 'https://www.linkedin.com/feed/?shareActive=true', uploadLabel: 'LinkedIn → Start a post', guides: [
+    g('Post and share updates', SRC.liPostLimit, 'Post and share updates | LinkedIn Help')] },
+  'linkedin-document': { upload: 'https://www.linkedin.com/feed/?shareActive=true', uploadLabel: 'LinkedIn → Start a post → More → Add a document', guides: [
+    g('Upload and share documents (PDF carousels)', SRC.liDocument, 'Upload and share documents on LinkedIn | LinkedIn Help')] },
+  x: { upload: 'https://x.com/compose/post', uploadLabel: 'X → Post', guides: [
+    g('How to post on X', 'https://help.x.com/en/using-x/how-to-post', null),
+    g('Posting pictures and GIFs', SRC.xPictures, null)] },
+  bluesky: { upload: 'https://bsky.app/', uploadLabel: 'bsky.app → New post', guides: [
+    g('Bluesky user FAQ', 'https://bsky.social/about/blog/5-19-2023-user-faq', null)] },
+  mastodon: { upload: '', uploadLabel: 'Your Mastodon server\'s web app → Publish', guides: [
+    g('Posting to your profile (alt text, hashtags)', SRC.mastoPosting, 'Posting to your profile - Mastodon documentation')] },
+  telegram: { upload: 'https://web.telegram.org/', uploadLabel: 'Telegram (app or web) → your channel', guides: [
+    g('Channels FAQ', 'https://telegram.org/faq_channels', 'Channels FAQ')] },
+  threads: { upload: 'https://www.threads.com/', uploadLabel: 'threads.com → New thread', guides: [
+    g('Threads tips from Meta (creators.instagram.com)', 'https://creators.instagram.com/threads', null),
+    g('Topics on Threads (one tag per post)', SRC.threadsTopics, null)] },
+  'whatsapp-status': { upload: '', uploadLabel: 'The WhatsApp app → Updates → Status', guides: [
+    g('How to create and share a status', 'https://faq.whatsapp.com/en/android/26000031', 'How to create and share a status | WhatsApp Help Center')] },
+  'whatsapp-channel': { upload: 'https://web.whatsapp.com/', uploadLabel: 'WhatsApp (app or web) → Updates → your channel', guides: [
+    g('WhatsApp Channels', SRC.waChannels, null)] }
+};
+
 for (const c of CHANNELS) {
+  c.howTo = HOWTO[c.id] || { upload: '', uploadLabel: '', guides: [] };
   c.linkInPost = LINK_IN_POST[c.id] !== false;
   c.noLinkOption = c.id === 'pinterest-video' || c.id === 'pinterest-image' || c.id === 'facebook-post';
   if (ADVICE[c.id]) c.advice = ADVICE[c.id];
@@ -763,9 +819,9 @@ function cards() {
     return {
       id: c.id, name: c.name, short: c.short, platform: c.platform, summary: c.summary, venue: c.venue, venueName, cadence, template: c.template,
       specs: c.specs, upload: c.upload, steps: c.steps, redLines: c.redLines, linkExample: c.linkExample, tick: !!c.tick, linkShape: !!c.linkShape,
-      linkInPost: c.linkInPost, noLinkOption: !!c.noLinkOption, advice: c.advice || null, budget
+      linkInPost: c.linkInPost, noLinkOption: !!c.noLinkOption, advice: c.advice || null, budget, howTo: c.howTo
     };
   });
 }
 
-module.exports = { CHECKED, NC, SRC, list, get, classify, check, cards, PLATFORM_NAME, LINK_IN_POST, ADVICE };
+module.exports = { CHECKED, NC, SRC, list, get, classify, check, cards, PLATFORM_NAME, LINK_IN_POST, ADVICE, HOWTO, HOW_CHECKED };

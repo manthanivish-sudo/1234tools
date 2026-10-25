@@ -4,6 +4,13 @@
  * 1234Tools Promotion Desk: CLI and local web app.
  *
  *   node build/promo/desk.js serve [--port 8797]     http://127.0.0.1:8797
+ *   node build/promo/desk.js start [--port 8797] [--quiet]   the desk in the background (no window), then the browser
+ *   node build/promo/desk.js stop | status
+ *   node build/promo/desk.js autostart on [--open] | off | status   start the desk when Windows starts (Startup folder
+ *        shortcut, plus "1234Tools Promotion Desk" in the Start menu); --open also opens it in the browser at sign-in
+ *   node build/promo/desk.js pack <toolPath> <channel|all>   the copy-paste fields for a platform: title, description,
+ *        tags, hashtags, pinned comment, alt text … plus the platform's official how-to-post guide
+ *   node build/promo/desk.js grow [toolPath]                today's growth moves, upcoming moments; or one tool's viral angles
  *   node build/promo/desk.js plan
  *   node build/promo/desk.js draft <toolPath> <venueId> [--template id] [--variant n] [--question "..."]
  *   node build/promo/desk.js find <toolPath|audience:slug>
@@ -299,6 +306,13 @@ async function route(req, res, u, q, p) {
         catch (e) { return send(res, 400, { error: e.message }); }
       }
       if (p === '/api/calendar/coverage') return send(res, 200, require('./calendar').coverage({ days: q.days }));
+      /* a slot's reel style (1234Tools) or template (another site): { id, style } sets one, '' rotates, { id, next: true } steps on */
+      if (p === '/api/calendar/style' && req.method === 'POST') {
+        const b = await readBody(req);
+        const C = require('./calendar');
+        try { return send(res, 200, { item: b.next ? C.nextStyle(b.id) : C.setStyle(b.id, b.style || '') }); }
+        catch (e) { return send(res, 400, { error: e.message }); }
+      }
       if (p === '/api/guide') return send(res, 200, require('./guide').payload());
       if (p === '/api/channels/check') return send(res, 200, require('./channels').check(q.channel, q.url || ''));
       if (p === '/api/reels') return send(res, 200, await reels());
@@ -324,6 +338,26 @@ async function route(req, res, u, q, p) {
           }
         } catch (e) { return send(res, 400, { error: e.message }); }
         return send(res, 404, { error: 'not found' });
+      }
+      /* start with Windows (autostart.js): two shortcuts in the owner's own Start menu folders, nothing else */
+      if (p === '/api/autostart' && req.method === 'GET') return send(res, 200, require('./autostart').info());
+      if (p === '/api/autostart' && req.method === 'POST') {
+        const b = await readBody(req);
+        const AS = require('./autostart');
+        try { return send(res, 200, b.on ? AS.enable({ open: !!b.open }) : AS.disable()); }
+        catch (e) { return send(res, 400, { error: e.message }); }
+      }
+      /* the copy-paste pack for one tool on one platform (postpack.js) */
+      if (p === '/api/pack') {
+        const PK = require('./postpack');
+        try { return send(res, 200, q.channel ? PK.pack(q.tool, q.channel, { variant: q.variant }) : { channels: PK.channelList() }); }
+        catch (e) { return send(res, 400, { error: e.message }); }
+      }
+      /* growth: today's moves, the playbook, upcoming moments, one tool's viral angles (growth.js) */
+      if (p === '/api/grow') {
+        const G = require('./growth');
+        try { return send(res, 200, q.tool ? { angles: G.angles(q.tool) } : Object.assign(G.today(), { playbook: G.playbook(), moments: G.moments({ days: 120 }) })); }
+        catch (e) { return send(res, 400, { error: e.message }); }
       }
       if (p === '/api/health') return send(res, 200, { ok: true, home: L.home(), venues: V.file() });
       return send(res, 404, { error: 'not found' });
@@ -435,6 +469,60 @@ async function cliInSite(a) {
     await serve(port);
     console.log('Promotion Desk on http://127.0.0.1:' + port + '  (log: ' + L.logFile() + ')');
     return null;
+  }
+  /* the background desk and Windows start-up (autostart.js) */
+  if (cmd === 'start' || cmd === 'stop' || cmd === 'status' || cmd === 'autostart') {
+    const AS = require('./autostart');
+    const port = a.port ? parseInt(a.port, 10) : 8797;
+    if (!PORTS.includes(port)) { console.error('Use a port between 8796 and 8799.'); return 2; }
+    try {
+      if (cmd === 'start') {
+        const r = await AS.start({ port, open: !a.quiet, site: a.site && a.site !== true ? String(a.site) : '' });
+        console.log((r.already ? 'The desk is already running on ' : 'The desk is running in the background on ') + r.url + (r.pid ? '  (pid ' + r.pid + ')' : '') +
+          (a.quiet ? '' : '\nOpened it in your browser.') + '\nStop it with: node build/promo/desk.js stop');
+        return 0;
+      }
+      if (cmd === 'stop') {
+        const r = await AS.stop({ port });
+        console.log(r.stopped ? 'Stopped the background desk (pid ' + r.pid + ').' : 'No background desk was running.');
+        if (r.note) console.log(r.note);
+        return r.stillRunning ? 1 : 0;
+      }
+      if (cmd === 'status') {
+        const r = await AS.status({ port });
+        console.log('Desk on ' + r.url + ': ' + (r.running ? 'running' + (r.pid ? ' in the background (pid ' + r.pid + ')' : ' (started from a terminal)') : 'not running'));
+        console.log('Start with Windows: ' + (r.autostart.supported ? (r.autostart.on ? 'on' + (r.autostart.open ? ', opens the browser' : ', in the background') : 'off') : 'Windows only'));
+        return 0;
+      }
+      const sub = a._[1] || 'status';
+      if (sub === 'on') {
+        const r = AS.enable({ open: !!a.open });
+        console.log('The desk now starts when you sign in to Windows' + (r.open ? ', and opens in your browser.' : ', in the background (open it from Start: "' + AS.NAME + '").') +
+          '\n  Startup shortcut: ' + r.startup + '\n  Start menu: ' + r.startMenu + '\nTurn it off with: node build/promo/desk.js autostart off');
+        return 0;
+      }
+      if (sub === 'off') { AS.disable(); console.log('The desk no longer starts with Windows (both shortcuts removed).'); return 0; }
+      if (sub === 'status') {
+        const r = AS.info();
+        console.log(!r.supported ? 'Start with Windows works on Windows only.' : r.on ? 'On: ' + r.startup + '\n  runs ' + r.command : 'Off. Turn it on with: node build/promo/desk.js autostart on [--open]');
+        return 0;
+      }
+      console.error('Unknown autostart command: ' + sub + '. Try on, off or status.');
+      return 2;
+    } catch (e) { console.error(e.message); return 1; }
+  }
+  if (cmd === 'pack') {
+    const PK = require('./postpack');
+    const tool = a._[1];
+    if (!tool) { console.error('Usage: desk.js pack <toolPath> <channel|all>   channels: ' + PK.channelIds().join(', ')); return 2; }
+    const ids = !a._[2] || a._[2] === 'all' ? PK.channelIds() : [a._[2]];
+    for (const id of ids) console.log(PK.text(PK.pack(tool, id)) + '\n');
+    return 0;
+  }
+  if (cmd === 'grow') {
+    const G = require('./growth');
+    console.log(a._[1] ? G.anglesText(G.angles(a._[1])) : G.todayText(G.today()));
+    return 0;
   }
   if (cmd === 'plan') {
     const p = require('./plan').plan();

@@ -21,7 +21,7 @@
  *  3d. a fixture TOOL_EXAMPLES before/after is wiped: before left of the
  *      seam, after right of it, mid-wipe;
  *  3e. a batch of three is planned in three palettes;
- *   4. ?preset=paper turns the look light; 4b. each of the 19 visitor
+ *   4. ?preset=paper turns the look light; 4a. ?style=speedrun; 4b. each of the 35 visitor
  *      templates makes its own scenes with no overflow; Shuffle look works;
  *   5. the caption copy: link-in-bio line, 3–8 hashtags (#gst, #1234tools),
  *      the share module's credit line; the bio link carries the UTMs;
@@ -176,7 +176,38 @@ const TEMPLATE_TYPES = {
   hottake: ['hook', 'text', 'point', 'point', 'text', 'cta'],
   thisorthat: ['hook', 'versus', 'versus', 'text', 'cta'],
   wishiknew: ['hook', 'point', 'point', 'point', 'text', 'cta'],
-  bts: ['hook', 'text', 'text', 'text', 'text', 'cta']
+  bts: ['hook', 'text', 'text', 'text', 'text', 'cta'],
+  /* the sixteen meme and trend formats added in wave T (2026-10-25) */
+  tellme: ['hook', 'text', 'text', 'text', 'cta'],
+  redgreen: ['hook', 'point', 'point', 'point', 'point', 'cta'],
+  expectation: ['hook', 'versus', 'versus', 'text', 'cta'],
+  nobody: ['hook', 'text', 'text', 'text', 'cta'],
+  storytime: ['hook', 'text', 'text', 'text', 'text', 'cta'],
+  rateit: ['hook', 'point', 'point', 'point', 'text', 'cta'],
+  tierlist: ['hook', 'point', 'point', 'point', 'point', 'cta'],
+  grwm: ['hook', 'point', 'point', 'point', 'point', 'cta'],
+  packorder: ['hook', 'point', 'point', 'point', 'text', 'cta'],
+  pricereveal: ['hook', 'text', 'text', 'point', 'cta'],
+  didyouknow: ['hook', 'text', 'text', 'cta'],
+  stopscrolling: ['hook', 'pain', 'fix', 'steps', 'cta'],
+  beforebuy: ['hook', 'point', 'point', 'point', 'text', 'cta'],
+  challenge: ['hook', 'text', 'text', 'text', 'cta'],
+  smallbiz: ['hook', 'text', 'text', 'text', 'cta'],
+  unboxing: ['hook', 'point', 'point', 'point', 'text', 'cta']
+};
+/* A tool's story styles (?style=): the scene types each makes for /india/gst-calculator/ (story, example and end card included). */
+const STYLE_TYPES = {
+  speedrun: ['hook', 'example', 'point', 'point', 'point', 'endcard'],
+  beforeafter: ['hook', 'versus', 'example', 'steps', 'endcard'],
+  myth: ['hook', 'versus', 'versus', 'example', 'endcard'],
+  mistakes: ['hook', 'point', 'point', 'point', 'fix', 'example', 'endcard'],
+  pov: ['hook', 'text', 'fix', 'example', 'endcard'],
+  stop: ['hook', 'usual', 'steps', 'example', 'endcard'],
+  quiz: ['hook', 'text', 'steps', 'example', 'endcard'],
+  countdown: ['hook', 'point', 'point', 'point', 'example', 'endcard'],
+  hottake: ['hook', 'text', 'point', 'point', 'example', 'endcard'],
+  thisorthat: ['hook', 'versus', 'versus', 'text', 'endcard'],
+  tutorial: ['hook', 'point', 'point', 'point', 'example', 'endcard']
 };
 /* In the page: pin a look (optional), render the last frame of the reel and read the QR on the end card's white plate back. */
 const scanEndCard = (page, spec) => page.evaluate(async (spec) => {
@@ -390,6 +421,45 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
       return ex && ex.ex.kind;
     });
     check(degrade === 'flow', 'without assets/examples.js the example beat falls back to the in → out line');
+    /* 3b-2. the story styles: each tells the same story in its own scenes, nothing overflows, the voice-over is clean */
+    const styled = await page.evaluate(async () => {
+      const T = AIImg.tools['reel-maker']; const S = T.state();
+      const BAD = /WIFI:|https?:|www\.|\.(com|in|org|net)\b|(^|\s)[#@][A-Za-z]|utm_|[{}]|\.(pdf|png|jpe?g|csv|json|svg|zip|txt)\b|[₹£$€%×→✓✗•|]|\p{Extended_Pictographic}/u;
+      const c = document.createElement('canvas'); c.width = 1080; c.height = 1920; const x = c.getContext('2d');
+      const out = {};
+      for (const st of T.styles) {
+        const scenes = T.buildScript(S.promote, { endcard: true, qr: true }, S.look, st.id);
+        const X = Object.assign({}, S, { scenes });
+        T.clearOverflow();
+        let t = 0;
+        for (const sc of scenes) { for (const fr of [0.1, 0.5, 0.99]) T.renderFrame(x, 1080, 1920, t + sc.seconds * fr, X); t += sc.seconds; }
+        const vo = scenes.filter((sc) => sc.type !== 'endcard').map((sc) => T.voOf(sc));
+        out[st.id] = { types: scenes.map((s) => s.type), D: t, over: T.overflow(), voBad: vo.filter((l) => !l || BAD.test(l)), story: scenes.story === true,
+          trans: scenes.filter((s) => s.tplTrans).length };
+      }
+      return out;
+    });
+    const styleIds = Object.keys(styled);
+    check(styleIds.length === 12 && styleIds[0] === 'story', 'twelve story styles, the full story first (' + styleIds.join(', ') + ')');
+    for (const id of Object.keys(STYLE_TYPES)) {
+      const s = styled[id] || { types: [], over: ['missing'], voBad: [], D: 0 };
+      check(JSON.stringify(s.types) === JSON.stringify(STYLE_TYPES[id]) && s.over.length === 0 && s.voBad.length === 0 && s.D >= 10 && s.D <= 30 && s.trans > 0,
+        'style "' + id + '" makes ' + s.types.join(', ') + ' (' + s.D.toFixed(1) + ' s, ' + s.trans + ' planned transitions), no overflow, clean voice-over' +
+        (s.over.length ? ' — overflow: ' + s.over.slice(0, 2).join(' | ') : '') + (s.voBad.length ? ' — voice-over: ' + s.voBad.slice(0, 2).join(' | ') : ''));
+    }
+    check(JSON.stringify(styled.story.types) === JSON.stringify(['hook', 'pain', 'usual', 'fix', 'example', 'steps', 'endcard']), 'the "story" style is the seven beats');
+    /* the style chips: one press tells the story another way, and the chip says so */
+    const chip = await page.evaluate(async () => {
+      const b = document.querySelector('.reel-styles .chip[data-style="myth"]');
+      if (!b) return { found: false };
+      b.click();
+      await new Promise((r) => setTimeout(r, 400));
+      const S = AIImg.tools['reel-maker'].state();
+      const on = document.querySelector('.reel-styles .chip[data-style="myth"]');
+      return { found: true, style: S.style, types: S.scenes.map((s) => s.type), pressed: on && on.getAttribute('aria-pressed') };
+    });
+    check(chip.found && chip.style === 'myth' && JSON.stringify(chip.types) === JSON.stringify(STYLE_TYPES.myth) && chip.pressed === 'true', 'the Myth vs fact chip rewrites the reel as ' + (chip.types || []).join(', '));
+    await page.evaluate(async () => { const b = document.querySelector('.reel-styles .chip[data-style="story"]'); if (b) b.click(); await new Promise((r) => setTimeout(r, 400)); });
     /* the contact sheet: every beat, settled and mid-motion, in three looks */
     const sheet = await page.evaluate(async (looks) => {
       const T = AIImg.tools['reel-maker']; const API = T.current; const S = T.state();
@@ -534,6 +604,19 @@ const setTheme = (page, mode) => page.evaluate((m) => document.documentElement.s
     savePng(paper.png, '5-paper-frame.png');
     check(paper.pressed === 'true', '?preset=paper marks the Paper chip pressed');
     check(paper.mean > 180, 'paper frame mean luminance > 180 (' + paper.mean.toFixed(0) + ')');
+    /* ---- 4a. ?style=speedrun (the desk's calendar links): the tool's story in that shape, its chip pressed ---- */
+    await gotoTool('?tool=india/gst-calculator/&style=speedrun');
+    await waitStudio();
+    await sleep(300);
+    const sp = await page.evaluate(() => { const S = AIImg.tools['reel-maker'].state(); const b = document.querySelector('.reel-styles .chip[data-style="speedrun"]'); return { style: S.style, types: S.scenes.map((s) => s.type), pressed: b && b.getAttribute('aria-pressed') }; });
+    check(sp.style === 'speedrun' && JSON.stringify(sp.types) === JSON.stringify(STYLE_TYPES.speedrun) && sp.pressed === 'true', '?style=speedrun opens the Speed run (' + sp.types.join(', ') + ')');
+    await page.evaluate(() => { const b = document.querySelector('.reel-styles .chip[data-style="story"]'); if (b) b.click(); });
+    await sleep(300);
+    /* ---- ?template=packorder (the desk suggests one per slot for a shop): the script box starts from it ---- */
+    await gotoTool('?template=packorder');
+    await sleep(400);
+    const tp = await page.evaluate(() => ({ sel: document.getElementById('reel-template') && document.getElementById('reel-template').value, script: (document.getElementById('reel-script') || {}).value || '' }));
+    check(tp.sel === 'packorder' && /^HOOK: Pack an order with me/.test(tp.script), '?template=packorder fills the script box from the template (' + tp.sel + ')');
 
     /* ---- 4b. the visitor's templates: each makes its own scenes, nothing overflows ---- */
     /* dialogs are accepted, except where a check sets dialogAnswer to 'dismiss' for the next one */

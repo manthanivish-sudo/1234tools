@@ -104,6 +104,7 @@
     tools: [], byPath: {},
     draft: { tool: '', venue: '', template: '', variant: 0, question: '', qurl: '', result: '' },
     lastDraft: null, venues: null, oppTool: '', kitTool: '',
+    post: { tool: '', channel: '', variant: 0 }, packChannels: null, growTool: '', grow: null, topVenues: [],
   };
 
   /* -------------------------------------------------------------- tabs */
@@ -118,41 +119,180 @@
     if (name === 'reels') loadReels();
     if (name === 'opps') loadSavedOpps();
     if (name === 'calendar') loadCalendar();
+    if (name === 'post') loadPostTab();
+    if (name === 'grow') loadGrow();
     if (name === 'guide') loadGuide().catch((e) => toast(e.message));
     if (name === 'testimonials') loadTestimonials().catch((e) => toast(e.message));
   }
   $$('.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
   /* ------------------------------------------------------------ picker */
+  /* One picker for every tool box: type-to-search (typo-tolerant), suggestions when the
+     box is focused and empty (today's calendar tools, the last 8 picked, a few per
+     section), and a "Browse all" panel (section chips, a grid of buttons). */
+  function editDist1(a, b) { // true when a and b differ by at most one edit
+    if (a === b) return true;
+    if (Math.abs(a.length - b.length) > 1) return false;
+    let i = 0;
+    while (i < a.length && i < b.length && a[i] === b[i]) i++;
+    if (a.length === b.length) return a.slice(i + 1) === b.slice(i + 1) || (a[i] === b[i + 1] && a[i + 1] === b[i] && a.slice(i + 2) === b.slice(i + 2));
+    return a.length > b.length ? a.slice(i + 1) === b.slice(i) : b.slice(i + 1) === a.slice(i);
+  }
+  function isSubseq(w, s) { let j = 0; for (let i = 0; i < s.length && j < w.length; i++) if (s[i] === w[j]) j++; return j === w.length; }
+  function wordScore(w, t) { // 0 exact, 1 one edit, 2 subsequence of a title word, -1 no match
+    if (t.hay.includes(w)) return 0;
+    if (w.length >= 4) for (const tok of t.tokens) if (editDist1(w, tok) || (tok.length > w.length && editDist1(w, tok.slice(0, w.length)))) return 1;
+    if (w.length >= 3) for (const tok of t.titleTokens) if (tok.length >= w.length && tok[0] === w[0] && isSubseq(w, tok)) return 2;
+    return -1;
+  }
+  function searchTools(q, max) {
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length) return [];
+    const out = [];
+    S.tools.forEach((t, idx) => {
+      if (!t._s) {
+        const hay = (t.title + ' ' + t.keywords.join(' ') + ' ' + t.path + ' ' + t.sectionName).toLowerCase();
+        t._s = { hay, tokens: hay.split(/[^a-z0-9]+/).filter(Boolean), titleTokens: t.title.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean) };
+      }
+      let score = 0;
+      for (const w of words) { const s = wordScore(w, t._s); if (s < 0) return; score += s; }
+      if (t.title.toLowerCase().includes(words.join(' '))) score -= 1;
+      out.push({ t, score, idx });
+    });
+    out.sort((a, b) => a.score - b.score || a.idx - b.idx);
+    return out.slice(0, max || 14).map((x) => x.t);
+  }
+
+  function recentKey() { return 'promo-recent-' + (SITE_ID || 'default'); }
+  function getRecent() {
+    try { const a = JSON.parse(localStorage.getItem(recentKey()) || '[]'); return Array.isArray(a) ? a.filter((p) => S.byPath[p]) : []; } catch (e) { return []; }
+  }
+  function addRecent(path) {
+    try { const a = getRecent().filter((p) => p !== path); a.unshift(path); localStorage.setItem(recentKey(), JSON.stringify(a.slice(0, 8))); } catch (e) { /* recents are a convenience */ }
+  }
+  async function todayTools() {
+    if (!S.todayTools) {
+      const site = SITE_ID;
+      S.todayTools = api('/api/calendar').then((cal) => Array.from(new Set(cal.items.filter((i) => i.date === cal.today && S.byPath[i.tool]).map((i) => i.tool)))).catch(() => []);   // a promise, so quick repeat calls share one request
+      S.todayTools.then((a) => { if (site !== SITE_ID) S.todayTools = null; });
+    }
+    return S.todayTools;
+  }
+  function sectionsOf() {
+    const m = new Map();
+    S.tools.forEach((t) => { if (!m.has(t.section)) m.set(t.section, { id: t.section, name: t.sectionName, tools: [] }); m.get(t.section).tools.push(t); });
+    return Array.from(m.values());
+  }
+
   function makePicker(input, list, onPick) {
+    const wrap = input.parentElement;
     let items = [];
     let on = -1;
-    function render() {
-      const q = input.value.trim().toLowerCase();
-      clear(list);
-      if (!q) { list.hidden = true; return; }
-      const words = q.split(/\s+/);
-      items = S.tools.filter((t) => {
-        const hay = (t.title + ' ' + t.keywords.join(' ') + ' ' + t.path + ' ' + t.sectionName).toLowerCase();
-        return words.every((w) => hay.includes(w));
-      }).slice(0, 14);
-      on = items.length ? 0 : -1;
-      items.forEach((t, i) => list.appendChild(h('li', { class: i === on ? 'on' : '', 'data-path': t.path, onmousedown: (e) => { e.preventDefault(); pick(t); } }, glyph(t.glyph), h('span', { text: t.title }), h('span', { class: 'sec', text: t.sectionName }))));
+    const btn = h('button', { type: 'button', class: 'browse-btn', title: 'Browse all, by section' }, 'Browse all');
+    const panel = h('div', { class: 'browse', hidden: true });
+    wrap.appendChild(btn); wrap.appendChild(panel);
+    input.classList.add('has-browse');
+
+    function pick(t) { input.value = t.title; list.hidden = true; panel.hidden = true; addRecent(t.path); onPick(t); }
+    function mark() {
+      const lis = $$('li.sel', list);
+      lis.forEach((li, i) => li.classList.toggle('on', i === on));
+      if (lis[on] && lis[on].scrollIntoView) lis[on].scrollIntoView({ block: 'nearest' });
+    }
+    function row(t) { return h('li', { class: 'sel', 'data-path': t.path, onmousedown: (e) => { e.preventDefault(); pick(t); } }, glyph(t.glyph), h('span', { text: t.title }), h('span', { class: 'sec', text: t.sectionName })); }
+    function fill(groups) {
+      clear(list); items = [];
+      for (const g of groups) {
+        if (!g.tools.length) continue;
+        if (g.label) list.appendChild(h('li', { class: 'grp', text: g.label }));
+        g.tools.forEach((t) => { items.push(t); list.appendChild(row(t)); });
+      }
+      on = items.length ? 0 : -1; mark();
       list.hidden = !items.length;
     }
-    function pick(t) { input.value = t.title; list.hidden = true; onPick(t); }
-    input.addEventListener('input', render);
-    input.addEventListener('focus', render);
-    input.addEventListener('blur', () => setTimeout(() => { list.hidden = true; }, 150));
+    let seq = 0;
+    async function render() {
+      const q = input.value.trim();
+      const my = ++seq;
+      if (q) {
+        const r = searchTools(q, 14);
+        fill([{ tools: r }]);
+        if (!r.length) { list.appendChild(h('li', { class: 'grp', text: 'Nothing found. Try Browse all.' })); list.hidden = false; }
+        return;
+      }
+      const seen = new Set();
+      const uniq = (a) => a.filter((t) => t && !seen.has(t.path) && seen.add(t.path));
+      fill([{ label: 'Recent', tools: uniq(getRecent().map((p) => S.byPath[p])) }]);   // at once; today's tools join when they arrive
+      const today = await todayTools();
+      if (my !== seq || input.value.trim() || document.activeElement !== input) return;
+      seen.clear();
+      const tt = uniq(today.map((p) => S.byPath[p]));
+      const rr = uniq(getRecent().map((p) => S.byPath[p]));
+      const perSec = [];
+      sectionsOf().forEach((s) => { perSec.push(...uniq(s.tools.slice(0, 2))); });
+      fill([{ label: 'Today\'s calendar', tools: tt }, { label: 'Recent', tools: rr }, { label: 'Popular by section', tools: perSec.slice(0, 16) }]);
+    }
+    input.addEventListener('input', () => { panel.hidden = true; render(); });
+    input.addEventListener('focus', () => { panel.hidden = true; render(); });
+    input.addEventListener('blur', () => { seq++; setTimeout(() => { list.hidden = true; }, 150); });
     input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { list.hidden = true; panel.hidden = true; return; }
+      if (list.hidden && e.key === 'ArrowDown') { render(); return; }
       if (list.hidden) return;
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
         on = Math.max(0, Math.min(items.length - 1, on + (e.key === 'ArrowDown' ? 1 : -1)));
-        $$('li', list).forEach((li, i) => li.classList.toggle('on', i === on));
+        mark();
       } else if (e.key === 'Enter' && on >= 0) { e.preventDefault(); pick(items[on]); }
     });
-    return { set(path) { const t = S.byPath[path]; if (t) input.value = t.title; } };
+
+    /* Browse all: section chips on top, the items as a grid of buttons, its own filter box */
+    let secId = '';
+    const chipRow = h('div', { class: 'browse-chips', role: 'group', 'aria-label': 'Sections' });
+    const filter = h('input', { type: 'search', class: 'browse-q', autocomplete: 'off', placeholder: 'Filter these…', 'aria-label': 'Filter the list' });
+    const grid = h('div', { class: 'browse-grid' });
+    panel.appendChild(chipRow); panel.appendChild(filter); panel.appendChild(grid);
+    function drawPanel() {
+      const q = filter.value.trim();
+      clear(chipRow);
+      chipRow.appendChild(h('button', { type: 'button', class: 'chip' + (secId ? '' : ' on'), 'data-sec': '', onclick: () => { secId = ''; drawPanel(); } }, 'All'));
+      sectionsOf().forEach((s) => chipRow.appendChild(h('button', { type: 'button', class: 'chip' + (secId === s.id ? ' on' : ''), 'data-sec': s.id, onclick: () => { secId = s.id; drawPanel(); } }, s.name)));
+      let tools = q ? searchTools(q, 400) : S.tools;
+      if (secId) tools = tools.filter((t) => t.section === secId);
+      clear(grid);
+      tools.forEach((t) => grid.appendChild(h('button', { type: 'button', class: 'bt', 'data-path': t.path, title: t.title, onclick: () => pick(t) }, glyph(t.glyph), h('span', { text: t.title }))));
+      if (!tools.length) grid.appendChild(h('p', { class: 'muted small', text: 'Nothing matches.' }));
+    }
+    filter.addEventListener('input', drawPanel);
+    filter.addEventListener('keydown', (e) => {
+      const b = $('.bt', grid);
+      if (e.key === 'Enter' && b) { e.preventDefault(); b.click(); }
+      if (e.key === 'ArrowDown' && b) { e.preventDefault(); b.focus(); }
+    });
+    panel.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.stopPropagation(); panel.hidden = true; input.focus(); return; }
+      if (!(e.target.classList && e.target.classList.contains('bt')) || !/^Arrow/.test(e.key)) return;
+      const bs = $$('.bt', grid);
+      const i = bs.indexOf(e.target);
+      const r = e.target.getBoundingClientRect();
+      let next = null;
+      if (e.key === 'ArrowRight') next = bs[i + 1];
+      else if (e.key === 'ArrowLeft') next = bs[i - 1];
+      else {
+        const down = e.key === 'ArrowDown';
+        const cand = bs.filter((b) => { const q = b.getBoundingClientRect(); return down ? q.top > r.top + 4 : q.top < r.top - 4; });
+        const rowTop = cand.length ? (down ? Math.min : Math.max)(...cand.map((b) => b.getBoundingClientRect().top)) : 0;
+        next = cand.filter((b) => Math.abs(b.getBoundingClientRect().top - rowTop) < 4).sort((a, b) => Math.abs(a.getBoundingClientRect().left - r.left) - Math.abs(b.getBoundingClientRect().left - r.left))[0];
+        if (!next && !down) { e.preventDefault(); filter.focus(); return; }
+      }
+      if (next) { e.preventDefault(); next.focus(); }
+    });
+    btn.addEventListener('click', () => {
+      if (!panel.hidden) { panel.hidden = true; return; }
+      list.hidden = true; secId = ''; filter.value = ''; drawPanel(); panel.hidden = false; filter.focus();
+    });
+    document.addEventListener('mousedown', (e) => { if (!panel.hidden && !wrap.contains(e.target)) panel.hidden = true; });
+    return { set(path) { const t = S.byPath[path]; if (t) input.value = t.title; }, close() { panel.hidden = true; list.hidden = true; } };
   }
 
   /* ------------------------------------------------------------- TODAY */
@@ -166,8 +306,23 @@
     $('#today-line').textContent = p.weekday + ': ' + p.routine.work.split(':')[0] + ' · ' + p.used + '/' + p.cap + ' linked · a human publishes every post';
     clear(box);
     loadTodayVideos();
+    loadTodayGrow();
     if (!p.tasks.length) box.appendChild(h('p', { class: 'muted', text: 'Nothing planned.' }));
     p.tasks.forEach((t) => box.appendChild(taskCard(t)));
+  }
+
+  /* one growth move of the day (Grow tab has the rest); nothing shows if the request fails */
+  let todayGrowSeq = 0;
+  async function loadTodayGrow() {
+    const seq = ++todayGrowSeq;
+    clear($('#plan-grow'));
+    let g;
+    try { g = await api('/api/grow'); } catch (e) { return; }
+    if (seq !== todayGrowSeq || !g.moves || !g.moves.length) return;
+    const m = g.moves[0];
+    clear($('#plan-grow')).appendChild(h('div', { class: 'card today-grow' }, h('h3', { class: 'cal-title', text: 'Growth move of the day' }),
+      h('div', null, h('b', { text: m.title }), ' ', h('span', { class: 'muted small', text: m.why })),
+      h('div', { class: 'actions' }, h('button', { class: 'btn', onclick: () => showTab('grow') }, 'Open Grow'))));
   }
 
   function taskCard(t) {
@@ -253,6 +408,8 @@
     }
     if (!S.draft.venue || !ids.includes(S.draft.venue)) S.draft.venue = f.venues.length ? f.venues[0].id : '';
     sel.value = S.draft.venue;
+    S.topVenues = f.venues.slice(0, 8).map((v) => ({ id: v.id, name: v.name, risk: v.risk }));
+    drawVenueChips();
     await loadDraft();
   }
 
@@ -417,7 +574,13 @@
   }
   $('#d-override').addEventListener('change', applyBlock);
 
-  $('#d-venue').addEventListener('change', (e) => { S.draft.venue = e.target.value; S.draft.template = ''; S.draft.variant = 0; loadDraft(); });
+  /* the top 8 ranked venues as chips above the full list */
+  function drawVenueChips() {
+    const box = clear($('#d-venue-chips'));
+    const cur = $('#d-venue').value;
+    (S.topVenues || []).forEach((v) => box.appendChild(h('button', { type: 'button', class: 'chip vchip' + (v.id === cur ? ' on' : ''), 'data-venue': v.id, 'aria-pressed': String(v.id === cur), onclick: () => { const sel = $('#d-venue'); sel.value = v.id; sel.dispatchEvent(new Event('change')); } }, v.name, ' ', h('span', { class: 'badge ' + v.risk, text: v.risk }))));
+  }
+  $('#d-venue').addEventListener('change', (e) => { drawVenueChips(); S.draft.venue = e.target.value; S.draft.template = ''; S.draft.variant = 0; loadDraft(); });
   $('#d-template').addEventListener('change', (e) => { S.draft.template = e.target.value; loadDraft(); });
   $('#d-vprev').addEventListener('click', () => { S.draft.variant = Math.max(0, S.draft.variant - 1); loadDraft(); });
   $('#d-vnext').addEventListener('click', () => { S.draft.variant += 1; loadDraft(); });
@@ -728,6 +891,7 @@
       if (t.flagged) controls.appendChild(h('button', { class: 'ghost tg-accept', title: 'The link is right: count it as posted', onclick: () => doTarget(it, t.channel, 'accept') }, 'It is right'));
       controls.appendChild(h('button', { class: 'ghost tg-clear', onclick: () => doTarget(it, t.channel, 'clear') }, 'Clear'));
     }
+    controls.appendChild(h('button', { class: 'ghost tg-pack', title: 'The title, caption and tags for this platform', onclick: () => openPost(it.tool, t.channel) }, 'Pack'));
     controls.appendChild(h('button', { class: 'linkish small', onclick: () => openGuide(t.channel) }, 'How to post'));
     return h('div', { class: 'tg is-' + state, 'data-channel': t.channel },
       h('div', { class: 'tg-head' },
@@ -759,6 +923,7 @@
     const st = it.state || it.status;
     return h('div', { class: 'cal-item is-' + st + (it.date === todayIso ? ' is-today' : ''), 'data-id': it.id },
       h('div', { class: 'cal-when' }, h('b', { text: it.date }), h('span', { class: 'badge', style: 'border-color:' + fmt + ';color:' + fmt, text: it.formatLabel }),
+        it.styleLabel ? h('span', { class: 'badge kind cal-style', title: it.styleAbout || '', text: it.styleLabel }) : null,
         it.progress ? h('span', { class: 'cal-prog small', text: it.progress.label }) : null,
         it.progress && it.progress.flagged ? h('span', { class: 'badge wait', text: it.progress.flagged + ' link' + (it.progress.flagged > 1 ? 's' : '') + ' to check' }) : null),
       h('div', { class: 'cal-what' },
@@ -768,6 +933,7 @@
         (it.unassigned || []).length ? h('p', { class: 'small muted' }, 'Unassigned link' + (it.unassigned.length > 1 ? 's' : '') + ' (matched no target): ', it.unassigned.map((u) => h('a', { href: u.url, target: '_blank', rel: 'noopener noreferrer', text: shortUrl(u.url) + ' ' }))) : null),
       h('div', { class: 'cal-actions' },
         h('a', { class: 'btn', href: it.reel, target: '_blank', rel: 'noopener noreferrer' }, 'Make the Reel'),
+        h('button', { class: 'ghost cal-restyle', title: 'Change the Reel style of this slot', onclick: async () => { try { const r = await api('/api/calendar/style', { id: it.id, next: true }); replaceItem(r.item); } catch (e) { toast(e.message); } } }, 'Another style'),
         h('button', { class: 'ghost', onclick: () => { S.kitTool = it.tool; kPicker.set(it.tool); $('#k-seed').value = ''; showTab('kits'); loadLooks(); } }, 'Kit'),
         h('button', { class: 'ghost', onclick: () => openDraft({ tool: it.tool, template: 'instagram-caption' }) }, 'Caption'),
         it.status === 'planned' ? h('button', { class: 'ghost', onclick: () => set('made') }, 'Made') : null,
@@ -1056,6 +1222,10 @@
 
   /* ------------------------------------------------------------- REELS */
 
+  const REEL_STYLES = ['speedrun', 'beforeafter', 'myth', 'mistakes', 'pov', 'stop', 'quiz', 'countdown', 'hottake', 'thisorthat', 'tutorial'];
+  const REEL_QUICK = [['Speed run', 'speedrun'], ['Myth vs fact', 'myth'], ['POV', 'pov'], ['Surprise me', '']];
+  const surprise = () => REEL_STYLES[Math.floor(Math.random() * REEL_STYLES.length)];
+
   async function loadReels() {
     const r = await api('/api/reels');
     $('#r-note').textContent = r.note;
@@ -1064,10 +1234,202 @@
       box.appendChild(h('div', { class: 'card reelsec' }, h('h3', { text: s.name }),
         s.tools.map((t) => h('div', { class: 'reel' }, glyph(t.glyph), h('span', { text: t.title }), h('span', { class: 'io', text: t.io }),
           r.available
-            ? h('a', { class: 'btn', href: t.reelUrl, target: '_blank', rel: 'noopener noreferrer' }, 'Open Reel Maker')
+            ? h('span', { class: 'reel-links' }, h('a', { class: 'btn', href: t.reelUrl, target: '_blank', rel: 'noopener noreferrer' }, 'Open Reel Maker'),
+                REEL_QUICK.map(([label, st]) => h('a', { class: 'reel-style', href: t.reelUrl + '&style=' + (st || surprise()), target: '_blank', rel: 'noopener noreferrer', onclick: st ? null : (e) => { e.currentTarget.href = t.reelUrl + '&style=' + surprise(); } }, label)))
             : h('span', { class: 'btn is-off', title: 'The Reel Maker is not deployed yet', 'aria-disabled': 'true' }, 'Not live yet')))));
     }
   }
+
+  /* -------------------------------------------------------------- POST */
+  /* Everything for one tool on one platform, ready to paste: the desk never posts, it
+     copies text and opens the upload page for a human to finish. */
+  const CHANNEL_GROUPS = [
+    { label: 'Video', ids: ['instagram-reel', 'facebook-reel', 'youtube-shorts', 'tiktok', 'pinterest-video', 'instagram-story', 'whatsapp-status'] },
+    { label: 'Image and carousel', ids: ['instagram-carousel', 'facebook-post', 'pinterest-image', 'linkedin-document'] },
+  ];
+  const pPicker = makePicker($('#p-tool'), $('#p-tool-list'), (t) => { S.post.tool = t.path; S.post.variant = 0; loadPack(); });
+
+  async function loadPostTab() {
+    if (!S.packChannels) {
+      try { S.packChannels = (await api('/api/pack')).channels; } catch (e) { toast(e.message); return; }
+    }
+    drawChannelTiles();
+    if (S.post.tool && S.post.channel && !$('#p-pack').firstChild) loadPack();
+  }
+  function drawChannelTiles() {
+    const box = clear($('#p-channels'));
+    const left = new Map((S.packChannels || []).map((c) => [c.id, c]));
+    const groups = CHANNEL_GROUPS.map((g) => ({ label: g.label, list: g.ids.map((id) => { const c = left.get(id); left.delete(id); return c; }).filter(Boolean) }));
+    groups.push({ label: 'Text and chat', list: Array.from(left.values()) });
+    groups.forEach((g) => {
+      if (!g.list.length) return;
+      box.appendChild(h('div', { class: 'tile-group' }, h('span', { class: 'tile-label', text: g.label }),
+        h('div', { class: 'tiles' }, g.list.map((c) => h('button', { type: 'button', class: 'tile' + (S.post.channel === c.id ? ' on' : ''), 'data-channel': c.id, 'aria-pressed': String(S.post.channel === c.id), title: c.name, onclick: () => { S.post.channel = c.id; S.post.variant = 0; drawChannelTiles(); loadPack(); } }, c.short)))));
+    });
+  }
+  function openPost(toolPath, channelId) {
+    if (toolPath) { S.post.tool = toolPath; pPicker.set(toolPath); }
+    if (channelId) S.post.channel = channelId;
+    S.post.variant = 0;
+    showTab('post');
+    if (S.post.tool && S.post.channel) loadPack();
+  }
+  let packSeq = 0;
+  async function loadPack() {
+    const box = clear($('#p-pack'));
+    const p = S.post;
+    if (!p.tool || !p.channel) { box.appendChild(h('p', { class: 'muted', text: p.tool ? 'Now pick a platform.' : 'Pick a tool, then a platform.' })); return; }
+    const seq = ++packSeq;
+    box.appendChild(h('p', { class: 'muted' }, h('span', { class: 'spinner' }), 'Building the pack…'));
+    let r;
+    try { r = await api('/api/pack?' + qs({ tool: p.tool, channel: p.channel, variant: p.variant })); }
+    catch (e) { if (seq === packSeq) clear(box).appendChild(h('p', { class: 'banner wait', text: e.message })); return; }
+    if (seq !== packSeq) return;
+    renderPack(r);
+  }
+  function renderPack(r) {
+    const box = clear($('#p-pack'));
+    const head = h('div', { class: 'card pack-head' },
+      h('div', { class: 'row wrap' },
+        h('div', { class: 'grow' }, h('h3', { class: 'cal-title', text: r.tool.title + ' · ' + r.channel.name }),
+          h('span', { class: 'badge ' + (r.ok ? 'ok' : 'wait'), text: r.ok ? 'passes the checks' : 'fix the red items first' }), ' ', h('span', { class: 'muted small', text: 'version ' + r.variant })),
+        h('div', { class: 'end' }, h('button', { class: 'btn gold', id: 'p-copyall', onclick: () => copyText(r.all) }, 'Copy all'), ' ',
+          h('button', { class: 'btn', id: 'p-another', onclick: () => { S.post.variant = r.variant + 1; loadPack(); } }, 'Another version'))));
+    box.appendChild(head);
+    const fields = h('div', { class: 'stack pack-fields' });
+    for (const f of r.fields) {
+      const over = f.limit && f.count > f.limit;
+      fields.appendChild(h('div', { class: 'part', 'data-key': f.key },
+        h('div', { class: 'part-head' }, h('span', { class: 'lab', text: f.label }),
+          h('span', { class: 'count' + (over ? ' over' : ''), text: f.count + (f.limit ? ' / ' + f.limit : '') }),
+          h('button', { class: 'ghost copy', onclick: () => copyText(f.text) }, 'Copy')),
+        h('textarea', { rows: Math.min(10, Math.max(2, Math.ceil(f.text.length / 90) + (f.text.match(/\n/g) || []).length)), readonly: true }, f.text),
+        f.note ? h('p', { class: 'muted small pack-note', text: f.note }) : null,
+        f.errors && f.errors.length ? h('ul', { class: 'lint' }, f.errors.map((e) => h('li', { class: 'err', text: '✖ ' + e.msg }))) : null,
+        f.warnings && f.warnings.length ? h('ul', { class: 'lint' }, f.warnings.map((w) => h('li', { class: 'warn', text: '! ' + (w.msg || w) }))) : null));
+    }
+    box.appendChild(fields);
+    const how = r.howTo || {};
+    const card = h('div', { class: 'card how-post' }, h('h3', { class: 'cal-title', text: 'How to post' }));
+    const links = h('div', { class: 'actions' });
+    if (how.upload) links.appendChild(h('a', { class: 'btn gold', id: 'p-upload', href: how.upload, target: '_blank', rel: 'noopener noreferrer' }, 'Open upload page'));
+    card.appendChild(links);
+    if (how.uploadLabel) card.appendChild(h('p', { class: 'muted small', text: how.uploadLabel }));
+    if ((how.guides || []).length) {
+      card.appendChild(h('h4', { text: 'Official guides' }));
+      card.appendChild(h('ul', { class: 'g-list pack-guides' }, how.guides.map((g) => h('li', null,
+        h('a', { href: g.url, target: '_blank', rel: 'noopener noreferrer', text: g.label }),
+        g.read ? null : h('span', { class: 'muted small', text: ' (the page needs JavaScript; check the steps there)' })))));
+    }
+    if ((r.upload || []).length) { card.appendChild(h('h4', { text: 'Files to upload' })); card.appendChild(h('ul', { class: 'g-list pack-files' }, r.upload.map((x) => h('li', { text: x })))); }
+    if ((r.steps || []).length) { card.appendChild(h('h4', { text: 'Steps' })); card.appendChild(h('ol', { class: 'g-list pack-steps' }, r.steps.map((x) => h('li', { text: x })))); }
+    if ((r.checklist || []).length) { card.appendChild(h('h4', { text: 'Before you post' })); card.appendChild(h('ul', { class: 'g-list pack-check' }, r.checklist.map((x) => h('li', { text: x })))); }
+    if ((r.redLines || []).length) { card.appendChild(h('h4', { class: 'red', text: 'Red lines' })); card.appendChild(h('ul', { class: 'g-list pack-red' }, r.redLines.map((x) => h('li', { text: x })))); }
+    box.appendChild(card);
+  }
+
+  /* --------------------------------------------------------------- GROW */
+  const DESK_TABS = { today: 'Today', draft: 'Draft', opps: 'Opportunities', kits: 'Kits', calendar: 'Calendar', testimonials: 'Testimonials', reels: 'Reels', post: 'Post', grow: 'Grow', pack: 'Post' };
+  function deskButton(desk) {
+    if (!DESK_TABS[desk]) return null;
+    const tab = desk === 'pack' ? 'post' : desk;
+    return h('button', { class: 'btn', 'data-desk': tab, onclick: () => showTab(tab) }, 'Open ' + DESK_TABS[desk]);
+  }
+  function momentLine(m) {
+    return h('div', { class: 'moment', 'data-date': m.date },
+      h('b', { text: m.date }), h('span', { text: m.name }),
+      m.region && m.region !== 'global' ? h('span', { class: 'badge', text: m.region }) : null,
+      m.check ? h('span', { class: 'badge verify', title: 'The date moves each year: confirm it before you plan', text: 'check the date' }) : null,
+      h('span', { class: 'muted small', text: m.startIn <= 0 ? 'start now' : 'start by ' + m.startBy }));
+  }
+  function moveCard(m) {
+    return h('div', { class: 'card gw-card', 'data-move': m.id },
+      h('div', { class: 'task-head' }, h('h3', { class: 'gw-title', text: m.title }), h('span', { class: 'badge kind', text: m.groupLabel })),
+      h('p', { class: 'what', text: m.why }),
+      m.how && m.how.length ? h('ol', { class: 'g-list' }, m.how.map((x) => h('li', { text: x }))) : null,
+      h('div', { class: 'actions' }, deskButton(m.desk)));
+  }
+  async function loadGrow() {
+    const box = $('#gw-main');
+    if (!box.firstChild) box.appendChild(h('p', { class: 'muted' }, h('span', { class: 'spinner' }), 'Loading…'));
+    let g;
+    try { g = await api('/api/grow'); } catch (e) { clear(box).appendChild(h('p', { class: 'banner wait', text: e.message })); return; }
+    S.grow = g;
+    clear(box);
+    box.appendChild(h('h3', { class: 'gw-h', text: 'Today\'s moves' }));
+    box.appendChild(h('div', { class: 'gw-moves', id: 'gw-moves' }, g.moves.map(moveCard)));
+    if (g.experiment) { box.appendChild(h('h3', { class: 'gw-h', text: 'Experiment of the week' })); box.appendChild(h('div', { id: 'gw-experiment' }, moveCard(g.experiment))); }
+    if (g.style) {
+      box.appendChild(h('h3', { class: 'gw-h', text: 'Reel style of the day' }));
+      box.appendChild(h('div', { class: 'card', id: 'gw-style' }, h('b', { text: g.style.label }), h('p', { class: 'what', text: g.style.about }),
+        h('div', { class: 'actions' }, deskButton('reels'), ' ', deskButton('calendar'))));
+    }
+    const moments = (title, id, list, none) => {
+      box.appendChild(h('h3', { class: 'gw-h', text: title }));
+      box.appendChild(h('div', { class: 'card', id }, list && list.length ? list.map(momentLine) : h('p', { class: 'muted small', text: none })));
+    };
+    moments('Prepare now', 'gw-prepare', g.prepare, 'Nothing to prepare today.');
+    moments('Coming up', 'gw-next', g.next, 'Nothing in the next few weeks.');
+    box.appendChild(h('h3', { class: 'gw-h', text: 'The playbook' }));
+    box.appendChild(h('div', { class: 'stack', id: 'gw-playbook' }, g.playbook.map((sec) => h('details', { class: 'card gw-sec', 'data-id': sec.id },
+      h('summary', { class: 'cal-title' }, sec.label, ' ', h('span', { class: 'muted small', text: sec.cards.length + ' ideas' })),
+      h('div', { class: 'stack' }, sec.cards.map(moveCard))))));
+  }
+
+  const gPicker = makePicker($('#gw-tool'), $('#gw-tool-list'), (t) => { S.growTool = t.path; loadAngles(t.path); });
+  let anglesSeq = 0;
+  async function loadAngles(path) {
+    const box = clear($('#gw-angles'));
+    const seq = ++anglesSeq;
+    box.appendChild(h('p', { class: 'muted' }, h('span', { class: 'spinner' }), 'Finding angles…'));
+    let a;
+    try { a = (await api('/api/grow?' + qs({ tool: path }))).angles; } catch (e) { if (seq === anglesSeq) clear(box).appendChild(h('p', { class: 'banner wait', text: e.message })); return; }
+    if (seq !== anglesSeq) return;
+    clear(box);
+    const label = Object.fromEntries((a.styles || []).map((s) => [s.id, s]));
+    const copyRow = (text, extra) => h('div', { class: 'angle' }, h('span', { class: 'angle-text', text }), extra, h('button', { class: 'ghost copy', onclick: () => copyText(text) }, 'Copy'));
+    box.appendChild(h('h4', { text: 'Hooks for ' + a.tool.title }));
+    box.appendChild(h('div', { class: 'card gw-hooks' }, a.hooks.map((k) => h('div', { class: 'angle hook', 'data-style': k.style },
+      h('span', { class: 'badge kind', text: (label[k.style] || { label: k.style }).label }),
+      h('span', { class: 'angle-text', text: k.text }),
+      k.reel ? h('a', { class: 'btn', href: k.reel, target: '_blank', rel: 'noopener noreferrer' }, 'Make this reel') : null,
+      h('button', { class: 'ghost copy', onclick: () => copyText(k.text) }, 'Copy')))));
+    const list = (title, id, arr) => { if (arr && arr.length) { box.appendChild(h('h4', { text: title })); box.appendChild(h('div', { class: 'card', id }, arr.map((x) => copyRow(x)))); } };
+    list('Series ideas', 'gw-series', a.series);
+    list('Challenge', 'gw-challenge', a.challenge ? [a.challenge] : []);
+    list('Collab', 'gw-collab', a.collab ? [a.collab] : []);
+    list('Reply video', 'gw-reply', a.reply ? [a.reply] : []);
+    if ((a.proof || []).length) { box.appendChild(h('h4', { text: 'Proof to show' })); box.appendChild(h('div', { class: 'pills', id: 'gw-proof' }, a.proof.map((x) => h('span', { class: 'badge ok', text: x })))); }
+    if (a.moment) { box.appendChild(h('h4', { text: 'Next moment for this tool' })); box.appendChild(h('div', { class: 'card' }, momentLine(a.moment))); }
+    const reelStyles = (a.styles || []).filter((s) => s.reel);
+    if (reelStyles.length) {
+      box.appendChild(h('h4', { text: 'Reel styles' }));
+      box.appendChild(h('div', { class: 'pills', id: 'gw-styles' }, reelStyles.map((s) => h('a', { class: 'btn', href: s.reel, title: s.about, target: '_blank', rel: 'noopener noreferrer', text: s.label }))));
+    }
+  }
+
+  /* ------------------------------------------------- start with Windows */
+  async function loadAutostart() {
+    const box = $('#autostart');
+    let a;
+    try { a = await api('/api/autostart'); } catch (e) { box.hidden = true; return; }
+    if (!a.supported) { box.hidden = true; return; }
+    box.hidden = false;
+    $('#as-on').checked = !!a.on; $('#as-open').checked = !!a.open;
+    box.dataset.state = a.on ? 'on' : 'off';
+  }
+  async function saveAutostart(changed) {
+    const on = $('#as-on').checked, open = $('#as-open').checked;
+    if (changed === 'open' && !on) return;   // the choice is kept for when the switch is turned on
+    try {
+      const a = await api('/api/autostart', { on, open });
+      $('#as-on').checked = !!a.on; $('#as-open').checked = !!a.open;
+      $('#autostart').dataset.state = a.on ? 'on' : 'off';
+      toast(a.on ? 'The desk will start with Windows' + (a.open ? ' and open in the browser' : ', in the background') : 'The desk will not start with Windows');
+    } catch (e) { toast(e.message); loadAutostart(); }
+  }
+  $('#as-on').addEventListener('change', () => saveAutostart('on'));
+  $('#as-open').addEventListener('change', () => saveAutostart('open'));
 
   /* -------------------------------------------------------------- boot */
   /* Everything that belongs to one site: its items, audiences, guide cards (the
@@ -1084,10 +1446,12 @@
     S.byPath = {};
     r.tools.forEach((t) => { S.byPath[t.path] = t; });
     const noun = own ? 'tools' : (info.site.promotes || 'items');
-    for (const id of ['#d-tool', '#o-tool', '#k-tool']) $(id).placeholder = 'Search the ' + r.tools.length + ' ' + noun + '…';
-    $('#d-tool').value = ''; $('#o-tool').value = ''; $('#k-tool').value = '';
+    for (const id of ['#d-tool', '#o-tool', '#k-tool', '#p-tool', '#gw-tool']) $(id).placeholder = 'Search the ' + r.tools.length + ' ' + noun + '…';
+    for (const id of ['#d-tool', '#o-tool', '#k-tool', '#p-tool', '#gw-tool']) $(id).value = '';
+    S.post = { tool: '', channel: '', variant: 0 }; S.packChannels = null; S.growTool = ''; S.grow = null; S.topVenues = [];
+    clear($('#p-pack')); clear($('#p-channels')); clear($('#gw-angles')); clear($('#gw-main')); clear($('#d-venue-chips')); clear($('#plan-grow'));
     Object.assign(S.draft, { tool: '', venue: '', template: '', variant: 0, question: '', qurl: '', result: '' });
-    S.lastDraft = null; S.oppTool = ''; S.kitTool = ''; S.cal = null; S.guide = null; S.guideRendered = false; S.venues = null;
+    S.lastDraft = null; S.oppTool = ''; S.kitTool = ''; S.cal = null; S.todayTools = null; S.guide = null; S.guideRendered = false; S.venues = null;
     clear($('#d-parts')); clear($('#d-status')); clear($('#d-tool-chosen')); clear($('#k-result')); clear($('#k-looks'));
     /* testimonials belong to one site: nothing typed for one site carries over to another */
     S.tm = null; S.tmFilter = 'all'; fillForm({}, true);
@@ -1130,9 +1494,10 @@
       document.body.setAttribute('data-ready', '1');
       toast('Now working on ' + pick.options[pick.selectedIndex].text);
     });
+    loadAutostart();
     await loadSite();
     const tab = (location.hash || '#today').slice(1).split('?')[0];
-    showTab(['today', 'draft', 'opps', 'kits', 'venues', 'log', 'reels', 'calendar', 'testimonials', 'guide'].includes(tab) ? tab : 'today');
+    showTab(['today', 'draft', 'post', 'opps', 'kits', 'venues', 'log', 'reels', 'calendar', 'grow', 'testimonials', 'guide'].includes(tab) ? tab : 'today');
     document.body.setAttribute('data-ready', '1');
   })().catch((e) => { document.body.setAttribute('data-ready', 'error'); toast(e.message); });
 })();

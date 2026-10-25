@@ -32,11 +32,19 @@
  * line when there is none), three steps, and an end card with the proof
  * pills, a QR code to the UTM link and the story's call to action. A tool
  * with no story falls back to a script written from its finder-index row.
- * Visitors get nineteen script templates (Problem → Solution, Before / After,
- * 3 Mistakes, Myth vs Fact, How-to, Top 5, Testimonial, and twelve formats
- * that trend: listicle, POV, day in the life, FAQ, quote card, countdown,
- * product demo, tutorial, hot take, this or that, things I wish I knew,
- * behind the scenes) written in a small line grammar: "HOOK: …", "USUAL:
+ * The same story can be told in eleven other styles (PROMO_STYLES, ?style=):
+ * speed run, before / after, myth vs fact, 3 mistakes, POV, stop doing this,
+ * guess first, 3 reasons, hot take, this or that, step by step; each is built
+ * only from the story's own lines and carries a plan of transitions.
+ * Visitors get thirty-five script templates (Problem → Solution, Before / After,
+ * 3 Mistakes, Myth vs Fact, How-to, Top 5, Testimonial, twelve formats that
+ * trend: listicle, POV, day in the life, FAQ, quote card, countdown, product
+ * demo, tutorial, hot take, this or that, things I wish I knew, behind the
+ * scenes; and sixteen meme and trend formats: tell me without telling me, red
+ * flag / green flag, expectation vs reality, Nobody: / Me:, storytime, rate it,
+ * tier list, get ready with me, pack an order with me, guess the price, did you
+ * know, stop scrolling if, watch this before you buy, challenge, small business
+ * check, unboxing) written in a small line grammar: "HOOK: …", "USUAL:
  * title | a | b | c", "STEPS: …" and so on; the newer ones carry a plan of
  * a transition and an animation per scene.
  *
@@ -549,7 +557,11 @@
         const lab = String(sc.heading || 'Myth | Fact').split('|').map((x) => x.trim());
         return items.map((x, i) => (lab[i] ? lab[i] + ': ' : '') + sentence(toSpeech(x).replace(/[.!?]+$/, ''))).join(' ');
       }
-      case 'point': return (sc.heading ? (sc.bad ? 'Mistake ' : 'Number ') + sc.heading + ': ' : '') + toSpeech(sc.text);
+      case 'point': {
+        /* "Number 3:" for a number; a word heading ("Green flag", "7am", "S") is said as it is */
+        const hd = String(sc.heading || '').trim();
+        return (hd ? (/^#?\d+$/.test(hd) ? (sc.bad ? 'Mistake ' : 'Number ') + hd.replace(/^#/, '') : toSpeech(hd).replace(/[.!?]+$/, '')) + ': ' : '') + toSpeech(sc.text);
+      }
       case 'quote': return toSpeech(sc.text) + (sc.heading ? ' That’s ' + toSpeech(sc.heading).replace(/\.$/, '') + '.' : '');
       case 'example': return exampleSpeech(sc.ex, { path: sc.path || '', title: sc.title || '' }) || toSpeech(sc.text);
       case 'endcard': return sc.voEnd || '';
@@ -994,13 +1006,15 @@
    * Scenes for one tool. With a story (assets/stories.js): hook, pain, the usual way, the fix, the example, three steps, the end card.
    * Without one: the finder-index script (hook, what it does, in → out, trust, end card).
    */
-  function buildScript(row, brand, look) {
+  function buildScript(row, brand, look, style) {
     const f = factsOf(row);
     brand = brand || {};
     const story = storyFor(f.path);
     if (!story) return buildFallback(f, brand);
     const c = look && look.copy !== undefined ? look.copy : fnv(f.path) % 3;
     const ex = exampleFor(f.path) || (f.inPart && f.outPart ? { kind: 'flow', input: f.inPart, output: f.outPart, schematicOnly: true } : null);
+    /* another shape for the same story (PROMO_STYLES); 'story' is the seven beats below */
+    if (style && style !== 'story' && STYLE_IDS.includes(style)) return styleScript(style, f, story, ex, brand);
     const out = [];
     out.push(beat('hook', { text: story.hook, eyebrow: story.persona || '', emphasis: [keyWordOf(story.hook)] }));
     out.push(beat('pain', { text: story.pain, eyebrow: COPY.painLabel[c] }));
@@ -1062,6 +1076,137 @@
     return out;
   }
 
+  /* ---- a tool's story told in a different shape ---- */
+  /* The story styles for a tool (?tool=…&style=…; build/promo/growth.js STYLES has the same ids). Every style is
+     built only from the story's own lines (hook, pain, the usual way, promise, steps, proof pills, call to action)
+     and the tool's facts: no number, result or claim is added. A fifth entry is its plan, as the templates' plans:
+     the transition each scene arrives with and the animation of each wordy scene, by scene number. */
+  const PROMO_STYLES = [
+    ['story', 'Full story', 'Hook, the pain, the usual way, the fix, the real example, three steps, the end card.'],
+    ['speedrun', 'Speed run', 'The task, the result, three fast steps with whip pans.', { trans: ['', 'zoom-in', 'whip', 'whip', 'whip', 'zoom-in'], anim: ['punch', '', 'scale', 'scale', 'scale'] }],
+    ['beforeafter', 'Before / after', 'The usual way next to the fix, then the real example.', { trans: ['', 'slide-left', 'zoom-in', 'slide-up', 'fade'], anim: ['words'] }],
+    ['myth', 'Myth vs fact', 'The belief people hold, crossed out, and what is true — twice.', { trans: ['', 'cut', 'slide-left', 'zoom-in', 'fade'], anim: ['glitch'] }],
+    ['mistakes', '3 mistakes', 'The usual ways as mistakes, crossed out one by one, then the fix.', { trans: ['', 'slide-up', 'slide-up', 'slide-up', 'zoom-in', 'zoom-in', 'fade'], anim: ['punch', '', '', '', 'words'] }],
+    ['pov', 'POV', 'A first-person moment: the problem, the turn, the result.', { trans: ['', 'dip-black', 'zoom-in', 'zoom-in', 'fade'], anim: ['words', 'glitch', 'karaoke'] }],
+    ['stop', 'Stop doing this', 'A pattern interrupt: stop the usual way, do this instead.', { trans: ['', 'cut', 'whip', 'zoom-in', 'fade'], anim: ['glitch'] }],
+    ['quiz', 'Guess first', 'A question to answer in your head, then the reveal.', { trans: ['', 'dip-white', 'zoom-in', 'zoom-in', 'fade'], anim: ['type', 'pop'] }],
+    ['countdown', '3 reasons', 'Three reasons counted down, the best last.', { trans: ['', 'zoom-in', 'zoom-in', 'zoom-in', 'dip-white', 'fade'], anim: ['', 'scale', 'scale', 'scale'] }],
+    ['hottake', 'Hot take', 'An opinion and two reasons: it invites replies.', { trans: ['', 'cut', 'whip', 'whip', 'zoom-in', 'fade'], anim: ['glitch', 'words'] }],
+    ['thisorthat', 'This or that', 'The usual way against the tool, side by side, twice.', { trans: ['', 'slide-left', 'slide-left', 'zoom-in', 'fade'], anim: ['bounce', '', '', 'pop'] }],
+    ['tutorial', 'Step by step', 'One step per scene, then the result.', { trans: ['', 'slide-up', 'slide-up', 'slide-up', 'zoom-out', 'fade'], anim: ['sweep'] }]
+  ];
+  const STYLE_IDS = PROMO_STYLES.map((s) => s[0]);
+  /** The job a story's how-to line names, without its "how to" and its "without …": "merge PDF files". */
+  function jobOf(story, f) {
+    const how = String(story.howTo || '').replace(/^how to\s+/i, '').replace(/\s+(?:without|in|for|on|with|from|using|online)\b.*$/i, '').replace(/[.!?]+$/, '').trim();
+    return how || lowerFirst(f.verb ? f.verb + ' ' + f.aNoun : f.title);
+  }
+  const lineText = (s) => oneLine(String(s || '')).replace(/[.!?…]+$/, '');
+  const firstOf = (s) => (String(s || '').match(/^.*?[.!?](?=\s|$)/) || [String(s || '')])[0].trim();
+  const NUM_WORD = ['zero', 'one', 'two', 'three', 'four', 'five'];
+  function styleScript(style, f, story, ex, brand) {
+    const usual = (story.usual || []).filter(Boolean).slice(0, 3);
+    const steps = (story.steps || []).filter(Boolean).slice(0, 3);
+    while (usual.length < 3) usual.push(usual[usual.length - 1] || 'Doing it by hand');
+    const job = jobOf(story, f);
+    const promise = story.promise || f.first;
+    const trust = oneLine(f.trustLine);
+    const short = f.title.length <= 18 ? f.title : 'This tool';
+    const out = [];
+    const add = (type, fields, vo) => { const sc = beat(type, fields); if (vo != null) sc._say = vo; out.push(sc); return sc; };
+    const hook = (text, eyebrow) => add('hook', { text, eyebrow: eyebrow || '', emphasis: [keyWordOf(text)] });
+    const exampleBeat = () => (ex ? add('example', { ex, text: exampleText(ex, f), glyph: f.row.glyph, section: f.sectionSlug, title: f.title, ai: f.isAI }) : null);
+    const fixBeat = (eyebrow) => add('fix', { heading: f.title, text: promise, eyebrow, glyph: f.row.glyph, section: f.sectionSlug, sub: f.isAI ? 'Sends your text to an AI model, and says so first.' : '' });
+    const point = (num, text, bad) => add('point', { heading: String(num), text, bad: !!bad }, (typeof num === 'number' ? capFirst(NUM_WORD[num] || String(num)) + ': ' : '') + toSpeech(text));
+    switch (style) {
+      case 'speedrun':
+        hook(capFirst(job) + '. Watch.', 'Speed run');
+        exampleBeat();
+        steps.forEach((s, i) => point(i + 1, s));
+        break;
+      case 'beforeafter':
+        hook(story.hook, 'Before / after');
+        add('versus', { heading: 'Before | After', text: lineText(usual[0]) + '\n' + lineText(promise) }, 'Before: ' + sentence(toSpeech(usual[0])) + ' After: ' + sentence(toSpeech(promise)));
+        exampleBeat();
+        add('steps', { heading: 'How', text: steps.join('\n'), eyebrow: f.title, foot: f.outPart ? 'You get: ' + f.outPart : '' }, stepsSpeech(steps));
+        break;
+      case 'myth':
+        hook('You don’t need ' + lowerFirst(lineText(usual[0])) + '.', 'Myth vs fact');
+        add('versus', { heading: 'Myth | Fact', text: 'You need ' + lowerFirst(lineText(usual[0])) + '\n' + lineText(promise) }, 'Myth: you need ' + lowerFirst(sentence(toSpeech(usual[0]))) + ' Fact: ' + sentence(toSpeech(promise)));
+        add('versus', { heading: 'Myth | Fact', text: lineText(usual[1]) + ' is the only way\n' + lineText(trust) }, 'Myth: ' + lowerFirst(toSpeech(lineText(usual[1]))) + ' is the only way. Fact: ' + sentence(toSpeech(trust)));
+        exampleBeat();
+        break;
+      case 'mistakes':
+        hook('3 mistakes when you ' + job, story.persona || '');
+        usual.forEach((u, i) => point(i + 1, u, true));
+        fixBeat('Do this instead');
+        exampleBeat();
+        break;
+      case 'pov':
+        hook('POV: ' + lowerFirst(lineText(firstOf(story.pain || story.hook))), story.persona || 'POV');
+        add('text', { text: lineText(usual[0]) + '? No.' });
+        fixBeat('Then you find');
+        exampleBeat();
+        break;
+      case 'stop':
+        hook('Stop doing it the long way.', '');
+        add('usual', { heading: 'Not this', hl: 'this', text: usual.join('\n'), foot: 'Do this instead' }, 'Not this: ' + usual.map((u) => sentence(toSpeech(u).replace(/[.!?]+$/, ''))).join(' '));
+        add('steps', { heading: 'Do this', hl: 'this', text: steps.join('\n'), eyebrow: f.title, foot: f.outPart ? 'You get: ' + f.outPart : '' }, 'Do this instead. ' + stepsSpeech(steps));
+        exampleBeat();
+        break;
+      case 'quiz':
+        hook('Quick: how many steps does it take to ' + job + '?', 'Guess first');
+        add('text', { text: 'Got a number?\nWatch.' }, 'Got a number? Watch.');
+        add('steps', { heading: 'The answer: ' + steps.length, hl: String(steps.length), text: steps.join('\n'), eyebrow: f.title }, 'The answer is ' + (NUM_WORD[steps.length] || steps.length) + '. ' + stepsSpeech(steps));
+        exampleBeat();
+        break;
+      case 'countdown': {
+        const reasons = [];
+        for (const r of [promise].concat(story.proof || [], [trust])) { const t = lineText(r); if (t && !reasons.some((x) => x.toLowerCase() === t.toLowerCase())) reasons.push(t); }
+        const top3 = reasons.slice(0, 3);
+        hook('3 reasons to try ' + f.title, story.persona || '');
+        for (let i = top3.length - 1; i >= 0; i--) point(i + 1, top3[i]);
+        exampleBeat();
+        break;
+      }
+      case 'hottake':
+        hook('Hot take: you shouldn’t need ' + lowerFirst(lineText(usual[0])) + '.', 'Hot take');
+        add('text', { text: 'Hear me out.' });
+        point(1, lineText(promise));
+        point(2, lineText(trust));
+        exampleBeat();
+        break;
+      case 'thisorthat':
+        hook(lineText(usual[0]) + ' or ' + f.title + '?', 'This or that');
+        add('versus', { heading: 'The usual | ' + short, text: lineText(usual[0]) + '\n' + lineText(promise) }, 'The usual way: ' + sentence(toSpeech(usual[0])) + ' ' + toolName(f) + ': ' + sentence(toSpeech(promise)));
+        add('versus', { heading: 'The usual | ' + short, text: lineText(usual[1]) + '\n' + lineText(trust) }, 'Or ' + lowerFirst(sentence(toSpeech(usual[1]))) + ' ' + toolName(f) + ': ' + sentence(toSpeech(trust)));
+        add('text', { text: 'My pick: ' + f.title }, 'My pick? ' + toolName(f) + '.');
+        break;
+      case 'tutorial':
+      default:
+        hook(lineText(story.howTo || ('How to ' + job)) + ', step by step', f.title);
+        steps.forEach((s, i) => point(i + 1, s));
+        exampleBeat();
+        break;
+    }
+    if (brand.endcard !== false) {
+      add('endcard', { title: f.title, cta: story.cta || (f.isAI ? 'Try 10 free runs' : 'Try it free'), proof: (story.proof || []).slice(0, 3),
+        text: f.isAI ? '10 free runs a month at 1234tools.com' : 'Free at 1234tools.com', qr: brand.qr !== false });
+    }
+    const row = PROMO_STYLES.find((s) => s[0] === style);
+    if (row && row[3]) applyPlan(out, row[3]);
+    for (const sc of out) {
+      if (sc.type === 'example') { sc.path = f.path; setVO(sc, exampleSpeech(sc.ex, f)); }
+      else if (sc.type === 'endcard') { setVO(sc, sentence(toSpeech(story.cta || (f.isAI ? 'Try ten free runs a month' : 'Try it free'))) + (f.isAI ? ' Ten free runs a month on 1234Tools.' : ' It’s free on 1234Tools.') + ' The link is in our bio.'); sc.voEnd = sc._vo; }
+      else if (sc.type === 'fix') setVO(sc, (f.isAI ? 'So try ' + toolName(f) + ' on 1234Tools.' : tryLine(toolName(f))) + ' ' + toSpeech(promise));
+      else setVO(sc, sc._say != null ? sc._say : toSpeech(sc.text));
+      delete sc._say;
+    }
+    out.story = true;
+    out.style = style;
+    return trimTo(out, 24);
+  }
+
   /* ---- the visitor's script: one line per scene, with an optional beat word ---- */
   const TEMPLATES = [
     ['problem', 'Problem → Solution', 'Hook, the pain, why the usual fixes annoy, your fix, three steps, a call to action.',
@@ -1115,7 +1260,56 @@
       { trans: ['', 'fade', 'fade', 'fade', 'dip-black', 'fade'], anim: ['words', 'karaoke', 'karaoke', 'karaoke', 'words'] }],
     ['bts', 'Behind the scenes', 'How something is really made: the start, the messy middle, the finish.',
       'HOOK: How [your product or post] is really made\nTEXT: It starts with [the first step]\nTEXT: The part nobody sees: [the hard bit]\nTEXT: Then [what turns it around]\nTEXT: And here it is: [the finished thing]\nCTA: Want more behind the scenes? Follow',
-      { trans: ['', 'slide-left', 'whip', 'slide-left', 'zoom-out', 'fade'], anim: ['', 'bounce', 'glitch', 'bounce', 'scale'] }]
+      { trans: ['', 'slide-left', 'whip', 'slide-left', 'zoom-out', 'fade'], anim: ['', 'bounce', 'glitch', 'bounce', 'scale'] }],
+    /* the meme and trend formats of short-video apps (wave T, 2026-10-25): each its own rhythm, so two reels in a row do not feel alike */
+    ['tellme', 'Tell me without telling me', 'The meme: three tell-tale signs, then the punchline.',
+      'HOOK: Tell me you’re a [your job] without telling me\nTEXT: [A tell-tale sign]\nTEXT: [A second sign]\nTEXT: [The one only insiders get]\nCTA: Tag someone who does this',
+      { trans: ['', 'cut', 'cut', 'zoom-in', 'fade'], anim: ['words', 'pop', 'pop', 'punch'] }],
+    ['redgreen', 'Red flag / green flag', 'Two red flags crossed out, two green flags ticked.',
+      'HOOK: Red flags and green flags when [choosing something]\nMISTAKE: Red flag | [A warning sign]\nMISTAKE: Red flag | [Another warning sign]\nPOINT: Green flag | [A good sign]\nPOINT: Green flag | [Another good sign]\nCTA: Which one did I miss? Tell me below',
+      { trans: ['', 'slide-left', 'slide-left', 'slide-right', 'slide-right', 'fade'], anim: ['glitch'] }],
+    ['expectation', 'Expectation vs reality', 'What people expect, what really happens — twice — and the lesson.',
+      'HOOK: [Doing the thing]: expectation vs reality\nVERSUS: Expectation | [What you imagine] | Reality | [What actually happens]\nVERSUS: Expectation | [A second hope] | Reality | [The truth]\nTEXT: [The lesson, in one line]\nCTA: Be honest: which one was you?',
+      { trans: ['', 'zoom-in', 'whip', 'dip-white', 'fade'], anim: ['bounce'] }],
+    ['nobody', 'Nobody: / Me:', 'The meme: nobody asked, you do it anyway, and why it makes sense.',
+      'HOOK: Nobody:\nTEXT: Absolutely nobody:\nTEXT: Me: [the oddly specific thing you do]\nTEXT: [Why it actually makes sense]\nCTA: Tag someone who does this too',
+      { trans: ['', 'cut', 'zoom-in', 'fade', 'fade'], anim: ['type', 'type', 'punch', 'words'] }],
+    ['storytime', 'Storytime', 'A short story in four beats: the set-up, the problem, the twist, the ending.',
+      'HOOK: Storytime: the day [something happened]\nTEXT: So there I was, [the set-up]\nTEXT: Then [the problem]\nTEXT: And then [the twist]\nTEXT: In the end, [how it turned out]\nCTA: Want part 2? Follow',
+      { trans: ['', 'fade', 'dip-black', 'whip', 'fade', 'fade'], anim: ['karaoke', 'words', 'words', 'glitch', 'karaoke'] }],
+    ['rateit', 'Rate it out of 10', 'Three things rated, a score each, then the verdict.',
+      'HOOK: Rating [things] out of 10\nPOINT: [7/10] | [The first thing] — [why]\nPOINT: [4/10] | [The second thing] — [why]\nPOINT: [10/10] | [The third thing] — [why it wins]\nTEXT: Verdict: [your pick, in one line]\nCTA: What would you rate it? Comment below',
+      { trans: ['', 'zoom-in', 'zoom-in', 'zoom-in', 'dip-white', 'fade'], anim: ['', 'scale', 'scale', 'scale', 'pop'] }],
+    ['tierlist', 'Tier list', 'Four picks ranked S, A, B and C.',
+      'HOOK: Ranking [things] for [who it is for]\nPOINT: S | [The best] — [why]\nPOINT: A | [Great] — [why]\nPOINT: B | [Fine] — [why]\nPOINT: C | [Skip it] — [why]\nCTA: Where would you put yours?',
+      { trans: ['', 'slide-down', 'slide-down', 'slide-down', 'slide-down', 'fade'], anim: ['', 'bounce', 'bounce', 'bounce', 'bounce'] }],
+    ['grwm', 'Get ready with me', 'Four steps of getting ready, by the clock or by the step.',
+      'HOOK: Get ready with me for [the occasion]\nPOINT: 1 | [The first thing I do]\nPOINT: 2 | [Then this]\nPOINT: 3 | [The step I never skip]\nPOINT: 4 | [The finishing touch]\nCTA: Save this for your next [occasion]',
+      { trans: ['', 'slide-left', 'slide-left', 'slide-left', 'slide-left', 'zoom-out'], anim: ['words', 'sweep', 'sweep', 'sweep', 'sweep'] }],
+    ['packorder', 'Pack an order with me', 'For shops: what was ordered, how it is packed, where it goes. Add a clip after each step.',
+      'HOOK: Pack an order with me: [what they ordered]\nPOINT: 1 | [First, the …]\nPOINT: 2 | [Then the …]\nPOINT: 3 | [The finishing touch]\nTEXT: Off to [the city or the customer’s first name, with permission]\nCTA: Order yours at [your shop]',
+      { trans: ['', 'whip', 'whip', 'whip', 'zoom-out', 'fade'], anim: ['words', 'scale', 'scale', 'scale', 'karaoke'] }],
+    ['pricereveal', 'Guess the price', 'A product, two clues, then the real price — use your own, real price.',
+      'HOOK: Guess the price of [your product]\nTEXT: [What makes it special]\nTEXT: Clue: [a hint about the price]\nPOINT: [The real price] | [What you get for it]\nCTA: Did you guess right? Tell me below',
+      { trans: ['', 'zoom-in', 'fade', 'dip-white', 'fade'], anim: ['', 'words', 'type', 'punch'] }],
+    ['didyouknow', 'Did you know?', 'One surprising, true fact, why it is true and why it matters.',
+      'HOOK: Did you know [a surprising fact]?\nTEXT: [Why it is true]\nTEXT: [Why it matters to you]\nCTA: Follow for more [topic] facts',
+      { trans: ['', 'zoom-in', 'fade', 'fade'], anim: ['punch', 'words', 'karaoke'] }],
+    ['stopscrolling', 'Stop scrolling if…', 'Calls out the viewer, names the problem, gives the fix in three steps.',
+      'HOOK: Stop scrolling if you [have this problem]\nPAIN: Sound familiar? | [What it costs you]\nFIX: [The fix] | [What it does, in one line]\nSTEPS: How | [Step one] | [Step two] | [Step three]\nCTA: Save this before you forget',
+      { trans: ['', 'cut', 'zoom-in', 'slide-up', 'fade'], anim: ['glitch', 'words'] }],
+    ['beforebuy', 'Watch this before you buy', 'Three things to check before buying, then the one to remember.',
+      'HOOK: Watch this before you buy [the thing]\nPOINT: 1 | [Check this first]\nPOINT: 2 | [Then check this]\nPOINT: 3 | [The one people forget]\nTEXT: If you remember one: [the most important check]\nCTA: Send this to someone about to buy one',
+      { trans: ['', 'slide-up', 'slide-up', 'slide-up', 'dip-black', 'fade'], anim: ['punch'] }],
+    ['challenge', 'Challenge', 'Sets the challenge, shows your go, invites stitches.',
+      'HOOK: Can you [do the thing] in under [a time]?\nTEXT: Here’s my go\nTEXT: [Your result, or what happened]\nTEXT: Your turn: [the rule of the challenge]\nCTA: Stitch this with yours',
+      { trans: ['', 'whip', 'zoom-in', 'fade', 'fade'], anim: ['scale', 'pop', 'punch', 'words'] }],
+    ['smallbiz', 'Small business check', 'Who you are, how you started, a day, the part you are proud of.',
+      'HOOK: Small business check: we [make or sell what]\nTEXT: It started with [how you began]\nTEXT: A normal day: [what a day looks like]\nTEXT: Proudest moment: [the part you are proud of]\nCTA: Support small — find us at [where]',
+      { trans: ['', 'slide-left', 'slide-left', 'zoom-in', 'fade'], anim: ['words', 'karaoke', 'karaoke', 'bounce'] }],
+    ['unboxing', 'Unboxing', 'First look, what is inside, the best part, the verdict. Add a clip after each scene.',
+      'HOOK: Unboxing [the product]\nPOINT: First look | [The box or the first impression]\nPOINT: Inside | [What is in it]\nPOINT: Best part | [The thing you love]\nTEXT: Verdict: [one line]\nCTA: Want a closer look? Follow',
+      { trans: ['', 'zoom-in', 'slide-up', 'zoom-in', 'dip-white', 'fade'], anim: ['punch', 'pop', 'pop', 'scale', 'words'] }]
   ];
   /** A template's plan applied to scenes made from it: by scene number, the transition it arrives with and its animation. */
   function applyPlan(scenes, plan) {
@@ -3595,7 +3789,7 @@
     const io = root.querySelector('.tool-io');
     io.innerHTML = '';
     const S = {
-      mode: 'script', promote: null, slug: 'reel', scenes: [],
+      mode: 'script', promote: null, slug: 'reel', scenes: [], style: 'story',
       look: lookFrom({ palette: 'midnight', type: 'gradient', motion: 'pop', bg: 'glow', layout: 'classic', copy: 0 }),
       lookLock: {}, lookOver: {}, lookTool: 'custom',
       brand: { handle: '', url: '', endcard: true, qr: false, progress: true, safe: true, logo: null, logoKind: 'none', utm: 'instagram', aiLabel: false, madeWith: true },
@@ -3912,6 +4106,24 @@
         usePromote(r, true);
       });
       chosen.append(ic, txt, change, rewrite);
+      /* the story's shape: twelve styles from the same lines, so the next reel of this tool is not the last one again */
+      if (S.scenes.story || S.style !== 'story') {
+        const styles = el('div', 'chip-row reel-styles'); styles.setAttribute('role', 'group'); styles.setAttribute('aria-label', 'Story style');
+        const pick = (id) => {
+          if (id === S.style) return;
+          if (S.edited && !confirm('Tell ' + r.title + '’s story as “' + PROMO_STYLES.find((s) => s[0] === id)[1] + '”? Your edits to the scenes will be lost.')) return;
+          S.style = id; usePromote(r, true);
+        };
+        for (const [id, label, about] of PROMO_STYLES) {
+          const b = button(label, 'chip', () => pick(id)); b.dataset.style = id; b.title = about;
+          b.classList.toggle('is-on', S.style === id); b.setAttribute('aria-pressed', S.style === id ? 'true' : 'false');
+          styles.appendChild(b);
+        }
+        const others = () => STYLE_IDS.filter((x) => x !== S.style);
+        const surprise = button('Surprise me', 'chip', () => { const o = others(); pick(o[Math.floor(Math.random() * o.length)]); }); surprise.id = 'reel-style-surprise';
+        styles.appendChild(surprise);
+        chosen.append(el('p', 'reel-styles-lbl', 'Story style — the same tool, told another way:'), styles);
+      }
     }
     /** With no scenes there is nothing to play or export: the buttons say so instead of failing silently. */
     function syncEmptyUi() {
@@ -3990,7 +4202,7 @@
       });
       const b = S.brand;
       return {
-        v: 1, savedAt: Date.now(), mode: S.mode, promote: S.promote ? S.promote.path : null, script: scriptBox.value, tpl: tplSel.value,
+        v: 1, savedAt: Date.now(), mode: S.mode, promote: S.promote ? S.promote.path : null, style: S.style || 'story', script: scriptBox.value, tpl: tplSel.value,
         scenes, look: S.look && S.look.spec, lookLock: S.lookLock,
         brand: { handle: b.handle, handleTouched: !!b.handleTouched, url: S.promote ? '' : b.url, endcard: b.endcard, qr: b.qr, progress: b.progress, safe: b.safe,
           logoKind: b.logoKind === 'site' ? 'site' : 'none', logoLost: b.logoKind === 'upload', utm: b.utm, aiLabel: !!b.aiLabel, madeWith: b.madeWith !== false },
@@ -4021,7 +4233,7 @@
           await Promise.all([loadStories(), loadExamples(), loadFonts()]);
           const idx = await ensureIndex();
           const r = idx && idx.find((x) => x.path === d.promote);
-          if (r) { S.mode = 'promote'; S.promote = r; S.brand.url = '1234tools.com/' + r.path; urlIn.value = S.brand.url; urlIn.readOnly = true; utmField.hidden = false; }
+          if (r) { S.mode = 'promote'; S.promote = r; S.style = STYLE_IDS.includes(d.style) ? d.style : 'story'; S.brand.url = '1234tools.com/' + r.path; urlIn.value = S.brand.url; urlIn.readOnly = true; utmField.hidden = false; }
         } else { S.mode = 'script'; S.promote = null; }
         S.scenes = d.scenes.map((o) => Object.assign({}, o, { id: nid(), media: null }));
         S.lookLock = d.lookLock || {};
@@ -5593,7 +5805,7 @@
       if (o.record !== false && o.replace && S.scenes.length) recordLook(S.lookTool, L.spec, true);
       /* a new copy index rewrites the story's eyebrows and titles, never what the visitor typed */
       if (S.promote && S.scenes.story && o.recopy) {
-        const fresh = buildScript(S.promote, S.brand, L);
+        const fresh = buildScript(S.promote, S.brand, L, S.style);
         for (const sc of S.scenes) {
           const nw = fresh.find((x) => x.type === sc.type);
           if (!nw) continue;
@@ -6016,7 +6228,7 @@
           const f = factsOf(r);
           const brand = Object.assign({}, S.brand, brandFor(r));
           const look = i === 0 ? S.look : lookFrom(looks[i]);
-          const X = Object.assign({}, S, { promote: r, brand, voice: null, look, scenes: buildScript(r, brand, look), mixP: null,
+          const X = Object.assign({}, S, { promote: r, brand, voice: null, look, scenes: buildScript(r, brand, look, S.style), mixP: null,
             captions: Object.assign({}, S.captions, { source: 'scene', cues: [], segments: [] }, { style: Object.assign({}, S.captions.style, look.caption) }) });
           const label = 'Reel ' + (i + 1) + ' of ' + n + ' — ' + r.title;
           bStatus.textContent = label + ' — preparing…' + (i === 1 && !dir ? ' Your browser may ask once to allow several downloads.' : '');
@@ -6219,7 +6431,7 @@
       note('');
       if (S.promote !== r) return;
       const L = freshLook(r.path);
-      S.scenes = buildScript(r, S.brand, L);
+      S.scenes = buildScript(r, S.brand, L, S.style);
       S.reels = (S.reels || 0) + 1;
       S.coverT = null;
       openStudio();
@@ -6248,6 +6460,9 @@
     let params;
     try { params = new URLSearchParams(location.search); } catch (e) { params = new URLSearchParams(''); }
     const toolParam = params.get('tool');
+    /* ?style=speedrun (the promotion desk's calendar passes one per slot): the tool's story in that shape */
+    const styleParam = params.get('style');
+    if (styleParam && STYLE_IDS.includes(styleParam)) S.style = styleParam;
     setMode('script');
     showPane('scenes');
     sizePreview();
@@ -6269,6 +6484,12 @@
       bar.append(el('p', 'aiimg-status', 'Your last reel (' + n + ' scene' + (n === 1 ? '' : 's') + ', saved ' + agoText(draft.savedAt) + ') is kept in this browser.'), row(restoreBtn, freshBtn),
         hint('Pictures, clips, a voice and music are not kept with it — you add those again.'));
       start.insertBefore(bar, start.firstChild);
+    }
+    /* ?template=packorder: the script box starts from that template (the desk suggests one per slot for a shop or an app) */
+    const tplParam = params.get('template');
+    if (!toolParam && tplParam && TEMPLATES.some((t) => t[0] === tplParam) && !scriptBox.value.trim()) {
+      tplSel.value = tplParam;
+      tplSel.dispatchEvent(new Event('change'));
     }
     if (toolParam) {
       let p = toolParam;
@@ -6314,6 +6535,8 @@
         box: { y: box.y, h: box.h }, bar: S.brand.progress ? { y: c.barY, h: c.barH } : null, foot: c.showFoot ? c.footY : null, top: c.sf.top * H, bottom: (1 - c.sf.bottom) * H };
     },
     templates: TEMPLATES.map((t) => ({ id: t[0], label: t[1], about: t[2], script: t[3], types: TEMPLATE_TYPES[t[0]], plan: t[4] || null })),
+    /** A tool's story styles (?style=): id, label, what it does, its plan. buildScript(row, brand, look, styleId) makes one. */
+    styles: PROMO_STYLES.map((s) => ({ id: s[0], label: s[1], about: s[2], plan: s[3] || null })),
     applyPlan, transOf, gradeOf, speedOf, clipTime, fpsOf, destOf, safeOf, sizes: SIZES, anims: ANIMS,
     palettes: PALETTES, types: TYPES, motions: MOTIONS, backgrounds: BGS, layouts: LAYOUTS, paletteAudit, chooseLook, pickLook, lookFrom, keyWordOf, contrast,
     overflow: () => OVER.slice(), clearOverflow: () => { OVER.length = 0; overSeen.clear(); MIN_PX = Infinity; }, minPx: () => MIN_PX,

@@ -16,6 +16,11 @@ const assert = require('assert');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'promo-ui-'));
 process.env.PROMO_HOME = TMP;
 process.env.PROMO_NOW = '2026-10-06T10:00:00';
+/* the Start with Windows switch writes shortcuts: point both folders at temp folders before any toggle */
+const STARTUP = fs.mkdtempSync(path.join(os.tmpdir(), 'promo-startup-'));
+const PROGRAMS = fs.mkdtempSync(path.join(os.tmpdir(), 'promo-programs-'));
+process.env.PROMO_STARTUP_DIR = STARTUP;
+process.env.PROMO_PROGRAMS_DIR = PROGRAMS;
 /* 8750-8759 is this test's range; createServer does not limit ports like serve() does */
 const PORT = +process.env.PROMO_UI_PORT || 8751;
 const BASE = 'http://127.0.0.1:' + PORT;
@@ -328,11 +333,11 @@ let S_ch = '';
       await page.waitForSelector('.cal-item[data-id="' + slotId + '"] .cal-prog', { timeout: 15000 });
       assert.strictEqual(await page.$eval('.cal-item[data-id="' + slotId + '"] .cal-prog', (e) => e.textContent), before);
     });
-    await check('site picker with 14 sites: grouped "Sites" and "XLeShop shops"; a shop gets its own items and the shop calendar (Facebook post starts as "no link")', async () => {
+    await check('site picker with 15 sites (XLePOS, a pilot, among them): grouped "Sites" and "XLeShop shops"; a shop gets its own items and the shop calendar (Facebook post starts as "no link")', async () => {
       const groups = await page.$$eval('#site optgroup', (gs) => gs.map((g) => ({ label: g.label, n: g.querySelectorAll('option').length })));
       assert.deepStrictEqual(groups.map((g) => g.label), ['Sites', 'XLeShop shops'], JSON.stringify(groups));
-      assert.deepStrictEqual(groups.map((g) => g.n), [5, 9], JSON.stringify(groups));
-      assert.strictEqual(await page.$$eval('#site option', (o) => o.length), 14);
+      assert.deepStrictEqual(groups.map((g) => g.n), [6, 9], JSON.stringify(groups));
+      assert.strictEqual(await page.$$eval('#site option', (o) => o.length), 15);
       const shop = await page.evaluate(async () => { const r = await (await fetch('/api/sites')).json(); return r.sites.find((s) => s.group === 'XLeShop shops' && s.items >= 8); });
       assert.ok(shop, 'a shop with items');
       await page.select('#site', shop.id);
@@ -417,6 +422,181 @@ let S_ch = '';
       await page.waitForFunction(() => document.getElementById('tm-suggest').hidden && /clean/.test(document.getElementById('tm-e-lint').textContent) && /1234tools\.com/.test(document.getElementById('tm-e-body').value), { timeout: 15000 });
     });
 
+    // ---- picker, venue chips, Post, Grow, calendar styles, Reels links, Windows switch
+    const typeInto = async (sel, text) => {
+      await page.click(sel);
+      await page.$eval(sel, (e) => e.select());
+      await page.keyboard.press('Backspace');
+      if (text) await page.keyboard.type(text);
+    };
+    await check('picker: "mrge pdf" finds Merge PDF Files first (typo tolerant)', async () => {
+      await page.click('.tabs button[data-tab="post"]');
+      await typeInto('#p-tool', 'mrge pdf');
+      await page.waitForSelector('#p-tool-list li.sel');
+      const first = await page.$eval('#p-tool-list li.sel', (e) => e.dataset.path);
+      assert.strictEqual(first, '/pdf/merge-pdf/');
+    });
+    await check('Post: Shorts pack for Merge PDF Files has Title, Description, Tags and the YouTube guides', async () => {
+      await page.click('#p-tool-list li.sel[data-path="/pdf/merge-pdf/"]');
+      await page.waitForSelector('#p-channels .tile[data-channel="youtube-shorts"]');
+      const groups = await page.$$eval('#p-channels .tile-label', (x) => x.map((e) => e.textContent));
+      assert.deepStrictEqual(groups, ['Video', 'Image and carousel', 'Text and chat']);
+      await page.click('#p-channels .tile[data-channel="youtube-shorts"]');
+      await page.waitForSelector('#p-pack .part[data-key="description"]');
+      const labels = await page.$$eval('#p-pack .part .lab', (x) => x.map((e) => e.textContent));
+      for (const want of ['Title', 'Description', 'Tags (comma-separated)']) assert.ok(labels.includes(want), want + ' in ' + labels.join('|'));
+      const count = await page.$eval('#p-pack .part[data-key="title"] .count', (e) => e.textContent);
+      assert.ok(/^\d+ \/ 100$/.test(count), count);
+      const guides = await page.$$eval('#p-pack .pack-guides a', (x) => x.map((e) => e.href + '|' + e.rel + '|' + e.target));
+      assert.ok(guides.length >= 2 && guides.every((g) => /noopener noreferrer\|_blank$/.test(g)) && guides.some((g) => /youtube|google/.test(g)), guides.join(' '));
+      assert.ok(await page.$eval('#p-upload', (e) => /studio\.youtube\.com/.test(e.href)));
+      assert.ok((await page.$$eval('#p-pack .pack-steps li', (x) => x.length)) >= 3);
+      assert.ok((await page.$$eval('#p-pack .pack-check li', (x) => x.length)) >= 3);
+      assert.ok((await page.$$eval('#p-pack .pack-red li', (x) => x.length)) >= 3);
+    });
+    await check('Post: Copy all puts every field on the clipboard; Another version changes the pack', async () => {
+      await page.evaluate(() => { window.__clip = null; });
+      await page.click('#p-copyall');
+      const clip = await page.evaluate(() => window.__clip);
+      assert.ok(/^Title:\n/.test(clip) && /Description:\n/.test(clip) && /Tags/.test(clip), String(clip).slice(0, 80));
+      const all = () => page.$$eval('#p-pack .part textarea', (x) => x.map((e) => e.value).join('|'));
+      const before = await all();
+      await page.click('#p-another');
+      await page.waitForFunction(() => /version 1/.test((document.querySelector('.pack-head') || {}).textContent || ''), { timeout: 10000 });
+      assert.notStrictEqual(await all(), before);
+    });
+    await check('picker: an empty focused box suggests Today\'s calendar tools and Recent', async () => {
+      await typeInto('#p-tool', '');
+      await page.waitForFunction(() => { const g = [...document.querySelectorAll('#p-tool-list li.grp')].map((e) => e.textContent); return g.includes('Recent') && g.includes('Today\'s calendar') && g.includes('Popular by section'); }, { timeout: 10000 });
+      const recent = await page.evaluate(() => { const li = [...document.querySelectorAll('#p-tool-list li')]; const i = li.findIndex((e) => e.textContent === 'Recent'); return li[i + 1].dataset.path; });
+      assert.strictEqual(recent, '/pdf/merge-pdf/');
+      await page.keyboard.press('Escape');
+    });
+    await check('picker: Browse all lists the sections; picking a tool fills #d-tool and loads the draft', async () => {
+      await page.click('.tabs button[data-tab="draft"]');
+      await page.click('#d-picker .browse-btn');
+      await page.waitForSelector('#d-picker .browse:not([hidden]) .browse-chips .chip');
+      const chips = await page.$$eval('#d-picker .browse-chips .chip', (x) => x.map((e) => e.textContent));
+      assert.ok(chips[0] === 'All' && chips.includes('PDF Tools') && chips.length >= 5, chips.join('|'));
+      await page.click('#d-picker .browse-chips .chip[data-sec="pdf"]');
+      await page.waitForSelector('#d-picker .browse-grid .bt[data-path="/pdf/compress-pdf/"], #d-picker .browse-grid .bt[data-path="/pdf/merge-pdf/"]');
+      const allPdf = await page.$$eval('#d-picker .browse-grid .bt', (x) => x.every((e) => /^\/pdf\//.test(e.dataset.path)));
+      assert.ok(allPdf);
+      await page.type('#d-picker .browse-q', 'merge');
+      await page.waitForFunction(() => document.querySelectorAll('#d-picker .browse-grid .bt').length >= 1 && document.querySelector('#d-picker .browse-grid .bt').dataset.path === '/pdf/merge-pdf/');
+      await page.click('#d-picker .browse-grid .bt[data-path="/pdf/merge-pdf/"]');
+      assert.strictEqual(await page.$eval('#d-tool', (e) => e.value), 'Merge PDF Files');
+      assert.ok(await page.$eval('#d-picker .browse', (e) => e.hidden));
+      await page.waitForFunction(() => document.querySelectorAll('#d-parts .part').length >= 1, { timeout: 15000 });
+    });
+    await check('picker: Escape closes the Browse all panel; arrows and Enter pick from the list', async () => {
+      await page.click('#d-picker .browse-btn');
+      await page.waitForSelector('#d-picker .browse:not([hidden])');
+      await page.keyboard.press('Escape');
+      assert.ok(await page.$eval('#d-picker .browse', (e) => e.hidden));
+      await typeInto('#d-tool', 'compress');
+      await page.waitForSelector('#d-tool-list li.sel');
+      await page.keyboard.press('ArrowDown');
+      const second = await page.$eval('#d-tool-list li.sel.on', (e) => e.dataset.path);
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(() => document.querySelector('#d-tool-list').hidden);
+      const chosen = await page.$eval('#d-tool', (e) => e.value);
+      assert.ok(chosen && chosen.toLowerCase().includes('compress'), chosen);
+      assert.ok(second && second !== '/pdf/merge-pdf/' || chosen.length > 3);
+      await typeInto('#d-tool', 'merge pdf');
+      await page.waitForSelector('#d-tool-list li.sel[data-path="/pdf/merge-pdf/"]');
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(() => document.querySelectorAll('#d-parts .part').length >= 1);
+      assert.strictEqual(await page.$eval('#d-tool', (e) => e.value), 'Merge PDF Files');
+    });
+    await check('Draft: the top venues show as chips; a chip sets the venue select', async () => {
+      await page.waitForFunction(() => document.querySelectorAll('#d-venue-chips .vchip').length >= 5, { timeout: 15000 });
+      const n = await page.$$eval('#d-venue-chips .vchip', (x) => x.length);
+      assert.ok(n >= 5 && n <= 8, 'chips ' + n);
+      assert.ok(await page.$eval('#d-venue-chips .vchip .badge', (e) => /low|medium|high/.test(e.textContent)));
+      const id = await page.$eval('#d-venue-chips .vchip:last-child', (e) => e.dataset.venue);
+      await page.click('#d-venue-chips .vchip:last-child');
+      await page.waitForFunction((v) => document.querySelector('#d-venue').value === v && document.querySelector('#d-venue-chips .vchip.on').dataset.venue === v, { timeout: 10000 }, id);
+    });
+    await check('Grow: three moves, experiment, style of the day and the playbook; a move opens its desk tab', async () => {
+      await page.click('.tabs button[data-tab="grow"]');
+      await page.waitForSelector('#gw-moves .gw-card');
+      assert.strictEqual(await page.$$eval('#gw-moves .gw-card', (x) => x.length), 3);
+      assert.ok(await page.$$eval('#gw-moves .gw-card', (x) => x.every((c) => c.querySelector('.badge') && c.querySelector('.what').textContent.length > 20 && c.querySelectorAll('li').length >= 2)));
+      assert.ok(await page.$('#gw-experiment .gw-card'));
+      assert.ok(/./.test(await page.$eval('#gw-style', (e) => e.textContent)));
+      assert.ok((await page.$$eval('#gw-playbook details.gw-sec', (x) => x.length)) >= 6);
+      assert.ok((await page.$$eval('#gw-playbook details.gw-sec .gw-card', (x) => x.length)) >= 15);
+      assert.ok(await page.$('#gw-prepare') && await page.$('#gw-next .moment'));
+    });
+    await check('Grow: viral angles for a tool - hooks with Copy and Make this reel, series, challenge, proof', async () => {
+      await typeInto('#gw-tool', 'mrge pdf');
+      await page.waitForSelector('#gw-tool-list li.sel');
+      await page.waitForSelector('#gw-tool-list li.sel.on[data-path="/pdf/merge-pdf/"]');
+      await page.keyboard.press('Enter');
+      await page.waitForSelector('#gw-angles .gw-hooks .hook').catch(async (e) => { throw new Error(e.message + ' :: ' + await page.$eval('#gw-angles', (b) => b.textContent.slice(0, 200)) + ' :: ' + await page.$eval('#gw-tool', (b) => b.value)); });
+      assert.strictEqual(await page.$$eval('#gw-angles .hook', (x) => x.length), 10);
+      assert.ok(await page.$eval('#gw-angles .hook a.btn', (e) => /reel-maker\/\?tool=%2Fpdf%2Fmerge-pdf%2F&style=/.test(e.href) && e.target === '_blank'));
+      await page.evaluate(() => { window.__clip = null; });
+      await page.click('#gw-angles .hook .copy');
+      assert.ok(/merge/i.test(await page.evaluate(() => window.__clip)));
+      assert.ok((await page.$$eval('#gw-series .angle', (x) => x.length)) >= 2);
+      assert.ok(/MergePDFChallenge/.test(await page.$eval('#gw-challenge', (e) => e.textContent)));
+      assert.ok((await page.$$eval('#gw-proof .badge', (x) => x.length)) >= 2);
+      assert.ok((await page.$$eval('#gw-styles a', (x) => x.length)) >= 8);
+    });
+    await check('Today: one "Growth move of the day" card links to the Grow tab', async () => {
+      await page.click('.tabs button[data-tab="today"]');
+      await page.waitForSelector('#plan-grow .today-grow');
+      assert.strictEqual(await page.$$eval('#plan-grow .today-grow', (x) => x.length), 1);
+      const moveTitle = await page.$eval('#plan-grow b', (e) => e.textContent);
+      await page.click('#plan-grow .today-grow button');
+      await page.waitForSelector('#tab-grow:not([hidden]) #gw-moves');
+      assert.ok(await page.$$eval('#gw-moves h3', (x, t) => x.some((e) => e.textContent === t), moveTitle));
+    });
+    await check('Reels: each tool row has Speed run, Myth vs fact, POV and Surprise me links', async () => {
+      await page.click('.tabs button[data-tab="reels"]');
+      await page.waitForSelector('#r-sections .reel');
+      const live = await page.$('#r-sections .reel .reel-links');
+      if (!live) return; // the Reel Maker is not live in this setup: the rows show the switched-off button
+      const links = await page.$eval('#r-sections .reel .reel-links', (box) => [...box.querySelectorAll('.reel-style')].map((e) => e.textContent + '|' + e.getAttribute('href')));
+      assert.deepStrictEqual(links.map((l) => l.split('|')[0]), ['Speed run', 'Myth vs fact', 'POV', 'Surprise me']);
+      assert.ok(/&style=speedrun$/.test(links[0]) && /&style=myth$/.test(links[1]) && /&style=pov$/.test(links[2]) && /&style=(speedrun|beforeafter|myth|mistakes|pov|stop|quiz|countdown|hottake|thisorthat|tutorial)$/.test(links[3]), links.join(' '));
+    });
+    await check('Calendar: a slot shows its style badge, "Another style" changes it, and Pack opens the Post tab', async () => {
+      await page.click('.tabs button[data-tab="calendar"]');
+      await page.waitForSelector('#cal-weeks .cal-item.is-today .cal-style');
+      const sid = await page.$eval('#cal-weeks .cal-item.is-today', (e) => e.dataset.id);
+      const sel = '#cal-weeks .cal-item[data-id="' + sid + '"]';
+      const before = await page.$eval(sel + ' .cal-style', (e) => e.textContent);
+      assert.ok(before.length > 2 && (await page.$eval(sel + ' .cal-style', (e) => e.title.length)) > 10);
+      await page.click(sel + ' .cal-restyle');
+      await page.waitForFunction((s, b) => { const e = document.querySelector(s + ' .cal-style'); return e && e.textContent !== b; }, { timeout: 10000 }, sel, before);
+      const after = await page.$eval(sel + ' .cal-style', (e) => e.textContent);
+      assert.notStrictEqual(after, before);
+      const reel = await page.$eval(sel + ' .cal-actions a.btn', (e) => e.href);
+      assert.ok(/style=/.test(reel) || after === 'Full story', reel);
+      await page.click(sel + ' .tg[data-channel="instagram-reel"] .tg-pack');
+      await page.waitForSelector('#tab-post:not([hidden]) #p-pack .part[data-key]', { timeout: 15000 });
+      assert.ok(await page.$eval('#p-channels .tile.on', (e) => e.dataset.channel === 'instagram-reel'));
+      assert.ok((await page.$eval('#p-tool', (e) => e.value)).length > 2);
+    });
+    await check('Start with Windows: the switch creates and removes the Startup shortcut (temp folders)', async () => {
+      await page.click('.tabs button[data-tab="today"]');
+      if (process.platform !== 'win32') { assert.ok(await page.$eval('#autostart', (e) => e.hidden)); return; }
+      await page.waitForFunction(() => !document.getElementById('autostart').hidden, { timeout: 10000 });
+      const lnk = path.join(STARTUP, '1234Tools Promotion Desk.lnk');
+      assert.ok(!fs.existsSync(lnk));
+      await page.click('#as-on');
+      for (let i = 0; i < 100 && !fs.existsSync(lnk); i++) await sleep(100);
+      assert.ok(fs.existsSync(lnk), 'shortcut not created');
+      assert.ok(await page.$eval('#as-on', (e) => e.checked));
+      await page.click('#as-on');
+      for (let i = 0; i < 100 && fs.existsSync(lnk); i++) await sleep(100);
+      assert.ok(!fs.existsSync(lnk), 'shortcut not removed');
+      assert.ok(await page.$eval('#as-on', (e) => !e.checked));
+    });
+
     await check('no external requests and no page errors', async () => {
       assert.deepStrictEqual(external, []);
       assert.deepStrictEqual(pageErrors, []);
@@ -426,6 +606,8 @@ let S_ch = '';
     server.close();
     await sleep(100);
     fs.rmSync(TMP, { recursive: true, force: true });
+    fs.rmSync(STARTUP, { recursive: true, force: true });
+    fs.rmSync(PROGRAMS, { recursive: true, force: true });
   }
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exitCode = fail ? 1 : 0;

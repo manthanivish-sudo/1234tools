@@ -15,7 +15,7 @@
  */
 (function () {
   'use strict';
-  var REC = {"v":199,"date":"2026-10-10","built_on":"92c13e781"};
+  var REC = {"v":200,"date":"2026-10-25","built_on":"065c533ce"};
   window.MVR_VERSION = REC;
 
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

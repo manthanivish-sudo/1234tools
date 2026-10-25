@@ -116,7 +116,11 @@ function cardText(c) {
   for (const s of c.specs) out.push('   ' + (s.label + ':').padEnd(26) + (s.value || CH.NC) + (s.src ? '\n   ' + ' '.repeat(26) + (s.value ? 'source: ' : 'official page tried: ') + s.src + ' (checked ' + s.checked + ')' : ''));
   out.push('   Upload:');
   for (const f of c.upload) out.push(wrap(f, '     - '));
-  out.push('   Draft with the template: ' + c.template);
+  out.push('   Draft with the template: ' + c.template + '   (every box to paste: desk.js pack <tool> ' + c.id + ')');
+  if (c.howTo) {
+    out.push('   How to post (the platform\'s own guide' + (c.howTo.upload ? '; upload at ' + c.howTo.upload : '') + '):');
+    for (const g of c.howTo.guides) out.push(wrap(g.label + ': ' + g.url + (g.read ? '' : ' (needs JavaScript; check the steps there)'), '     - '));
+  }
   out.push('   A right link looks like: ' + (c.linkExample || 'no link: tick it as posted'));
   out.push('   Checklist:');
   c.steps.forEach((s, i) => out.push(wrap(s, '     ' + (i + 1) + '. ')));
