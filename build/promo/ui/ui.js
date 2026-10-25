@@ -126,6 +126,35 @@
   }
   $$('.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 
+  /* Day / Night / Auto. index.html's head script applies the saved choice before the
+     first paint; "auto" leaves the attribute off so the CSS follows Windows. */
+  function setTheme(mode) {
+    if (mode === 'light' || mode === 'dark') document.documentElement.setAttribute('data-theme', mode);
+    else { mode = 'auto'; document.documentElement.removeAttribute('data-theme'); }
+    $$('#theme-sw button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themeSet === mode)));
+    return mode;
+  }
+  let themeMode = 'auto';
+  try { themeMode = localStorage.getItem('promo-theme') || 'auto'; } catch (e) { /* Auto */ }
+  setTheme(themeMode);
+  $$('#theme-sw button').forEach((b) => b.addEventListener('click', () => {
+    const mode = setTheme(b.dataset.themeSet);
+    try { localStorage.setItem('promo-theme', mode); } catch (e) { /* the choice lasts for this tab only */ }
+  }));
+
+  /* each page's "How to use this page" box stays folded once folded */
+  let howtoShut = [];
+  try { howtoShut = JSON.parse(localStorage.getItem('promo-howto-shut') || '[]'); } catch (e) { howtoShut = []; }
+  if (!Array.isArray(howtoShut)) howtoShut = [];
+  $$('details.howto[data-k]').forEach((d) => {
+    if (howtoShut.includes(d.dataset.k)) d.open = false;
+    d.addEventListener('toggle', () => {
+      howtoShut = howtoShut.filter((k) => k !== d.dataset.k);
+      if (!d.open) howtoShut.push(d.dataset.k);
+      try { localStorage.setItem('promo-howto-shut', JSON.stringify(howtoShut)); } catch (e) { /* stays open next time */ }
+    });
+  });
+
   /* ------------------------------------------------------------ picker */
   /* One picker for every tool box: type-to-search (typo-tolerant), suggestions when the
      box is focused and empty (today's calendar tools, the last 8 picked, a few per
@@ -308,7 +337,12 @@
     loadTodayVideos();
     loadTodayGrow();
     if (!p.tasks.length) box.appendChild(h('p', { class: 'muted', text: 'Nothing planned.' }));
-    p.tasks.forEach((t) => box.appendChild(taskCard(t)));
+    const work = p.tasks.filter((t) => t.kind !== 'info');
+    const open = work.filter((t) => !t.done && !t.skipped);
+    const next = open.find((t) => !t.status || t.status.ok);
+    $('#plan-progress').textContent = work.length ? (open.length ? (work.length - open.length) + ' of ' + work.length + ' done' : 'All ' + work.length + ' done') : '';
+    $('#plan-progress').classList.toggle('all', !!work.length && !open.length);
+    p.tasks.forEach((t) => box.appendChild(taskCard(t, t.kind === 'info' ? 0 : work.indexOf(t) + 1, t === next)));
   }
 
   /* one growth move of the day (Grow tab has the rest); nothing shows if the request fails */
@@ -320,15 +354,17 @@
     try { g = await api('/api/grow'); } catch (e) { return; }
     if (seq !== todayGrowSeq || !g.moves || !g.moves.length) return;
     const m = g.moves[0];
-    clear($('#plan-grow')).appendChild(h('div', { class: 'card today-grow' }, h('h3', { class: 'cal-title', text: 'Growth move of the day' }),
+    clear($('#plan-grow')).appendChild(h('div', { class: 'card today-grow' },
       h('div', null, h('b', { text: m.title }), ' ', h('span', { class: 'muted small', text: m.why })),
       h('div', { class: 'actions' }, h('button', { class: 'btn', onclick: () => showTab('grow') }, 'Open Grow'))));
   }
 
-  function taskCard(t) {
-    const cls = 'task' + (t.done ? ' done' : '') + (t.skipped ? ' skipped' : '');
+  function taskCard(t, n, isNext) {
+    const cls = 'task' + (t.done ? ' done' : '') + (t.skipped ? ' skipped' : '') + (isNext ? ' is-next' : '');
     if (t.kind === 'info') return h('div', { class: cls }, h('div', { class: 'task-head' }, h('span', { class: 'badge kind', text: 'note' })), h('p', { class: 'what', text: t.what }));
     const head = h('div', { class: 'task-head' },
+      n ? h('span', { class: 'task-n', 'aria-label': 'Task ' + n, text: String(n) }) : null,
+      isNext ? h('span', { class: 'badge next', text: 'Next' }) : null,
       h('span', { class: 'badge ' + (t.kind === 'help' ? 'help' : 'kind'), text: t.kind === 'help' ? 'help only' : 'linked' }),
       h('h3', { text: t.venueName }),
       t.toolTitle ? h('span', { class: 'muted', text: '· ' + t.toolTitle }) : null,
@@ -347,6 +383,13 @@
             h('button', { class: 'ghost copy', onclick: () => copyText(p.text) }, 'Copy')),
           h('textarea', { rows: Math.min(10, Math.max(2, Math.ceil(p.text.length / 90) + (p.text.match(/\n/g) || []).length)), readonly: true }, p.text)));
       }
+    }
+    if (!t.done && !t.skipped && (!t.status || t.status.ok)) {
+      const how = t.kind === 'help'
+        ? [t.searchUrl && t.toolPath ? 'Click Search the venue, or Find questions, for a thread to answer.' : t.searchUrl ? 'Click Search the venue for a thread to answer.' : t.toolPath ? 'Click Find questions for a thread to answer.' : 'Find a thread on the venue that you can really help with.',
+          'Write a helpful reply with no link and post it yourself.', 'Click Done and paste your reply\'s link (optional).']
+        : [t.composerUrl ? 'Click Open composer, or copy each part below.' : 'Copy each part below.', 'Read it on the venue and publish it yourself.', 'Click Done and paste the post\'s link.'];
+      body.push(h('ol', { class: 'mini-steps' }, how.map((s) => h('li', { text: s }))));
     }
     const actions = h('div', { class: 'actions' });
     if (t.composerUrl) actions.appendChild(h('a', { class: 'btn gold', href: t.composerUrl, target: '_blank', rel: 'noopener noreferrer' }, 'Open composer'));
@@ -919,10 +962,10 @@
       if (status === 'posted') { postedUrl = prompt('Link to the post (optional). Better: record each channel\'s link in its row below.', it.postedUrl || ''); if (postedUrl === null) return; }
       try { const r = await api('/api/calendar/status', { id: it.id, status, postedUrl }); replaceItem(r.item); } catch (e) { toast(e.message); }
     };
-    const fmt = { problem: '#f7c948', before: '#2dd4ff', dev: '#7c5cff', india: '#ff9d2e', ai: '#ff6b9d' }[it.format] || '#f7c948';
+    const fmt = ['problem', 'before', 'dev', 'india', 'ai'].includes(it.format) ? it.format : 'problem';
     const st = it.state || it.status;
     return h('div', { class: 'cal-item is-' + st + (it.date === todayIso ? ' is-today' : ''), 'data-id': it.id },
-      h('div', { class: 'cal-when' }, h('b', { text: it.date }), h('span', { class: 'badge', style: 'border-color:' + fmt + ';color:' + fmt, text: it.formatLabel }),
+      h('div', { class: 'cal-when' }, h('b', { text: it.date }), h('span', { class: 'badge fmt fmt-' + fmt, text: it.formatLabel }),
         it.styleLabel ? h('span', { class: 'badge kind cal-style', title: it.styleAbout || '', text: it.styleLabel }) : null,
         it.progress ? h('span', { class: 'cal-prog small', text: it.progress.label }) : null,
         it.progress && it.progress.flagged ? h('span', { class: 'badge wait', text: it.progress.flagged + ' link' + (it.progress.flagged > 1 ? 's' : '') + ' to check' }) : null),
@@ -1017,7 +1060,7 @@
     if (seq !== todaySeq) return;
     const box = clear($('#plan-cal'));
     if (!c.todaySlots.length) return;
-    const card = h('div', { class: 'card today-videos' }, h('h3', { class: 'cal-title', text: 'Today\'s videos' }));
+    const card = h('div', { class: 'card today-videos' });
     for (const s of c.todaySlots) {
       card.appendChild(h('div', { class: 'tv-slot', 'data-id': s.id },
         h('div', null, h('b', { text: s.title }), ' ', h('span', { class: 'muted small', text: s.formatLabel + ' · ' + s.progress.label }), ' ', h('button', { class: 'linkish small', onclick: () => goToSlot(s.id) }, 'Open in Calendar')),

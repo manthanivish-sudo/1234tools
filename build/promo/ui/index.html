@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Promotion Desk · 1234Tools</title>
+<script>try{var t=localStorage.getItem('promo-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 <link rel="stylesheet" href="/ui.css">
 </head>
 <body>
@@ -15,43 +16,87 @@
       <h1>Promotion Desk</h1>
       <p class="sub" id="today-line">A human publishes every post.</p>
     </div>
-    <label class="site-pick" title="Each site has its own items, claim rules, calendar, log, drafts and kits"><span class="lbl">Site</span><select id="site" aria-label="Site"></select></label>
   </div>
-  <nav class="tabs" role="tablist">
-    <button role="tab" data-tab="today" aria-selected="true">Today</button>
-    <button role="tab" data-tab="draft">Draft</button>
-    <button role="tab" data-tab="post">Post</button>
-    <button role="tab" data-tab="opps">Opportunities</button>
-    <button role="tab" data-tab="kits">Kits</button>
-    <button role="tab" data-tab="venues">Venues</button>
-    <button role="tab" data-tab="log">Log</button>
-    <button role="tab" data-tab="reels">Reels</button>
-    <button role="tab" data-tab="calendar">Calendar</button>
-    <button role="tab" data-tab="grow">Grow</button>
-    <button role="tab" data-tab="testimonials">Testimonials</button>
-    <button role="tab" data-tab="guide">Guide</button>
-  </nav>
-  <div class="autostart" id="autostart" hidden>
-    <label class="chk"><input type="checkbox" id="as-on"> Start with Windows</label>
-    <label class="chk" id="as-open-wrap"><input type="checkbox" id="as-open"> also open the desk</label>
-    <span class="muted small">Starts the desk when you sign in; find it in Start as 1234Tools Promotion Desk.</span>
+  <div class="top-tools">
+    <label class="site-pick" title="Each site has its own items, claim rules, calendar, log, drafts and kits"><span class="lbl">Site</span><select id="site" aria-label="Site"></select></label>
+    <div class="theme-sw" id="theme-sw" role="group" aria-label="Colour mode">
+      <button type="button" data-theme-set="light" aria-pressed="false" title="Day mode: warm light colours"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Day</button>
+      <button type="button" data-theme-set="dark" aria-pressed="false" title="Night mode: warm dark colours"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>Night</button>
+      <button type="button" data-theme-set="auto" aria-pressed="false" title="Follow the Windows light or dark setting">Auto</button>
+    </div>
   </div>
 </header>
 
+<div class="shell">
+<aside class="side">
+  <nav class="tabs" role="tablist" aria-label="Desk sections">
+    <p class="nav-grp">Every day</p>
+    <button role="tab" data-tab="today" aria-selected="true">Today<small>Your list, step by step</small></button>
+    <button role="tab" data-tab="calendar">Calendar<small>90-day video plan</small></button>
+    <button role="tab" data-tab="post">Post<small>Copy for a platform's upload</small></button>
+    <p class="nav-grp">Create</p>
+    <button role="tab" data-tab="draft">Draft<small>Write a post for a venue</small></button>
+    <button role="tab" data-tab="reels">Reels<small>Make a short video</small></button>
+    <button role="tab" data-tab="kits">Kits<small>Images and a carousel</small></button>
+    <p class="nav-grp">Reach out</p>
+    <button role="tab" data-tab="opps">Opportunities<small>Questions to answer</small></button>
+    <button role="tab" data-tab="grow">Grow<small>Growth moves and dates</small></button>
+    <button role="tab" data-tab="testimonials">Testimonials<small>Client quotes, with permission</small></button>
+    <p class="nav-grp">Look up</p>
+    <button role="tab" data-tab="venues">Venues<small>Where to post, and the rules</small></button>
+    <button role="tab" data-tab="log">Log<small>What you have posted</small></button>
+    <button role="tab" data-tab="guide">Guide<small>How each channel works</small></button>
+  </nav>
+  <div class="side-foot">
+    <div class="autostart" id="autostart" hidden>
+      <label class="chk"><input type="checkbox" id="as-on"> Start with Windows</label>
+      <label class="chk" id="as-open-wrap"><input type="checkbox" id="as-open"> also open the desk</label>
+      <span class="muted small">Find it in Start as 1234Tools Promotion Desk.</span>
+    </div>
+    <p class="site-home">Data folder: <code id="site-home"></code></p>
+  </div>
+</aside>
+
 <main>
   <p class="card notice small" id="site-note" hidden></p>
-  <p class="muted small site-home">Data folder: <code id="site-home"></code></p>
   <!-- TODAY -->
   <section id="tab-today" class="tab" data-tab="today">
     <div class="head-row"><h2 id="plan-title">Today</h2><button class="ghost" id="plan-refresh">Refresh</button></div>
     <p class="muted" id="plan-work"></p>
-    <div id="plan-grow"></div>
-    <div id="plan-cal"></div>
-    <div id="plan-tasks" class="stack"></div>
+    <details class="howto" data-k="today" open><summary>How to work through today</summary>
+      <ol class="steps">
+        <li><span><b>Videos first.</b> Open each of today's slots in Calendar, make the Reel and post it on every channel still listed.</span></li>
+        <li><span><b>Then the posts.</b> Work down the cards one at a time; the gold one is next.</span></li>
+        <li><span><b>Publish by hand.</b> Open the composer or copy the text, read it, and publish it yourself.</span></li>
+        <li><span><b>Record it.</b> Click Done and paste the post's link, or Skip. The desk uses this to keep each venue's limits.</span></li>
+      </ol>
+    </details>
+    <div class="step">
+      <div class="step-h"><span class="step-n" aria-hidden="true"></span><div><h3>Make and post today's videos</h3><p>Open a slot in Calendar to make the Reel, then post it on each channel still listed.</p></div></div>
+      <div id="plan-cal" class="step-body"></div>
+    </div>
+    <div class="step">
+      <div class="step-h"><span class="step-n" aria-hidden="true"></span><div><h3>Posts and replies</h3><p>One card at a time, top to bottom.</p></div><span class="step-prog" id="plan-progress"></span></div>
+      <div id="plan-tasks" class="stack step-body"></div>
+    </div>
+    <div class="step">
+      <div class="step-h"><span class="step-n" aria-hidden="true"></span><div><h3>Growth move of the day</h3><p>If there is time left.</p></div></div>
+      <div id="plan-grow" class="step-body"></div>
+    </div>
   </section>
 
   <!-- DRAFT -->
   <section id="tab-draft" class="tab" data-tab="draft" hidden>
+    <div class="page-head"><h2>Draft a post</h2><p>Write one post for one venue, checked against that venue's own rules.</p></div>
+    <details class="howto" data-k="draft" open><summary>How to use this page</summary>
+      <ol class="steps">
+        <li><span><b>Pick a tool</b> in the box on the left.</span></li>
+        <li><span><b>Pick a venue</b> (best fit first) and a template; ‹ › gives another wording.</span></li>
+        <li><span><b>Read the status</b> at the top right: it says whether this venue is fine today.</span></li>
+        <li><span><b>Copy each part</b>, or click Open composer, and publish it yourself.</span></li>
+        <li><span><b>Click Log as posted</b> and paste the post's link.</span></li>
+      </ol>
+    </details>
     <div class="grid2">
       <div class="card">
         <label class="lbl" for="d-tool">Tool</label>
@@ -109,6 +154,15 @@
 
   <!-- POST -->
   <section id="tab-post" class="tab" data-tab="post" hidden>
+    <div class="page-head"><h2>Post to a platform</h2><p>Everything one platform's upload screen asks for: title, caption, tags and the checks.</p></div>
+    <details class="howto" data-k="post" open><summary>How to use this page</summary>
+      <ol class="steps">
+        <li><span><b>Pick a tool.</b></span></li>
+        <li><span><b>Pick a platform.</b></span></li>
+        <li><span><b>Click Open upload page</b>, then copy each box into the matching field, in order.</span></li>
+        <li><span><b>Publish it yourself</b>, then record the link in that day's Calendar slot.</span></li>
+      </ol>
+    </details>
     <div class="card">
       <label class="lbl" for="p-tool">Tool</label>
       <div class="picker" id="p-picker">
@@ -124,6 +178,15 @@
 
   <!-- OPPORTUNITIES -->
   <section id="tab-opps" class="tab" data-tab="opps" hidden>
+    <div class="page-head"><h2>Opportunities</h2><p>Recent public questions that a tool really answers, to reply to helpfully.</p></div>
+    <details class="howto" data-k="opps" open><summary>How to use this page</summary>
+      <ol class="steps">
+        <li><span><b>Pick a tool or an audience</b>, then click Find questions.</span></li>
+        <li><span><b>Open a thread</b> and read all of it before replying.</span></li>
+        <li><span><b>Click Draft</b> to write the answer, then post it yourself.</span></li>
+        <li><span><b>Click Mark answered</b>, or Dismiss threads that do not fit.</span></li>
+      </ol>
+    </details>
     <div class="card">
       <div class="row wrap">
         <div class="grow">
@@ -157,6 +220,15 @@
 
   <!-- KITS -->
   <section id="tab-kits" class="tab" data-tab="kits" hidden>
+    <div class="page-head"><h2>Launch kits</h2><p>Images, a 5-slide carousel and captions for one tool, saved to a folder on this computer.</p></div>
+    <details class="howto" data-k="kits" open><summary>How to use this page</summary>
+      <ol class="steps">
+        <li><span><b>Pick a tool.</b></span></li>
+        <li><span><b>Pick a look</b> from the previews, or leave every field on Auto.</span></li>
+        <li><span><b>Click Generate kit.</b></span></li>
+        <li><span><b>Click Open folder</b> and upload the files yourself, with the captions from kit.md.</span></li>
+      </ol>
+    </details>
     <div class="card">
       <label class="lbl" for="k-tool">Launch kit for a tool</label>
       <div class="row">
@@ -184,6 +256,14 @@
 
   <!-- VENUES -->
   <section id="tab-venues" class="tab" data-tab="venues" hidden>
+    <div class="page-head"><h2>Venues</h2><p>Every place the desk knows, with its rules, its risk and whether you may post there today.</p></div>
+    <details class="howto" data-k="venues" open><summary>How to use this page</summary>
+      <ol class="steps">
+        <li><span><b>Filter</b> by name, kind, audience, section or risk.</span></li>
+        <li><span><b>Click a row</b> to read that venue's rules and notes.</span></li>
+        <li><span><b>Check the Today column</b> before you post there.</span></li>
+      </ol>
+    </details>
     <div class="card filters">
       <input id="v-q" type="search" placeholder="Filter by name or notes">
       <select id="v-kind"><option value="">All kinds</option></select>
@@ -200,6 +280,14 @@
 
   <!-- LOG -->
   <section id="tab-log" class="tab" data-tab="log" hidden>
+    <div class="page-head"><h2>Posting log</h2><p>Everything you have posted or replied to. It sets when each venue is free again.</p></div>
+    <details class="howto" data-k="log" open><summary>How to use this page</summary>
+      <ol class="steps">
+        <li><span><b>Done and Log as posted</b> add entries here for you.</span></li>
+        <li><span><b>Add by hand</b> a help-only reply, a removal or a post made elsewhere (bottom of the list).</span></li>
+        <li><span><b>Check Cadence by venue</b> to see when each venue is free again.</span></li>
+      </ol>
+    </details>
     <div class="card">
       <div class="row wrap">
         <select id="l-venue"><option value="">All venues</option></select>
@@ -226,16 +314,34 @@
 
   <!-- REELS -->
   <section id="tab-reels" class="tab" data-tab="reels" hidden>
+    <div class="page-head"><h2>Reels</h2><p>Open the Reel Maker for any tool, in the style you choose.</p></div>
+    <details class="howto" data-k="reels" open><summary>How to use this page</summary>
+      <ol class="steps">
+        <li><span><b>Find the tool</b> in its section.</span></li>
+        <li><span><b>Click Open Reel Maker</b>, or a style link beside it.</span></li>
+        <li><span><b>Make the video</b> and save it.</span></li>
+        <li><span><b>Upload it yourself</b>; the Post tab has the caption and tags.</span></li>
+      </ol>
+    </details>
     <div class="card notice"><strong>Available once deployed.</strong> <span id="r-note"></span></div>
     <div id="r-sections" class="stack"></div>
   </section>
 
   <section id="tab-calendar" class="tab" data-tab="calendar" hidden>
+    <div class="page-head"><h2>Video calendar</h2><p>90 days of short videos: one problem, one tool, one result. About nine a week in five formats (problem → solution, before / after, 10-second developer tricks, India finance, AI at work); no tool repeats within 21 days.</p></div>
+    <details class="howto" data-k="calendar" open><summary>How to use this page</summary>
+      <ol class="steps">
+        <li><span><b>Find today's slot</b>; it has a gold edge.</span></li>
+        <li><span><b>Click Make the Reel</b>; use Kit or Caption if you also need images or text.</span></li>
+        <li><span><b>Post it on each target channel</b>, then paste each post's link in its row, or skip it with a reason.</span></li>
+        <li><span><b>Done</b> when the slot shows "posted". The Guide tab has each channel's format and checklist.</span></li>
+      </ol>
+    </details>
     <div class="card">
       <div class="row wrap">
         <div class="grow">
-          <h3 class="cal-title">90-day short-video calendar</h3>
-          <p class="muted small">One problem, one tool, one result — about nine a week in five formats: problem → solution, before / after, 10-second developer tricks, India finance and AI at work. No tool repeats within 21 days. Each slot opens the Reel Maker with the tool's own story, makes a kit, or drafts the caption, and lists its target channels: record each post's link (or skip it with a reason) and the slot counts up to "posted". The Guide tab has every channel's format and checklist. Status is saved on this computer.</p>
+          <h3 class="cal-title">Plan</h3>
+          <p class="muted small">Re-plan from any start date, or download the plan as a spreadsheet. Status is saved on this computer.</p>
         </div>
         <div><label class="lbl" for="cal-start">Start</label><input id="cal-start" type="date"></div>
         <div class="end"><button class="ghost" id="cal-replan">Re-plan from this date</button> <a class="ghost" id="cal-csv" href="/api/calendar.csv">Download CSV</a></div>
@@ -255,6 +361,14 @@
 
   <!-- GROW -->
   <section id="tab-grow" class="tab" data-tab="grow" hidden>
+    <div class="page-head"><h2>Grow</h2><p>Three growth moves a day, dates to prepare for, and viral angles for any tool.</p></div>
+    <details class="howto" data-k="grow" open><summary>How to use this page</summary>
+      <ol class="steps">
+        <li><span><b>Do today's moves</b>, first one first.</span></li>
+        <li><span><b>Check Prepare now</b> for dates coming up.</span></li>
+        <li><span><b>Pick a tool</b> at the bottom for angles and hooks to use in posts and Reels.</span></li>
+      </ol>
+    </details>
     <div id="gw-main"></div>
     <h3 class="gw-h">Viral angles for a tool</h3>
     <div class="card">
@@ -269,6 +383,14 @@
 
   <!-- TESTIMONIALS -->
   <section id="tab-testimonials" class="tab" data-tab="testimonials" hidden>
+    <div class="page-head"><h2>Testimonials</h2><p>Named client quotes, each used only with the client's written permission.</p></div>
+    <details class="howto" data-k="testimonials" open><summary>How to use this page</summary>
+      <ol class="steps">
+        <li><span><b>Ask:</b> fill in Request email, copy it (or the WhatsApp text) and send it yourself.</span></li>
+        <li><span><b>Record the reply:</b> paste their exact words and the permission details, then Save.</span></li>
+        <li><span><b>Approve and publish</b> it, then use Export at the bottom for the site.</span></li>
+      </ol>
+    </details>
     <div class="card notice small">
       <strong>Named quotes only, each with the client's written permission.</strong>
       Ask every client the same way, with no suggested wording and nothing in return; paste their words exactly as they sent them.
@@ -370,8 +492,8 @@
 
   <!-- GUIDE -->
   <section id="tab-guide" class="tab" data-tab="guide" hidden>
+    <div class="page-head"><h2>Guide</h2><p>How to post, where, and in which format, for every channel.</p></div>
     <div class="card">
-      <h3 class="cal-title">Guide: how to post, where, and in which format</h3>
       <p class="muted small" id="g-checked"></p>
       <nav class="g-nav small"><a href="#g-vision">Vision</a> · <a href="#g-process">Process</a> · <a href="#g-redlines">Red lines</a> · <a href="#g-channels">Channels</a> · <a href="#g-faq">FAQ</a>
         <label class="g-jump"><span class="muted">Channel</span> <select id="g-channel"><option value="">All channels</option></select></label></nav>
@@ -383,6 +505,7 @@
     <div class="card" id="g-faq"></div>
   </section>
 </main>
+</div>
 
 <div id="toast" role="status" aria-live="polite" hidden></div>
 <script src="/ui.js"></script>
