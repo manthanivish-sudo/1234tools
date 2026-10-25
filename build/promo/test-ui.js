@@ -606,6 +606,43 @@ let S_ch = '';
       assert.ok(await page.$eval('#p-channels .tile.on', (e) => e.dataset.channel === 'instagram-reel'));
       assert.ok((await page.$eval('#p-tool', (e) => e.value)).length > 2);
     });
+    await check('Calendar: Another tool and Choose tool change a slot; posted tools are marked on the slot and in the picker, and Browse all hides them', async () => {
+      await page.click('.tabs button[data-tab="calendar"]');
+      await page.waitForSelector('#cal-weeks .cal-item.is-today .cal-retool');
+      // an earlier check recorded posts on today's first slot, so its tool stays: use the one still open
+      const sid = await page.$eval('#cal-weeks .cal-item.is-today .cal-retool', (e) => e.closest('.cal-item').dataset.id);      const sel = '#cal-weeks .cal-item[data-id="' + sid + '"]';
+      const title = () => page.$eval(sel + ' .cal-what b', (e) => e.textContent);
+      const first = await title();
+      await page.click(sel + ' .cal-retool');
+      await page.waitForFunction((s, b) => { const e = document.querySelector(s + ' .cal-what b'); return e && e.textContent !== b; }, { timeout: 10000 }, sel, first);
+      const tool = await page.$eval(sel + ' .cal-actions a.btn', (e) => decodeURIComponent(new URL(e.href).searchParams.get('tool')));
+      const name = await title();
+      // that tool went out five days ago: the slot and every picker now mark it
+      require('./log').append({ venueId: 'social-instagram', toolPath: tool, kind: 'post', at: '2026-10-01T10:00:00.000Z', channel: 'instagram-reel' });
+      await page.click('.tabs button[data-tab="today"]');
+      await page.click('.tabs button[data-tab="calendar"]');
+      await page.waitForSelector(sel + ' .cal-what .done-mark');
+      assert.strictEqual(await page.$eval(sel + ' .cal-what .done-mark', (e) => e.textContent), 'Posted 1 Oct');
+      await page.click(sel + ' .cal-choose > summary');
+      await page.waitForSelector(sel + ' .cal-choose .picker input:focus');
+      await page.type(sel + ' .cal-choose .picker input', name);
+      await page.waitForSelector(sel + ' .cal-choose .picker-list li.sel');
+      const rows = await page.$$eval(sel + ' .cal-choose .picker-list li.sel', (ls) => ls.map((l) => [l.dataset.path, l.classList.contains('is-done'), !!l.querySelector('.done-mark')]));
+      const mine = rows.find((r) => r[0] === tool);
+      assert.ok(mine && mine[1] && mine[2], JSON.stringify(rows));
+      assert.ok(rows.some((r) => !r[1]) || rows.length === 1, JSON.stringify(rows));
+      await page.click(sel + ' .cal-choose .browse-btn');
+      await page.waitForSelector(sel + ' .cal-choose .browse .bt');
+      await page.$eval(sel + ' .cal-choose .browse-q', (e) => { e.value = ''; e.dispatchEvent(new Event('input')); });
+      const btSel = sel + ' .cal-choose .browse .bt[data-path="' + tool + '"]';
+      assert.ok(await page.$eval(btSel, (e) => e.classList.contains('is-done') && !!e.querySelector('.bt-done')));
+      await page.click(sel + ' .cal-choose .browse-hide-done');
+      assert.strictEqual(await page.$(btSel), null);
+      const other = await page.$eval(sel + ' .cal-choose .browse .bt', (e) => [e.dataset.path, e.title]);
+      await page.click(sel + ' .cal-choose .browse .bt');
+      await page.waitForFunction((s, n) => { const e = document.querySelector(s + ' .cal-what b'); return e && e.textContent !== n; }, { timeout: 10000 }, sel, name);
+      assert.ok((await title()) === other[1].split(' · ')[0], other.join(' | '));
+    });
     await check('Start with Windows: the switch creates and removes the Startup shortcut (temp folders)', async () => {
       await page.click('.tabs button[data-tab="today"]');
       if (process.platform !== 'win32') { assert.ok(await page.$eval('#autostart', (e) => e.hidden)); return; }

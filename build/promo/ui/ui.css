@@ -362,3 +362,14 @@ select{cursor:pointer}
 .reel-links .btn{margin-left:0}
 .reel-style{font-size:13px}
 .cal-style{cursor:help}
+/* tools already posted: marked in every list of tools, and on a calendar slot whose tool went out before */
+.badge.done-mark{font-size:11.5px;padding:1px 7px;border-color:color-mix(in srgb,var(--green) 45%,transparent);color:var(--green)}
+.picker-list li.is-done > span:not(.sec):not(.badge){color:var(--ink2)}
+.browse-hide{display:flex;gap:6px;align-items:center;margin:0 0 8px;color:var(--ink2);cursor:pointer}
+.browse-grid .bt.is-done{border-style:dashed;color:var(--ink2)}
+.browse-grid .bt .bt-done{margin-left:auto;color:var(--green);font-weight:700}
+.cal-choose{flex-basis:100%;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.cal-choose > summary{list-style:none}
+.cal-choose > summary::-webkit-details-marker{display:none}
+.cal-choose .picker{width:100%;min-width:min(320px,calc(100vw - 48px))}
+@media (max-width:820px){.cal-choose{align-items:flex-start}}

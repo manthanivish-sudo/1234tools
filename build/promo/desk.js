@@ -313,6 +313,15 @@ async function route(req, res, u, q, p) {
         try { return send(res, 200, { item: b.next ? C.nextStyle(b.id) : C.setStyle(b.id, b.style || '') }); }
         catch (e) { return send(res, 400, { error: e.message }); }
       }
+      /* a slot's tool, while nothing is posted from it: { id, tool } puts that one in, { id, next: true } the next one not posted yet */
+      if (p === '/api/calendar/tool' && req.method === 'POST') {
+        const b = await readBody(req);
+        const C = require('./calendar');
+        try { return send(res, 200, { item: b.next ? C.nextTool(b.id) : C.setTool(b.id, b.tool) }); }
+        catch (e) { return send(res, 400, { error: e.message }); }
+      }
+      /* every tool already posted (calendar and log), so the pickers can mark them: { tools: { path: { last, days } } } */
+      if (p === '/api/calendar/posted') return send(res, 200, { tools: require('./calendar').posted() });
       if (p === '/api/guide') return send(res, 200, require('./guide').payload());
       if (p === '/api/channels/check') return send(res, 200, require('./channels').check(q.channel, q.url || ''));
       if (p === '/api/reels') return send(res, 200, await reels());

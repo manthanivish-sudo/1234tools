@@ -13,7 +13,9 @@
  * Each day carries the tool, the story's hook and the beats for the Reel
  * (pain → the usual way → the fix → the real example → steps → CTA), and
  * links straight into the Reel Maker, the kit and a caption draft. A tool
- * is not repeated within 21 days.
+ * is not repeated within 21 days, and a plan uses tools never posted (in
+ * the calendar or the posting log) before it repeats one. Any slot not yet
+ * posted can take another tool (setTool, nextTool: "Another tool").
  *
  * Every slot has TARGETS: one per channel and format it should go to
  * (channels.js holds the channels, their specs and the link rules). For
@@ -30,7 +32,7 @@
  * and one postedUrl per slot) loads as it is: the link is assigned to the
  * target whose rules it matches, or kept on the slot as an unassigned link,
  * and a copy of the v1 file is kept as calendar.v1.json. Re-planning keeps
- * every slot that has a status or any target record.
+ * every slot that has a status, any target record or a tool chosen by hand.
  */
 'use strict';
 const fs = require('fs');
@@ -123,6 +125,7 @@ function pools() {
 const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 function localDate(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
 function addDays(s, n) { const d = localDate(s); return iso(new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)); }
+function dayDiff(a, b) { return Math.round((localDate(b) - localDate(a)) / DAY); }
 const todayIso = () => iso(L.now());
 const nowIso = () => L.now().toISOString();
 
@@ -207,16 +210,45 @@ function assignLoose(it, url, at, note) {
 /* ----------------------------------------------------------- planning */
 
 function hasRecord(it) {
-  return it.status !== 'planned' || (it.targets || []).some((t) => (t.state && t.state !== 'due') || t.extra || t.logAt) || (it.unassigned || []).length > 0;
+  return it.status !== 'planned' || !!it.toolSet || (it.targets || []).some((t) => (t.state && t.state !== 'due') || t.extra || t.logAt) || (it.unassigned || []).length > 0;
 }
 
-/** A fresh plan from `start` (YYYY-MM-DD), keeping every slot that has a status or a target record. */
+/** Every tool already posted, from the calendar's slots and the posting log: path -> { last: 'YYYY-MM-DD', days }. */
+function posted(cal) {
+  if (cal === undefined) cal = load();
+  const seen = {};
+  const note = (p, d) => { if (p && d) (seen[p] = seen[p] || new Set()).add(d); };
+  const day = (at, fallback) => { const d = at ? new Date(at) : null; return d && !isNaN(d) ? iso(d) : fallback; };
+  for (const it of (cal ? cal.items : [])) {
+    const done = (it.targets || []).filter((t) => t.state === 'posted');
+    for (const t of done) note(it.tool, day(t.at, it.date));
+    if (!done.length && it.status === 'posted') note(it.tool, day(it.statusAt, it.date));
+  }
+  try { for (const e of L.entries({ kind: 'post' })) note(e.toolPath, day(e.at, '')); } catch (e) { /* no log yet */ }
+  const out = {};
+  for (const [p, days] of Object.entries(seen)) out[p] = { last: [...days].sort().pop(), days: days.size };
+  return out;
+}
+
+/** A slot's words and Reel link for one tool: its written story (1234Tools) or its record (another site). */
+function slotContent(pick) {
+  const SITE = require('./site');
+  const own = SITE.isDefault();
+  const st = (own ? require('./stories/index.js').storyFor(pick.path) : T.record(pick.path).story) || {};
+  return {
+    tool: pick.path, title: pick.title,
+    hook: st.hook || pick.description, pain: st.pain || '', promise: st.promise || '',
+    beats: ['Hook: ' + (st.hook || pick.title), 'Pain: ' + (st.pain || ''), 'The usual way: ' + (st.usual || []).join(' · '),
+      'The fix: ' + (st.promise || pick.description), own ? 'Show the real result' : 'Show it on screen, as the site shows it', 'Steps: ' + (st.steps || []).join(' → '), 'CTA: ' + (st.cta || (own ? 'Try it free' : 'See it on ' + SITE.current().name)) + ' — link in bio'],
+    reel: own ? REEL + encodeURIComponent(pick.path) : REEL_BASE
+  };
+}
+
+/** A fresh plan from `start` (YYYY-MM-DD), keeping every slot that has a status, a target record or a tool chosen by hand. */
 function plan(start) {
   const SITE = require('./site');
   const own = SITE.isDefault();
-  const S = own ? require('./stories/index.js') : { storyFor: (p) => T.record(p).story };
   const week = own ? WEEK : SITE_WEEK;
-  const reelBase = own ? REEL : REEL.replace(/\?tool=$/, '');
   const old = load();
   const kept = {};
   if (old) for (const it of old.items) if (hasRecord(it)) kept[it.id] = it;
@@ -225,6 +257,14 @@ function plan(start) {
   const lastUsed = {};
   const items = [];
   const s = localDate(start || todayIso());
+  /* what went out before the start counts: a tool posted 5 days ago waits out the rest of its 21 days,
+     and a tool never posted comes before one that was */
+  const done = posted(old);
+  for (const [p, d] of Object.entries(done)) if (d.last < iso(s)) lastUsed[p] = dayDiff(iso(s), d.last);
+  /* a kept slot's tool (recorded, or chosen by hand) is not planned again within 21 days either side of it */
+  const keptDays = {};
+  for (const it of Object.values(kept)) (keptDays[it.tool] = keptDays[it.tool] || []).push(dayDiff(iso(s), it.date));
+  const clash = (p, i) => (keptDays[p] || []).some((d) => Math.abs(d - i) < GAP);
   for (let i = 0; i < DAYS; i++) {
     const day = new Date(s.getFullYear(), s.getMonth(), s.getDate() + i);
     const date = iso(day);
@@ -234,22 +274,21 @@ function plan(start) {
       const pool = by[fmt];
       if (!pool.length) return;
       let pick = null;
-      for (let k = 0; k < pool.length; k++) {
+      for (let k = 0; k < pool.length && !pick; k++) {
         const t = pool[(cursor[fmt] + k) % pool.length];
-        if (lastUsed[t.path] === undefined || i - lastUsed[t.path] >= GAP) { pick = t; cursor[fmt] = (cursor[fmt] + k + 1) % pool.length; break; }
+        if (!done[t.path] && lastUsed[t.path] === undefined && !clash(t.path, i)) { pick = t; cursor[fmt] = (cursor[fmt] + k + 1) % pool.length; }
+      }
+      for (let k = 0; k < pool.length && !pick; k++) {
+        const t = pool[(cursor[fmt] + k) % pool.length];
+        if ((lastUsed[t.path] === undefined || i - lastUsed[t.path] >= GAP) && !clash(t.path, i)) { pick = t; cursor[fmt] = (cursor[fmt] + k + 1) % pool.length; }
       }
       if (!pick) { pick = pool[cursor[fmt] % pool.length]; cursor[fmt]++; }
       lastUsed[pick.path] = i;
-      const st = S.storyFor(pick.path) || {};
-      items.push({
-        id, date, slot, format: fmt, formatLabel: FORMATS[fmt].label, tool: pick.path, title: pick.title,
-        hook: st.hook || pick.description, pain: st.pain || '', promise: st.promise || '',
-        beats: ['Hook: ' + (st.hook || pick.title), 'Pain: ' + (st.pain || ''), 'The usual way: ' + (st.usual || []).join(' · '),
-          'The fix: ' + (st.promise || pick.description), own ? 'Show the real result' : 'Show it on screen, as the site shows it', 'Steps: ' + (st.steps || []).join(' → '), 'CTA: ' + (st.cta || (own ? 'Try it free' : 'See it on ' + SITE.current().name)) + ' — link in bio'],
-        platforms: targetsFor(fmt).map((id) => CH.get(id).name), reel: own ? reelBase + encodeURIComponent(pick.path) : reelBase,
+      items.push(Object.assign({ id, date, slot, format: fmt, formatLabel: FORMATS[fmt].label }, slotContent(pick), {
+        platforms: targetsFor(fmt).map((id) => CH.get(id).name),
         status: 'planned', postedUrl: '', note: '',
         targets: newTargets(fmt, 'due')
-      });
+      }));
       if (!own) items[items.length - 1].formatLabel = SITE.current().promotes === 'products' ? 'Product story' : SITE.current().promotes === 'app features' ? 'Feature story' : 'Service story';
     });
   }
@@ -399,6 +438,38 @@ function nextStyle(id) {
   return setStyle(id, ids[(ids.indexOf(now) + 1) % ids.length]);
 }
 
+/** Put another tool in a slot that is not posted yet; the slot keeps its date, format, channels and style.
+    The item comes back with alsoOn: the other dates within 21 days that have the same tool (never stored). */
+function setTool(id, toolPath) {
+  const cal = raw();
+  const it = find(cal, id);
+  if (it.status === 'posted' || (it.targets || []).some((t) => t.state === 'posted')) throw new Error('This slot already has a post recorded, so its tool stays. Clear its posted channels first, or change a slot not posted yet.');
+  const pick = T.listTools().find((t) => t.path === toolPath);
+  if (!pick) throw new Error('Unknown tool: ' + toolPath);
+  Object.assign(it, slotContent(pick), { toolSet: nowIso() });
+  save(cal);
+  const alsoOn = cal.items.filter((x) => x.id !== id && x.tool === toolPath && Math.abs(dayDiff(x.date, it.date)) < GAP).map((x) => x.date);
+  return Object.assign(get().items.find((x) => x.id === id), { alsoOn });
+}
+
+/** The next tool for the "Another tool" button: walking on from the slot's tool through its format's list,
+    the first never posted and not on the plan within 21 days of the slot, then one not posted within 21 days, then any. */
+function nextTool(id) {
+  const cal = raw();
+  const it = find(cal, id);
+  const by = pools();
+  const pool = (by[it.format] || []).length ? by[it.format] : T.listTools();
+  const done = posted(cal);
+  const near = new Set(cal.items.filter((x) => x.id !== id && Math.abs(dayDiff(x.date, it.date)) < GAP).map((x) => x.tool));
+  const at = pool.findIndex((t) => t.path === it.tool);
+  const order = [];
+  for (let k = 1; k <= pool.length; k++) { const t = pool[(at + k) % pool.length]; if (t.path !== it.tool) order.push(t); }
+  if (!order.length) throw new Error('No other tool to put in this slot');
+  const recent = (t) => done[t.path] && Math.abs(dayDiff(done[t.path].last, it.date)) < GAP;
+  const pick = order.find((t) => !done[t.path] && !near.has(t.path)) || order.find((t) => !recent(t) && !near.has(t.path)) || order.find((t) => !done[t.path]) || order[0];
+  return setTool(id, pick.path);
+}
+
 /* ------------------------------------------------------------ actions */
 
 /** The slot's manual status, as before; a link given with "posted" goes to the target it matches. */
@@ -537,6 +608,7 @@ function coverage(opts) {
   const channels = Object.values(per).filter((r) => Object.values(r.week).some(Boolean) || Object.values(r.d30).some(Boolean));
   const todaySlots = cal.items.filter((it) => it.date === today && it.status !== 'skipped').map((it) => ({
     id: it.id, title: it.title, tool: it.tool, formatLabel: it.formatLabel, progress: it.progress,
+    canRetool: it.status !== 'posted' && !it.targets.some((t) => t.state === 'posted'),
     missing: it.targets.filter((t) => !t.done).map((t) => {
       const ch = CH.get(t.channel);
       let cadence = null;
@@ -569,4 +641,4 @@ function csv() {
   return [head.map(q).join(',')].concat(cal.items.map((it) => [it.date, it.formatLabel, it.title, it.tool, it.hook, it.platforms.join(' / '), it.reel, it.state, it.postedUrl, it.progress.label, it.targets.map(tgt).join(' | '), it.styleLabel].map(q).join(','))).join('\r\n') + '\r\n';
 }
 
-module.exports = { plan, get, setStatus, target, coverage, csv, migrate, linkKey, setStyle, nextStyle, STYLE_ORDER, SITE_TEMPLATES, FORMATS, WEEK, DAYS, GAP, FILE };
+module.exports = { plan, get, setStatus, target, coverage, csv, migrate, linkKey, setStyle, nextStyle, setTool, nextTool, posted, STYLE_ORDER, SITE_TEMPLATES, FORMATS, WEEK, DAYS, GAP, FILE };

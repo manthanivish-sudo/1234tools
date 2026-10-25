@@ -1217,6 +1217,38 @@ section('growth: playbook, moments, angles, the calendar\'s reel styles');
     assert.strictEqual(C.get().items[0].style, first.style);
     assert.ok(/"Style"\r?\n/.test(C.csv().split('\r\n')[0] + '\n'));
   });
+  check('calendar: Another tool puts in a tool not posted and not planned within 21 days; Choose tool sets one; both survive a re-plan', () => {
+    C.plan('2026-10-26');
+    const it = C.get().items.find((x) => x.date === '2026-10-28');
+    const n = C.nextTool(it.id);
+    assert.ok(n.tool !== it.tool && n.toolSet && n.title && n.beats.length && n.date === it.date && n.format === it.format && n.style, JSON.stringify(n).slice(0, 200));
+    assert.ok(!C.posted()[n.tool], n.tool);
+    const far = (x) => Math.abs(new Date(x.date) - new Date(it.date)) >= 21 * 864e5;
+    assert.ok(C.get().items.every((x) => x.id === it.id || x.tool !== n.tool || far(x)), n.tool + ' is planned within 21 days');
+    assert.ok(new RegExp('\\?tool=' + encodeURIComponent(n.tool).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(n.reel), n.reel);
+    const pick = T.listTools().find((t) => t.path === '/text/word-counter/');
+    const set = C.setTool(it.id, pick.path);
+    assert.ok(set.title === pick.title && Array.isArray(set.alsoOn));
+    assert.throws(() => C.setTool(it.id, '/no/such-tool/'), /Unknown tool/);
+    C.plan('2026-10-26');
+    assert.strictEqual(C.get().items.find((x) => x.id === it.id).tool, '/text/word-counter/');
+    assert.ok(C.get().items.every((x) => x.id === it.id || x.tool !== pick.path || far(x)), 'a re-plan put the chosen tool on a slot near it');
+    assert.deepStrictEqual(C.setTool(it.id, pick.path).alsoOn, []);
+  });
+  check('calendar: a posted slot keeps its tool; posted() lists it; a re-plan uses tools not posted before repeating it', () => {
+    C.plan('2026-10-26');
+    const first = C.get().items[0];
+    C.setStatus(first.id, 'posted');
+    assert.throws(() => C.nextTool(first.id), /already has a post recorded/);
+    const done = C.posted();
+    assert.ok(done[first.tool] && done[first.tool].last && done[first.tool].days >= 1, JSON.stringify(done[first.tool]));
+    C.plan('2026-11-20');
+    const soon = C.get().items.filter((x) => x.date >= '2026-11-20' && x.date < '2026-12-11');
+    assert.ok(soon.length > 20 && soon.every((x) => x.tool !== first.tool), first.tool + ' came back within 21 days of the re-plan');
+    assert.strictEqual(C.get().items.find((x) => x.id === first.id).tool, first.tool);
+    C.setStatus(first.id, 'planned');
+    C.plan('2026-10-26');
+  });
   check('calendar for a shop suggests shop templates (?template=)', () => {
     SITE.run('kbk-mart', () => {
       C.plan('2026-10-26');

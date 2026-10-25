@@ -101,7 +101,7 @@
 
   /* ------------------------------------------------------------- state */
   const S = {
-    tools: [], byPath: {},
+    tools: [], byPath: {}, posted: {},
     draft: { tool: '', venue: '', template: '', variant: 0, question: '', qurl: '', result: '' },
     lastDraft: null, venues: null, oppTool: '', kitTool: '',
     post: { tool: '', channel: '', variant: 0 }, packChannels: null, growTool: '', grow: null, topVenues: [],
@@ -298,6 +298,20 @@
     }
     return S.todayTools;
   }
+  /* tools already posted (calendar slots and the posting log), so every list of tools can mark them */
+  let postedReq = null;
+  function refreshPosted() {
+    if (!postedReq) {
+      const site = SITE_ID;
+      postedReq = api('/api/calendar/posted').then((r) => { if (site === SITE_ID) S.posted = r.tools || {}; }).catch(() => {}).then(() => { postedReq = null; });
+    }
+    return postedReq;
+  }
+  function postedMark(path) {
+    const p = S.posted[path];
+    if (!p) return null;
+    return h('span', { class: 'badge done-mark', title: 'Already posted: last on ' + p.last + (p.days > 1 ? ', on ' + p.days + ' days in all' : ''), text: 'Posted ' + localDay(p.last).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) });
+  }
   function sectionsOf() {
     const m = new Map();
     S.tools.forEach((t) => { if (!m.has(t.section)) m.set(t.section, { id: t.section, name: t.sectionName, tools: [] }); m.get(t.section).tools.push(t); });
@@ -319,7 +333,7 @@
       lis.forEach((li, i) => li.classList.toggle('on', i === on));
       if (lis[on] && lis[on].scrollIntoView) lis[on].scrollIntoView({ block: 'nearest' });
     }
-    function row(t) { return h('li', { class: 'sel', 'data-path': t.path, onmousedown: (e) => { e.preventDefault(); pick(t); } }, glyph(t.glyph), h('span', { text: t.title }), h('span', { class: 'sec', text: t.sectionName })); }
+    function row(t) { return h('li', { class: 'sel' + (S.posted[t.path] ? ' is-done' : ''), 'data-path': t.path, onmousedown: (e) => { e.preventDefault(); pick(t); } }, glyph(t.glyph), h('span', { text: t.title }), postedMark(t.path), h('span', { class: 'sec', text: t.sectionName })); }
     function fill(groups) {
       clear(list); items = [];
       for (const g of groups) {
@@ -353,7 +367,7 @@
       fill([{ label: 'Today\'s calendar', tools: tt }, { label: 'Recent', tools: rr }, { label: 'Popular by section', tools: perSec.slice(0, 16) }]);
     }
     input.addEventListener('input', () => { panel.hidden = true; render(); });
-    input.addEventListener('focus', () => { panel.hidden = true; render(); });
+    input.addEventListener('focus', () => { panel.hidden = true; render(); refreshPosted(); });
     input.addEventListener('blur', () => { seq++; setTimeout(() => { list.hidden = true; }, 150); });
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { list.hidden = true; panel.hidden = true; return; }
@@ -371,7 +385,10 @@
     const chipRow = h('div', { class: 'browse-chips', role: 'group', 'aria-label': 'Sections' });
     const filter = h('input', { type: 'search', class: 'browse-q', autocomplete: 'off', placeholder: 'Filter these…', 'aria-label': 'Filter the list' });
     const grid = h('div', { class: 'browse-grid' });
-    panel.appendChild(chipRow); panel.appendChild(filter); panel.appendChild(grid);
+    const hideDone = h('input', { type: 'checkbox', class: 'browse-hide-done', onchange: () => drawPanel() });
+    panel.appendChild(chipRow); panel.appendChild(filter);
+    panel.appendChild(h('label', { class: 'browse-hide small' }, hideDone, ' Hide tools already posted'));
+    panel.appendChild(grid);
     function drawPanel() {
       const q = filter.value.trim();
       clear(chipRow);
@@ -379,8 +396,12 @@
       sectionsOf().forEach((s) => chipRow.appendChild(h('button', { type: 'button', class: 'chip' + (secId === s.id ? ' on' : ''), 'data-sec': s.id, onclick: () => { secId = s.id; drawPanel(); } }, s.name)));
       let tools = q ? searchTools(q, 400) : S.tools;
       if (secId) tools = tools.filter((t) => t.section === secId);
+      if (hideDone.checked) tools = tools.filter((t) => !S.posted[t.path]);
       clear(grid);
-      tools.forEach((t) => grid.appendChild(h('button', { type: 'button', class: 'bt', 'data-path': t.path, title: t.title, onclick: () => pick(t) }, glyph(t.glyph), h('span', { text: t.title }))));
+      tools.forEach((t) => {
+        const p = S.posted[t.path];
+        grid.appendChild(h('button', { type: 'button', class: 'bt' + (p ? ' is-done' : ''), 'data-path': t.path, title: t.title + (p ? ' · posted, last on ' + p.last : ''), onclick: () => pick(t) }, glyph(t.glyph), h('span', { text: t.title }), p ? h('span', { class: 'bt-done', 'aria-label': 'already posted', text: '✓' }) : null));
+      });
       if (!tools.length) grid.appendChild(h('p', { class: 'muted small', text: 'Nothing matches.' }));
     }
     filter.addEventListener('input', drawPanel);
@@ -961,7 +982,7 @@
   function shortUrl(u) { return String(u).replace(/^https?:\/\/(www\.)?/, '').slice(0, 48) + (String(u).replace(/^https?:\/\/(www\.)?/, '').length > 48 ? '…' : ''); }
 
   async function loadCalendar() {
-    const cal = await api('/api/calendar');
+    const [cal] = await Promise.all([api('/api/calendar'), refreshPosted()]);
     S.cal = cal;
     $('#cal-start').value = cal.start;
     renderCalStats();
@@ -992,6 +1013,8 @@
     $('#cal-stats').textContent = cal.items.length + ' videos from ' + cal.start + ' · ' + counts.posted + ' posted · ' + (counts.partly ? counts.partly + ' partly posted · ' : '') + counts.made + ' made · ' + counts.planned + ' planned' + (counts.skipped ? ' · ' + counts.skipped + ' skipped' : '');
   }
   function replaceItem(item) {
+    S.todayTools = null;
+    refreshPosted();
     const i = S.cal.items.findIndex((x) => x.id === item.id);
     if (i >= 0) S.cal.items[i] = item;
     const old = document.querySelector('.cal-item[data-id="' + item.id + '"]');
@@ -1058,27 +1081,53 @@
       if (status === 'posted') { postedUrl = prompt('Link to the post (optional). Better: record each channel\'s link in its row below.', it.postedUrl || ''); if (postedUrl === null) return; }
       try { const r = await api('/api/calendar/status', { id: it.id, status, postedUrl }); replaceItem(r.item); } catch (e) { toast(e.message); }
     };
+    const retool = async (body) => {
+      try {
+        const r = await api('/api/calendar/tool', Object.assign({ id: it.id }, body));
+        const also = r.item.alsoOn || [];
+        replaceItem(r.item);
+        toast(it.date + ': ' + r.item.title + (also.length ? '. Also planned on ' + also.join(', ') + ': Another tool there changes it.' : ''));
+      } catch (e) { toast(e.message); }
+    };
     const fmt = ['problem', 'before', 'dev', 'india', 'ai'].includes(it.format) ? it.format : 'problem';
     const st = it.state || it.status;
+    /* the tool can change until something from the slot is posted; a tool that went out before the slot's date is marked */
+    const canRetool = it.status !== 'posted' && !(it.targets || []).some((t) => t.state === 'posted');
+    const before = S.posted[it.tool] && S.posted[it.tool].last < it.date;
     return h('div', { class: 'cal-item is-' + st + (it.date === todayIso ? ' is-today' : ''), 'data-id': it.id },
       h('div', { class: 'cal-when' }, h('b', { text: it.date }), h('span', { class: 'badge fmt fmt-' + fmt, text: it.formatLabel }),
         it.styleLabel ? h('span', { class: 'badge kind cal-style', title: it.styleAbout || '', text: it.styleLabel }) : null,
         it.progress ? h('span', { class: 'cal-prog small', text: it.progress.label }) : null,
         it.progress && it.progress.flagged ? h('span', { class: 'badge wait', text: it.progress.flagged + ' link' + (it.progress.flagged > 1 ? 's' : '') + ' to check' }) : null),
       h('div', { class: 'cal-what' },
-        h('div', null, h('b', { text: it.title }), ' — ', h('span', { text: it.hook })),
+        h('div', null, h('b', { text: it.title }), before ? ' ' : null, before ? postedMark(it.tool) : null, ' — ', h('span', { text: it.hook })),
         h('details', { class: 'small' }, h('summary', { text: 'Beats for the Reel' }), h('ol', null, it.beats.map((b) => h('li', { text: b })))),
         h('div', { class: 'cal-targets' }, (it.targets || []).map((t) => targetRow(it, t)), addChannel(it)),
         (it.unassigned || []).length ? h('p', { class: 'small muted' }, 'Unassigned link' + (it.unassigned.length > 1 ? 's' : '') + ' (matched no target): ', it.unassigned.map((u) => h('a', { href: u.url, target: '_blank', rel: 'noopener noreferrer', text: shortUrl(u.url) + ' ' }))) : null),
       h('div', { class: 'cal-actions' },
         h('a', { class: 'btn', href: it.reel, target: '_blank', rel: 'noopener noreferrer' }, 'Make the Reel'),
         h('button', { class: 'ghost cal-restyle', title: 'Change the Reel style of this slot', onclick: async () => { try { const r = await api('/api/calendar/style', { id: it.id, next: true }); replaceItem(r.item); } catch (e) { toast(e.message); } } }, 'Another style'),
+        canRetool ? h('button', { class: 'ghost cal-retool', title: 'Put the next tool not posted yet (and not planned within 21 days) in this slot', onclick: () => retool({ next: true }) }, 'Another tool') : null,
+        canRetool ? toolChooser(it, retool) : null,
         h('button', { class: 'ghost', onclick: () => { S.kitTool = it.tool; kPicker.set(it.tool); $('#k-seed').value = ''; showTab('kits'); loadLooks(); } }, 'Kit'),
         h('button', { class: 'ghost', onclick: () => openDraft({ tool: it.tool, template: 'instagram-caption' }) }, 'Caption'),
         it.status === 'planned' ? h('button', { class: 'ghost', onclick: () => set('made') }, 'Made') : null,
         it.status !== 'posted' && st !== 'posted' ? h('button', { class: 'ghost', onclick: () => set('posted') }, 'Posted') : null,
         it.status !== 'skipped' && st !== 'posted' ? h('button', { class: 'ghost', onclick: () => set('skipped') }, 'Skip') : null,
         st !== 'planned' ? h('span', { class: 'badge st-' + st, text: STATE_LABEL[st] || st }) : null));
+  }
+  /* "Choose tool": the usual picker, built when first opened (a 90-day plan has over a hundred slots) */
+  function toolChooser(it, retool) {
+    const input = h('input', { type: 'search', autocomplete: 'off', placeholder: 'Search tools…', 'aria-label': 'Tool for ' + it.date });
+    const list = h('ul', { class: 'picker-list', hidden: true });
+    const box = h('details', { class: 'cal-choose' }, h('summary', { class: 'ghost', text: 'Choose tool' }), h('div', { class: 'picker' }, input, list));
+    let made = false;
+    box.addEventListener('toggle', () => {
+      if (!box.open) return;
+      if (!made) { made = true; makePicker(input, list, (t) => retool({ tool: t.path })); }
+      input.focus();
+    });
+    return box;
   }
   function goToSlot(id) {
     return showTab('calendar', { jump: true, spot: { sel: '.cal-item[data-id="' + CSS.escape(id) + '"]', center: true, flash: true } });
@@ -1144,14 +1193,16 @@
     const seq = ++todaySeq;
     clear($('#plan-cal'));   /* never show the last visit's list while the new one loads */
     let c;
-    try { c = await api('/api/calendar/coverage?days=1'); } catch (e) { return; }
+    try { [c] = await Promise.all([api('/api/calendar/coverage?days=1'), refreshPosted()]); } catch (e) { return; }
     if (seq !== todaySeq) return;
     const box = clear($('#plan-cal'));
     if (!c.todaySlots.length) return;
     const card = h('div', { class: 'card today-videos' });
     for (const s of c.todaySlots) {
       card.appendChild(h('div', { class: 'tv-slot', 'data-id': s.id },
-        h('div', null, h('b', { text: s.title }), ' ', h('span', { class: 'muted small', text: s.formatLabel + ' · ' + s.progress.label }), ' ', h('button', { class: 'linkish small', onclick: () => goToSlot(s.id) }, 'Open in Calendar')),
+        h('div', null, h('b', { text: s.title }), ' ', S.posted[s.tool] && S.posted[s.tool].last < c.today ? postedMark(s.tool) : null, ' ', h('span', { class: 'muted small', text: s.formatLabel + ' · ' + s.progress.label }), ' ', h('button', { class: 'linkish small', onclick: () => goToSlot(s.id) }, 'Open in Calendar'),
+          s.canRetool ? ' · ' : null,
+          s.canRetool ? h('button', { class: 'linkish small tv-retool', title: 'Put the next tool not posted yet in today\'s slot', onclick: async () => { try { const r = await api('/api/calendar/tool', { id: s.id, next: true }); S.todayTools = null; toast('Today: ' + r.item.title); loadTodayVideos(); } catch (e) { toast(e.message); } } }, 'Another tool') : null),
         s.missing.length ? h('div', { class: 'tv-missing' }, h('span', { class: 'muted small', text: 'Still to post: ' }),
           s.missing.map((m) => h('span', { class: 'badge chip' + (m.flagged ? ' wait' : ''), 'data-channel': m.channel, title: m.cadence && !m.cadence.ok ? 'Wait: ' + m.cadence.reasons.join(' · ') : m.flagged ? 'The recorded link needs a check' : m.advice ? m.advice.text : '', text: m.name + (m.cadence && !m.cadence.ok ? ' · wait' : '') + (m.flagged ? ' · check link' : '') + (m.advice && m.advice.over ? ' · ' + m.advice.today + ' today (advice: ' + m.advice.perDay + ')' : '') })))
           : h('p', { class: 'small ok-line', text: 'Every channel is done for this slot.' })));
@@ -1583,6 +1634,7 @@
     clear($('#p-pack')); clear($('#p-channels')); clear($('#gw-angles')); clear($('#gw-main')); clear($('#d-venue-chips')); clear($('#plan-grow'));
     Object.assign(S.draft, { tool: '', venue: '', template: '', variant: 0, question: '', qurl: '', result: '' });
     S.lastDraft = null; S.oppTool = ''; S.kitTool = ''; S.cal = null; S.todayTools = null; S.guide = null; S.guideRendered = false; S.venues = null;
+    S.posted = {}; postedReq = null; refreshPosted();
     clear($('#d-parts')); clear($('#d-status')); clear($('#d-tool-chosen')); clear($('#k-result')); clear($('#k-looks'));
     /* testimonials belong to one site: nothing typed for one site carries over to another */
     S.tm = null; S.tmFilter = 'all'; fillForm({}, true);
