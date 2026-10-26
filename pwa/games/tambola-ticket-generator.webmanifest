@@ -1,0 +1,41 @@
+{
+  "id": "/games/tambola-ticket-generator/",
+  "name": "Tambola Ticket Generator — 1234Tools",
+  "short_name": "Tambola Ticket",
+  "description": "Make valid Tambola (Housie) tickets in strips of six that use every number 1–90 once. Print 6 or 12 a page on A4 or Letter, download a PDF, or send each ticket as a picture on WhatsApp. Free, no sign-up.",
+  "start_url": "/games/tambola-ticket-generator/?src=pwa",
+  "scope": "/games/tambola-ticket-generator/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-tambola-ticket-generator.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-tambola-ticket-generator-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-tambola-ticket-generator-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

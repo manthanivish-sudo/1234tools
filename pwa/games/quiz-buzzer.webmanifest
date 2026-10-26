@@ -1,0 +1,41 @@
+{
+  "id": "/games/quiz-buzzer/",
+  "name": "Quiz Buzzer — 1234Tools",
+  "short_name": "Quiz Buzzer",
+  "description": "A free buzzer for a quiz night: each team gets a key and a big pad, the first press wins and locks the others out, with the gaps in milliseconds. Works with several fingers on a tablet. Shows on the TV, no sign-up.",
+  "start_url": "/games/quiz-buzzer/?src=pwa",
+  "scope": "/games/quiz-buzzer/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-quiz-buzzer.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-quiz-buzzer-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-quiz-buzzer-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

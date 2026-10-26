@@ -1,0 +1,41 @@
+{
+  "id": "/games/scoreboard/",
+  "name": "Quiz Scoreboard — 1234Tools",
+  "short_name": "Quiz Scoreboard",
+  "description": "Keep score for a quiz night or a class: up to 12 teams, rounds, a joker for each team, undo and redo, a round timer and a big leaderboard for the TV. Free, no sign-up, kept on your device.",
+  "start_url": "/games/scoreboard/?src=pwa",
+  "scope": "/games/scoreboard/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-scoreboard.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-scoreboard-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-scoreboard-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

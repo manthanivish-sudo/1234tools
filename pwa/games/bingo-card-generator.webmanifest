@@ -1,0 +1,41 @@
+{
+  "id": "/games/bingo-card-generator/",
+  "name": "Bingo Card Generator — 1234Tools",
+  "short_name": "Bingo Card Generator",
+  "description": "Print bingo cards: classic 75-ball cards with a free centre, or word bingo from your own list for a baby shower or a classroom. Numbered cards, 1, 2 or 4 a page, a PDF, and a caller for the same game. Free, no sign-up.",
+  "start_url": "/games/bingo-card-generator/?src=pwa",
+  "scope": "/games/bingo-card-generator/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-bingo-card-generator.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-bingo-card-generator-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-bingo-card-generator-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

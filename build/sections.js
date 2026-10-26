@@ -56,6 +56,11 @@ const SECTIONS = {
      maths. They run in the browser like the image tools; build-social.js
      owns everything under /social/. */
   '/social/':      { name: 'Social Media Tools', head: 'Social Media', hub: 'Social Media Tools', noun: 'tool' },
+  /* Family quiz nights and party games: a wheel, teams, a scoreboard, a
+     buzzer, a Tambola caller and printable tickets. They run on one device,
+     with a second window for the TV, and send nothing anywhere;
+     build-games.js owns everything under /games/. */
+  '/games/':       { name: 'Quiz & Party Games', head: 'Quiz & Party', hub: 'Quiz & Party Games', noun: 'tool' },
   /* Video and sound files, cut, shrunk, converted and recorded in the
      browser with its own WebCodecs codecs: nothing is uploaded and no model
      is involved. build-video.js owns everything under /video/, build-audio.js

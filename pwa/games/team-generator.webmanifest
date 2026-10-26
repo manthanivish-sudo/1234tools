@@ -1,0 +1,41 @@
+{
+  "id": "/games/team-generator/",
+  "name": "Random Team Generator — 1234Tools",
+  "short_name": "Random Team",
+  "description": "Split a list of names into fair random teams in one click — random, balanced by skill, or with brothers and sisters kept apart — and show the teams big on the TV. Free, no sign-up, runs in your browser.",
+  "start_url": "/games/team-generator/?src=pwa",
+  "scope": "/games/team-generator/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-team-generator.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-team-generator-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-team-generator-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

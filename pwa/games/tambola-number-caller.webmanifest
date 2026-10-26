@@ -1,0 +1,41 @@
+{
+  "id": "/games/tambola-number-caller/",
+  "name": "Tambola Number Caller — 1234Tools",
+  "short_name": "Tambola Number",
+  "description": "Call Tambola (Housie) numbers 1–90 aloud with the traditional calls in English or Hindi, on a board big enough for the TV. Auto-call, undo, and check any claim from its ticket number. Free, no sign-up, works offline.",
+  "start_url": "/games/tambola-number-caller/?src=pwa",
+  "scope": "/games/tambola-number-caller/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-tambola-number-caller.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-tambola-number-caller-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-tambola-number-caller-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

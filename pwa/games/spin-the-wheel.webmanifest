@@ -1,0 +1,41 @@
+{
+  "id": "/games/spin-the-wheel/",
+  "name": "Spin the Wheel — 1234Tools",
+  "short_name": "Spin the Wheel",
+  "description": "A spinning wheel for names, prizes or forfeits: up to 100 entries, weighted slices, a fair winner chosen before the spin, remove each winner so nobody repeats, and a big-screen view for the TV. Free, no sign-up.",
+  "start_url": "/games/spin-the-wheel/?src=pwa",
+  "scope": "/games/spin-the-wheel/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-spin-the-wheel.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-spin-the-wheel-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-spin-the-wheel-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
