@@ -46,6 +46,7 @@ const SECTION_DEFAULT = {
   '/ai-video/':    ['Make', 'Video → MP4'],
   '/social/':      ['Make', 'Text → post images'],
   '/games/':       ['Make', 'Names → a game'],
+  '/live/':        ['Make', 'Phones → live results'],
   '/video/':       ['Convert', 'Video → video'],
   '/audio/':       ['Convert', 'Sound → sound'],
   '/text/':        ['Check', 'Text → result'],
@@ -262,6 +263,11 @@ const JOBS = {
   '/games/quiz-maker/': ['Make', 'Questions → a quiz on the TV'],
   '/games/category-board/': ['Make', 'Categories → a quiz board'],
   '/games/top-answers/': ['Make', 'Survey answers → a game board'],
+  /* live: answers from phones, counted on the presenter's page */
+  '/live/live-poll/': ['Make', 'Phones → live vote bars'],
+  '/live/word-cloud/': ['Make', 'Phones → a live word cloud'],
+  '/live/audience-qa/': ['Make', 'Phones → ranked questions'],
+  '/live/rating-scale/': ['Make', 'Phones → average and spread'],
   /* video */
   '/video/video-compressor/': ['Clean up', 'Video → smaller MP4'],
   '/video/video-trimmer/': ['Clean up', 'Video → the part you keep'],
@@ -534,6 +540,10 @@ const DESCS = {
   '/games/quiz-maker/': 'Write a quiz with picture rounds, host it on the TV with a timer and scores, or print the sheets.',
   '/games/category-board/': 'A board of categories and points for the TV: pick a square, reveal the answer, award the team.',
   '/games/top-answers/': 'Hidden survey answers on the TV: reveal them one by one, three strikes, then the other team steals.',
+  '/live/live-poll/': 'Ask a question; phones vote with a code and the bars grow live on the projector.',
+  '/live/word-cloud/': 'Phones send a word or three; the cloud grows on the big screen, rude words masked.',
+  '/live/audience-qa/': 'Questions from phones, approved by you and upvoted by the room, best first.',
+  '/live/rating-scale/': 'Stars, 0–10 or a slider from every phone; average, spread and histogram live.',
   '/video/video-compressor/': 'Shrink a video to a size you choose, or a quality level, with the sizes before and after.',
   '/video/video-trimmer/': 'Cut a video to the frame, or copy the part untouched from a keyframe. MP4, MOV, WebM.',
   '/video/video-converter/': 'MOV, MKV and WebM to MP4 or WebM, copied untouched when the codecs already fit.',
@@ -569,6 +579,7 @@ const START = {
   '/ai-video/': ['/ai-video/reel-maker/', '/ai-video/auto-captions/'],
   '/social/': ['/social/carousel-maker/', '/social/caption-counter/'],
   '/games/': ['/games/tambola-number-caller/', '/games/spin-the-wheel/'],
+  '/live/': ['/live/live-poll/', '/live/word-cloud/'],
   '/video/': ['/video/video-compressor/', '/video/video-trimmer/'],
   '/audio/': ['/audio/audio-converter/', '/audio/text-to-speech/'],
   '/text/': ['/text/word-counter/', '/text/text-diff/'],
@@ -682,7 +693,10 @@ function pageOf(p) {
 }
 
 function tagsFor(p) {
-  return pricingFor(normalise(p)).key === 'freemium' ? ['Free to try', 'AI'] : ['Free', 'On your device'];
+  const key = normalise(p);
+  /* the live tools send answers through our relay, so "On your device" would be untrue */
+  if (/^\/live\//.test(key)) return ['Free', 'Live'];
+  return pricingFor(key).key === 'freemium' ? ['Free to try', 'AI'] : ['Free', 'On your device'];
 }
 
 /**

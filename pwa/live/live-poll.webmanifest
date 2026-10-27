@@ -1,0 +1,41 @@
+{
+  "id": "/live/live-poll/",
+  "name": "Live Poll — 1234Tools",
+  "short_name": "Live Poll",
+  "description": "Ask a multiple-choice question and watch the votes arrive live from phones: the audience join at 1234tools.com/join with a code, one vote per phone, bars or a donut on the projector. Free, no sign-up, no app.",
+  "start_url": "/live/live-poll/?src=pwa",
+  "scope": "/live/live-poll/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-live-poll.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-live-poll-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-live-poll-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

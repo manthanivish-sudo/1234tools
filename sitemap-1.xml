@@ -1342,6 +1342,10 @@
 <url><loc>https://www.1234tools.com/games/quiz-maker/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/games/category-board/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/games/top-answers/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/live/live-poll/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/live/word-cloud/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/live/audience-qa/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/live/rating-scale/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/image/png-to-jpg/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/image/jpg-to-png/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/image/webp-to-jpg/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
@@ -1408,6 +1412,7 @@
 <url><loc>https://www.1234tools.com/settings/</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
 <url><loc>https://www.1234tools.com/trust/</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
 <url><loc>https://www.1234tools.com/tools/</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+<url><loc>https://www.1234tools.com/join/</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
 <url><loc>https://www.1234tools.com/conversions/angle/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/conversions/area/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/conversions/data/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
@@ -1559,4 +1564,13 @@
 <url><loc>https://www.1234tools.com/games/tambola-tickets-for-whatsapp/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/games/would-you-rather-questions-for-kids/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 <url><loc>https://www.1234tools.com/games/yes-or-no-wheel/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/live/classroom-understanding-check/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/live/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/live/live-poll-for-classroom/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/live/live-poll-for-meetings/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/live/qa-for-town-hall-meeting/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/live/rate-a-session-live/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/live/wedding-questions-for-the-couple/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/live/word-cloud-for-classroom/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+<url><loc>https://www.1234tools.com/live/word-cloud-for-team-meeting/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 </urlset>

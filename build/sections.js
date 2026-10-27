@@ -61,6 +61,11 @@ const SECTIONS = {
      with a second window for the TV, and send nothing anywhere;
      build-games.js owns everything under /games/. */
   '/games/':       { name: 'Quiz & Party Games', head: 'Quiz & Party', hub: 'Quiz & Party Games', noun: 'tool' },
+  /* Live polls, word clouds, audience Q&A and ratings: the presenter's page
+     counts everything, but the answers travel from phones through our relay
+     at live.1234tools.com (the only free tools whose data leaves the device);
+     build-live.js owns everything under /live/. */
+  '/live/':       { name: 'Live Polls & Q&A', head: 'Live Polls', hub: 'Live Polls & Q&A', noun: 'tool' },
   /* Video and sound files, cut, shrunk, converted and recorded in the
      browser with its own WebCodecs codecs: nothing is uploaded and no model
      is involved. build-video.js owns everything under /video/, build-audio.js

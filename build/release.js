@@ -18,7 +18,7 @@
  *
  *   generators, run once in this order, each only when named:
  *   --learn --ai            (never part of --all-generators; run first)
- *   --pdf-ship --social --games --video --audio --landing --finder --stories --examples --tools --collections --guides
+ *   --pdf-ship --social --games --live --video --audio --landing --finder --stories --examples --tools --collections --guides
  *   --compare --embed --biz --ai-image --ai-video --showcase --og   (og = build/make-og.js --cards;
  *                           with --collections, build-collections runs again after --showcase)
  *   --gen a,b,c             the same names as a list
@@ -79,7 +79,7 @@ const BS_ALLOWED = new Set(['engine/biz-tally-converter.js']);
    landing after the sections that own the tools it mounts (it cuts its pages
    from theirs) and before finder, which reads its finderRows() */
 const GENERATORS = [
-  ['pdf-ship', 'build-pdf-ship.js'], ['social', 'build-social.js'], ['games', 'build-games.js'], ['video', 'build-video.js'], ['audio', 'build-audio.js'], ['landing', 'build-landing.js'], ['finder', 'build-finder.js'],
+  ['pdf-ship', 'build-pdf-ship.js'], ['social', 'build-social.js'], ['games', 'build-games.js'], ['live', 'build-live.js'], ['video', 'build-video.js'], ['audio', 'build-audio.js'], ['landing', 'build-landing.js'], ['finder', 'build-finder.js'],
   ['stories', 'build-stories.js'], ['examples', 'build-examples.js'], ['tools', 'build-tools.js'], ['collections', 'build-collections.js'],
   ['guides', 'build-guides.js'], ['compare', 'build-compare.js'], ['embed', 'build-embed.js'],
   ['biz', 'build-biz.js'], ['ai-image', 'build-ai-image.js'], ['ai-video', 'build-ai-video.js'], ['showcase', 'build-showcase.js'],
