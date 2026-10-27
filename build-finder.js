@@ -110,9 +110,10 @@ function searchIndex() {
 
 /**
  * Keywords, where a spec carries them. Every engine file is run against a
- * stub window; the ones that define a registry are harvested, the ones that
- * need a real browser are skipped. Keywords are a bonus, not a requirement,
- * so a file that fails to run costs nothing but its keywords.
+ * stub window and whatever registry it defined is harvested — even when it
+ * then throws: the game engines register their spec first and only fail later,
+ * on a helper (GameKit, QuizCore) that a real page loads beside them. A file
+ * that throws before registering costs nothing but its keywords.
  */
 function keywordsBySlug() {
   const out = {};
@@ -121,7 +122,7 @@ function keywordsBySlug() {
     getElementById() { return null; }, createElement() { return { style: {}, setAttribute() {}, appendChild() {}, classList: { add() {}, remove() {} } }; },
     documentElement: { setAttribute() {}, getAttribute() { return null; }, style: {} }, body: { appendChild() {} }, head: { appendChild() {} }, fonts: { load() { return Promise.resolve(); } }
   };
-  const REGISTRIES = ['TOOLS', 'PDF_TOOLS', 'DEV_TOOLS', 'AI_TOOLS', 'IMAGE_TOOLS', 'BIZ_TOOLS', 'TEXT_TOOLS', 'EDU_TOOLS', 'AI_IMAGE_TOOLS'];
+  const REGISTRIES = ['TOOLS', 'PDF_TOOLS', 'DEV_TOOLS', 'AI_TOOLS', 'IMAGE_TOOLS', 'BIZ_TOOLS', 'TEXT_TOOLS', 'EDU_TOOLS', 'AI_IMAGE_TOOLS', 'AI_VIDEO_TOOLS', 'AUDIO_TOOLS', 'VIDEO_TOOLS', 'SOCIAL_TOOLS', 'GAME_TOOLS'];
   const dir = path.join(ROOT, 'engine');
   for (const name of fs.readdirSync(dir)) {
     if (!/\.js$/.test(name) || /bundle|render-|vendor|^aiimg-|^finder|^qr/.test(name)) continue;
@@ -129,7 +130,7 @@ function keywordsBySlug() {
     if (fs.statSync(abs).size > 400000) continue;
     const w = { addEventListener() {}, localStorage: { getItem() { return null; }, setItem() {} }, location: { pathname: '/', search: '' }, navigator: {}, matchMedia() { return { matches: false, addEventListener() {} }; } };
     try { new Function('window', 'document', 'self', 'globalThis', 'navigator', fs.readFileSync(abs, 'utf8'))(w, stubDoc, w, w, w.navigator); }
-    catch (e) { continue; }
+    catch (e) { /* keep what it registered before it failed */ }
     for (const r of REGISTRIES) {
       const reg = w[r];
       if (!reg || typeof reg !== 'object') continue;

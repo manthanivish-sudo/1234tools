@@ -191,7 +191,7 @@
     return 60;   /* every word somewhere in the title, not at the start of one */
   }
 
-  /* The index is ~9 KB gzipped. Most visitors arrive from a search
+  /* The index is ~16 KB gzipped. Most visitors arrive from a search
      engine on the exact tool they wanted and never use the box, so it
      is fetched on first interaction rather than on every page load. */
   var indexState = 'idle';
@@ -215,6 +215,34 @@
     };
     s.onerror = function () { indexState = 'idle'; waiting = []; };
     document.head.appendChild(s);
+  }
+
+  /* Names are not always the word in the visitor's head: "housie" for the
+     Tambola caller, "spinner" for the wheel, "games" for a whole section.
+     When the names give only a few hits, the Tool Finder's index (every
+     tool's keywords and section, ~45 KB gzipped, shared with the finder
+     page's cache) is fetched once and its matches are added below them. */
+  var kwState = 'idle';
+  function ensureKeywords(then) {
+    if (kwState !== 'idle') return;
+    kwState = 'loading';
+    var s = document.createElement('script');
+    s.src = base + 'assets/finder-index.js';
+    s.onload = function () { kwState = 'ready'; then(); };
+    s.onerror = function () { kwState = 'idle'; };
+    document.head.appendChild(s);
+  }
+  function keywordHits(term, seen) {
+    var rows = (kwState === 'ready' && window.FINDER_INDEX && window.FINDER_INDEX.tools) || [], hits = [];
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      if (seen[r[1]]) continue;
+      var best = score(r[3], term) / 2, kws = r[5] ? r[5].split(' | ') : [];
+      for (var k = 0; k < kws.length; k++) best = Math.max(best, score(kws[k], term));
+      /* below any name match: a name hit is the surer one */
+      if (best > 0) { seen[r[1]] = 1; hits.push([best / 20, [r[0], r[1], String(r[2]).replace(/^i-/, '')]]); }
+    }
+    return hits;
   }
 
   /* Pages that are not tools. They are deliberately NOT in
@@ -247,6 +275,11 @@
       var ps = Math.max(score(pg[0], term), score(pg[3], term) ? 60 : 0);
       if (ps > 0) hits.push([ps - 1, pg]);
     }
+    if (hits.length < 5) {
+      var seen = {};
+      for (var h = 0; h < hits.length; h++) seen[hits[h][1][1]] = 1;
+      hits = hits.concat(keywordHits(term, seen));
+    }
     hits.sort(function (a, b) { return b[0] - a[0]; });
     return hits.slice(0, 20).map(function (h) { return h[1]; });
   }
@@ -264,6 +297,11 @@
   function render(term) {
     if (!term) { box.hidden = true; box.innerHTML = ''; return; }
     var hits = search(term);
+    if (hits.length < 5 && kwState === 'idle') {
+      ensureKeywords(function () {
+        if (q.value.trim().toLowerCase() === term) render(term);
+      });
+    }
     if (!hits.length) {
       box.textContent = '';
       var p = document.createElement('p');
