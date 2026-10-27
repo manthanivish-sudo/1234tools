@@ -229,6 +229,9 @@ function hubPage(parts, all) {
   const title = 'Quiz & Party Games — Free for Family Nights | 1234Tools';
   const description = 'Free games for a family quiz night or a party: spin the wheel, random teams, a scoreboard, a buzzer, a Tambola caller and printable tickets. No sign-up.';
   const cards = all.map((t) => '<a class="card" href="/' + SECTION + '/' + t.slug + '/"><span class="card-icon">' + icon(t.spec.glyph) + '</span><strong>' + esc(t.spec.title) + '</strong><span class="card-desc">' + esc(t.spec.description) + '</span></a>').join('');
+  /* the how-to guides (build/guides.js, written by build-guides.js) that name a game: the manual for a whole evening */
+  const guides = require('./build/guides.js').GUIDES.filter((g) => (g.tools || []).some((p) => p.indexOf('/' + SECTION + '/') === 0))
+    .map((g) => '<li><a href="/guides/' + g.slug + '/">' + esc(g.name) + '</a></li>').join('');
   const ready = landings(all).map((x) => '<li><a href="/' + SECTION + '/' + x.L.slug + '/">' + esc(x.L.title) + '</a></li>').join('');
   const body =
     crumbs.render([], sec.hub || sec.name) + '\n' +
@@ -237,6 +240,7 @@ function hubPage(parts, all) {
     '<p class="lede">Everything a quiz night or a party needs, run from one laptop or phone with the TV as the big screen: pick names, make teams, keep score, find who buzzed first, call Tambola and print the tickets. No sign-up, no adverts in the game, and nothing anyone types leaves the device. ' + n + ' game' + (n === 1 ? '' : 's') + ' so far.</p>\n' +
     '<div class="grid">' + cards + '</div>\n' +
     (ready ? '<section class="panel"><h2>Ready-made for</h2><ul class="related">' + ready + '</ul></section>\n' : '') +
+    (guides ? '<section class="panel"><h2>Step-by-step guides</h2><ul class="related">' + guides + '</ul></section>\n' : '') +
     '<section class="panel"><h2>Made for the big screen</h2>' +
     '<p>Every game has a big-screen view. Press <strong>Show on TV</strong> and the game opens in a second window: drag it to the TV or projector, or cast that browser tab, and press Full screen. The page you started on stays your remote. With one screen, <strong>Full screen here</strong> does the same on the device in your hand.</p>' +
     '<p>The controls are large enough for small fingers and older eyes, every button works from the keyboard, and the games work offline once they have opened once — useful at a party where the signal is poor. Each game can be installed as its own app from the browser’s menu.</p></section>\n' +

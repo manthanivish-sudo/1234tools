@@ -1980,6 +1980,154 @@ const GUIDES = [
     tools: ['/pdf/split-pdf/', '/pdf/extract-pdf-pages/', '/pdf/delete-pdf-pages/', '/pdf/merge-pdf/', '/pdf/rotate-pdf/'],
     collections: ['going-paperless'],
     related: ['merge-pdf-files', 'convert-jpg-to-pdf', 'compress-an-image']
+  },
+
+  /* ================================================================== */
+  {
+    slug: 'run-a-tambola-game',
+    glyph: 'i-tambola-number-caller',
+    name: 'How to run a tambola (housie) game',
+    title: 'How to run a tambola (housie) game — tickets, calling, the TV and checking claims',
+    description: 'Run a tambola or housie game for a party, a kitty or a video call: print or send the tickets, call the numbers on the TV with the traditional calls, and check every claim from the ticket number alone.',
+    answer: 'Make the tickets in the Tambola Ticket Generator (in strips of six, printed or sent as pictures on WhatsApp), open the Tambola Number Caller and press Show on TV, call numbers with Next number or auto-call, and when someone claims, type the ticket number printed on their ticket into Check a claim.',
+    minutes: { first: 'fifteen minutes to set up, including printing', again: 'five minutes' },
+    howLong: 'About fifteen minutes before the guests arrive the first time: most of it is printing and cutting the tickets. A game of 90 numbers takes 30 to 45 minutes at a relaxed pace, or about 20 with auto-call at 10 seconds.',
+    before: [
+      'A laptop or phone to call from. A TV or projector helps everyone see the board, but is not essential.',
+      'A printer and scissors for paper tickets, or the players’ WhatsApp numbers for ticket pictures. Pens or dabbers for marking.',
+      'The prizes you will play for, decided in advance: usually Early Five, the three lines, Four Corners and Full House.'
+    ],
+    steps: [
+      {
+        name: 'Make the tickets',
+        body: [
+          { p: 'Tickets come in strips of six: a strip uses every number from 1 to 90 exactly once. Make one ticket per player plus a few spare. For 20 people, 24 tickets is four strips.' },
+          { p: 'Type a title (the party’s name), pick a colour and press Print, Download PDF or Ticket pictures. Each ticket shows a set code and a ticket number such as K7MPQ2-014. Write the set code down: typing it again reprints exactly the same tickets.' },
+          { tool: '/games/tambola-ticket-generator/', why: 'makes valid tambola tickets in strips of six, prints 6 or 12 to a page with cut lines, or makes one PNG picture per ticket to send on WhatsApp' }
+        ]
+      },
+      {
+        name: 'Hand out the tickets and agree the prizes',
+        body: [
+          { p: 'Give out paper tickets, or send each player their own ticket picture. Read out the prizes before the first number and how many claims each prize allows. A common house rule: a claim must be made before the next number is called.' },
+          { ul: [
+            'Early Five: the first player to mark any five numbers.',
+            'Top, Middle and Bottom line: every number in that row.',
+            'Four Corners: the first and last numbers of the top and bottom rows.',
+            'Full House: all fifteen numbers on the ticket.'
+          ] }
+        ]
+      },
+      {
+        name: 'Put the caller on the TV',
+        body: [
+          { p: 'Open the caller on the laptop and press Show on TV. A second window opens with the number huge, its call, the 1–90 board, the last five numbers and the prizes won. Drag it to the TV or projector and make it full screen. On a video call, share that window instead.' },
+          { p: 'Choose the voice: English with the Indian tambola calls, English with the British bingo calls, or the numbers in Hindi (this needs a Hindi voice on the device; the page says so if there is none).' },
+          { tool: '/games/tambola-number-caller/', why: 'draws each number fairly from those not yet called, says it aloud and keeps the TV board up to date' }
+        ]
+      },
+      {
+        name: 'Call the numbers',
+        body: [
+          { p: 'Press Next number, or Space, for each call. For a steady pace press Start auto-call and choose 3 to 20 seconds between numbers; P pauses and resumes. If the voice is still speaking when the time is up, the next number waits for it.' },
+          { p: 'Called one by mistake? Undo last call puts it back. If the page is refreshed or the phone sleeps, the game comes back as it was; only auto-call needs starting again.' }
+        ]
+      },
+      {
+        name: 'Check every claim from the ticket number',
+        body: [
+          { p: 'When someone shouts, pause and ask for the ticket number printed on their ticket. Type it into Check a claim and pick the prize. The page rebuilds that exact ticket, marks the numbers called and says whether the claim is good or which numbers are still missing, and at which call the prize was complete.' },
+          { p: 'A good claim can be awarded: it appears on the TV, so everyone sees who won what. Then carry on calling until Full House.' }
+        ]
+      }
+    ],
+    wrong: [
+      { name: 'Printing too few tickets', text: 'Tickets only come in whole strips of six. Count the players, add a few spare for latecomers and people who want two, and round up to the next six.' },
+      { name: 'Losing the set code', text: 'The set code on every ticket is what lets you reprint the same tickets and is part of each ticket number. Keep one spare ticket or a photo of it; without the code a lost ticket cannot be remade.' },
+      { name: 'Accepting a claim without checking it', text: 'People mark numbers that were never called, or mishear one. Type the ticket number into Check a claim every time: it takes seconds and ends arguments, because everyone can see the result on the TV.' },
+      { name: 'Expecting a Hindi voice that is not there', text: 'The Hindi calls need a Hindi text-to-speech voice on the calling device. Most Android phones have one; Windows, iPhone and Mac can add one in their language settings. Without it the caller speaks English, and says so.' },
+      { name: 'Calling too fast for the room', text: 'Children and older players need time to find each number. Auto-call at 10 to 15 seconds suits most family games; pause with P while a claim is checked.' }
+    ],
+    faq: [
+      { q: 'Is tambola the same as housie and 90-ball bingo?', a: 'Yes. They use the same ticket: three rows, nine columns and fifteen numbers, six tickets to a strip. Only the prize names differ, and the caller can also check One line and Two lines for 90-ball bingo.' },
+      { q: 'Can we play tambola on a video call?', a: 'Yes. Send each player their ticket picture on WhatsApp, share the caller’s TV window in the call, and check claims by ticket number. Players mark their own tickets at home.' },
+      { q: 'Do I need to note who has which ticket?', a: 'No. The ticket number is enough: the caller rebuilds the ticket from it and checks it against the numbers called.' },
+      { q: 'Is anything sent to a server?', a: 'No. The tickets, the PDF, the pictures and the calling all happen in your browser, on your device.' }
+    ],
+    tools: ['/games/tambola-ticket-generator/', '/games/tambola-number-caller/', '/games/spin-the-wheel/', '/games/scoreboard/'],
+    collections: [],
+    related: ['host-a-family-quiz-night']
+  },
+
+  /* ================================================================== */
+  {
+    slug: 'host-a-family-quiz-night',
+    glyph: 'i-quiz-buzzer',
+    name: 'How to host a family quiz night',
+    title: 'How to host a family quiz night — teams, a buzzer, scores on the TV',
+    description: 'Host a quiz night at home, in a classroom or at a club: split people into fair teams, use a buzzer so you know who was first, keep the scores on the TV and pick forfeits or prizes with a wheel.',
+    answer: 'Split the players into fair teams with the Random Team Generator, open the Quiz Buzzer so every team has a key or a touch pad, keep the points on the Quiz Scoreboard (the buzzer can send them there for you), and put both on the TV with Show on TV. Spin the Wheel picks the next category, a forfeit or a prize.',
+    minutes: { first: 'twenty minutes to set up, plus writing the questions', again: 'five minutes' },
+    howLong: 'About twenty minutes to set up the first time, not counting the questions. Five rounds of ten questions take an hour to an hour and a half with a family audience.',
+    before: [
+      'The questions: five rounds of eight to ten is plenty. Mix easy and hard so every age gets some right.',
+      'A laptop for the host, and a TV or projector if you have one. A keyboard or a touch screen for the buzzers.',
+      'The names of everyone playing, for the teams.'
+    ],
+    steps: [
+      {
+        name: 'Make fair teams',
+        body: [
+          { p: 'Type or paste the names, one per line, and choose how many teams. For teams that are even in strength, add a number after a comma (“Asha, 4”) and choose Balanced by skill; to keep two people apart, add a line such as “Asha / Ravi”.' },
+          { p: 'Press Make teams, then Reveal one by one on the TV for a little ceremony. Team sizes never differ by more than one.' },
+          { tool: '/games/team-generator/', why: 'splits the names into fair random teams, balanced by skill or with people kept apart, and shows them on the TV' }
+        ]
+      },
+      {
+        name: 'Set up the buzzer',
+        body: [
+          { p: 'Choose the number of teams and name them. Each team gets a key on the keyboard and a pad on the screen; on a tablet several teams can press their pads at once. R, C and W are kept for the host.' },
+          { p: 'Tick “Send points to the scoreboard” so that pressing Correct adds the points on the Quiz Scoreboard automatically.' },
+          { tool: '/games/quiz-buzzer/', why: 'decides who pressed first from each press’s time stamp and locks the other teams out' }
+        ]
+      },
+      {
+        name: 'Open the scoreboard and put it on the TV',
+        body: [
+          { p: 'Open the scoreboard in another tab with the same teams. Press Show on TV: a big leaderboard that re-orders as the scores change. Use +1, +5 or −1 for a team, or the keys 1 to 9 to pick a team and + or − to change its score.' },
+          { tool: '/games/scoreboard/', why: 'keeps every team’s points round by round, with a double-points joker per team, undo and a CSV of the results' }
+        ]
+      },
+      {
+        name: 'Run each round',
+        body: [
+          { p: 'Read the question and say go. The first team to press is shown; press Correct (C) to give the points or Wrong (W) to lock that team out and let the others try. Press Reset (R) for the next question, and Next round on the scoreboard when the round ends.' },
+          { p: 'Between rounds, spin the wheel to choose the next category, a forfeit for the losing team or the order of play. Tick “Remove the winner after each spin” so nothing comes up twice.' },
+          { tool: '/games/spin-the-wheel/', why: 'picks fairly from a list on the TV, with the winner chosen by the browser’s random generator before the wheel moves' }
+        ]
+      },
+      {
+        name: 'Finish and keep the results',
+        body: [
+          { p: 'After the last round the scoreboard shows the final order; equal totals share a rank. Export the results as a CSV file if you keep a league table from week to week.' }
+        ]
+      }
+    ],
+    wrong: [
+      { name: 'Two teams sharing a key', text: 'The buzzer refuses a key another team already has and keeps the old one. Give each team a key on opposite sides of the keyboard so hands do not collide.' },
+      { name: 'Scoring in the wrong round', text: 'Points always go into the round shown in “Scoring round”. Press Next round when a round ends, and choose an earlier round from the list only to fix it.' },
+      { name: 'Questions that only the adults can answer', text: 'Mixed-age teams make this fair: balance the teams by giving each person a rough strength from 1 to 5, and include a picture or kids’ round.' },
+      { name: 'Playing a joker too late', text: 'A joker doubles a team’s points in the round it is played, minus points included. Ask teams to say which round they are playing it on before the round starts.' }
+    ],
+    faq: [
+      { q: 'Do the players need phones?', a: 'No. The buzzer runs on one keyboard or touch screen, with a key or pad per team, and everything else is on the host’s laptop and the TV.' },
+      { q: 'Can I run it without a TV?', a: 'Yes. Everything works on the laptop screen; Show on TV just gives the room a bigger view.' },
+      { q: 'Does anything get uploaded?', a: 'No. Names, teams and scores stay in your browser on this device.' },
+      { q: 'Can I use it in a classroom?', a: 'Yes. A projector and one keyboard are enough for four to six teams, and the team generator can keep particular pupils apart.' }
+    ],
+    tools: ['/games/team-generator/', '/games/quiz-buzzer/', '/games/scoreboard/', '/games/spin-the-wheel/'],
+    collections: ['teachers'],
+    related: ['run-a-tambola-game']
   }
 ];
 

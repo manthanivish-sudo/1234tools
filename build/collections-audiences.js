@@ -117,7 +117,7 @@ const COLLECTIONS = [
     slug: 'teachers', kind: 'role', glyph: 'i-ai-lesson',
     name: 'Teachers and tutors',
     title: 'Free tools for teachers and tutors',
-    lede: 'Lesson plans, question papers, rubrics and report comments as drafts; marks, grades and certificates in a few clicks; timers and random pickers for the lesson itself.',
+    lede: 'Lesson plans, question papers, rubrics and report comments as drafts; marks, grades and certificates in a few clicks; timers, random pickers and classroom games for the lesson itself.',
     intro: [
       'A teacher’s evening goes on the same things every week: a lesson plan, a worksheet, a question paper with the marks adding up, comments for thirty report cards, and a message home. The school office has its own list — the timetable, the seating plan — and the tools for those are in the collection for schools. This page is for the person in front of the class.',
       'The marks, grades, certificates, timers and pickers run in your browser, so a class list or a marks sheet never leaves your device. The writing tools are AI tools and say so on their pages: they send the topic and notes you give them to a model, never pupils’ names unless you type them, and they give you a structured draft to edit rather than a finished paper.'
@@ -126,6 +126,7 @@ const COLLECTIONS = [
       { name: 'Planning', blurb: 'A draft to edit instead of a blank page.', tools: ['/ai/lesson-plan-writer/', '/ai/question-paper-writer/', '/ai/rubric-writer/', '/ai/ncert-solution-writer/', '/text/readability-score/'] },
       { name: 'Marks and reports', blurb: 'Totals, grades and comments for the whole class at once.', tools: ['/education/report-card/', '/ai/student-comment-writer/', '/education/marks-percentage/', '/education/cgpa-to-percentage/', '/education/attendance-calculator/', '/mathematics/statistics/'] },
       { name: 'In the lesson', blurb: 'On the board, on the projector, in front of the class.', tools: ['/time/stopwatch-timer/', '/time/countdown-timer/', '/utilities/random-number-generator/', '/utilities/dice-roller/', '/mathematics/scientific-calculator/', '/mathematics/fraction-calculator/', '/qr/qr-code-generator/'] },
+      { name: 'Classroom games', blurb: 'Teams, a name wheel, a buzzer and a scoreboard on the projector for a review lesson.', tools: ['/games/team-generator/', '/games/spin-the-wheel/', '/games/quiz-buzzer/', '/games/scoreboard/', '/games/bingo-card-generator/'] },
       { name: 'Paper, certificates and letters home', blurb: 'Printed, named and signed.', tools: ['/pdf/certificate-pdf/', '/pdf/paper-pdf/', '/pdf/text-to-pdf/', '/business/mail-merge/', '/ai/parent-message-writer/', '/ai-video/auto-captions/'] }
     ],
     faq: [
@@ -136,7 +137,6 @@ const COLLECTIONS = [
     related: ['schools', 'start-of-term', 'students'],
     next: [
       { name: 'Worksheet maker', what: 'Maths practice sheets with answer keys, printed as PDF.' },
-      { name: 'Random name picker', what: 'A class list in; a fair pick, without repeats, on the projector.' },
       { name: 'Grade boundaries', what: 'Raw marks in; grades by your boundaries, with the distribution.' }
     ]
   },
