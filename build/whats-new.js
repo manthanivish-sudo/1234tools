@@ -20,7 +20,7 @@
 const MAX = 8;
 
 /* One sentence under the heading: what the newest batch is for. */
-const LEDE = 'Games for a quiz night, a tambola party or the classroom. Run them on a laptop or phone and put the game on the TV for everyone to see.';
+const LEDE = 'Live polls, word clouds and Q&A from the audience’s phones, and games for a quiz night, a tambola party or the classroom, shown on the TV.';
 
 /* Newest first. Same-day tools keep this order on the page. */
 const NEW = [

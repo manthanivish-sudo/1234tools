@@ -2128,6 +2128,82 @@ const GUIDES = [
     tools: ['/games/team-generator/', '/games/quiz-buzzer/', '/games/scoreboard/', '/games/spin-the-wheel/'],
     collections: ['teachers'],
     related: ['run-a-tambola-game']
+  },
+
+  /* ================================================================== */
+  {
+    slug: 'run-a-live-poll',
+    glyph: 'i-live-poll',
+    name: 'How to run a live poll from the audience’s phones',
+    title: 'How to run a live poll — votes, a word cloud and Q&A from phones',
+    description: 'Run a live poll in a class, meeting or talk: the audience join at 1234tools.com/join with a 6-digit code, vote from their phones and the results grow on the projector. Add a word cloud, questions and ratings.',
+    answer: 'Open Live Poll on the laptop connected to the projector, type the question and answers, and press “Start a live session”. The audience open 1234tools.com/join on their phones (or scan the QR code), type the 6-digit code and a nickname, and tap an answer. Press Reveal results to show the bars. A free session takes up to 100 phones, with no app and no accounts.',
+    minutes: { first: 'five minutes', again: 'two minutes' },
+    howLong: 'About five minutes to set up the first time. People join in under a minute once the code is on the screen.',
+    before: [
+      'A laptop connected to the projector or TV, with an internet connection: the votes travel from the phones to your screen.',
+      'The questions, with their answers: from 2 to 10 answers each.',
+      'An audience with phones. They need only a browser: no app and no account.'
+    ],
+    steps: [
+      {
+        name: 'Set up the question',
+        body: [
+          { p: 'Type the question and the answers, one per line. Choose bars or a donut, and tick “Hide results until I press Reveal” if the votes should stay secret until everyone has voted.' },
+          { tool: '/live/live-poll/', why: 'counts the votes from every phone on your laptop and shows them as bars or a donut on the projector' }
+        ]
+      },
+      {
+        name: 'Start the session and put it on the big screen',
+        body: [
+          { p: 'Press “Start a live session”: a 6-digit code and a QR code appear. Press “Show on TV (new window)”, drag that window to the projector and press Full screen there; the laptop page stays your remote. With one screen, press “Full screen here”.' }
+        ]
+      },
+      {
+        name: 'Let the audience join',
+        body: [
+          { p: 'People open 1234tools.com/join on their phones, or scan the QR code with the camera, type the six digits and choose a nickname (or press Random nickname). If someone joins with a rude nickname, open People and press Remove: that phone cannot rejoin.' }
+        ]
+      },
+      {
+        name: 'Ask, reveal and move on',
+        body: [
+          { p: 'Press “Ask this question”: the answers appear as big buttons on every phone, one vote per phone. Press Reveal results (R) to show the totals, Close voting (C) to stop late votes, then ask the next question.' }
+        ]
+      },
+      {
+        name: 'Add a word cloud, questions or a rating',
+        body: [
+          { p: 'Each live tool runs its own session with its own code: start it the same way and the audience join again at 1234tools.com/join. Ask for one to three words and watch them grow into a cloud, with rude words masked:' },
+          { tool: '/live/word-cloud/', why: 'groups the words from every phone into a live cloud on the projector, and hides any word in a tap' },
+          { p: 'Take questions from the room: you approve each one, the audience upvote, and the most wanted rise to the top.' },
+          { tool: '/live/audience-qa/', why: 'collects questions from phones, waits for your approval and ranks them by upvotes on the big screen' },
+          { p: 'At the end, ask how it went: stars, 0 to 10 or a slider, with the average, the spread and a histogram.' },
+          { tool: '/live/rating-scale/', why: 'shows the average, the spread and a histogram of every phone’s rating as they arrive' }
+        ]
+      },
+      {
+        name: 'Keep the results and end the session',
+        body: [
+          { p: 'Press Export CSV to save every question with its votes and percentages; the file is made in your browser. Then press End session twice: the relay forgets the session at once.' }
+        ]
+      }
+    ],
+    wrong: [
+      { name: 'A phone says “No session with this code”', text: 'Check the six digits against the screen. A code works only while its session is open.' },
+      { name: 'The session is full', text: 'A free session takes 100 phones. People can share a phone, or you can end the session and start a new one for a second group.' },
+      { name: 'Reloading the presenter’s page', text: 'Press “Reopen session” in the same tab: the code and the votes come back. Keep the laptop awake and the tab open during the talk.' },
+      { name: 'Showing results too early', text: 'Once people see the bars, later voters follow the crowd. Tick “Hide results until I press Reveal” before you ask.' }
+    ],
+    faq: [
+      { q: 'Do people need an app or an account?', a: 'No. They open 1234tools.com/join in their phone’s browser, type the code and choose a nickname. You need no account either.' },
+      { q: 'What does the server see and keep?', a: 'Answers pass through our server only to reach the presenter’s screen. They are held in memory for the room’s life and deleted when it closes (24 hours at most). No accounts, no cookies, no analytics for participants.' },
+      { q: 'Can someone vote twice?', a: 'No. A second vote from the same phone replaces the first, or is refused if changes are off. A different phone or browser counts as a different person.' },
+      { q: 'Do other people see how I voted?', a: 'No. Phones never receive anyone else’s vote, and the big screen shows totals, not who voted for what.' }
+    ],
+    tools: ['/live/live-poll/', '/live/word-cloud/', '/live/audience-qa/', '/live/rating-scale/'],
+    collections: ['teachers'],
+    related: ['host-a-family-quiz-night']
   }
 ];
 
