@@ -76,7 +76,7 @@
       { q: 'Which scales can I use?', a: 'One to five stars, 0 to 10 as eleven buttons, or a 0 to 10 slider. Each can have words at the low and high ends.' },
       { q: 'How is the average worked out?', a: 'It is the mean of everyone’s latest rating, shown to one decimal place. The spread is the standard deviation of the same ratings.' },
       { q: 'Can people see each other’s ratings?', a: 'No. Phones receive only the question and, if you show them, the average, the count and the histogram — never who gave which rating.' },
-      { q: 'How many people can rate?', a: 'A free session takes up to 100 phones at once.' },
+      { q: 'How many people can rate?', a: 'During the launch trial a free session takes up to 1,000 phones at once.' },
       { q: 'What does the server keep?', a: 'The relay at live.1234tools.com passes the question to the phones and each rating to you. It keeps only the current question in memory for late joiners and forgets everything when the session ends (24 hours at most). Ratings are counted on your device.' },
       { q: 'Can I ask several questions?', a: 'Yes. Change the question and press Ask for ratings again; the earlier results are kept and all of them go into the CSV export.' }
     ],

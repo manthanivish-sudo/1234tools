@@ -58,7 +58,7 @@
       ],
       troubleshooting: [
         { q: 'A phone says “No session with this code”.', a: 'Check the six digits against the screen. Codes work only while the session is open.' },
-        { q: 'A phone says the session is full.', a: 'Free sessions take 100 phones. People can share a phone, or end and start a new session for a second group.' },
+        { q: 'A phone says the session is full.', a: 'During the launch trial a free session takes up to 1,000 phones. People can share a phone, or end and start a new session for a second group.' },
         { q: 'Someone joined with a rude nickname.', a: 'Open “People” in the session panel and press Remove next to it; that phone cannot rejoin.' },
         { q: 'I reloaded the page by mistake.', a: 'Press “Reopen session” in the same tab: the code and the votes come back.' },
         { q: 'Phones show “The presenter’s screen has dropped out”.', a: 'This page lost its connection; it reconnects by itself. Keep this tab open and the laptop awake.' }
@@ -79,7 +79,7 @@
     ],
     faq: [
       { q: 'Do people need an app or an account?', a: 'No. They open 1234tools.com/join in their phone’s browser, type the 6-digit code (or scan the QR code) and choose a nickname. You need no account either.' },
-      { q: 'How many people can vote?', a: 'A free session takes up to 100 phones at once. When it is full, the next phone is told the session is full.' },
+      { q: 'How many people can vote?', a: 'During the launch trial a free session takes up to 1,000 phones at once. When it is full, the next phone is told the session is full.' },
       { q: 'Can someone vote twice?', a: 'No. Votes are counted in your browser against each phone’s connection, which stays the same when the phone reconnects, so a second vote replaces the first (or is refused if changes are off). A different phone or browser counts as a different person.' },
       { q: 'What does the server see and keep?', a: 'The relay at live.1234tools.com passes the question to the phones and each phone’s vote to you. It keeps only the current question in memory so late joiners see it, and forgets everything when the session ends (24 hours at most). Votes are counted on your device.' },
       { q: 'Do other people see how I voted?', a: 'No. Phones receive the question and, only if the presenter shows them, the totals. No phone ever receives another person’s vote, and the presenter’s screen shows totals, not who voted for what.' },

@@ -142,7 +142,7 @@
       { q: 'Is there a winner announcement?', a: 'Yes. Four seconds after each quiz answer is revealed the big screen shows the top 5; after the last quiz question it reveals third place, then second, then the winner. The winner’s phone says “You won!” and every other phone shows its final place.' },
       { q: 'Where is my deck kept?', a: 'In this browser on this computer, saved as you edit. Save deck file downloads it as a .json file; Open deck file loads it on any computer. Nothing about the deck is stored on our server.' },
       { q: 'What does the server see and keep?', a: 'The relay at live.1234tools.com passes each slide to the phones and each answer to you. It keeps only the current slide in memory so late joiners see it, and forgets everything when the session ends (24 hours at most). Answers are counted on your device.' },
-      { q: 'How many people can join?', a: 'A free session takes up to 100 phones at once. When it is full, the next phone is told the session is full.' },
+      { q: 'How many people can join?', a: 'During the launch trial a free session takes up to 1,000 phones at once. When it is full, the next phone is told the session is full.' },
       { q: 'Can I keep the results?', a: 'Yes. Export CSV saves every slide: votes and percentages per answer, typed answers, word counts, ratings, questions and the quiz scores by nickname. The file is made in your browser.' }
     ],
     related: ['/live/live-poll/', '/live/word-cloud/', '/games/quiz-buzzer/'],

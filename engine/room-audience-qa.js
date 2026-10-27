@@ -79,7 +79,7 @@
       { q: 'Do people need an app or an account?', a: 'No. They open 1234tools.com/join in their phone’s browser, type the 6-digit code (or scan the QR code) and choose a nickname.' },
       { q: 'Are the questions anonymous?', a: 'People join with a nickname, not their real name. Untick “Show nicknames on the big screen” and the board shows the questions alone; your own page still shows the nickname so you can remove a phone that misbehaves.' },
       { q: 'Who sees a question before I approve it?', a: 'Only you. A waiting question stays on your page; phones and the big screen get approved questions only.' },
-      { q: 'How many people can take part?', a: 'A free session takes up to 100 phones at once. Each phone can send up to 10 questions.' },
+      { q: 'How many people can take part?', a: 'During the launch trial a free session takes up to 1,000 phones at once. Each phone can send up to 10 questions.' },
       { q: 'What does the server keep?', a: 'The relay at live.1234tools.com passes questions to you and the approved board to the phones. It keeps only the current board in memory for late joiners and forgets everything when the session ends (24 hours at most).' },
       { q: 'Can I keep the questions afterwards?', a: 'Yes. Export CSV saves every question with its nickname, its upvotes and whether it was approved, hidden or answered. The file is made in your browser.' },
       { q: 'How do I show the board on the projector?', a: 'Press Show on TV to open the big-screen view in a new window, drag it to the projector and press Full screen there. This page stays your remote.' }

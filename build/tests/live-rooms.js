@@ -8,7 +8,8 @@
  *
  * Starts the relay's local dev server exactly as its test/devserver.js does
  * (wrangler dev on 127.0.0.1:<relay-port>, inspector 8939, CREATE_PER_MIN
- * 1000, a local PLAN_SECRET) unless one already answers /health there, and
+ * 1000, a local PLAN_SECRET, FREE_CAP 100: the code's default, which the
+ * full-room test fills; production may raise it) unless one already answers /health there, and
  * stops only the process it started (by PID). Serves the site with
  * build/tests/serve.js.
  *
@@ -86,7 +87,7 @@ async function healthy(endpoint) {
 async function startRelay() {
   const endpoint = 'http://127.0.0.1:' + RELAY_PORT;
   if (await healthy(endpoint)) return { endpoint, stop: () => {}, pid: null };
-  const child = spawn(process.execPath, [path.join(RELAY_DIR, 'node_modules/wrangler/bin/wrangler.js'), 'dev', '--port', String(RELAY_PORT), '--ip', '127.0.0.1', '--inspector-port', '8939', '--var', 'CREATE_PER_MIN:1000', '--var', 'PLAN_SECRET:local-dev-secret'], {
+  const child = spawn(process.execPath, [path.join(RELAY_DIR, 'node_modules/wrangler/bin/wrangler.js'), 'dev', '--port', String(RELAY_PORT), '--ip', '127.0.0.1', '--inspector-port', '8939', '--var', 'CREATE_PER_MIN:1000', '--var', 'PLAN_SECRET:local-dev-secret', '--var', 'FREE_CAP:100'], {
     cwd: RELAY_DIR, stdio: ['ignore', 'pipe', 'pipe'],
     env: Object.assign({}, process.env, { WRANGLER_SEND_METRICS: 'false', NO_COLOR: '1' })
   });

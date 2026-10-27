@@ -77,7 +77,7 @@
     ],
     faq: [
       { q: 'Do people need an app or an account?', a: 'No. They open 1234tools.com/join in their phone’s browser, type the 6-digit code (or scan the QR code) and choose a nickname.' },
-      { q: 'How many people can take part?', a: 'A free session takes up to 100 phones at once. Each phone can send one, two or three words, as you choose.' },
+      { q: 'How many people can take part?', a: 'During the launch trial a free session takes up to 1,000 phones at once. Each phone can send one, two or three words, as you choose.' },
       { q: 'How are rude words handled?', a: 'Masked by default: a list of rude words in English and Hindi or Hinglish is kept in the page, and a match is shown as its first letter and stars. Look-alike spellings (sh!t, b1tch) and stretched ones are caught too. No list is perfect, so you can also hide any word by hand.' },
       { q: 'Can people see who wrote which word?', a: 'No. The cloud shows words and counts only. Phones never receive another person’s answers; with “Show top answers on phones” they see the top twenty words and their counts.' },
       { q: 'What does the server keep?', a: 'The relay at live.1234tools.com passes the prompt to the phones and each answer to you. It keeps only the current prompt in memory for late joiners and forgets everything when the session ends (24 hours at most). The words are counted on your device.' },
