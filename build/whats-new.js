@@ -24,6 +24,7 @@ const LEDE = 'Live polls, word clouds and Q&A from the audience’s phones, and 
 
 /* Newest first. Same-day tools keep this order on the page. */
 const NEW = [
+  ['/live/live-presentation/', '2026-10-27'],
   ['/games/quiz-maker/', '2026-10-27'],
   ['/games/category-board/', '2026-10-27'],
   ['/games/top-answers/', '2026-10-27'],

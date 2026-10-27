@@ -268,6 +268,7 @@ const JOBS = {
   '/live/word-cloud/': ['Make', 'Phones → a live word cloud'],
   '/live/audience-qa/': ['Make', 'Phones → ranked questions'],
   '/live/rating-scale/': ['Make', 'Phones → average and spread'],
+  '/live/live-presentation/': ['Make', 'A deck of questions → phones'],
   /* video */
   '/video/video-compressor/': ['Clean up', 'Video → smaller MP4'],
   '/video/video-trimmer/': ['Clean up', 'Video → the part you keep'],
@@ -544,6 +545,7 @@ const DESCS = {
   '/live/word-cloud/': 'Phones send a word or three; the cloud grows on the big screen, rude words masked.',
   '/live/audience-qa/': 'Questions from phones, approved by you and upvoted by the room, best first.',
   '/live/rating-scale/': 'Stars, 0–10 or a slider from every phone; average, spread and histogram live.',
+  '/live/live-presentation/': 'Prepare slides of polls and quiz questions; phones follow each slide and you reveal the answers.',
   '/video/video-compressor/': 'Shrink a video to a size you choose, or a quality level, with the sizes before and after.',
   '/video/video-trimmer/': 'Cut a video to the frame, or copy the part untouched from a keyframe. MP4, MOV, WebM.',
   '/video/video-converter/': 'MOV, MKV and WebM to MP4 or WebM, copied untouched when the codecs already fit.',

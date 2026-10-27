@@ -200,6 +200,9 @@
     if (s.cl) main.appendChild(K.el('p', 'st-foot', STR.closed));
   }
 
+  /* the big screen, also drawn by Live Presentation (engine/room-live-presentation.js) for its slides */
+  window.ROOM_TOOLS[SLUG].render = renderStage;
+
   /* ---------- the presenter's page ---------- */
 
   function mount(root, stage) {

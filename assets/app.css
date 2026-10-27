@@ -6949,3 +6949,83 @@ html.game-stage-mode, html.game-stage-mode body, html.game-stage-open body { ove
 .st-hist-n { color: var(--st-dim); font-variant-numeric: tabular-nums; }
 .st-ends { display: flex; justify-content: space-between; font: 600 clamp(.9rem, 2.4vmin, 1.8rem) var(--font-body); color: var(--st-dim); }
 /* WAVE-G3L end */
+/* WAVE-G3D start: Live Presentation (engine/room-live-presentation.js; its phone cards are in engine/room-join-deck.js and use /join/'s own CSS) */
+@media (min-width: 900px) { .game-cols.deck-cols { grid-template-columns: minmax(0, 7fr) minmax(280px, 5fr); } }
+.deck-left { display: grid; gap: 12px; min-width: 0; align-content: start; }
+.deck-mode { justify-self: start; }
+.deck-list { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 6px; }
+.deck-row { display: flex; gap: 6px; align-items: stretch; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-0); padding: 4px; }
+.deck-row.is-on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.deck-row.is-drag { opacity: .5; }
+.deck-pick { flex: 1; min-width: 0; min-height: 44px; display: flex; gap: 10px; align-items: center; text-align: left; border: 0; background: transparent; color: var(--text-1); font: inherit; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+.deck-pick b { flex: none; width: 1.8em; text-align: center; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.deck-pick-text { display: grid; min-width: 0; }
+.deck-pick-text small { color: var(--text-3); font-size: .78rem; }
+.deck-pick-text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deck-row-tools { display: flex; gap: 2px; flex: none; }
+.game-tool .deck-row-tools .btn-ghost { min-width: 44px; padding: 6px 8px; }
+@media (max-width: 520px) { .deck-row { flex-wrap: wrap; } .deck-row-tools { width: 100%; justify-content: flex-end; } }
+.deck-add { align-items: end; }
+.deck-add .game-field { flex: 1 1 180px; margin-bottom: 0; }
+.deck-form { border-top: 1px solid var(--border); margin-top: 14px; padding-top: 12px; }
+.deck-form h3 { margin: 0 0 10px; font-size: 1rem; }
+.deck-correct { border: 1px solid var(--border); border-radius: var(--radius-sm); margin: 0 0 12px; padding: 6px 12px; min-width: 0; }
+.deck-correct legend { font-weight: 600; font-size: .92rem; padding: 0 4px; }
+.deck-correct .game-check { overflow-wrap: anywhere; }
+.game-tool .deck-form textarea.deck-opts { min-height: 130px; }
+.game-tool .deck-form input.deck-max, .game-tool .deck-form input.deck-secs { max-width: 9em; }
+.deck-where { margin: 0; color: var(--text-3); font-size: .9rem; font-variant-numeric: tabular-nums; }
+.deck-remote-q { margin: 2px 0 6px; font-size: 1.2rem; overflow-wrap: anywhere; }
+.deck-count { margin: 0 0 4px; font: 700 1.25rem var(--font-head); color: var(--accent); font-variant-numeric: tabular-nums; }
+.deck-clock-line { margin: 0 0 8px; font-weight: 700; font-variant-numeric: tabular-nums; min-height: 1.4em; }
+.deck-nav { margin: 6px 0 10px; }
+.deck-nav .game-big { flex: 1 1 140px; }
+.deck-remote .game-msg { margin: 8px 0; }
+.deck-out { margin-top: 6px; }
+.live-bars li.is-right b, .live-bars li.is-right .live-bar-label { color: var(--t4); font-weight: 700; }
+.deck-resp li.is-hidden .live-word { text-decoration: line-through; color: var(--text-3); }
+.deck-lb-mini { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 4px; font-variant-numeric: tabular-nums; }
+.deck-jump-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 320px; overflow: auto; }
+.game-tool .deck-jump-b { width: 100%; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deck-jump-b[aria-current="true"] { border-color: var(--accent); color: var(--accent); }
+
+/* the big screen */
+.deck-bars.has-key li:not(.is-right) { opacity: .5; }
+.deck-bars li.is-right b { color: var(--t4); }
+.deck-bars li.is-right .st-bar-label { color: var(--t4); }
+.deck-clock { color: var(--st-accent); font-weight: 800; }
+.deck-info { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: .5em; padding: 0 4vmin; }
+.deck-info-title { margin: 0; font: 800 clamp(2rem, 8vmin, 6.5rem)/1.15 var(--font-head); max-width: 24ch; overflow-wrap: anywhere; }
+.deck-info p { margin: 0; font-size: clamp(1.1rem, 3.6vmin, 2.8rem); color: var(--st-dim); max-width: 40ch; }
+.deck-wall { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow: hidden; display: flex; flex-wrap: wrap; align-content: flex-start; gap: clamp(6px, 1.2vmin, 16px); font: 600 clamp(.95rem, 2.8vmin, 2rem)/1.3 var(--font-body); }
+.deck-wall li { flex: 1 1 clamp(160px, 26vw, 520px); max-width: 100%; padding: .6em .8em; border-radius: .5em; background: var(--st-card); border-top: .25em solid var(--tc, var(--t1)); overflow-wrap: anywhere; }
+.deck-lb { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; display: grid; grid-template-rows: repeat(var(--rows, 10), minmax(0, 1fr)); gap: clamp(4px, 1vmin, 12px); font: 700 clamp(1rem, calc(48vmin / (var(--rows, 10) + 3)), 3rem) var(--font-body); }
+.deck-lb.is-rest { flex: 0 1 auto; font-size: clamp(.9rem, 2.6vmin, 2rem); }
+.deck-lb li { display: grid; grid-template-columns: 2.2em minmax(0, 1fr) auto auto; gap: .8em; align-items: center; padding: 0 .8em; border-radius: .4em; background: var(--st-card); animation: deck-move .9s cubic-bezier(.2, .8, .2, 1) both; }
+.deck-lb li b { color: var(--st-accent); font-variant-numeric: tabular-nums; }
+.deck-lb li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deck-lb li strong { font-variant-numeric: tabular-nums; }
+.deck-lb li small { color: var(--st-dim); font-size: .75em; font-variant-numeric: tabular-nums; }
+.deck-lb li.is-new { animation-name: deck-in; }
+@keyframes deck-move { from { transform: translateY(calc(var(--from, 0) * (100% + clamp(4px, 1vmin, 12px)))); } to { transform: none; } }
+@keyframes deck-in { from { opacity: 0; transform: translateX(-4vmin); } to { opacity: 1; transform: none; } }
+.deck-podium { flex: 1; min-height: 0; display: flex; justify-content: center; align-items: flex-end; gap: clamp(8px, 2.4vmin, 32px); font-family: var(--font-body); }
+.deck-step { flex: 0 1 clamp(120px, 24vw, 420px); display: flex; flex-direction: column; align-items: center; gap: .3em; min-width: 0; animation: deck-rise 1s cubic-bezier(.2, .8, .2, 1) both; }
+.deck-step-nick { font: 800 clamp(1.1rem, 4vmin, 3.2rem) var(--font-head); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deck-step-pts { font-size: clamp(.95rem, 2.8vmin, 2.2rem); color: var(--st-dim); font-variant-numeric: tabular-nums; }
+.deck-step-block { display: grid; place-items: center; width: 100%; border-radius: .3em .3em 0 0; background: var(--st-card); border-top: .3em solid var(--st-accent); font: 800 clamp(2rem, 8vmin, 6rem) var(--font-head); color: var(--st-accent); }
+.deck-step.is-1 .deck-step-block { height: clamp(90px, 30vmin, 420px); }
+.deck-step.is-2 .deck-step-block { height: clamp(70px, 21vmin, 300px); border-top-color: var(--t8); color: var(--t8); }
+.deck-step.is-3 .deck-step-block { height: clamp(54px, 15vmin, 220px); border-top-color: var(--t6); color: var(--t6); }
+.deck-step.is-2 { animation-delay: .25s; }
+.deck-step.is-1 { animation-delay: .5s; }
+@keyframes deck-rise { from { opacity: 0; transform: translateY(12vmin); } to { opacity: 1; transform: none; } }
+.deck-winner { margin: clamp(6px, 1.6vmin, 20px) 0; text-align: center; font: 800 clamp(1.4rem, 5vmin, 4rem) var(--font-head); color: var(--st-accent); }
+.deck-winner.is-win { animation: deck-pop .8s 3.4s cubic-bezier(.2, .8, .2, 1) both; }
+/* the winner reveal: third place, then second, then first */
+.deck-podium.is-win .deck-step.is-3 { animation-delay: .2s; }
+.deck-podium.is-win .deck-step.is-2 { animation-delay: 1.4s; }
+.deck-podium.is-win .deck-step.is-1 { animation-delay: 2.6s; }
+@keyframes deck-pop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .deck-lb li, .deck-step, .deck-winner.is-win { animation: none; } }
+/* WAVE-G3D end */

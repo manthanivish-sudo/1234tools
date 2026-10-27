@@ -1,6 +1,6 @@
 /**
  * The live audience section: a hub at /live/, a page per live tool (poll,
- * word cloud, Q&A, rating scale), their landing pages, and their place in
+ * word cloud, Q&A, rating scale, presentation), their landing pages, and their place in
  * the search index, the sitemap, the homepage and the sidebar. Also puts
  * the phone page /join/ in the sitemap.
  *
@@ -11,7 +11,8 @@
  * Tools come from every engine/room-<slug>.js that adds a spec to
  * window.ROOM_TOOLS. The shared files engine/room-client.js (the relay
  * client), room-kit.js (the presenter's kit), room-words.js (the rude-word
- * list) and room-join.js / room-join-hi.js (the phone page) add none and are
+ * list) and room-join.js / room-join-hi.js / room-join-quiz.js /
+ * room-join-deck.js (the phone page and its lazy cards) add none and are
  * skipped. A copy of build-games.js with the section, the glyph, the hub copy,
  * the homepage placement, the "Live" badge and the step-by-step manual
  * changed; the two should keep moving together. Requiring this file does
@@ -47,7 +48,7 @@ const SECTION = 'live';
 /* the text the owner approved, shown word for word on every live page and on /join/ */
 const PRIVACY = 'Answers pass through our server only to reach the presenter\u2019s screen. They are held in memory for the room\u2019s life and deleted when it closes (24 hours at most). No accounts, no cookies, no analytics for participants.';
 const BADGE = 'Live — answers pass through our server';
-const SHARED = new Set(['room-client.js', 'room-kit.js', 'room-words.js', 'room-join.js', 'room-join-hi.js']);
+const SHARED = new Set(['room-client.js', 'room-kit.js', 'room-words.js', 'room-join.js', 'room-join-hi.js', 'room-join-quiz.js', 'room-join-deck.js']);
 const SHELL_PAGE = 'image/background-remover/index.html';
 
 const changes = [];
@@ -230,7 +231,7 @@ function hubPage(parts, all) {
   const sec = SECTIONS['/' + SECTION + '/'];
   const n = all.length;
   const title = 'Live Polls & Q&A — Free, Phones Join With a Code | 1234Tools';
-  const description = 'Free live polls, word clouds, audience Q&A and rating scales: the audience join at 1234tools.com/join with a 6-digit code and answer from their phones. No app, no sign-up.';
+  const description = 'Free live polls, word clouds, audience Q&A, rating scales and interactive presentations: the audience join at 1234tools.com/join with a 6-digit code and answer from their phones. No app, no sign-up.';
   const cards = all.map((t) => '<a class="card" href="/' + SECTION + '/' + t.slug + '/"><span class="card-icon">' + icon(t.spec.glyph) + '</span><strong>' + esc(t.spec.title) + '</strong><span class="card-desc">' + esc(t.spec.description) + '</span></a>').join('');
   const ready = landings(all).map((x) => '<li><a href="/' + SECTION + '/' + x.L.slug + '/">' + esc(x.L.title) + '</a></li>').join('');
   const body =
@@ -238,7 +239,7 @@ function hubPage(parts, all) {
     '<p class="eyebrow">' + esc(sec.name) + '</p>\n' +
     '<h1>' + icon('i-live', 'ico ico-title') + esc(sec.name) + '</h1>\n' +
     badge() +
-    '<p class="lede">Ask the room a question and see the answers arrive live: a poll, a word cloud, questions for the speaker or a rating. You show the question on the projector; the audience open <strong>1234tools.com/join</strong> on their phones, type the 6-digit code and answer. No app, no account, no sign-up. ' + n + ' live tool' + (n === 1 ? '' : 's') + ' so far.</p>\n' +
+    '<p class="lede">Ask the room a question and see the answers arrive live: a poll, a word cloud, questions for the speaker, a rating, or a whole presentation of questions and quizzes with a leaderboard. You show the question on the projector; the audience open <strong>1234tools.com/join</strong> on their phones, type the 6-digit code and answer. No app, no account, no sign-up. ' + n + ' live tool' + (n === 1 ? '' : 's') + ' so far.</p>\n' +
     '<div class="grid">' + cards + '</div>\n' +
     (ready ? '<section class="panel"><h2>Ready-made for</h2><ul class="related">' + ready + '</ul></section>\n' : '') +
     '<section class="panel"><h2>How a live session works</h2><ol class="tips">' +

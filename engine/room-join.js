@@ -133,6 +133,8 @@
     msg('code-msg', t('checking'));
     window.MVRRoom.info(c, OPT).then(function (r) {
       if (seq !== infoSeq) return;
+      /* a busy shared network (a school's one address) can hit the lookup limit: Join still works */
+      if (r && r.error) return msg('code-msg', '');
       if (!r || !r.open) return msg('code-msg', t('r_noroom'), 'bad');
       if (r.locked) return msg('code-msg', t('r_locked'), 'bad');
       if (r.full) return msg('code-msg', t('r_full'), 'bad');
@@ -204,6 +206,7 @@
     me.on('status', function (s) { status = s; renderTop(); });
     me.on('error', function (c2) { if (c2 === 'rate') msg('room-msg', t('slow'), 'bad'); else if (c2 === 'host-away' || c2 === 'no-host') msg('room-msg', t('hostAway')); });
     me.on('closed', function (e) { end(e && e.reason); });
+    me.on('direct', function (v) { API.dv = v; if (card && card.direct) card.direct(v); });
   }
   function end(reason) {
     var r = reason || 'other';
@@ -231,21 +234,20 @@
 
   /* ---------- cards ---------- */
 
-  /* The quiz and buzzer cards live in engine/room-join-quiz.js, fetched the
-     first time the presenter shows one, so a poll or a word cloud never pays
-     for them. */
-  var EXT = { quiz: 1, buzz: 1 }, extLoading = null;
+  /* Quiz and buzzer cards: engine/room-join-quiz.js; Live Presentation
+     cards: room-join-deck.js. Each is fetched when first shown. */
+  var EXT = { quiz: 'quiz', buzz: 'quiz', mc: 'deck', oe: 'deck', dq: 'deck', lb: 'deck', look: 'deck' }, extLoading = {};
   var API = { heading: heading, el: el, btn: btn, note: note, setNote: setNote, send: send, remember: remember, t: t, buzzHaptic: buzzHaptic, LETTERS: LETTERS,
     mine: function () { return mine; }, me: function () { return me; } };
-  function loadExt() {
-    if (!extLoading) extLoading = new Promise(function (res) {
+  function loadExt(f) {
+    if (!extLoading[f]) extLoading[f] = new Promise(function (res) {
       var sc = document.createElement('script');
-      sc.src = '/engine/room-join-quiz.js';
+      sc.src = '/engine/room-join-' + f + '.js';
       sc.onload = function () { if (window.MVRJoinCards) { var c = window.MVRJoinCards(API); for (var k in c) CARDS[k] = c[k]; } res(); };
-      sc.onerror = function () { extLoading = null; res(); };
+      sc.onerror = function () { extLoading[f] = null; res(); };
       document.head.appendChild(sc);
     });
-    return extLoading;
+    return extLoading[f];
   }
 
 
@@ -253,7 +255,7 @@
      (a reveal, a closed flag, a new approved question) updates it in place. */
   function draw(force) {
     var s = cur || { k: 'wait' };
-    if (!CARDS[s.k] && EXT[s.k]) { var want = s.k; loadExt().then(function () { if (CARDS[want] && cur && cur.k === want) draw(true); }); s = { k: 'wait', id: s.id }; }
+    if (!CARDS[s.k] && EXT[s.k]) { var want = s.k; loadExt(EXT[want]).then(function () { if (CARDS[want] && cur && cur.k === want) draw(true); }); s = { k: 'wait', id: s.id }; }
     var box = $('card');
     if (force || !card || card.k !== s.k || card.id !== s.id) {
       box.textContent = '';

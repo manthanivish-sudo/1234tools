@@ -23,6 +23,13 @@
  *         rv:{a:average, n, h:[counts]}
  *   quiz: o[], e (deadline in server ms), rv:{a:correct index}
  *   buzz: open:1, rv:{w:nickname}
+ *   Live Presentation (phone side in engine/room-join-deck.js, lazy):
+ *   mc:   o[], m (most choices, when more than 1), ch:1, rv:{c:[counts], n, a:[correct indexes]}
+ *   dq:   o[], e (deadline in server ms), rv:{a:[correct], c:[counts], n} once the question is done
+ *   oe:   l (characters), ch:1 (a phone may replace its answer)
+ *   lb:   the leaderboard; look: a content slide (phones show "look at the screen")
+ *   presenter -> one phone (direct): {q:card id, t:total points, r:rank, of:players,
+ *     tm:total ms of right answers, p:points and ms:answer time on a quiz, fin:1 at the end}
  *   phone -> presenter: {q:id, v:value} (quiz and buzz add at: server ms);
  *     Q&A: {q:id, ask:text} or {q:id, up:qid, on:1|0}
  *

@@ -280,6 +280,9 @@
     main.appendChild(K.el('p', 'st-foot', fmt(STR.summary, { w: s.total, p: s.people }) + (s.cl ? ' · ' + STR.closed : '')));
   }
 
+  /* the big screen, also drawn by Live Presentation (engine/room-live-presentation.js) for its slides */
+  window.ROOM_TOOLS[SLUG].render = renderStage;
+
   /* ---------- the presenter's page ---------- */
 
   function mount(root, stage) {

@@ -1,0 +1,41 @@
+{
+  "id": "/live/live-presentation/",
+  "name": "Live Presentation — 1234Tools",
+  "short_name": "Live Presentation",
+  "description": "Prepare a deck of questions — multiple choice, timed quiz, word cloud, open answers, rating, Q&A — then present it: phones join once with a code, follow every slide, and you reveal the answers when you choose. Free, no sign-up, no app.",
+  "start_url": "/live/live-presentation/?src=pwa",
+  "scope": "/live/live-presentation/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-live-presentation.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-live-presentation-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-live-presentation-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
