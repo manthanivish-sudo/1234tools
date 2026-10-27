@@ -244,7 +244,7 @@ module.exports = {
     h.ok(/Yellow/.test(tv3.ans || '') && /Yellow/.test(tv3.right || '') && tv3.note === 'Bananas start green.', 'quiz host: Reveal shows the answer and the note on the TV', JSON.stringify(tv3));
     /* the next question: Blue's typed answer with a typo-free "rome" is marked by Reveal */
     await page.keyboard.press('ArrowRight');
-    await h.sleep(200);
+    await page.waitForSelector('.qz-their[data-team="Blue"]', { timeout: 3000 });
     await page.type('.qz-their[data-team="Blue"]', 'rome');
     await page.click('.qz-pres-head');
     await page.keyboard.press('r');

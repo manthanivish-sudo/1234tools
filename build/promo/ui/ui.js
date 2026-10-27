@@ -1089,7 +1089,7 @@
         toast(it.date + ': ' + r.item.title + (also.length ? '. Also planned on ' + also.join(', ') + ': Another tool there changes it.' : ''));
       } catch (e) { toast(e.message); }
     };
-    const fmt = ['problem', 'before', 'dev', 'india', 'ai'].includes(it.format) ? it.format : 'problem';
+    const fmt = ['problem', 'before', 'dev', 'india', 'ai', 'games'].includes(it.format) ? it.format : 'problem';
     const st = it.state || it.status;
     /* the tool can change until something from the slot is posted; a tool that went out before the slot's date is marked */
     const canRetool = it.status !== 'posted' && !(it.targets || []).some((t) => t.state === 'posted');

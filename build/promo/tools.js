@@ -52,7 +52,7 @@ const SECTION_TAGS = {
   text: ['productivity', 'students'], mathematics: ['students', 'maths-education'],
   finance: ['personal-finance'], time: ['productivity'], health: ['health-fitness'],
   qr: ['smallbiz'], utilities: ['general', 'productivity'], engineering: ['engineering'],
-  design: ['designers'], conversions: ['general', 'students'],
+  design: ['designers'], conversions: ['general', 'students'], games: ['general', 'teachers'],
 };
 
 const MEDIA_SECTIONS = ['pdf', 'image', 'ai-image', 'ai-video'];

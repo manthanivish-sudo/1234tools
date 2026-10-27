@@ -91,7 +91,7 @@ function calculatorPages(root) {
 }
 
 /** The tools that work on files and text: every tool page in these sections. */
-const FILE_SECTIONS = ['image', 'pdf', 'text', 'developer', 'qr', 'social', 'video', 'audio'];
+const FILE_SECTIONS = ['image', 'pdf', 'text', 'developer', 'qr', 'social', 'video', 'audio', 'games'];
 
 function filePages(root) {
   const out = [];
@@ -103,6 +103,8 @@ function filePages(root) {
       if (!fs.existsSync(f)) continue;
       const html = fs.readFileSync(f, 'utf8');
       if (/<meta name="robots" content="noindex/.test(html) || /http-equiv="refresh"/.test(html)) continue;
+      /* a games landing page (class game-landing) is the same tool with a preset: its reading part is the tool page's */
+      if (/<article class="tool game-tool game-landing/.test(html)) continue;
       if (/<article class="tool[ "]/.test(html)) out.push('/' + sec + '/' + slug + '/');
     }
   }

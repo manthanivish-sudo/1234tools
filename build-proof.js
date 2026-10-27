@@ -69,7 +69,8 @@ const SEE_RE = /<!-- SEEITWORK(?::[^>]*)? -->[\s\S]*?<!-- \/SEEITWORK -->/;
 const THUMB_RE = /<img class="card-thumb"[^>]*>/g;
 const CARD_RE = /(<a class="card(?: [^"]*)?" href="([^"]+)"[^>]*>)([\s\S]*?<\/a>)/g;
 const CALC_RE = /<div class="calc">[\s\S]*?<div class="tool-results"[^>]*><\/div>\s*<\/div>/;
-const IO_RE = /<div class="tool-io"(?: [^>]*)?><\/div>/;
+/* a game mounts into a tool-io that holds only its noscript message */
+const IO_RE = /<div class="tool-io"(?: [^>]*)?>(?:<noscript>[\s\S]*?<\/noscript>)?<\/div>/;
 const SHARE_END = '<!-- /SHARE -->';
 const HOW_RE = /<h2[^>]*>\s*How (?:it works|to use)\b/i;
 /* build-depth.js's block is not the page's own: its "How it works in your

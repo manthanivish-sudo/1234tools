@@ -26,6 +26,7 @@ const TABLE = {
   utilities: ['#Productivity', '#LifeHacks', '#Tools', '#PasswordGenerator', '#Checklist', '#Utilities', '#Organised', '#Minimalism', '#DigitalTools', '#TechTips'],
   engineering: ['#Engineering', '#STEM', '#CivilEngineering', '#MechanicalEngineering', '#Calculator', '#UnitConverter', '#Students', '#EngineeringLife', '#Construction', '#Design'],
   design: ['#Design', '#UIDesign', '#GraphicDesign', '#ColorPalette', '#Typography', '#WebDesign', '#DesignTools', '#Branding', '#UX', '#Creative'],
+  games: ['#GameNight', '#FamilyGameNight', '#PartyGames', '#QuizNight', '#Tambola', '#Housie', '#DumbCharades', '#Bingo', '#ClassroomGames', '#FamilyTime'],
   conversions: ['#UnitConverter', '#Converter', '#Metric', '#Imperial', '#Cooking', '#Travel', '#Students', '#Engineering', '#Measurement', '#Conversion'],
 };
 

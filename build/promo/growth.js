@@ -162,15 +162,18 @@ function playbook() {
 /* region: 'uk', 'india' or 'global'. sections: the 1234Tools sections the moment suits (empty = any).
    lead: how many days before to start posting. check: a lunar or announced date that moves; check it. */
 const FIXED = [
-  { date: '2026-10-31', name: 'Halloween', region: 'global', kind: 'festival', sections: ['design', 'image', 'ai-image'], lead: 5 },
-  { date: '2026-11-08', name: 'Diwali', region: 'india', kind: 'festival', sections: ['qr', 'design', 'image', 'business', 'india'], lead: 10, check: true, shop: true },
-  { date: '2026-11-14', name: 'Children\'s Day (India)', region: 'india', kind: 'education', sections: ['education', 'mathematics'], lead: 4 },
+  { date: '2026-10-31', name: 'Halloween', region: 'global', kind: 'festival', sections: ['design', 'image', 'ai-image', 'games'], lead: 5 },
+  { date: '2026-11-05', name: 'Bonfire Night (UK): a family evening in', region: 'uk', kind: 'festival', sections: ['games'], lead: 5 },
+  { date: '2026-11-08', name: 'Diwali', region: 'india', kind: 'festival', sections: ['qr', 'design', 'image', 'business', 'india', 'games'], lead: 10, check: true, shop: true },
+  { date: '2026-11-14', name: 'Children\'s Day (India)', region: 'india', kind: 'education', sections: ['education', 'mathematics', 'games'], lead: 4 },
   { date: '2026-11-27', name: 'Black Friday', region: 'global', kind: 'shopping', sections: ['qr', 'image', 'business', 'design'], lead: 10, shop: true },
   { date: '2026-11-30', name: 'Cyber Monday', region: 'global', kind: 'shopping', sections: ['qr', 'image', 'business'], lead: 5, shop: true },
   { date: '2026-12-15', name: 'Advance tax, third instalment (India)', region: 'india', kind: 'tax', sections: ['india', 'finance'], lead: 7 },
-  { date: '2026-12-25', name: 'Christmas', region: 'global', kind: 'festival', sections: ['design', 'image', 'qr', 'time'], lead: 14, shop: true },
+  { date: '2026-12-25', name: 'Christmas', region: 'global', kind: 'festival', sections: ['design', 'image', 'qr', 'time', 'games'], lead: 14, shop: true },
+  { date: '2026-12-31', name: "New Year's Eve: a night in with the family", region: 'global', kind: 'festival', sections: ['games'], lead: 10 },
   { date: '2026-12-31', name: 'Belated and revised ITR deadline (AY 2026-27)', region: 'india', kind: 'tax', sections: ['india', 'finance'], lead: 10 },
   { date: '2027-01-01', name: 'New Year: new-system resolutions', region: 'global', kind: 'season', sections: ['business', 'utilities', 'time', 'finance'], lead: 5 },
+  { date: '2027-01-05', name: 'Spring term starts (UK): first week back', region: 'uk', kind: 'education', sections: ['education', 'games'], lead: 7, check: true },
   { date: '2027-01-14', name: 'Makar Sankranti and Pongal', region: 'india', kind: 'festival', sections: ['design', 'image'], lead: 7, check: true, shop: true },
   { date: '2027-01-26', name: 'Republic Day (India)', region: 'india', kind: 'festival', sections: ['design', 'india'], lead: 5 },
   { date: '2027-01-31', name: 'Self Assessment deadline (UK, 2025-26 returns)', region: 'uk', kind: 'tax', sections: ['business', 'finance'], lead: 21 },
@@ -178,17 +181,20 @@ const FIXED = [
   { date: '2027-02-14', name: 'Valentine\'s Day', region: 'global', kind: 'shopping', sections: ['design', 'image', 'ai-image'], lead: 10, shop: true },
   { date: '2027-02-15', name: 'Board exams begin (India)', region: 'india', kind: 'education', sections: ['education', 'mathematics', 'time'], lead: 14, check: true },
   { date: '2027-03-07', name: 'Mothering Sunday (UK)', region: 'uk', kind: 'shopping', sections: ['design', 'image'], lead: 10, shop: true },
-  { date: '2027-03-10', name: 'Eid al-Fitr', region: 'global', kind: 'festival', sections: ['design', 'image'], lead: 10, check: true, shop: true },
+  { date: '2027-03-10', name: 'Eid al-Fitr', region: 'global', kind: 'festival', sections: ['design', 'image', 'games'], lead: 10, check: true, shop: true },
   { date: '2027-03-15', name: 'Advance tax, last instalment (India)', region: 'india', kind: 'tax', sections: ['india', 'finance'], lead: 7 },
-  { date: '2027-03-22', name: 'Holi', region: 'india', kind: 'festival', sections: ['design', 'image'], lead: 7, shop: true },
+  { date: '2027-03-22', name: 'Holi', region: 'india', kind: 'festival', sections: ['design', 'image', 'games'], lead: 7, shop: true },
+  { date: '2027-03-28', name: 'Easter Sunday', region: 'global', kind: 'festival', sections: ['games'], lead: 10 },
   { date: '2027-03-31', name: 'Financial year end (India): tax-saving deadline', region: 'india', kind: 'tax', sections: ['india', 'finance', 'business'], lead: 14 },
   { date: '2027-04-01', name: 'New financial year (India)', region: 'india', kind: 'tax', sections: ['india', 'finance', 'business'], lead: 3 },
   { date: '2027-04-05', name: 'UK tax year ends', region: 'uk', kind: 'tax', sections: ['business', 'finance'], lead: 14 },
   { date: '2027-04-06', name: 'New UK tax year: new payslips and thresholds', region: 'uk', kind: 'tax', sections: ['business', 'finance'], lead: 3 },
   { date: '2027-05-10', name: 'Exam season (UK GCSEs and A levels)', region: 'uk', kind: 'education', sections: ['education', 'mathematics', 'time'], lead: 14, check: true },
+  { date: '2027-05-17', name: 'Eid al-Adha (about 16 to 17 May)', region: 'global', kind: 'festival', sections: ['games'], lead: 10, check: true },
   { date: '2027-07-31', name: 'ITR due date for most individuals (India)', region: 'india', kind: 'tax', sections: ['india', 'finance'], lead: 21, check: true },
   { date: '2027-08-15', name: 'Independence Day (India)', region: 'india', kind: 'festival', sections: ['design', 'india'], lead: 5, shop: true },
-  { date: '2027-09-01', name: 'Back to school (UK)', region: 'uk', kind: 'education', sections: ['education', 'mathematics', 'time', 'pdf'], lead: 14 }
+  { date: '2027-08-17', name: 'Raksha Bandhan', region: 'india', kind: 'festival', sections: ['design', 'games'], lead: 7, check: true, shop: true },
+  { date: '2027-09-01', name: 'Back to school (UK)', region: 'uk', kind: 'education', sections: ['education', 'mathematics', 'time', 'pdf', 'games'], lead: 14 }
 ];
 /* Monthly filing days: GSTR-1 (11th) and GSTR-3B (20th) for monthly GST filers; PAYE paid electronically by the 22nd (UK). */
 const MONTHLY = [
@@ -272,6 +278,55 @@ const firstSentence = (s) => (String(s || '').match(/^.*?[.!?](?=\s|$)/) || [Str
 const strip = (s) => String(s || '').replace(/[.!?…]+$/, '').trim();
 const camel = (s) => '#' + String(s).replace(/[^A-Za-z0-9]+(.)?/g, (m, c) => (c ? c.toUpperCase() : '')).replace(/^./, (c) => c.toUpperCase());
 
+/* Angles that suit the games (/games/): a game is a night out, so the hooks are about the night, not the chore.
+   Same ten styles; a hook here replaces the generic one of its style. The wording makes no promise the
+   game does not keep (the wheel's draw is fair; the Tambola caller checks a claim from the ticket number). */
+const GAME_ANGLES = [
+  { re: /tambola|housie|90-ball|bingo-caller/, hooks: {
+    pov: 'POV: it is Diwali night, the whole family is round the TV, and the numbers call themselves.',
+    speedrun: 'A live Tambola reel: call the numbers, and check a Full House from the ticket number.',
+    quiz: 'Guess which Tambola number comes next. Nobody can: every call is a fair draw.',
+    hottake: 'Hot take: the host of a Tambola night should get to play too.' },
+    series: ['"Tambola night, number by number": a live reel of the board filling up.', '"Early Five to Full House": one prize explained a week.'],
+    moment: /Diwali/,
+    challenge: 'TambolaNight: film the moment your family shouts Full House, and tag it.' },
+  { re: /wheel|picker/, hooks: {
+    pov: 'POV: three of you want the front seat, so we let a wheel decide.',
+    speedrun: 'We let a wheel decide: who goes first, who washes up, who picks the film.',
+    stop: 'Stop arguing about whose turn it is. Spin the wheel.',
+    thisorthat: 'Rock paper scissors, or let a wheel decide?' },
+    series: ['"We let a wheel decide": one family choice a week, spun on camera.', '"Prize wheel": the party prizes, rare and common.'],
+    challenge: 'WheelDecides: let a wheel make one small choice today, and show the spin.' },
+  { re: /team|group/, hooks: {
+    pov: 'POV: you hold up the class list and the groups appear on the board.',
+    speedrun: 'Classroom team reveal: fifteen names, four fair teams, one press.',
+    stop: 'Stop picking teams by hand. Let the groups appear on the board.',
+    thisorthat: 'Captains picking teams, or a fair shuffle?' },
+    series: ['"The team reveal": a new class or family split into teams each episode.', '"Cousins, split up": quiz-night teams, mixed.'],
+    moment: /Back to school|Children/,
+    challenge: 'TeamReveal: film your teams appearing on the TV, one at a time.' },
+  { re: /quiz|buzzer|scoreboard|board|survey|top-answers|picture|points/, hooks: {
+    pov: 'POV: your quiz night has a buzzer, a leaderboard and the answers on your phone.',
+    speedrun: 'Quiz night set-up in a few presses: teams, buzzer, scores on the TV.',
+    stop: 'Stop adding up the quiz scores on a napkin.',
+    thisorthat: 'Scores on scrap paper, or a leaderboard on the TV?' },
+    series: ['"Quiz night, behind the scenes": one round built on screen each week.', '"The fastest finger": a buzzer round with a family.'],
+    moment: /Christmas|Diwali/,
+    challenge: 'QuizNightChallenge: host a ten-question round for your family and show the leaderboard.' },
+  { re: /charades|antakshari|icebreaker|would-you-rather|bingo/, hooks: {
+    pov: 'POV: the family game night where the host finally gets to play.',
+    speedrun: 'Game night in three presses: pick, start, play.',
+    stop: 'Stop saying "what shall we play?" Open a game.',
+    thisorthat: 'Another evening of phones, or one good game on the TV?' },
+    series: ['"Game night in a minute": one family game set up per episode.', '"Pass the phone": the charades turn, filmed from the actor side.'],
+    moment: /Diwali|Christmas/,
+    challenge: 'GameNightChallenge: play one game with the family with phones in a basket.' }
+];
+function gameAngles(rec) {
+  if (rec.section !== 'games') return null;
+  return GAME_ANGLES.find((g) => g.re.test(rec.path)) || null;
+}
+
 function angles(itemPath) {
   const rec = T.record(itemPath);
   let story = rec.story;
@@ -283,7 +338,7 @@ function angles(itemPath) {
   const task = own ? require('./templates').taskPhrase(rec) : lc(rec.title);
   const persona = story.persona || (own ? '' : 'shop owners');
   const name = rec.title;
-  const u0 = lc(strip(usual[0] || 'doing it the long way'));
+  const u0 = lc(strip(usual[0] || 'doing it the long way')).replace(/^(A|An|The) (?=[a-z])/, (m) => m.toLowerCase());
   const hooks = [
     { style: 'speedrun', text: own ? 'Watch me ' + task + ' in three steps.' : name + ', in three steps.' },
     { style: 'beforeafter', text: 'Before: ' + u0 + '. After: ' + lcFirst(strip(story.promise || name)) + '.' },
@@ -299,8 +354,10 @@ function angles(itemPath) {
     /* every suggestion passes the same claim rules as a post; one that does not is left out */
     .filter((h) => require('./lint').lint(h.text, Object.assign({ pricing: rec.pricing, section: rec.section }, SITE.lintCtx())).ok)
     .map((h) => Object.assign(h, { reel: own ? styleUrl(rec.path, h.style) : '' }));
+  const ga = own ? gameAngles(rec) : null;
+  if (ga) for (const h of hooks) { const t = ga.hooks[h.style]; if (t && require('./lint').lint(t, Object.assign({ pricing: rec.pricing, section: rec.section }, SITE.lintCtx())).ok) h.text = t; }
   const tag = own ? camel(task.replace(/^(work out|make|create|convert|check|find|calculate)\s+/i, '')) : camel(SITE.current().name);
-  const series = own
+  const series = ga ? ga.series.concat(['"' + (rec.sectionName || 'Games') + '": ' + name + ' is one.']) : own
     ? ['"' + (rec.sectionName || 'Tools') + ' in 10 seconds", episode by episode: ' + name + ' is one.', '"The job I stopped doing by hand": one tool a week, the same opening line.', '"You asked, I answered": each episode answers one real question about ' + lc(rec.sectionName || 'the tools') + '.']
     : ['"How ' + SITE.current().name + ' works", one feature per episode: ' + name + ' is one.', '"A day at the shop": the real work, with ' + lc(name) + ' in it.', '"You asked": answer one customer question a week on camera.'];
   const ms = moments({ days: 180 }).filter((m) => !m.monthly && (!own || !m.sections || !m.sections.length || m.sections.includes(rec.section)));
@@ -308,11 +365,11 @@ function angles(itemPath) {
     tool: { path: rec.path, title: name, section: rec.section, sectionName: rec.sectionName },
     hooks,
     series,
-    challenge: own ? tag + 'Challenge: ' + task + ' in under 10 seconds. Stitch this with your time.' : tag + ': show how you use ' + lc(name) + ' in your shop.',
+    challenge: ga ? ga.challenge : own ? tag + 'Challenge: ' + task + ' in under 10 seconds. Stitch this with your time.' : tag + ': show how you use ' + lc(name) + ' in your shop.',
     collab: 'Send the kit and the reel to a creator whose followers ' + (own ? 'need to ' + task : 'are ' + (persona ? lc(persona) : 'your customers')) + ': they post it their way, as a Collab, and disclose the partnership.',
     reply: 'Find a comment or a question that asks how to ' + (own ? task : 'do this') + ', and answer it with a video reply in the ' + (STYLES[1].label) + ' style.',
     proof: proof.slice(0, 3),
-    moment: ms[0] || null,
+    moment: (ga && ga.moment && ms.find((m) => ga.moment.test(m.name))) || ms[0] || null,
     styles: STYLES.map((s) => Object.assign({}, s, { reel: own ? styleUrl(rec.path, s.id) : '' }))
   };
 }

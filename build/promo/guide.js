@@ -36,7 +36,7 @@ const RED_LINES = [
   'No links in YouTube comments; no unsolicited direct messages; broadcast only to people who opted in.',
   'Never claim absolute privacy; for browser tools say "nothing you type is uploaded". Privacy and analytics claims carry the consent qualifier: nothing contacts a third party on page load; analytics only after you opt in.',
   'AI for Business tools (/ai/): an account is needed, text goes to a model, and they are free for 10 runs a month. Say so wherever the word free appears; never say on your device, offline, no account or no upload about them.',
-  '"No watermark" only for media tools (PDF, image, AI image, AI video).',
+  '"No watermark" only for media tools (PDF, image, AI image, AI video, social, video).',
   'No superlatives, ranking claims, scarcity, invented user numbers or comparisons that run down another product.',
   'Testimonials only as named quotes in the client\'s own words, given with their written permission and recorded in the Testimonials tab; nothing offered in return, no wording suggested to them, and a withdrawn quote comes down everywhere.'
 ];

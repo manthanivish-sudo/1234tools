@@ -73,12 +73,12 @@ const SECTION_OBJECT = {
   pdf: 'PDFs', image: 'photos', 'ai-image': 'photos', 'ai-video': 'videos', text: 'text', developer: 'code and data',
   business: 'business figures', india: 'salary and tax figures', finance: 'financial figures', mathematics: 'numbers',
   health: 'health numbers', time: 'dates', qr: 'links', utilities: 'everyday data', education: 'school data',
-  engineering: 'measurements', design: 'design files', conversions: 'values', ai: 'documents',
+  engineering: 'measurements', design: 'design files', conversions: 'values', ai: 'documents', games: 'names, teams and scores',
 };
 const SECTION_ADJ = {
   pdf: 'PDF', image: 'image', 'ai-image': 'photo', 'ai-video': 'video', text: 'text', developer: 'developer-tool', business: 'calculator',
   india: 'tax calculator', finance: 'finance calculator', mathematics: 'maths', health: 'health calculator', time: 'date', qr: 'QR',
-  utilities: 'online tool', education: 'school-admin', engineering: 'engineering calculator', design: 'design', conversions: 'converter', ai: 'AI',
+  utilities: 'online tool', education: 'school-admin', engineering: 'engineering calculator', design: 'design', conversions: 'converter', ai: 'AI', games: 'party game',
 };
 const SECTION_MANUAL = {
   pdf: 'a desktop PDF editor, if you have one installed', business: 'the official rates tables and a spreadsheet',
@@ -89,13 +89,14 @@ const SECTION_MANUAL = {
   time: 'a calendar and careful counting', health: 'the formula and a calculator', qr: "your phone's built-in share-as-QR option, where it has one",
   utilities: 'a spreadsheet', engineering: 'the formula and a scientific calculator', design: 'a design app',
   conversions: 'the conversion factor and a calculator', ai: 'doing it by hand, line by line',
+  games: 'paper chits in a bowl and a pen',
 };
 const MERGE_MANUAL = "print each file to PDF and use your OS's print-to-PDF 'collate' trick, which is fiddly for more than two files";
 const SECTION_ENGINE = {
   pdf: 'pdf.js is self-hosted and the PDF work happens inside the page', image: "the image work uses the browser's own canvas",
   'ai-image': 'the model downloads once and then runs in the browser', 'ai-video': 'Whisper runs in the browser on your own machine',
   ai: 'the page sends your text to the model only when you press run, and says so first',
-  developer: 'it is plain JavaScript in the page', text: 'it is plain JavaScript in the page', utilities: 'it is plain JavaScript in the page',
+  games: 'the game runs in the page and every draw uses the browser random generator', developer: 'it is plain JavaScript in the page', text: 'it is plain JavaScript in the page', utilities: 'it is plain JavaScript in the page',
 };
 const SECTION_LIMIT = {
   pdf: 'OCR or editing the text inside a page', image: 'RAW files from every camera', 'ai-image': 'very large images on older phones',
@@ -135,6 +136,7 @@ const PH_TOPICS = {
   developer: ['Developer Tools', 'Web App'], image: ['Design Tools', 'Photography'], 'ai-image': ['Artificial Intelligence', 'Design Tools'],
   'ai-video': ['Artificial Intelligence', 'Video'], ai: ['Artificial Intelligence', 'Productivity'], text: ['Writing', 'Productivity'],
   education: ['Education', 'Productivity'],
+  games: ['Games', 'Family'],
 };
 const IG_EMOJI = { pdf: '📄', business: '💷', finance: '💷', india: '🇮🇳' };
 
@@ -233,7 +235,16 @@ function relatedTool(rec) {
   return same[(i + 1) % same.length];
 }
 
+/* What a game is for, in the words a host would use (rec.verb is only Make, Calculate or Check for a game). */
+const GAME_TASK = [
+  [/90-ball/, 'call 90-ball bingo'], [/tambola.*caller|tambola-number|kitty-party-tambola/, 'call Tambola numbers'], [/tambola/, 'make Tambola tickets'], [/bingo/, 'make bingo cards'],
+  [/team|group/, 'make fair teams'], [/yes-or-no/, 'settle a yes or no with a wheel'], [/wheel|picker/, 'pick a winner with a wheel'],
+  [/classroom-points/, 'keep group points in class'], [/scoreboard/, 'keep the score at a quiz night'], [/buzzer/, 'run a quiz buzzer'], [/category|review-game/, 'run a quiz board game'],
+  [/quiz|picture-round/, 'host a quiz night'], [/survey|top-answers/, 'play a family survey game'], [/charades/, 'play dumb charades'],
+  [/antakshari/, 'run antakshari'], [/icebreaker|would-you-rather/, 'start a conversation with question cards']
+];
 function taskPhrase(rec) {
+  if (rec.section === 'games') { const g = GAME_TASK.find((x) => x[0].test(rec.path)); if (g) return g[1]; }
   let kw = String(rec.keywords[0] || rec.title).toLowerCase().trim();
   if (ACTION.test(kw)) return acro(kw);
   kw = kw.replace(/\b(calculator|generator|converter|maker|tool|checker|online|free|app|software|planner|finder|validator)\b/g, '').replace(/\s+/g, ' ').trim();
@@ -588,7 +599,7 @@ B['facebook-group'] = (C) => {
 B['pinterest-pin'] = (C) => {
   const r = C.rec;
   const title = C.free
-    ? C.pick(0, [`How to ${C.task} without uploading (free)`, `${r.title} — free, no account`, `${r.io}: the private way`])
+    ? C.pick(0, [`How to ${C.task}${r.section === 'games' ? ', free' : ' without uploading (free)'}`, `${r.title} — free, no account`, `${r.io}: the private way`])
     : C.pick(0, [`How to ${C.task} with AI (10 free a month)`, `${r.title} — 10 free runs a month`, `${r.io} with AI`]);
   const desc = C.free
     ? C.pick(1, [
@@ -631,7 +642,7 @@ B['youtube-comment'] = (C) => {
 B['youtube-description'] = (C) => {
   const r = C.rec;
   const line1 = trunc(C.free
-    ? C.pick(0, [`${r.title} in 30 seconds: ${r.io}.`, `How to ${C.task} without uploading — ${r.title}.`, C.D()])
+    ? C.pick(0, [`${r.title} in 30 seconds: ${r.io}.`, `How to ${C.task}${r.section === 'games' ? '' : ' without uploading'} — ${r.title}.`, C.D()])
     : C.pick(0, [`${r.title} in 30 seconds: ${r.io}.`, `How to ${C.task} with AI — ${r.title}.`, C.D()]), 100);
   const bullets = [
     '• ' + cap(C.FREE()),

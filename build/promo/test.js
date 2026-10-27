@@ -1200,6 +1200,36 @@ section('growth: playbook, moments, angles, the calendar\'s reel styles');
     const ids = (block.match(/^\s+\['([a-z]+)',/gm) || []).map((l) => l.trim().slice(2, -2));
     assert.deepStrictEqual(ids, G.STYLES.map((s) => s.id));
   });
+  check('games: all 13 games and 26 landing pages are on the desk with a written story (shard games.js) inside the kit limits', () => {
+    const S = require('./stories');
+    const g = T.listTools().filter((r) => r.section === 'games');
+    assert.ok(g.length >= 39, 'games on the desk: ' + g.length);
+    assert.strictEqual(T.listAll().filter((r) => r.path.indexOf('/games/') === 0).length >= 13, true);
+    for (const r of g) {
+      const s = S.storyFor(r.path);
+      assert.strictEqual(s.shard, 'games.js', r.path + ' has no written story');
+      assert.ok([...s.hook].length <= 64 && [...s.pain].length <= 120 && [...s.promise].length <= 70 && [...s.howTo].length <= 60, r.path + ' lengths');
+      assert.ok(s.usual.length === 3 && s.usual.every((u) => [...u].length <= 46) && s.steps.length === 3 && s.steps.every((u) => [...u].length <= 32), r.path + ' usual/steps');
+      for (const t of [s.hook, s.pain, s.promise, s.howTo, s.cta].concat(s.usual, s.steps, s.proof)) assert.ok(lint(t, { pricing: r.pricing, section: r.section, record: r }).ok, r.path + ': ' + t);
+    }
+    assert.deepStrictEqual(S.errors(), []);
+  });
+  check('games: moments carry the games section (Diwali, Christmas, Holi, Halloween ...), angles are game-shaped, and the plan has a Sunday games slot', () => {
+    const all = G.moments({ now: '2026-10-25T09:00:00Z', days: 700 }).filter((m) => (m.sections || []).includes('games'));
+    for (const n of ['Halloween', 'Diwali', "Children's Day", 'Christmas', 'New Year', 'Holi', 'Raksha Bandhan', 'Eid al-Fitr', 'Back to school']) assert.ok(all.some((m) => m.name.indexOf(n) >= 0), n);
+    assert.ok(all.filter((m) => m.check).length >= 3);
+    const a = G.angles('/games/tambola-number-caller/');
+    assert.strictEqual(a.hooks.length, 10);
+    assert.ok(a.hooks.some((h) => /Tambola/.test(h.text)) && /Diwali/.test(a.moment.name));
+    assert.ok(G.angles('/games/spin-the-wheel/').hooks.some((h) => /wheel decide/.test(h.text)));
+    assert.ok(G.angles('/games/team-generator/').hooks.some((h) => /team reveal/i.test(h.text)));
+    for (const p of ['/games/antakshari/', '/games/scoreboard/']) for (const h of G.angles(p).hooks) assert.ok(lint(h.text, { pricing: 'free', section: 'games' }).ok, h.text);
+    C.plan('2026-10-26');
+    const gs = C.get().items.filter((x) => x.format === 'games');
+    assert.ok(gs.length >= 12 && gs.every((x) => /^\/games\//.test(x.tool) && new Date(x.date + 'T12:00:00').getDay() === 0), 'Sunday games slots');
+    assert.ok(C.get().items.filter((x) => x.format === 'problem').every((x) => x.tool.indexOf('/games/') !== 0));
+    assert.deepStrictEqual(C.get().items.find((x) => x.format === 'games').targets.map((t) => t.channel), C.FORMATS.games.targets);
+  });
   check('calendar: every slot has a style, no two slots in a row share one, links carry it', () => {
     C.plan('2026-10-26');
     const items = C.get().items;

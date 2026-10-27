@@ -57,7 +57,8 @@ const FORMATS = {
   before: { label: 'Before / after', targets: ['instagram-reel', 'tiktok', 'facebook-reel', 'pinterest-video'] },
   dev: { label: '10-second developer trick', targets: ['youtube-shorts', 'x', 'linkedin-post'] },
   india: { label: 'India finance', targets: ['instagram-reel', 'youtube-shorts', 'facebook-reel', 'whatsapp-status', 'instagram-carousel', 'linkedin-document'] },
-  ai: { label: 'AI at work', targets: ['linkedin-post', 'youtube-shorts', 'instagram-reel'] }
+  ai: { label: 'AI at work', targets: ['linkedin-post', 'youtube-shorts', 'instagram-reel'] },
+  games: { label: 'Game night', targets: ['instagram-reel', 'youtube-shorts', 'facebook-reel', 'whatsapp-status', 'tiktok'] }
 };
 for (const f of Object.values(FORMATS)) f.platforms = f.targets.map((id) => CH.get(id).name);
 
@@ -89,9 +90,13 @@ function newTargets(fmt, state) {
 /* Which slots each weekday fills (0 = Sunday). Nine a week: one a day,
    and a second on Tuesday and Thursday, the two days short video does best
    for work tools. */
-const WEEK = [['problem'], ['problem'], ['before', 'dev'], ['india'], ['ai', 'before'], ['dev'], ['before']];
+/* Sunday is the family-games slot: the Quiz & Party Games (/games/), kept out of the problem format. */
+const WEEK = [['games'], ['problem'], ['before', 'dev'], ['india'], ['ai', 'before'], ['dev'], ['before']];
 
 /* The tools people search for most come first in each format's rotation. */
+/* The games' order in the Sunday slot: the nearest festival first (Diwali, Children's Day, Christmas), then the rest by path. */
+const GAMES_LEAD = ['diwali-tambola-caller', 'charades-generator', 'random-group-generator-for-class', 'spin-the-wheel', 'icebreaker-cards', 'quiz-maker',
+  'christmas-quiz-host', 'family-survey-game', 'antakshari', 'quiz-buzzer', 'scoreboard', 'tambola-ticket-generator', 'bingo-card-generator'].map((s) => '/games/' + s + '/');
 const LEAD = ['/image/image-compressor/', '/pdf/merge-pdf/', '/ai-image/background-remover/', '/qr/qr-code-generator/',
   '/mathematics/percentage/', '/health/bmi/', '/time/age-calculator/', '/text/word-counter/', '/image/passport-photo/',
   '/ai-video/auto-captions/', '/ai-video/reel-maker/', '/india/gst-calculator/', '/india/emi-calculator/', '/india/sip-calculator/',
@@ -105,20 +110,22 @@ function examples() {
 function pools() {
   if (!require('./site').isDefault()) {
     const items = T.listTools();
-    return { problem: items, before: [], dev: [], india: [], ai: [] };
+    return { problem: items, before: [], dev: [], india: [], ai: [], games: [] };
   }
   const ex = examples();
   const tools = T.listTools();
   const visual = (t) => { const e = ex[t.path]; return !!(e && (e.before || e.after || e.page)); };
   const by = {
-    problem: tools.filter((t) => t.pricing !== 'freemium' && !/^\/(developer|india|ai)\//.test(t.path)),
+    problem: tools.filter((t) => t.pricing !== 'freemium' && !/^\/(developer|india|ai|games)\//.test(t.path)),
+    games: tools.filter((t) => /^\/games\//.test(t.path)),
     before: tools.filter((t) => /^\/(image|ai-image|ai-video|pdf)\//.test(t.path) && visual(t)),
     dev: tools.filter((t) => /^\/(developer|text)\//.test(t.path)),
     india: tools.filter((t) => /^\/india\//.test(t.path) || t.path === '/business/ctc-structure/'),
     ai: tools.filter((t) => t.pricing === 'freemium')
   };
   const rank = (t) => { const i = LEAD.indexOf(t.path); return i < 0 ? 100 : i; };
-  for (const k of Object.keys(by)) by[k].sort((a, b) => rank(a) - rank(b) || a.path.localeCompare(b.path));
+  const gRank = (t) => { const i = GAMES_LEAD.indexOf(t.path); return i < 0 ? 100 : i; };
+  for (const k of Object.keys(by)) by[k].sort((a, b) => (k === 'games' ? gRank(a) - gRank(b) : rank(a) - rank(b)) || a.path.localeCompare(b.path));
   return by;
 }
 
@@ -253,7 +260,7 @@ function plan(start) {
   const kept = {};
   if (old) for (const it of old.items) if (hasRecord(it)) kept[it.id] = it;
   const by = pools();
-  const cursor = { problem: 0, before: 0, dev: 0, india: 0, ai: 0 };
+  const cursor = { problem: 0, before: 0, dev: 0, india: 0, ai: 0, games: 0 };
   const lastUsed = {};
   const items = [];
   const s = localDate(start || todayIso());
@@ -369,7 +376,8 @@ const STYLE_ORDER = {
   before: ['beforeafter', 'speedrun', 'thisorthat', 'myth'],
   dev: ['speedrun', 'tutorial', 'quiz', 'stop'],
   india: ['countdown', 'myth', 'quiz', 'beforeafter', 'tutorial', 'story'],
-  ai: ['tutorial', 'hottake', 'thisorthat', 'speedrun']
+  ai: ['tutorial', 'hottake', 'thisorthat', 'speedrun'],
+  games: ['pov', 'speedrun', 'story', 'thisorthat', 'stop', 'tutorial']
 };
 const SITE_TEMPLATES = {
   shop: [['packorder', 'Pack an order with me'], ['pricereveal', 'Guess the price'], ['smallbiz', 'Small business check'], ['unboxing', 'Unboxing'], ['bts', 'Behind the scenes'], ['didyouknow', 'Did you know?'], ['tellme', 'Tell me without telling me'], ['grwm', 'Get ready with me']],

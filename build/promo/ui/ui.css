@@ -152,7 +152,7 @@ select{cursor:pointer}
 .badge.kind{border-color:color-mix(in srgb,var(--cyan) 45%,transparent);color:var(--cyan)}
 .badge.help,.badge.plink{border-color:color-mix(in srgb,var(--violet) 50%,transparent);color:var(--violet)}
 .badge.fmt{border-color:color-mix(in srgb,currentColor 45%,transparent)}
-.fmt-problem{color:var(--gold)}.fmt-before{color:var(--cyan)}.fmt-dev{color:var(--violet)}.fmt-india{color:var(--orange)}.fmt-ai{color:var(--pink)}
+.fmt-problem{color:var(--gold)}.fmt-before{color:var(--cyan)}.fmt-dev{color:var(--violet)}.fmt-india{color:var(--orange)}.fmt-ai{color:var(--pink)}.fmt-games{color:var(--green)}
 .part{border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--panel2)}
 .part-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .part-head .lab{font-weight:600;font-size:13.5px;color:var(--ink2)}

@@ -64,12 +64,29 @@ const HOOKS = [
   { n: 46, text: 'One job, one page, no account.', verb: '*', angle: 'no-signup', free: true },
   { n: 47, text: 'Free, and it works offline once opened.', verb: '*', angle: 'offline', free: true },
   { n: 48, text: 'Open the page, do the job, close the tab.', verb: '*', angle: 'speed' },
+  // Quiz & Party Games (/games/): only these are used for a game, because "just the file" or "your PDFs" would be false for a party game.
+  { n: 49, text: 'Names, scores and tickets stay on your own device.', verb: '*', angle: 'privacy', sections: ['games'], free: true },
+  { n: 50, text: 'Nothing about your party is uploaded.', verb: '*', angle: 'privacy', sections: ['games'], free: true },
+  { n: 51, text: 'From blank page to game night in a minute.', verb: '*', angle: 'speed', sections: ['games'] },
+  { n: 52, text: 'Set it up, put it on the TV, play.', verb: '*', angle: 'speed', sections: ['games'] },
+  { n: 53, text: 'Game night, and not a penny for an app.', verb: '*', angle: 'cost', sections: ['games'], free: true },
+  { n: 54, text: 'A party game that never asks for a subscription.', verb: '*', angle: 'cost', sections: ['games'], free: true },
+  { n: 55, text: 'No signal at the party? It still works once opened.', verb: '*', angle: 'offline', sections: ['games'], free: true },
+  { n: 56, text: 'Open it once, and it plays without the internet.', verb: '*', angle: 'offline', sections: ['games'], free: true },
+  { n: 57, text: 'No account, no app. Just press Start.', verb: '*', angle: 'no-signup', sections: ['games'], free: true },
+  { n: 58, text: 'Everyone plays, nobody signs up.', verb: '*', angle: 'no-signup', sections: ['games'], free: true },
+  { n: 59, text: 'Here is the big screen, and the game is ready.', verb: '*', angle: 'result-first', sections: ['games'] },
+  { n: 60, text: 'The host finally gets to play too.', verb: '*', angle: 'result-first', sections: ['games'] },
+  { n: 61, text: 'The caller who never loses count.', verb: '*', angle: 'speed', sections: ['games'], kw: 'tambola|housie|bingo' },
+  { n: 62, text: 'Who pressed first? Now you can prove it.', verb: '*', angle: 'speed', sections: ['games'], kw: 'buzzer' },
+  { n: 63, text: 'Fair teams, and nobody picks last.', verb: '*', angle: 'speed', sections: ['games'], kw: 'team|group' },
 ];
 
 const ANGLES = ['privacy', 'speed', 'cost', 'offline', 'no-signup', 'result-first'];
 
 /** Whether hook h is true for record rec (independent of verb/angle). */
 function allowed(h, rec, opts) {
+  if (rec.section === 'games' && !(h.sections && h.sections.includes('games'))) return false;
   if (h.free && rec.pricing !== 'free') return false;
   if (h.ai && rec.pricing !== 'freemium') return false;
   if (h.sections && !h.sections.includes(rec.section)) return false;

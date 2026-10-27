@@ -65,6 +65,7 @@ const PERSONA = {
   time: 'Planners and remote teams', health: 'Anyone tracking their health', qr: 'Shops, events and marketers',
   utilities: 'Anyone with a quick job to do', engineering: 'Engineers and students', design: 'Designers and makers',
   conversions: 'Students, cooks and travellers',
+  games: 'Families, teachers and party hosts',
 };
 
 const PAIN = {
@@ -87,6 +88,7 @@ const PAIN = {
   design: 'Getting sizes and values right by eye takes longer than it should.',
   conversions: 'You need the conversion now, exactly, without wading through a page full of ads.',
   education: 'Marks, grades and timetables take hours by hand, and one slip means doing it twice.',
+  games: 'The game night needs a fair pick, a score and a clock, and someone ends up doing it all by hand.',
 };
 
 const USUAL = {
@@ -109,6 +111,7 @@ const USUAL = {
   design: ['Eyeballing it and hoping', 'Heavy software for a quick check', 'Pages crowded with ads'],
   conversions: ['Mental maths and a rough guess', 'Search results full of ads', 'An app you will use once'],
   education: ['Hours of marking by hand', 'Spreadsheets that break mid-term', 'Tools that want every pupil signed up'],
+  games: ['Paper chits and a pen', 'Scores on the back of an envelope', 'Arguments about whose turn it is'],
 };
 
 const CALC_SECTIONS = ['business', 'india', 'finance', 'mathematics', 'health', 'time', 'utilities', 'engineering', 'design', 'education', 'conversions'];
