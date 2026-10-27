@@ -3300,6 +3300,30 @@ h2.hub-verb::before {
 .home-cats .card:hover .card-icon { background: color-mix(in srgb, var(--sec) 24%, var(--surface)); }
 /* ==== /B3-home ==== */
 
+/* ==== HOME-NEW: the "New on 1234Tools" row (build-home.js newBlock, build/whats-new.js) ==== */
+/* Straight under the finder. A wide screen shows a grid; a phone shows one
+   row that scrolls sideways inside itself (the page never does), so the
+   row costs one card's height. Tokens only. */
+.home-new { margin: 6px 0 4px; }
+.home-new-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 16px; }
+.home-new-head .section-title { margin-bottom: 10px; }
+.home-new-all { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; color: var(--link); }
+.home-new-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); margin-bottom: 28px; }
+.home-new-grid .card { gap: 4px; padding: 16px 18px; }
+.home-new-grid .card-desc { font-size: .88rem; }
+.tag-new { color: var(--gold-2); background: var(--bg-2); border: 1px solid var(--border-gold); cursor: default; }
+[data-theme="light"] .tag-new { color: #7d5200; }
+@media (max-width: 640px) {
+  .home-new-grid {
+    grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 78%;
+    overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory;
+    padding-bottom: 8px; margin-bottom: 20px;
+  }
+  .home-new-grid > .card { scroll-snap-align: start; }
+  .home-new-grid .card:hover { transform: none; }
+}
+/* ==== /HOME-NEW ==== */
+
 /* ==== D3-audiences: "I am a…" tiles, collection extras ==== */
 /* The home page row written by build-collections.js. Each tile carries
    its own hue as --aud-h; everything else is shared, so twelve tiles read

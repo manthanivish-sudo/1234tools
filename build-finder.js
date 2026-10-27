@@ -169,6 +169,13 @@ function finderIndex() {
   if (fs.existsSync(path.join(ROOT, 'build-landing.js'))) {
     for (const row of require('./build-landing.js').finderRows()) { rows.push(row); if (row[5]) withKeywords++; }
   }
+  /* the games' landing pages (build-games.js, build-live.js) work the same way */
+  for (const gen of ['build-games.js', 'build-live.js']) {
+    if (!fs.existsSync(path.join(ROOT, gen))) continue;
+    const mod = require('./' + gen);
+    if (typeof mod.finderRows !== 'function') continue;
+    for (const row of mod.finderRows(ioOf)) { rows.push(row); if (row[5]) withKeywords++; }
+  }
   return { rows, withKeywords, prefilled };
 }
 /** The eighth column, only on the rows that have one. */

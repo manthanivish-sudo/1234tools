@@ -23,7 +23,7 @@
     title: 'Random Team Generator',
     short: 'Team Generator',
     description: 'Split a list of names into fair random teams in one click — random, balanced by skill, or with brothers and sisters kept apart — and show the teams big on the TV. Free, no sign-up, runs in your browser.',
-    keywords: ['random team generator', 'team picker', 'split names into teams', 'random group generator', 'make teams for quiz', 'balanced team generator', 'team generator for kids', 'divide class into groups'],
+    keywords: ['random team generator', 'team picker', 'split names into teams', 'random group generator', 'make teams for quiz', 'balanced team generator', 'team generator for kids', 'divide class into groups', 'pick teams', 'team maker'],
     glyph: 'i-team-generator',
     glyphSvg: '<symbol id="i-team-generator" viewBox="0 0 24 24">\n  <circle cx="7" cy="7.5" r="2.6"/>\n  <circle cx="17" cy="7.5" r="2.6"/>\n  <path d="M2.8 18.5c.4-3.2 2-5 4.2-5s3.8 1.8 4.2 5"/>\n  <path d="M12.8 18.5c.4-3.2 2-5 4.2-5s3.8 1.8 4.2 5"/>\n  <path d="M12 3v18" class="thin"/>\n</symbol>',
     scripts: ['/engine/game-kit.js', '/engine/game-team-generator.js'],

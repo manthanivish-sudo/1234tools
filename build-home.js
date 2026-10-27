@@ -87,7 +87,9 @@ const HERO_JOBS = [
    are is the second question after what you came to do. */
 /* SEEITWORK is the "See it work" strip of real before-and-after examples,
    written by build-proof.js. */
-const ORDER = ['HOME-HERO', 'AUDIENCES', 'SEEITWORK', 'POPULAR', 'CATEGORIES', 'COLLECTIONS', 'HOME-PICKS', 'HOME-WHY'];
+/* HOME-NEW is the "New on 1234Tools" row (build/whats-new.js), straight
+   under the finder so a returning visitor sees what changed. */
+const ORDER = ['HOME-HERO', 'HOME-NEW', 'AUDIENCES', 'SEEITWORK', 'POPULAR', 'CATEGORIES', 'COLLECTIONS', 'HOME-PICKS', 'HOME-WHY'];
 
 /* The callable's address, built from the same config the account pages
    use so there is one place a project id is written down. While it says
@@ -294,6 +296,38 @@ function picksBlock(metas) {
     '</section>';
 }
 
+/* "New on 1234Tools": the newest tools from build/whats-new.js whose pages
+   exist, each with its glyph, its one-line job (build/jobs.js) and the day
+   it went live; "see all" opens the newest tool's section. */
+function newBlock() {
+  const { NEW, MAX, LEDE, problems } = require('./build/whats-new.js');
+  const bad = problems();
+  if (bad.length) throw new Error('build/whats-new.js: ' + bad.join('; '));
+  const { descOf } = require('./build/jobs.js');
+  const { SECTIONS } = require('./build/sections.js');
+  const live = NEW.filter(([p]) => fs.existsSync(path.join(ROOT, p, 'index.html'))).slice(0, MAX);
+  if (!live.length) return '';
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const card = ([p, d]) => {
+    const m = toolMeta(p);
+    const src = fs.readFileSync(path.join(ROOT, p, 'index.html'), 'utf8');
+    const g = /<h1><svg class="ico ico-title"[^>]*><use href="[^#"]*#(i-[a-z0-9-]+)"/.exec(src);
+    const day = Number(d.slice(8, 10)) + ' ' + MONTHS[Number(d.slice(5, 7)) - 1];
+    return '<a class="card" href="' + p + '">' +
+      (g ? '<span class="card-icon"><svg class="ico" aria-hidden="true" focusable="false"><use href="/assets/icons.svg#' + g[1] + '"></use></svg></span>' : '') +
+      '<strong>' + esc(m.title) + '</strong><span class="card-desc">' + esc(descOf(p) || m.description) + '</span>' +
+      '<span class="tag tag-new">New · <time datetime="' + d + '">' + day + '</time></span></a>';
+  };
+  const hub = '/' + live[0][0].split('/')[1] + '/';
+  const sec = SECTIONS[hub];
+  return '<section class="home-new" aria-labelledby="home-new-title">\n' +
+    '  <div class="home-new-head"><h2 class="section-title" id="home-new-title">New on 1234Tools</h2>' +
+    (sec ? '<a class="home-new-all" href="' + hub + '">All ' + esc(sec.name) + ' →</a>' : '') + '</div>\n' +
+    '  <p class="section-lede">' + esc(LEDE) + '</p>\n' +
+    '  <div class="grid home-new-grid">' + live.map(card).join('') + '</div>\n' +
+    '</section>';
+}
+
 /* ---------- patching ---------- */
 
 function askBlock(url) {
@@ -417,6 +451,10 @@ function patchHome() {
   const url = endpoint();
   html = put(html, 'HOME-HERO', heroBlock(c, url), (h, block) => {
     const at = h.indexOf(MAIN_OPEN) + MAIN_OPEN.length;
+    return h.slice(0, at) + '\n' + block + h.slice(at);
+  });
+  html = put(html, 'HOME-NEW', newBlock(), (h, block) => {
+    const at = h.indexOf(close('HOME-HERO')) + close('HOME-HERO').length;
     return h.slice(0, at) + '\n' + block + h.slice(at);
   });
   html = put(html, 'HOME-WHY', whyBlock(c, checked), (h, block) => {

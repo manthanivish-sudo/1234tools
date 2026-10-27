@@ -81,6 +81,16 @@ function landings(list) {
 }
 /** For build-site.js and the tests: the landing pages' addresses. */
 function landingPaths() { return landings(tools()).map((x) => '/' + SECTION + '/' + x.L.slug + '/'); }
+/** For build-finder.js: one Tool Finder row per landing page that exists, in
+    build-landing.js's shape, so "random name picker" opens the wheel's page
+    for that job. `io` is the game's own in->out line. */
+function finderRows(ioOf) {
+  const name = SECTIONS['/' + SECTION + '/'].name;
+  return landings(tools())
+    .filter((x) => fs.existsSync(path.join(ROOT, SECTION, x.L.slug, 'index.html')))
+    .map(({ t, L }) => [L.title, SECTION + '/' + L.slug + '/', t.spec.glyph || ('i-' + t.slug), name, L.description,
+      (L.keywords || t.spec.keywords || []).join(' | '), ioOf ? ioOf(SECTION + '/' + t.slug + '/') : '', '', 'landing']);
+}
 
 function shell() {
   const src = fs.readFileSync(path.join(ROOT, SHELL_PAGE), 'utf8');
@@ -387,4 +397,4 @@ if (require.main === module) {
   try { main(); }
   catch (e) { console.error('\nbuild-games.js failed: ' + (e && e.message || e) + '\n'); process.exit(1); }
 }
-module.exports = { tools, landingPaths };
+module.exports = { tools, landingPaths, finderRows };
