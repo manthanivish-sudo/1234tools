@@ -1,0 +1,41 @@
+{
+  "id": "/games/category-board/",
+  "name": "Category Quiz Board — 1234Tools",
+  "short_name": "Category Quiz Board",
+  "description": "A quiz board of categories and points for the TV or the classroom projector: pick a square, reveal the answer, give the points to a team. One hidden double square. Build, save and print boards. Free, nothing uploaded.",
+  "start_url": "/games/category-board/?src=pwa",
+  "scope": "/games/category-board/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-category-board.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-category-board-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-category-board-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

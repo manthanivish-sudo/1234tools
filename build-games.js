@@ -227,7 +227,7 @@ function hubPage(parts, all) {
   const sec = SECTIONS['/' + SECTION + '/'];
   const n = all.length;
   const title = 'Quiz & Party Games — Free for Family Nights | 1234Tools';
-  const description = 'Free games for a family quiz night or a party: spin the wheel, random teams, a scoreboard, a buzzer, a Tambola caller and printable tickets. No sign-up.';
+  const description = 'Free games for a quiz night or a party: write and host a quiz, charades, antakshari, Tambola, a buzzer, a scoreboard and a name wheel. No sign-up.';
   const cards = all.map((t) => '<a class="card" href="/' + SECTION + '/' + t.slug + '/"><span class="card-icon">' + icon(t.spec.glyph) + '</span><strong>' + esc(t.spec.title) + '</strong><span class="card-desc">' + esc(t.spec.description) + '</span></a>').join('');
   /* the how-to guides (build/guides.js, written by build-guides.js) that name a game: the manual for a whole evening */
   const guides = require('./build/guides.js').GUIDES.filter((g) => (g.tools || []).some((p) => p.indexOf('/' + SECTION + '/') === 0))
@@ -237,7 +237,7 @@ function hubPage(parts, all) {
     crumbs.render([], sec.hub || sec.name) + '\n' +
     '<p class="eyebrow">' + esc(sec.name) + '</p>\n' +
     '<h1>' + icon('i-games', 'ico ico-title') + esc(sec.name) + '</h1>\n' +
-    '<p class="lede">Everything a quiz night or a party needs, run from one laptop or phone with the TV as the big screen: pick names, make teams, keep score, find who buzzed first, call Tambola and print the tickets. No sign-up, no adverts in the game, and nothing anyone types leaves the device. ' + n + ' game' + (n === 1 ? '' : 's') + ' so far.</p>\n' +
+    '<p class="lede">Everything a quiz night or a party needs, run from one laptop or phone with the TV as the big screen: write and host a quiz, pick names, make teams, keep score, find who buzzed first, act out charades, call Tambola and print the tickets. No sign-up, no adverts in the game, and nothing anyone types leaves the device. ' + n + ' game' + (n === 1 ? '' : 's') + ' so far.</p>\n' +
     '<div class="grid">' + cards + '</div>\n' +
     (ready ? '<section class="panel"><h2>Ready-made for</h2><ul class="related">' + ready + '</ul></section>\n' : '') +
     (guides ? '<section class="panel"><h2>Step-by-step guides</h2><ul class="related">' + guides + '</ul></section>\n' : '') +

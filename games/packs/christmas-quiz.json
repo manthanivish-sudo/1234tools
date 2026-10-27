@@ -1,0 +1,651 @@
+{
+  "v": 1,
+  "id": "christmas-quiz",
+  "title": "Christmas Quiz",
+  "ages": "all",
+  "region": "global",
+  "count": 50,
+  "reviewed": "2026-10-27",
+  "sources": [
+    "en.wikipedia.org"
+  ],
+  "rounds": [
+    {
+      "name": "Traditions",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "On which date is Christmas Day celebrated in most countries?",
+          "options": [
+            "24 December",
+            "1 January",
+            "25 December",
+            "6 January"
+          ],
+          "answer": "25 December",
+          "note": "Many people also celebrate on Christmas Eve, 24 December.",
+          "source": "https://en.wikipedia.org/wiki/Christmas"
+        },
+        {
+          "type": "number",
+          "prompt": "Traditionally, how many doors does an Advent calendar count through, up to Christmas Eve?",
+          "answer": 24,
+          "tolerance": 0,
+          "note": "Some modern calendars have 25 doors, or begin on the first day of Advent.",
+          "source": "https://en.wikipedia.org/wiki/Advent_calendar"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who is credited with inventing the Christmas cracker in London?",
+          "options": [
+            "Henry Cole",
+            "Charles Dickens",
+            "Thomas Edison",
+            "Tom Smith"
+          ],
+          "answer": "Tom Smith",
+          "note": "He first sold bonbons wrapped in twists of paper.",
+          "source": "https://en.wikipedia.org/wiki/Christmas_cracker"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which royal couple helped make Christmas trees popular in Britain in the 1840s?",
+          "options": [
+            "Queen Victoria and Prince Albert",
+            "George III and Queen Charlotte",
+            "Henry VIII and Catherine",
+            "Elizabeth II and Prince Philip"
+          ],
+          "answer": "Queen Victoria and Prince Albert",
+          "note": "A picture of the royal family with a tree was widely printed in 1848.",
+          "source": "https://en.wikipedia.org/wiki/Christmas_tree"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which country did the custom of the decorated Christmas tree develop?",
+          "options": [
+            "Spain",
+            "Germany",
+            "Egypt",
+            "Canada"
+          ],
+          "answer": "Germany",
+          "note": "The tradition goes back to at least the 1500s in German lands.",
+          "source": "https://en.wikipedia.org/wiki/Christmas_tree"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What day is Boxing Day?",
+          "options": [
+            "24 December",
+            "27 December",
+            "26 December",
+            "1 January"
+          ],
+          "answer": "26 December",
+          "note": "It was once the day when servants and workers received gift boxes.",
+          "source": "https://en.wikipedia.org/wiki/Boxing_Day"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who commissioned the first commercial Christmas card in 1843?",
+          "options": [
+            "Tom Smith",
+            "Prince Albert",
+            "Charles Dickens",
+            "Henry Cole"
+          ],
+          "answer": "Henry Cole",
+          "note": "Henry Cole was a civil servant who helped set up the Victoria and Albert Museum.",
+          "source": "https://en.wikipedia.org/wiki/Christmas_card"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The Santa Claus legend is partly based on which 4th-century bishop?",
+          "options": [
+            "Saint Nicholas",
+            "Saint George",
+            "Saint Patrick",
+            "Saint Francis"
+          ],
+          "answer": "Saint Nicholas",
+          "note": "Nicholas was famous for secretly helping people in need.",
+          "source": "https://en.wikipedia.org/wiki/Saint_Nicholas"
+        },
+        {
+          "type": "number",
+          "prompt": "In the Gospel of Matthew, how many different gifts do the Magi bring?",
+          "answer": 3,
+          "tolerance": 0,
+          "note": "The gifts are gold, frankincense and myrrh. The gospel does not say how many visitors there were.",
+          "source": "https://en.wikipedia.org/wiki/Magi"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In the Christmas story, in which town is Jesus born?",
+          "options": [
+            "Jerusalem",
+            "Bethlehem",
+            "Nazareth",
+            "Jericho"
+          ],
+          "answer": "Bethlehem",
+          "note": "Bethlehem lies a few miles south of Jerusalem.",
+          "source": "https://en.wikipedia.org/wiki/Nativity_of_Jesus"
+        }
+      ]
+    },
+    {
+      "name": "Christmas Around the World",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "In Australia, Christmas falls in which season?",
+          "options": [
+            "Winter",
+            "Autumn",
+            "Summer",
+            "Spring"
+          ],
+          "answer": "Summer",
+          "note": "Many Australians have Christmas lunch at the beach or outdoors.",
+          "source": "https://en.wikipedia.org/wiki/Christmas_in_Australia"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which country sends a large Christmas tree to Trafalgar Square in London each year as a thank-you for help in the Second World War?",
+          "options": [
+            "Sweden",
+            "Denmark",
+            "Finland",
+            "Norway"
+          ],
+          "answer": "Norway",
+          "note": "The tradition began in 1947.",
+          "source": "https://en.wikipedia.org/wiki/Trafalgar_Square_Christmas_tree"
+        },
+        {
+          "type": "tf",
+          "prompt": "In Japan, many families eat fried chicken from a fast-food chain at Christmas.",
+          "answer": true,
+          "note": "A 1970s advertising campaign helped start the habit.",
+          "source": "https://en.wikipedia.org/wiki/Christmas_in_Japan"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Las Posadas, a series of nine nights of Christmas processions, is a tradition in which country?",
+          "options": [
+            "Mexico",
+            "Norway",
+            "Egypt",
+            "Australia"
+          ],
+          "answer": "Mexico",
+          "note": "Children often break a star-shaped piñata at the party.",
+          "source": "https://en.wikipedia.org/wiki/Las_Posadas"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the star-shaped lantern that is a symbol of Christmas in the Philippines called?",
+          "options": [
+            "A diya",
+            "A parol",
+            "A fanoos",
+            "A kandil"
+          ],
+          "answer": "A parol",
+          "note": "Some giant parols are made of thousands of lights.",
+          "source": "https://en.wikipedia.org/wiki/Parol"
+        },
+        {
+          "type": "number",
+          "prompt": "In Icelandic folklore, how many Yule Lads visit children in the days before Christmas?",
+          "answer": 13,
+          "tolerance": 0,
+          "note": "Children leave a shoe on the windowsill for them.",
+          "source": "https://en.wikipedia.org/wiki/Yule_Lads"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Saint Lucy's Day, with processions of children in white robes and candle crowns, is especially popular in which country?",
+          "options": [
+            "Italy",
+            "Portugal",
+            "Sweden",
+            "Brazil"
+          ],
+          "answer": "Sweden",
+          "note": "It is celebrated on 13 December.",
+          "source": "https://en.wikipedia.org/wiki/Saint_Lucy's_Day"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In Dutch tradition, Sinterklaas is said to arrive each year by boat from which country?",
+          "options": [
+            "Germany",
+            "Turkey",
+            "Norway",
+            "Spain"
+          ],
+          "answer": "Spain",
+          "note": "Children leave out a shoe with a carrot for his horse.",
+          "source": "https://en.wikipedia.org/wiki/Sinterklaas"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In Italian folklore, who brings presents on the night before Epiphany?",
+          "options": [
+            "La Befana",
+            "Babbo Natale",
+            "Saint Lucy",
+            "Krampus"
+          ],
+          "answer": "La Befana",
+          "note": "She is usually pictured as a kind old lady riding a broom.",
+          "source": "https://en.wikipedia.org/wiki/Befana"
+        },
+        {
+          "type": "mcq",
+          "prompt": "On which date do Ethiopian Orthodox Christians celebrate Christmas (Genna)?",
+          "options": [
+            "25 December",
+            "7 January",
+            "6 December",
+            "1 January"
+          ],
+          "answer": "7 January",
+          "note": "They follow an older calendar from the one most of the world uses.",
+          "source": "https://en.wikipedia.org/wiki/Genna"
+        }
+      ]
+    },
+    {
+      "name": "Carols and Music",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "In which country was the carol Silent Night first performed, in 1818?",
+          "options": [
+            "England",
+            "Germany",
+            "Austria",
+            "USA"
+          ],
+          "answer": "Austria",
+          "note": "It was first heard in a church in Oberndorf near Salzburg.",
+          "source": "https://en.wikipedia.org/wiki/Silent_Night"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who composed the ballet The Nutcracker?",
+          "options": [
+            "Sergei Prokofiev",
+            "Johann Strauss",
+            "Claude Debussy",
+            "Pyotr Ilyich Tchaikovsky"
+          ],
+          "answer": "Pyotr Ilyich Tchaikovsky",
+          "note": "It was first staged in St Petersburg in 1892.",
+          "source": "https://en.wikipedia.org/wiki/The_Nutcracker"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which city was Handel's oratorio Messiah first performed in 1742?",
+          "options": [
+            "Dublin",
+            "London",
+            "Vienna",
+            "Rome"
+          ],
+          "answer": "Dublin",
+          "note": "Messiah is often performed in the Christmas season.",
+          "source": "https://en.wikipedia.org/wiki/Messiah_(Handel)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which American composer wrote the song Jingle Bells in the 1850s?",
+          "options": [
+            "Irving Berlin",
+            "James Lord Pierpont",
+            "Stephen Foster",
+            "John Philip Sousa"
+          ],
+          "answer": "James Lord Pierpont",
+          "note": "It was first called One Horse Open Sleigh.",
+          "source": "https://en.wikipedia.org/wiki/Jingle_Bells"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who wrote the song White Christmas?",
+          "options": [
+            "George Gershwin",
+            "Cole Porter",
+            "Irving Berlin",
+            "Bing Crosby"
+          ],
+          "answer": "Irving Berlin",
+          "note": "Bing Crosby's recording became one of the best-selling singles ever.",
+          "source": "https://en.wikipedia.org/wiki/White_Christmas_(song)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "A famous Christmas Eve service of carols and Bible readings is broadcast every year from the chapel of which college?",
+          "options": [
+            "Trinity College, Dublin",
+            "Balliol College, Oxford",
+            "Eton College",
+            "King's College, Cambridge"
+          ],
+          "answer": "King's College, Cambridge",
+          "note": "The first Nine Lessons and Carols took place in 1918.",
+          "source": "https://en.wikipedia.org/wiki/Nine_Lessons_and_Carols"
+        },
+        {
+          "type": "tf",
+          "prompt": "Good King Wenceslas was a real person, a duke who ruled Bohemia.",
+          "answer": true,
+          "note": "He lived in the 10th century and became the patron saint of the Czech lands.",
+          "source": "https://en.wikipedia.org/wiki/Wenceslaus_I,_Duke_of_Bohemia"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who composed the tune now used for Hark! The Herald Angels Sing?",
+          "options": [
+            "Felix Mendelssohn",
+            "George Frideric Handel",
+            "Franz Schubert",
+            "Edward Elgar"
+          ],
+          "answer": "Felix Mendelssohn",
+          "note": "The words were written earlier by Charles Wesley.",
+          "source": "https://en.wikipedia.org/wiki/Hark!_The_Herald_Angels_Sing"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who wrote the words of the carol Joy to the World?",
+          "options": [
+            "Charles Wesley",
+            "Isaac Watts",
+            "Phillips Brooks",
+            "John Newton"
+          ],
+          "answer": "Isaac Watts",
+          "note": "It was published in 1719 as a hymn about Christ's coming.",
+          "source": "https://en.wikipedia.org/wiki/Joy_to_the_World"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Wassail, linked to the old custom of wassailing, is what kind of drink?",
+          "options": [
+            "Hot chocolate",
+            "Eggnog",
+            "A spiced hot cider or ale called wassail",
+            "Mulled lemonade"
+          ],
+          "answer": "A spiced hot cider or ale called wassail",
+          "note": "The word comes from an old greeting meaning \"be in good health\".",
+          "source": "https://en.wikipedia.org/wiki/Wassail"
+        }
+      ]
+    },
+    {
+      "name": "Christmas Stories and Films",
+      "questions": [
+        {
+          "type": "number",
+          "prompt": "In which year was Charles Dickens' A Christmas Carol first published?",
+          "answer": 1843,
+          "tolerance": 0,
+          "note": "It sold out in a few days.",
+          "source": "https://en.wikipedia.org/wiki/A_Christmas_Carol"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the name of Scrooge's dead business partner in A Christmas Carol?",
+          "options": [
+            "Bob Cratchit",
+            "Fezziwig",
+            "Tiny Tim",
+            "Jacob Marley"
+          ],
+          "answer": "Jacob Marley",
+          "note": "Marley's ghost visits Scrooge on Christmas Eve.",
+          "source": "https://en.wikipedia.org/wiki/A_Christmas_Carol"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who wrote the book How the Grinch Stole Christmas!?",
+          "options": [
+            "Dr. Seuss",
+            "Roald Dahl",
+            "Eric Carle",
+            "Maurice Sendak"
+          ],
+          "answer": "Dr. Seuss",
+          "note": "It was published in 1957.",
+          "source": "https://en.wikipedia.org/wiki/How_the_Grinch_Stole_Christmas!"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the name of the boy left at home in the film Home Alone (1990)?",
+          "options": [
+            "Harry Potter",
+            "Kevin McCallister",
+            "Buddy Hobbs",
+            "Peter Parker"
+          ],
+          "answer": "Kevin McCallister",
+          "note": "The film was written by John Hughes.",
+          "source": "https://en.wikipedia.org/wiki/Home_Alone"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which actor played Buddy in the 2003 film Elf?",
+          "options": [
+            "Jim Carrey",
+            "Tim Allen",
+            "Will Ferrell",
+            "Steve Martin"
+          ],
+          "answer": "Will Ferrell",
+          "note": "Buddy is a human raised by elves at the North Pole.",
+          "source": "https://en.wikipedia.org/wiki/Elf_(film)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who wrote and illustrated the picture book The Polar Express (1985)?",
+          "options": [
+            "Raymond Briggs",
+            "Quentin Blake",
+            "Eric Carle",
+            "Chris Van Allsburg"
+          ],
+          "answer": "Chris Van Allsburg",
+          "note": "He also wrote Jumanji.",
+          "source": "https://en.wikipedia.org/wiki/The_Polar_Express_(book)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who created Rudolph the Red-Nosed Reindeer for a 1939 booklet?",
+          "options": [
+            "Robert L. May",
+            "Gene Autry",
+            "Dr. Seuss",
+            "Clement Clarke Moore"
+          ],
+          "answer": "Robert L. May",
+          "note": "He worked for a department store called Montgomery Ward.",
+          "source": "https://en.wikipedia.org/wiki/Rudolph_the_Red-Nosed_Reindeer"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who directed the 1946 film It's a Wonderful Life?",
+          "options": [
+            "Alfred Hitchcock",
+            "Frank Capra",
+            "Walt Disney",
+            "Orson Welles"
+          ],
+          "answer": "Frank Capra",
+          "note": "It starred James Stewart.",
+          "source": "https://en.wikipedia.org/wiki/It's_a_Wonderful_Life"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who wrote and illustrated the 1978 picture book The Snowman?",
+          "options": [
+            "Roald Dahl",
+            "Julia Donaldson",
+            "Raymond Briggs",
+            "Axel Scheffler"
+          ],
+          "answer": "Raymond Briggs",
+          "note": "It has no words, only pictures.",
+          "source": "https://en.wikipedia.org/wiki/The_Snowman_(book)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who wrote the original story The Nutcracker and the Mouse King?",
+          "options": [
+            "Hans Christian Andersen",
+            "The Brothers Grimm",
+            "Charles Perrault",
+            "E. T. A. Hoffmann"
+          ],
+          "answer": "E. T. A. Hoffmann",
+          "note": "It was published in 1816.",
+          "source": "https://en.wikipedia.org/wiki/The_Nutcracker_and_the_Mouse_King"
+        }
+      ]
+    },
+    {
+      "name": "Food and Symbols",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "The poinsettia, a popular Christmas plant, is originally from which country?",
+          "options": [
+            "Mexico",
+            "Finland",
+            "Italy",
+            "Kenya"
+          ],
+          "answer": "Mexico",
+          "note": "The red parts are actually coloured leaves, not petals.",
+          "source": "https://en.wikipedia.org/wiki/Poinsettia"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is traditionally poured over a Christmas pudding and set alight?",
+          "options": [
+            "Custard",
+            "Brandy",
+            "Milk",
+            "Honey"
+          ],
+          "answer": "Brandy",
+          "note": "The flames are meant to be a bit magical.",
+          "source": "https://en.wikipedia.org/wiki/Christmas_pudding"
+        },
+        {
+          "type": "tf",
+          "prompt": "Early mince pies contained minced meat as well as fruit and spices.",
+          "answer": true,
+          "note": "Today most mince pies are filled with sweet dried fruit only.",
+          "source": "https://en.wikipedia.org/wiki/Mince_pie"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Panettone, a sweet bread eaten at Christmas, comes from which Italian city?",
+          "options": [
+            "Naples",
+            "Venice",
+            "Milan",
+            "Florence"
+          ],
+          "answer": "Milan",
+          "note": "It is tall and dome-shaped, with raisins and candied fruit.",
+          "source": "https://en.wikipedia.org/wiki/Panettone"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Stollen, a fruit bread dusted with sugar, is a Christmas speciality of which country?",
+          "options": [
+            "Greece",
+            "Ireland",
+            "Portugal",
+            "Germany"
+          ],
+          "answer": "Germany",
+          "note": "The best-known one is from the city of Dresden.",
+          "source": "https://en.wikipedia.org/wiki/Stollen"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The bûche de Noël, a Christmas dessert from France, is shaped like what?",
+          "options": [
+            "A log",
+            "A star",
+            "A bell",
+            "A tree"
+          ],
+          "answer": "A log",
+          "note": "It echoes the old Yule log tradition.",
+          "source": "https://en.wikipedia.org/wiki/Yule_log_(cake)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Frankincense and myrrh, gifts in the Christmas story, are made from what?",
+          "options": [
+            "Flower petals",
+            "Tree resin",
+            "Crushed shells",
+            "Spices from roots"
+          ],
+          "answer": "Tree resin",
+          "note": "The resin oozes out of cuts in the bark and hardens.",
+          "source": "https://en.wikipedia.org/wiki/Frankincense"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which ingredient besides milk, cream and sugar is key to eggnog?",
+          "options": [
+            "Cocoa",
+            "Oats",
+            "Eggs",
+            "Coffee"
+          ],
+          "answer": "Eggs",
+          "note": "Eggnog is served cold in many countries, sometimes with nutmeg.",
+          "source": "https://en.wikipedia.org/wiki/Eggnog"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which bird is the traditional centrepiece of a Christmas dinner in Britain today?",
+          "options": [
+            "Duck",
+            "Pheasant",
+            "Swan",
+            "Turkey"
+          ],
+          "answer": "Turkey",
+          "note": "Goose was more common before the 20th century.",
+          "source": "https://en.wikipedia.org/wiki/Christmas_dinner"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Tinsel was first made of which metal?",
+          "options": [
+            "Silver",
+            "Aluminium",
+            "Copper",
+            "Gold"
+          ],
+          "answer": "Silver",
+          "note": "It was invented in Germany in the early 1600s.",
+          "source": "https://en.wikipedia.org/wiki/Tinsel"
+        }
+      ]
+    }
+  ]
+}

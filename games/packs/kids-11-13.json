@@ -1,0 +1,603 @@
+{
+  "v": 1,
+  "id": "kids-11-13",
+  "title": "Kids' Quiz (ages 11–13)",
+  "ages": "11-13",
+  "region": "global",
+  "count": 50,
+  "reviewed": "2026-10-27",
+  "sources": [
+    "en.wikipedia.org"
+  ],
+  "rounds": [
+    {
+      "name": "Science and Nature",
+      "questions": [
+        {
+          "type": "text",
+          "prompt": "What is the chemical symbol for gold?",
+          "answer": "Au",
+          "accept": [
+            "au"
+          ],
+          "note": "Au comes from aurum, the Latin word for gold.",
+          "source": "https://en.wikipedia.org/wiki/Gold"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which part of a cell is often called its powerhouse?",
+          "options": [
+            "Nucleus",
+            "Mitochondria",
+            "Ribosome",
+            "Cell wall"
+          ],
+          "answer": "Mitochondria",
+          "note": "Mitochondria release energy from food.",
+          "source": "https://en.wikipedia.org/wiki/Mitochondrion"
+        },
+        {
+          "type": "number",
+          "prompt": "What is the pH of pure water at room temperature?",
+          "answer": 7,
+          "tolerance": 0,
+          "note": "Below 7 is acidic and above 7 is alkaline.",
+          "source": "https://en.wikipedia.org/wiki/PH"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which gas makes up most of Earth's atmosphere?",
+          "options": [
+            "Oxygen",
+            "Carbon dioxide",
+            "Nitrogen",
+            "Argon"
+          ],
+          "answer": "Nitrogen",
+          "note": "Nitrogen is about 78 per cent of the air.",
+          "source": "https://en.wikipedia.org/wiki/Atmosphere_of_Earth"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which blood cells carry oxygen around the body?",
+          "options": [
+            "White blood cells",
+            "Platelets",
+            "Plasma cells",
+            "Red blood cells"
+          ],
+          "answer": "Red blood cells",
+          "note": "They contain haemoglobin, which is what makes blood red.",
+          "source": "https://en.wikipedia.org/wiki/Red_blood_cell"
+        },
+        {
+          "type": "number",
+          "prompt": "Light travels at about how many kilometres per second? (Give it to the nearest thousand.)",
+          "answer": 300000,
+          "tolerance": 1000,
+          "note": "Light takes about eight minutes to reach us from the Sun.",
+          "source": "https://en.wikipedia.org/wiki/Speed_of_light"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which is the smallest bone in the human body?",
+          "options": [
+            "The stapes (stirrup)",
+            "The femur",
+            "The hyoid",
+            "The patella"
+          ],
+          "answer": "The stapes (stirrup)",
+          "note": "It sits inside your ear and is only about three millimetres long.",
+          "source": "https://en.wikipedia.org/wiki/Stapes"
+        },
+        {
+          "type": "tf",
+          "prompt": "A tomato is botanically a fruit.",
+          "answer": true,
+          "note": "It grows from a flower and holds the seeds.",
+          "source": "https://en.wikipedia.org/wiki/Tomato"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which scientist is best known for the theory of evolution by natural selection?",
+          "options": [
+            "Isaac Newton",
+            "Charles Darwin",
+            "Gregor Mendel",
+            "Louis Pasteur"
+          ],
+          "answer": "Charles Darwin",
+          "note": "His book On the Origin of Species came out in 1859.",
+          "source": "https://en.wikipedia.org/wiki/Charles_Darwin"
+        },
+        {
+          "type": "text",
+          "prompt": "What is the chemical formula for water?",
+          "answer": "H2O",
+          "accept": [
+            "H₂O",
+            "h2o"
+          ],
+          "note": "Two hydrogen atoms join one oxygen atom.",
+          "source": "https://en.wikipedia.org/wiki/Water"
+        }
+      ]
+    },
+    {
+      "name": "Around the World",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "What is the capital city of Canada?",
+          "options": [
+            "Toronto",
+            "Vancouver",
+            "Ottawa",
+            "Montreal"
+          ],
+          "answer": "Ottawa",
+          "note": "Ottawa is on the border between Ontario and Quebec.",
+          "source": "https://en.wikipedia.org/wiki/Ottawa"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which river flows through Cairo?",
+          "options": [
+            "The Amazon",
+            "The Danube",
+            "The Tigris",
+            "The Nile"
+          ],
+          "answer": "The Nile",
+          "note": "Almost all Egyptians live near the Nile.",
+          "source": "https://en.wikipedia.org/wiki/Nile"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which is the smallest country in the world by area?",
+          "options": [
+            "Vatican City",
+            "Monaco",
+            "San Marino",
+            "Liechtenstein"
+          ],
+          "answer": "Vatican City",
+          "note": "It is entirely inside the city of Rome.",
+          "source": "https://en.wikipedia.org/wiki/Vatican_City"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which sea lies between southern Europe and North Africa?",
+          "options": [
+            "The Red Sea",
+            "The Mediterranean Sea",
+            "The Black Sea",
+            "The Baltic Sea"
+          ],
+          "answer": "The Mediterranean Sea",
+          "note": "Its name means middle of the land.",
+          "source": "https://en.wikipedia.org/wiki/Mediterranean_Sea"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Mount Kilimanjaro is in which country?",
+          "options": [
+            "Kenya",
+            "Ethiopia",
+            "Tanzania",
+            "Uganda"
+          ],
+          "answer": "Tanzania",
+          "note": "It is the highest mountain in Africa.",
+          "source": "https://en.wikipedia.org/wiki/Mount_Kilimanjaro"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The ancient rock-cut city of Petra is in which country?",
+          "options": [
+            "Egypt",
+            "Iraq",
+            "Turkey",
+            "Jordan"
+          ],
+          "answer": "Jordan",
+          "note": "Petra is known as the Rose City for the colour of its stone.",
+          "source": "https://en.wikipedia.org/wiki/Petra"
+        },
+        {
+          "type": "text",
+          "prompt": "Which line of latitude is at zero degrees?",
+          "answer": "The Equator",
+          "accept": [
+            "equator"
+          ],
+          "note": "North of it is the Northern Hemisphere and south is the Southern.",
+          "source": "https://en.wikipedia.org/wiki/Equator"
+        },
+        {
+          "type": "tf",
+          "prompt": "Greenland is the largest island in the world.",
+          "answer": true,
+          "note": "Australia is bigger but counts as a continent.",
+          "source": "https://en.wikipedia.org/wiki/Greenland"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which desert covers much of southern Mongolia and northern China?",
+          "options": [
+            "The Gobi Desert",
+            "The Sahara",
+            "The Atacama",
+            "The Namib"
+          ],
+          "answer": "The Gobi Desert",
+          "note": "Many dinosaur fossils have been found in the Gobi.",
+          "source": "https://en.wikipedia.org/wiki/Gobi_Desert"
+        },
+        {
+          "type": "text",
+          "prompt": "What is the capital city of Japan?",
+          "answer": "Tokyo",
+          "accept": [
+            "Tokio"
+          ],
+          "note": "Tokyo is one of the biggest cities in the world.",
+          "source": "https://en.wikipedia.org/wiki/Tokyo"
+        }
+      ]
+    },
+    {
+      "name": "History",
+      "questions": [
+        {
+          "type": "number",
+          "prompt": "In which year did the Berlin Wall come down?",
+          "answer": 1989,
+          "tolerance": 0,
+          "note": "Germany became one country again in 1990.",
+          "source": "https://en.wikipedia.org/wiki/Berlin_Wall"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who was the first Roman emperor?",
+          "options": [
+            "Julius Caesar",
+            "Augustus",
+            "Nero",
+            "Constantine"
+          ],
+          "answer": "Augustus",
+          "note": "Augustus was Julius Caesar's great-nephew and adopted son.",
+          "source": "https://en.wikipedia.org/wiki/Augustus"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which ancient people built Machu Picchu in the Andes?",
+          "options": [
+            "The Maya",
+            "The Aztecs",
+            "The Inca",
+            "The Romans"
+          ],
+          "answer": "The Inca",
+          "note": "It sits high in the mountains of Peru.",
+          "source": "https://en.wikipedia.org/wiki/Machu_Picchu"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year was Magna Carta sealed in England?",
+          "answer": 1215,
+          "tolerance": 0,
+          "note": "It limited the power of King John.",
+          "source": "https://en.wikipedia.org/wiki/Magna_Carta"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which explorer sailed across the Atlantic in 1492 on a voyage that reached the Americas?",
+          "options": [
+            "Vasco da Gama",
+            "Ferdinand Magellan",
+            "James Cook",
+            "Christopher Columbus"
+          ],
+          "answer": "Christopher Columbus",
+          "note": "He thought he had reached Asia.",
+          "source": "https://en.wikipedia.org/wiki/Christopher_Columbus"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year did the Second World War end?",
+          "answer": 1945,
+          "tolerance": 0,
+          "note": "The war in Europe ended in May and in Asia in September.",
+          "source": "https://en.wikipedia.org/wiki/World_War_II"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who is credited with inventing the telephone in the 1870s?",
+          "options": [
+            "Alexander Graham Bell",
+            "Thomas Edison",
+            "Nikola Tesla",
+            "Guglielmo Marconi"
+          ],
+          "answer": "Alexander Graham Bell",
+          "note": "Bell was born in Edinburgh.",
+          "source": "https://en.wikipedia.org/wiki/Alexander_Graham_Bell"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Johannes Gutenberg is famous for introducing which invention to Europe?",
+          "options": [
+            "The telescope",
+            "The printing press with movable type",
+            "The steam engine",
+            "The compass"
+          ],
+          "answer": "The printing press with movable type",
+          "note": "It helped books become cheaper and more common.",
+          "source": "https://en.wikipedia.org/wiki/Johannes_Gutenberg"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who was the first woman to win a Nobel Prize?",
+          "options": [
+            "Florence Nightingale",
+            "Mother Teresa",
+            "Marie Curie",
+            "Rosalind Franklin"
+          ],
+          "answer": "Marie Curie",
+          "note": "She won in 1903, and won a second Nobel Prize in 1911.",
+          "source": "https://en.wikipedia.org/wiki/Marie_Curie"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The Byzantine Empire was ruled from which city?",
+          "options": [
+            "Athens",
+            "Alexandria",
+            "Rome",
+            "Constantinople"
+          ],
+          "answer": "Constantinople",
+          "note": "Today it is called Istanbul.",
+          "source": "https://en.wikipedia.org/wiki/Byzantine_Empire"
+        }
+      ]
+    },
+    {
+      "name": "Maths, Tech and Words",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "What does the abbreviation CPU stand for?",
+          "options": [
+            "Central Processing Unit",
+            "Computer Power Unit",
+            "Central Program Utility",
+            "Core Processing Update"
+          ],
+          "answer": "Central Processing Unit",
+          "note": "The CPU is often called the brain of a computer.",
+          "source": "https://en.wikipedia.org/wiki/Central_processing_unit"
+        },
+        {
+          "type": "number",
+          "prompt": "What is the square root of 144?",
+          "answer": 12,
+          "tolerance": 0,
+          "note": "12 times 12 is 144.",
+          "source": "https://en.wikipedia.org/wiki/Square_root"
+        },
+        {
+          "type": "number",
+          "prompt": "What is the value of pi, to two decimal places?",
+          "answer": 3.14,
+          "tolerance": 0.005,
+          "note": "Pi is the distance round a circle divided by the distance across it.",
+          "source": "https://en.wikipedia.org/wiki/Pi"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which of these numbers is a prime number?",
+          "options": [
+            "15",
+            "17",
+            "21",
+            "27"
+          ],
+          "answer": "17",
+          "note": "A prime has exactly two factors, itself and one.",
+          "source": "https://en.wikipedia.org/wiki/Prime_number"
+        },
+        {
+          "type": "text",
+          "prompt": "How many bits make up a byte?",
+          "answer": "8",
+          "accept": [
+            "eight"
+          ],
+          "note": "A byte can store one letter of text.",
+          "source": "https://en.wikipedia.org/wiki/Byte"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who proposed the World Wide Web in 1989?",
+          "options": [
+            "Bill Gates",
+            "Steve Jobs",
+            "Tim Berners-Lee",
+            "Alan Turing"
+          ],
+          "answer": "Tim Berners-Lee",
+          "note": "He worked at the CERN laboratory.",
+          "source": "https://en.wikipedia.org/wiki/Tim_Berners-Lee"
+        },
+        {
+          "type": "number",
+          "prompt": "How many degrees are there in a right angle?",
+          "answer": 90,
+          "tolerance": 0,
+          "note": "A full turn is 360 degrees.",
+          "source": "https://en.wikipedia.org/wiki/Right_angle"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which language has the most native speakers in the world?",
+          "options": [
+            "English",
+            "Spanish",
+            "Hindi",
+            "Mandarin Chinese"
+          ],
+          "answer": "Mandarin Chinese",
+          "note": "English has more learners in total, but fewer native speakers.",
+          "source": "https://en.wikipedia.org/wiki/List_of_languages_by_number_of_native_speakers"
+        },
+        {
+          "type": "number",
+          "prompt": "How many letters are in the English alphabet?",
+          "answer": 26,
+          "tolerance": 0,
+          "note": "Five of them are vowels: a, e, i, o and u.",
+          "source": "https://en.wikipedia.org/wiki/English_alphabet"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What was the programming language Python named after?",
+          "options": [
+            "A British comedy group",
+            "A snake",
+            "A film",
+            "A mountain"
+          ],
+          "answer": "A British comedy group",
+          "note": "It was named after Monty Python's Flying Circus.",
+          "source": "https://en.wikipedia.org/wiki/Python_(programming_language)"
+        }
+      ]
+    },
+    {
+      "name": "Arts, Sport and Culture",
+      "questions": [
+        {
+          "type": "number",
+          "prompt": "How many players from one team are on court at a time in basketball?",
+          "answer": 5,
+          "tolerance": 0,
+          "note": "Basketball was invented in 1891 in the USA.",
+          "source": "https://en.wikipedia.org/wiki/Basketball"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which city hosted the 2012 Summer Olympic Games?",
+          "options": [
+            "Beijing",
+            "London",
+            "Rio de Janeiro",
+            "Athens"
+          ],
+          "answer": "London",
+          "note": "London was the first city to host the Games three times.",
+          "source": "https://en.wikipedia.org/wiki/2012_Summer_Olympics"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who painted The Starry Night?",
+          "options": [
+            "Claude Monet",
+            "Pablo Picasso",
+            "Vincent van Gogh",
+            "Rembrandt"
+          ],
+          "answer": "Vincent van Gogh",
+          "note": "He painted it in 1889 while staying in a hospital in France.",
+          "source": "https://en.wikipedia.org/wiki/The_Starry_Night"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which Shakespeare play does the character Prospero appear?",
+          "options": [
+            "Macbeth",
+            "Hamlet",
+            "Othello",
+            "The Tempest"
+          ],
+          "answer": "The Tempest",
+          "note": "Prospero is a magician living on an island.",
+          "source": "https://en.wikipedia.org/wiki/The_Tempest"
+        },
+        {
+          "type": "number",
+          "prompt": "How many keys does a standard piano have?",
+          "answer": 88,
+          "tolerance": 0,
+          "note": "That is 52 white keys and 36 black keys.",
+          "source": "https://en.wikipedia.org/wiki/Piano"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Origami is the traditional paper-folding art of which country?",
+          "options": [
+            "Japan",
+            "China",
+            "Korea",
+            "Thailand"
+          ],
+          "answer": "Japan",
+          "note": "The word means folding paper.",
+          "source": "https://en.wikipedia.org/wiki/Origami"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who wrote The Hobbit?",
+          "options": [
+            "C. S. Lewis",
+            "J. R. R. Tolkien",
+            "Philip Pullman",
+            "Terry Pratchett"
+          ],
+          "answer": "J. R. R. Tolkien",
+          "note": "It was first published in 1937.",
+          "source": "https://en.wikipedia.org/wiki/The_Hobbit"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who invented the Rubik's Cube?",
+          "options": [
+            "Alexey Pajitnov",
+            "Tim Berners-Lee",
+            "Ernő Rubik",
+            "Nikola Tesla"
+          ],
+          "answer": "Ernő Rubik",
+          "note": "He was a Hungarian professor of architecture.",
+          "source": "https://en.wikipedia.org/wiki/Rubik's_Cube"
+        },
+        {
+          "type": "number",
+          "prompt": "Every how many years is the men's FIFA World Cup normally held?",
+          "answer": 4,
+          "tolerance": 0,
+          "note": "The first tournament was in 1930 in Uruguay.",
+          "source": "https://en.wikipedia.org/wiki/FIFA_World_Cup"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which city were the first modern Olympic Games held in 1896?",
+          "options": [
+            "Paris",
+            "London",
+            "Rome",
+            "Athens"
+          ],
+          "answer": "Athens",
+          "note": "They were held in a restored ancient stadium.",
+          "source": "https://en.wikipedia.org/wiki/1896_Summer_Olympics"
+        }
+      ]
+    }
+  ]
+}

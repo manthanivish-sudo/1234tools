@@ -1,0 +1,632 @@
+{
+  "v": 1,
+  "id": "uk-general",
+  "title": "UK General Knowledge",
+  "ages": "all",
+  "region": "uk",
+  "count": 50,
+  "reviewed": "2026-10-27",
+  "sources": [
+    "en.wikipedia.org"
+  ],
+  "rounds": [
+    {
+      "name": "Geography",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "What is the highest mountain in the United Kingdom?",
+          "options": [
+            "Snowdon",
+            "Scafell Pike",
+            "Ben Nevis",
+            "Cairn Gorm"
+          ],
+          "answer": "Ben Nevis",
+          "note": "Ben Nevis is in the Scottish Highlands and is about 1,345 metres high.",
+          "source": "https://en.wikipedia.org/wiki/Ben_Nevis"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which is the longest river in Great Britain?",
+          "options": [
+            "The Thames",
+            "The Trent",
+            "The Tay",
+            "The Severn"
+          ],
+          "answer": "The Severn",
+          "note": "It flows from Wales through England to the Bristol Channel.",
+          "source": "https://en.wikipedia.org/wiki/River_Severn"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the capital city of Wales?",
+          "options": [
+            "Cardiff",
+            "Swansea",
+            "Newport",
+            "Bangor"
+          ],
+          "answer": "Cardiff",
+          "note": "Cardiff became the capital in 1955.",
+          "source": "https://en.wikipedia.org/wiki/Cardiff"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the capital city of Scotland?",
+          "options": [
+            "Glasgow",
+            "Edinburgh",
+            "Aberdeen",
+            "Inverness"
+          ],
+          "answer": "Edinburgh",
+          "note": "Edinburgh Castle stands on an extinct volcano.",
+          "source": "https://en.wikipedia.org/wiki/Edinburgh"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which is the largest lake in the United Kingdom by area?",
+          "options": [
+            "Loch Lomond",
+            "Windermere",
+            "Lough Neagh",
+            "Loch Ness"
+          ],
+          "answer": "Lough Neagh",
+          "note": "It is in Northern Ireland.",
+          "source": "https://en.wikipedia.org/wiki/Lough_Neagh"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which island lies off the south coast of England and can be reached by ferry from Portsmouth?",
+          "options": [
+            "Anglesey",
+            "Brownsea Island",
+            "Lundy",
+            "The Isle of Wight"
+          ],
+          "answer": "The Isle of Wight",
+          "note": "The island is known for its sandy beaches and dinosaur fossils.",
+          "source": "https://en.wikipedia.org/wiki/Isle_of_Wight"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which part of the UK is the Giant's Causeway?",
+          "options": [
+            "Northern Ireland",
+            "Scotland",
+            "Wales",
+            "Cornwall"
+          ],
+          "answer": "Northern Ireland",
+          "note": "It is made of about 40,000 stone columns.",
+          "source": "https://en.wikipedia.org/wiki/Giant's_Causeway"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The Lake District National Park is in which English county?",
+          "options": [
+            "Devon",
+            "Cumbria",
+            "Norfolk",
+            "Kent"
+          ],
+          "answer": "Cumbria",
+          "note": "Windermere is the largest lake in England.",
+          "source": "https://en.wikipedia.org/wiki/Lake_District"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Fingal's Cave, with its basalt columns, is on which Scottish island?",
+          "options": [
+            "Skye",
+            "Iona",
+            "Staffa",
+            "Arran"
+          ],
+          "answer": "Staffa",
+          "note": "Mendelssohn wrote an overture after visiting it.",
+          "source": "https://en.wikipedia.org/wiki/Fingal's_Cave"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The White Cliffs of Dover look across the English Channel towards which country?",
+          "options": [
+            "Belgium",
+            "The Netherlands",
+            "Spain",
+            "France"
+          ],
+          "answer": "France",
+          "note": "On a clear day you can see the French coast.",
+          "source": "https://en.wikipedia.org/wiki/White_Cliffs_of_Dover"
+        }
+      ]
+    },
+    {
+      "name": "History",
+      "questions": [
+        {
+          "type": "number",
+          "prompt": "In which year was the Battle of Hastings fought?",
+          "answer": 1066,
+          "tolerance": 0,
+          "note": "William of Normandy won and became king of England.",
+          "source": "https://en.wikipedia.org/wiki/Battle_of_Hastings"
+        },
+        {
+          "type": "number",
+          "prompt": "How many wives did King Henry VIII have?",
+          "answer": 6,
+          "tolerance": 0,
+          "note": "A rhyme helps people remember: divorced, beheaded, died, divorced, beheaded, survived.",
+          "source": "https://en.wikipedia.org/wiki/Henry_VIII"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year was the Great Fire of London?",
+          "answer": 1666,
+          "tolerance": 0,
+          "note": "It destroyed most of the old city but few people died.",
+          "source": "https://en.wikipedia.org/wiki/Great_Fire_of_London"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which queen was on the English throne when the Spanish Armada sailed in 1588?",
+          "options": [
+            "Elizabeth I",
+            "Mary I",
+            "Victoria",
+            "Anne"
+          ],
+          "answer": "Elizabeth I",
+          "note": "She gave a famous speech to her troops at Tilbury.",
+          "source": "https://en.wikipedia.org/wiki/Spanish_Armada"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which king ordered the building of the Tower of London soon after 1066?",
+          "options": [
+            "Henry VIII",
+            "William the Conqueror",
+            "Richard I",
+            "Edward III"
+          ],
+          "answer": "William the Conqueror",
+          "note": "It started with the White Tower.",
+          "source": "https://en.wikipedia.org/wiki/Tower_of_London"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year did the Channel Tunnel open?",
+          "answer": 1994,
+          "tolerance": 0,
+          "note": "It links Folkestone in England with Coquelles in France.",
+          "source": "https://en.wikipedia.org/wiki/Channel_Tunnel"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year did the Acts of Union join England and Scotland into the Kingdom of Great Britain?",
+          "answer": 1707,
+          "tolerance": 0,
+          "note": "The two countries shared one parliament from then on, meeting at Westminster.",
+          "source": "https://en.wikipedia.org/wiki/Acts_of_Union_1707"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year did Queen Victoria come to the throne?",
+          "answer": 1837,
+          "tolerance": 0,
+          "note": "She was only 18 when she became queen.",
+          "source": "https://en.wikipedia.org/wiki/Queen_Victoria"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who was the British Prime Minister for most of the Second World War?",
+          "options": [
+            "Neville Chamberlain",
+            "Clement Attlee",
+            "Winston Churchill",
+            "Stanley Baldwin"
+          ],
+          "answer": "Winston Churchill",
+          "note": "Churchill became Prime Minister in May 1940.",
+          "source": "https://en.wikipedia.org/wiki/Winston_Churchill"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which admiral died during the Battle of Trafalgar in 1805?",
+          "options": [
+            "Francis Drake",
+            "Walter Raleigh",
+            "Robert Blake",
+            "Horatio Nelson"
+          ],
+          "answer": "Horatio Nelson",
+          "note": "He was on board HMS Victory.",
+          "source": "https://en.wikipedia.org/wiki/Battle_of_Trafalgar"
+        }
+      ]
+    },
+    {
+      "name": "Science and Inventions",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Which Scottish scientist discovered penicillin in 1928?",
+          "options": [
+            "Alexander Fleming",
+            "Joseph Lister",
+            "Edward Jenner",
+            "James Clerk Maxwell"
+          ],
+          "answer": "Alexander Fleming",
+          "note": "He noticed mould had killed bacteria in a dish.",
+          "source": "https://en.wikipedia.org/wiki/Alexander_Fleming"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which English scientist set out the laws of motion and universal gravitation?",
+          "options": [
+            "Michael Faraday",
+            "Isaac Newton",
+            "Robert Boyle",
+            "Charles Darwin"
+          ],
+          "answer": "Isaac Newton",
+          "note": "He published his famous book in 1687.",
+          "source": "https://en.wikipedia.org/wiki/Isaac_Newton"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who built the first steam locomotive to run on rails, in 1804?",
+          "options": [
+            "George Stephenson",
+            "Isambard Kingdom Brunel",
+            "Richard Trevithick",
+            "Thomas Newcomen"
+          ],
+          "answer": "Richard Trevithick",
+          "note": "It pulled iron and passengers at a Welsh ironworks.",
+          "source": "https://en.wikipedia.org/wiki/Richard_Trevithick"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which mathematician played a central part in breaking the Enigma code at Bletchley Park?",
+          "options": [
+            "Charles Babbage",
+            "Ada Lovelace",
+            "Tommy Flowers",
+            "Alan Turing"
+          ],
+          "answer": "Alan Turing",
+          "note": "Turing also helped create ideas behind modern computers.",
+          "source": "https://en.wikipedia.org/wiki/Alan_Turing"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which pair announced the double-helix structure of DNA in 1953 while working at Cambridge?",
+          "options": [
+            "Watson and Crick",
+            "Hooke and Newton",
+            "Darwin and Wallace",
+            "Fleming and Florey"
+          ],
+          "answer": "Watson and Crick",
+          "note": "Rosalind Franklin's X-ray images were vital to their work.",
+          "source": "https://en.wikipedia.org/wiki/Francis_Crick"
+        },
+        {
+          "type": "tf",
+          "prompt": "Dolly the sheep, the first mammal cloned from an adult cell, was born in Scotland.",
+          "answer": true,
+          "note": "Dolly was born in 1996 at the Roslin Institute near Edinburgh.",
+          "source": "https://en.wikipedia.org/wiki/Dolly_(sheep)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which Scottish engineer greatly improved the steam engine in the 1760s?",
+          "options": [
+            "Robert Stephenson",
+            "James Watt",
+            "John Logie Baird",
+            "Thomas Telford"
+          ],
+          "answer": "James Watt",
+          "note": "The unit of power, the watt, is named after him.",
+          "source": "https://en.wikipedia.org/wiki/James_Watt"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year was Stephen Hawking's A Brief History of Time first published?",
+          "answer": 1988,
+          "tolerance": 0,
+          "note": "It became one of the best-selling science books of all time.",
+          "source": "https://en.wikipedia.org/wiki/A_Brief_History_of_Time"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Through which district of London does the Prime Meridian (0 degrees longitude) pass?",
+          "options": [
+            "Westminster",
+            "Camden",
+            "Greenwich",
+            "Kensington"
+          ],
+          "answer": "Greenwich",
+          "note": "Greenwich Mean Time is named after it.",
+          "source": "https://en.wikipedia.org/wiki/Prime_meridian"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who developed the first smallpox vaccine in 1796?",
+          "options": [
+            "Louis Pasteur",
+            "Joseph Lister",
+            "Florence Nightingale",
+            "Edward Jenner"
+          ],
+          "answer": "Edward Jenner",
+          "note": "He used cowpox to protect people against smallpox.",
+          "source": "https://en.wikipedia.org/wiki/Edward_Jenner"
+        }
+      ]
+    },
+    {
+      "name": "Culture and Arts",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "In which town was William Shakespeare born?",
+          "options": [
+            "Stratford-upon-Avon",
+            "London",
+            "Oxford",
+            "Canterbury"
+          ],
+          "answer": "Stratford-upon-Avon",
+          "note": "He was baptised there in 1564.",
+          "source": "https://en.wikipedia.org/wiki/William_Shakespeare"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who wrote Oliver Twist?",
+          "options": [
+            "Thomas Hardy",
+            "Charles Dickens",
+            "George Orwell",
+            "Jane Austen"
+          ],
+          "answer": "Charles Dickens",
+          "note": "It was first published in instalments in a magazine.",
+          "source": "https://en.wikipedia.org/wiki/Oliver_Twist"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who wrote Alice's Adventures in Wonderland?",
+          "options": [
+            "J. M. Barrie",
+            "Kenneth Grahame",
+            "Lewis Carroll",
+            "Beatrix Potter"
+          ],
+          "answer": "Lewis Carroll",
+          "note": "Lewis Carroll was the pen name of Charles Dodgson.",
+          "source": "https://en.wikipedia.org/wiki/Alice's_Adventures_in_Wonderland"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who created Winnie-the-Pooh?",
+          "options": [
+            "Michael Bond",
+            "Enid Blyton",
+            "Rudyard Kipling",
+            "A. A. Milne"
+          ],
+          "answer": "A. A. Milne",
+          "note": "Pooh is named after a real bear at London Zoo and a swan.",
+          "source": "https://en.wikipedia.org/wiki/Winnie-the-Pooh"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which British band, formed in London in 1962, was fronted by Mick Jagger?",
+          "options": [
+            "The Rolling Stones",
+            "The Who",
+            "The Kinks",
+            "Queen"
+          ],
+          "answer": "The Rolling Stones",
+          "note": "The band named itself after a Muddy Waters song.",
+          "source": "https://en.wikipedia.org/wiki/The_Rolling_Stones"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which month is the Edinburgh Festival Fringe usually held?",
+          "options": [
+            "February",
+            "August",
+            "May",
+            "November"
+          ],
+          "answer": "August",
+          "note": "It is one of the largest arts festivals in the world.",
+          "source": "https://en.wikipedia.org/wiki/Edinburgh_Festival_Fringe"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which English county is Stonehenge?",
+          "options": [
+            "Cornwall",
+            "Yorkshire",
+            "Wiltshire",
+            "Suffolk"
+          ],
+          "answer": "Wiltshire",
+          "note": "The huge stones were put up about 4,500 years ago.",
+          "source": "https://en.wikipedia.org/wiki/Stonehenge"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The Eisteddfod is a festival of music and poetry in which country?",
+          "options": [
+            "Scotland",
+            "Ireland",
+            "Cornwall",
+            "Wales"
+          ],
+          "answer": "Wales",
+          "note": "Welsh is the main language used there.",
+          "source": "https://en.wikipedia.org/wiki/Eisteddfod"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which British artist painted The Fighting Temeraire?",
+          "options": [
+            "J. M. W. Turner",
+            "John Constable",
+            "L. S. Lowry",
+            "David Hockney"
+          ],
+          "answer": "J. M. W. Turner",
+          "note": "The painting shows an old warship being towed to be broken up.",
+          "source": "https://en.wikipedia.org/wiki/The_Fighting_Temeraire"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which London art gallery is housed in a former power station?",
+          "options": [
+            "The National Gallery",
+            "Tate Modern",
+            "The Courtauld",
+            "The Wallace Collection"
+          ],
+          "answer": "Tate Modern",
+          "note": "It opened in 2000 on the south bank of the Thames.",
+          "source": "https://en.wikipedia.org/wiki/Tate_Modern"
+        }
+      ]
+    },
+    {
+      "name": "Everyday Britain",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "In which county does the Cornish pasty come from?",
+          "options": [
+            "Devon",
+            "Dorset",
+            "Cornwall",
+            "Somerset"
+          ],
+          "answer": "Cornwall",
+          "note": "Tin miners carried pasties for lunch.",
+          "source": "https://en.wikipedia.org/wiki/Cornish_pasty"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Haggis is a traditional dish of which country?",
+          "options": [
+            "Wales",
+            "England",
+            "Ireland",
+            "Scotland"
+          ],
+          "answer": "Scotland",
+          "note": "It is served on Burns Night with neeps and tatties.",
+          "source": "https://en.wikipedia.org/wiki/Haggis"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The game of rugby is named after a school in which English town?",
+          "options": [
+            "Rugby",
+            "Eton",
+            "Harrow",
+            "Winchester"
+          ],
+          "answer": "Rugby",
+          "note": "The story goes that a pupil picked up the ball and ran with it.",
+          "source": "https://en.wikipedia.org/wiki/Rugby_School"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which country did the modern game of golf develop?",
+          "options": [
+            "England",
+            "Scotland",
+            "The Netherlands",
+            "The USA"
+          ],
+          "answer": "Scotland",
+          "note": "St Andrews is known as the home of golf.",
+          "source": "https://en.wikipedia.org/wiki/Golf"
+        },
+        {
+          "type": "mcq",
+          "prompt": "On which side of the road do vehicles drive in the UK?",
+          "options": [
+            "The right",
+            "It depends on the city",
+            "The left",
+            "The middle"
+          ],
+          "answer": "The left",
+          "note": "Many former British territories, such as India, Australia and Kenya, also drive on the left.",
+          "source": "https://en.wikipedia.org/wiki/Left-_and_right-hand_traffic"
+        },
+        {
+          "type": "number",
+          "prompt": "How many pence are there in one pound sterling?",
+          "answer": 100,
+          "tolerance": 0,
+          "note": "Britain changed to this system in 1971.",
+          "source": "https://en.wikipedia.org/wiki/Pound_sterling"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which number Downing Street is the official home of the Prime Minister?",
+          "options": [
+            "Number 1",
+            "Number 11",
+            "Number 7",
+            "Number 10"
+          ],
+          "answer": "Number 10",
+          "note": "Number 11 is the home of the Chancellor of the Exchequer.",
+          "source": "https://en.wikipedia.org/wiki/10_Downing_Street"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year did the first London Underground railway open?",
+          "answer": 1863,
+          "tolerance": 0,
+          "note": "It is the oldest underground railway in the world.",
+          "source": "https://en.wikipedia.org/wiki/London_Underground"
+        },
+        {
+          "type": "tf",
+          "prompt": "Big Ben is the name of the clock tower at the Palace of Westminster.",
+          "answer": false,
+          "note": "Big Ben is the nickname of the great bell inside the tower.",
+          "source": "https://en.wikipedia.org/wiki/Big_Ben"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is celebrated in Britain on 5 November with bonfires and fireworks?",
+          "options": [
+            "Guy Fawkes Night",
+            "Burns Night",
+            "Hogmanay",
+            "Trafalgar Day"
+          ],
+          "answer": "Guy Fawkes Night",
+          "note": "It remembers the failed Gunpowder Plot of 1605.",
+          "source": "https://en.wikipedia.org/wiki/Guy_Fawkes_Night"
+        }
+      ]
+    }
+  ]
+}

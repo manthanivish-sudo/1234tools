@@ -1,0 +1,608 @@
+{
+  "v": 1,
+  "id": "kids-5-7",
+  "title": "Kids' Quiz (ages 5–7)",
+  "ages": "5-7",
+  "region": "global",
+  "count": 50,
+  "reviewed": "2026-10-27",
+  "sources": [
+    "en.wikipedia.org"
+  ],
+  "rounds": [
+    {
+      "name": "Animals",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "What sound does a cow make?",
+          "options": [
+            "Moo",
+            "Baa",
+            "Quack",
+            "Oink"
+          ],
+          "answer": "Moo",
+          "note": "Cows moo to talk to each other and to their calves.",
+          "source": "https://en.wikipedia.org/wiki/Cattle"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which animal has a long trunk?",
+          "options": [
+            "Lion",
+            "Elephant",
+            "Rabbit",
+            "Horse"
+          ],
+          "answer": "Elephant",
+          "note": "An elephant uses its trunk like a hand to pick things up.",
+          "source": "https://en.wikipedia.org/wiki/Elephant"
+        },
+        {
+          "type": "mcq",
+          "prompt": "A baby cat is called a what?",
+          "options": [
+            "Puppy",
+            "Calf",
+            "Kitten",
+            "Cub"
+          ],
+          "answer": "Kitten",
+          "note": "Kittens sleep for most of the day.",
+          "source": "https://en.wikipedia.org/wiki/Kitten"
+        },
+        {
+          "type": "number",
+          "prompt": "How many legs does a dog have?",
+          "answer": 4,
+          "tolerance": 0,
+          "note": "Dogs walk on four legs.",
+          "source": "https://en.wikipedia.org/wiki/Dog"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which animal hops and says ribbit?",
+          "options": [
+            "Snake",
+            "Fish",
+            "Mouse",
+            "Frog"
+          ],
+          "answer": "Frog",
+          "note": "Frogs can jump many times their own length.",
+          "source": "https://en.wikipedia.org/wiki/Frog"
+        },
+        {
+          "type": "tf",
+          "prompt": "Fish live in water.",
+          "answer": true,
+          "note": "Fish breathe underwater using gills.",
+          "source": "https://en.wikipedia.org/wiki/Fish"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which bird swims very well but cannot fly?",
+          "options": [
+            "Penguin",
+            "Robin",
+            "Eagle",
+            "Owl"
+          ],
+          "answer": "Penguin",
+          "note": "Penguins use their wings like flippers.",
+          "source": "https://en.wikipedia.org/wiki/Penguin"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which animal gives us wool?",
+          "options": [
+            "Cow",
+            "Sheep",
+            "Hen",
+            "Pig"
+          ],
+          "answer": "Sheep",
+          "note": "A sheep grows a thick woolly coat that is cut off once a year.",
+          "source": "https://en.wikipedia.org/wiki/Wool"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which animal is the tallest in the world?",
+          "options": [
+            "Elephant",
+            "Horse",
+            "Giraffe",
+            "Camel"
+          ],
+          "answer": "Giraffe",
+          "note": "A giraffe can reach leaves very high in the trees.",
+          "source": "https://en.wikipedia.org/wiki/Giraffe"
+        },
+        {
+          "type": "tf",
+          "prompt": "A spider has six legs.",
+          "answer": false,
+          "note": "Spiders have eight legs. Insects have six.",
+          "source": "https://en.wikipedia.org/wiki/Spider"
+        }
+      ]
+    },
+    {
+      "name": "Colours and Shapes",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "What colour do you get if you mix blue and yellow paint?",
+          "options": [
+            "Purple",
+            "Orange",
+            "Brown",
+            "Green"
+          ],
+          "answer": "Green",
+          "note": "Blue and yellow make the green of grass and leaves.",
+          "source": "https://en.wikipedia.org/wiki/Color_wheel"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What colour do you get if you mix red and yellow paint?",
+          "options": [
+            "Orange",
+            "Green",
+            "Pink",
+            "Blue"
+          ],
+          "answer": "Orange",
+          "note": "Red and yellow make orange, just like the fruit.",
+          "source": "https://en.wikipedia.org/wiki/Color_wheel"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What colour is a ripe banana?",
+          "options": [
+            "Blue",
+            "Yellow",
+            "Purple",
+            "Red"
+          ],
+          "answer": "Yellow",
+          "note": "Bananas start green and turn yellow as they ripen.",
+          "source": "https://en.wikipedia.org/wiki/Banana"
+        },
+        {
+          "type": "number",
+          "prompt": "How many sides does a triangle have?",
+          "answer": 3,
+          "tolerance": 0,
+          "note": "Tri means three.",
+          "source": "https://en.wikipedia.org/wiki/Triangle"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which shape has four equal sides and four square corners?",
+          "options": [
+            "Circle",
+            "Triangle",
+            "Square",
+            "Star"
+          ],
+          "answer": "Square",
+          "note": "A square is a special kind of rectangle.",
+          "source": "https://en.wikipedia.org/wiki/Square"
+        },
+        {
+          "type": "tf",
+          "prompt": "A circle has corners.",
+          "answer": false,
+          "note": "A circle is perfectly round, with no corners at all.",
+          "source": "https://en.wikipedia.org/wiki/Circle"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What colour is the sky on a clear, sunny day?",
+          "options": [
+            "Green",
+            "Pink",
+            "Brown",
+            "Blue"
+          ],
+          "answer": "Blue",
+          "note": "Sunlight is scattered by the air, and blue light scatters the most.",
+          "source": "https://en.wikipedia.org/wiki/Sky"
+        },
+        {
+          "type": "number",
+          "prompt": "How many colours are in a rainbow, as we usually count them?",
+          "answer": 7,
+          "tolerance": 0,
+          "note": "Red, orange, yellow, green, blue, indigo and violet.",
+          "source": "https://en.wikipedia.org/wiki/Rainbow"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which solid shape is a ball?",
+          "options": [
+            "Sphere",
+            "Cube",
+            "Cone",
+            "Pyramid"
+          ],
+          "answer": "Sphere",
+          "note": "A sphere is round all the way around.",
+          "source": "https://en.wikipedia.org/wiki/Sphere"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What colour do you get if you mix red and white paint?",
+          "options": [
+            "Green",
+            "Pink",
+            "Grey",
+            "Yellow"
+          ],
+          "answer": "Pink",
+          "note": "The more white you add, the paler the pink.",
+          "source": "https://en.wikipedia.org/wiki/Pink"
+        }
+      ]
+    },
+    {
+      "name": "Nature and Food",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Which season comes after winter?",
+          "options": [
+            "Summer",
+            "Autumn",
+            "Spring",
+            "Monsoon"
+          ],
+          "answer": "Spring",
+          "note": "In spring, flowers open and new leaves grow.",
+          "source": "https://en.wikipedia.org/wiki/Season"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What do bees make?",
+          "options": [
+            "Milk",
+            "Butter",
+            "Sugar cane",
+            "Honey"
+          ],
+          "answer": "Honey",
+          "note": "A bee makes only a tiny bit of honey in its whole life.",
+          "source": "https://en.wikipedia.org/wiki/Honey_bee"
+        },
+        {
+          "type": "tf",
+          "prompt": "Carrots grow underground.",
+          "answer": true,
+          "note": "The orange part of a carrot is a root.",
+          "source": "https://en.wikipedia.org/wiki/Carrot"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which of these is a fruit?",
+          "options": [
+            "Apple",
+            "Carrot",
+            "Potato",
+            "Onion"
+          ],
+          "answer": "Apple",
+          "note": "An apple grows on a tree and has seeds inside.",
+          "source": "https://en.wikipedia.org/wiki/Apple"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What do hens lay?",
+          "options": [
+            "Milk",
+            "Eggs",
+            "Acorns",
+            "Pebbles"
+          ],
+          "answer": "Eggs",
+          "note": "A good laying hen can lay nearly one egg a day.",
+          "source": "https://en.wikipedia.org/wiki/Chicken"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What do we call frozen water?",
+          "options": [
+            "Steam",
+            "Mud",
+            "Ice",
+            "Cloud"
+          ],
+          "answer": "Ice",
+          "note": "Water turns to ice when it gets cold enough.",
+          "source": "https://en.wikipedia.org/wiki/Ice"
+        },
+        {
+          "type": "tf",
+          "prompt": "The Sun comes up in the morning.",
+          "answer": true,
+          "note": "We call this sunrise.",
+          "source": "https://en.wikipedia.org/wiki/Sunrise"
+        },
+        {
+          "type": "mcq",
+          "prompt": "A caterpillar can turn into what?",
+          "options": [
+            "A beetle",
+            "A bee",
+            "A ladybird",
+            "A butterfly"
+          ],
+          "answer": "A butterfly",
+          "note": "The caterpillar rests in a cocoon or chrysalis while it changes.",
+          "source": "https://en.wikipedia.org/wiki/Caterpillar"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What colour are most leaves in summer?",
+          "options": [
+            "Green",
+            "Red",
+            "Blue",
+            "Purple"
+          ],
+          "answer": "Green",
+          "note": "Leaves are green because of a substance called chlorophyll.",
+          "source": "https://en.wikipedia.org/wiki/Leaf"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the name of the planet we live on?",
+          "options": [
+            "Mars",
+            "Earth",
+            "Jupiter",
+            "Venus"
+          ],
+          "answer": "Earth",
+          "note": "Earth is the only planet we know that has living things.",
+          "source": "https://en.wikipedia.org/wiki/Earth"
+        }
+      ]
+    },
+    {
+      "name": "Stories and Rhymes",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Who huffs and puffs in The Three Little Pigs?",
+          "options": [
+            "The fox",
+            "The bear",
+            "The wolf",
+            "The tiger"
+          ],
+          "answer": "The wolf",
+          "note": "The wolf could not blow down the house made of bricks.",
+          "source": "https://en.wikipedia.org/wiki/The_Three_Little_Pigs"
+        },
+        {
+          "type": "number",
+          "prompt": "How many bears does Goldilocks meet in the story?",
+          "answer": 3,
+          "tolerance": 0,
+          "note": "Daddy bear, Mummy bear and Baby bear.",
+          "source": "https://en.wikipedia.org/wiki/Goldilocks_and_the_Three_Bears"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What did Cinderella lose at the ball?",
+          "options": [
+            "A crown",
+            "A necklace",
+            "An umbrella",
+            "A glass slipper"
+          ],
+          "answer": "A glass slipper",
+          "note": "The prince used the slipper to find her.",
+          "source": "https://en.wikipedia.org/wiki/Cinderella"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In the rhyme, what was Humpty Dumpty sitting on?",
+          "options": [
+            "A wall",
+            "A chair",
+            "A horse",
+            "A tree"
+          ],
+          "answer": "A wall",
+          "note": "Humpty is usually drawn as an egg.",
+          "source": "https://en.wikipedia.org/wiki/Humpty_Dumpty"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What does Jack get for his cow in Jack and the Beanstalk?",
+          "options": [
+            "A golden egg",
+            "Magic beans",
+            "A harp",
+            "A bag of apples"
+          ],
+          "answer": "Magic beans",
+          "note": "The beans grew into a giant beanstalk overnight.",
+          "source": "https://en.wikipedia.org/wiki/Jack_and_the_Beanstalk"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who does Little Red Riding Hood go to visit?",
+          "options": [
+            "Her teacher",
+            "Her cousin",
+            "Her grandmother",
+            "Her aunt"
+          ],
+          "answer": "Her grandmother",
+          "note": "She carries a basket of food for her.",
+          "source": "https://en.wikipedia.org/wiki/Little_Red_Riding_Hood"
+        },
+        {
+          "type": "number",
+          "prompt": "In the nursery rhyme, how many blind mice are there?",
+          "answer": 3,
+          "tolerance": 0,
+          "note": "They ran after the farmer's wife in the rhyme.",
+          "source": "https://en.wikipedia.org/wiki/Three_Blind_Mice"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What does the Gingerbread Man keep doing in the story?",
+          "options": [
+            "Singing",
+            "Sleeping",
+            "Dancing",
+            "Running away"
+          ],
+          "answer": "Running away",
+          "note": "He tells everyone they cannot catch him.",
+          "source": "https://en.wikipedia.org/wiki/The_Gingerbread_Man"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who wrote The Tale of Peter Rabbit?",
+          "options": [
+            "Beatrix Potter",
+            "Roald Dahl",
+            "Enid Blyton",
+            "A. A. Milne"
+          ],
+          "answer": "Beatrix Potter",
+          "note": "Beatrix Potter also drew the pictures herself.",
+          "source": "https://en.wikipedia.org/wiki/The_Tale_of_Peter_Rabbit"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What does the Ugly Duckling grow up to be?",
+          "options": [
+            "A goose",
+            "A swan",
+            "A hen",
+            "A peacock"
+          ],
+          "answer": "A swan",
+          "note": "He was a beautiful swan all along.",
+          "source": "https://en.wikipedia.org/wiki/The_Ugly_Duckling"
+        }
+      ]
+    },
+    {
+      "name": "Our World",
+      "questions": [
+        {
+          "type": "number",
+          "prompt": "How many days are there in a week?",
+          "answer": 7,
+          "tolerance": 0,
+          "note": "Monday to Sunday.",
+          "source": "https://en.wikipedia.org/wiki/Week"
+        },
+        {
+          "type": "number",
+          "prompt": "How many fingers and thumbs are on one hand?",
+          "answer": 5,
+          "tolerance": 0,
+          "note": "Two hands make ten.",
+          "source": "https://en.wikipedia.org/wiki/Finger"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which part of the body do we use to see?",
+          "options": [
+            "Ears",
+            "Nose",
+            "Eyes",
+            "Knees"
+          ],
+          "answer": "Eyes",
+          "note": "Eyes work with the brain to make pictures of the world.",
+          "source": "https://en.wikipedia.org/wiki/Human_eye"
+        },
+        {
+          "type": "number",
+          "prompt": "How many months are in a year?",
+          "answer": 12,
+          "tolerance": 0,
+          "note": "January is the first and December is the last.",
+          "source": "https://en.wikipedia.org/wiki/Month"
+        },
+        {
+          "type": "tf",
+          "prompt": "The Moon is made of cheese.",
+          "answer": false,
+          "note": "The Moon is made of rock.",
+          "source": "https://en.wikipedia.org/wiki/Moon"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the name of the star that gives us light in the day?",
+          "options": [
+            "The Moon",
+            "Mars",
+            "Pluto",
+            "The Sun"
+          ],
+          "answer": "The Sun",
+          "note": "The Sun is a star that looks big because it is close.",
+          "source": "https://en.wikipedia.org/wiki/Sun"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which meal do we eat in the morning?",
+          "options": [
+            "Breakfast",
+            "Dinner",
+            "Supper",
+            "Tea party"
+          ],
+          "answer": "Breakfast",
+          "note": "Break-fast means ending the night's fast.",
+          "source": "https://en.wikipedia.org/wiki/Breakfast"
+        },
+        {
+          "type": "number",
+          "prompt": "How many wheels does a bicycle have?",
+          "answer": 2,
+          "tolerance": 0,
+          "note": "Bi means two.",
+          "source": "https://en.wikipedia.org/wiki/Bicycle"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What do we use to clean our teeth?",
+          "options": [
+            "A comb",
+            "A toothbrush",
+            "A spoon",
+            "A sponge"
+          ],
+          "answer": "A toothbrush",
+          "note": "Brush your teeth twice a day.",
+          "source": "https://en.wikipedia.org/wiki/Toothbrush"
+        },
+        {
+          "type": "mcq",
+          "prompt": "At traffic lights, which colour means stop?",
+          "options": [
+            "Green",
+            "Blue",
+            "Red",
+            "White"
+          ],
+          "answer": "Red",
+          "note": "Green means go.",
+          "source": "https://en.wikipedia.org/wiki/Traffic_light"
+        }
+      ]
+    }
+  ]
+}

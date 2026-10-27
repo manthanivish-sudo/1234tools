@@ -1,0 +1,601 @@
+{
+  "v": 1,
+  "id": "cricket",
+  "title": "Cricket Quiz",
+  "ages": "all",
+  "region": "global",
+  "count": 50,
+  "reviewed": "2026-10-27",
+  "sources": [
+    "en.wikipedia.org"
+  ],
+  "rounds": [
+    {
+      "name": "Rules and Terms",
+      "questions": [
+        {
+          "type": "number",
+          "prompt": "How many players are in a cricket team on the field?",
+          "answer": 11,
+          "tolerance": 0,
+          "note": "Two batters from the other side are also in the middle.",
+          "source": "https://en.wikipedia.org/wiki/Cricket"
+        },
+        {
+          "type": "number",
+          "prompt": "How many legal balls are bowled in a standard over?",
+          "answer": 6,
+          "tolerance": 0,
+          "note": "In the past some countries used 8-ball overs.",
+          "source": "https://en.wikipedia.org/wiki/Over_(cricket)"
+        },
+        {
+          "type": "number",
+          "prompt": "How many stumps make up a wicket?",
+          "answer": 3,
+          "tolerance": 0,
+          "note": "The stumps are topped with two bails.",
+          "source": "https://en.wikipedia.org/wiki/Wicket"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is it called when a batter is out without scoring a run?",
+          "options": [
+            "A maiden",
+            "A duck",
+            "A blank",
+            "A bye"
+          ],
+          "answer": "A duck",
+          "note": "A golden duck is out on the very first ball.",
+          "source": "https://en.wikipedia.org/wiki/Duck_(cricket)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What does LBW stand for?",
+          "options": [
+            "Long ball wide",
+            "Low bounce wicket",
+            "Leg before wicket",
+            "Last batter waiting"
+          ],
+          "answer": "Leg before wicket",
+          "note": "It applies when the ball would have hit the stumps but hits the batter's leg first.",
+          "source": "https://en.wikipedia.org/wiki/Leg_before_wicket"
+        },
+        {
+          "type": "number",
+          "prompt": "How long is a cricket pitch, from stumps to stumps, in yards?",
+          "answer": 22,
+          "tolerance": 0,
+          "note": "That is one chain, an old unit of measurement.",
+          "source": "https://en.wikipedia.org/wiki/Cricket_pitch"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is it called when a bowler takes wickets with three balls in a row?",
+          "options": [
+            "A triple",
+            "A treble",
+            "A trio",
+            "A hat-trick"
+          ],
+          "answer": "A hat-trick",
+          "note": "The term began in cricket in the 1800s.",
+          "source": "https://en.wikipedia.org/wiki/Hat-trick"
+        },
+        {
+          "type": "tf",
+          "prompt": "A maiden over is an over in which the bowler concedes no runs.",
+          "answer": true,
+          "note": "Maiden means that there are no runs against the bowler's name.",
+          "source": "https://en.wikipedia.org/wiki/Maiden_(cricket)"
+        },
+        {
+          "type": "tf",
+          "prompt": "A wide ball adds a run to the batting team's score.",
+          "answer": true,
+          "note": "A ball is wide if it is too far from the batter to be hit, and the bowler has to bowl it again.",
+          "source": "https://en.wikipedia.org/wiki/Extra_(cricket)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "How many runs does a batter score for hitting the ball over the boundary without it bouncing?",
+          "options": [
+            "Six",
+            "Four",
+            "Five",
+            "Eight"
+          ],
+          "answer": "Six",
+          "note": "If it bounces first, a boundary is worth four.",
+          "source": "https://en.wikipedia.org/wiki/Boundary_(cricket)"
+        }
+      ]
+    },
+    {
+      "name": "Laws and Equipment",
+      "questions": [
+        {
+          "type": "number",
+          "prompt": "How many bails rest on top of the stumps?",
+          "answer": 2,
+          "tolerance": 0,
+          "note": "The bails must fall off for the wicket to be broken.",
+          "source": "https://en.wikipedia.org/wiki/Bail_(cricket)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which colour of ball is traditionally used in Test matches?",
+          "options": [
+            "White",
+            "Red",
+            "Yellow",
+            "Blue"
+          ],
+          "answer": "Red",
+          "note": "White balls are used for limited-overs matches.",
+          "source": "https://en.wikipedia.org/wiki/Cricket_ball"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What do we call the fielder who stands behind the stumps?",
+          "options": [
+            "The slip",
+            "The umpire",
+            "The wicketkeeper",
+            "The long stop"
+          ],
+          "answer": "The wicketkeeper",
+          "note": "Wicketkeepers wear gloves and pads.",
+          "source": "https://en.wikipedia.org/wiki/Wicket-keeper"
+        },
+        {
+          "type": "number",
+          "prompt": "How many overs can each team face in a standard Twenty20 innings?",
+          "answer": 20,
+          "tolerance": 0,
+          "note": "A Twenty20 match often takes about three hours.",
+          "source": "https://en.wikipedia.org/wiki/Twenty20"
+        },
+        {
+          "type": "number",
+          "prompt": "For how many days does a Test match last at most, in its traditional form?",
+          "answer": 5,
+          "tolerance": 0,
+          "note": "In the past there were also Tests with no time limit.",
+          "source": "https://en.wikipedia.org/wiki/Test_cricket"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What does an umpire's raised finger mean?",
+          "options": [
+            "The ball is wide",
+            "It is a no-ball",
+            "The innings is over",
+            "The batter is out"
+          ],
+          "answer": "The batter is out",
+          "note": "The umpire is making a decision.",
+          "source": "https://en.wikipedia.org/wiki/Umpire_(cricket)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The Ashes series is traditionally played between England and which other country?",
+          "options": [
+            "Australia",
+            "India",
+            "South Africa",
+            "New Zealand"
+          ],
+          "answer": "Australia",
+          "note": "The name comes from a joke newspaper notice in 1882.",
+          "source": "https://en.wikipedia.org/wiki/The_Ashes"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What does DRS stand for in cricket?",
+          "options": [
+            "Digital Rule Scorer",
+            "Decision Review System",
+            "Direct Run Sheet",
+            "Double Review Series"
+          ],
+          "answer": "Decision Review System",
+          "note": "Teams can ask for a close umpire call to be checked with technology.",
+          "source": "https://en.wikipedia.org/wiki/Decision_Review_System"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which kind of bowler delivers a googly?",
+          "options": [
+            "A fast bowler",
+            "A medium-pace swing bowler",
+            "A wrist spinner (leg-spinner)",
+            "An off-spinner using the fingers only"
+          ],
+          "answer": "A wrist spinner (leg-spinner)",
+          "note": "The googly turns the opposite way to what the batter expects.",
+          "source": "https://en.wikipedia.org/wiki/Googly"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What does ICC stand for?",
+          "options": [
+            "Indian Cricket Committee",
+            "International Club of Cricket",
+            "Imperial Cricket Congress",
+            "International Cricket Council"
+          ],
+          "answer": "International Cricket Council",
+          "note": "The ICC was founded in 1909 as the Imperial Cricket Conference.",
+          "source": "https://en.wikipedia.org/wiki/International_Cricket_Council"
+        }
+      ]
+    },
+    {
+      "name": "Firsts and Beginnings",
+      "questions": [
+        {
+          "type": "number",
+          "prompt": "In which year was the first official Test match played?",
+          "answer": 1877,
+          "tolerance": 0,
+          "note": "It was between England and Australia.",
+          "source": "https://en.wikipedia.org/wiki/Test_cricket"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year was the first One Day International played?",
+          "answer": 1971,
+          "tolerance": 0,
+          "note": "It was played in Melbourne after a Test was washed out by rain.",
+          "source": "https://en.wikipedia.org/wiki/One_Day_International"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year was the first men's Cricket World Cup held?",
+          "answer": 1975,
+          "tolerance": 0,
+          "note": "It was held in England.",
+          "source": "https://en.wikipedia.org/wiki/1975_Cricket_World_Cup"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which team won the first men's Cricket World Cup in 1975?",
+          "options": [
+            "West Indies",
+            "Australia",
+            "England",
+            "India"
+          ],
+          "answer": "West Indies",
+          "note": "They beat Australia in the final at Lord's.",
+          "source": "https://en.wikipedia.org/wiki/1975_Cricket_World_Cup"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who captained India to victory in the 1983 Cricket World Cup?",
+          "options": [
+            "Sunil Gavaskar",
+            "Kapil Dev",
+            "Mohinder Amarnath",
+            "Bishan Singh Bedi"
+          ],
+          "answer": "Kapil Dev",
+          "note": "India beat the West Indies in the final.",
+          "source": "https://en.wikipedia.org/wiki/1983_Cricket_World_Cup"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Lord's Cricket Ground in London is the home of which club?",
+          "options": [
+            "Surrey County Cricket Club",
+            "Kent County Cricket Club",
+            "Marylebone Cricket Club (MCC)",
+            "Cricket Club of India"
+          ],
+          "answer": "Marylebone Cricket Club (MCC)",
+          "note": "MCC wrote and still looks after the Laws of Cricket.",
+          "source": "https://en.wikipedia.org/wiki/Lord's"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which team won the first ICC Men's T20 World Cup in 2007?",
+          "options": [
+            "Pakistan",
+            "Australia",
+            "Sri Lanka",
+            "India"
+          ],
+          "answer": "India",
+          "note": "It was played in South Africa.",
+          "source": "https://en.wikipedia.org/wiki/2007_ICC_World_Twenty20"
+        },
+        {
+          "type": "tf",
+          "prompt": "The first Women's Cricket World Cup was held before the first men's one.",
+          "answer": true,
+          "note": "It was held in England in 1973.",
+          "source": "https://en.wikipedia.org/wiki/Women's_Cricket_World_Cup"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Cricket was played at the Olympic Games in 1900. In which city were those Games held?",
+          "options": [
+            "Paris",
+            "London",
+            "Athens",
+            "St. Louis"
+          ],
+          "answer": "Paris",
+          "note": "Only two teams played in the cricket match.",
+          "source": "https://en.wikipedia.org/wiki/Cricket_at_the_1900_Summer_Olympics"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year did India play its first Test match?",
+          "answer": 1932,
+          "tolerance": 0,
+          "note": "It was played at Lord's against England.",
+          "source": "https://en.wikipedia.org/wiki/India_national_cricket_team"
+        }
+      ]
+    },
+    {
+      "name": "Famous Matches and Series",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Which England all-rounder starred in the famous 1981 Ashes Test at Headingley?",
+          "options": [
+            "David Gower",
+            "Ian Botham",
+            "Graham Gooch",
+            "Geoffrey Boycott"
+          ],
+          "answer": "Ian Botham",
+          "note": "England won by 18 runs after following on, with Botham making 149 not out.",
+          "source": "https://en.wikipedia.org/wiki/1981_Ashes_series"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The first tied Test match, in 1960, took place in which Australian city?",
+          "options": [
+            "Sydney",
+            "Melbourne",
+            "Brisbane",
+            "Adelaide"
+          ],
+          "answer": "Brisbane",
+          "note": "It was between Australia and the West Indies.",
+          "source": "https://en.wikipedia.org/wiki/Tied_Test"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which country was the controversial Bodyline series of 1932-33 played?",
+          "options": [
+            "England",
+            "India",
+            "South Africa",
+            "Australia"
+          ],
+          "answer": "Australia",
+          "note": "England bowled fast, short balls aimed at the batters' bodies.",
+          "source": "https://en.wikipedia.org/wiki/Bodyline"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which city was the 2011 Cricket World Cup final played, won by India?",
+          "options": [
+            "Mumbai",
+            "Kolkata",
+            "Chennai",
+            "Colombo"
+          ],
+          "answer": "Mumbai",
+          "note": "It was played at the Wankhede Stadium.",
+          "source": "https://en.wikipedia.org/wiki/2011_Cricket_World_Cup_Final"
+        },
+        {
+          "type": "mcq",
+          "prompt": "How was the 2019 Cricket World Cup final at Lord's finally decided?",
+          "options": [
+            "By the Duckworth-Lewis method",
+            "On boundaries scored after a tied Super Over",
+            "By a coin toss",
+            "By a replay the next day"
+          ],
+          "answer": "On boundaries scored after a tied Super Over",
+          "note": "England won, after both the match and the Super Over were tied.",
+          "source": "https://en.wikipedia.org/wiki/2019_Cricket_World_Cup_final"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which team won the 1996 Cricket World Cup, co-hosted by India, Pakistan and Sri Lanka?",
+          "options": [
+            "Australia",
+            "India",
+            "Sri Lanka",
+            "West Indies"
+          ],
+          "answer": "Sri Lanka",
+          "note": "It was Sri Lanka's first World Cup win.",
+          "source": "https://en.wikipedia.org/wiki/1996_Cricket_World_Cup"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which team won the 1992 Cricket World Cup, the first with coloured clothing and white balls?",
+          "options": [
+            "England",
+            "New Zealand",
+            "South Africa",
+            "Pakistan"
+          ],
+          "answer": "Pakistan",
+          "note": "The tournament was held in Australia and New Zealand.",
+          "source": "https://en.wikipedia.org/wiki/1992_Cricket_World_Cup"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which South African city was the 2007 T20 World Cup final played?",
+          "options": [
+            "Johannesburg",
+            "Cape Town",
+            "Durban",
+            "Port Elizabeth"
+          ],
+          "answer": "Johannesburg",
+          "note": "India beat Pakistan by five runs.",
+          "source": "https://en.wikipedia.org/wiki/2007_ICC_World_Twenty20"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The second tied Test in history, in 1986 in Madras, involved India and which other team?",
+          "options": [
+            "England",
+            "Australia",
+            "West Indies",
+            "Pakistan"
+          ],
+          "answer": "Australia",
+          "note": "Madras is now called Chennai.",
+          "source": "https://en.wikipedia.org/wiki/Tied_Test"
+        },
+        {
+          "type": "mcq",
+          "prompt": "At which ground was the first Test match in 1877 played?",
+          "options": [
+            "Lord's",
+            "The Oval",
+            "Melbourne Cricket Ground",
+            "Sydney Cricket Ground"
+          ],
+          "answer": "Melbourne Cricket Ground",
+          "note": "The ground is called the MCG for short.",
+          "source": "https://en.wikipedia.org/wiki/Melbourne_Cricket_Ground"
+        }
+      ]
+    },
+    {
+      "name": "Grounds and Culture",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "In which Indian city is Eden Gardens?",
+          "options": [
+            "Mumbai",
+            "Delhi",
+            "Bengaluru",
+            "Kolkata"
+          ],
+          "answer": "Kolkata",
+          "note": "It is one of the oldest cricket grounds in India.",
+          "source": "https://en.wikipedia.org/wiki/Eden_Gardens"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which country is the Galle International Stadium, with its famous fort backdrop?",
+          "options": [
+            "Sri Lanka",
+            "India",
+            "Bangladesh",
+            "South Africa"
+          ],
+          "answer": "Sri Lanka",
+          "note": "It sits beside the old Dutch fort.",
+          "source": "https://en.wikipedia.org/wiki/Galle_International_Stadium"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which South African city is Newlands Cricket Ground, under Table Mountain?",
+          "options": [
+            "Durban",
+            "Cape Town",
+            "Johannesburg",
+            "Pretoria"
+          ],
+          "answer": "Cape Town",
+          "note": "The mountain gives the ground one of the best views in cricket.",
+          "source": "https://en.wikipedia.org/wiki/Newlands_Cricket_Ground"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year was the first season of the Indian Premier League played?",
+          "answer": 2008,
+          "tolerance": 0,
+          "note": "It is a Twenty20 competition.",
+          "source": "https://en.wikipedia.org/wiki/Indian_Premier_League"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What was Sir Donald Bradman's nickname?",
+          "options": [
+            "The Master",
+            "The Wall",
+            "The Don",
+            "The Gaffer"
+          ],
+          "answer": "The Don",
+          "note": "He was Australian and played from 1928 to 1948.",
+          "source": "https://en.wikipedia.org/wiki/Donald_Bradman"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year was the Wisden Cricketers' Almanack first published?",
+          "answer": 1864,
+          "tolerance": 0,
+          "note": "It is nicknamed the bible of cricket.",
+          "source": "https://en.wikipedia.org/wiki/Wisden_Cricketers'_Almanack"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which country did cricket begin?",
+          "options": [
+            "India",
+            "Australia",
+            "Scotland",
+            "England"
+          ],
+          "answer": "England",
+          "note": "It was played in southern England by the 16th century.",
+          "source": "https://en.wikipedia.org/wiki/History_of_cricket"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is a drying pitch, which makes the ball behave in unpredictable ways, often called?",
+          "options": [
+            "A sticky wicket",
+            "A wet bat",
+            "A rain delay",
+            "A green top"
+          ],
+          "answer": "A sticky wicket",
+          "note": "The phrase is now also used outside cricket for a tricky situation.",
+          "source": "https://en.wikipedia.org/wiki/Sticky_wicket"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the Duckworth-Lewis-Stern method used for?",
+          "options": [
+            "Choosing the man of the match",
+            "Setting fair targets in rain-affected matches",
+            "Counting extras",
+            "Deciding who bats first"
+          ],
+          "answer": "Setting fair targets in rain-affected matches",
+          "note": "It is named after the statisticians who devised it.",
+          "source": "https://en.wikipedia.org/wiki/Duckworth%E2%80%93Lewis%E2%80%93Stern_method"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year was the first women's Test match played?",
+          "answer": 1934,
+          "tolerance": 0,
+          "note": "It was between Australia and England.",
+          "source": "https://en.wikipedia.org/wiki/Women's_Test_cricket"
+        }
+      ]
+    }
+  ]
+}

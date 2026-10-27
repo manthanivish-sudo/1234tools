@@ -1,0 +1,642 @@
+{
+  "v": 1,
+  "id": "india-gk",
+  "title": "India General Knowledge",
+  "ages": "all",
+  "region": "india",
+  "count": 50,
+  "reviewed": "2026-10-27",
+  "sources": [
+    "en.wikipedia.org"
+  ],
+  "rounds": [
+    {
+      "name": "Geography",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "What is the capital city of India?",
+          "options": [
+            "New Delhi",
+            "Mumbai",
+            "Kolkata",
+            "Chennai"
+          ],
+          "answer": "New Delhi",
+          "note": "New Delhi was designed by Edwin Lutyens and Herbert Baker.",
+          "source": "https://en.wikipedia.org/wiki/New_Delhi"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which river, about 2,500 km long, is usually named as India's longest?",
+          "options": [
+            "The Yamuna",
+            "The Ganga (Ganges)",
+            "The Godavari",
+            "The Narmada"
+          ],
+          "answer": "The Ganga (Ganges)",
+          "note": "It flows from the Himalayas to the Bay of Bengal.",
+          "source": "https://en.wikipedia.org/wiki/Ganges"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which is the highest mountain lying entirely within India?",
+          "options": [
+            "Mount Everest",
+            "Nanga Parbat",
+            "Nanda Devi",
+            "Kamet"
+          ],
+          "answer": "Nanda Devi",
+          "note": "Kangchenjunga is higher, but it sits on the India-Nepal border.",
+          "source": "https://en.wikipedia.org/wiki/Nanda_Devi"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which town marks the southern tip of mainland India?",
+          "options": [
+            "Rameswaram",
+            "Kochi",
+            "Madurai",
+            "Kanyakumari"
+          ],
+          "answer": "Kanyakumari",
+          "note": "Three seas meet near Kanyakumari.",
+          "source": "https://en.wikipedia.org/wiki/Kanyakumari"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which desert lies in western India?",
+          "options": [
+            "The Thar Desert",
+            "The Gobi Desert",
+            "The Sahara",
+            "The Kalahari"
+          ],
+          "answer": "The Thar Desert",
+          "note": "It is also called the Great Indian Desert.",
+          "source": "https://en.wikipedia.org/wiki/Thar_Desert"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which sea lies to the west of the Indian peninsula?",
+          "options": [
+            "Bay of Bengal",
+            "Arabian Sea",
+            "Red Sea",
+            "Andaman Sea"
+          ],
+          "answer": "Arabian Sea",
+          "note": "Mumbai, Kochi and Goa are on this coast.",
+          "source": "https://en.wikipedia.org/wiki/Arabian_Sea"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which state is Chilika Lake, a very large coastal lagoon?",
+          "options": [
+            "Kerala",
+            "Gujarat",
+            "Odisha",
+            "Assam"
+          ],
+          "answer": "Odisha",
+          "note": "Many migratory birds spend the winter there.",
+          "source": "https://en.wikipedia.org/wiki/Chilika_Lake"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which city is nicknamed the Pink City?",
+          "options": [
+            "Jodhpur",
+            "Udaipur",
+            "Agra",
+            "Jaipur"
+          ],
+          "answer": "Jaipur",
+          "note": "Its old city buildings are painted pink.",
+          "source": "https://en.wikipedia.org/wiki/Jaipur"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The Sundarbans mangrove forest is famous as a home of which big cat?",
+          "options": [
+            "Bengal tiger",
+            "Asiatic lion",
+            "Snow leopard",
+            "Clouded leopard"
+          ],
+          "answer": "Bengal tiger",
+          "note": "These tigers are strong swimmers.",
+          "source": "https://en.wikipedia.org/wiki/Sundarbans"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which is the largest Indian state by area?",
+          "options": [
+            "Madhya Pradesh",
+            "Rajasthan",
+            "Maharashtra",
+            "Uttar Pradesh"
+          ],
+          "answer": "Rajasthan",
+          "note": "It covers more than 340,000 square kilometres.",
+          "source": "https://en.wikipedia.org/wiki/List_of_states_and_union_territories_of_India_by_area"
+        }
+      ]
+    },
+    {
+      "name": "History",
+      "questions": [
+        {
+          "type": "number",
+          "prompt": "In which year did India become independent from British rule?",
+          "answer": 1947,
+          "tolerance": 0,
+          "note": "Independence was on 15 August.",
+          "source": "https://en.wikipedia.org/wiki/Independence_Day_(India)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who led the Salt March to Dandi in 1930?",
+          "options": [
+            "Subhas Chandra Bose",
+            "Bhagat Singh",
+            "Mahatma Gandhi",
+            "Jawaharlal Nehru"
+          ],
+          "answer": "Mahatma Gandhi",
+          "note": "The march was about 240 miles long.",
+          "source": "https://en.wikipedia.org/wiki/Salt_March"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What was the capital of the Mauryan Empire?",
+          "options": [
+            "Ujjain",
+            "Taxila",
+            "Kanchipuram",
+            "Pataliputra"
+          ],
+          "answer": "Pataliputra",
+          "note": "Pataliputra is now the city of Patna.",
+          "source": "https://en.wikipedia.org/wiki/Pataliputra"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who ordered the building of the Taj Mahal?",
+          "options": [
+            "Shah Jahan",
+            "Akbar",
+            "Babur",
+            "Aurangzeb"
+          ],
+          "answer": "Shah Jahan",
+          "note": "He built it in memory of his wife Mumtaz Mahal.",
+          "source": "https://en.wikipedia.org/wiki/Taj_Mahal"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Emperor Ashoka is said to have turned away from war after which conflict?",
+          "options": [
+            "The Battle of Plassey",
+            "The Kalinga War",
+            "The Battle of Panipat",
+            "The Battle of Haldighati"
+          ],
+          "answer": "The Kalinga War",
+          "note": "He then spread messages of peace on pillars and rocks.",
+          "source": "https://en.wikipedia.org/wiki/Kalinga_War"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who was the first Prime Minister of independent India?",
+          "options": [
+            "Sardar Patel",
+            "Rajendra Prasad",
+            "Jawaharlal Nehru",
+            "Lal Bahadur Shastri"
+          ],
+          "answer": "Jawaharlal Nehru",
+          "note": "He took office in 1947.",
+          "source": "https://en.wikipedia.org/wiki/Jawaharlal_Nehru"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year did India's Constitution come into effect and the country become a republic?",
+          "answer": 1950,
+          "tolerance": 0,
+          "note": "We celebrate this on 26 January as Republic Day.",
+          "source": "https://en.wikipedia.org/wiki/Republic_Day_(India)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Mohenjo-daro, a city of the Indus Valley Civilisation, lies in which present-day country?",
+          "options": [
+            "India",
+            "Afghanistan",
+            "Iran",
+            "Pakistan"
+          ],
+          "answer": "Pakistan",
+          "note": "The city is about 4,500 years old.",
+          "source": "https://en.wikipedia.org/wiki/Mohenjo-daro"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The ancient text on statecraft called the Arthashastra is traditionally attributed to whom?",
+          "options": [
+            "Kautilya (Chanakya)",
+            "Kalidasa",
+            "Valmiki",
+            "Panini"
+          ],
+          "answer": "Kautilya (Chanakya)",
+          "note": "Kautilya advised the first Mauryan emperor.",
+          "source": "https://en.wikipedia.org/wiki/Arthashastra"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The Battle of Plassey in 1757 was fought in which present-day Indian state?",
+          "options": [
+            "Punjab",
+            "West Bengal",
+            "Tamil Nadu",
+            "Maharashtra"
+          ],
+          "answer": "West Bengal",
+          "note": "It helped the East India Company gain power in Bengal.",
+          "source": "https://en.wikipedia.org/wiki/Battle_of_Plassey"
+        }
+      ]
+    },
+    {
+      "name": "Science and Space",
+      "questions": [
+        {
+          "type": "number",
+          "prompt": "In which year was India's first Moon mission, Chandrayaan-1, launched?",
+          "answer": 2008,
+          "tolerance": 0,
+          "note": "It helped find evidence of water molecules on the Moon.",
+          "source": "https://en.wikipedia.org/wiki/Chandrayaan-1"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year was Aryabhata, India's first satellite, launched?",
+          "answer": 1975,
+          "tolerance": 0,
+          "note": "It was named after the ancient mathematician.",
+          "source": "https://en.wikipedia.org/wiki/Aryabhata_(satellite)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which Indian scientist won the Nobel Prize in Physics in 1930 for his work on light scattering?",
+          "options": [
+            "Homi Bhabha",
+            "Satyendra Nath Bose",
+            "C. V. Raman",
+            "Jagadish Chandra Bose"
+          ],
+          "answer": "C. V. Raman",
+          "note": "The Raman effect is named after him.",
+          "source": "https://en.wikipedia.org/wiki/C._V._Raman"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which Indian scientist and President is often called the Missile Man of India?",
+          "options": [
+            "Vikram Sarabhai",
+            "Homi Bhabha",
+            "G. Madhavan Nair",
+            "A. P. J. Abdul Kalam"
+          ],
+          "answer": "A. P. J. Abdul Kalam",
+          "note": "He served as India's 11th President.",
+          "source": "https://en.wikipedia.org/wiki/A._P._J._Abdul_Kalam"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who was the first Indian citizen to travel in space?",
+          "options": [
+            "Rakesh Sharma",
+            "Kalpana Chawla",
+            "Sunita Williams",
+            "Ravish Malhotra"
+          ],
+          "answer": "Rakesh Sharma",
+          "note": "He flew on a Soviet spacecraft in 1984.",
+          "source": "https://en.wikipedia.org/wiki/Rakesh_Sharma"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which Indian mathematician wrote early rules for using zero in arithmetic, in the 7th century?",
+          "options": [
+            "Bhaskara II",
+            "Brahmagupta",
+            "Aryabhata",
+            "Varahamihira"
+          ],
+          "answer": "Brahmagupta",
+          "note": "His book is the Brahmasphutasiddhanta.",
+          "source": "https://en.wikipedia.org/wiki/Brahmagupta"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Srinivasa Ramanujan is famous for his work in which subject?",
+          "options": [
+            "Physics",
+            "Chemistry",
+            "Mathematics",
+            "Medicine"
+          ],
+          "answer": "Mathematics",
+          "note": "He had little formal training but wrote thousands of results.",
+          "source": "https://en.wikipedia.org/wiki/Srinivasa_Ramanujan"
+        },
+        {
+          "type": "tf",
+          "prompt": "The digits 0 to 9 that we use today developed from a number system first created in India.",
+          "answer": true,
+          "note": "It travelled to Europe through the Arabic-speaking world.",
+          "source": "https://en.wikipedia.org/wiki/Hindu%E2%80%93Arabic_numeral_system"
+        },
+        {
+          "type": "tf",
+          "prompt": "The game of chess began in India.",
+          "answer": true,
+          "note": "Its early form was called chaturanga.",
+          "source": "https://en.wikipedia.org/wiki/Chess"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year was India's Mars Orbiter Mission, Mangalyaan, launched?",
+          "answer": 2013,
+          "tolerance": 0,
+          "note": "It reached Mars orbit in September 2014 on its first try.",
+          "source": "https://en.wikipedia.org/wiki/Mars_Orbiter_Mission"
+        }
+      ]
+    },
+    {
+      "name": "Arts and Culture",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Who wrote the words and music of India's national anthem, Jana Gana Mana?",
+          "options": [
+            "Bankim Chandra Chatterjee",
+            "Sarojini Naidu",
+            "Muhammad Iqbal",
+            "Rabindranath Tagore"
+          ],
+          "answer": "Rabindranath Tagore",
+          "note": "Tagore also wrote the national anthem of Bangladesh.",
+          "source": "https://en.wikipedia.org/wiki/Jana_Gana_Mana"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which classical dance form comes from Tamil Nadu?",
+          "options": [
+            "Bharatanatyam",
+            "Kathak",
+            "Odissi",
+            "Kuchipudi"
+          ],
+          "answer": "Bharatanatyam",
+          "note": "It is one of the oldest classical dance styles in India.",
+          "source": "https://en.wikipedia.org/wiki/Bharatanatyam"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which instrument is Pandit Ravi Shankar famous for playing?",
+          "options": [
+            "Tabla",
+            "Sitar",
+            "Sarod",
+            "Flute"
+          ],
+          "answer": "Sitar",
+          "note": "He helped bring Indian music to audiences around the world.",
+          "source": "https://en.wikipedia.org/wiki/Ravi_Shankar"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year did Rabindranath Tagore win the Nobel Prize in Literature?",
+          "answer": 1913,
+          "tolerance": 0,
+          "note": "He was the first non-European to win it.",
+          "source": "https://en.wikipedia.org/wiki/Rabindranath_Tagore"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Kathakali, with its colourful face paint and costumes, comes from which state?",
+          "options": [
+            "Karnataka",
+            "West Bengal",
+            "Kerala",
+            "Gujarat"
+          ],
+          "answer": "Kerala",
+          "note": "Stories are told through gesture and expression, not words.",
+          "source": "https://en.wikipedia.org/wiki/Kathakali"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The Ajanta Caves, known for ancient paintings, are in which state?",
+          "options": [
+            "Madhya Pradesh",
+            "Odisha",
+            "Rajasthan",
+            "Maharashtra"
+          ],
+          "answer": "Maharashtra",
+          "note": "They were cut into a horseshoe-shaped rock face.",
+          "source": "https://en.wikipedia.org/wiki/Ajanta_Caves"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which bird is the national bird of India?",
+          "options": [
+            "Indian peafowl (peacock)",
+            "Sarus crane",
+            "Great hornbill",
+            "Parrot"
+          ],
+          "answer": "Indian peafowl (peacock)",
+          "note": "The peacock was named national bird in 1963.",
+          "source": "https://en.wikipedia.org/wiki/National_symbols_of_India"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Hindi is written in which script?",
+          "options": [
+            "Gurmukhi",
+            "Devanagari",
+            "Tamil",
+            "Bengali"
+          ],
+          "answer": "Devanagari",
+          "note": "Devanagari is written from left to right with a line along the top.",
+          "source": "https://en.wikipedia.org/wiki/Hindi"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Hampi was the capital of which empire?",
+          "options": [
+            "Maurya Empire",
+            "Chola Empire",
+            "Vijayanagara Empire",
+            "Gupta Empire"
+          ],
+          "answer": "Vijayanagara Empire",
+          "note": "Its ruins are a UNESCO World Heritage Site.",
+          "source": "https://en.wikipedia.org/wiki/Hampi"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The epic Ramayana is traditionally attributed to which sage?",
+          "options": [
+            "Vyasa",
+            "Tulsidas",
+            "Kalidasa",
+            "Valmiki"
+          ],
+          "answer": "Valmiki",
+          "note": "Valmiki is called the first poet in Indian tradition.",
+          "source": "https://en.wikipedia.org/wiki/Valmiki"
+        }
+      ]
+    },
+    {
+      "name": "Food, Nature and Everyday",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Darjeeling tea comes from which state?",
+          "options": [
+            "West Bengal",
+            "Assam",
+            "Kerala",
+            "Himachal Pradesh"
+          ],
+          "answer": "West Bengal",
+          "note": "Darjeeling is high in the Himalayan foothills.",
+          "source": "https://en.wikipedia.org/wiki/Darjeeling_tea"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which fruit is often called the king of fruits in India?",
+          "options": [
+            "Banana",
+            "Mango",
+            "Guava",
+            "Papaya"
+          ],
+          "answer": "Mango",
+          "note": "There are hundreds of mango varieties, such as Alphonso and Dasheri.",
+          "source": "https://en.wikipedia.org/wiki/Mango"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Idli is traditionally steamed from a fermented batter of rice and which other ingredient?",
+          "options": [
+            "Wheat flour",
+            "Maize",
+            "Urad dal (black gram)",
+            "Chana dal"
+          ],
+          "answer": "Urad dal (black gram)",
+          "note": "Fermenting makes the idlis soft and fluffy.",
+          "source": "https://en.wikipedia.org/wiki/Idli"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which spice gives many curries their yellow colour?",
+          "options": [
+            "Cumin",
+            "Coriander",
+            "Black pepper",
+            "Turmeric"
+          ],
+          "answer": "Turmeric",
+          "note": "Turmeric is a root related to ginger.",
+          "source": "https://en.wikipedia.org/wiki/Turmeric"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which state is famous for its backwaters and houseboats?",
+          "options": [
+            "Kerala",
+            "Rajasthan",
+            "Punjab",
+            "Bihar"
+          ],
+          "answer": "Kerala",
+          "note": "Houseboats are called kettuvallam.",
+          "source": "https://en.wikipedia.org/wiki/Kerala"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Gir National Park is the only home of wild Asiatic lions. In which state is it?",
+          "options": [
+            "Rajasthan",
+            "Gujarat",
+            "Madhya Pradesh",
+            "Karnataka"
+          ],
+          "answer": "Gujarat",
+          "note": "Asiatic lions are slightly smaller than African lions.",
+          "source": "https://en.wikipedia.org/wiki/Gir_Forest_National_Park"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the currency of India called?",
+          "options": [
+            "Dinar",
+            "Taka",
+            "Rupee",
+            "Rial"
+          ],
+          "answer": "Rupee",
+          "note": "The rupee symbol was adopted in 2010.",
+          "source": "https://en.wikipedia.org/wiki/Indian_rupee"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which Indian city used to be called Bombay?",
+          "options": [
+            "Chennai",
+            "Kolkata",
+            "Pune",
+            "Mumbai"
+          ],
+          "answer": "Mumbai",
+          "note": "The name changed officially in 1995.",
+          "source": "https://en.wikipedia.org/wiki/Mumbai"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Kaziranga National Park is famous for protecting which animal?",
+          "options": [
+            "One-horned rhinoceros",
+            "Asiatic lion",
+            "Red panda",
+            "Snow leopard"
+          ],
+          "answer": "One-horned rhinoceros",
+          "note": "It is in the state of Assam.",
+          "source": "https://en.wikipedia.org/wiki/Kaziranga_National_Park"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year did India's first passenger train run, from Bombay to Thane?",
+          "answer": 1853,
+          "tolerance": 0,
+          "note": "The 34-km journey took about an hour.",
+          "source": "https://en.wikipedia.org/wiki/Rail_transport_in_India"
+        }
+      ]
+    }
+  ]
+}

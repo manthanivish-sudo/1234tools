@@ -1,0 +1,643 @@
+{
+  "v": 1,
+  "id": "family-general",
+  "title": "Family Quiz (all ages)",
+  "ages": "all",
+  "region": "global",
+  "count": 50,
+  "reviewed": "2026-10-27",
+  "sources": [
+    "en.wikipedia.org"
+  ],
+  "rounds": [
+    {
+      "name": "General Knowledge",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Which planet is closest to the Sun?",
+          "options": [
+            "Venus",
+            "Mars",
+            "Mercury",
+            "Earth"
+          ],
+          "answer": "Mercury",
+          "note": "A year on Mercury lasts only about 88 Earth days.",
+          "source": "https://en.wikipedia.org/wiki/Mercury_(planet)"
+        },
+        {
+          "type": "number",
+          "prompt": "How many days are there in a leap year?",
+          "answer": 366,
+          "tolerance": 0,
+          "note": "The extra day is 29 February.",
+          "source": "https://en.wikipedia.org/wiki/Leap_year"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which is the largest mammal that lives on land?",
+          "options": [
+            "Hippopotamus",
+            "Rhinoceros",
+            "Giraffe",
+            "African elephant"
+          ],
+          "answer": "African elephant",
+          "note": "An African elephant can weigh as much as several cars.",
+          "source": "https://en.wikipedia.org/wiki/African_elephant"
+        },
+        {
+          "type": "number",
+          "prompt": "How many sides does a hexagon have?",
+          "answer": 6,
+          "tolerance": 0,
+          "note": "Honeycomb cells are shaped like hexagons.",
+          "source": "https://en.wikipedia.org/wiki/Hexagon"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which fruit is dried to make raisins?",
+          "options": [
+            "Grapes",
+            "Plums",
+            "Dates",
+            "Figs"
+          ],
+          "answer": "Grapes",
+          "note": "Sultanas and currants are dried grapes too.",
+          "source": "https://en.wikipedia.org/wiki/Raisin"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the currency of Japan?",
+          "options": [
+            "Won",
+            "Yen",
+            "Yuan",
+            "Baht"
+          ],
+          "answer": "Yen",
+          "note": "The yen has been used since 1871.",
+          "source": "https://en.wikipedia.org/wiki/Japanese_yen"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which metal is liquid at normal room temperature?",
+          "options": [
+            "Lead",
+            "Tin",
+            "Mercury",
+            "Zinc"
+          ],
+          "answer": "Mercury",
+          "note": "Mercury is used in some old thermometers.",
+          "source": "https://en.wikipedia.org/wiki/Mercury_(element)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is a baby swan called?",
+          "options": [
+            "A cub",
+            "A fawn",
+            "A chick",
+            "A cygnet"
+          ],
+          "answer": "A cygnet",
+          "note": "Cygnets are usually grey-brown, not white.",
+          "source": "https://en.wikipedia.org/wiki/Swan"
+        },
+        {
+          "type": "number",
+          "prompt": "How many strings does a standard guitar have?",
+          "answer": 6,
+          "tolerance": 0,
+          "note": "Bass guitars usually have four.",
+          "source": "https://en.wikipedia.org/wiki/Guitar"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which is the longest bone in the human body?",
+          "options": [
+            "Femur",
+            "Tibia",
+            "Humerus",
+            "Spine"
+          ],
+          "answer": "Femur",
+          "note": "The femur is the thigh bone.",
+          "source": "https://en.wikipedia.org/wiki/Femur"
+        }
+      ]
+    },
+    {
+      "name": "Food and Drink",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Which fruit is the main ingredient of guacamole?",
+          "options": [
+            "Lime",
+            "Avocado",
+            "Tomato",
+            "Mango"
+          ],
+          "answer": "Avocado",
+          "note": "Guacamole comes from Mexico.",
+          "source": "https://en.wikipedia.org/wiki/Guacamole"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which country did pizza begin, in the city of Naples?",
+          "options": [
+            "Greece",
+            "France",
+            "Italy",
+            "Spain"
+          ],
+          "answer": "Italy",
+          "note": "A famous story says Pizza Margherita was named after Queen Margherita of Italy.",
+          "source": "https://en.wikipedia.org/wiki/Pizza"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which expensive spice comes from the stigmas of a crocus flower?",
+          "options": [
+            "Turmeric",
+            "Cinnamon",
+            "Cardamom",
+            "Saffron"
+          ],
+          "answer": "Saffron",
+          "note": "It takes thousands of flowers to make a small amount.",
+          "source": "https://en.wikipedia.org/wiki/Saffron"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which nut is the main ingredient in marzipan?",
+          "options": [
+            "Almond",
+            "Cashew",
+            "Walnut",
+            "Peanut"
+          ],
+          "answer": "Almond",
+          "note": "Marzipan is a sweet paste of ground almonds and sugar.",
+          "source": "https://en.wikipedia.org/wiki/Marzipan"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Tofu is made from which bean?",
+          "options": [
+            "Kidney bean",
+            "Soya bean",
+            "Chickpea",
+            "Black-eyed bean"
+          ],
+          "answer": "Soya bean",
+          "note": "Making tofu is a bit like making cheese from soya milk.",
+          "source": "https://en.wikipedia.org/wiki/Tofu"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which drink is made from the leaves of the Camellia sinensis plant?",
+          "options": [
+            "Coffee",
+            "Hot chocolate",
+            "Tea",
+            "Cola"
+          ],
+          "answer": "Tea",
+          "note": "Black, green and white tea all come from the same plant.",
+          "source": "https://en.wikipedia.org/wiki/Camellia_sinensis"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Yoghurt is made by fermenting which food?",
+          "options": [
+            "Rice",
+            "Flour",
+            "Eggs",
+            "Milk"
+          ],
+          "answer": "Milk",
+          "note": "Friendly bacteria turn the milk sugar into lactic acid.",
+          "source": "https://en.wikipedia.org/wiki/Yogurt"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Feta cheese is traditionally from which country?",
+          "options": [
+            "Greece",
+            "Switzerland",
+            "Italy",
+            "Turkey"
+          ],
+          "answer": "Greece",
+          "note": "It is the main cheese in a Greek salad.",
+          "source": "https://en.wikipedia.org/wiki/Feta"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the scale used to measure how hot a chilli pepper is?",
+          "options": [
+            "The Richter scale",
+            "The Scoville scale",
+            "The Beaufort scale",
+            "The Kelvin scale"
+          ],
+          "answer": "The Scoville scale",
+          "note": "It is named after the chemist Wilbur Scoville.",
+          "source": "https://en.wikipedia.org/wiki/Scoville_scale"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which vitamin can your skin make when it is in sunlight?",
+          "options": [
+            "Vitamin C",
+            "Vitamin A",
+            "Vitamin D",
+            "Vitamin B12"
+          ],
+          "answer": "Vitamin D",
+          "note": "Vitamin D helps keep bones strong.",
+          "source": "https://en.wikipedia.org/wiki/Vitamin_D"
+        }
+      ]
+    },
+    {
+      "name": "Films, Books and Music",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Which film director made both Jaws and E.T. the Extra-Terrestrial?",
+          "options": [
+            "George Lucas",
+            "James Cameron",
+            "Ridley Scott",
+            "Steven Spielberg"
+          ],
+          "answer": "Steven Spielberg",
+          "note": "Jaws came out in 1975 and E.T. in 1982.",
+          "source": "https://en.wikipedia.org/wiki/Steven_Spielberg"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the name of the cowboy toy in Toy Story?",
+          "options": [
+            "Woody",
+            "Buzz",
+            "Rex",
+            "Slinky"
+          ],
+          "answer": "Woody",
+          "note": "Toy Story was the first full-length computer-animated film.",
+          "source": "https://en.wikipedia.org/wiki/Toy_Story"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who created the detective Sherlock Holmes?",
+          "options": [
+            "Agatha Christie",
+            "Arthur Conan Doyle",
+            "Charles Dickens",
+            "Edgar Allan Poe"
+          ],
+          "answer": "Arthur Conan Doyle",
+          "note": "Holmes first appeared in 1887.",
+          "source": "https://en.wikipedia.org/wiki/Sherlock_Holmes"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which English city were The Beatles formed?",
+          "options": [
+            "London",
+            "Manchester",
+            "Liverpool",
+            "Birmingham"
+          ],
+          "answer": "Liverpool",
+          "note": "They began playing in Liverpool's clubs around 1960.",
+          "source": "https://en.wikipedia.org/wiki/The_Beatles"
+        },
+        {
+          "type": "number",
+          "prompt": "How many books are in the main Harry Potter series?",
+          "answer": 7,
+          "tolerance": 0,
+          "note": "The final book is Harry Potter and the Deathly Hallows.",
+          "source": "https://en.wikipedia.org/wiki/Harry_Potter"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the name of Dorothy's dog in The Wonderful Wizard of Oz?",
+          "options": [
+            "Fido",
+            "Lassie",
+            "Rex",
+            "Toto"
+          ],
+          "answer": "Toto",
+          "note": "In the 1939 film, Toto was played by a Cairn terrier called Terry.",
+          "source": "https://en.wikipedia.org/wiki/Toto_(Oz)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which composer wrote The Four Seasons violin concertos?",
+          "options": [
+            "Antonio Vivaldi",
+            "Johann Sebastian Bach",
+            "Wolfgang Amadeus Mozart",
+            "Ludwig van Beethoven"
+          ],
+          "answer": "Antonio Vivaldi",
+          "note": "Vivaldi was a priest from Venice.",
+          "source": "https://en.wikipedia.org/wiki/The_Four_Seasons_(Vivaldi)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who wrote the novel Pride and Prejudice?",
+          "options": [
+            "Charlotte Brontë",
+            "Jane Austen",
+            "George Eliot",
+            "Mary Shelley"
+          ],
+          "answer": "Jane Austen",
+          "note": "It was published in 1813.",
+          "source": "https://en.wikipedia.org/wiki/Pride_and_Prejudice"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In the film The Lion King (1994), what is the name of Simba's father?",
+          "options": [
+            "Scar",
+            "Rafiki",
+            "Mufasa",
+            "Nala"
+          ],
+          "answer": "Mufasa",
+          "note": "Mufasa is voiced by James Earl Jones.",
+          "source": "https://en.wikipedia.org/wiki/The_Lion_King"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year was the first Star Wars film released?",
+          "answer": 1977,
+          "tolerance": 0,
+          "note": "It was later renamed Episode IV: A New Hope.",
+          "source": "https://en.wikipedia.org/wiki/Star_Wars_(film)"
+        }
+      ]
+    },
+    {
+      "name": "Nature and Science",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Which is the largest planet in our Solar System?",
+          "options": [
+            "Saturn",
+            "Neptune",
+            "Earth",
+            "Jupiter"
+          ],
+          "answer": "Jupiter",
+          "note": "More than 1,000 Earths could fit inside Jupiter.",
+          "source": "https://en.wikipedia.org/wiki/Jupiter"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the name for water vapour turning into liquid water?",
+          "options": [
+            "Condensation",
+            "Evaporation",
+            "Precipitation",
+            "Sublimation"
+          ],
+          "answer": "Condensation",
+          "note": "It is how dew forms on grass.",
+          "source": "https://en.wikipedia.org/wiki/Condensation"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the largest organ of the human body?",
+          "options": [
+            "The liver",
+            "The skin",
+            "The brain",
+            "The lungs"
+          ],
+          "answer": "The skin",
+          "note": "Skin protects you and helps control your temperature.",
+          "source": "https://en.wikipedia.org/wiki/Skin"
+        },
+        {
+          "type": "tf",
+          "prompt": "Lightning never strikes the same place twice.",
+          "answer": false,
+          "note": "Tall buildings are struck many times a year.",
+          "source": "https://en.wikipedia.org/wiki/Lightning"
+        },
+        {
+          "type": "number",
+          "prompt": "How many legs does an insect have?",
+          "answer": 6,
+          "tolerance": 0,
+          "note": "Insects also have three body parts and usually wings.",
+          "source": "https://en.wikipedia.org/wiki/Insect"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which gas do plants take in from the air to make their food?",
+          "options": [
+            "Oxygen",
+            "Nitrogen",
+            "Carbon dioxide",
+            "Hydrogen"
+          ],
+          "answer": "Carbon dioxide",
+          "note": "This is part of photosynthesis.",
+          "source": "https://en.wikipedia.org/wiki/Photosynthesis"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which is the largest living bird?",
+          "options": [
+            "Emu",
+            "Albatross",
+            "Condor",
+            "Ostrich"
+          ],
+          "answer": "Ostrich",
+          "note": "An ostrich can run at about 70 km/h.",
+          "source": "https://en.wikipedia.org/wiki/Ostrich"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What kind of rock is formed when molten lava cools?",
+          "options": [
+            "Igneous",
+            "Sedimentary",
+            "Metamorphic",
+            "Limestone"
+          ],
+          "answer": "Igneous",
+          "note": "Igneous means born of fire.",
+          "source": "https://en.wikipedia.org/wiki/Igneous_rock"
+        },
+        {
+          "type": "number",
+          "prompt": "At what temperature in degrees Fahrenheit does water freeze?",
+          "answer": 32,
+          "tolerance": 0,
+          "note": "That is zero degrees Celsius.",
+          "source": "https://en.wikipedia.org/wiki/Fahrenheit"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the scientific study of the weather called?",
+          "options": [
+            "Geology",
+            "Meteorology",
+            "Astronomy",
+            "Ecology"
+          ],
+          "answer": "Meteorology",
+          "note": "It has nothing to do with meteors, despite the name.",
+          "source": "https://en.wikipedia.org/wiki/Meteorology"
+        }
+      ]
+    },
+    {
+      "name": "World and History",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Which country gave the Statue of Liberty to the United States?",
+          "options": [
+            "Britain",
+            "Spain",
+            "France",
+            "Italy"
+          ],
+          "answer": "France",
+          "note": "It arrived in pieces and was put together in New York in 1886.",
+          "source": "https://en.wikipedia.org/wiki/Statue_of_Liberty"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the capital city of Spain?",
+          "options": [
+            "Barcelona",
+            "Seville",
+            "Valencia",
+            "Madrid"
+          ],
+          "answer": "Madrid",
+          "note": "Madrid sits near the centre of the country.",
+          "source": "https://en.wikipedia.org/wiki/Madrid"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which ancient wonder near Cairo is the only one of the Seven Wonders still standing?",
+          "options": [
+            "The Great Pyramid of Giza",
+            "The Colossus of Rhodes",
+            "The Lighthouse of Alexandria",
+            "The Hanging Gardens of Babylon"
+          ],
+          "answer": "The Great Pyramid of Giza",
+          "note": "It was the tallest man-made structure for more than 3,700 years.",
+          "source": "https://en.wikipedia.org/wiki/Great_Pyramid_of_Giza"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which ocean lies between Africa and Australia?",
+          "options": [
+            "Atlantic Ocean",
+            "Indian Ocean",
+            "Pacific Ocean",
+            "Arctic Ocean"
+          ],
+          "answer": "Indian Ocean",
+          "note": "It is named after India.",
+          "source": "https://en.wikipedia.org/wiki/Indian_Ocean"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which country is the Taj Mahal?",
+          "options": [
+            "Pakistan",
+            "Iran",
+            "India",
+            "Nepal"
+          ],
+          "answer": "India",
+          "note": "It is in the city of Agra.",
+          "source": "https://en.wikipedia.org/wiki/Taj_Mahal"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year did the first Moon landing take place?",
+          "answer": 1969,
+          "tolerance": 0,
+          "note": "Apollo 11 landed in July 1969.",
+          "source": "https://en.wikipedia.org/wiki/Apollo_11"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who was the first woman to be Prime Minister of the United Kingdom?",
+          "options": [
+            "Theresa May",
+            "Queen Victoria",
+            "Barbara Castle",
+            "Margaret Thatcher"
+          ],
+          "answer": "Margaret Thatcher",
+          "note": "She took office in 1979.",
+          "source": "https://en.wikipedia.org/wiki/Margaret_Thatcher"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which river flows through London?",
+          "options": [
+            "The Thames",
+            "The Severn",
+            "The Mersey",
+            "The Trent"
+          ],
+          "answer": "The Thames",
+          "note": "The Thames is about 350 kilometres long.",
+          "source": "https://en.wikipedia.org/wiki/River_Thames"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which is the largest country in the world by land area?",
+          "options": [
+            "Canada",
+            "Russia",
+            "China",
+            "Brazil"
+          ],
+          "answer": "Russia",
+          "note": "It stretches across eleven time zones.",
+          "source": "https://en.wikipedia.org/wiki/Russia"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which country would you find wild kangaroos?",
+          "options": [
+            "New Zealand",
+            "South Africa",
+            "Australia",
+            "Brazil"
+          ],
+          "answer": "Australia",
+          "note": "Kangaroos hop on their strong back legs and use their tail for balance.",
+          "source": "https://en.wikipedia.org/wiki/Kangaroo"
+        }
+      ]
+    }
+  ]
+}

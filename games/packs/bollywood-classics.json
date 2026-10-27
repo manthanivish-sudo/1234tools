@@ -1,0 +1,666 @@
+{
+  "v": 1,
+  "id": "bollywood-classics",
+  "title": "Bollywood Classics Quiz",
+  "ages": "all",
+  "region": "india",
+  "count": 50,
+  "reviewed": "2026-10-27",
+  "sources": [
+    "en.wikipedia.org"
+  ],
+  "rounds": [
+    {
+      "name": "The Golden Age",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Who directed the 1957 film Mother India?",
+          "options": [
+            "Mehboob Khan",
+            "Raj Kapoor",
+            "Guru Dutt",
+            "Bimal Roy"
+          ],
+          "answer": "Mehboob Khan",
+          "note": "Mehboob Khan had made an earlier version, Aurat, in 1940.",
+          "source": "https://en.wikipedia.org/wiki/Mother_India"
+        },
+        {
+          "type": "tf",
+          "prompt": "Mother India (1957) was nominated for the Academy Award for Best Foreign Language Film.",
+          "answer": true,
+          "note": "It was the first Indian film to be nominated in that category.",
+          "source": "https://en.wikipedia.org/wiki/Mother_India"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who directed the epic Mughal-e-Azam (1960)?",
+          "options": [
+            "Mehboob Khan",
+            "K. Asif",
+            "Yash Chopra",
+            "Satyajit Ray"
+          ],
+          "answer": "K. Asif",
+          "note": "Filming went on, on and off, for many years from the 1940s.",
+          "source": "https://en.wikipedia.org/wiki/K._Asif"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who played Anarkali in Mughal-e-Azam?",
+          "options": [
+            "Nargis",
+            "Meena Kumari",
+            "Madhubala",
+            "Waheeda Rehman"
+          ],
+          "answer": "Madhubala",
+          "note": "A few scenes, including the mirror-hall song, were originally shot in colour.",
+          "source": "https://en.wikipedia.org/wiki/Mughal-e-Azam"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who directed and starred in the 1951 film Awaara?",
+          "options": [
+            "Dev Anand",
+            "Dilip Kumar",
+            "Guru Dutt",
+            "Raj Kapoor"
+          ],
+          "answer": "Raj Kapoor",
+          "note": "Awaara was hugely popular in the Soviet Union and elsewhere.",
+          "source": "https://en.wikipedia.org/wiki/Awaara"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The title of Guru Dutt's 1957 film Pyaasa means what in English?",
+          "options": [
+            "Thirsty",
+            "Lonely",
+            "Dreamer",
+            "Wanderer"
+          ],
+          "answer": "Thirsty",
+          "note": "Pyaasa is often listed among the great films of Indian cinema.",
+          "source": "https://en.wikipedia.org/wiki/Pyaasa"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The 1955 film Devdas, starring Dilip Kumar, is based on a novel by which writer?",
+          "options": [
+            "Munshi Premchand",
+            "Sarat Chandra Chattopadhyay",
+            "Rabindranath Tagore",
+            "Bankim Chandra Chatterjee"
+          ],
+          "answer": "Sarat Chandra Chattopadhyay",
+          "note": "The novel has been filmed many times, in many languages.",
+          "source": "https://en.wikipedia.org/wiki/Devdas_(1955_film)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who directed the 1953 film Do Bigha Zamin, about a farmer fighting to save his land?",
+          "options": [
+            "Mehboob Khan",
+            "Raj Kapoor",
+            "Bimal Roy",
+            "K. Asif"
+          ],
+          "answer": "Bimal Roy",
+          "note": "It won a prize at the Cannes Film Festival in 1954.",
+          "source": "https://en.wikipedia.org/wiki/Do_Bigha_Zamin"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year was Alam Ara, India's first sound film, released?",
+          "answer": 1931,
+          "tolerance": 0,
+          "note": "Before it, Indian films were silent.",
+          "source": "https://en.wikipedia.org/wiki/Alam_Ara"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who is known as the Father of Indian Cinema, for making the 1913 film Raja Harishchandra?",
+          "options": [
+            "Satyajit Ray",
+            "V. Shantaram",
+            "Raj Kapoor",
+            "Dadasaheb Phalke"
+          ],
+          "answer": "Dadasaheb Phalke",
+          "note": "India's highest film honour is named after him.",
+          "source": "https://en.wikipedia.org/wiki/Dadasaheb_Phalke"
+        }
+      ]
+    },
+    {
+      "name": "The Seventies and Eighties",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Who played the villain Gabbar Singh in Sholay (1975)?",
+          "options": [
+            "Amjad Khan",
+            "Amrish Puri",
+            "Pran",
+            "Danny Denzongpa"
+          ],
+          "answer": "Amjad Khan",
+          "note": "His line about Gabbar became one of the best-known in Hindi film.",
+          "source": "https://en.wikipedia.org/wiki/Sholay"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who played Jai in Sholay?",
+          "options": [
+            "Dharmendra",
+            "Amitabh Bachchan",
+            "Sanjeev Kumar",
+            "Vinod Khanna"
+          ],
+          "answer": "Amitabh Bachchan",
+          "note": "Dharmendra played his friend Veeru.",
+          "source": "https://en.wikipedia.org/wiki/Sholay"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who directed Sholay?",
+          "options": [
+            "Yash Chopra",
+            "Manmohan Desai",
+            "Ramesh Sippy",
+            "Hrishikesh Mukherjee"
+          ],
+          "answer": "Ramesh Sippy",
+          "note": "The film was shot mostly near Ramanagara in Karnataka.",
+          "source": "https://en.wikipedia.org/wiki/Sholay"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who played the invisible hero in Mr. India (1987)?",
+          "options": [
+            "Sanjay Dutt",
+            "Govinda",
+            "Jackie Shroff",
+            "Anil Kapoor"
+          ],
+          "answer": "Anil Kapoor",
+          "note": "Sridevi played the reporter Seema.",
+          "source": "https://en.wikipedia.org/wiki/Mr._India"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who directed Amar Akbar Anthony (1977)?",
+          "options": [
+            "Manmohan Desai",
+            "Ramesh Sippy",
+            "Raj Khosla",
+            "Prakash Mehra"
+          ],
+          "answer": "Manmohan Desai",
+          "note": "It follows three brothers separated as children.",
+          "source": "https://en.wikipedia.org/wiki/Amar_Akbar_Anthony"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which actress starred as Sahibjaan in the 1972 film Pakeezah?",
+          "options": [
+            "Nargis",
+            "Meena Kumari",
+            "Madhubala",
+            "Hema Malini"
+          ],
+          "answer": "Meena Kumari",
+          "note": "The film is known for its music and sets.",
+          "source": "https://en.wikipedia.org/wiki/Pakeezah"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which 1973 film directed by Raj Kapoor introduced Dimple Kapadia as an actress?",
+          "options": [
+            "Satyam Shivam Sundaram",
+            "Awaara",
+            "Bobby",
+            "Mera Naam Joker"
+          ],
+          "answer": "Bobby",
+          "note": "It was a teenage love story that became a big hit.",
+          "source": "https://en.wikipedia.org/wiki/Bobby_(1973_film)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who directed the 1977 film Shatranj Ke Khilari, set around a game of chess?",
+          "options": [
+            "Mrinal Sen",
+            "Shyam Benegal",
+            "Ritwik Ghatak",
+            "Satyajit Ray"
+          ],
+          "answer": "Satyajit Ray",
+          "note": "It was Ray's first feature in Hindi.",
+          "source": "https://en.wikipedia.org/wiki/Shatranj_Ke_Khilari"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who directed the 1971 film Anand, starring Rajesh Khanna and Amitabh Bachchan?",
+          "options": [
+            "Hrishikesh Mukherjee",
+            "Basu Chatterjee",
+            "Gulzar",
+            "Shakti Samanta"
+          ],
+          "answer": "Hrishikesh Mukherjee",
+          "note": "Anand is remembered for its warm story about living life fully.",
+          "source": "https://en.wikipedia.org/wiki/Anand_(1971_film)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which 1982 Hindi film starring Mithun Chakraborty became a huge hit in the Soviet Union?",
+          "options": [
+            "Sholay",
+            "Disco Dancer",
+            "Mr. India",
+            "Bobby"
+          ],
+          "answer": "Disco Dancer",
+          "note": "Its music was known across the Soviet Union and beyond.",
+          "source": "https://en.wikipedia.org/wiki/Disco_Dancer"
+        }
+      ]
+    },
+    {
+      "name": "The Nineties",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Who directed Dilwale Dulhania Le Jayenge (1995)?",
+          "options": [
+            "Karan Johar",
+            "Sooraj Barjatya",
+            "Aditya Chopra",
+            "Subhash Ghai"
+          ],
+          "answer": "Aditya Chopra",
+          "note": "It was Aditya Chopra's first film as director.",
+          "source": "https://en.wikipedia.org/wiki/Dilwale_Dulhania_Le_Jayenge"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which actor played Raj in Dilwale Dulhania Le Jayenge?",
+          "options": [
+            "Salman Khan",
+            "Aamir Khan",
+            "Saif Ali Khan",
+            "Shah Rukh Khan"
+          ],
+          "answer": "Shah Rukh Khan",
+          "note": "The film is often shortened to DDLJ.",
+          "source": "https://en.wikipedia.org/wiki/Dilwale_Dulhania_Le_Jayenge"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who directed Hum Aapke Hain Koun..! (1994)?",
+          "options": [
+            "Sooraj Barjatya",
+            "Aditya Chopra",
+            "Yash Chopra",
+            "David Dhawan"
+          ],
+          "answer": "Sooraj Barjatya",
+          "note": "It was one of the biggest hits of the decade.",
+          "source": "https://en.wikipedia.org/wiki/Hum_Aapke_Hain_Koun..!"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which film (1998) was Karan Johar's debut as a director?",
+          "options": [
+            "Kabhi Khushi Kabhie Gham",
+            "Kuch Kuch Hota Hai",
+            "Dil To Pagal Hai",
+            "Pardes"
+          ],
+          "answer": "Kuch Kuch Hota Hai",
+          "note": "He was in his mid-twenties when he made it.",
+          "source": "https://en.wikipedia.org/wiki/Kuch_Kuch_Hota_Hai"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who composed the music for Roja (1992), his first film score?",
+          "options": [
+            "R. D. Burman",
+            "Anu Malik",
+            "A. R. Rahman",
+            "Nadeem-Shravan"
+          ],
+          "answer": "A. R. Rahman",
+          "note": "Rahman was known as Dileep before taking his new name.",
+          "source": "https://en.wikipedia.org/wiki/Roja"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who directed Dil To Pagal Hai (1997)?",
+          "options": [
+            "Aditya Chopra",
+            "Mansoor Khan",
+            "Rakesh Roshan",
+            "Yash Chopra"
+          ],
+          "answer": "Yash Chopra",
+          "note": "Yash Chopra was known for his romantic films shot in Switzerland.",
+          "source": "https://en.wikipedia.org/wiki/Dil_To_Pagal_Hai"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which actor starred as the lead in Qayamat Se Qayamat Tak (1988)?",
+          "options": [
+            "Aamir Khan",
+            "Shah Rukh Khan",
+            "Salman Khan",
+            "Govinda"
+          ],
+          "answer": "Aamir Khan",
+          "note": "It was Aamir Khan's first film as the leading man.",
+          "source": "https://en.wikipedia.org/wiki/Qayamat_Se_Qayamat_Tak"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the name of Kajol's character in Dilwale Dulhania Le Jayenge?",
+          "options": [
+            "Anjali",
+            "Simran",
+            "Pooja",
+            "Tina"
+          ],
+          "answer": "Simran",
+          "note": "Simran is a name that means remembering or quiet prayer.",
+          "source": "https://en.wikipedia.org/wiki/Dilwale_Dulhania_Le_Jayenge"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the name of the pet dog in Hum Aapke Hain Koun..!?",
+          "options": [
+            "Sheru",
+            "Moti",
+            "Tuffy",
+            "Bruno"
+          ],
+          "answer": "Tuffy",
+          "note": "Tuffy has some of the film's most loved scenes.",
+          "source": "https://en.wikipedia.org/wiki/Hum_Aapke_Hain_Koun..!"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which sport is the focus of the climax in Jo Jeeta Wohi Sikandar (1992)?",
+          "options": [
+            "Cricket",
+            "Hockey",
+            "Football",
+            "Cycling"
+          ],
+          "answer": "Cycling",
+          "note": "The Cyclothon race scene is the highlight of the film.",
+          "source": "https://en.wikipedia.org/wiki/Jo_Jeeta_Wohi_Sikandar"
+        }
+      ]
+    },
+    {
+      "name": "2000 to 2014",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Which sport is at the heart of the film Lagaan (2001)?",
+          "options": [
+            "Cricket",
+            "Hockey",
+            "Kabaddi",
+            "Football"
+          ],
+          "answer": "Cricket",
+          "note": "The villagers play to avoid paying tax.",
+          "source": "https://en.wikipedia.org/wiki/Lagaan"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who directed Lagaan?",
+          "options": [
+            "Farhan Akhtar",
+            "Ashutosh Gowariker",
+            "Rajkumar Hirani",
+            "Aamir Khan"
+          ],
+          "answer": "Ashutosh Gowariker",
+          "note": "The film was nominated for an Oscar in the Best Foreign Language Film category.",
+          "source": "https://en.wikipedia.org/wiki/Lagaan"
+        },
+        {
+          "type": "mcq",
+          "prompt": "3 Idiots (2009) is loosely based on a novel by which author?",
+          "options": [
+            "Arundhati Roy",
+            "Vikram Seth",
+            "Chetan Bhagat",
+            "Amish Tripathi"
+          ],
+          "answer": "Chetan Bhagat",
+          "note": "The novel is called Five Point Someone.",
+          "source": "https://en.wikipedia.org/wiki/3_Idiots"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The film Taare Zameen Par (2007) tells the story of a child with which learning difficulty?",
+          "options": [
+            "Deafness",
+            "Shyness",
+            "Stammering",
+            "Dyslexia"
+          ],
+          "answer": "Dyslexia",
+          "note": "The film helped many families talk about learning differences.",
+          "source": "https://en.wikipedia.org/wiki/Taare_Zameen_Par"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who directed Dil Chahta Hai (2001)?",
+          "options": [
+            "Farhan Akhtar",
+            "Zoya Akhtar",
+            "Karan Johar",
+            "Rohit Shetty"
+          ],
+          "answer": "Farhan Akhtar",
+          "note": "It was Farhan Akhtar's first film as director.",
+          "source": "https://en.wikipedia.org/wiki/Dil_Chahta_Hai"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who directed Kabhi Khushi Kabhie Gham (2001)?",
+          "options": [
+            "Aditya Chopra",
+            "Karan Johar",
+            "Sooraj Barjatya",
+            "Subhash Ghai"
+          ],
+          "answer": "Karan Johar",
+          "note": "The title is often shortened to K3G.",
+          "source": "https://en.wikipedia.org/wiki/Kabhi_Khushi_Kabhie_Gham..."
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the name of the alien in Koi... Mil Gaya (2003)?",
+          "options": [
+            "Krrish",
+            "Mogambo",
+            "Jadoo",
+            "Tuffy"
+          ],
+          "answer": "Jadoo",
+          "note": "The alien became a favourite with children.",
+          "source": "https://en.wikipedia.org/wiki/Koi..._Mil_Gaya"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which sport does the film Chak De! India (2007) focus on?",
+          "options": [
+            "Cricket",
+            "Badminton",
+            "Football",
+            "Hockey"
+          ],
+          "answer": "Hockey",
+          "note": "Field hockey is India's long-time Olympic sport.",
+          "source": "https://en.wikipedia.org/wiki/Chak_De!_India"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In Swades (2004), the hero Mohan Bhargava has a job at which organisation?",
+          "options": [
+            "NASA",
+            "ISRO",
+            "Google",
+            "Microsoft"
+          ],
+          "answer": "NASA",
+          "note": "He returns to an Indian village.",
+          "source": "https://en.wikipedia.org/wiki/Swades"
+        },
+        {
+          "type": "mcq",
+          "prompt": "A. R. Rahman won two Academy Awards in 2009 for the music of which film?",
+          "options": [
+            "Lagaan",
+            "Slumdog Millionaire",
+            "3 Idiots",
+            "Taare Zameen Par"
+          ],
+          "answer": "Slumdog Millionaire",
+          "note": "He won for Best Original Score and Best Original Song.",
+          "source": "https://en.wikipedia.org/wiki/A._R._Rahman"
+        }
+      ]
+    },
+    {
+      "name": "Music and Movie Makers",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Which singer was widely known as the Nightingale of India?",
+          "options": [
+            "Asha Bhosle",
+            "Geeta Dutt",
+            "Lata Mangeshkar",
+            "Shreya Ghoshal"
+          ],
+          "answer": "Lata Mangeshkar",
+          "note": "She recorded songs in many Indian languages.",
+          "source": "https://en.wikipedia.org/wiki/Lata_Mangeshkar"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who was the father of the composer R. D. Burman?",
+          "options": [
+            "Naushad",
+            "Shankar-Jaikishan",
+            "O. P. Nayyar",
+            "S. D. Burman"
+          ],
+          "answer": "S. D. Burman",
+          "note": "Both father and son were famous music directors.",
+          "source": "https://en.wikipedia.org/wiki/R._D._Burman"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which language was Satyajit Ray's first film, Pather Panchali (1955)?",
+          "options": [
+            "Bengali",
+            "Hindi",
+            "Tamil",
+            "English"
+          ],
+          "answer": "Bengali",
+          "note": "It is the first film of the Apu Trilogy.",
+          "source": "https://en.wikipedia.org/wiki/Pather_Panchali"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which city is the Hindi film industry known as Bollywood based?",
+          "options": [
+            "Chennai",
+            "Mumbai",
+            "Kolkata",
+            "Hyderabad"
+          ],
+          "answer": "Mumbai",
+          "note": "Mumbai used to be called Bombay.",
+          "source": "https://en.wikipedia.org/wiki/Bollywood"
+        },
+        {
+          "type": "tf",
+          "prompt": "The word Bollywood comes from joining Bombay and Hollywood.",
+          "answer": true,
+          "note": "Some people dislike the name, but it is widely used.",
+          "source": "https://en.wikipedia.org/wiki/Bollywood"
+        },
+        {
+          "type": "tf",
+          "prompt": "Shah Rukh Khan's acting career began on television.",
+          "answer": true,
+          "note": "He appeared in the TV series Fauji in 1988.",
+          "source": "https://en.wikipedia.org/wiki/Shah_Rukh_Khan"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which was Amitabh Bachchan's first film, released in 1969?",
+          "options": [
+            "Zanjeer",
+            "Anand",
+            "Saat Hindustani",
+            "Deewaar"
+          ],
+          "answer": "Saat Hindustani",
+          "note": "He later became a big star in the 1970s.",
+          "source": "https://en.wikipedia.org/wiki/Amitabh_Bachchan"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who directed the 2002 version of Devdas, starring Shah Rukh Khan and Madhuri Dixit?",
+          "options": [
+            "Yash Chopra",
+            "Karan Johar",
+            "Ashutosh Gowariker",
+            "Sanjay Leela Bhansali"
+          ],
+          "answer": "Sanjay Leela Bhansali",
+          "note": "It was shown at the Cannes Film Festival.",
+          "source": "https://en.wikipedia.org/wiki/Devdas_(2002_film)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the Filmfare Award trophy nicknamed?",
+          "options": [
+            "The Black Lady",
+            "The Golden Star",
+            "The Silver Reel",
+            "The Blue Lotus"
+          ],
+          "answer": "The Black Lady",
+          "note": "It is a statuette of a woman with raised arms.",
+          "source": "https://en.wikipedia.org/wiki/Filmfare_Awards"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which actress played Paro in the 2002 film Devdas?",
+          "options": [
+            "Kajol",
+            "Aishwarya Rai",
+            "Rani Mukerji",
+            "Preity Zinta"
+          ],
+          "answer": "Aishwarya Rai",
+          "note": "Madhuri Dixit played Chandramukhi in the same film.",
+          "source": "https://en.wikipedia.org/wiki/Devdas_(2002_film)"
+        }
+      ]
+    }
+  ]
+}

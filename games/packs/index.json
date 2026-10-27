@@ -1,0 +1,207 @@
+{
+ "v": 1,
+ "packs": [
+  {
+   "id": "bollywood-classics",
+   "title": "Bollywood Classics Quiz",
+   "ages": "all",
+   "region": "india",
+   "count": 50,
+   "rounds": [
+    "The Golden Age",
+    "The Seventies and Eighties",
+    "The Nineties",
+    "2000 to 2014",
+    "Music and Movie Makers"
+   ],
+   "types": {
+    "mcq": 46,
+    "tf": 3,
+    "number": 1
+   },
+   "reviewed": "2026-10-27"
+  },
+  {
+   "id": "christmas-quiz",
+   "title": "Christmas Quiz",
+   "ages": "all",
+   "region": "global",
+   "count": 50,
+   "rounds": [
+    "Traditions",
+    "Christmas Around the World",
+    "Carols and Music",
+    "Christmas Stories and Films",
+    "Food and Symbols"
+   ],
+   "types": {
+    "mcq": 43,
+    "number": 4,
+    "tf": 3
+   },
+   "reviewed": "2026-10-27"
+  },
+  {
+   "id": "cricket",
+   "title": "Cricket Quiz",
+   "ages": "all",
+   "region": "global",
+   "count": 50,
+   "rounds": [
+    "Rules and Terms",
+    "Laws and Equipment",
+    "Firsts and Beginnings",
+    "Famous Matches and Series",
+    "Grounds and Culture"
+   ],
+   "types": {
+    "number": 14,
+    "mcq": 33,
+    "tf": 3
+   },
+   "reviewed": "2026-10-27"
+  },
+  {
+   "id": "family-general",
+   "title": "Family Quiz (all ages)",
+   "ages": "all",
+   "region": "global",
+   "count": 50,
+   "rounds": [
+    "General Knowledge",
+    "Food and Drink",
+    "Films, Books and Music",
+    "Nature and Science",
+    "World and History"
+   ],
+   "types": {
+    "mcq": 41,
+    "number": 8,
+    "tf": 1
+   },
+   "reviewed": "2026-10-27"
+  },
+  {
+   "id": "festivals-of-india",
+   "title": "Festivals of India Quiz",
+   "ages": "all",
+   "region": "india",
+   "count": 50,
+   "rounds": [
+    "Diwali",
+    "Holi and Spring",
+    "Eid and Christmas in India",
+    "Harvest Festivals",
+    "More Festivals"
+   ],
+   "types": {
+    "mcq": 42,
+    "tf": 6,
+    "number": 2
+   },
+   "reviewed": "2026-10-27"
+  },
+  {
+   "id": "india-gk",
+   "title": "India General Knowledge",
+   "ages": "all",
+   "region": "india",
+   "count": 50,
+   "rounds": [
+    "Geography",
+    "History",
+    "Science and Space",
+    "Arts and Culture",
+    "Food, Nature and Everyday"
+   ],
+   "types": {
+    "mcq": 41,
+    "number": 7,
+    "tf": 2
+   },
+   "reviewed": "2026-10-27"
+  },
+  {
+   "id": "kids-11-13",
+   "title": "Kids' Quiz (ages 11–13)",
+   "ages": "11-13",
+   "region": "global",
+   "count": 50,
+   "rounds": [
+    "Science and Nature",
+    "Around the World",
+    "History",
+    "Maths, Tech and Words",
+    "Arts, Sport and Culture"
+   ],
+   "types": {
+    "text": 5,
+    "mcq": 31,
+    "number": 12,
+    "tf": 2
+   },
+   "reviewed": "2026-10-27"
+  },
+  {
+   "id": "kids-5-7",
+   "title": "Kids' Quiz (ages 5–7)",
+   "ages": "5-7",
+   "region": "global",
+   "count": 50,
+   "rounds": [
+    "Animals",
+    "Colours and Shapes",
+    "Nature and Food",
+    "Stories and Rhymes",
+    "Our World"
+   ],
+   "types": {
+    "mcq": 35,
+    "number": 9,
+    "tf": 6
+   },
+   "reviewed": "2026-10-27"
+  },
+  {
+   "id": "kids-8-10",
+   "title": "Kids' Quiz (ages 8–10)",
+   "ages": "8-10",
+   "region": "global",
+   "count": 50,
+   "rounds": [
+    "Animals and Plants",
+    "Space and Science",
+    "Geography",
+    "Stories and History",
+    "Sport, Maths and Everyday"
+   ],
+   "types": {
+    "mcq": 31,
+    "tf": 5,
+    "number": 11,
+    "text": 3
+   },
+   "reviewed": "2026-10-27"
+  },
+  {
+   "id": "uk-general",
+   "title": "UK General Knowledge",
+   "ages": "all",
+   "region": "uk",
+   "count": 50,
+   "rounds": [
+    "Geography",
+    "History",
+    "Science and Inventions",
+    "Culture and Arts",
+    "Everyday Britain"
+   ],
+   "types": {
+    "mcq": 39,
+    "number": 9,
+    "tf": 2
+   },
+   "reviewed": "2026-10-27"
+  }
+ ]
+}

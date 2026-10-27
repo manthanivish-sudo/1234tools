@@ -1,0 +1,643 @@
+{
+  "v": 1,
+  "id": "festivals-of-india",
+  "title": "Festivals of India Quiz",
+  "ages": "all",
+  "region": "india",
+  "count": 50,
+  "reviewed": "2026-10-27",
+  "sources": [
+    "en.wikipedia.org"
+  ],
+  "rounds": [
+    {
+      "name": "Diwali",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Diwali is often called the festival of what?",
+          "options": [
+            "Colours",
+            "Kites",
+            "Boats",
+            "Lights"
+          ],
+          "answer": "Lights",
+          "note": "Homes, streets and shops are lit up with lamps and lights.",
+          "source": "https://en.wikipedia.org/wiki/Diwali"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What are the small clay lamps lit at Diwali called?",
+          "options": [
+            "Diyas",
+            "Torans",
+            "Kalash",
+            "Thalis"
+          ],
+          "answer": "Diyas",
+          "note": "A diya is filled with oil or ghee and a cotton wick.",
+          "source": "https://en.wikipedia.org/wiki/Diya"
+        },
+        {
+          "type": "mcq",
+          "prompt": "The main day of Diwali falls on which night of the lunar month?",
+          "options": [
+            "The full moon night",
+            "The new moon night",
+            "The first quarter",
+            "The last quarter"
+          ],
+          "answer": "The new moon night",
+          "note": "The sky is at its darkest, so the lamps shine brightest.",
+          "source": "https://en.wikipedia.org/wiki/Diwali"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What are the colourful patterns made on the floor at the door, with powders or rice flour, called?",
+          "options": [
+            "Mehndi",
+            "Tilak",
+            "Rangoli",
+            "Torana"
+          ],
+          "answer": "Rangoli",
+          "note": "Rangoli is made to welcome guests and good luck.",
+          "source": "https://en.wikipedia.org/wiki/Rangoli"
+        },
+        {
+          "type": "tf",
+          "prompt": "In much of north India, Diwali is linked with the return of Lord Rama to Ayodhya.",
+          "answer": true,
+          "note": "Different regions tell different stories of Diwali.",
+          "source": "https://en.wikipedia.org/wiki/Diwali"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which goddess is worshipped in many homes on the main night of Diwali?",
+          "options": [
+            "Saraswati",
+            "Parvati",
+            "Ganga",
+            "Lakshmi"
+          ],
+          "answer": "Lakshmi",
+          "note": "She is the goddess of wealth and good fortune.",
+          "source": "https://en.wikipedia.org/wiki/Lakshmi"
+        },
+        {
+          "type": "tf",
+          "prompt": "Diwali is celebrated only by Hindus.",
+          "answer": false,
+          "note": "Jains and Sikhs also mark this time of year, each for their own reasons.",
+          "source": "https://en.wikipedia.org/wiki/Diwali"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Dhanteras, the first day of Diwali celebrations, is a traditional day to buy what?",
+          "options": [
+            "Gold, silver or new utensils",
+            "Kites",
+            "Colours",
+            "Fireworks"
+          ],
+          "answer": "Gold, silver or new utensils",
+          "note": "Many people buy something new for the home.",
+          "source": "https://en.wikipedia.org/wiki/Dhanteras"
+        },
+        {
+          "type": "number",
+          "prompt": "For how many days do the Diwali celebrations traditionally last in many parts of India?",
+          "answer": 5,
+          "tolerance": 0,
+          "note": "Dhanteras starts it and Bhai Dooj ends it.",
+          "source": "https://en.wikipedia.org/wiki/Diwali"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which of these is a sweet often shared at Diwali?",
+          "options": [
+            "Pav bhaji",
+            "Kaju katli",
+            "Dhokla",
+            "Samosa"
+          ],
+          "answer": "Kaju katli",
+          "note": "Kaju katli is a diamond-shaped sweet made from cashews.",
+          "source": "https://en.wikipedia.org/wiki/Kaju_katli"
+        }
+      ]
+    },
+    {
+      "name": "Holi and Spring",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Holi is known as the festival of what?",
+          "options": [
+            "Lights",
+            "Boats",
+            "Colours",
+            "Kites"
+          ],
+          "answer": "Colours",
+          "note": "People throw coloured powder and water at each other in fun.",
+          "source": "https://en.wikipedia.org/wiki/Holi"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the bonfire lit on the eve of Holi called?",
+          "options": [
+            "Lohri",
+            "Ravan Dahan",
+            "Diwali Agni",
+            "Holika Dahan"
+          ],
+          "answer": "Holika Dahan",
+          "note": "It recalls the story of Prahlada and Holika.",
+          "source": "https://en.wikipedia.org/wiki/Holika_Dahan"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Holi marks the arrival of which season?",
+          "options": [
+            "Spring",
+            "Summer",
+            "Monsoon",
+            "Winter"
+          ],
+          "answer": "Spring",
+          "note": "It comes as winter ends in most of north India.",
+          "source": "https://en.wikipedia.org/wiki/Holi"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the coloured powder thrown at Holi commonly called?",
+          "options": [
+            "Haldi paste",
+            "Gulal",
+            "Sindoor",
+            "Kajal"
+          ],
+          "answer": "Gulal",
+          "note": "Today many people choose natural, skin-safe colours.",
+          "source": "https://en.wikipedia.org/wiki/Gulal"
+        },
+        {
+          "type": "tf",
+          "prompt": "Holi celebrations around Mathura and Vrindavan are linked with Radha and Krishna.",
+          "answer": true,
+          "note": "These towns are known for their long Holi festivities.",
+          "source": "https://en.wikipedia.org/wiki/Holi"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In Lathmar Holi in Barsana, what do the women playfully use against the men?",
+          "options": [
+            "Pillows",
+            "Flower garlands",
+            "Sticks (lathis)",
+            "Water pistols"
+          ],
+          "answer": "Sticks (lathis)",
+          "note": "The men carry shields to protect themselves.",
+          "source": "https://en.wikipedia.org/wiki/Lathmar_Holi"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which sweet dumpling, often filled with khoya and dry fruit, is a Holi favourite?",
+          "options": [
+            "Rasgulla",
+            "Jalebi",
+            "Modak",
+            "Gujiya"
+          ],
+          "answer": "Gujiya",
+          "note": "It is deep-fried or baked into a crescent shape.",
+          "source": "https://en.wikipedia.org/wiki/Gujia"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which cooling milk drink, flavoured with nuts and spices, is often enjoyed at Holi?",
+          "options": [
+            "Thandai",
+            "Lassi",
+            "Chaas",
+            "Nimbu pani"
+          ],
+          "answer": "Thandai",
+          "note": "Thandai means cooling.",
+          "source": "https://en.wikipedia.org/wiki/Thandai"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Holi falls around the full moon of which month of the Hindu calendar?",
+          "options": [
+            "Kartika",
+            "Phalguna",
+            "Chaitra",
+            "Shravana"
+          ],
+          "answer": "Phalguna",
+          "note": "Phalguna usually falls in February or March in the Gregorian calendar.",
+          "source": "https://en.wikipedia.org/wiki/Holi"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In which neighbouring country is Holi also widely celebrated?",
+          "options": [
+            "Myanmar",
+            "Afghanistan",
+            "Nepal",
+            "Bhutan"
+          ],
+          "answer": "Nepal",
+          "note": "Holi is also celebrated by Indian communities around the world.",
+          "source": "https://en.wikipedia.org/wiki/Holi"
+        }
+      ]
+    },
+    {
+      "name": "Eid and Christmas in India",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Eid al-Fitr marks the end of which month of fasting?",
+          "options": [
+            "Muharram",
+            "Rajab",
+            "Shaban",
+            "Ramadan"
+          ],
+          "answer": "Ramadan",
+          "note": "Muslims fast from dawn to sunset during Ramadan.",
+          "source": "https://en.wikipedia.org/wiki/Eid_al-Fitr"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Eid al-Fitr is celebrated on the first day of which Islamic month?",
+          "options": [
+            "Shawwal",
+            "Ramadan",
+            "Dhu al-Hijjah",
+            "Safar"
+          ],
+          "answer": "Shawwal",
+          "note": "The date depends on sighting the new moon.",
+          "source": "https://en.wikipedia.org/wiki/Eid_al-Fitr"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which creamy milk dessert with vermicelli, dates and nuts is a traditional Eid treat?",
+          "options": [
+            "Rasgulla",
+            "Sheer khurma",
+            "Halwa",
+            "Jalebi"
+          ],
+          "answer": "Sheer khurma",
+          "note": "Its name comes from Persian words for milk and dates.",
+          "source": "https://en.wikipedia.org/wiki/Sheer_khurma"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What does the greeting Eid Mubarak mean?",
+          "options": [
+            "Happy harvest",
+            "Good night",
+            "Blessed Eid",
+            "Peace be upon you"
+          ],
+          "answer": "Blessed Eid",
+          "note": "People hug and say it to each other.",
+          "source": "https://en.wikipedia.org/wiki/Eid_Mubarak"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the Eidi that children often receive at Eid?",
+          "options": [
+            "A new book",
+            "A special sweet",
+            "A ride on a camel",
+            "A gift, often money"
+          ],
+          "answer": "A gift, often money",
+          "note": "Elders give Eidi to younger family members.",
+          "source": "https://en.wikipedia.org/wiki/Eidi"
+        },
+        {
+          "type": "tf",
+          "prompt": "Because the Islamic calendar is lunar, Eid falls about 10 to 11 days earlier in the Gregorian calendar each year.",
+          "answer": true,
+          "note": "Over many years Eid moves through all the seasons.",
+          "source": "https://en.wikipedia.org/wiki/Islamic_calendar"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is Eid al-Adha commonly called in India?",
+          "options": [
+            "Bakrid",
+            "Muharram",
+            "Shab-e-Barat",
+            "Milad"
+          ],
+          "answer": "Bakrid",
+          "note": "It remembers the willingness of Ibrahim to sacrifice.",
+          "source": "https://en.wikipedia.org/wiki/Eid_al-Adha"
+        },
+        {
+          "type": "tf",
+          "prompt": "Christmas Day, 25 December, is a public holiday in India.",
+          "answer": true,
+          "note": "It is a state holiday, though its celebration is biggest in places such as Goa, Kerala and the North-East.",
+          "source": "https://en.wikipedia.org/wiki/Christmas_in_India"
+        },
+        {
+          "type": "mcq",
+          "prompt": "In North India, Christmas Day is often called by a name that means \"Big Day\". What is it?",
+          "answer": "Bada Din",
+          "note": "Bada Din is the name many people use for Christmas in North India.",
+          "source": "https://en.wikipedia.org/wiki/Christmas_in_India",
+          "options": [
+            "Chhota Din",
+            "Bada Tyohar",
+            "Bada Din",
+            "Maha Utsav"
+          ]
+        },
+        {
+          "type": "mcq",
+          "prompt": "According to tradition, which apostle brought Christianity to India in the 1st century?",
+          "options": [
+            "St Peter",
+            "St Thomas",
+            "St Paul",
+            "St Francis Xavier"
+          ],
+          "answer": "St Thomas",
+          "note": "The Saint Thomas Christians of Kerala trace their history to him.",
+          "source": "https://en.wikipedia.org/wiki/Saint_Thomas_Christians"
+        }
+      ]
+    },
+    {
+      "name": "Harvest Festivals",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "In which state is Pongal mainly celebrated?",
+          "options": [
+            "Punjab",
+            "Gujarat",
+            "Tamil Nadu",
+            "Assam"
+          ],
+          "answer": "Tamil Nadu",
+          "note": "It takes place in mid-January.",
+          "source": "https://en.wikipedia.org/wiki/Pongal_(festival)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What do families let the pot of milk and rice do at Pongal for good luck?",
+          "options": [
+            "Freeze",
+            "Stay cold",
+            "Be shared first with guests",
+            "Boil over"
+          ],
+          "answer": "Boil over",
+          "note": "People shout Pongalo Pongal as it overflows.",
+          "source": "https://en.wikipedia.org/wiki/Pongal_(dish)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "To which deity is Pongal mainly dedicated, in thanks for the harvest?",
+          "options": [
+            "Surya, the Sun god",
+            "Ganesha",
+            "Hanuman",
+            "Kartikeya"
+          ],
+          "answer": "Surya, the Sun god",
+          "note": "Farmers thank the Sun, rain and cattle.",
+          "source": "https://en.wikipedia.org/wiki/Pongal_(festival)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Onam is the main festival of which state?",
+          "options": [
+            "Karnataka",
+            "Kerala",
+            "Maharashtra",
+            "Odisha"
+          ],
+          "answer": "Kerala",
+          "note": "It falls in August or September.",
+          "source": "https://en.wikipedia.org/wiki/Onam"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the flower carpet made at the door for Onam called?",
+          "options": [
+            "Rangoli",
+            "Kolam",
+            "Pookalam",
+            "Mehndi"
+          ],
+          "answer": "Pookalam",
+          "note": "Fresh petals are laid in circles of bright colours.",
+          "source": "https://en.wikipedia.org/wiki/Pookalam"
+        },
+        {
+          "type": "mcq",
+          "prompt": "According to legend, which king returns to visit his people at Onam?",
+          "options": [
+            "Rama",
+            "Ashoka",
+            "Bharata",
+            "Mahabali"
+          ],
+          "answer": "Mahabali",
+          "note": "He is remembered as a just and generous ruler.",
+          "source": "https://en.wikipedia.org/wiki/Mahabali"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What are the snake boat races held around Onam called?",
+          "options": [
+            "Vallamkali",
+            "Kabaddi",
+            "Kalaripayattu",
+            "Theyyam"
+          ],
+          "answer": "Vallamkali",
+          "note": "Teams of rowers paddle in rhythm to songs.",
+          "source": "https://en.wikipedia.org/wiki/Vallam_Kali"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year did Guru Gobind Singh found the Khalsa on Baisakhi (Vaisakhi)?",
+          "answer": 1699,
+          "tolerance": 0,
+          "note": "The day is also a harvest festival in Punjab.",
+          "source": "https://en.wikipedia.org/wiki/Vaisakhi"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which energetic folk dance of Punjab is often danced at Baisakhi?",
+          "options": [
+            "Garba",
+            "Bhangra",
+            "Bihu",
+            "Lavani"
+          ],
+          "answer": "Bhangra",
+          "note": "Bhangra was first danced by farmers during the harvest.",
+          "source": "https://en.wikipedia.org/wiki/Bhangra_(dance)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which activity is the highlight of Makar Sankranti (Uttarayan) in Gujarat?",
+          "options": [
+            "Boat races",
+            "Playing with colours",
+            "Flying kites",
+            "Burning effigies"
+          ],
+          "answer": "Flying kites",
+          "note": "The sky fills with thousands of colourful kites.",
+          "source": "https://en.wikipedia.org/wiki/Makar_Sankranti"
+        }
+      ]
+    },
+    {
+      "name": "More Festivals",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "In which state is Durga Puja most famous?",
+          "options": [
+            "Rajasthan",
+            "Kerala",
+            "Haryana",
+            "West Bengal"
+          ],
+          "answer": "West Bengal",
+          "note": "It is celebrated with large, decorated pandals.",
+          "source": "https://en.wikipedia.org/wiki/Durga_Puja"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the final day of Durga Puja, when idols are taken for immersion, called?",
+          "options": [
+            "Vijaya Dashami",
+            "Maha Saptami",
+            "Mahalaya",
+            "Navami"
+          ],
+          "answer": "Vijaya Dashami",
+          "note": "On this day people greet each other and share sweets.",
+          "source": "https://en.wikipedia.org/wiki/Durga_Puja"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What are the temporary decorated structures that house Durga idols called?",
+          "options": [
+            "Gopurams",
+            "Pandals",
+            "Stupas",
+            "Ghats"
+          ],
+          "answer": "Pandals",
+          "note": "Some pandals are made to look like famous buildings.",
+          "source": "https://en.wikipedia.org/wiki/Pandal"
+        },
+        {
+          "type": "tf",
+          "prompt": "At Dussehra in many places, large figures of Ravana are burned.",
+          "answer": true,
+          "note": "It shows the victory of good over evil.",
+          "source": "https://en.wikipedia.org/wiki/Dussehra"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the decorated thread that sisters tie on their brothers' wrists at Raksha Bandhan called?",
+          "options": [
+            "Mangalsutra",
+            "Janeu",
+            "Rakhi",
+            "Tilak"
+          ],
+          "answer": "Rakhi",
+          "note": "Brothers promise to protect their sisters and often give a gift.",
+          "source": "https://en.wikipedia.org/wiki/Raksha_Bandhan"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Ganesh Chaturthi is celebrated especially grandly in which state?",
+          "options": [
+            "Punjab",
+            "Assam",
+            "Himachal Pradesh",
+            "Maharashtra"
+          ],
+          "answer": "Maharashtra",
+          "note": "Large public celebrations in Mumbai and Pune began in the 1890s.",
+          "source": "https://en.wikipedia.org/wiki/Ganesh_Chaturthi"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Garba, a circle dance, is closely linked to Navratri in which state?",
+          "options": [
+            "Gujarat",
+            "Odisha",
+            "Tamil Nadu",
+            "Bihar"
+          ],
+          "answer": "Gujarat",
+          "note": "Dancers move around a lamp or image of the goddess.",
+          "source": "https://en.wikipedia.org/wiki/Garba_(dance)"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Lohri, a winter bonfire festival, is especially popular in which region?",
+          "options": [
+            "Kerala",
+            "Punjab",
+            "Goa",
+            "Sikkim"
+          ],
+          "answer": "Punjab",
+          "note": "People throw popcorn, peanuts and sweets into the fire.",
+          "source": "https://en.wikipedia.org/wiki/Lohri"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Bihu is the festival of which Indian state?",
+          "options": [
+            "Manipur",
+            "Tripura",
+            "Assam",
+            "Nagaland"
+          ],
+          "answer": "Assam",
+          "note": "Rongali Bihu is celebrated in April.",
+          "source": "https://en.wikipedia.org/wiki/Bihu"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Ugadi is the New Year festival of which region?",
+          "options": [
+            "Kerala and Tamil Nadu",
+            "Punjab and Haryana",
+            "Gujarat and Rajasthan",
+            "Karnataka, Andhra Pradesh and Telangana"
+          ],
+          "answer": "Karnataka, Andhra Pradesh and Telangana",
+          "note": "A special mixture with six tastes is eaten to show life has many flavours.",
+          "source": "https://en.wikipedia.org/wiki/Ugadi"
+        }
+      ]
+    }
+  ]
+}

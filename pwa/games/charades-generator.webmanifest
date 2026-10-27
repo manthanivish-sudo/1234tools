@@ -1,0 +1,41 @@
+{
+  "id": "/games/charades-generator/",
+  "name": "Dumb Charades Generator — 1234Tools",
+  "short_name": "Dumb Charades",
+  "description": "Dumb charades for the whole family: Bollywood and Hollywood films, animals, actions, jobs and more. A timer for each team, points, and the word kept off the TV. Free, no sign-up.",
+  "start_url": "/games/charades-generator/?src=pwa",
+  "scope": "/games/charades-generator/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "theme_color": "#06080f",
+  "background_color": "#06080f",
+  "lang": "en-GB",
+  "dir": "ltr",
+  "categories": [
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/assets/pwa/i-charades-generator.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa/i-charades-generator-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/pwa/i-charades-generator-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

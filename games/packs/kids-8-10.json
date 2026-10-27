@@ -1,0 +1,593 @@
+{
+  "v": 1,
+  "id": "kids-8-10",
+  "title": "Kids' Quiz (ages 8–10)",
+  "ages": "8-10",
+  "region": "global",
+  "count": 50,
+  "reviewed": "2026-10-27",
+  "sources": [
+    "en.wikipedia.org"
+  ],
+  "rounds": [
+    {
+      "name": "Animals and Plants",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Which animal is the largest on Earth?",
+          "options": [
+            "African elephant",
+            "Giraffe",
+            "Great white shark",
+            "Blue whale"
+          ],
+          "answer": "Blue whale",
+          "note": "A blue whale can be about 30 metres long.",
+          "source": "https://en.wikipedia.org/wiki/Blue_whale"
+        },
+        {
+          "type": "tf",
+          "prompt": "Bats are mammals.",
+          "answer": true,
+          "note": "Bats are the only mammals that can truly fly.",
+          "source": "https://en.wikipedia.org/wiki/Bat"
+        },
+        {
+          "type": "number",
+          "prompt": "How many hearts does an octopus have?",
+          "answer": 3,
+          "tolerance": 0,
+          "note": "Two pump blood through the gills and one pumps it around the body.",
+          "source": "https://en.wikipedia.org/wiki/Octopus"
+        },
+        {
+          "type": "text",
+          "prompt": "What is the name for a baby kangaroo?",
+          "answer": "Joey",
+          "accept": [
+            "a joey"
+          ],
+          "note": "A joey stays in its mother's pouch for months.",
+          "source": "https://en.wikipedia.org/wiki/Kangaroo"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which is the fastest land animal over a short distance?",
+          "options": [
+            "Cheetah",
+            "Lion",
+            "Horse",
+            "Greyhound"
+          ],
+          "answer": "Cheetah",
+          "note": "A cheetah can sprint faster than cars drive in towns.",
+          "source": "https://en.wikipedia.org/wiki/Cheetah"
+        },
+        {
+          "type": "tf",
+          "prompt": "Sharks are mammals.",
+          "answer": false,
+          "note": "Sharks are fish. They breathe with gills.",
+          "source": "https://en.wikipedia.org/wiki/Shark"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is a group of lions called?",
+          "options": [
+            "A herd",
+            "A pride",
+            "A flock",
+            "A pack"
+          ],
+          "answer": "A pride",
+          "note": "Lions are the only big cats that live in social groups.",
+          "source": "https://en.wikipedia.org/wiki/Lion"
+        },
+        {
+          "type": "text",
+          "prompt": "What is the name of the process plants use to make food from sunlight?",
+          "answer": "Photosynthesis",
+          "accept": [],
+          "note": "Plants take in carbon dioxide and give out oxygen while doing it.",
+          "source": "https://en.wikipedia.org/wiki/Photosynthesis"
+        },
+        {
+          "type": "number",
+          "prompt": "How many bones does an adult human body usually have?",
+          "answer": 206,
+          "tolerance": 0,
+          "note": "Babies are born with more, and some join together as they grow.",
+          "source": "https://en.wikipedia.org/wiki/Human_skeleton"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which insect makes honey?",
+          "options": [
+            "Wasp",
+            "Ant",
+            "Honey bee",
+            "Butterfly"
+          ],
+          "answer": "Honey bee",
+          "note": "Honey bees visit flowers to collect nectar.",
+          "source": "https://en.wikipedia.org/wiki/Honey_bee"
+        }
+      ]
+    },
+    {
+      "name": "Space and Science",
+      "questions": [
+        {
+          "type": "number",
+          "prompt": "How many planets are in our Solar System?",
+          "answer": 8,
+          "tolerance": 0,
+          "note": "Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus and Neptune.",
+          "source": "https://en.wikipedia.org/wiki/Solar_System"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which star is closest to Earth?",
+          "options": [
+            "Sirius",
+            "The Pole Star",
+            "Proxima Centauri",
+            "The Sun"
+          ],
+          "answer": "The Sun",
+          "note": "The Sun is about 150 million kilometres away.",
+          "source": "https://en.wikipedia.org/wiki/Sun"
+        },
+        {
+          "type": "tf",
+          "prompt": "Sound travels faster than light.",
+          "answer": false,
+          "note": "Light is far faster, which is why you see lightning before you hear thunder.",
+          "source": "https://en.wikipedia.org/wiki/Speed_of_light"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which gas do humans need to breathe in to stay alive?",
+          "options": [
+            "Oxygen",
+            "Helium",
+            "Nitrogen",
+            "Hydrogen"
+          ],
+          "answer": "Oxygen",
+          "note": "Plants make a lot of the oxygen we breathe.",
+          "source": "https://en.wikipedia.org/wiki/Oxygen"
+        },
+        {
+          "type": "number",
+          "prompt": "At what temperature in degrees Celsius does water boil at sea level?",
+          "answer": 100,
+          "tolerance": 0,
+          "note": "On a high mountain it boils at a lower temperature.",
+          "source": "https://en.wikipedia.org/wiki/Boiling_point"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which planet is famous for its bright rings?",
+          "options": [
+            "Mars",
+            "Saturn",
+            "Mercury",
+            "Venus"
+          ],
+          "answer": "Saturn",
+          "note": "Saturn's rings are made of ice and rock.",
+          "source": "https://en.wikipedia.org/wiki/Saturn"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who was the first person to walk on the Moon?",
+          "options": [
+            "Buzz Aldrin",
+            "Yuri Gagarin",
+            "Neil Armstrong",
+            "Michael Collins"
+          ],
+          "answer": "Neil Armstrong",
+          "note": "This happened in July 1969.",
+          "source": "https://en.wikipedia.org/wiki/Neil_Armstrong"
+        },
+        {
+          "type": "text",
+          "prompt": "What force pulls objects towards the Earth?",
+          "answer": "Gravity",
+          "accept": [
+            "gravitation"
+          ],
+          "note": "Gravity keeps the Moon going around the Earth too.",
+          "source": "https://en.wikipedia.org/wiki/Gravity"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the hardest natural substance?",
+          "options": [
+            "Gold",
+            "Iron",
+            "Quartz",
+            "Diamond"
+          ],
+          "answer": "Diamond",
+          "note": "Diamonds are made of carbon.",
+          "source": "https://en.wikipedia.org/wiki/Diamond"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which of these metals is attracted to a magnet?",
+          "options": [
+            "Iron",
+            "Aluminium",
+            "Copper",
+            "Gold"
+          ],
+          "answer": "Iron",
+          "note": "Steel is mostly iron, so magnets stick to it.",
+          "source": "https://en.wikipedia.org/wiki/Magnet"
+        }
+      ]
+    },
+    {
+      "name": "Geography",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "What is the capital city of France?",
+          "options": [
+            "Lyon",
+            "Paris",
+            "Marseille",
+            "Brussels"
+          ],
+          "answer": "Paris",
+          "note": "The Eiffel Tower is in Paris.",
+          "source": "https://en.wikipedia.org/wiki/Paris"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which is the largest ocean?",
+          "options": [
+            "Atlantic Ocean",
+            "Indian Ocean",
+            "Pacific Ocean",
+            "Arctic Ocean"
+          ],
+          "answer": "Pacific Ocean",
+          "note": "It covers about a third of the Earth's surface.",
+          "source": "https://en.wikipedia.org/wiki/Pacific_Ocean"
+        },
+        {
+          "type": "number",
+          "prompt": "How many continents are there, using the most common way of counting?",
+          "answer": 7,
+          "tolerance": 0,
+          "note": "Africa, Antarctica, Asia, Australia/Oceania, Europe, North America and South America.",
+          "source": "https://en.wikipedia.org/wiki/Continent"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which is the largest hot desert in the world?",
+          "options": [
+            "The Gobi",
+            "The Thar",
+            "The Kalahari",
+            "The Sahara"
+          ],
+          "answer": "The Sahara",
+          "note": "The Sahara covers about nine million square kilometres.",
+          "source": "https://en.wikipedia.org/wiki/Sahara"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which mountain is the highest above sea level?",
+          "options": [
+            "Mount Everest",
+            "K2",
+            "Kilimanjaro",
+            "Mont Blanc"
+          ],
+          "answer": "Mount Everest",
+          "note": "It lies on the border of Nepal and Tibet.",
+          "source": "https://en.wikipedia.org/wiki/Mount_Everest"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the capital city of Australia?",
+          "options": [
+            "Sydney",
+            "Canberra",
+            "Melbourne",
+            "Perth"
+          ],
+          "answer": "Canberra",
+          "note": "Many people guess Sydney, but Canberra was built to be the capital.",
+          "source": "https://en.wikipedia.org/wiki/Canberra"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which country is shaped a little like a boot?",
+          "options": [
+            "Spain",
+            "Greece",
+            "Italy",
+            "Portugal"
+          ],
+          "answer": "Italy",
+          "note": "Sicily looks like a football being kicked by the boot.",
+          "source": "https://en.wikipedia.org/wiki/Italy"
+        },
+        {
+          "type": "mcq",
+          "prompt": "On which continent is Egypt?",
+          "options": [
+            "Asia",
+            "Europe",
+            "South America",
+            "Africa"
+          ],
+          "answer": "Africa",
+          "note": "Egypt's Sinai Peninsula is in Asia, but most of the country is in Africa.",
+          "source": "https://en.wikipedia.org/wiki/Egypt"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which country is the Great Wall famous for being in?",
+          "options": [
+            "China",
+            "Japan",
+            "India",
+            "Mongolia"
+          ],
+          "answer": "China",
+          "note": "Parts of the wall were built over many centuries.",
+          "source": "https://en.wikipedia.org/wiki/Great_Wall_of_China"
+        },
+        {
+          "type": "tf",
+          "prompt": "Antarctica is the coldest continent.",
+          "answer": true,
+          "note": "Temperatures there have dropped below minus 80 degrees Celsius.",
+          "source": "https://en.wikipedia.org/wiki/Antarctica"
+        }
+      ]
+    },
+    {
+      "name": "Stories and History",
+      "questions": [
+        {
+          "type": "mcq",
+          "prompt": "Who wrote the Harry Potter books?",
+          "options": [
+            "Roald Dahl",
+            "J. K. Rowling",
+            "Jacqueline Wilson",
+            "Enid Blyton"
+          ],
+          "answer": "J. K. Rowling",
+          "note": "The first book came out in 1997.",
+          "source": "https://en.wikipedia.org/wiki/J._K._Rowling"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who painted the Mona Lisa?",
+          "options": [
+            "Michelangelo",
+            "Vincent van Gogh",
+            "Leonardo da Vinci",
+            "Pablo Picasso"
+          ],
+          "answer": "Leonardo da Vinci",
+          "note": "It hangs in the Louvre museum in Paris.",
+          "source": "https://en.wikipedia.org/wiki/Mona_Lisa"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who were the great pyramids of Egypt built for?",
+          "options": [
+            "Soldiers",
+            "Farmers",
+            "Sailors",
+            "Pharaohs"
+          ],
+          "answer": "Pharaohs",
+          "note": "Pharaohs were the rulers of ancient Egypt.",
+          "source": "https://en.wikipedia.org/wiki/Egyptian_pyramids"
+        },
+        {
+          "type": "number",
+          "prompt": "In which year did the Wright brothers make the first powered aeroplane flight?",
+          "answer": 1903,
+          "tolerance": 0,
+          "note": "The first flight lasted about 12 seconds.",
+          "source": "https://en.wikipedia.org/wiki/Wright_brothers"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which huge ship sank in 1912 after hitting an iceberg?",
+          "options": [
+            "Titanic",
+            "Mayflower",
+            "Victory",
+            "Endeavour"
+          ],
+          "answer": "Titanic",
+          "note": "It was on its first voyage.",
+          "source": "https://en.wikipedia.org/wiki/Titanic"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Who wrote Charlie and the Chocolate Factory?",
+          "options": [
+            "Dr Seuss",
+            "Roald Dahl",
+            "Michael Morpurgo",
+            "C. S. Lewis"
+          ],
+          "answer": "Roald Dahl",
+          "note": "Roald Dahl also wrote Matilda and The BFG.",
+          "source": "https://en.wikipedia.org/wiki/Charlie_and_the_Chocolate_Factory"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is the name of the lion in The Lion, the Witch and the Wardrobe?",
+          "options": [
+            "Simba",
+            "Mufasa",
+            "Aslan",
+            "Leo"
+          ],
+          "answer": "Aslan",
+          "note": "C. S. Lewis wrote the Narnia books.",
+          "source": "https://en.wikipedia.org/wiki/Aslan"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which wall did the Romans build across northern England?",
+          "options": [
+            "The Great Wall",
+            "Offa's Dyke",
+            "The Berlin Wall",
+            "Hadrian's Wall"
+          ],
+          "answer": "Hadrian's Wall",
+          "note": "Parts of it still stand after nearly 1,900 years.",
+          "source": "https://en.wikipedia.org/wiki/Hadrian's_Wall"
+        },
+        {
+          "type": "tf",
+          "prompt": "Viking warriors wore helmets with horns in battle.",
+          "answer": false,
+          "note": "There is no good evidence for it. The idea became popular through 19th-century art.",
+          "source": "https://en.wikipedia.org/wiki/Horned_helmet"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which language is mostly spoken in Brazil?",
+          "options": [
+            "Portuguese",
+            "Spanish",
+            "English",
+            "French"
+          ],
+          "answer": "Portuguese",
+          "note": "Brazil was ruled by Portugal for over 300 years.",
+          "source": "https://en.wikipedia.org/wiki/Brazil"
+        }
+      ]
+    },
+    {
+      "name": "Sport, Maths and Everyday",
+      "questions": [
+        {
+          "type": "number",
+          "prompt": "How many players from one team are on the pitch in a football (soccer) match?",
+          "answer": 11,
+          "tolerance": 0,
+          "note": "That includes the goalkeeper.",
+          "source": "https://en.wikipedia.org/wiki/Association_football"
+        },
+        {
+          "type": "number",
+          "prompt": "How many rings are in the Olympic symbol?",
+          "answer": 5,
+          "tolerance": 0,
+          "note": "They stand for five regions of the world joined together.",
+          "source": "https://en.wikipedia.org/wiki/Olympic_symbols"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which sport is played at Wimbledon?",
+          "options": [
+            "Cricket",
+            "Tennis",
+            "Golf",
+            "Rugby"
+          ],
+          "answer": "Tennis",
+          "note": "Wimbledon is played on grass courts.",
+          "source": "https://en.wikipedia.org/wiki/The_Championships,_Wimbledon"
+        },
+        {
+          "type": "number",
+          "prompt": "What is 7 multiplied by 8?",
+          "answer": 56,
+          "tolerance": 0,
+          "note": "A handy trick is 5, 6, 7, 8: 56 equals 7 times 8.",
+          "source": "https://en.wikipedia.org/wiki/Multiplication_table"
+        },
+        {
+          "type": "number",
+          "prompt": "How many sides does an octagon have?",
+          "answer": 8,
+          "tolerance": 0,
+          "note": "Stop signs are often octagons.",
+          "source": "https://en.wikipedia.org/wiki/Octagon"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which number is shown by the Roman numeral X?",
+          "options": [
+            "5",
+            "50",
+            "10",
+            "100"
+          ],
+          "answer": "10",
+          "note": "V is 5, L is 50 and C is 100.",
+          "source": "https://en.wikipedia.org/wiki/Roman_numerals"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What is bread mainly made from?",
+          "options": [
+            "Rice",
+            "Sugar",
+            "Butter",
+            "Flour"
+          ],
+          "answer": "Flour",
+          "note": "Flour is usually ground from wheat.",
+          "source": "https://en.wikipedia.org/wiki/Bread"
+        },
+        {
+          "type": "mcq",
+          "prompt": "Which musical instrument has black and white keys?",
+          "options": [
+            "Piano",
+            "Violin",
+            "Flute",
+            "Drum"
+          ],
+          "answer": "Piano",
+          "note": "Its full name is pianoforte, which means soft-loud.",
+          "source": "https://en.wikipedia.org/wiki/Piano"
+        },
+        {
+          "type": "mcq",
+          "prompt": "What do the letters www stand for in a web address?",
+          "options": [
+            "Wide World Window",
+            "World Wide Web",
+            "Web We Work",
+            "Wireless Web World"
+          ],
+          "answer": "World Wide Web",
+          "note": "Tim Berners-Lee invented the web.",
+          "source": "https://en.wikipedia.org/wiki/World_Wide_Web"
+        },
+        {
+          "type": "number",
+          "prompt": "How many strings does a standard violin have?",
+          "answer": 4,
+          "tolerance": 0,
+          "note": "They are tuned G, D, A and E.",
+          "source": "https://en.wikipedia.org/wiki/Violin"
+        }
+      ]
+    }
+  ]
+}
