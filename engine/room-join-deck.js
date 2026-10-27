@@ -2,8 +2,8 @@
  * The Live Presentation cards of /join/ (engine/room-join.js), fetched only
  * when the presenter shows one: multiple choice with one or several answers
  * (mc), an open-ended typed answer (oe), a timed quiz question with points
- * (dq), the leaderboard (lb) and "look at the screen" for a content slide
- * (look). room-join.js passes its helpers in `x` (heading, el, btn, note,
+ * (dq), the leaderboard (lb), "look at the screen" for a content slide
+ * (look) and the finale after the last slide, with confetti (end). room-join.js passes its helpers in `x` (heading, el, btn, note,
  * setNote, send, remember, t, buzzHaptic, LETTERS, mine(), me(), and dv:
  * the last `direct` message from the presenter). Card shapes:
  * engine/room-kit.js.
@@ -16,14 +16,16 @@
       sentChange: 'Your answer was sent. You can change it until voting closes.',
       typePh: 'Type your answer', left: '{n} characters left', look: 'Look at the screen',
       pts: '+{p} points in {s} s', pts0: '+{p} points', total: 'Total {t} points · {r} of {of} · {tm} s answering', rank: 'You are {r} of {of} with {t} points ({tm} s).',
-      won: 'You won! {t} points in {tm} s.', fin: 'You finished {r} of {of} with {t} points ({tm} s).'
+      won: 'You won! {t} points in {tm} s.', fin: 'You finished {r} of {of} with {t} points ({tm} s).',
+      thanks: 'Thank you for taking part!', winIs: 'The winner: {n}'
     },
     hi: {
       upTo: 'ज़्यादा से ज़्यादा {m} चुनें, फिर भेजें दबाएँ।', send: 'भेजें', sent: 'आपका जवाब भेज दिया गया।',
       sentChange: 'आपका जवाब भेज दिया गया। वोटिंग बंद होने तक आप इसे बदल सकते हैं।',
       typePh: 'अपना जवाब लिखें', left: '{n} अक्षर बाक़ी', look: 'स्क्रीन की ओर देखें',
       pts: '+{p} अंक, {s} सेकंड में', pts0: '+{p} अंक', total: 'कुल {t} अंक · {of} में से {r} · {tm} सेकंड', rank: '{of} में से आप {r} हैं, {t} अंकों के साथ ({tm} सेकंड)।',
-      won: 'आप जीत गए! {t} अंक, {tm} सेकंड में।', fin: '{of} में से आप {r} रहे, {t} अंकों के साथ ({tm} सेकंड)।'
+      won: 'आप जीत गए! {t} अंक, {tm} सेकंड में।', fin: '{of} में से आप {r} रहे, {t} अंकों के साथ ({tm} सेकंड)।',
+      thanks: 'भाग लेने के लिए धन्यवाद!', winIs: 'विजेता: {n}'
     }
   };
   function s(k, a) {
@@ -38,6 +40,21 @@
   function place(v, key) {
     var a = { r: v.r, of: v.of, t: v.t, tm: sec(v.tm) };
     return v.fin ? s(v.r === 1 ? 'won' : 'fin', a) : s(key, a);
+  }
+
+  /* confetti falling once over the phone; none with reduced motion (inline styles: /join/ keeps its CSS small) */
+  var COLS = ['#f4b400', '#e8453c', '#3d7cf2', '#1aa260', '#a64bd6', '#ff7a45', '#18b5c9', '#f06292'];
+  function confetti(n) {
+    if (!document.body.animate || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    for (var i = 0; i < n; i++) {
+      var p = document.createElement('i'), z = 6 + Math.random() * 6;
+      p.setAttribute('aria-hidden', 'true');
+      p.style.cssText = 'position:fixed;top:-24px;left:' + (Math.random() * 100).toFixed(1) + 'vw;width:' + z.toFixed(1) + 'px;height:' + (z * 1.6).toFixed(1) +
+        'px;background:' + COLS[i % COLS.length] + ';border-radius:2px;pointer-events:none;z-index:9';
+      document.body.appendChild(p);
+      p.animate([{ transform: 'translate(0,0) rotate(0deg)' }, { transform: 'translate(' + Math.round(Math.random() * 160 - 80) + 'px,110vh) rotate(' + Math.round(Math.random() * 1080 - 540) + 'deg)' }],
+        { duration: 2600 + Math.random() * 2200, delay: Math.random() * 1400, easing: 'cubic-bezier(.25,.6,.4,1)', fill: 'both' }).onfinish = (function (el) { return function () { el.remove(); }; })(p);
+    }
   }
 
   window.MVRJoinCards = function (x) {
@@ -220,6 +237,24 @@
         x.heading(box, s0);
         box.appendChild(x.el('p', 'hint', s('look')));
         return {};
+      },
+
+      end: function (s0, box) {
+        x.heading(box, s0);
+        var st = s0, won = false, w = x.el('h3', null), me = x.el('p', 'msg ok');
+        box.appendChild(x.el('p', null, s('thanks')));
+        box.appendChild(w);
+        me.setAttribute('role', 'status');
+        box.appendChild(me);
+        confetti(40);
+        function paint() {
+          var v = x.dv, mine = v && v.q === st.id;
+          w.textContent = st.w ? s('winIs', { n: st.w }) : '';
+          me.textContent = mine ? place(v, 'rank') : '';
+          if (mine && v.r === 1 && !won) { won = true; confetti(140); x.buzzHaptic && x.buzzHaptic(); }
+        }
+        paint();
+        return { update: function (s2) { st = s2; paint(); }, direct: paint };
       }
     };
   };

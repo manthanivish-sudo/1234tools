@@ -236,7 +236,7 @@
 
   /* Quiz and buzzer cards: engine/room-join-quiz.js; Live Presentation
      cards: room-join-deck.js. Each is fetched when first shown. */
-  var EXT = { quiz: 'quiz', buzz: 'quiz', mc: 'deck', oe: 'deck', dq: 'deck', lb: 'deck', look: 'deck' }, extLoading = {};
+  var EXT = { quiz: 'quiz', buzz: 'quiz', mc: 'deck', oe: 'deck', dq: 'deck', lb: 'deck', look: 'deck', end: 'deck' }, extLoading = {};
   var API = { heading: heading, el: el, btn: btn, note: note, setNote: setNote, send: send, remember: remember, t: t, buzzHaptic: buzzHaptic, LETTERS: LETTERS,
     mine: function () { return mine; }, me: function () { return me; } };
   function loadExt(f) {

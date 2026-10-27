@@ -52,7 +52,7 @@ const BACKEND = path.resolve(arg('backend', path.join(ROOT, '..', '1234tools-bac
 const DEFAULT = 'Every calculation runs inside your browser — no figures are sent to a server, and nothing you type is stored or logged.';
 /* the about line's ending, written out here rather than read from build-site.js */
 const ABOUT_LEAD = ', almost all of them running entirely in your browser.';
-const ABOUT_DEFAULT = ABOUT_LEAD + ' The exceptions are the <a href="/ai/">AI for Business</a> tools, which send what you give them through our server to Anthropic’s API, and the tool request, contact and showcase forms, which send what you type to us, as the <a href="/privacy/">privacy policy</a> explains.';
+const ABOUT_DEFAULT = ABOUT_LEAD + ' The exceptions are the <a href="/ai/">AI for Business</a> tools, which send what you give them through our server to Anthropic’s API, the <a href="/live/">live tools</a>, whose answers pass through our server to the presenter’s screen, and the tool request, contact and showcase forms, which send what you type to us, as the <a href="/privacy/">privacy policy</a> explains.';
 const ABOUT_LEGACY = ' and running entirely in your browser.';
 /* the version line (build-site.js versionApply), written out here too */
 const VER_AFTER = '<div>Made with dedication by MVR IT Services.</div>';

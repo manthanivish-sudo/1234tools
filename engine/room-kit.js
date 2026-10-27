@@ -28,6 +28,8 @@
  *   dq:   o[], e (deadline in server ms), rv:{a:[correct], c:[counts], n} once the question is done
  *   oe:   l (characters), ch:1 (a phone may replace its answer)
  *   lb:   the leaderboard; look: a content slide (phones show "look at the screen")
+ *   end:  id 'end', q (deck title), w (the winner's nickname(s), after a quiz): the finale
+ *         after the last slide; its direct has q:'end' and fin:1
  *   presenter -> one phone (direct): {q:card id, t:total points, r:rank, of:players,
  *     tm:total ms of right answers, p:points and ms:answer time on a quiz, fin:1 at the end}
  *   phone -> presenter: {q:id, v:value} (quiz and buzz add at: server ms);

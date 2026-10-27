@@ -7028,4 +7028,14 @@ html.game-stage-mode, html.game-stage-mode body, html.game-stage-open body { ove
 .deck-podium.is-win .deck-step.is-1 { animation-delay: 2.6s; }
 @keyframes deck-pop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .deck-lb li, .deck-step, .deck-winner.is-win { animation: none; } }
+/* the finale (Finish after the last slide) and the confetti of every winner screen */
+.deck-end { flex: 1; min-height: 0; display: flex; flex-direction: column; text-align: center; }
+.deck-end-kicker { margin: 0 0 clamp(6px, 1.6vmin, 20px); font: 700 clamp(1.1rem, 3.6vmin, 2.8rem) var(--font-head); color: var(--st-dim); }
+.deck-end-title { margin: auto 0 .3em; font: 800 clamp(2.4rem, 10vmin, 8rem) var(--font-head); color: var(--st-accent); animation: deck-pop .9s cubic-bezier(.2, .8, .2, 1) both; }
+.deck-end-thanks { margin: 0 0 auto; font-size: clamp(1.1rem, 3.6vmin, 2.8rem); color: var(--st-dim); }
+.deck-end-thanks.is-late { margin: 0; animation: deck-pop .8s 4.4s cubic-bezier(.2, .8, .2, 1) both; }
+.deck-confetti { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 5; }
+.deck-confetti i { position: absolute; top: -3vmin; left: var(--x); width: clamp(6px, 1vmin, 14px); height: clamp(10px, 1.7vmin, 24px); border-radius: 2px; background: var(--c); animation: deck-fall var(--t) var(--d) cubic-bezier(.25, .6, .4, 1) both; }
+@keyframes deck-fall { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(var(--dx), 110vh) rotate(var(--r)); } }
+@media (prefers-reduced-motion: reduce) { .deck-confetti { display: none; } .deck-end-title, .deck-end-thanks.is-late { animation: none; } }
 /* WAVE-G3D end */

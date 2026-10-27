@@ -896,7 +896,8 @@ const FOOT_APPEND = new Set(['request']);
 /* The line under the logo: "1,282+ free calculators and converters … —
    built by MVR IT Services", then ABOUT_DEFAULT, which says almost all of
    them run entirely in your browser and names the ones that do not: the AI
-   tools under /ai/ (the AI image and video tools run on the device) and the
+   tools under /ai/ (the AI image and video tools run on the device), the
+   live tools under /live/ (answers pass through the relay) and the
    three forms that send what is typed (the tool request form, the contact
    form, the showcase form). Accounts and payments are not tools; their own
    pages say what they send. ABOUT_DEFAULT starts with its own comma, so it
@@ -910,8 +911,10 @@ const FOOT_APPEND = new Set(['request']);
    Older blocks sat after a space ("Services <!--about:…"); ABOUT_RE takes
    that space with them. */
 const ABOUT_LEAD = ', almost all of them running entirely in your browser.';
-const ABOUT_DEFAULT = ABOUT_LEAD + ' The exceptions are the <a href="/ai/">AI for Business</a> tools, which send what you give them through our server to Anthropic’s API, and the tool request, contact and showcase forms, which send what you type to us, as the <a href="/privacy/">privacy policy</a> explains.';
+const ABOUT_DEFAULT = ABOUT_LEAD + ' The exceptions are the <a href="/ai/">AI for Business</a> tools, which send what you give them through our server to Anthropic’s API, the <a href="/live/">live tools</a>, whose answers pass through our server to the presenter’s screen, and the tool request, contact and showcase forms, which send what you type to us, as the <a href="/privacy/">privacy policy</a> explains.';
 const ABOUT_LEGACY = ' and running entirely in your browser.';
+/* the default before the live tools were named in it (2026-10-27); aboutBare() updates it */
+const ABOUT_PREV = ABOUT_LEAD + ' The exceptions are the <a href="/ai/">AI for Business</a> tools, which send what you give them through our server to Anthropic’s API, and the tool request, contact and showcase forms, which send what you type to us, as the <a href="/privacy/">privacy policy</a> explains.';
 const ABOUT_RE = / ?<!--about:([a-z-]+)-->[\s\S]*?<!--\/about-->/g;
 const ABOUT = {
   'ai': ABOUT_LEAD + ' This AI tool is one of the exceptions: when you press its button, what you give it is sent through our server to Anthropic’s API, as the note below explains.',
@@ -926,7 +929,7 @@ function aboutBare(html) {
   const end = start === -1 ? -1 : html.indexOf('</div>', start);
   if (end === -1) return html;
   const region = html.slice(start, end);
-  const bare = region.replace(ABOUT_RE, () => ABOUT_DEFAULT).split(ABOUT_LEGACY).join(ABOUT_DEFAULT);
+  const bare = region.replace(ABOUT_RE, () => ABOUT_DEFAULT).split(ABOUT_PREV).join(ABOUT_DEFAULT).split(ABOUT_LEGACY).join(ABOUT_DEFAULT);
   return bare === region ? html : html.slice(0, start) + bare + html.slice(end);
 }
 

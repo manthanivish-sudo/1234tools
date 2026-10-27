@@ -88,7 +88,7 @@
       'Press “Show on TV” and drag the new window to the projector, then press Full screen there.',
       'Tell the audience: open 1234tools.com/join on your phone (or scan the QR code), type the code, pick a nickname and press Join.',
       'Press “Present”. The first slide appears on the big screen and on every phone.',
-      'Press Next (→ or Space) to move on and Previous (←) to go back. Press R to reveal the results, H to hide them and C to close or reopen voting.',
+      'Press Next (→ or Space) to move on and Previous (←) to go back. Press R to reveal the results, H to hide them and C to close or reopen voting. On the last slide Next becomes Finish: the big screen and every phone show the finale, with the winner and confetti after a quiz.',
       'Press “Export CSV” to save every slide’s results, then “End session” (press it twice) to close the room on every phone.'
     ],
     manual: {
@@ -103,7 +103,7 @@
         'Audience: type the 6 digits, choose a nickname (or press Random nickname) and press Join.',
         'Presenter: press Present. Every phone shows the first slide.',
         'Audience: tap an answer or type one and press Send. The phone says “Your answer was sent”.',
-        'Presenter: press R to reveal the results, then → (or Space) for the next slide. After a quiz answer the top 5 appear by themselves; after the last one, the winner.',
+        'Presenter: press R to reveal the results, then → (or Space) for the next slide. After a quiz answer the top 5 appear by themselves; after the last one, the winner. On the last slide press Finish for the finale.',
         'Presenter: Export CSV, then End session (press twice).'
       ],
       tv: [
@@ -139,7 +139,7 @@
       { q: 'Do phones change slide by themselves?', a: 'Yes. When you press Next or Previous, every joined phone switches to that slide at once, without reloading. A content slide shows “Look at the screen”.' },
       { q: 'Can I hide the answers until I am ready?', a: 'Yes. Multiple-choice and quiz slides start with “Hide results until I reveal” ticked: the screen shows only how many have answered until you press R. Then the counts, percentages and the correct answers appear on the screen and on the phones.' },
       { q: 'How are quiz points worked out?', a: 'A right answer scores 1000 points if it arrives at once, falling evenly to 500 at the deadline; a wrong answer or no answer scores 0. The time is measured by our relay when the answer arrives, so a slow phone clock makes no difference. Players on equal points are ranked by the total time their right answers took, fastest first.' },
-      { q: 'Is there a winner announcement?', a: 'Yes. Four seconds after each quiz answer is revealed the big screen shows the top 5; after the last quiz question it reveals third place, then second, then the winner. The winner’s phone says “You won!” and every other phone shows its final place.' },
+      { q: 'Is there a winner announcement?', a: 'Yes. Four seconds after each quiz answer is revealed the big screen shows the top 5; after the last quiz question it reveals third place, then second, then the winner. The winner’s phone says “You won!” and every other phone shows its final place. On the last slide, Finish ends the deck in celebration: the podium again with “Congratulations” and confetti on the big screen, and the winner’s name and confetti on every phone.' },
       { q: 'Where is my deck kept?', a: 'In this browser on this computer, saved as you edit. Save deck file downloads it as a .json file; Open deck file loads it on any computer. Nothing about the deck is stored on our server.' },
       { q: 'What does the server see and keep?', a: 'The relay at live.1234tools.com passes each slide to the phones and each answer to you. It keeps only the current slide in memory so late joiners see it, and forgets everything when the session ends (24 hours at most). Answers are counted on your device.' },
       { q: 'How many people can join?', a: 'During the launch trial a free session takes up to 1,000 phones at once. When it is full, the next phone is told the session is full.' },
@@ -343,7 +343,9 @@
     waiting: 'waiting', lbNone: 'No quiz answers yet.', pts: '{p} pts', jump: 'All slides', queued: 'Not live yet: press “Start a live session” and the phones will get this slide.',
     stageAnswered: '{a} answered', stageResp: '{n} answers so far', look: 'Look at the screen', untitled: '(no question yet)',
     questions: '{a} questions', top5: 'Top 5', winnerQ: 'And the winner is…', winner: 'Winner: {n}', time: '{s} s',
-    stepBoard: 'The big screen shows the top 5. Press Next to go on.', stepWin: 'The big screen announces the winner. Press Next to go on.'
+    stepBoard: 'The big screen shows the top 5. Press Next to go on.', stepWin: 'The big screen announces the winner. Press Next to go on.', stepWinEnd: 'The big screen announces the winner. Press Finish for the finale.',
+    finish: 'Finish  ✓', theEnd: 'The end', thanks: 'Thank you for taking part!', congrats: 'Congratulations, {n}!', finalBoard: 'Final standings',
+    endSession: 'End the session', doneNote: 'The big screen and the phones show the finale. Press ← to go back, or End the session when everyone has seen it.'
   };
   const fmt = (s, a) => s.replace(/\{(\w+)\}/g, (m, k) => (a && a[k] !== undefined ? a[k] : m));
   const mask = (t) => (window.RoomWords ? window.RoomWords.mask(t) : t);
@@ -390,6 +392,34 @@
     const left = Math.ceil((end - Date.now()) / 1000);
     return left > 0 ? fmt(STR.timeLeft, { s: left }) : STR.timeUp;
   }
+  const firsts = (rows) => rows.filter((x) => x.r === 1).map((x) => x.n).join(' & ');
+  /** Third, second and first place on blocks (with is-win they rise one by one). */
+  function podium(main, rows, win) {
+    const pod = K.el('div', 'deck-podium' + (win ? ' is-win' : ''));
+    [1, 0, 2].forEach((i) => {
+      const x = rows[i];
+      if (!x) return;
+      const col = K.el('div', 'deck-step is-' + (i + 1));
+      col.appendChild(K.el('span', 'deck-step-nick', x.n));
+      col.appendChild(K.el('span', 'deck-step-pts', fmt(STR.pts, { p: x.p }) + ' · ' + fmt(STR.time, { s: x.s })));
+      col.appendChild(K.el('b', 'deck-step-block', String(x.r)));
+      pod.appendChild(col);
+    });
+    main.appendChild(pod);
+  }
+  /** Confetti over the big screen, falling once from `delay` seconds (app.css hides it for reduced motion). */
+  function confetti(main, delay) {
+    const box = K.el('div', 'deck-confetti');
+    box.setAttribute('aria-hidden', 'true');
+    for (let i = 0; i < 120; i++) {
+      const p = K.el('i');
+      p.style.cssText = '--x:' + (Math.random() * 100).toFixed(1) + '%;--d:' + (delay + Math.random() * 2.4).toFixed(2) + 's;--t:' + (2.8 + Math.random() * 2.4).toFixed(2) +
+        's;--dx:' + Math.round(Math.random() * 200 - 100) + 'px;--r:' + Math.round(Math.random() * 1080 - 540) + 'deg;--c:var(--t' + ((i % 8) + 1) + ')';
+      box.appendChild(p);
+    }
+    main.appendChild(box);
+  }
+
   function renderStage(body, s) {
     if (!body._deckTick) {
       /* one timer per screen keeps the quiz countdown moving between updates */
@@ -412,6 +442,22 @@
     main._deckKey = key;
     main.textContent = '';
     if (!t) { main.appendChild(K.el('p', 'game-stage-wait', L.STR.stageWait)); return; }
+    if (t === 'end') {
+      /* the finale after the last slide: the winner (if there was a quiz) and thanks */
+      const box = K.el('div', 'deck-end');
+      if (s.rows.length) {
+        box.appendChild(K.el('p', 'deck-end-kicker', STR.winnerQ));
+        podium(box, s.rows, true);
+        box.appendChild(K.el('p', 'deck-winner is-win', fmt(STR.congrats, { n: firsts(s.rows) })));
+        box.appendChild(K.el('p', 'deck-end-thanks is-late', STR.thanks));
+      } else {
+        box.appendChild(K.el('h1', 'deck-end-title', STR.thanks));
+        if (s.q) box.appendChild(K.el('p', 'deck-end-thanks', s.q));
+      }
+      main.appendChild(box);
+      confetti(main, s.rows.length ? 3.4 : 0.2);
+      return;
+    }
     if (t === 'info') {
       const box = K.el('div', 'deck-info');
       box.appendChild(K.el('h1', 'deck-info-title', s.q));
@@ -444,18 +490,9 @@
       if (!s.rows.length) { main.appendChild(K.el('p', 'st-big-n', STR.lbNone)); return; }
       let rows = s.rows;
       if (s.fin) {
-        const pod = K.el('div', 'deck-podium' + (s.win ? ' is-win' : ''));
-        [1, 0, 2].forEach((i) => {
-          const x = rows[i];
-          if (!x) return;
-          const col = K.el('div', 'deck-step is-' + (i + 1));
-          col.appendChild(K.el('span', 'deck-step-nick', x.n));
-          col.appendChild(K.el('span', 'deck-step-pts', fmt(STR.pts, { p: x.p }) + ' · ' + fmt(STR.time, { s: x.s })));
-          col.appendChild(K.el('b', 'deck-step-block', String(x.r)));
-          pod.appendChild(col);
-        });
-        main.appendChild(pod);
-        main.appendChild(K.el('p', 'deck-winner' + (s.win ? ' is-win' : ''), fmt(STR.winner, { n: rows.filter((x) => x.r === 1).map((x) => x.n).join(' & ') })));
+        podium(main, rows, s.win);
+        main.appendChild(K.el('p', 'deck-winner' + (s.win ? ' is-win' : ''), fmt(STR.winner, { n: firsts(rows) })));
+        confetti(main, s.win ? 3.4 : 0.6);
         rows = rows.slice(3);
       }
       const ol = K.el('ol', 'deck-lb' + (s.fin ? ' is-rest' : ''));
@@ -486,7 +523,7 @@
     const saved = store.get(null);
     let deck = (saved && cleanDeck(saved.deck)) || cleanDeck(preset.deck || SAMPLE);
     let sel = saved && Number.isInteger(saved.sel) ? Math.min(saved.sel, deck.slides.length - 1) : 0;
-    let mode = 'edit', pos = 0, started = false;
+    let mode = 'edit', pos = 0, started = false, done = false; /* done: the finale after the last slide */
     let R = {};                 /* slide id → its results in this session */
     let quizTimer = 0, saveT = 0;
 
@@ -540,7 +577,9 @@
     const nav = K.el('div', 'game-row deck-nav');
     const prevB = K.button(STR.prev, 'btn-ghost game-big', () => prev());
     const nextB = K.button(STR.next, 'btn-primary game-big', () => next());
-    nav.appendChild(prevB); nav.appendChild(nextB);
+    const endB = K.button(STR.endSession, 'btn-primary game-big', () => kit.end());
+    endB.hidden = true;
+    nav.appendChild(prevB); nav.appendChild(nextB); nav.appendChild(endB);
     const acts = K.el('div', 'game-row');
     const revealB = K.button(STR.reveal, 'btn-ghost', () => reveal(true));
     const hideB = K.button(STR.hideR, 'btn-ghost', () => reveal(false));
@@ -787,6 +826,7 @@
     }
     function setMode(m) {
       mode = m === 'present' ? 'present' : 'edit';
+      done = false;
       editB.setAttribute('aria-pressed', String(mode === 'edit'));
       presB.setAttribute('aria-pressed', String(mode === 'present'));
       ed.hidden = mode !== 'edit';
@@ -799,11 +839,13 @@
       save();
     }
     function go(i, force) {
+      if (done && i === pos) { setDone(false); return; }
       if (i < 0 || i >= deck.slides.length || (i === pos && !force && kit.card)) return;
       const was = deck.slides[pos];
       if (was && was.t === 'quiz' && i !== pos) { const r = R[was.id]; if (r && r.qz && !r.qz.done) finishQuiz(was, r); }
       clearTimeout(stepT);
       pos = i;
+      done = false;
       const s = slide(), r = res(s);
       if (s.t === 'quiz' && !r.qz) startQuiz(s, r);
       if (s.t === 'quiz' && r.qz && !r.qz.done) armQuiz(s, r);
@@ -861,12 +903,19 @@
       if (r.cl && s.t !== 'lb' && s.t !== 'info') c.cl = 1;
       return c;
     }
+    /** The finale on phones: the deck's title and, after a quiz, the winner. */
+    function endCard() {
+      const c = { k: 'end', id: 'end', q: deck.title };
+      const w = firsts(finalBoard(3));
+      if (w) c.w = w;
+      return c;
+    }
     const quizVotes = (r) => { const m = new Map(); r.votes.forEach((x, id) => m.set(id, x.v)); return m; };
     /** Send the phones what changed: a whole card for a new slide, else a small merge patch. */
     function sync() {
       const s = slide();
       if (!s) return;
-      const c = cardFor(s, res(s));
+      const c = done ? endCard() : cardFor(s, res(s));
       if (!kit.card || kit.card.id !== c.id) kit.setCard(c);
       else { const d = diff(kit.card, c); if (d) kit.patch(d); }
     }
@@ -962,6 +1011,12 @@
     /** Each phone's own points, total and place, to that phone alone. */
     function directFor(id) {
       const s = slide(); if (!s) return null;
+      if (done) {
+        /* the finale: each phone's final place over the whole quiz */
+        const all = standings(totals(deck.slides.length - 1));
+        const m = finalBoard(1).length ? all.find((x) => x.id === id) : null;
+        return m ? { q: 'end', t: m.p, r: m.r, of: all.length, tm: m.tm, fin: 1 } : null;
+      }
       const r = res(s);
       if (s.t === 'quiz' && !(r.shown && r.qz && r.qz.done)) return null;
       if (s.t !== 'quiz' && s.t !== 'lb') return null;
@@ -1018,16 +1073,37 @@
       r.step = 'ans';
       stepT = setTimeout(() => { if (slide() === s && r.shown && r.step === 'ans') setStep(s, r, lastQuiz(pos) ? 'win' : 'board'); }, STEP_MS);
     }
-    function next() {
+    /** A revealed quiz answer waiting for its top 5 or winner step. */
+    function stepping() {
       const s = slide(), r = s && R[s.id];
-      if (s && s.t === 'quiz' && r && r.shown && r.qz && r.qz.done && (r.step || 'ans') === 'ans') { setStep(s, r, lastQuiz(pos) ? 'win' : 'board'); return; }
+      return !!(s && s.t === 'quiz' && r && r.shown && r.qz && r.qz.done && (r.step || 'ans') === 'ans');
+    }
+    const atEnd = () => pos >= deck.slides.length - 1 && !stepping();
+    function next() {
+      if (done) return;
+      const s = slide(), r = s && R[s.id];
+      if (stepping()) { setStep(s, r, lastQuiz(pos) ? 'win' : 'board'); return; }
+      if (atEnd()) { setDone(true); return; }
       go(pos + 1);
     }
     function prev() {
+      if (done) { setDone(false); return; }
       const s = slide(), r = s && R[s.id];
       if (s && s.t === 'quiz' && r && r.step && r.step !== 'ans') { setStep(s, r, 'ans'); return; }
       go(pos - 1);
     }
+
+    /** Finish: after the last slide the big screen and the phones show the finale; ← goes back. */
+    function setDone(on) {
+      const s = slide(), r = s && R[s.id];
+      if (on && s && s.t === 'quiz' && r && r.qz && !r.qz.done) finishQuiz(s, r);
+      clearTimeout(stepT);
+      done = on;
+      sync(); sendScores(); drawRemote(); drawJump(); publish(); save();
+      K.announce(root, on ? STR.theEnd + ': ' + STR.thanks : fmt(STR.of, { i: pos + 1, n: deck.slides.length }) + ': ' + label(s));
+    }
+    /** The final standings over the whole deck (empty when no quiz was answered). */
+    const finalBoard = (n) => board(deck.slides.length - 1, n).rows.filter((x) => x.p > 0);
 
     /* ----- what the presenter and the big screen see ----- */
 
@@ -1040,6 +1116,24 @@
       const s = slide();
       if (!s || mode !== 'present') return;
       const r = res(s);
+      nextB.hidden = done; endB.hidden = !done || !kit.live; acts.hidden = done;
+      if (done) {
+        where.textContent = STR.theEnd;
+        remQ.textContent = STR.thanks;
+        count.hidden = true;
+        prevB.disabled = false;
+        note.textContent = STR.doneNote;
+        tickClock();
+        out.textContent = '';
+        const rows = finalBoard(10);
+        if (rows.length) {
+          const ol = K.el('ol', 'deck-lb-mini');
+          rows.forEach((x) => ol.appendChild(K.el('li', null, x.r + '. ' + x.n + ' — ' + fmt(STR.pts, { p: x.p }) + ' · ' + fmt(STR.time, { s: x.s }))));
+          out.appendChild(K.el('h3', null, STR.finalBoard));
+          out.appendChild(ol);
+        }
+        return;
+      }
       where.textContent = fmt(STR.of, { i: pos + 1, n: deck.slides.length }) + ' · ' + STR.types[s.t];
       remQ.textContent = label(s);
       const answers = s.t !== 'lb' && s.t !== 'info';
@@ -1047,8 +1141,7 @@
       count.textContent = !answers ? '' : s.t === 'qa' ? fmt(STR.questions, { a }) : kit.live ? fmt(STR.answered, { a, n: kit.count }) : fmt(STR.answeredN, { a });
       count.hidden = !answers;
       tickClock();
-      const stepping = s.t === 'quiz' && r.shown && r.qz && r.qz.done && (r.step || 'ans') === 'ans';
-      nextB.disabled = pos >= deck.slides.length - 1 && !stepping;
+      nextB.textContent = atEnd() ? STR.finish : STR.next;
       prevB.disabled = pos === 0 && !(s.t === 'quiz' && r.step && r.step !== 'ans');
       const canR = answers && s.t !== 'qa';
       revealB.hidden = hideB.hidden = !canR;
@@ -1058,7 +1151,7 @@
       closeB.hidden = clearB.hidden = !answers;
       closeB.textContent = r.cl ? STR.reopen : STR.close;
       closeB.disabled = s.t === 'quiz' && (!r.qz || r.qz.done);
-      note.textContent = !kit.live ? STR.queued : canR && !r.shown ? STR.hiddenNote : r.step === 'board' ? STR.stepBoard : r.step === 'win' ? STR.stepWin : r.cl ? STR.closed : '';
+      note.textContent = !kit.live ? STR.queued : canR && !r.shown ? STR.hiddenNote : r.step === 'board' ? STR.stepBoard : r.step === 'win' ? (atEnd() ? STR.stepWinEnd : STR.stepWin) : r.cl ? STR.closed : '';
       drawOut(s, r);
     }
     let clockT = 0;
@@ -1160,6 +1253,7 @@
     function publish() {
       const s = started ? slide() : null;
       if (!s) { stage.update({ join: kit.join, t: '' }); return; }
+      if (done) { stage.update({ join: kit.join, t: 'end', q: deck.title, rows: finalBoard(5) }); return; }
       const r = res(s);
       const st = { join: kit.join, t: s.t, q: s.q, i: pos + 1, of: deck.slides.length };
       if (s.t === 'info') st.body = s.body;
@@ -1189,7 +1283,7 @@
     }
     function save() {
       if (!kit.live) return;
-      kit.save({ pos, mode, res: pack(R) });
+      kit.save({ pos, mode, done, res: pack(R) });
     }
     function restore(sv) {
       if (!sv) return;
@@ -1198,6 +1292,7 @@
       mode = 'edit';
       kit.card = undefined;
       setMode('present');
+      if (sv.done) setDone(true);
     }
 
     /* ----- CSV ----- */
@@ -1257,7 +1352,7 @@
 
     setMode('edit');
     root._live = {
-      kit, deck: () => deck, setDeck: (d) => openDeckText(JSON.stringify(d)), pos: () => pos, mode: () => mode, R: () => R,
+      kit, deck: () => deck, setDeck: (d) => openDeckText(JSON.stringify(d)), pos: () => pos, mode: () => mode, done: () => done, finish: () => setDone(true), R: () => R,
       go, next, prev, reveal, csvRows, board, msg: onMsg, step: () => { const s = slide(), r = s && R[s.id]; return r ? r.step || '' : ''; }, totals: (i) => standings(totals(i === undefined ? pos : i)), present: () => setMode('present'),
       deckJson: () => JSON.stringify({ app: '1234tools-live-presentation', v: 1, title: deck.title, slides: deck.slides })
     };

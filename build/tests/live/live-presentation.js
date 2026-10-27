@@ -305,6 +305,29 @@ module.exports = {
     await press(host, 'ArrowLeft');
     ok((await Promise.all(phones.map((ph) => waitFor(() => ph.page.evaluate(() => /Leaderboard/.test(document.querySelector('#card h2').textContent)), 8000)))).every(Boolean), 'live-presentation: after Reopen, ← still moves every phone');
 
+    /* the finale: on the last slide Next becomes Finish, then the big screen and every phone celebrate */
+    await press(host, 'ArrowRight');
+    const navOf = () => host.evaluate(() => Array.from(document.querySelectorAll('.deck-nav button')).filter((b) => !b.hidden).map((b) => b.textContent.trim()).join('|'));
+    ok(/Finish/.test(await waitFor(async () => { const t = await navOf(); return /Finish/.test(t) ? t : null; }, 5000) || ''), 'live-presentation: on the last slide Next becomes Finish');
+    await press(host, 'ArrowRight');
+    const endScreen = await waitFor(() => stage.evaluate(() => { const w = document.querySelector('.deck-end .deck-winner'); return w && document.querySelectorAll('.deck-confetti i').length >= 100 && document.querySelector('.deck-end .deck-podium') ? w.textContent : null; }), 6000);
+    ok(!!endScreen && /^Congratulations, .*!$/.test(endScreen) && endScreen.indexOf(nickOf(w0)) > 0, 'live-presentation: Finish announces the winner on the big screen, on a podium with confetti', String(endScreen));
+    const nav = await navOf();
+    ok(!/Next|Finish/.test(nav) && /End the session/.test(nav) && (await live(host, (X) => X.done())), 'live-presentation: after Finish the remote offers End the session, not Next', nav);
+    const ends = await Promise.all(phones.map((ph) => waitFor(() => ph.page.evaluate(() => { const c = document.getElementById('card').textContent; return /Thank you for taking part!/.test(c) && /The winner: /.test(c) && /You won!|You finished/.test(c) ? c : null; }), 8000)));
+    ok(ends.every((c) => c && c.indexOf('The winner: ') >= 0 && c.indexOf(nickOf(w0)) >= 0), 'live-presentation: every phone shows the finale with the winner’s name', String(ends.filter(Boolean).length) + '/' + N);
+    ok(/You won!/.test(ends[w0] || '') && ends.every((c, i) => !c || fin[i].r === 1 || c.indexOf('You finished ' + fin[i].r + ' of ' + N) >= 0), 'live-presentation: the winner’s phone says “You won!”, every other phone its own place', ends[loser]);
+    ok((await phones[w0].page.evaluate(() => document.querySelectorAll('body > i').length)) >= 100, 'live-presentation: confetti falls on the winner’s phone');
+    if (process.env.LIVE_SHOTS) {
+      /* screenshots of the finale (LIVE_SHOTS=<folder>); a window in the back does not run its animations */
+      await phones[w0].page.screenshot({ path: path.join(process.env.LIVE_SHOTS, 'finale-phone.png') });
+      await press(host, 'ArrowLeft'); await sleep(300); await stage.bringToFront(); await press(host, 'ArrowRight');
+      for (const t of [1500, 3000, 4500]) { await sleep(t === 1500 ? 1500 : 1500); await stage.screenshot({ path: path.join(process.env.LIVE_SHOTS, 'finale-stage-' + t + '.png') }); }
+    }
+    await press(host, 'ArrowLeft');
+    ok(!!(await waitFor(() => stage.evaluate(() => { const t = document.querySelector('.deck-info-title'); return t && t.textContent === 'Thank you!' && !document.querySelector('.deck-end'); }), 5000)) && !(await live(host, (X) => X.done())), 'live-presentation: ← after Finish goes back to the last slide');
+    ok((await Promise.all(phones.slice(0, 5).map((ph) => waitFor(() => ph.page.evaluate(() => /Look at the screen/.test(document.getElementById('card').textContent)), 6000)))).every(Boolean), 'live-presentation: … and the phones follow');
+
     /* CSV */
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'deck-csv-'));
     const cdp = await host.createCDPSession();
