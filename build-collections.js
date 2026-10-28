@@ -99,6 +99,14 @@ function shell() {
   return { head: src.slice(0, headEnd), mid: src.slice(headEnd, mainStart + open.length), tail: src.slice(mainEnd) };
 }
 
+/* Guides that walk through using this audience's tools together. */
+function guidesPanel(c, hi) {
+  const list = hi ? (hi.guides || []) : (c.guides || []);
+  if (!list.length) return '';
+  return '  <section class="panel collection-guides"><h2>' + (hi ? esc(hi.guidesHead) : 'A guide to start with') + '</h2><ul class="related">' +
+    list.map((g) => '<li><a href="/guides/' + g.slug + '/">' + esc(g.name) + '</a></li>').join('') + '</ul></section>\n';
+}
+
 function headFor(parts, pathOnly, title, description) {
   const url = SITE + pathOnly;
   const full = title + ' | 1234Tools';
@@ -186,7 +194,7 @@ function collectionPage(c, parts) {
       (freemium ? ' · ' + (all.length - freemium) + ' free with no account · ' + freemium + ' free to try with one' : ' · all free, no account needed') + '</p>\n' +
     c.intro.map(x => '  <p class="collection-intro">' + esc(x) + '</p>').join('\n') + '\n' +
     groups + '\n' +
-    nextPanel(c) + showcaseStrip(c) +
+    guidesPanel(c) + nextPanel(c) + showcaseStrip(c) +
     (c.hi ? '  <p class="collection-lang"><a href="/hi/' + SECTION + '/' + c.slug + '/" hreflang="hi" lang="hi">यह पेज हिन्दी में पढ़ें</a></p>\n' : '') +
     '  <section class="panel"><h2>Frequently asked questions</h2>' +
       c.faq.map(f => '<details><summary>' + esc(f.q) + '</summary><p>' + esc(f.a) + '</p></details>').join('') + '</section>\n' +
@@ -296,7 +304,7 @@ function collectionPageHi(c, parts) {
       (freemium ? ' · ' + (all.length - freemium) + ' बिना अकाउंट के मुफ़्त · ' + freemium + ' अकाउंट के साथ आज़माने के लिए मुफ़्त' : ' · सब मुफ़्त, कोई अकाउंट नहीं') + '</p>\n' +
     hi.intro.map((x) => '  <p class="collection-intro">' + esc(x) + '</p>').join('\n') + '\n' +
     groups + '\n' +
-    nextPanel(c, hi) + showcaseStrip(c, hi) +
+    guidesPanel(c, hi) + nextPanel(c, hi) + showcaseStrip(c, hi) +
     '  <p class="collection-lang"><a href="/' + SECTION + '/' + c.slug + '/" hreflang="en" lang="en">Read this page in English</a></p>\n' +
     '  <section class="panel"><h2>' + esc(hi.faqHead) + '</h2>' +
       hi.faq.map((f) => '<details><summary>' + esc(f.q) + '</summary><p>' + esc(f.a) + '</p></details>').join('') + '</section>\n' +

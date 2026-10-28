@@ -127,17 +127,51 @@ const COLLECTIONS = [
       { name: 'Marks and reports', blurb: 'Totals, grades and comments for the whole class at once.', tools: ['/education/report-card/', '/ai/student-comment-writer/', '/education/marks-percentage/', '/education/cgpa-to-percentage/', '/education/attendance-calculator/', '/mathematics/statistics/'] },
       { name: 'In the lesson', blurb: 'On the board, on the projector, in front of the class.', tools: ['/time/stopwatch-timer/', '/time/countdown-timer/', '/utilities/random-number-generator/', '/utilities/dice-roller/', '/mathematics/scientific-calculator/', '/mathematics/fraction-calculator/', '/qr/qr-code-generator/'] },
       { name: 'Classroom games', blurb: 'Teams, a name wheel, a buzzer and a scoreboard on the projector for a review lesson.', tools: ['/games/team-generator/', '/games/spin-the-wheel/', '/games/quiz-buzzer/', '/games/scoreboard/', '/games/bingo-card-generator/'] },
+      { name: 'Live classroom tools', blurb: 'Pupils answer from their own phones and the results grow on the projector.', tools: ['/live/live-poll/', '/live/word-cloud/', '/live/audience-qa/', '/live/rating-scale/', '/live/live-presentation/', '/live/live-quiz-for-classroom/'] },
       { name: 'Paper, certificates and letters home', blurb: 'Printed, named and signed.', tools: ['/pdf/certificate-pdf/', '/pdf/paper-pdf/', '/pdf/text-to-pdf/', '/business/mail-merge/', '/ai/parent-message-writer/', '/ai-video/auto-captions/'] }
     ],
     faq: [
       { q: 'Do the AI tools see my pupils’ data?', a: 'Only what you type into them. A lesson plan or a question paper needs a topic, a class and a length, not a name. The report-comment writer works from the marks and notes you give it; use first names or initials if you can. Every AI page says what it sends before you press the button.' },
       { q: 'Can I make certificates for a whole class at once?', a: 'Yes. Paste or upload the list of names and the certificate generator makes one PDF with a page per pupil. It runs in your browser, so the class list stays on your device.' },
+      { q: 'What do the live tools send, and where?', a: 'The live tools are the one part of this page that uses pupils’ phones. Answers pass through our server only to reach the presenter’s screen. They are held in memory for the room’s life and deleted when it closes (24 hours at most). No accounts, no cookies, no analytics for participants. During the launch trial a free session takes up to 1,000 phones.' },
       { q: 'Are the question papers aligned to my board?', a: 'You give the board, the class, the chapters and the marks blueprint, and the draft follows them. Check every question and the answer key before it is printed — it is a first draft, and you are the examiner.' }
     ],
     related: ['schools', 'start-of-term', 'students'],
     next: [
       { name: 'Worksheet maker', what: 'Maths practice sheets with answer keys, printed as PDF.' },
       { name: 'Grade boundaries', what: 'Raw marks in; grades by your boundaries, with the distribution.' }
+    ]
+  },
+  {
+    slug: 'families', kind: 'role', glyph: 'i-tambola-number-caller',
+    name: 'Families',
+    title: 'Free tools for families: games nights, festivals, homework and household money',
+    lede: 'A quiz for Sunday evening, tambola for Diwali, a wheel to settle who washes up, sums for the kids, the home-loan EMI and the holiday photos, all free and without an account.',
+    intro: [
+      'A family has a long list of small jobs and none of them deserves a subscription: a games night that does not turn into an argument about teams, tambola tickets for the whole building, the fraction your child is stuck on, what the loan will really cost each month, and a folder of holiday photos that is too big to send. These pages gather the tools for them in one place.',
+      'Nearly everything here runs in your browser, on your own device. Names, scores, tickets, sums and photos are not uploaded. The exception is the live tools, such as Live Poll: the family joins from their own phones at 1234tools.com/join, and what they send passes through our server only to reach the screen you are showing. The Family games night guide walks through an evening from start to finish.'
+    ],
+    groups: [
+      { name: 'Family games night', blurb: 'A quiz, tambola, charades and antakshari, with fair teams and a scoreboard for the TV.', tools: ['/games/quiz-maker/', '/games/tambola-ticket-generator/', '/games/spin-the-wheel/', '/games/team-generator/', '/games/charades-generator/', '/games/antakshari/', '/games/scoreboard/'] },
+      { name: 'Festivals and parties', blurb: 'Tambola for the whole building, bingo for a baby shower, icebreakers for guests who have not met, and a live vote for a decision.', tools: ['/games/tambola-number-caller/', '/games/printable-tambola-tickets/', '/games/diwali-tambola-caller/', '/games/bingo-card-generator/', '/games/baby-shower-bingo/', '/games/icebreaker-cards/', '/live/live-poll/'] },
+      { name: 'Kids’ learning', blurb: 'Fractions, percentages, factors, ratios and shapes, answered as fast as you can type.', tools: ['/mathematics/fraction-calculator/', '/mathematics/percentage/', '/mathematics/lcm-gcd/', '/mathematics/prime-factorisation/', '/mathematics/ratio-calculator/', '/mathematics/geometry-calculator/', '/mathematics/roman-numerals/', '/education/exam-countdown/', '/time/age-calculator/'] },
+      { name: 'Household money', blurb: 'What a loan costs, what a monthly saving grows into, and who owes what after dinner.', tools: ['/india/emi-calculator/', '/finance/loan-payment/', '/india/sip-calculator/', '/india/fd-rd-calculator/', '/india/ppf-calculator/', '/finance/compound-interest/', '/utilities/tip-calculator/', '/business/discount-calculator/'] },
+      { name: 'Photos and memories', blurb: 'Make the pictures smaller to send, change the format, tidy them up, or turn a stack into one PDF.', tools: ['/image/image-resizer/', '/image/image-compressor/', '/image/heic-to-jpg/', '/image/photo-filters/', '/image/image-border/', '/image/image-cropper/', '/pdf/jpg-to-pdf/', '/ai-image/image-upscaler/'] }
+    ],
+    guides: [
+      { slug: 'plan-a-family-games-night', name: 'How to plan a family games night' }
+    ],
+    faq: [
+      { q: 'Does anything I enter get uploaded?', a: 'Not by the games, calculators and photo tools: they run in your browser, so names, scores, loan figures and photos stay on your device. The live tools are the exception, because phones have to reach the screen somehow. The privacy statement for them is: Answers pass through our server only to reach the presenter’s screen. They are held in memory for the room’s life and deleted when it closes (24 hours at most). No accounts, no cookies, no analytics for participants.' },
+      { q: 'Do the children need an app or an account?', a: 'No. The games run on one laptop or phone, with the TV showing the board. For a live poll the family open 1234tools.com/join in a browser and type a six-digit code. During the launch trial a free session takes up to 1,000 phones.' },
+      { q: 'Are the loan and savings calculators financial advice?', a: 'No. They do the arithmetic on the figures you enter. A bank’s own quote includes fees and rate changes that a general calculator cannot know, so use the result to compare options and ask the lender for the exact figures.' },
+      { q: 'Can I make a quiz in Hindi or another language?', a: 'The Quiz Maker shows the questions you type. The Antakshari scorekeeper draws its letter in Hindi or English, and the Tambola caller has Hindi calls, which need a Hindi text-to-speech voice on the device to be spoken.' }
+    ],
+    related: ['teachers', 'students', 'photographers'],
+    next: [
+      { name: 'Household budget planner', what: 'Income and bills in; what is left each month, and where it goes.' },
+      { name: 'Photo collage maker', what: 'Several photos laid out on one page, ready to print or share.' },
+      { name: 'Pocket-money tracker', what: 'Who has saved what, for children saving up for something.' }
     ]
   },
   {
@@ -211,6 +245,7 @@ const TILES = [
   { slug: 'students', label: 'Students', hue: 200, picks: ['/education/cgpa-to-percentage/', '/mathematics/percentage/', '/pdf/merge-pdf/'] },
   { slug: 'job-seekers', label: 'Job seekers', hue: 160, picks: ['/ai/cv-screener/', '/image/passport-photo/', '/india/ctc-take-home/'] },
   { slug: 'teachers', label: 'Teachers & tutors', hue: 120, picks: ['/ai/lesson-plan-writer/', '/education/report-card/', '/pdf/certificate-pdf/'] },
+  { slug: 'families', label: 'Families', hue: 85, picks: ['/games/quiz-maker/', '/games/tambola-ticket-generator/', '/india/emi-calculator/'] },
   { slug: 'photographers', label: 'Photographers', hue: 260, picks: ['/ai-image/image-upscaler/', '/ai-image/sky-replacement/', '/image/exif-remover/'] },
   { slug: 'designers', label: 'Designers', hue: 320, picks: ['/developer/color-converter/', '/image/svg-optimizer/', '/image/color-palette-extractor/'] },
   { slug: 'accountants', label: 'Accountants', hue: 50, picks: ['/business/bank-reconciliation/', '/business/vat-return/', '/business/tally-converter/'] },

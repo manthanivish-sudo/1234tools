@@ -2132,6 +2132,88 @@ const GUIDES = [
 
   /* ================================================================== */
   {
+    slug: 'plan-a-family-games-night',
+    glyph: 'i-quiz-buzzer',
+    name: 'How to plan a family games night',
+    title: 'How to plan a family games night — teams, a quiz, charades, tambola and scores on the TV',
+    description: 'Plan an evening of games for a family or a group of friends: pick the games, make fair teams, run a quiz, charades, antakshari or tambola, keep one scoreboard on the TV and settle the small arguments with a wheel.',
+    answer: 'Choose three or four games for the evening, split everyone into fair teams with the Random Team Generator, and put one Quiz Scoreboard on the TV for all of them. Run a quiz from the Quiz Maker, charades from the Dumb Charades Generator, antakshari with the Antakshari Scorekeeper, and tambola with the Tambola Ticket Generator and Number Caller. Spin the Wheel decides who goes first and who washes up.',
+    minutes: { first: 'thirty minutes to set up, plus writing the quiz', again: 'ten minutes' },
+    howLong: 'About thirty minutes to set up the first time, not counting the quiz questions. An evening of three games takes two to three hours with breaks for food.',
+    before: [
+      'A laptop for the host, and a TV or projector if you have one. Everything also works on the laptop screen.',
+      'The names of everyone coming, with a rough idea of how old they are, for the teams.',
+      'A printer and scissors if you will play tambola on paper tickets. Pens or dabbers for marking.',
+      'The quiz questions, if you are running one: five rounds of eight to ten is plenty.'
+    ],
+    steps: [
+      {
+        name: 'Choose the order of the evening',
+        body: [
+          { p: 'Three or four games are plenty. Start with something quick that everyone can join, put the longest game (usually the quiz or tambola) in the middle, and finish with the loud one, such as charades or antakshari. Spin the wheel to decide who goes first or which game opens the evening.' },
+          { tool: '/games/spin-the-wheel/', why: 'picks fairly from a list of games, names or forfeits on the TV, with the result chosen by the browser’s random generator before the wheel moves' }
+        ]
+      },
+      {
+        name: 'Make teams that are fair',
+        body: [
+          { p: 'Type or paste the names, one per line, and choose how many teams. Add a number after a comma (“Asha, 4”) to balance the teams by skill, and a line such as “Asha / Ravi” to keep two people apart. Grandparents and children in the same team make the evening, so spread the strengths out.' },
+          { tool: '/games/team-generator/', why: 'splits the names into fair random teams, balanced by skill or with people kept apart, and shows them on the TV' }
+        ]
+      },
+      {
+        name: 'Open one scoreboard for the whole evening',
+        body: [
+          { p: 'Put the same team names into the scoreboard and press Show on TV. Use a new round for each game and add points as you go: +1, +5 or −1 for a team, or the keys 1 to 9 to pick a team and + or − to change its score. Equal totals share a rank.' },
+          { tool: '/games/scoreboard/', why: 'keeps every team’s points round by round, with undo and a CSV of the results' }
+        ]
+      },
+      {
+        name: 'Run the games',
+        body: [
+          { p: 'Quiz: write the questions beforehand, with picture rounds if you like, and host them on the TV with a countdown and a Reveal button.' },
+          { tool: '/games/quiz-maker/', why: 'hosts a quiz you have written on the TV, with a countdown, a Reveal button and team scores, or prints the question and answer sheets' },
+          { p: 'Charades: choose Bollywood films, animals, actions or jobs. Each team gets a timer, and the word stays off the TV so only the actor sees it.' },
+          { tool: '/games/charades-generator/', why: 'draws the words for dumb charades, with a timer for each team and points' },
+          { p: 'Antakshari: the scorekeeper draws a fair random letter in Hindi or English, times each turn and shows the team scores big on the TV. You sing; it keeps the count.' },
+          { tool: '/games/antakshari/', why: 'draws the letter, times the turn and keeps the team scores for antakshari' }
+        ]
+      },
+      {
+        name: 'Play tambola while dinner is served',
+        body: [
+          { p: 'Make the tickets in strips of six and print them, or send each player a ticket picture on WhatsApp. Open the caller, press Show on TV, and call numbers with Next number or auto-call at 10 to 15 seconds. When someone claims, type the number printed on their ticket into Check a claim.' },
+          { tool: '/games/tambola-ticket-generator/', why: 'makes tambola tickets in strips of six, as a printable PDF or as pictures to send on WhatsApp' },
+          { tool: '/games/tambola-number-caller/', why: 'calls the numbers 1 to 90 with the traditional calls in English or Hindi and checks any claim from its ticket number' }
+        ]
+      },
+      {
+        name: 'Finish and settle up',
+        body: [
+          { p: 'After the last game the scoreboard shows the final order. Spin the wheel for the forfeit for the losing team, or for who gets the first slice of dessert. Export the results as a CSV if the family keeps a league from one month to the next.' }
+        ]
+      }
+    ],
+    wrong: [
+      { name: 'Planning too many games', text: 'Four games is the most an evening can hold with food and breaks. Pick three, and keep a fourth in your pocket in case the first is a hit and the others run short.' },
+      { name: 'Teams that are strong at the same thing', text: 'If all the film buffs end up together they win every round. Give each person a rough strength from 1 to 5 and balance the teams by it, and mix the ages.' },
+      { name: 'Forgetting that someone is left out', text: 'A quiz of general knowledge shuts out the youngest players. Include a picture round or a kids’ round, and let the youngest hold the scoreboard.' },
+      { name: 'Printing too few tambola tickets', text: 'Tickets only come in whole strips of six. Count the players, add a few spare for latecomers and round up to the next six.' },
+      { name: 'Scoring in the wrong round', text: 'Points go into the round shown in “Scoring round” on the scoreboard. Start a new round for each game, and choose an earlier round from the list only to fix a mistake.' }
+    ],
+    faq: [
+      { q: 'Do the guests need phones?', a: 'No. Every game here is run by the host on one laptop or phone, with the TV for everyone to see. If you want a quick vote from the room, such as which game to play next, Live Poll lets people join from their phones at 1234tools.com/join. During the launch trial a free session takes up to 1,000 phones.' },
+      { q: 'Does anything get uploaded?', a: 'Not by the games: names, teams, scores and questions stay in your browser on this device. A live poll is different, because phones have to reach the screen: answers pass through our server only to reach the presenter’s screen, are held in memory for the room’s life and deleted when it closes (24 hours at most), with no accounts, no cookies and no analytics for participants.' },
+      { q: 'Can children run some of it?', a: 'Yes. The scoreboard, the wheel and the tambola caller are simple enough for a child to run while the adults play.' },
+      { q: 'Can we play with relatives on a video call?', a: 'Yes for the host-run games: share the window with the TV view in the call. Tambola works well this way, because each player marks a ticket picture at home.' }
+    ],
+    tools: ['/games/team-generator/', '/games/scoreboard/', '/games/spin-the-wheel/', '/games/quiz-maker/', '/games/charades-generator/', '/games/antakshari/', '/games/tambola-ticket-generator/', '/games/tambola-number-caller/'],
+    collections: ['families'],
+    related: ['host-a-family-quiz-night', 'run-a-tambola-game']
+  },
+
+  /* ================================================================== */
+  {
     slug: 'run-a-live-poll',
     glyph: 'i-live-poll',
     name: 'How to run a live poll from the audience’s phones',
