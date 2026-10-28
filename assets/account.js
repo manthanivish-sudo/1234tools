@@ -289,8 +289,22 @@
     catch (e) { throw new Error(friendly(e)); }
   }
 
+  /* ---------- a bigger live room, for the live tools ---------- */
+  /** A signed plan token for the live relay, or '' for a free room. The
+      server decides the plan; asking only when the record says paid saves a
+      call for everybody else. engine/room-kit.js loads this file only when
+      the signed-in flag above is set. */
+  async function liveToken() {
+    if (!enabled) return '';
+    await ready;
+    if (!user || planOf(record) === 'free') return '';
+    const call = FN.httpsCallable(fns, 'liveToken');
+    const res = (await call({})).data;
+    return res && typeof res.token === 'string' ? res.token : '';
+  }
+
   window.Account = {
-    enabled, ready, state, plan: () => planOf(record),
+    enabled, ready, state, plan: () => planOf(record), liveToken,
     onChange: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
     signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, signOut,
     checkout, buyCredits, credits: () => Math.max(0, Math.floor((record && record.credits) || 0)),

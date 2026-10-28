@@ -253,6 +253,25 @@
   /** The winner's name(s): everyone ranked first, joined with " & ". */
   L.firsts = (rows) => rows.filter((x) => x.r === 1).map((x) => x.n).join(' & ');
 
+  /* ---------- a bigger room on a paid plan ---------- */
+
+  /** The relay's plan token for a signed-in presenter on a paid plan, or ''
+      for a free room. Only a visitor who has signed in on this device (the
+      flag assets/account.js keeps) loads the account code and asks our
+      functions; anybody else gets '' at once, with nothing loaded and
+      nothing sent. Any failure, or no answer within L.PLAN_WAIT ms, is ''
+      too: the room opens all the same, at the free cap. */
+  L.PLAN_WAIT = 5000;
+  L.planToken = function () {
+    let flag = null;
+    try { flag = window.localStorage.getItem('1234tools.signedIn'); } catch (e) { /* no storage: never signed in here */ }
+    if (flag !== '1') return Promise.resolve('');
+    const ask = (window.Account ? Promise.resolve() : L.loadScript('/assets/firebase-config.js').then(() => L.loadScript('/assets/account.js')))
+      .then(() => (window.Account && typeof window.Account.liveToken === 'function' ? window.Account.liveToken() : ''));
+    return Promise.race([ask, new Promise((res) => setTimeout(() => res(''), L.PLAN_WAIT))])
+      .then((t) => (typeof t === 'string' && t.length < 2048 ? t : ''), () => '');
+  };
+
   /* ---------- the session ---------- */
 
   let seq = 0;
@@ -383,12 +402,18 @@
     }
 
     function start(resume) {
-      if (ctl.live || !MVR) return;
+      if (ctl.live || ctl.starting || !MVR) return;
       K.sound.unlock();
       startB.disabled = true;
       startB.textContent = STR.starting;
       say('');
-      const room = resume ? MVR.resume(roomOpts) : MVR.create(Object.assign({ title: opts.title || '' }, roomOpts));
+      /* a reopened room keeps the cap it was made with; a new one asks for a plan token first */
+      if (resume) { open(true, ''); return; }
+      ctl.starting = true;
+      L.planToken().then((plan) => { ctl.starting = false; open(false, plan); });
+    }
+    function open(resume, plan) {
+      const room = resume ? MVR.resume(roomOpts) : MVR.create(Object.assign({ title: opts.title || '' }, roomOpts, plan ? { plan } : {}));
       if (!room) { startB.disabled = false; startB.textContent = STR.start; resumeRow.hidden = true; return; }
       ctl.room = room;
       if (ctl.card !== undefined) room.setState(ctl.card);
