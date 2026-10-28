@@ -734,7 +734,9 @@
       const tags = el('span', 'finder-card-tags');
       const ai = p.indexOf('ai/') === 0;
       if (d.io) tags.appendChild(el('span', 'finder-card-io', d.io));
-      for (const label of (ai ? ['Free to try', 'AI'] : ['Free', 'On your device'])) tags.appendChild(el('span', 'tag ' + (ai ? 'tag-freemium' : 'tag-free'), label));
+      /* the index names the pages whose tags differ (live tools, games with phones) */
+      const own = (window.FINDER_INDEX && window.FINDER_INDEX.tags || {})[d.path];
+      for (const label of (own || (ai ? ['Free to try', 'AI'] : ['Free', 'On your device']))) tags.appendChild(el('span', 'tag ' + (ai ? 'tag-freemium' : 'tag-free'), label));
       body.append(el('strong', null, d.title), tags);
       if (d.desc) body.appendChild(el('span', 'finder-card-desc', clip(d.desc, 110)));
       const go = el('span', 'finder-card-go', 'Open →');

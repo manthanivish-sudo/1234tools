@@ -219,6 +219,15 @@ const registerTotal = () => {
   check(scopedPage.section === 'pdf' && scopedPage.hrefs.length > 0 && scopedPage.hrefs.every((h) => h.indexOf('/pdf/') === 0), '?section=pdf page: every card under /pdf/ -> ' + scopedPage.hrefs.join(', '));
   check(/PDF Tools/.test(scopedPage.head), 'scoped head names the section: ' + scopedPage.head);
   check(scopedPage.secs.every((s) => s === 'pdf') && scopedPage.tags.length >= 2 && /tag-free:Free/.test(scopedPage.tags[0]) && /On your device/.test(scopedPage.tags[1]), 'cards carry data-sec and the two tag chips: ' + scopedPage.tags.slice(0, 2).join(' | '));
+
+  /* the live tools and the games with phones carry their own chips: "On your device" would be untrue */
+  const ownTags = {};
+  for (const [q, want] of [['live poll', '/live/live-poll/'], ['quiz maker', '/games/quiz-maker/']]) {
+    await page.goto(BASE + '/utilities/tool-finder/?q=' + encodeURIComponent(q), { waitUntil: 'networkidle0', timeout: 60000 });
+    await page.waitForFunction(() => document.querySelectorAll('.finder-msg.is-bot .finder-card').length > 0, { timeout: 15000 });
+    ownTags[q] = await page.evaluate((w) => { const a = Array.from(document.querySelectorAll('.finder-card')).find((x) => x.getAttribute('href') === w); return a ? Array.from(a.querySelectorAll('.tag')).map((t) => t.textContent).join(' | ') : 'no card ' + w; }, want);
+  }
+  check(ownTags['live poll'] === 'Free | Live' && ownTags['quiz maker'] === 'Free | Phones optional', 'live tools say Live and the phone games Phones optional, not On your device: ' + JSON.stringify(ownTags));
   await noBanner();
   await page.screenshot({ path: path.join(OUT, '1-full-scoped-pdf.png') });
 

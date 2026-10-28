@@ -184,6 +184,21 @@ function prefillCol(p) {
   if (!JOBS || typeof JOBS.prefillOf !== 'function') return '';
   try { return String(JOBS.prefillOf('/' + p) || ''); } catch (e) { return ''; }
 }
+/** Card tags that differ from the engine's default (Free + On your device, or
+    Free to try + AI under ai/): the live tools and the games with phones. Keyed
+    by path, so the positional rows keep their shape. */
+function tagsMap(rows) {
+  const out = {};
+  if (!JOBS || typeof JOBS.jobOf !== 'function') return out;
+  for (const r of rows) {
+    const p = r[1];
+    const def = p.indexOf('ai/') === 0 ? 'Free to try|AI' : 'Free|On your device';
+    let t = null;
+    try { const j = JOBS.jobOf('/' + p); t = j && j.tags; } catch (e) { t = null; }
+    if (Array.isArray(t) && t.length && t.join('|') !== def) out[p] = t;
+  }
+  return out;
+}
 /** The seventh column: '' when the module has nothing to say about a page. */
 function ioOf(p) {
   if (!JOBS || typeof JOBS.jobOf !== 'function') return '';
@@ -355,7 +370,7 @@ function main() {
   const { rows, withKeywords, prefilled } = finderIndex();
   /* v2 is the seven-column shape, v3 adds the eighth (prefill) where a
      calculator declares one; the engine reads any of them */
-  const fi = write('assets/finder-index.js', 'window.FINDER_INDEX=' + JSON.stringify({ v: JOBS ? (typeof JOBS.prefillOf === 'function' ? 3 : 2) : 1, built: new Date().toISOString().slice(0, 10), tools: rows }) + ';\n');
+  const fi = write('assets/finder-index.js', 'window.FINDER_INDEX=' + JSON.stringify({ v: JOBS ? (typeof JOBS.prefillOf === 'function' ? 3 : 2) : 1, built: new Date().toISOString().slice(0, 10), tools: rows, tags: tagsMap(rows) }) + ';\n');
   const parts = shell();
   const rel = SECTION + '/' + SLUG + '/index.html';
   const fresh = !fs.existsSync(path.join(ROOT, rel));

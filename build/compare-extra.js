@@ -393,4 +393,11 @@ const COMPARISONS = [
   }
 ];
 
-module.exports = { COMPARISONS, REF, COMPETITORS };
+/* Third batch (live and party tools) lives in build/compare-live.js. */
+const LIVE = require('./compare-live.js');
+
+module.exports = {
+  COMPARISONS: COMPARISONS.concat(LIVE.COMPARISONS),
+  REF: Object.assign({}, REF, LIVE.REF),
+  COMPETITORS: COMPETITORS.concat(LIVE.COMPETITORS)
+};

@@ -250,6 +250,20 @@ function sourcesPanel(s) {
   return '  <section class="panel"><h2>' + esc(s.heading) + '</h2><ul class="tips">' + items + '</ul></section>\n';
 }
 
+/* Optional: guides a page points at, by slug. Each title is read from the
+   guide's own page so the link cannot drift; a slug with no page stops the build. */
+function guidesPanel(slugs) {
+  if (!slugs || !slugs.length) return '';
+  const items = slugs.map(sl => {
+    const abs = path.join(ROOT, 'guides', sl, 'index.html');
+    if (!fs.existsSync(abs)) throw new Error('a comparison points at the guide ' + sl + ', which does not exist');
+    const t = /<title>([^<]*)<\/title>/.exec(fs.readFileSync(abs, 'utf8'));
+    const name = t ? unesc(t[1]).replace(/\s*\|\s*1234Tools\s*$/i, '').trim() : sl;
+    return '<li><a href="/guides/' + esc(sl) + '/">' + esc(name) + '</a></li>';
+  }).join('');
+  return '  <section class="panel"><h2>Step-by-step guides</h2><ul class="related">' + items + '</ul></section>\n';
+}
+
 function comparePage(c, parts) {
   const bad = shapeCheck(c);
   if (bad.length) throw new Error('/' + SECTION + '/' + c.slug + '/ is not a fair comparison:\n    - ' + bad.join('\n    - '));
@@ -293,10 +307,11 @@ function comparePage(c, parts) {
     comparisonTable(c) +
     pointList('buy', c.buy) +
     '<section class="collection-group compare-free">\n  <h2>What you can do here for nothing</h2>\n' +
-    '  <p class="group-blurb">Everything below runs in your browser unless it is marked “free to try”, which means an AI tool with an account and a monthly allowance. None of it files anything.</p>\n</section>\n' +
+    '  <p class="group-blurb">' + esc(c.freeBlurb || 'Everything below runs in your browser unless it is marked “free to try”, which means an AI tool with an account and a monthly allowance. None of it files anything.') + '</p>\n</section>\n' +
     groups + '\n' +
     '  <section class="panel"><h2>Frequently asked questions</h2>' +
       c.faq.map(f => '<details><summary>' + esc(f.q) + '</summary><p>' + esc(f.a) + '</p></details>').join('') + '</section>\n' +
+    guidesPanel(c.guides) +
     sourcesPanel(c.sources) +
     '  <section class="panel"><h2>Related collections</h2><ul class="related">' + related + '</ul></section>\n' +
     '</article>\n';
