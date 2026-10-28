@@ -27,6 +27,9 @@
  * phone receives is recorded and inspected), a dropped socket rejoins with
  * one vote, 70 extra sockets fill the room to 100 and the 101st phone is
  * told it is full, and ending the session closes every phone.
+ * Pages outside /live/ that use the relay have a file there with
+ * `extra: true` (build/tests/live/quiz-phones.js: the quiz games' phones),
+ * run after the live tools, or alone with --only <its name>.
  */
 'use strict';
 const fs = require('fs');
@@ -260,6 +263,8 @@ async function main() {
       await CHECKS[t.slug].maths(page, h);
       await page.close();
     }
+    /* pages outside /live/ that use the relay: build/tests/live/<name>.js with extra: true (the quiz games' phones) */
+    for (const k of Object.keys(CHECKS).filter((x) => CHECKS[x].extra && (!ONLY || ONLY === x))) if (CHECKS[k].maths) await CHECKS[k].maths(null, h);
     {
       const page = await open('/live/' + (list[0] ? list[0].slug : 'live-poll') + '/');
       const kit = await page.evaluate(() => {
@@ -389,6 +394,11 @@ async function main() {
         const t0 = Date.now();
         await CHECKS[t.slug].flow(h, t);
         console.log('  ' + t.slug + ' flow: ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s');
+      }
+      for (const k of Object.keys(CHECKS).filter((x) => CHECKS[x].extra && (!ONLY || ONLY === x))) {
+        const t0 = Date.now();
+        await CHECKS[k].flow(h);
+        console.log('  ' + k + ' flow: ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s');
       }
       for (const ph of phones) await ph.ctx.close();
     }

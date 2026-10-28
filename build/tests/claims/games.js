@@ -30,7 +30,8 @@ module.exports = function ({ claim, kit: K }) {
       for (let i = 0; i < n; i++) {
         await p.evaluate((i) => {
           const b = document.querySelectorAll('[data-tool] button')[i];
-          if (!b || b.disabled || /new game|clear|reset|delete|remove|forget|undo/i.test(b.textContent + ' ' + (b.getAttribute('aria-label') || ''))) return;
+          /* the optional phones (Use phones, then Start a live session) are the one part that sends anything: their own claim is below */
+          if (!b || b.disabled || /new game|clear|reset|delete|remove|forget|undo|use phones|live session|reopen session/i.test(b.textContent + ' ' + (b.getAttribute('aria-label') || ''))) return;
           try { b.click(); } catch (e) { /* */ }
         }, i);
         await K.sleep(60);
@@ -46,11 +47,27 @@ module.exports = function ({ claim, kit: K }) {
   privacy('team-generator', 'faq', 'They are never sent anywhere.');
   privacy('spin-the-wheel', 'faq', 'They are never sent anywhere.');
   privacy('scoreboard', 'faq', 'It is not sent anywhere, so it will not appear on another device.');
-  privacy('quiz-buzzer', 'ui', 'nothing is uploaded');
+  privacy('quiz-buzzer', 'ui', 'Without phones, everything happens on this device.');
   privacy('tambola-number-caller', 'faq', 'Nothing is uploaded.');
   privacy('tambola-ticket-generator', 'faq', 'nothing is sent anywhere');
   privacy('bingo-card-generator', 'ui', 'nothing is uploaded');
-  privacy('quiz-maker', 'faq', 'Nothing is uploaded.');
+  privacy('quiz-maker', 'ui', 'Without phones, nothing is uploaded.');
+  /* the optional phones: nothing of them loads on a visit, and Use phones fetches same-origin files only; the relay is contacted
+     only after Start a live session (build/tests/live/quiz-phones.js plays it with 20 phones against the relay) */
+  const phonesOff = (slug, sel) => claim(G + slug + '/', 'ui', 'Phones are optional', 'nothing for phones loads on a visit; Use phones loads the kit from the site itself and contacts no server', B, withPage(slug, async (p) => {
+    await K.sleep(300);
+    const before = p.__requests.filter((r) => /room-|game-phones|live\.1234tools/.test(r.url)).map((r) => r.url);
+    const loadedBefore = await p.evaluate(() => !!(window.LiveKit || window.GamePhones || window.MVRRoom));
+    await p.evaluate((sel) => document.querySelector(sel).click(), sel).catch(() => {});
+    await K.sleep(1200);
+    /* the browser may serve the kit from its memory cache (no request event), so look for what it defines */
+    const after = await p.evaluate(() => ['LiveKit', 'GamePhones', 'MVRRoom', 'RoomWords'].filter((k) => !!window[k]).length);
+    const out = p.__requests.filter((r) => !r.url.startsWith(K.BASE));
+    const start = await p.evaluate(() => !!document.querySelector('.live-start'));
+    return [before.length === 0 && !loadedBefore && after === 4 && out.length === 0 && start, 'before Use phones: ' + (before.join(' ') || 'none') + '; after: ' + after + ' kit files, ' + out.length + ' outside requests, Start shown: ' + start];
+  }));
+  phonesOff('quiz-maker', '.qz-use-phones');
+  phonesOff('quiz-buzzer', '.bz-use-phones');
   privacy('category-board', 'faq', 'Nothing is uploaded.');
   privacy('top-answers', 'faq', 'Nothing is uploaded.');
   privacy('charades-generator', 'ui', 'nothing is uploaded');

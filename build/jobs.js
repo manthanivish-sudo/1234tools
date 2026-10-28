@@ -691,13 +691,16 @@ function pageOf(p) {
   const html = fs.readFileSync(abs, 'utf8');
   const d = /<meta name="description" content="([^"]*)">/.exec(html);
   const t = /<title>([^<]*)<\/title>/.exec(html);
-  return (_pages[key] = { description: d ? unesc(d[1]) : '', title: t ? unesc(t[1]) : '' });
+  return (_pages[key] = { description: d ? unesc(d[1]) : '', title: t ? unesc(t[1]) : '', phones: /<article\b[^>]*\bdata-phones="1"/.test(html) });
 }
 
 function tagsFor(p) {
   const key = normalise(p);
   /* the live tools send answers through our relay, so "On your device" would be untrue */
   if (/^\/live\//.test(key)) return ['Free', 'Live'];
+  /* a game whose optional phones go through the relay (data-phones="1" on its page): on the device unless phones are used */
+  const pg = pageOf(key);
+  if (pg && pg.phones) return ['Free', 'Phones optional'];
   return pricingFor(key).key === 'freemium' ? ['Free to try', 'AI'] : ['Free', 'On your device'];
 }
 

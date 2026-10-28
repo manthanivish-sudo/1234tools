@@ -919,6 +919,7 @@ const ABOUT_RE = / ?<!--about:([a-z-]+)-->[\s\S]*?<!--\/about-->/g;
 const ABOUT = {
   'ai': ABOUT_LEAD + ' This AI tool is one of the exceptions: when you press its button, what you give it is sent through our server to Anthropic’s API, as the note below explains.',
   'live': ABOUT_LEAD + ' The live tools in this section are an exception: the answers people send from their phones pass through our server only to reach the presenter’s screen, and are deleted when the session closes.',
+  'phones': ABOUT_LEAD + ' This game is an exception only when you use its optional phones: the answers people send from their phones then pass through our server only to reach the presenter’s screen, and are deleted when the session closes.',
   'ai-hub': ABOUT_LEAD + ' The exceptions here are the AI tools in this section, which send what you give them through our server to Anthropic’s API when you press their buttons, and the tool request form on this page, which sends what you type to us, as the note below explains.'
 };
 
@@ -995,6 +996,10 @@ function footKind(html, rel) {
   /* the live tools: the default "nothing sent to a server" would be untrue here */
   if (rel.startsWith('live/')) {
     return { kind: 'live', text: FOOT_LOCAL + ' The live tools in this section are the exception: once the presenter starts a session, the question on the screen and the answers people send from their phones pass through our server at live.1234tools.com only to reach the presenter’s screen. They are held in memory for the room’s life and deleted when it closes (24 hours at most). No accounts, no cookies, no analytics for participants.' + (/data-endpoint="[^"]*\/submitToolRequest"/.test(html) ? ' The tool request form on this page is sent to us too when you press “Send the request”, and kept until the request is dealt with, ' + FOOT_PRIVACY + '.' : '') };
+  }
+  /* a game with optional phones (build-games.js marks it data-phones="1"): on the device unless the host starts a live session */
+  if (/<article\b[^>]*\bdata-phones="1"/.test(html)) {
+    return { kind: 'phones', text: FOOT_LOCAL + ' So does this game; its optional phones are the exception: once the host presses “Use phones” and starts a live session, the questions on the screen and the answers people send from their phones pass through our server at live.1234tools.com only to reach the presenter’s screen. They are held in memory for the room’s life and deleted when it closes (24 hours at most). No accounts, no cookies, no analytics for participants.' + (/data-endpoint="[^"]*\/submitToolRequest"/.test(html) ? ' The tool request form on this page is sent to us too when you press “Send the request”, and kept until the request is dealt with, ' + FOOT_PRIVACY + '.' : '') };
   }
   if (rel === 'account/index.html') {
     return { kind: 'account', text: 'The calculators, converters and file tools on 1234Tools run inside your browser and need no account. This page is different: creating an account or signing in goes through Firebase Authentication, Google’s sign-in service, and the account keeps your email address, your plan, a monthly count of AI calls and any settings you choose to keep with it, ' + FOOT_PRIVACY + '.' };

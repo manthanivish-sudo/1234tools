@@ -2,7 +2,7 @@
   "id": "/games/quiz-buzzer/",
   "name": "Quiz Buzzer — 1234Tools",
   "short_name": "Quiz Buzzer",
-  "description": "A free buzzer for a quiz night: each team gets a key and a big pad, the first press wins and locks the others out, with the gaps in milliseconds. Works with several fingers on a tablet. Shows on the TV, no sign-up.",
+  "description": "A free buzzer for a quiz night: each team gets a key and a big pad, or players buzz on their own phones. The first press wins and locks the others out, with the gaps in milliseconds. Shows on the TV.",
   "start_url": "/games/quiz-buzzer/?src=pwa",
   "scope": "/games/quiz-buzzer/",
   "display": "standalone",

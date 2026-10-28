@@ -32,18 +32,45 @@
     order: 7,
     title: 'Quiz Buzzer',
     short: 'Quiz Buzzer',
-    description: 'A free buzzer for a quiz night: each team gets a key and a big pad, the first press wins and locks the others out, with the gaps in milliseconds. Works with several fingers on a tablet. Shows on the TV, no sign-up.',
-    keywords: ['quiz buzzer', 'online buzzer', 'buzzer for quiz night', 'family quiz buzzer', 'first to buzz', 'quiz game buzzers', 'fastest finger', 'buzzer app'],
+    description: 'A free buzzer for a quiz night: each team gets a key and a big pad, or players buzz on their own phones. The first press wins and locks the others out, with the gaps in milliseconds. Shows on the TV.',
+    keywords: ['quiz buzzer', 'online buzzer', 'buzzer for quiz night', 'family quiz buzzer', 'first to buzz', 'quiz game buzzers', 'fastest finger', 'buzzer app', 'phone buzzer'],
     glyph: 'i-quiz-buzzer',
     glyphSvg: '<symbol id="i-quiz-buzzer" viewBox="0 0 24 24">\n  <path d="M3.4 17.4h17.2v3H3.4z"/>\n  <path d="M5.6 17.4a6.4 6.4 0 0 1 12.8 0"/>\n  <path d="M12 3.2v3M5.4 5.6l1.8 2.2M18.6 5.6l-1.8 2.2" class="thin"/>\n  <circle cx="12" cy="14" r="1.1" class="fill"/>\n</symbol>',
     scripts: ['/engine/game-kit.js', '/engine/game-quiz-buzzer.js'],
-    privacy: 'Everything happens on this device. The presses are timed by your own browser and shown on your own screens; nothing is uploaded. Team names, keys and settings are remembered on this device only.',
+    /* optional phones through the live relay (engine/game-phones.js, fetched on Use phones): build-games.js marks the page */
+    phones: true,
+    privacy: 'Without phones, everything happens on this device. The presses are timed by your own browser and shown on your own screens; nothing is uploaded. Team names, keys and settings are remembered on this device only. Phones are optional: once you press Use phones and start a live session, the team names and who buzzed go through our server at live.1234tools.com to the phones, and each phone’s press comes back the same way. Answers pass through our server only to reach the presenter’s screen. They are held in memory for the room’s life and deleted when it closes (24 hours at most). No accounts, no cookies, no analytics for participants.',
     how: [
       'Choose the number of teams and give each a name. Every team has a key and a pad; change a team’s key if you like.',
       'Read the question, then say go. The first team to press its key (or touch its pad) wins; the rest are locked out and listed with their gaps.',
       'Press Correct (C), or Wrong (W) to lock that team out and let the others try. Reset (R) opens the buzzer for the next question.',
-      'Press Show on TV to put the winning team on the big screen. Tick “Send points to the scoreboard” to have Correct add points on the Quiz Scoreboard.'
+      'Press Show on TV to put the winning team on the big screen. Tick “Send points to the scoreboard” to have Correct add points on the Quiz Scoreboard.',
+      'Optional, with phones: press Use phones, then Start a live session. Players join at 1234tools.com/join with the 6-digit code and choose their team; press “Teams are set: back to the game” and every phone shows a BUZZ button.'
     ],
+    manual: {
+      setup: [
+        'Type how many teams are playing (2 to 8) and give each a name.',
+        'Change a team’s key if you like; R, C and W belong to you, the host.',
+        'Choose an answer timer and tick “Send points to the scoreboard” if the Quiz Scoreboard is open in another tab.',
+        'Optional: press Use phones, then Start a live session, and let players join at 1234tools.com/join with the code and choose their team.'
+      ],
+      play: [
+        'Read the question, then say go.',
+        'The first press, on a key, a pad or a phone, wins; the others are locked out and listed with their gaps.',
+        'Press Correct (C) to give the point, or Wrong (W) to lock that team out and let the others buzz.',
+        'Press Reset (R) before the next question: every pad and phone opens again.'
+      ],
+      tv: [
+        'Press Show on TV, drag the new window to the TV and press Full screen there.',
+        'Keys pressed on the TV window’s keyboard count as presses too.',
+        'With phones, the TV shows 1234tools.com/join, the code and how many phones each team has.'
+      ],
+      troubleshooting: [
+        { q: 'A key does nothing.', a: 'Click outside the name and key boxes first: the keyboard is not a buzzer while you type in a box.' },
+        { q: 'A phone says “Wait for the buzzers to open”.', a: 'Someone has buzzed. Press Reset to open every phone again. After Wrong, the phones name the team that is out: its phones can still press, but those presses do not count until Reset.' },
+        { q: 'A phone is in the wrong team.', a: 'Open “Phones and teams” under Phones and pick the right team beside its name.' }
+      ]
+    },
     uses: [
       ['Family quiz night', 'one tablet in the middle of the table, a pad each, and the winner on the TV'],
       ['Classroom', 'quick-fire revision where the first table to press answers'],
@@ -56,16 +83,18 @@
       'Wrong locks that team out until you press Reset and opens the buzzer for the others. Presses made by the other teams while the buzzer was locked are only listed: they do not queue, so those teams press again.',
       'The answer timer (off, or 5 to 30 seconds) starts at the first press and shows on the TV. It makes a low double tone at zero; it does not decide anything, so you still press Correct or Wrong.',
       'A keyboard stops working as a buzzer while you are typing in a name or key box. Click outside the boxes to play again.',
-      'The gap shown for each team is the time between its press and the winner’s. Browsers round time stamps a little, so differences of under a millisecond may show as 0.'
+      'The gap shown for each team is the time between its press and the winner’s. Browsers round time stamps a little, so differences of under a millisecond may show as 0.',
+      'A phone’s press is timed by our server the moment it arrives, and moved onto this computer’s clock, so phones, keys and pads are sorted together. A phone on a slow connection arrives a little later, so for a close finish between phones the server’s time decides.'
     ],
     faq: [
-      { q: 'How does the buzzer know who pressed first?', a: 'Every key press and touch carries a time stamp from the browser. The page sorts the presses by those times, so the earliest one wins even when events are handled in a different order. The later teams are listed with how many milliseconds behind they were.' },
+      { q: 'How does the buzzer know who pressed first?', a: 'Every key press and touch carries a time stamp from the browser, and every phone press the time our server received it. The page sorts the presses by those times, so the earliest one wins even when a press is handled late. The later teams are listed with how many milliseconds behind they were.' },
+      { q: 'Can players buzz from their own phones?', a: 'Yes, if you want: phones are optional. Press Use phones, then Start a live session. Players go to 1234tools.com/join, type the 6-digit code and choose their team, with no app and no account. During the launch trial a free session takes up to 1,000 phones. The first phone to buzz locks every other phone until you press Reset, and every phone and the TV show who it was. Answers pass through our server only to reach the presenter’s screen. They are held in memory for the room’s life and deleted when it closes (24 hours at most). No accounts, no cookies, no analytics for participants.' },
       { q: 'Can several teams use one tablet?', a: 'Yes. Each team has its own big pad and the pads respond to touch separately, so several fingers can press at once. The earliest touch wins and the others are locked out and listed.' },
       { q: 'What happens when the answer is wrong?', a: 'Press Wrong (or W). That team is locked out for the rest of the question and the buzzer opens for the others, who press again. Press Reset (or R) to bring every team back for the next question.' },
       { q: 'Can the buzzer add points to the scoreboard?', a: 'Yes. Tick “Send points to the scoreboard”, set how many points, and open the Quiz Scoreboard in the same browser. Pressing Correct sends the points to the team with the same name there. It works only between pages open in the same browser on this device.' },
       { q: 'How do I show it on the TV?', a: 'Press Show on TV to open the big-screen view in a new window, drag it to the TV or projector (or cast that browser tab) and press Full screen there. Keys pressed on the TV window’s keyboard count as presses, with their own time stamps. With one screen, press Full screen here.' },
       { q: 'Can I change the keys?', a: 'Yes. Each team has a key box: type one letter or digit. R, C and W belong to the host controls and cannot be used, and two teams cannot share a key. Your keys and names are remembered on this device.' },
-      { q: 'Does it work on a phone and offline?', a: 'Yes. It works on phones, tablets and computers, and after the first visit it opens without a connection. One device is the buzzer; it is not a game for several phones at once.' }
+      { q: 'Does it work on a phone and offline?', a: 'Yes. It works on phones, tablets and computers, and after the first visit it opens without a connection. One device runs the buzzer; with Use phones every player can buzz from their own phone too, which needs a connection.' }
     ],
     related: ['/utilities/random-number-generator/', '/time/stopwatch-timer/', '/time/countdown-timer/'],
     landings: [
@@ -127,7 +156,11 @@
     sent: 'Sent +',
     sentTail: ' for ',
     sentNote: '. It arrives only if the Quiz Scoreboard is open in this browser.',
-    tvWait: 'The buzzer will appear here.'
+    tvWait: 'The buzzer will appear here.',
+    phonesH: 'Phones (optional)', usePhones: 'Use phones',
+    phonesHint: 'Give every player a buzzer on their own phone: they join at 1234tools.com/join with a 6-digit code, no app, no account, and choose their team. The keys and pads keep working alongside the phones. During the launch trial a free session takes up to 1,000 phones. Without phones the buzzer works as before and nothing leaves this device.',
+    phonesPrivacy: 'Answers pass through our server only to reach the presenter’s screen. They are held in memory for the room’s life and deleted when it closes (24 hours at most). No accounts, no cookies, no analytics for participants.',
+    phonesFailed: 'The phone tools could not be loaded. Check the connection and press Use phones again.'
   };
 
   /* ---------- the rules (pure; build/tests/games/quiz-buzzer.js checks them) ---------- */
@@ -165,7 +198,13 @@
 
   const views = new WeakMap();
   const clock = (ms) => String(Math.ceil(Math.max(0, ms) / 1000));
-  function renderStage(body, s) {
+  function renderStage(stageBody, s) {
+    let body = stageBody;
+    /* phones in play (s.ph): the join strip on top, drawn with engine/room-kit.js, fetched for the TV when needed */
+    if (s && s.ph) {
+      if (window.LiveKit && window.GamePhones) body = window.GamePhones.frame(stageBody, s.ph);
+      else phonesStage().then(() => renderStage(stageBody, s)).catch(() => { /* drawn without the strip */ });
+    } else if (stageBody._live) { stageBody.textContent = ''; stageBody._live = null; }
     let v = views.get(body);
     if (!v || !body.contains(v.box)) {
       body.textContent = '';
@@ -207,10 +246,27 @@
       const li = K.el('li', t.locked ? 'is-out' : null);
       li.style.setProperty('--tc', 'var(--t' + (t.color + 1) + ')');
       li.appendChild(K.el('b', null, t.key));
-      li.appendChild(document.createTextNode(' ' + t.name + (t.locked ? ' — ' + STR.out : '')));
+      li.appendChild(document.createTextNode(' ' + t.name + (t.phones ? ' · ' + t.phones + (t.phones === 1 ? ' phone' : ' phones') : '') + (t.locked ? ' — ' + STR.out : '')));
       v.chips.appendChild(li);
     });
   }
+
+  /* ---------- phones (optional): fetched only when the host presses Use phones ---------- */
+
+  const js = {};
+  function loadJs(src) {
+    if (!js[src]) js[src] = new Promise((res, rej) => {
+      const sc = document.createElement('script');
+      sc.src = src; sc.async = true;
+      sc.onload = res; sc.onerror = () => { delete js[src]; rej(new Error(src)); };
+      document.head.appendChild(sc);
+    });
+    return js[src];
+  }
+  const inOrder = (list) => list.reduce((p, src) => p.then(() => loadJs(src)), Promise.resolve());
+  /* the TV window needs only the drawing parts; the host page needs the relay client too */
+  const phonesStage = () => inOrder(['/engine/room-kit.js', '/engine/game-phones.js']);
+  const phonesHost = () => inOrder(['/engine/room-client.js', '/engine/room-words.js', '/engine/room-kit.js', '/engine/game-phones.js']);
 
   /* ---------- the page ---------- */
 
@@ -227,6 +283,7 @@
     if (TIMERS.indexOf(opt.timer) < 0) opt.timer = 0;
     opt.pts = Math.max(1, Math.min(100, opt.pts | 0 || 1));
     let g = fresh();
+    let who = {}, phones = null;   /* who: the nickname of the phone that pressed for each team */
     const timer = { running: false, endAt: 0, up: false };
     let tTick = 0, flashT = 0;
     const channel = 'BroadcastChannel' in window ? new BroadcastChannel(POINTS_CHANNEL) : null;
@@ -279,6 +336,27 @@
     const cols = K.el('div', 'game-cols bz-cols');
     cols.appendChild(left); cols.appendChild(right);
     io.appendChild(cols);
+    const phonesBox = K.el('section', 'game-panel bz-phones');
+    phonesBox.appendChild(K.el('h2', null, STR.phonesH));
+    phonesBox.appendChild(K.el('p', 'game-msg', STR.phonesHint));
+    const phonesB = K.button(STR.usePhones, 'btn-ghost bz-use-phones', () => {
+      phonesB.disabled = true;
+      phonesHost().then(() => {
+        phones = window.GamePhones.buzzer({
+          teams: () => Array.from({ length: opt.n }, (_, i) => teamName(i)),
+          press: (team, at, nick) => buzz(team, at, nick),
+          publish: () => publish()
+        });
+        phonesBox.textContent = '';
+        phonesBox.appendChild(K.el('h2', null, STR.phonesH));
+        phonesBox.appendChild(phones.el);
+        root.quizBuzzer.phones = phones;
+        publish();
+      }).catch(() => { phonesB.disabled = false; sentMsg.textContent = STR.phonesFailed; });
+    });
+    phonesBox.appendChild(phonesB);
+    phonesBox.appendChild(K.el('p', 'game-msg', STR.phonesPrivacy));
+    io.appendChild(phonesBox);
 
     let nameEls = [], keyEls = [], padEls = [];
     function buildSetup() {
@@ -373,13 +451,17 @@
     function publish() {
       const lab = label(g, timerState(), opt.n);
       const w = winnerOf(g), gp = gaps(g);
-      stage.update({
+      /* the phones: a buzz card while armed, then who buzzed (engine/game-phones.js) */
+      const ph = phones ? phones.sync(g, lab, w === null ? '' : (who[w] ? who[w] + ' (' + teamName(w) + ')' : teamName(w))) : null;
+      const st = {
         label: lab,
         timer: { running: timer.running, endAt: timer.endAt },
-        winner: w === null ? null : { name: teamName(w), key: teamKey(w), color: w % 8 },
-        order: g.presses.map((p, k) => ({ name: teamName(p.team), color: p.team % 8, gap: gp[k] })),
-        teams: Array.from({ length: opt.n }, (_, i) => ({ name: teamName(i), key: teamKey(i), color: i % 8, locked: g.locked.indexOf(i) >= 0 }))
-      });
+        winner: w === null ? null : { name: teamName(w), key: who[w] || teamKey(w), color: w % 8 },
+        order: g.presses.map((p, k) => ({ name: teamName(p.team) + (who[p.team] ? ' (' + who[p.team] + ')' : ''), color: p.team % 8, gap: gp[k] })),
+        teams: Array.from({ length: opt.n }, (_, i) => ({ name: teamName(i), key: teamKey(i), color: i % 8, locked: g.locked.indexOf(i) >= 0, phones: ph ? ph.counts[i] || 0 : 0 }))
+      };
+      if (ph) st.ph = { join: ph.join };
+      stage.update(st);
     }
     function flash() {
       right.classList.add('is-flash');
@@ -401,14 +483,15 @@
       }, 250);
     }
     function stopTimer() { clearInterval(tTick); timer.running = false; timer.up = false; }
-    /** A press by team i at time `at` (ms, epoch clock). */
-    function buzz(i, at) {
+    /** A press by team i at time `at` (ms, epoch clock); nick when it came from a phone. */
+    function buzz(i, at, nick) {
       if (i < 0 || i >= opt.n) return;
       K.sound.unlock();
       const before = winnerOf(g), was = g.phase;
       const next = press(g, i, at);
       if (next === g) return;
       g = next;
+      if (nick) who[i] = nick; else delete who[i];
       const now = winnerOf(g);
       if (was === 'open') {
         K.sound.buzz(); flash(); startTimer();
@@ -419,7 +502,7 @@
       }
       paint();
     }
-    function doReset() { g = fresh(); stopTimer(); K.announce(root, 'Buzzer reset. All teams are open.'); sentMsg.textContent = ''; paint(); }
+    function doReset() { g = fresh(); who = {}; stopTimer(); K.announce(root, 'Buzzer reset. All teams are open.'); sentMsg.textContent = ''; paint(); }
     function doCorrect() {
       if (g.phase !== 'buzzed') return;
       const w = winnerOf(g);
@@ -435,7 +518,7 @@
     function doWrong() {
       if (g.phase !== 'buzzed') return;
       const w = winnerOf(g);
-      g = wrong(g); stopTimer();
+      g = wrong(g); who = {}; stopTimer();
       K.sound.wrong();
       K.announce(root, teamName(w) + ' is wrong and locked out. The others may buzz.');
       paint();
@@ -463,7 +546,7 @@
     nBox.addEventListener('change', () => {
       opt.n = Math.max(MIN_TEAMS, Math.min(MAX_TEAMS, parseInt(nBox.value, 10) || opt.n));
       nBox.value = String(opt.n);
-      g = fresh(); stopTimer();
+      g = fresh(); who = {}; stopTimer();
       buildSetup(); persist(); paint();
     });
     tsel.addEventListener('change', () => { opt.timer = Number(tsel.value); persist(); });
@@ -473,6 +556,7 @@
 
     buildSetup();
     paint();
+    root.quizBuzzer = { phones: null, get state() { return g; }, buzz: buzz };
   }
 
   document.addEventListener('DOMContentLoaded', () => {

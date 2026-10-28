@@ -30,12 +30,14 @@
     order: 8,
     title: 'Quiz Maker & Host',
     short: 'Quiz Maker',
-    description: 'Write a quiz with picture rounds, multiple choice and typed answers, then host it on the TV with a countdown, a Reveal button and team scores — or print the question and answer sheets. Free, no sign-up, nothing uploaded.',
-    keywords: ['quiz maker', 'make a quiz', 'quiz host', 'pub quiz maker', 'family quiz night', 'picture round maker', 'quiz on tv', 'printable quiz answer sheet'],
+    description: 'Write a quiz with picture rounds, multiple choice and typed answers, host it on the TV with a countdown, a Reveal button and team scores, and let players answer on their phones if you like. Or print the sheets. Free, no sign-up.',
+    keywords: ['quiz maker', 'make a quiz', 'quiz host', 'pub quiz maker', 'family quiz night', 'picture round maker', 'quiz on tv', 'printable quiz answer sheet', 'quiz with phones', 'answer on your phone'],
     glyph: 'i-quiz-maker',
     glyphSvg: '<symbol id="i-quiz-maker" viewBox="0 0 24 24">\n  <rect x="2.6" y="3.4" width="18.8" height="13.4" rx="2.4"/>\n  <path d="M8.4 20.6h7.2M12 16.8v3.8" class="thin"/>\n  <path d="M9.7 8.2a2.4 2.4 0 1 1 3.3 2.2c-.6.3-1 .8-1 1.4v.3"/>\n  <circle cx="12" cy="14.2" r=".95" class="fill"/>\n</symbol>',
     scripts: ['/engine/game-kit.js', '/engine/game-quiz-core.js', '/engine/game-quiz-maker.js'],
-    privacy: 'Your quiz, its pictures and the scores stay on this device: they are kept in this browser’s own storage and shown on your own screens. Nothing is uploaded. A share link carries the quiz after the “#”, a part of a link that browsers never send to a server.',
+    /* optional phones through the live relay (engine/game-phones.js, fetched on Use phones): build-games.js marks the page */
+    phones: true,
+    privacy: 'Your quiz, its pictures and the scores stay on this device: they are kept in this browser’s own storage and shown on your own screens. Without phones, nothing is uploaded. A share link carries the quiz after the “#”, a part of a link that browsers never send to a server. Phones are optional: once you press Use phones and start a live session, each question’s words and options go through our server at live.1234tools.com to the phones, and the phones’ answers come back the same way; pictures never leave this device. Answers pass through our server only to reach the presenter’s screen. They are held in memory for the room’s life and deleted when it closes (24 hours at most). No accounts, no cookies, no analytics for participants.',
     how: [
       'Type a title for the quiz in Quiz title.',
       'Choose a question type under the round (multiple choice, true or false, typed answer, number, picture or put in order) and press Add question.',
@@ -49,7 +51,8 @@
       'Press Right (or the team’s number key, 1 to 9) for each team that got it.',
       'Press Next (→) for the next question. Show scores (S) puts the scores on the TV.',
       'After the last question, press Final scores. To play again, press End the game, then Start the quiz.',
-      'For a paper quiz, press 3 Print and choose question sheets, answer sheets or the answer key.'
+      'For a paper quiz, press 3 Print and choose question sheets, answer sheets or the answer key.',
+      'Optional, with phones: in Host press Use phones, choose Everyone for themselves or Teams, press Start a live session, and players join at 1234tools.com/join with the 6-digit code before you press Start the quiz.'
     ],
     manual: {
       setup: [
@@ -57,27 +60,31 @@
         'Add questions round by round with Add question; add rounds with Add a round.',
         'Fix anything listed under the title until it says ready to host.',
         'Press 2 Host and type the team names, one per line.',
-        'Tick the joker or Closest answer wins if you want them, and set a timer if you want one.'
+        'Tick the joker or Closest answer wins if you want them, and set a timer if you want one.',
+        'Optional: press Use phones, choose Everyone for themselves or Teams, and press Start a live session; players join at 1234tools.com/join with the code.'
       ],
       play: [
         'Press Start the quiz. The TV shows the round’s name.',
         'Press Show the question (Enter); read it out. Your page has the answer.',
         'Press Reveal answer (R), then Right (or 1 to 9) for each team that got it.',
         'Press Next (→). Back (←) goes back one step.',
-        'Press Show scores (S) between rounds, and Final scores at the end.'
+        'Press Show scores (S) between rounds, and Final scores at the end.',
+        'With phones: players tap or type their answer before the time runs out; Reveal tells each phone “Correct!” or “Not this time.”, the top 5 follow, and Final scores shows the winner on a podium.'
       ],
       tv: [
         'On the Host tab, press Show on TV. A new window opens.',
         'Drag that window to the TV or projector, or cast that browser tab.',
         'Press Full screen in that window. Your page stays the presenter view with the answers.',
-        'With only one screen, press Full screen here; press Esc to come back.'
+        'With only one screen, press Full screen here; press Esc to come back.',
+        'With phones, the TV shows 1234tools.com/join, the code and a QR code at the top, so people can join at any time.'
       ],
       troubleshooting: [
         { q: 'Start the quiz does nothing.', a: 'The quiz has something to fix: a question without an answer, a round without a name, or a picture question without a picture. The list under the button names each one.' },
         { q: 'The TV window says the quiz will appear here.', a: 'Keep the host page open in the same browser on the same computer and press Show the question or Next: the TV follows the host page.' },
         { q: 'I marked the wrong team.', a: 'Press that team’s Right button again to take the mark off.' },
         { q: 'My quiz is gone.', a: 'Quizzes are kept in this browser on this device. A private window forgets them when it closes; use Export file to keep a copy.' },
-        { q: 'The pictures are missing on another device.', a: 'Pictures stay on the device they were added on, and a share link cannot carry them. Use Export file and open the file with Import file on the other device.' }
+        { q: 'The pictures are missing on another device.', a: 'Pictures stay on the device they were added on, and a share link cannot carry them. Use Export file and open the file with Import file on the other device.' },
+        { q: 'A phone cannot answer.', a: 'The phone answers multiple-choice, true-or-false, typed, number and picture questions until the time runs out; put-in-order questions say “Look at the screen”. A phone that joins during a question can still answer it until the time runs out. If it says the session ended, start a new session and give out the new code.' }
       ]
     },
     uses: [
@@ -91,16 +98,19 @@
       'Give a question a time limit and the TV counts it down, with ticks in the last five seconds and a buzzer at the end.',
       'Each team may play its joker on one round to double its points there; pick it in Host before that round starts.',
       'Pictures are made at most 1600 pixels across before they are kept, so a phone photo does not fill the browser’s storage.',
-      'A share link holds up to 60 questions without pictures. For a picture round, use Export file and send the .json: it opens with Import file on any device.'
+      'A share link holds up to 60 questions without pictures. For a picture round, use Export file and send the .json: it opens with Import file on any device.',
+      'With phones, every question has a time limit (its own, the default you set in Host, or 20 seconds). A right answer earns the question’s points plus up to half again for speed; equal scores go to the player with the lower total time on right answers.',
+      'In Teams with phones, each team’s first answer from its phones is the team’s answer, so a team should agree before anyone taps. Phones choose their team when you pick Teams; anyone who does not is put in the smallest team, and you can move people under Phones and teams.'
     ],
     faq: [
-      { q: 'Is the quiz uploaded anywhere?', a: 'No. The questions, pictures and scores are kept in this browser’s storage on this device and shown on your own screens. A share link holds the quiz after the “#”, which browsers do not send to the website, and an exported file goes wherever you send it.' },
+      { q: 'Is the quiz uploaded anywhere?', a: 'Not unless you use phones. The questions, pictures and scores are kept in this browser’s storage on this device and shown on your own screens. Nothing is uploaded. A share link holds the quiz after the “#”, which browsers do not send to the website, and an exported file goes wherever you send it. With phones, each question’s words and options go through our server to the phones and their answers come back. Answers pass through our server only to reach the presenter’s screen. They are held in memory for the room’s life and deleted when it closes (24 hours at most). No accounts, no cookies, no analytics for participants.' },
+      { q: 'Can players answer on their own phones?', a: 'Yes, if you want: phones are optional. In Host press Use phones, choose Everyone for themselves or Teams, and press Start a live session. Players go to 1234tools.com/join, type the 6-digit code (or scan the QR code on the TV) and answer with no app and no account. During the launch trial a free session takes up to 1,000 phones. At the end the TV shows the winner on a podium and each phone that answered shows its place. Export answers saves every phone’s answers, times and points as a CSV file.' },
       { q: 'How do I show the quiz on the TV?', a: 'In Host, press Show on TV to open the big-screen view in a new window, drag it to the TV or projector (or cast that browser tab) and press Full screen there. Your page stays the presenter view with the answers. With one screen, press Full screen here.' },
       { q: 'Does it mark typed answers?', a: 'If you type a team’s answer into its row, Reveal marks it: case, accents, punctuation and the words “the”, “a” and “an” are ignored, the spellings in “Also accept” count, and a small typo is forgiven in longer words. You can always change a mark by hand.' },
       { q: 'Can I make a picture round?', a: 'Yes. Choose Picture as the question type and pick a photo from the device. It is resized to at most 1600 pixels, kept in this browser, and shown big on the TV; the printed question sheet includes it too.' },
       { q: 'How do I print a pub quiz?', a: 'Open Print and choose question sheets (one set per table), answer sheets (numbered blank lines per round, with a space for the team name) or the answer key with your notes. Each opens your browser’s print dialogue, where you can also save a PDF.' },
       { q: 'Can I share the quiz with another quizmaster?', a: 'Yes. Copy share link puts a quiz of up to 60 questions without pictures into a link. For bigger quizzes or picture rounds, Export file saves a .json file (pictures included) that Import file opens on another device.' },
-      { q: 'Does it work offline and on a phone?', a: 'Yes. After the first visit the page opens without a connection, and a ready-made pack you have opened once is kept too. It works on phones, tablets and computers; you can install it as an app from the browser’s menu.' },
+      { q: 'Does it work offline and on a phone?', a: 'Yes. After the first visit the page opens without a connection, and a ready-made pack you have opened once is kept too. It works on phones, tablets and computers; you can install it as an app from the browser’s menu. Playing with phones needs a connection.' },
       { q: 'Where are the ready-made packs from?', a: 'They are written for this site, each question with a source page that states the answer, and each pack shows the date it was last checked. The picker tells you if a pack has not been checked yet.' }
     ],
     related: ['/utilities/random-number-generator/', '/time/countdown-timer/', '/education/report-card/'],
@@ -108,7 +118,7 @@
       {
         slug: 'family-quiz-night-maker',
         title: 'Family Quiz Night Maker',
-        description: 'Write a family quiz with a kids’ round and a picture round, host it on the TV with team scores, or print the sheets. Free, no sign-up, nothing uploaded.',
+        description: 'Write a family quiz with a kids’ round and a picture round, host it on the TV with team scores, let everyone answer on their phones, or print the sheets. Free, no sign-up.',
         lede: 'Four rounds ready to fill — general knowledge, a kids’ round, a picture round and a quick-fire finish — then host it on the TV with the scores kept for you.',
         preset: { title: 'Family Quiz Night', rounds: ['General knowledge', 'Kids’ round', 'Picture round', 'Quick-fire'] },
         about: [
@@ -123,7 +133,7 @@
       {
         slug: 'christmas-quiz-host',
         title: 'Christmas Quiz Host',
-        description: 'Host a Christmas quiz on the TV: rounds for traditions, films and food, a countdown, a Reveal button and team scores. Free, works offline, nothing uploaded.',
+        description: 'Host a Christmas quiz on the TV: rounds for traditions, films and food, a countdown, a Reveal button and team scores, with answers on phones if you like. Free.',
         lede: 'A Christmas quiz in four rounds — traditions, films, food and a picture round — shown on the TV with the answers on your phone and the scores kept for you.',
         preset: { title: 'Christmas Quiz', rounds: ['Christmas traditions', 'Christmas films', 'Festive food', 'Picture round'] },
         about: [
@@ -131,14 +141,14 @@
           'The TV shows a question at a time; your page is the presenter view with the answer and a note to read out. Mark the teams, press Next, and show the scores between rounds.'
         ],
         faq: [
-          { q: 'Can the whole family play on one TV?', a: 'Yes. Teams write their answers on paper (print the answer sheets) or call them out, and you mark each team on your page. The TV only ever shows what you choose to reveal.' },
-          { q: 'Will it work at a relative’s house with no Wi-Fi?', a: 'Yes, once you have opened the page on that phone or laptop before. The quiz is kept on the device and the page works offline.' }
+          { q: 'Can the whole family play on one TV?', a: 'Yes. Teams write their answers on paper (print the answer sheets) or call them out, and you mark each team on your page; or press Use phones and everyone answers on their own phone. The TV only ever shows what you choose to reveal.' },
+          { q: 'Will it work at a relative’s house with no Wi-Fi?', a: 'Yes, once you have opened the page on that phone or laptop before. The quiz is kept on the device and the page works offline. Only answering on phones needs a connection.' }
         ]
       },
       {
         slug: 'picture-round-maker',
         title: 'Picture Round Maker for a Quiz',
-        description: 'Make a quiz picture round from photos on your phone or computer: each picture shown big on the TV, or printed on the question sheet. Nothing uploaded.',
+        description: 'Make a quiz picture round from photos on your phone or computer: each picture shown big on the TV, or printed on the question sheet. Your photos are never uploaded.',
         lede: 'Pick photos from the device — baby photos, famous places, logos you took yourself — type the answer for each, and show them one by one on the TV or print them.',
         preset: { title: 'Picture Round', rounds: ['Picture round'], type: 'picture' },
         about: [
@@ -197,7 +207,11 @@
     printHint: 'Each opens the print dialogue; choose “Save as PDF” there for a file. Question sheets include the pictures and the options; answer sheets have a numbered line per question and a space for the team name.',
     teamName: 'Team name', answerKey: 'Answer key', questionSheet: 'Questions', answerSheet: 'Answer sheet', total: 'Total',
     tvWait: 'The quiz will appear here.', tvScores: 'Scores', tvFinal: 'Final scores', tvRound: function (n) { return 'Round ' + n; },
-    tvTimeUp: 'Time’s up!', pts: function (n) { return n === 1 ? '1 point' : n + ' points'; }
+    tvTimeUp: 'Time’s up!', pts: function (n) { return n === 1 ? '1 point' : n + ' points'; },
+    phonesH: 'Phones (optional)', usePhones: 'Use phones',
+    phonesHint: 'Let players answer on their own phones at 1234tools.com/join with a 6-digit code: no app, no account. Multiple choice and true or false are answered with a tap, typed and number answers are typed in, and faster right answers earn a speed bonus. During the launch trial a free session takes up to 1,000 phones. Without phones the quiz works as before and nothing leaves this device.',
+    phonesPrivacy: 'Answers pass through our server only to reach the presenter’s screen. They are held in memory for the room’s life and deleted when it closes (24 hours at most). No accounts, no cookies, no analytics for participants.',
+    phonesFailed: 'The phone tools could not be loaded. Check the connection and press Use phones again.'
   };
   const TYPE_LIST = ['mcq', 'tf', 'text', 'number', 'picture', 'order'];
 
@@ -263,8 +277,17 @@
     const base = n < 50 ? 7 : n < 110 ? 5.6 : n < 220 ? 4.4 : 3.4;
     return (withPic ? base * 0.62 : base).toFixed(2) + 'vmin';
   }
-  function renderStage(body, s) {
+  function renderStage(stageBody, s) {
     cancelAnimationFrame(tvRaf);
+    let body = stageBody;
+    /* phones in play (s.ph): the join strip on top and the phones' own views, drawn by engine/game-phones.js */
+    if (s && s.ph) {
+      const GP = window.GamePhones;
+      if (GP && window.LiveKit) {
+        body = GP.frame(stageBody, s.ph);
+        if (GP.drawStage(body, s)) return;
+      } else phonesStage().then(function () { renderStage(stageBody, s); }).catch(function () { /* drawn without the strip */ });
+    }
     body.textContent = '';
     if (!s || !s.view || s.view === 'idle') { body.appendChild(K.el('p', 'game-stage-wait', STR.tvWait)); return; }
     const wrap = K.el('div', 'st-qz');
@@ -337,8 +360,26 @@
       };
       tick();
     }
+    if (s.ph && window.GamePhones && s.view === 'question') window.GamePhones.answeredLine(wrap, s.ph);
     body.appendChild(wrap);
   }
+
+  /* ---------- phones (optional): fetched only when the host presses Use phones ---------- */
+
+  const js = {};
+  function loadJs(src) {
+    if (!js[src]) js[src] = new Promise(function (res, rej) {
+      const sc = document.createElement('script');
+      sc.src = src; sc.async = true;
+      sc.onload = res; sc.onerror = function () { delete js[src]; rej(new Error(src)); };
+      document.head.appendChild(sc);
+    });
+    return js[src];
+  }
+  const inOrder = function (list) { return list.reduce(function (p, src) { return p.then(function () { return loadJs(src); }); }, Promise.resolve()); };
+  /* the TV window needs only the drawing parts; the host page needs the relay client too */
+  function phonesStage() { return inOrder(['/engine/room-kit.js', '/engine/game-phones.js']); }
+  function phonesHost() { return inOrder(['/engine/room-client.js', '/engine/room-words.js', '/engine/room-kit.js', '/engine/game-phones.js']); }
 
   /* ---------- the page ---------- */
 
@@ -347,7 +388,7 @@
     const prefs = K.store(SLUG, 1);
     const preset = K.preset(root);
     const P = Object.assign({ current: null, tab: 0, host: { teams: 'Team 1\nTeam 2\nTeam 3', timer: '', closest: false, joker: true, board: false }, game: null }, prefs.get({}));
-    let rec = null, persistent = true, saveT = 0, game = null, view = 'idle', intro = false, showScores = false;
+    let rec = null, persistent = true, saveT = 0, game = null, view = 'idle', intro = false, showScores = false, phones = null;
     const thumbs = new Map();
     const addType = preset.type && TYPE_LIST.indexOf(preset.type) >= 0 ? preset.type : 'mcq';
 
@@ -769,6 +810,28 @@
     const hostSetup = K.el('section', 'game-panel qz-setup');
     const hostLive = K.el('section', 'game-panel qz-live'); hostLive.hidden = true;
     host.appendChild(hostSetup); host.appendChild(hostLive);
+    const phonesBox = K.el('section', 'game-panel qz-phones');
+    phonesBox.appendChild(K.el('h2', null, STR.phonesH));
+    phonesBox.appendChild(K.el('p', 'game-msg', STR.phonesHint));
+    const phonesB = K.button(STR.usePhones, 'btn-ghost qz-use-phones', function () {
+      phonesB.disabled = true;
+      phonesHost().then(function () {
+        phones = window.GamePhones.quiz({
+          C: C, game: function () { return game; }, view: function () { return view; },
+          quizTitle: function () { return (rec && rec.quiz && rec.quiz.title) || STR.untitled; },
+          teams: function () { return game ? game.teams().map(function (t) { return t.name; }) : hostOpts().teams; },
+          closest: function () { return !!P.host.closest; }, publish: publish
+        });
+        phonesBox.textContent = '';
+        phonesBox.appendChild(K.el('h2', null, STR.phonesH));
+        phonesBox.appendChild(phones.el);
+        root.quizMaker.phones = phones;
+        publish();
+      }).catch(function () { phonesB.disabled = false; say(STR.phonesFailed, true); });
+    });
+    phonesBox.appendChild(phonesB);
+    phonesBox.appendChild(K.el('p', 'game-msg', STR.phonesPrivacy));
+    host.appendChild(phonesBox);
     host.appendChild(stage.bar());
 
     function hostOpts() {
@@ -810,8 +873,13 @@
         return;
       }
       const o = hostOpts();
-      if (o.teams.length < 1) o.teams = ['Team 1', 'Team 2'];
-      game = C.createGame(quiz(), Object.assign(o, { rand: K.randInt }), saved);
+      const live = !!(phones && phones.live);
+      if (live && phones.solo) o.teams = [];
+      else if (o.teams.length < 1) o.teams = ['Team 1', 'Team 2'];
+      /* with phones every question has a time limit and right answers earn the speed bonus */
+      if (live) { o.speed = true; o.speedMax = 0.5; }
+      game = C.createGame(live ? phones.timed(quiz(), P.host.timer) : quiz(), Object.assign(o, { rand: K.randInt }), saved);
+      if (live) phones.start(); else if (phones) phones.stop();
       intro = !saved && game.current().qi === 0;
       showScores = false;
       view = intro ? 'round' : 'question';
@@ -846,10 +914,11 @@
       tickRaf = requestAnimationFrame(loop);
     }
     function publish() {
-      if (!game) { stage.update({ view: 'idle' }); return; }
-      if (showScores || view === 'end') { stage.update({ view: view === 'end' ? 'end' : 'scores', scores: scoresList() }); return; }
+      const out = function (st) { stage.update(phones ? phones.decorate(st, view) : st); };
+      if (!game) { out({ view: 'idle' }); return; }
+      if (showScores || view === 'end') { out({ view: view === 'end' ? 'end' : 'scores', scores: scoresList() }); return; }
       const pq = game.publicQuestion();
-      if (view === 'round') { stage.update({ view: 'round', roundNo: pq.roundNo, round: pq.round }); return; }
+      if (view === 'round') { out({ view: 'round', roundNo: pq.roundNo, round: pq.round }); return; }
       const st = { view: view, meta: STR.roundQ(pq), prompt: pq.prompt, type: pq.type, options: pq.options || null, image: pq.image ? pq.image.id : null };
       if (view === 'question') { const secs = secsFor(pq); if (secs) { st.secs = secs; st.endsAt = pq.shownAt + secs * 1000; } }
       if (view === 'reveal') {
@@ -858,7 +927,7 @@
         st.answerIndex = q.type === 'mcq' ? q.options.indexOf(q.answer) : q.type === 'tf' ? (q.answer ? 0 : 1) : null;
         if (q.type === 'order') { st.options = q.answer.slice(); st.answerIndex = null; }
       }
-      stage.update(st);
+      out(st);
     }
     function scoresList() { return game.standings().map(function (t) { return { name: t.name, score: t.score, rank: t.rank, joker: t.joker !== null, i: game.teams().findIndex(function (x) { return x.name === t.name; }) }; }); }
     function sendBoard(team, delta) {
@@ -875,6 +944,7 @@
       });
       const before = game.teams().map(function (t) { return t.score; });
       game.reveal();
+      if (phones) phones.reveal();
       game.teams().forEach(function (t, i) { sendBoard(t.name, t.score - before[i]); });
       view = 'reveal'; showScores = false;
       K.sound.ding();
@@ -967,7 +1037,8 @@
         tl.appendChild(row);
       });
       hostLive.appendChild(tl);
-      hostLive.appendChild(K.button(STR.endGame, 'btn-ghost', function () { game = null; keepGame(); cancelAnimationFrame(tickRaf); K.wakeLock(false); renderHost(); publish(); }));
+      if (phones && phones.live) hostLive.appendChild(phones.statusEl);
+      hostLive.appendChild(K.button(STR.endGame, 'btn-ghost', function () { game = null; if (phones) phones.stop(); keepGame(); cancelAnimationFrame(tickRaf); K.wakeLock(false); renderHost(); publish(); }));
       hostTimer();
     }
     document.addEventListener('keydown', function (e) {
@@ -1057,7 +1128,7 @@
     });
     pick.addEventListener('change', function () { C.store.getQuiz(pick.value).then(function (r) { if (r) { game = null; useRec(r); } }); });
     window.addEventListener('hashchange', checkShared);
-    root.quizMaker = { get game() { return game; }, get quiz() { return rec && rec.quiz; }, get id() { return rec && rec.id; }, flush: function () { clearTimeout(saveT); return C.store.putQuiz(rec); } };
+    root.quizMaker = { phones: null, get game() { return game; }, get quiz() { return rec && rec.quiz; }, get id() { return rec && rec.id; }, flush: function () { clearTimeout(saveT); return C.store.putQuiz(rec); } };
   }
 
   window.GAME_TOOLS[SLUG].maths = { printDoc: printDoc, promptSize: promptSize };

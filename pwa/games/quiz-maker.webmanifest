@@ -2,7 +2,7 @@
   "id": "/games/quiz-maker/",
   "name": "Quiz Maker & Host — 1234Tools",
   "short_name": "Quiz Maker & Host",
-  "description": "Write a quiz with picture rounds, multiple choice and typed answers, then host it on the TV with a countdown, a Reveal button and team scores — or print the question and answer sheets. Free, no sign-up, nothing uploaded.",
+  "description": "Write a quiz with picture rounds, multiple choice and typed answers, host it on the TV with a countdown, a Reveal button and team scores, and let players answer on their phones if you like. Or print the sheets. Free, no sign-up.",
   "start_url": "/games/quiz-maker/?src=pwa",
   "scope": "/games/quiz-maker/",
   "display": "standalone",

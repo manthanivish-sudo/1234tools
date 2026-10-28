@@ -3,7 +3,8 @@
  * when the presenter shows one: multiple choice with one or several answers
  * (mc), an open-ended typed answer (oe), a timed quiz question with points
  * (dq), the leaderboard (lb), "look at the screen" for a content slide
- * (look) and the finale after the last slide, with confetti (end). room-join.js passes its helpers in `x` (heading, el, btn, note,
+ * (look) and the finale after the last slide, with confetti (end). The quiz
+ * games use oe for typed answers (the verdict comes in a direct {q, ok}). room-join.js passes its helpers in `x` (heading, el, btn, note,
  * setNote, send, remember, t, buzzHaptic, LETTERS, mine(), me(), and dv:
  * the last `direct` message from the presenter). Card shapes:
  * engine/room-kit.js.
@@ -177,11 +178,14 @@
           ta.disabled = !open;
           go.disabled = !open || !ta.value.trim() || ta.value.replace(/\s+/g, ' ').trim() === m;
           go.hidden = !open;
-          if (st.cl) x.setNote(n, x.t('closed'));
+          var v = x.dv;
+          /* a typed quiz answer (the quiz games): the presenter's verdict comes as a direct {q, ok} */
+          if (m !== undefined && v && v.q === st.id && v.ok !== undefined) x.setNote(n, v.ok ? x.t('quizRight') : x.t('quizWrong'), v.ok ? 'ok' : 'bad');
+          else if (st.cl) x.setNote(n, x.t('closed'));
           else if (m !== undefined) x.setNote(n, st.ch ? s('sentChange') : s('sent'), 'ok');
           else x.setNote(n, '');
         }
-        return { update: function (s2) { st = s2; paint(); } };
+        return { update: function (s2) { st = s2; paint(); }, direct: paint };
       },
 
       dq: function (s0, box) {

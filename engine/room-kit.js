@@ -199,6 +199,60 @@
     return f.main;
   };
 
+  /* ---------- the leaderboard, the podium and confetti (Live Presentation and the quiz games) ---------- */
+
+  /** Ranked rows [{n, p, r, s, w}] (name, points, rank, seconds, place before
+      the last question or -1) as the big screen's list; with fin the first
+      three are on a podium, so the list starts at fourth place. o: { pts(p), time(s) }. */
+  L.lbList = function (main, rows, fin, o) {
+    const ol = K.el('ol', 'deck-lb' + (fin ? ' is-rest' : ''));
+    ol.style.setProperty('--rows', String(Math.max(rows.length, 1)));
+    rows.forEach((x, i) => {
+      const li = K.el('li');
+      const at = fin ? i + 3 : i;
+      /* rows slide in from where they stood after the previous question */
+      if (x.w >= 0 && x.w !== at) li.style.setProperty('--from', String(x.w - at));
+      else if (x.w < 0) li.classList.add('is-new');
+      li.appendChild(K.el('b', null, String(x.r)));
+      li.appendChild(K.el('span', null, x.n));
+      li.appendChild(K.el('strong', null, o.pts(x.p)));
+      li.appendChild(K.el('small', null, o.time(x.s)));
+      ol.appendChild(li);
+    });
+    if (rows.length) main.appendChild(ol);
+    return ol;
+  };
+  /** Third, second and first place on blocks (with win they rise one by one). line(x) is the text under a name. */
+  L.podium = function (main, rows, win, line) {
+    const pod = K.el('div', 'deck-podium' + (win ? ' is-win' : ''));
+    [1, 0, 2].forEach((i) => {
+      const x = rows[i];
+      if (!x) return;
+      const col = K.el('div', 'deck-step is-' + (i + 1));
+      col.appendChild(K.el('span', 'deck-step-nick', x.n));
+      col.appendChild(K.el('span', 'deck-step-pts', line(x)));
+      col.appendChild(K.el('b', 'deck-step-block', String(x.r)));
+      pod.appendChild(col);
+    });
+    main.appendChild(pod);
+    return pod;
+  };
+  /** Confetti over the big screen, falling once from `delay` seconds (app.css hides it for reduced motion). */
+  L.confetti = function (main, delay) {
+    const box = K.el('div', 'deck-confetti');
+    box.setAttribute('aria-hidden', 'true');
+    for (let i = 0; i < 120; i++) {
+      const p = K.el('i');
+      p.style.cssText = '--x:' + (Math.random() * 100).toFixed(1) + '%;--d:' + (delay + Math.random() * 2.4).toFixed(2) + 's;--t:' + (2.8 + Math.random() * 2.4).toFixed(2) +
+        's;--dx:' + Math.round(Math.random() * 200 - 100) + 'px;--r:' + Math.round(Math.random() * 1080 - 540) + 'deg;--c:var(--t' + ((i % 8) + 1) + ')';
+      box.appendChild(p);
+    }
+    main.appendChild(box);
+    return box;
+  };
+  /** The winner's name(s): everyone ranked first, joined with " & ". */
+  L.firsts = (rows) => rows.filter((x) => x.r === 1).map((x) => x.n).join(' & ');
+
   /* ---------- the session ---------- */
 
   let seq = 0;
@@ -207,13 +261,14 @@
 
   /**
    * L.session({ slug, title, onMsg(m), onJoin(p), onLeft(p), onChange(),
-   *             onRestore(saved), onEnd(reason) }) →
+   *             onRestore(saved), onEnd(reason), keys }) →
    *   { el, live, room, join, setCard(v), patch(p), card, save(obj),
    *     players, count, nick(id) }
    *
    * `el` is the panel to put on the page. m is {id, nick, at, v}.
    * onChange is called whenever what the big screen shows of the session
    * changes (the code, the count, the strip switched on or off).
+   * keys:false leaves the L key alone (a page whose letters are buzzers).
    */
   L.session = function (opts) {
     const MVR = window.MVRRoom;
@@ -442,7 +497,7 @@
       resumeRow.appendChild(K.el('p', 'game-msg', STR.resumeHint));
     }
 
-    document.addEventListener('keydown', (e) => {
+    if (opts.keys !== false) document.addEventListener('keydown', (e) => {
       if (!ctl.live || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
       const t = e.target;
       if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.isContentEditable)) return;

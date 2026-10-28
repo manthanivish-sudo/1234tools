@@ -392,33 +392,9 @@
     const left = Math.ceil((end - Date.now()) / 1000);
     return left > 0 ? fmt(STR.timeLeft, { s: left }) : STR.timeUp;
   }
-  const firsts = (rows) => rows.filter((x) => x.r === 1).map((x) => x.n).join(' & ');
-  /** Third, second and first place on blocks (with is-win they rise one by one). */
-  function podium(main, rows, win) {
-    const pod = K.el('div', 'deck-podium' + (win ? ' is-win' : ''));
-    [1, 0, 2].forEach((i) => {
-      const x = rows[i];
-      if (!x) return;
-      const col = K.el('div', 'deck-step is-' + (i + 1));
-      col.appendChild(K.el('span', 'deck-step-nick', x.n));
-      col.appendChild(K.el('span', 'deck-step-pts', fmt(STR.pts, { p: x.p }) + ' · ' + fmt(STR.time, { s: x.s })));
-      col.appendChild(K.el('b', 'deck-step-block', String(x.r)));
-      pod.appendChild(col);
-    });
-    main.appendChild(pod);
-  }
-  /** Confetti over the big screen, falling once from `delay` seconds (app.css hides it for reduced motion). */
-  function confetti(main, delay) {
-    const box = K.el('div', 'deck-confetti');
-    box.setAttribute('aria-hidden', 'true');
-    for (let i = 0; i < 120; i++) {
-      const p = K.el('i');
-      p.style.cssText = '--x:' + (Math.random() * 100).toFixed(1) + '%;--d:' + (delay + Math.random() * 2.4).toFixed(2) + 's;--t:' + (2.8 + Math.random() * 2.4).toFixed(2) +
-        's;--dx:' + Math.round(Math.random() * 200 - 100) + 'px;--r:' + Math.round(Math.random() * 1080 - 540) + 'deg;--c:var(--t' + ((i % 8) + 1) + ')';
-      box.appendChild(p);
-    }
-    main.appendChild(box);
-  }
+  const firsts = L.firsts;
+  const podium = (main, rows, win) => L.podium(main, rows, win, (x) => fmt(STR.pts, { p: x.p }) + ' · ' + fmt(STR.time, { s: x.s }));
+  const confetti = L.confetti;
 
   function renderStage(body, s) {
     if (!body._deckTick) {
@@ -495,21 +471,7 @@
         confetti(main, s.win ? 3.4 : 0.6);
         rows = rows.slice(3);
       }
-      const ol = K.el('ol', 'deck-lb' + (s.fin ? ' is-rest' : ''));
-      ol.style.setProperty('--rows', String(Math.max(rows.length, 1)));
-      rows.forEach((x, i) => {
-        const li = K.el('li');
-        const at = s.fin ? i + 3 : i;
-        /* rows slide in from where they stood after the previous question */
-        if (x.w >= 0 && x.w !== at) li.style.setProperty('--from', String(x.w - at));
-        else if (x.w < 0) li.classList.add('is-new');
-        li.appendChild(K.el('b', null, String(x.r)));
-        li.appendChild(K.el('span', null, x.n));
-        li.appendChild(K.el('strong', null, fmt(STR.pts, { p: x.p })));
-        li.appendChild(K.el('small', null, fmt(STR.time, { s: x.s })));
-        ol.appendChild(li);
-      });
-      if (rows.length) main.appendChild(ol);
+      L.lbList(main, rows, s.fin, { pts: (p) => fmt(STR.pts, { p }), time: (x) => fmt(STR.time, { s: x }) });
     }
   }
 

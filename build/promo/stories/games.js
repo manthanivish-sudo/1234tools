@@ -10,6 +10,8 @@
 
 const FREE = ['Free', 'No sign-up', 'Nothing uploaded'];
 const TV = ['Free', 'Shows on the TV', 'Nothing uploaded'];
+/* the quiz games with optional phones: their answers go through the live relay when phones are used */
+const PHONES = ['Free', 'Shows on the TV', 'Phones optional'];
 
 module.exports = {
   /* ------------------------------------------------------------ the 13 games */
@@ -56,7 +58,7 @@ module.exports = {
     usual: ['Shouting the answer out', 'Hands up and a guess at who was first', 'A kitchen bell and a lot of arguing'],
     promise: 'Each team gets a pad and a key; the first press locks the rest.',
     steps: ['Name the teams, check their keys', 'Say go: the first press wins', 'Press Correct or Reset'],
-    proof: TV,
+    proof: PHONES,
     example: { kind: 'schematic', input: 'Team presses on one tablet or keyboard', output: 'The winner, and the others with their gaps', sampleIn: 'Team 2 presses first; Team 4 a moment later', sampleOut: 'Team 2 locks the buzzer; Team 4 is listed with its gap in ms' },
     howTo: 'How to run a quiz buzzer on one tablet, free',
     cta: 'Open the buzzer'
@@ -140,7 +142,7 @@ module.exports = {
     usual: ['Slides and a printed answer list', 'Scores added up at the end', 'Pictures that will not load'],
     promise: 'Questions, picture rounds, a countdown, scores and print sheets.',
     steps: ['Type questions and answers', 'Press Host and name the teams', 'Reveal each answer on the TV'],
-    proof: TV,
+    proof: PHONES,
     example: { kind: 'schematic', input: 'Rounds of questions, with answers and pictures', output: 'A hosted quiz on the TV, or printed sheets', sampleIn: 'A multiple-choice question and a picture round', sampleOut: 'Question on the TV, answer on your phone, scores kept' },
     howTo: 'How to write and host a quiz night on the TV',
     cta: 'Make a quiz'
@@ -268,7 +270,7 @@ module.exports = {
     usual: ['Shouting over each other', 'Hands up, and an argument', 'A toy horn from the cupboard'],
     promise: 'A big pad for each team on one tablet. The first touch wins.',
     steps: ['Set the four team names', 'Say go and watch the pads', 'Press Correct, then Reset'],
-    proof: TV,
+    proof: PHONES,
     example: { kind: 'schematic', input: 'Four teams touching pads on one screen', output: 'The first touch locks the others out', sampleIn: 'Two pads touched almost together', sampleOut: 'The earlier time stamp wins; the gap is listed in ms' },
     howTo: 'How to run a family quiz buzzer on one tablet',
     cta: 'Open the family buzzer'
@@ -384,7 +386,7 @@ module.exports = {
     usual: ['Slides for every round', 'A scoring sheet taped to the wall', 'Questions only one generation can answer'],
     promise: 'Rounds for every age, hosted on the TV with scores kept.',
     steps: ['Type your questions', 'Press Host and name the teams', 'Reveal answers on the TV'],
-    proof: TV,
+    proof: PHONES,
     example: { kind: 'schematic', input: 'Four rounds of your own questions', output: 'A quiz hosted on the TV, scores kept', sampleIn: 'General knowledge, kids, picture round, quick-fire', sampleOut: 'Question on the TV; the answer and notes on your phone' },
     howTo: 'How to host a family quiz night on the TV',
     cta: 'Make the family quiz'
@@ -396,7 +398,7 @@ module.exports = {
     usual: ['A quiz book read aloud', 'Slides made at midnight', 'Scores on the back of a card'],
     promise: 'Four festive rounds to fill, hosted on the TV with the scores.',
     steps: ['Fill in the four rounds', 'Name the teams, press Host', 'Show the picture round on the TV'],
-    proof: TV,
+    proof: PHONES,
     example: { kind: 'schematic', input: 'Festive questions and photos', output: 'A Christmas quiz hosted on the TV', sampleIn: 'Traditions, films, festive food, picture round', sampleOut: 'Answers on your phone, questions and scores on the TV' },
     howTo: 'How to host a Christmas quiz on the TV, free',
     cta: 'Host a Christmas quiz'
@@ -408,7 +410,7 @@ module.exports = {
     usual: ['Photos pasted into slides', 'Printing a sheet per table', 'Image files that open in the wrong order'],
     promise: 'Pick the photos, type the answers, show them one by one.',
     steps: ['Pick photos from your device', 'Type the answer for each', 'Show on the TV, or print'],
-    proof: TV,
+    proof: PHONES,
     example: { kind: 'schematic', input: 'Photos from your device and their answers', output: 'A picture round on the TV, or printed sheets', sampleIn: 'Baby photos of the family, one answer each', sampleOut: 'Pictures resized in the page, kept on this device, nothing uploaded' },
     howTo: 'How to make a picture round for a quiz',
     cta: 'Make a picture round'

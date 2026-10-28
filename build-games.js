@@ -154,7 +154,8 @@ function relatedItems(t) {
 }
 const faqHtml = (faq) => '  <section class="panel"><h2>Frequently asked questions</h2>' + faq.map((f) => '<details><summary>' + esc(f.q) + '</summary><p>' + esc(f.a) + '</p></details>').join('') + '</section>\n';
 const faqLd = (faq) => ({ '@type': 'FAQPage', mainEntity: faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) });
-const appLd = (name, description, url, keywords) => ({ '@type': 'SoftwareApplication', name, description, url, applicationCategory: 'GameApplication', operatingSystem: 'Any', browserRequirements: 'Requires a current browser; nothing is uploaded.', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }, keywords: (keywords || []).join(', ') });
+/* a game with optional phones (spec.phones) uploads nothing unless the host starts a live session */
+const appLd = (name, description, url, keywords, phones) => ({ '@type': 'SoftwareApplication', name, description, url, applicationCategory: 'GameApplication', operatingSystem: 'Any', browserRequirements: phones ? 'Requires a current browser; nothing is uploaded unless you use phones.' : 'Requires a current browser; nothing is uploaded.', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }, keywords: (keywords || []).join(', ') });
 
 /* ------------------------------------------------------------------ */
 
@@ -167,7 +168,7 @@ function toolPage(t, parts, all) {
   const ready = (s.landings || []).map((L) => '<li><a href="/' + SECTION + '/' + L.slug + '/">' + esc(L.title) + '</a></li>');
   const body =
     crumbs.render(trail, s.title) + '\n' +
-    '<article class="tool game-tool" data-tool="' + t.slug + '">\n' +
+    '<article class="tool game-tool" data-tool="' + t.slug + '"' + (s.phones ? ' data-phones="1"' : '') + '>\n' +
     '  <p class="eyebrow">' + esc(sec.name) + '</p>\n' +
     '  <h1>' + icon(s.glyph, 'ico ico-title') + esc(s.title) + '</h1>\n' +
     '  <p class="lede">' + esc(s.description) + '</p>\n' +
@@ -182,7 +183,7 @@ function toolPage(t, parts, all) {
     '</article>\n';
   const ld = '<script type="application/ld+json">' + JSON.stringify({
     '@context': 'https://schema.org',
-    '@graph': [appLd(s.title, s.description, SITE + pathOnly, s.keywords), crumbs.breadcrumbList(trail, s.title, pathOnly), faqLd(s.faq || [])]
+    '@graph': [appLd(s.title, s.description, SITE + pathOnly, s.keywords, s.phones), crumbs.breadcrumbList(trail, s.title, pathOnly), faqLd(s.faq || [])]
   }) + '</script>\n';
   const rel = SECTION + '/' + t.slug + '/index.html';
   const html = headFor(parts, pathOnly, s.pageTitle || (s.title + ' — Free, No Sign-up | 1234Tools'), s.description, s.scripts) + ld + parts.mid + '\n' + body + parts.tail;
@@ -201,7 +202,7 @@ function landingPage(x, parts, all) {
     .map((y) => '<li><a href="/' + SECTION + '/' + y.L.slug + '/">' + esc(y.L.title) + '</a></li>');
   const body =
     crumbs.render(trail, L.title) + '\n' +
-    '<article class="tool game-tool game-landing" data-tool="' + t.slug + '" data-preset="' + esc(JSON.stringify(L.preset || {})) + '">\n' +
+    '<article class="tool game-tool game-landing" data-tool="' + t.slug + '" data-preset="' + esc(JSON.stringify(L.preset || {})) + '"' + (s.phones ? ' data-phones="1"' : '') + '>\n' +
     '  <p class="eyebrow">' + esc(sec.name) + '</p>\n' +
     '  <h1>' + icon(s.glyph, 'ico ico-title') + esc(L.title) + '</h1>\n' +
     '  <p class="lede">' + esc(L.lede || L.description) + '</p>\n' +
@@ -215,7 +216,7 @@ function landingPage(x, parts, all) {
     '</article>\n';
   const ld = '<script type="application/ld+json">' + JSON.stringify({
     '@context': 'https://schema.org',
-    '@graph': [appLd(L.title, L.description, SITE + pathOnly, s.keywords), crumbs.breadcrumbList(trail, L.title, pathOnly), faqLd(faq)]
+    '@graph': [appLd(L.title, L.description, SITE + pathOnly, s.keywords, s.phones), crumbs.breadcrumbList(trail, L.title, pathOnly), faqLd(faq)]
   }) + '</script>\n';
   const rel = SECTION + '/' + L.slug + '/index.html';
   const title = L.pageTitle || (L.title + ' — Free | 1234Tools');
@@ -237,7 +238,7 @@ function hubPage(parts, all) {
     crumbs.render([], sec.hub || sec.name) + '\n' +
     '<p class="eyebrow">' + esc(sec.name) + '</p>\n' +
     '<h1>' + icon('i-games', 'ico ico-title') + esc(sec.name) + '</h1>\n' +
-    '<p class="lede">Everything a quiz night or a party needs, run from one laptop or phone with the TV as the big screen: write and host a quiz, pick names, make teams, keep score, find who buzzed first, act out charades, call Tambola and print the tickets. No sign-up, no adverts in the game, and nothing anyone types leaves the device. ' + n + ' game' + (n === 1 ? '' : 's') + ' so far.</p>\n' +
+    '<p class="lede">Everything a quiz night or a party needs, run from one laptop or phone with the TV as the big screen: write and host a quiz, pick names, make teams, keep score, find who buzzed first, act out charades, call Tambola and print the tickets. No sign-up, no adverts in the game, and nothing anyone types leaves the device, unless you choose to let players answer or buzz on their own phones. ' + n + ' game' + (n === 1 ? '' : 's') + ' so far.</p>\n' +
     '<div class="grid">' + cards + '</div>\n' +
     (ready ? '<section class="panel"><h2>Ready-made for</h2><ul class="related">' + ready + '</ul></section>\n' : '') +
     (guides ? '<section class="panel"><h2>Step-by-step guides</h2><ul class="related">' + guides + '</ul></section>\n' : '') +

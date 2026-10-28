@@ -246,7 +246,7 @@ module.exports = {
     await page.keyboard.press('ArrowRight');
     await page.waitForSelector('.qz-their[data-team="Blue"]', { timeout: 3000 });
     await page.type('.qz-their[data-team="Blue"]', 'rome');
-    await page.click('.qz-pres-head');
+    await page.$eval('.qz-pres-head', (x) => { if (document.activeElement) document.activeElement.blur(); x.click(); }); /* a DOM click: a mouse click can land on a moved link under load */
     await page.keyboard.press('r');
     await h.sleep(300);
     const sc = await page.evaluate(() => Array.from(document.querySelectorAll('.qz-teamrow')).map((r) => r.querySelector('.qz-team-name').textContent + ':' + r.querySelector('.qz-team-score').textContent).join());
@@ -318,6 +318,6 @@ function step(s) { if (process.env.QZ_STEP) console.log('  quiz-maker step: ' + 
 function document_has_answer(text) { return /✓|Answer\s*Yellow/.test(text); }
 async function clickText(page, sel, text) {
   const list = await page.$$(sel);
-  for (const b of list) { if ((await b.evaluate((x) => x.textContent.trim())).indexOf(text) === 0) { await b.click(); return true; } }
+  for (const b of list) { if ((await b.evaluate((x) => x.textContent.trim())).indexOf(text) === 0) { await b.evaluate((x) => x.click()); return true; } }
   throw new Error('no button "' + text + '" in ' + sel);
 }

@@ -120,6 +120,13 @@ for (const abs of pages()) {
         /deleted when the session closes/.test(aboutWords) && !about.includes(ABOUT_DEFAULT) && (about.match(/<!--about:/g) || []).length === 1,
         rel + ': footer-about line not qualified for the live tools, found ' + aboutKind);
       bump('about-live', rel);
+    } else if (/<article\b[^>]*\bdata-phones="1"/.test(html)) {
+      /* a game with optional phones (build-games.js): an exception only when phones are used */
+      const aboutWords = (/<!--about:[a-z-]+-->([\s\S]*?)<!--\/about-->/.exec(about) || [])[1] || '';
+      ok(aboutKind === 'phones' && about.includes('MVR IT Services<!--about:phones-->' + ABOUT_LEAD) && /optional phones/.test(aboutWords) && /pass through our server/.test(aboutWords) &&
+        /deleted when the session closes/.test(aboutWords) && !about.includes(ABOUT_DEFAULT) && (about.match(/<!--about:/g) || []).length === 1,
+        rel + ': footer-about line not qualified for a game with phones, found ' + aboutKind);
+      bump('about-phones', rel);
     } else {
       ok(!aboutKind, rel + ': footer-about carries an about block (' + aboutKind + ') off the AI pages');
       ok(about.includes('MVR IT Services' + ABOUT_DEFAULT + '</p>'), rel + ': footer-about does not end with the default about line');
@@ -195,6 +202,14 @@ for (const abs of pages()) {
   if (rel.startsWith('live/')) {
     ok(kind === 'live' && !note.includes(DEFAULT) && /pass through our server/.test(words) && /deleted when it closes \(24 hours at most\)/.test(words) &&
       /No accounts, no cookies, no analytics for participants\./.test(words) && request === /tool request form/.test(words), rel + ': a live tool without the live wording, found ' + kind);
+    continue;
+  }
+  if (/<article\b[^>]*\bdata-phones="1"/.test(html)) {
+    /* a game with optional phones: "nothing is sent to a server" would be untrue once phones are used */
+    ok(kind === 'phones' && !note.includes(DEFAULT) && /optional phones/.test(words) && /pass through our server/.test(words) && /deleted when it closes \(24 hours at most\)/.test(words) &&
+      /No accounts, no cookies, no analytics for participants\./.test(words) && request === /tool request form/.test(words), rel + ': a game with phones without the phones wording, found ' + kind);
+    const tags = (require(path.join(ROOT, 'build', 'jobs.js')).jobOf('/' + rel.replace(/index\.html$/, '')) || { tags: [] }).tags;
+    ok(tags.join() === 'Free,Phones optional', rel + ': a game with phones is not tagged "On your device"', tags.join());
     continue;
   }
   if (request) {
