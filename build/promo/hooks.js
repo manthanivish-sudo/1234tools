@@ -80,6 +80,23 @@ const HOOKS = [
   { n: 61, text: 'The caller who never loses count.', verb: '*', angle: 'speed', sections: ['games'], kw: 'tambola|housie|bingo' },
   { n: 62, text: 'Who pressed first? Now you can prove it.', verb: '*', angle: 'speed', sections: ['games'], kw: 'buzzer' },
   { n: 63, text: 'Fair teams, and nobody picks last.', verb: '*', angle: 'speed', sections: ['games'], kw: 'team|group' },
+  // The live tools (/live/): only these are used for them. The answers pass through our server to the presenter's screen, so no
+  // on-device, offline or "private" hook is true; what is true is no app for the audience, one code, results live on the screen, free.
+  { n: 64, text: 'No app for the audience: they join with a code.', verb: '*', angle: 'no-signup', sections: ['live'], free: true },
+  { n: 65, text: 'Everyone answers. Nobody installs anything.', verb: '*', angle: 'no-signup', sections: ['live'], free: true },
+  { n: 66, text: 'Ask the room a question and watch the answers arrive.', verb: '*', angle: 'result-first', sections: ['live'] },
+  { n: 67, text: 'Results live on the big screen as the phones answer.', verb: '*', angle: 'result-first', sections: ['live'] },
+  { n: 68, text: 'One code on the screen, and the whole room is in.', verb: '*', angle: 'speed', sections: ['live'] },
+  { n: 69, text: 'Type a question, share a code, watch the room answer.', verb: '*', angle: 'speed', sections: ['live'] },
+  { n: 70, text: 'Free for the whole room, and no app to install.', verb: '*', angle: 'cost', sections: ['live'], free: true },
+  { n: 71, text: 'A room full of phones, and no app to pay for.', verb: '*', angle: 'cost', sections: ['live'], free: true },
+  { n: 72, text: 'No accounts, no cookies, no analytics for participants.', verb: '*', angle: 'privacy', sections: ['live'], free: true },
+  { n: 73, text: 'The answers are deleted when the room closes.', verb: '*', angle: 'privacy', sections: ['live'], free: true },
+  { n: 74, text: 'Quiz night on the TV, answered on every phone.', verb: '*', angle: 'speed', sections: ['live'], kw: 'quiz' },
+  { n: 75, text: 'The faster the right answer, the more it scores.', verb: '*', angle: 'result-first', sections: ['live'], kw: 'quiz' },
+  { n: 76, text: 'Questions from every seat, ranked by the room.', verb: '*', angle: 'result-first', sections: ['live'], kw: 'questions' },
+  { n: 77, text: 'One word from everyone, and the cloud grows.', verb: '*', angle: 'result-first', sections: ['live'], kw: 'word cloud' },
+  { n: 78, text: 'Is the room with you? Ask for a rating and see.', verb: '*', angle: 'result-first', sections: ['live'], kw: 'rate|rating|understood' },
 ];
 
 const ANGLES = ['privacy', 'speed', 'cost', 'offline', 'no-signup', 'result-first'];
@@ -87,6 +104,7 @@ const ANGLES = ['privacy', 'speed', 'cost', 'offline', 'no-signup', 'result-firs
 /** Whether hook h is true for record rec (independent of verb/angle). */
 function allowed(h, rec, opts) {
   if (rec.section === 'games' && !(h.sections && h.sections.includes('games'))) return false;
+  if (rec.section === 'live' && !(h.sections && h.sections.includes('live'))) return false;
   if (h.free && rec.pricing !== 'free') return false;
   if (h.ai && rec.pricing !== 'freemium') return false;
   if (h.sections && !h.sections.includes(rec.section)) return false;

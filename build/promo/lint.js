@@ -101,7 +101,9 @@ function lint(text, ctx) {
   let m = t.match(/\b100\s*%\s*(private|secure|safe|anonymous|privacy|confidential)|\b(completely|totally|fully|absolutely|perfectly) (private|anonymous)\b/i);
   if (m) err('absolute-privacy', 'Never claim "100% private" or equivalent; say "nothing you type is uploaded".', m[0]);
 
-  for (const s of sentences(t)) {
+  /* the live tools (/live/): the owner-approved line "No accounts, no cookies, no analytics for participants" is about the phones, and is true */
+  const tt = ctx.section === 'live' ? t.replace(/no cookies, no analytics for participants/ig, 'for participants') : t;
+  for (const s of sentences(tt)) {
     // 2. third-party requests
     m = s.match(/\b(no|zero|without any|never any|doesn'?t make any|makes no) third[- ]part(y|ies)( requests?| calls?| scripts?| cookies?)?\b|\bnothing (ever )?contacts a third party\b/i);
     if (m && !QUALIFIER.test(s)) err('third-party', 'Third-party claim needs the qualifier: "nothing contacts a third party on page load; analytics only after you opt in".', m[0]);
@@ -149,6 +151,13 @@ function lint(text, ctx) {
     if (/\bfree\b/i.test(t.replace(/#\w+/g, (h) => (/free/i.test(h) ? ' free ' : ' '))) && !ALLOWANCE.test(t)) {
       err('ai-free', 'AI tools are free only for 10 runs a month: say so wherever "free" appears.', 'free');
     }
+  }
+
+  // 9b. The live tools (/live/) send the answers through our server to the presenter's screen:
+  //     no on-device, offline, no-upload or "private" claims (the approved privacy line says what is true).
+  if (ctx.section === 'live') {
+    m = t.match(/\bon (your|the) (device|phone|laptop|computer)\b|\boffline\b|\bnothing (you type |you enter |you send )?(is |gets |ever )?(uploaded|sent|stored)\b|\bno uploads?\b|\bwithout (an? )?upload(ing)?\b|\bno server\b|\bnever leaves?\b|\bclient-side\b|\bentirely in (the|your) browser\b|\bstays? (on|in) (your|the) (device|browser|page)\b|\bprivate\b|\bno data (is |ever )?(sent|collected|stored|kept)\b/i);
+    if (m) err('live-claim', 'The live tools send the answers through our server to the presenter screen: no on-device, offline, no-upload or private claims.', m[0]);
   }
 
   // 10. no-watermark is a media claim

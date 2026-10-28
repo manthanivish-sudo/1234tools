@@ -82,6 +82,16 @@ function landings(list) {
 }
 /** For build-site.js and the tests: the landing pages' addresses. */
 function landingPaths() { return landings(tools()).map((x) => '/' + SECTION + '/' + x.L.slug + '/'); }
+/** For build-finder.js: one Tool Finder row per landing page that exists, in
+    build-games.js's shape, so "live quiz for the classroom" opens its page
+    (and the promotion desk lists it). `io` is the tool's own in->out line. */
+function finderRows(ioOf) {
+  const name = SECTIONS['/' + SECTION + '/'].name;
+  return landings(tools())
+    .filter((x) => fs.existsSync(path.join(ROOT, SECTION, x.L.slug, 'index.html')))
+    .map(({ t, L }) => [L.title, SECTION + '/' + L.slug + '/', t.spec.glyph || ('i-' + t.slug), name, L.description,
+      (L.keywords || t.spec.keywords || []).join(' | '), ioOf ? ioOf(SECTION + '/' + t.slug + '/') : '', '', 'landing']);
+}
 
 function shell() {
   const src = fs.readFileSync(path.join(ROOT, SHELL_PAGE), 'utf8');
@@ -414,4 +424,4 @@ if (require.main === module) {
   try { main(); }
   catch (e) { console.error('\nbuild-live.js failed: ' + (e && e.message || e) + '\n'); process.exit(1); }
 }
-module.exports = { tools, landingPaths };
+module.exports = { tools, landingPaths, finderRows };

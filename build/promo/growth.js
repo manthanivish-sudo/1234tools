@@ -162,24 +162,26 @@ function playbook() {
 /* region: 'uk', 'india' or 'global'. sections: the 1234Tools sections the moment suits (empty = any).
    lead: how many days before to start posting. check: a lunar or announced date that moves; check it. */
 const FIXED = [
-  { date: '2026-10-31', name: 'Halloween', region: 'global', kind: 'festival', sections: ['design', 'image', 'ai-image', 'games'], lead: 5 },
+  { date: '2026-10-31', name: 'Halloween', region: 'global', kind: 'festival', sections: ['design', 'image', 'ai-image', 'games', 'live'], lead: 5 },
   { date: '2026-11-05', name: 'Bonfire Night (UK): a family evening in', region: 'uk', kind: 'festival', sections: ['games'], lead: 5 },
-  { date: '2026-11-08', name: 'Diwali', region: 'india', kind: 'festival', sections: ['qr', 'design', 'image', 'business', 'india', 'games'], lead: 10, check: true, shop: true },
-  { date: '2026-11-14', name: 'Children\'s Day (India)', region: 'india', kind: 'education', sections: ['education', 'mathematics', 'games'], lead: 4 },
+  { date: '2026-11-08', name: 'Diwali', region: 'india', kind: 'festival', sections: ['qr', 'design', 'image', 'business', 'india', 'games', 'live'], lead: 10, check: true, shop: true },
+  { date: '2026-11-20', name: 'Wedding season opens (India), after Dev Uthani Ekadashi', region: 'india', kind: 'festival', sections: ['live'], lead: 10, check: true },
+  { date: '2026-11-14', name: 'Children\'s Day (India)', region: 'india', kind: 'education', sections: ['education', 'mathematics', 'games', 'live'], lead: 4 },
   { date: '2026-11-27', name: 'Black Friday', region: 'global', kind: 'shopping', sections: ['qr', 'image', 'business', 'design'], lead: 10, shop: true },
   { date: '2026-11-30', name: 'Cyber Monday', region: 'global', kind: 'shopping', sections: ['qr', 'image', 'business'], lead: 5, shop: true },
   { date: '2026-12-15', name: 'Advance tax, third instalment (India)', region: 'india', kind: 'tax', sections: ['india', 'finance'], lead: 7 },
-  { date: '2026-12-25', name: 'Christmas', region: 'global', kind: 'festival', sections: ['design', 'image', 'qr', 'time', 'games'], lead: 14, shop: true },
-  { date: '2026-12-31', name: "New Year's Eve: a night in with the family", region: 'global', kind: 'festival', sections: ['games'], lead: 10 },
+  { date: '2026-12-10', name: 'Year-end team meetings and all-hands', region: 'global', kind: 'season', sections: ['live'], lead: 7, check: true },
+  { date: '2026-12-25', name: 'Christmas', region: 'global', kind: 'festival', sections: ['design', 'image', 'qr', 'time', 'games', 'live'], lead: 14, shop: true },
+  { date: '2026-12-31', name: "New Year's Eve: a night in with the family", region: 'global', kind: 'festival', sections: ['games', 'live'], lead: 10 },
   { date: '2026-12-31', name: 'Belated and revised ITR deadline (AY 2026-27)', region: 'india', kind: 'tax', sections: ['india', 'finance'], lead: 10 },
   { date: '2027-01-01', name: 'New Year: new-system resolutions', region: 'global', kind: 'season', sections: ['business', 'utilities', 'time', 'finance'], lead: 5 },
-  { date: '2027-01-05', name: 'Spring term starts (UK): first week back', region: 'uk', kind: 'education', sections: ['education', 'games'], lead: 7, check: true },
+  { date: '2027-01-05', name: 'Spring term starts (UK): first week back', region: 'uk', kind: 'education', sections: ['education', 'games', 'live'], lead: 7, check: true },
   { date: '2027-01-14', name: 'Makar Sankranti and Pongal', region: 'india', kind: 'festival', sections: ['design', 'image'], lead: 7, check: true, shop: true },
-  { date: '2027-01-26', name: 'Republic Day (India)', region: 'india', kind: 'festival', sections: ['design', 'india'], lead: 5 },
+  { date: '2027-01-26', name: 'Republic Day (India)', region: 'india', kind: 'festival', sections: ['design', 'india', 'live'], lead: 5 },
   { date: '2027-01-31', name: 'Self Assessment deadline (UK, 2025-26 returns)', region: 'uk', kind: 'tax', sections: ['business', 'finance'], lead: 21 },
   { date: '2027-02-01', name: 'Union Budget (India)', region: 'india', kind: 'tax', sections: ['india', 'finance'], lead: 3, check: true },
   { date: '2027-02-14', name: 'Valentine\'s Day', region: 'global', kind: 'shopping', sections: ['design', 'image', 'ai-image'], lead: 10, shop: true },
-  { date: '2027-02-15', name: 'Board exams begin (India)', region: 'india', kind: 'education', sections: ['education', 'mathematics', 'time'], lead: 14, check: true },
+  { date: '2027-02-15', name: 'Board exams begin (India)', region: 'india', kind: 'education', sections: ['education', 'mathematics', 'time', 'live'], lead: 14, check: true },
   { date: '2027-03-07', name: 'Mothering Sunday (UK)', region: 'uk', kind: 'shopping', sections: ['design', 'image'], lead: 10, shop: true },
   { date: '2027-03-10', name: 'Eid al-Fitr', region: 'global', kind: 'festival', sections: ['design', 'image', 'games'], lead: 10, check: true, shop: true },
   { date: '2027-03-15', name: 'Advance tax, last instalment (India)', region: 'india', kind: 'tax', sections: ['india', 'finance'], lead: 7 },
@@ -187,14 +189,16 @@ const FIXED = [
   { date: '2027-03-28', name: 'Easter Sunday', region: 'global', kind: 'festival', sections: ['games'], lead: 10 },
   { date: '2027-03-31', name: 'Financial year end (India): tax-saving deadline', region: 'india', kind: 'tax', sections: ['india', 'finance', 'business'], lead: 14 },
   { date: '2027-04-01', name: 'New financial year (India)', region: 'india', kind: 'tax', sections: ['india', 'finance', 'business'], lead: 3 },
+  { date: '2027-04-01', name: 'New school year starts (India): first weeks of term', region: 'india', kind: 'education', sections: ['education', 'live'], lead: 7, check: true },
   { date: '2027-04-05', name: 'UK tax year ends', region: 'uk', kind: 'tax', sections: ['business', 'finance'], lead: 14 },
   { date: '2027-04-06', name: 'New UK tax year: new payslips and thresholds', region: 'uk', kind: 'tax', sections: ['business', 'finance'], lead: 3 },
-  { date: '2027-05-10', name: 'Exam season (UK GCSEs and A levels)', region: 'uk', kind: 'education', sections: ['education', 'mathematics', 'time'], lead: 14, check: true },
+  { date: '2027-05-10', name: 'Exam season (UK GCSEs and A levels)', region: 'uk', kind: 'education', sections: ['education', 'mathematics', 'time', 'live'], lead: 14, check: true },
   { date: '2027-05-17', name: 'Eid al-Adha (about 16 to 17 May)', region: 'global', kind: 'festival', sections: ['games'], lead: 10, check: true },
   { date: '2027-07-31', name: 'ITR due date for most individuals (India)', region: 'india', kind: 'tax', sections: ['india', 'finance'], lead: 21, check: true },
-  { date: '2027-08-15', name: 'Independence Day (India)', region: 'india', kind: 'festival', sections: ['design', 'india'], lead: 5, shop: true },
+  { date: '2027-08-15', name: 'Independence Day (India)', region: 'india', kind: 'festival', sections: ['design', 'india', 'live'], lead: 5, shop: true },
   { date: '2027-08-17', name: 'Raksha Bandhan', region: 'india', kind: 'festival', sections: ['design', 'games'], lead: 7, check: true, shop: true },
-  { date: '2027-09-01', name: 'Back to school (UK)', region: 'uk', kind: 'education', sections: ['education', 'mathematics', 'time', 'pdf', 'games'], lead: 14 }
+  { date: '2027-09-01', name: 'Back to school (UK)', region: 'uk', kind: 'education', sections: ['education', 'mathematics', 'time', 'pdf', 'games', 'live'], lead: 14 },
+  { date: '2027-09-05', name: "Teachers' Day (India)", region: 'india', kind: 'education', sections: ['education', 'live'], lead: 7 }
 ];
 /* Monthly filing days: GSTR-1 (11th) and GSTR-3B (20th) for monthly GST filers; PAYE paid electronically by the 22nd (UK). */
 const MONTHLY = [
@@ -327,6 +331,64 @@ function gameAngles(rec) {
   return GAME_ANGLES.find((g) => g.re.test(rec.path)) || null;
 }
 
+/* Angles that suit the live tools (/live/): a live tool is a moment in a room (a lesson, a meeting, a quiz night), so
+   the hooks are about the room. Same ten styles; a hook here replaces the generic one of its style. Nothing here says
+   the answers stay on a device: they pass through our server to the presenter's screen (build/tests/claims/live.js). */
+const LIVE_ANGLES = [
+  { re: /quiz-night/, hooks: {
+    pov: 'POV: it is quiz night, the TV shows the question, and every phone in the room is answering.',
+    speedrun: 'Quiz night in three steps: edit the deck, show the code, present.',
+    quiz: 'Guess who wins quiz night when faster right answers score more.',
+    stop: 'Stop marking quiz answer sheets by hand. Put the leaderboard on the TV.' },
+    series: ['"Quiz night, round by round": one deck built and played each week.', '"The podium": the last question and the confetti, filmed from the sofa.'],
+    moment: /Diwali|Christmas|New Year/,
+    challenge: 'QuizNightLive: host a ten-question quiz for your family on the TV and show the podium.' },
+  { re: /live-quiz-for-classroom|classroom-understanding|live-poll-for-classroom|word-cloud-for-classroom/, hooks: {
+    pov: 'POV: you ask the class a question and every pupil answers, not just the front row.',
+    speedrun: 'A class check in three steps: pick the question, share the code, ask.',
+    stop: 'Stop asking “does everyone understand?” and hearing nothing back.',
+    thisorthat: 'Hands up for the bold few, or every pupil on a phone?' },
+    series: ['"Exit ticket Friday": one class question a week, answered on phones.', '"Quiz Friday": a timed class quiz, filmed from the back of the room.'],
+    moment: /Teachers|Exam|Back to school|Children|term/i,
+    challenge: 'ClassCheck: ask your class one question on phones this week and show the reveal.' },
+  { re: /wedding/, hooks: {
+    pov: 'POV: the wedding guests are asking the couple questions from their phones.',
+    speedrun: 'Guest questions for the couple: open, share the code, approve the best.',
+    stop: 'Stop passing a microphone round the reception. Let guests ask from their seats.',
+    thisorthat: 'Questions on table cards, or from every guest’s phone?' },
+    series: ['"Ask the couple": the funniest guest questions of the week.', '"The reception, live": a Q&A board on the big screen.'],
+    moment: /Wedding/,
+    challenge: 'AskTheCouple: let your guests send the questions, and film the board filling up.' },
+  { re: /live-presentation/, hooks: {
+    pov: 'POV: your slides ask the room a question, and every phone answers.',
+    speedrun: 'A deck the room answers in three steps: prepare, share the code, present.',
+    stop: 'Stop switching between your slides and a separate quiz tool.',
+    thisorthat: 'Slides in one tool and a quiz in another, or one code for both?' },
+    series: ['"Slides that answer back": one deck with six kinds of question.', '"The podium": the last quiz question and the winner finale.'],
+    moment: /Teachers|Exam|Year-end/i,
+    challenge: 'SlidesThatAnswer: present one deck to phones and show the winner finale.' },
+  { re: /meeting|town-hall|team/, hooks: {
+    pov: 'POV: the team meeting where everyone answers, not just the loud few.',
+    speedrun: 'A team check-in in three steps: pick the question, share the code, ask.',
+    stop: 'Stop running meetings where only the loud few speak.',
+    thisorthat: 'Going round the room, or one question on every phone?' },
+    series: ['"The five-minute check-in": a word cloud to open every meeting.', '"All-hands, answered": a town-hall Q&A on the big screen.'],
+    moment: /Year-end|New Year|term/i,
+    challenge: 'MeetingPulse: open your next meeting with one question on phones and show the cloud.' },
+  { re: /live-poll|word-cloud|audience-qa|rating-scale|rate-a-session/, hooks: {
+    pov: 'POV: you ask the room a question and the answers arrive on the screen.',
+    speedrun: 'A live poll in three steps: type it, share the code, ask.',
+    stop: 'Stop counting hands. Let the room answer on their phones.',
+    thisorthat: 'A show of hands, or every phone in the room?' },
+    series: ['"Ask the room": one live question a week, answered on phones.', '"Before and after the reveal": what the room said, and what you guessed.'],
+    moment: /Teachers|Year-end|Exam/i,
+    challenge: 'AskTheRoom: run one live question in your next session and show the result.' }
+];
+function liveAngles(rec) {
+  if (rec.section !== 'live') return null;
+  return LIVE_ANGLES.find((g) => g.re.test(rec.path)) || null;
+}
+
 function angles(itemPath) {
   const rec = T.record(itemPath);
   let story = rec.story;
@@ -354,10 +416,10 @@ function angles(itemPath) {
     /* every suggestion passes the same claim rules as a post; one that does not is left out */
     .filter((h) => require('./lint').lint(h.text, Object.assign({ pricing: rec.pricing, section: rec.section }, SITE.lintCtx())).ok)
     .map((h) => Object.assign(h, { reel: own ? styleUrl(rec.path, h.style) : '' }));
-  const ga = own ? gameAngles(rec) : null;
+  const ga = own ? (gameAngles(rec) || liveAngles(rec)) : null;
   if (ga) for (const h of hooks) { const t = ga.hooks[h.style]; if (t && require('./lint').lint(t, Object.assign({ pricing: rec.pricing, section: rec.section }, SITE.lintCtx())).ok) h.text = t; }
   const tag = own ? camel(task.replace(/^(work out|make|create|convert|check|find|calculate)\s+/i, '')) : camel(SITE.current().name);
-  const series = ga ? ga.series.concat(['"' + (rec.sectionName || 'Games') + '": ' + name + ' is one.']) : own
+  const series = ga ? ga.series.concat(['"' + (rec.sectionName || (rec.section === 'live' ? 'Live tools' : 'Games')) + '": ' + name + ' is one.']) : own
     ? ['"' + (rec.sectionName || 'Tools') + ' in 10 seconds", episode by episode: ' + name + ' is one.', '"The job I stopped doing by hand": one tool a week, the same opening line.', '"You asked, I answered": each episode answers one real question about ' + lc(rec.sectionName || 'the tools') + '.']
     : ['"How ' + SITE.current().name + ' works", one feature per episode: ' + name + ' is one.', '"A day at the shop": the real work, with ' + lc(name) + ' in it.', '"You asked": answer one customer question a week on camera.'];
   const ms = moments({ days: 180 }).filter((m) => !m.monthly && (!own || !m.sections || !m.sections.length || m.sections.includes(rec.section)));

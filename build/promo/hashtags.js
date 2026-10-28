@@ -27,6 +27,7 @@ const TABLE = {
   engineering: ['#Engineering', '#STEM', '#CivilEngineering', '#MechanicalEngineering', '#Calculator', '#UnitConverter', '#Students', '#EngineeringLife', '#Construction', '#Design'],
   design: ['#Design', '#UIDesign', '#GraphicDesign', '#ColorPalette', '#Typography', '#WebDesign', '#DesignTools', '#Branding', '#UX', '#Creative'],
   games: ['#GameNight', '#FamilyGameNight', '#PartyGames', '#QuizNight', '#Tambola', '#Housie', '#DumbCharades', '#Bingo', '#ClassroomGames', '#FamilyTime'],
+  live: ['#LivePoll', '#WordCloud', '#QuizNight', '#Teachers', '#ClassroomTech', '#TeamMeeting', '#TownHall', '#AllHands', '#EventTech', '#PresentationTips'],
   conversions: ['#UnitConverter', '#Converter', '#Metric', '#Imperial', '#Cooking', '#Travel', '#Students', '#Engineering', '#Measurement', '#Conversion'],
 };
 
@@ -44,6 +45,8 @@ const BRAND = [
 /* Tags that only fit a media section. */
 const MEDIA_ONLY = ['#NoWatermark'];
 /* Tags that claim on-device / offline; never on an AI-for-Business tool. */
+/* The live tools pass answers through a server: no on-device or offline tag is true of them. */
+const LIVE_UNTRUE = ['#WorksOffline', '#PrivacyFirst', '#OnDeviceAI', '#OfflineAI'];
 const DEVICE_CLAIMS = ['#OnDeviceAI', '#OfflineAI', '#WorksOffline', '#PrivacyFirst', '#NoSignup', '#FreeTools'];
 
 function words(tag) {
@@ -65,6 +68,7 @@ function tagsFor(rec, opts) {
   const row = (TABLE[rec.section] || TABLE.utilities).filter((t) => {
     if (MEDIA_ONLY.includes(t) && !rec.media) return false;
     if (rec.pricing === 'freemium' && DEVICE_CLAIMS.includes(t)) return false;
+    if (rec.section === 'live' && LIVE_UNTRUE.includes(t)) return false;
     return true;
   });
   const hay = (rec.title + ' ' + rec.keywords.join(' ') + ' ' + rec.io + ' ' + rec.description).toLowerCase();
@@ -82,6 +86,7 @@ function tagsFor(rec, opts) {
   if (brandN > 0) {
     const brand = BRAND.filter((b) => {
       if (b.freeOnly && rec.pricing === 'freemium') return false;
+      if (rec.section === 'live' && LIVE_UNTRUE.includes(b.tag)) return false;
       if (b.makerOnly && !opts.maker) return false;
       if (out.includes(b.tag)) return false;
       return true;

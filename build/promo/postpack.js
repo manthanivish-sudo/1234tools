@@ -38,7 +38,7 @@ const YT_CATEGORY = {
   developer: 'Science & Technology', ai: 'Science & Technology', 'ai-image': 'Science & Technology', 'ai-video': 'Science & Technology', engineering: 'Science & Technology',
   education: 'Education', mathematics: 'Education', finance: 'Education', india: 'Education', business: 'Education', health: 'Howto & Style',
   pdf: 'Howto & Style', image: 'Howto & Style', text: 'Howto & Style', design: 'Howto & Style', qr: 'Howto & Style', utilities: 'Howto & Style',
-  games: 'Entertainment', time: 'Howto & Style', conversions: 'Howto & Style', audio: 'Howto & Style', video: 'Howto & Style', social: 'Howto & Style'
+  games: 'Entertainment', live: 'Education', time: 'Howto & Style', conversions: 'Howto & Style', audio: 'Howto & Style', video: 'Howto & Style', social: 'Howto & Style'
 };
 
 const CHECK_COMMON = [

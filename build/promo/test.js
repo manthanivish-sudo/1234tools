@@ -1230,6 +1230,83 @@ section('growth: playbook, moments, angles, the calendar\'s reel styles');
     assert.ok(C.get().items.filter((x) => x.format === 'problem').every((x) => x.tool.indexOf('/games/') !== 0));
     assert.deepStrictEqual(C.get().items.find((x) => x.format === 'games').targets.map((t) => t.channel), C.FORMATS.games.targets);
   });
+  check('live: the 5 live tools and their 11 landing pages are on the desk with a written story (shard live.js) inside the kit limits', () => {
+    const S = require('./stories');
+    const g = T.listTools().filter((r) => r.section === 'live');
+    assert.strictEqual(g.length, 16, 'live pages on the desk: ' + g.length);
+    assert.strictEqual(g.filter((r) => ['live-poll', 'word-cloud', 'audience-qa', 'rating-scale', 'live-presentation'].includes(r.slug)).length, 5);
+    for (const r of g) {
+      const s = S.storyFor(r.path);
+      assert.strictEqual(s.shard, 'live.js', r.path + ' has no written story');
+      assert.ok([...s.hook].length <= 64 && [...s.pain].length <= 120 && [...s.promise].length <= 70 && [...s.howTo].length <= 60, r.path + ' lengths');
+      assert.ok(s.usual.length === 3 && s.usual.every((u) => [...u].length <= 46) && s.steps.length === 3 && s.steps.every((u) => [...u].length <= 32), r.path + ' usual/steps');
+      for (const t of [s.hook, s.pain, s.promise, s.howTo, s.cta].concat(s.usual, s.steps, s.proof)) assert.ok(lint(t, { pricing: r.pricing, section: r.section, record: r }).ok, r.path + ': ' + t);
+    }
+    assert.deepStrictEqual(S.errors(), []);
+  });
+  check('live: the lint refuses on-device, offline, no-upload and private claims for a live page but allows the approved participants line', () => {
+    for (const t of ['Nothing is uploaded.', 'Works offline once opened.', 'It runs on your device.', 'Entirely in the browser, no server.', 'A private poll.', 'Your answers never leave the page.', 'No upload.'])
+      assert.ok(!lint(t, { pricing: 'free', section: 'live' }).ok, t);
+    assert.ok(lint('No accounts, no cookies, no analytics for participants.', { pricing: 'free', section: 'live' }).ok);
+    assert.ok(!lint('No cookies, no analytics.', { pricing: 'free', section: 'live' }).ok, 'the exemption is only for the approved wording');
+    assert.ok(lint('Nothing is uploaded.', { pricing: 'free', section: 'games' }).ok, 'games unchanged');
+  });
+  check('live: every post template renders lint-clean for every live page, says nothing untrue about where the answers go, and keeps the trial wording exact', () => {
+    const Tm = require('./templates');
+    const bad = /\b(on your (device|phone|laptop|computer)|offline|no uploads?|without upload|no server|never leaves|client-side|entirely in (the|your) browser|nothing (you type )?(is )?uploaded|static (page|html|site)|private)\b|doesn't have a server|zero servers|dark-first/i;
+    let n = 0;
+    for (const r of T.listTools().filter((x) => x.section === 'live')) {
+      for (let v = 0; v < 4; v++) for (const id of Tm.TEMPLATE_IDS) {
+        const o = Tm.render(id, r, { variant: v });
+        n++;
+        if (id === 'bio') continue; /* the profile bio is about the whole site, not a live page */
+        assert.ok(o.ok, r.path + ' ' + id + ' ' + JSON.stringify(o.errors));
+        for (const p of o.parts) {
+          assert.ok(!bad.test(p.text), r.path + ' ' + id + ' ' + p.key + ': ' + (p.text.match(bad) || [])[0]);
+          for (const m of p.text.matchAll(/up to [0-9,]+ phones/g)) assert.strictEqual(m[0], 'up to 1,000 phones');
+          if (/launch trial/.test(p.text)) assert.ok(p.text.includes('During the launch trial a free session takes up to 1,000 phones'), r.path + ' ' + id + ' trial wording');
+        }
+      }
+    }
+    assert.ok(n >= 16 * 4 * 30, 'renders: ' + n);
+    /* the long forms carry the approved privacy text, word for word */
+    const full = Tm.render('reddit-post', '/live/live-poll/', { variant: 0 }).text;
+    assert.ok(full.includes('Answers pass through our server only to reach the presenter’s screen. They are held in memory for the room’s life and deleted when it closes (24 hours at most). No accounts, no cookies, no analytics for participants.'));
+  });
+  check('live: hooks and tags for a live page are true (no offline, private or device claim) and the moments, angles and Monday slot are in place', () => {
+    const H = require('./hooks');
+    const Tg = require('./hashtags');
+    for (const r of T.listTools().filter((x) => x.section === 'live')) {
+      for (const a of H.ANGLES) for (let v = 0; v < 4; v++) {
+        const h = H.hook(r, a, v, {});
+        assert.ok(H.HOOKS.find((x) => x.n === h.n).sections.includes('live'), r.path + ' ' + a + ': ' + h.text);
+        assert.ok(lint(h.text, { pricing: 'free', section: 'live' }).ok, h.text);
+      }
+      const tags = Tg.tagsFor(r, { n: 10, brand: 3 });
+      assert.ok(!tags.some((t) => ['#WorksOffline', '#PrivacyFirst', '#OnDeviceAI', '#OfflineAI'].includes(t)), r.path + ' ' + tags.join(' '));
+    }
+    const all = G.moments({ now: '2026-10-28T09:00:00Z', days: 700 }).filter((m) => (m.sections || []).includes('live'));
+    for (const n of ['Diwali', 'Christmas', 'Wedding season', 'Year-end', "Teachers' Day", 'Exam season', 'Back to school', 'Republic Day', 'Independence Day', 'Spring term', 'Board exams']) assert.ok(all.some((m) => m.name.indexOf(n) >= 0), n);
+    assert.ok(all.filter((m) => m.check).length >= 4);
+    for (const p of ['/live/live-poll/', '/live/live-presentation/', '/live/quiz-night-with-phones/', '/live/wedding-questions-for-the-couple/', '/live/classroom-understanding-check/', '/live/word-cloud-for-team-meeting/']) {
+      const a = G.angles(p);
+      assert.strictEqual(a.hooks.length, 10);
+      for (const h of a.hooks) assert.ok(lint(h.text, { pricing: 'free', section: 'live' }).ok, p + ': ' + h.text);
+      assert.ok(a.series.length >= 3 && a.challenge, p);
+    }
+    assert.ok(G.angles('/live/quiz-night-with-phones/').hooks.some((h) => /quiz night/i.test(h.text)));
+    assert.ok(/Diwali|Christmas|New Year/.test(G.angles('/live/quiz-night-with-phones/').moment.name));
+    C.plan('2026-10-26');
+    const ls = C.get().items.filter((x) => x.format === 'live');
+    assert.ok(ls.length >= 12 && ls.every((x) => /^\/live\//.test(x.tool) && new Date(x.date + 'T12:00:00').getDay() === 1), 'Monday live slots');
+    assert.ok(C.get().items.filter((x) => x.format !== 'live').every((x) => x.tool.indexOf('/live/') !== 0));
+    assert.deepStrictEqual(ls[0].targets.map((t) => t.channel), C.FORMATS.live.targets);
+    const P = require('./postpack');
+    for (const ch of ['youtube-shorts', 'instagram-reel', 'linkedin-post', 'tiktok']) {
+      const pk = P.pack('/live/live-presentation/', ch);
+      assert.ok(pk && pk.ok && pk.fields.length, 'a clean post pack for a live page on ' + ch + ': ' + JSON.stringify(pk && pk.all && pk.all.errors));
+    }
+  });
   check('calendar: every slot has a style, no two slots in a row share one, links carry it', () => {
     C.plan('2026-10-26');
     const items = C.get().items;

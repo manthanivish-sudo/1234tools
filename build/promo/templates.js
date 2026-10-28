@@ -24,6 +24,7 @@ const T = require('./tools');
 const H = require('./hooks');
 const TAGS = require('./hashtags');
 const { lint, count } = require('./lint');
+const LIVE = require('./templates-live');
 
 /* ------------------------------------------------------------------ meta */
 
@@ -73,13 +74,20 @@ const SECTION_OBJECT = {
   pdf: 'PDFs', image: 'photos', 'ai-image': 'photos', 'ai-video': 'videos', text: 'text', developer: 'code and data',
   business: 'business figures', india: 'salary and tax figures', finance: 'financial figures', mathematics: 'numbers',
   health: 'health numbers', time: 'dates', qr: 'links', utilities: 'everyday data', education: 'school data',
-  engineering: 'measurements', design: 'design files', conversions: 'values', ai: 'documents', games: 'names, teams and scores',
+  engineering: 'measurements', design: 'design files', conversions: 'values', ai: 'documents', games: 'names, teams and scores', live: 'questions and answers',
 };
 const SECTION_ADJ = {
   pdf: 'PDF', image: 'image', 'ai-image': 'photo', 'ai-video': 'video', text: 'text', developer: 'developer-tool', business: 'calculator',
   india: 'tax calculator', finance: 'finance calculator', mathematics: 'maths', health: 'health calculator', time: 'date', qr: 'QR',
-  utilities: 'online tool', education: 'school-admin', engineering: 'engineering calculator', design: 'design', conversions: 'converter', ai: 'AI', games: 'party game',
+  utilities: 'online tool', education: 'school-admin', engineering: 'engineering calculator', design: 'design', conversions: 'converter', ai: 'AI', games: 'party game', live: 'live polling',
 };
+/* What can be said about privacy for a live tool: the owner-approved wording (answers pass through the server
+   only to reach the presenter's screen; deleted when the room closes; no accounts, no cookies, no analytics for participants). */
+const LIVE_PRIV = [
+  'the audience need no app and no account; answers pass through our server only to reach the presenter’s screen',
+  'answers are deleted when the room closes (24 hours at most)',
+  'no accounts, no cookies, no analytics for participants',
+];
 const SECTION_MANUAL = {
   pdf: 'a desktop PDF editor, if you have one installed', business: 'the official rates tables and a spreadsheet',
   india: 'the official rates tables and a spreadsheet', finance: 'the official rates tables and a spreadsheet',
@@ -89,14 +97,14 @@ const SECTION_MANUAL = {
   time: 'a calendar and careful counting', health: 'the formula and a calculator', qr: "your phone's built-in share-as-QR option, where it has one",
   utilities: 'a spreadsheet', engineering: 'the formula and a scientific calculator', design: 'a design app',
   conversions: 'the conversion factor and a calculator', ai: 'doing it by hand, line by line',
-  games: 'paper chits in a bowl and a pen',
+  games: 'paper chits in a bowl and a pen', live: 'a show of hands and a tally on the board',
 };
 const MERGE_MANUAL = "print each file to PDF and use your OS's print-to-PDF 'collate' trick, which is fiddly for more than two files";
 const SECTION_ENGINE = {
   pdf: 'pdf.js is self-hosted and the PDF work happens inside the page', image: "the image work uses the browser's own canvas",
   'ai-image': 'the model downloads once and then runs in the browser', 'ai-video': 'Whisper runs in the browser on your own machine',
   ai: 'the page sends your text to the model only when you press run, and says so first',
-  games: 'the game runs in the page and every draw uses the browser random generator', developer: 'it is plain JavaScript in the page', text: 'it is plain JavaScript in the page', utilities: 'it is plain JavaScript in the page',
+  live: 'phones join with a code and the answers pass through our server to the presenter’s screen', games: 'the game runs in the page and every draw uses the browser random generator', developer: 'it is plain JavaScript in the page', text: 'it is plain JavaScript in the page', utilities: 'it is plain JavaScript in the page',
 };
 const SECTION_LIMIT = {
   pdf: 'OCR or editing the text inside a page', image: 'RAW files from every camera', 'ai-image': 'very large images on older phones',
@@ -136,7 +144,7 @@ const PH_TOPICS = {
   developer: ['Developer Tools', 'Web App'], image: ['Design Tools', 'Photography'], 'ai-image': ['Artificial Intelligence', 'Design Tools'],
   'ai-video': ['Artificial Intelligence', 'Video'], ai: ['Artificial Intelligence', 'Productivity'], text: ['Writing', 'Productivity'],
   education: ['Education', 'Productivity'],
-  games: ['Games', 'Family'],
+  games: ['Games', 'Family'], live: ['Education', 'Productivity'],
 };
 const IG_EMOJI = { pdf: '📄', business: '💷', finance: '💷', india: '🇮🇳' };
 
@@ -244,6 +252,7 @@ const GAME_TASK = [
   [/antakshari/, 'run antakshari'], [/icebreaker|would-you-rather/, 'start a conversation with question cards']
 ];
 function taskPhrase(rec) {
+  if (rec.section === 'live') return LIVE.taskFor(rec);
   if (rec.section === 'games') { const g = GAME_TASK.find((x) => x[0].test(rec.path)); if (g) return g[1]; }
   let kw = String(rec.keywords[0] || rec.title).toLowerCase().trim();
   if (ACTION.test(kw)) return acro(kw);
@@ -283,12 +292,14 @@ function makeCtx(id, rec, opts, flags) {
   }
   const useClean = venue && typeof venue.utm === 'boolean' ? !venue.utm : !!meta.clean;
   const free = rec.pricing === 'free';
+  /* the live tools (/live/) send the answers through our server to the presenter's screen: none of the on-device lines is true of them */
+  const live = rec.section === 'live';
   const media = rec.media;
   const aud = audienceOf(rec);
   const rel = relatedTool(rec);
   const C = {
     id, meta, rec, opts, v, venue, venueId, medium, utm, clean, URL: useClean ? clean : utm, flags,
-    free, media, aud, rel,
+    free, live, media, aud, rel, aud0: live ? LIVE.whoFor(rec) : null,
     q: questionOf(opts.question),
     result: opts.result || null,
     count: T.toolCountText(),
@@ -316,6 +327,7 @@ function makeCtx(id, rec, opts, flags) {
     return trunc(d, flags.descMax);
   };
   C.PRIV = (slot) => {
+    if (live) return flags.noPriv ? '' : C.pick(slot, LIVE_PRIV);
     if (flags.noPriv) return free ? '' : 'cloud AI, 10 free runs a month';
     if (free) {
       const what = media ? 'nothing you drop in is uploaded' : 'nothing you type is uploaded';
@@ -331,10 +343,10 @@ function makeCtx(id, rec, opts, flags) {
       'needs a free account; 10 runs a month included; your text goes to the model provider',
     ]);
   };
-  C.PRIVSHORT = (slot) => (free ? C.pick(slot, ['Nothing uploaded.', 'Runs in your browser.', 'Works offline once loaded.']) : 'Cloud AI, 10 free a month.');
-  C.PRIVWHAT = () => (free ? (flags.noPriv ? '' : (media ? 'nothing you drop in is uploaded' : 'nothing you type is uploaded')) : C.PRIV(0));
+  C.PRIVSHORT = (slot) => (live ? C.pick(slot, ['No app for the audience.', 'One code to join.', 'No sign-up.']) : free ? C.pick(slot, ['Nothing uploaded.', 'Runs in your browser.', 'Works offline once loaded.']) : 'Cloud AI, 10 free a month.');
+  C.PRIVWHAT = () => (live ? (flags.noPriv ? '' : 'answers are deleted when the room closes') : free ? (flags.noPriv ? '' : (media ? 'nothing you drop in is uploaded' : 'nothing you type is uploaded')) : C.PRIV(0));
   C.FREE = () => (free ? (media ? 'free, no account, no watermark' : 'free, no account') : 'free for 10 runs a month');
-  C.OFFLINE = (near) => (free && !flags.noOffline && !/offline/i.test(near || '') ? 'works offline once opened' : '');
+  C.OFFLINE = (near) => (free && !live && !flags.noOffline && !/offline/i.test(near || '') ? 'works offline once opened' : '');
   C.HOOK = (angle, slot) => {
     const a = angle || (venue && venue.angle) || opts.angle || 'privacy';
     if (flags.shortHook) return H.shortestHook(rec, { video: opts.video }).text;
@@ -902,6 +914,9 @@ B['bio'] = (C) => {
   };
 };
 
+/* the live tools (/live/) have their own builders: templates-live.js says why */
+const LIVE_B = LIVE({ S, sent, cap, lc1, tidy, trunc, cp, count, sectionCount }).B;
+
 /* ------------------------------------------------------------- fitting */
 
 const STEPS = [
@@ -941,7 +956,7 @@ function render(templateId, rec, opts) {
   let step = 0;
   for (; step < STEPS.length; step++) {
     const C = makeCtx(templateId, rec, opts, STEPS[step]);
-    built = B[templateId](C);
+    built = C.live && LIVE_B[templateId] ? LIVE_B[templateId](C) : B[templateId](C);
     built.C = C;
     if (fits(templateId, built, venue)) break;
   }
