@@ -195,7 +195,7 @@ function toolPage(t, parts, all) {
     '</article>\n';
   const ld = '<script type="application/ld+json">' + JSON.stringify({
     '@context': 'https://schema.org',
-    '@graph': [appLd(s.title, s.description, SITE + pathOnly, s.keywords), crumbs.breadcrumbList(trail, s.title, pathOnly), faqLd(s.faq || [])]
+    '@graph': [appLd(s.title, s.description, SITE + pathOnly, s.keywords), crumbs.breadcrumbList(trail, s.title, pathOnly), faqLd(((s.manual && s.manual.troubleshooting) || []).concat(s.faq || []))]
   }) + '</script>\n';
   const rel = SECTION + '/' + t.slug + '/index.html';
   const html = headFor(parts, pathOnly, s.pageTitle || (s.title + ' — Free, No Sign-up | 1234Tools'), s.description, s.scripts) + ld + parts.mid + '\n' + body + parts.tail;
